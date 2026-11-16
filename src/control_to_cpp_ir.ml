@@ -43,9 +43,9 @@ let shaped_loop ~unit ~lowerings r planned target =
       let shaped = match lowering with Tail -> not builds | Modulo_cons -> builds | Frames -> true in
       if shaped then Some (l, lowering)
       else begin
-        Probe.violation "control IR"
+        Base.Probe.violation "control IR"
           Pp.(
-            str "the ControlIR of " ++ str (Table.kername_of_global r)
+            str "the ControlIR of " ++ str (Base.Table.kername_of_global r)
             ++ str
               (if builds then " builds what a tail loop does not" else " builds no constructor the plan's chains do") );
         None
@@ -56,7 +56,7 @@ let shaped_loop ~unit ~lowerings r planned target =
 (* The loop the recursion plan lowers the function [r] to, and how, where
    it lowers it in one of the ways [lowerings]. *)
 let loop_of ~unit ~lowerings r =
-  if Option.has_some (Lifted.of_ref r) then None
+  if Option.has_some (Base.Lifted.of_ref r) then None
   else
     shaped_loop ~unit ~lowerings r
       (lowering_of
@@ -67,7 +67,7 @@ let loop_of ~unit ~lowerings r =
 (* The loop of the function [r], and how it is lowered, where it is one
    this module lowers. *)
 let planned_loop ~unit r =
-  if Table.should_loopify r then loop_of ~unit ~lowerings:[Tail; Modulo_cons; Frames] r else None
+  if Base.Table.should_loopify r then loop_of ~unit ~lowerings:[Tail; Modulo_cons; Frames] r else None
 
 (* The loop of the method made of [r], and how it is lowered, where it is
    one this module lowers. *)
@@ -146,8 +146,8 @@ let invariant_at (l : Control_ir.Term.loop) ~first =
    decided after the plan leaves its calls as generated. *)
 let function_machine ~unit r =
   let frames =
-    Table.should_loopify r
-    && Option.is_empty (Lifted.of_ref r)
+    Base.Table.should_loopify r
+    && Option.is_empty (Base.Lifted.of_ref r)
     && Recursion_plan.strategy (Unit_context.recursion unit)
          ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r
        = Some Recursion_plan.Frame_stack
@@ -165,11 +165,11 @@ let method_resumes ~unit r ~inductive ~receiver ~depth =
   (* Its struct's methods are loopified where everything is, if the struct
      is merged into its module's, and as its inductive says otherwise
      ({!lower_struct_methods}): which, the method is generated before it is told. *)
-  let either = Table.loopify () || Table.loopifies_methods_of inductive in
-  let both = Table.loopify () && Table.loopifies_methods_of inductive in
+  let either = Base.Table.loopify () || Base.Table.loopifies_methods_of inductive in
+  let both = Base.Table.loopify () && Base.Table.loopifies_methods_of inductive in
   match method_loop ~unit r with
   | Some (l, Frames)
-    when Table.loopifies_method r && either && Control_ir.Term.entries l.body = []
+    when Base.Table.loopifies_method r && either && Control_ir.Term.entries l.body = []
          && Option.default false (List.nth_opt (derived_passed ~unit l) receiver) ->
     Some (resumes_of ~unit ~origin:r ~depth ~available:(invariant_at l ~first:0) ~parameters:(0, l) (), both)
   | Some _ | None -> None
@@ -253,10 +253,10 @@ let jump continues : Loopify_analysis.call_checker = function
    the calls [jumped], which must be its Continues [continues]. *)
 let check_jumps ~loop (f : func) ~continues ~jumped =
   if not (Loopify_analysis.made_as_planned continues jumped) then
-    Probe.violation "control IR"
+    Base.Probe.violation "control IR"
       Pp.(
         str "the calls the " ++ str loop ++ str " of "
-        ++ str (Table.kername_of_global (fst f.path.outer))
+        ++ str (Base.Table.kername_of_global (fst f.path.outer))
         ++ str " takes are not its Continues" )
 
 (* Whether a frame can hold a parameter declared at [ty] by pointer: one
@@ -288,9 +288,9 @@ let planned_held ~unit r (l : Control_ir.Term.loop) positions ~declared k cty =
   | Some (Some i) -> (
     match planned_holdable ~unit r (declared k) (snd (List.nth l.parameters i)) with
     | Some true when not (holdable_type ~unit cty) ->
-      Probe.violation "frame storage"
+      Base.Probe.violation "frame storage"
         Pp.(
-          str "the plan of " ++ str (Table.kername_of_global r) ++ str " lends its parameter " ++ int (declared k)
+          str "the plan of " ++ str (Base.Table.kername_of_global r) ++ str " lends its parameter " ++ int (declared k)
           ++ str " for a frame to hold by pointer, at a declared type no pointer spells" );
       false
     | Some planned -> planned
@@ -322,12 +322,12 @@ let fixpoint_parameters stmts =
    ({!loop_params}): the variables the helper captures, stored
    first, stand for none, every call passing them on as they are; the rest
    for the parameters of [l] that are not void
-   ({!Type_util.void_binder}), the last first.  [None] where they are
+   ({!Base.Type_util.void_binder}), the last first.  [None] where they are
    not so many. *)
 let lifted_positions (l : Control_ir.Term.loop) params =
   let kept =
     List.filter_map
-      (fun (i, (_, ty)) -> if Type_util.void_binder ty then None else Some i)
+      (fun (i, (_, ty)) -> if Base.Type_util.void_binder ty then None else Some i)
       (List.mapi (fun i p -> (i, p)) l.parameters)
   in
   let captured = List.length params - List.length kept in
@@ -380,7 +380,7 @@ let machine_storage ~unit (f : func) params body (l : Control_ir.Term.loop) =
   match l.loop with
   | Member _ ->
     let r = fst f.path.outer in
-    if Option.has_some (Lifted.of_ref r) then
+    if Option.has_some (Base.Lifted.of_ref r) then
       Option.map
         (fun positions ->
           let n = List.length params in
@@ -421,7 +421,7 @@ let rec lower_function ~unit ~tparams (f : func) {loop = l; lowering; varying; p
       f.return_type exposed with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | loop -> (
-      if Probe.checking () then check_jumps ~loop:"tail loop" f ~continues ~jumped:(List.rev !jumps);
+      if Base.Probe.checking () then check_jumps ~loop:"tail loop" f ~continues ~jumped:(List.rev !jumps);
       match Loopify.after_tail_loop ~unit ~tparams f params loop with
       | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
       | body -> Ok {f with shape = Definition (List.rev params, body); loop = Some l.loop} ) )
@@ -440,7 +440,7 @@ and lower_modulo_cons ~unit ~tparams (f : func) params body l ?cursor ~varying ~
   | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
   | None -> Error (Loopify.Left None)
   | Some loop -> (
-    if Probe.checking () then check_jumps ~loop:"loop tail modulo cons" f ~continues ~jumped:(List.rev !jumps);
+    if Base.Probe.checking () then check_jumps ~loop:"loop tail modulo cons" f ~continues ~jumped:(List.rev !jumps);
     match Loopify.after_tail_loop ~unit ~strategy:Tmc ~tparams f params loop with
     | exception Loopify_analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | body -> Ok {f with shape = Definition (List.rev params, body); loop = Some l.loop} )
@@ -489,8 +489,8 @@ let rec with_function f : decl -> decl = function
    methods are loopified. *)
 let loopified r =
   match Cpp_state.is_registered_method r with
-  | Some (inductive, _) -> Table.loopifies_methods_of inductive && Table.loopifies_method r
-  | None -> Table.should_loopify r
+  | Some (inductive, _) -> Base.Table.loopifies_methods_of inductive && Base.Table.loopifies_method r
+  | None -> Base.Table.should_loopify r
 
 (* Whether Loopify makes a machine with a stack of its own of the definition
    [r] and lowers the local fixpoints in its body only around that
@@ -509,7 +509,7 @@ let machine ~unit r =
    ({!Loopify.after_tail_loop}) or, where none is made, alone
    ({!lower_locals}), not a helper lifted out of another definition.  Of any other body it lowers the local tail
    loops alone. *)
-let lowers_local_machines ~function_ r = function_ && Table.should_loopify r && not (Option.has_some (Lifted.of_ref r))
+let lowers_local_machines ~function_ r = function_ && Base.Table.should_loopify r && not (Option.has_some (Base.Lifted.of_ref r))
 
 (* How {!local_loop} lowers the local fixpoint [member], if at all.  The
    function a fixpoint is in the flow of adopts it only where it is a
@@ -617,10 +617,10 @@ let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lam
           || Loopify_analysis.body_exists (fun e -> Option.has_some (left e)) body
         then declined ()
         else begin
-          if Probe.checking () && lowering = Tail
+          if Base.Probe.checking () && lowering = Tail
              && not (Loopify_analysis.made_as_planned continues (List.rev !jumps))
           then
-            Probe.violation "control IR"
+            Base.Probe.violation "control IR"
               Pp.(str "the calls the tail loop of the local fixpoint " ++ Id.print name
                   ++ str " jumps at are not its Continues");
           if lowering = Tail then Loopify_analysis.record_outcome (Id.to_string name) Tail;
@@ -735,7 +735,7 @@ let lower_struct_methods ~unit ~merged inductive vars fields =
   let tparams = List.map (fun v -> ((Typename, v) : Loopify_analysis.param_kind * Id.t)) vars in
   let self_ty : ty = Const (Pointer (Entity_application (inductive, List.map Loopify_analysis.named_tvar vars, []))) in
   let loopified r =
-    (if merged then Table.loopify () else Table.loopifies_methods_of inductive) && Table.loopifies_method r
+    (if merged then Base.Table.loopify () else Base.Table.loopifies_methods_of inductive) && Base.Table.loopifies_method r
   in
   List.map
     (fun (((f, vis, tag) as field) : Loopify_analysis.phase Cpp_ir.Field.member) ->
@@ -758,7 +758,7 @@ let lower_struct_methods ~unit ~merged inductive vars fields =
    recorded. *)
 let lower_locals ~unit ?unlowered d =
   match function_of d with
-  | Some (tparams, ({shape = Definition (params, body); _} as f)) when Table.should_loopify (fst f.path.outer) ->
+  | Some (tparams, ({shape = Definition (params, body); _} as f)) when Base.Table.should_loopify (fst f.path.outer) ->
     let body = Loopify.lower_function_locals ~unit ~tparams (loop_params params) body in
     Loopify.record_unlowered ~unit ?unlowered f body;
     with_function {f with shape = Definition (params, body)} d
@@ -772,8 +772,8 @@ let lowered_or_left lower planned = Option.cata lower (Error (Loopify.Left None)
    and how it is lowered, where it is one this module lowers: that
    member's. *)
 let lifted_loop ~unit r =
-  match Option.bind (Lifted.of_ref r) Lifted.fixpoint with
-  | Some member when Table.should_loopify r ->
+  match Option.bind (Base.Lifted.of_ref r) Base.Lifted.fixpoint with
+  | Some member when Base.Table.should_loopify r ->
     shaped_loop ~unit ~lowerings:[Tail; Modulo_cons; Frames] r
       (lowering_of
         ((Recursion_plan.strategy_at (Unit_context.recursion unit))
@@ -908,7 +908,7 @@ let check_pointer_fields ~unit (s : Ir.phase Cpp_ir.Struct.t) =
           (List.mapi
              (fun i (ty : Ir.Type.t) : Loopify_analysis.ptr_field option ->
                match ty with
-               | Shared_pointer (Entity_application (r, _, _)) when Common.globref_equal r s.ref_ -> Some (Recursive i)
+               | Shared_pointer (Entity_application (r, _, _)) when Base.Common.globref_equal r s.ref_ -> Some (Recursive i)
                | Shared_pointer _ -> Some (Boxed i)
                | _ -> None )
              data )
@@ -921,10 +921,10 @@ let check_pointer_fields ~unit (s : Ir.phase Cpp_ir.Struct.t) =
 
 let check_lowered ~unit (decl : Ir.Decl.t) =
   let violation (l : Control_ir.Loop.t) what =
-    Probe.violation "control lowering"
+    Base.Probe.violation "control lowering"
       Pp.(
         str what ++ str ": "
-        ++ match l with Function r -> str (Table.kername_of_global r) | Member _ -> str "a local fixpoint" )
+        ++ match l with Function r -> str (Base.Table.kername_of_global r) | Member _ -> str "a local fixpoint" )
   in
   (* The loop [l], emitted as [body]: a lowering recorded as [recorded]
      allows, no call left of the turns it takes, and no call of its own left
@@ -953,7 +953,7 @@ let check_lowered ~unit (decl : Ir.Decl.t) =
     match (f.shape, f.path.inner) with
     | Definition (_, body), [] -> (
       let r = fst f.path.outer in
-      match (f.loop, Option.bind (Lifted.of_ref r) Lifted.fixpoint) with
+      match (f.loop, Option.bind (Base.Lifted.of_ref r) Base.Lifted.fixpoint) with
       | Some l, _ -> emitted l ~recorded:lowered body
       | None, Some (o, m) -> unlowered (Member (o, m)) ~committed:(Option.has_some (lifted_loop ~unit r))
       | None, None -> unlowered (Function r) ~committed:(Option.has_some (planned_loop ~unit r)) )

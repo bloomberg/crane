@@ -80,7 +80,7 @@ module Minted = Hashtbl.Make (struct
 end)
 
 let let_lambda_bases : int Minted.t = Minted.create 16
-let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_bases)
+let () = Base.State.on_reset Base.State.Extraction (fun () -> Minted.reset let_lambda_bases)
 
 (** The type a term builds in tail position, where its own annotations say so.
 
@@ -112,10 +112,10 @@ let rec tail_result_type cx ~find = function
   | _ -> None
 
 (* The registered type of a global. *)
-let find_type r = try Some (Table.find_type r) with Not_found -> None
+let find_type r = try Some (Base.Table.find_type r) with Not_found -> None
 
 (* The registered type of a global, as the extracted program reads it. *)
-let find_extracted r = try Some (Table.find_extracted_type r) with Not_found -> None
+let find_extracted r = try Some (Base.Table.find_extracted_type r) with Not_found -> None
 
 (** Recover a fixpoint's return type from its body.
 
@@ -135,14 +135,14 @@ let find_extracted r = try Some (Table.find_extracted_type r) with Not_found -> 
     [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
     integer literals, and its call site supplies the argument. *)
 let recover_fix_codomain cx ~find ((id, ty) : Names.Id.t * _ Core.Type.at) (body : _ Core.Expr.at) =
-  let dom, cod = Core_util.type_decomp ty in
+  let dom, cod = Base.Core_util.type_decomp ty in
   match cod with
   | Core.Type.Variable {variable = i; _}
-    when not (List.exists (fun t -> Core_util.IntSet.mem i (Core_util.core_tvars t)) dom) -> (
+    when not (List.exists (fun t -> Base.Core_util.IntSet.mem i (Base.Core_util.core_tvars t)) dom) -> (
     match tail_result_type cx ~find body with
     | Some t ->
-      let subst = Type_util.subst_tvars_type [(i, t)] in
-      ((id, subst ty), Type_util.map_types_in_ast subst body)
+      let subst = Base.Type_util.subst_tvars_type [(i, t)] in
+      ((id, subst ty), Base.Type_util.map_types_in_ast subst body)
     | None -> ((id, ty), body) )
   | _ -> ((id, ty), body)
 
@@ -158,7 +158,7 @@ let recover_fix_codomains cx ids funs = recover_fix_codomains_with cx ~find:find
    anything is minted -- a variable already standing for the result type is
    no longer asking what the body builds. *)
 let fill_codomain_hole cx (_, ty) body =
-  match snd (Core_util.type_decomp ty) with
+  match snd (Base.Core_util.type_decomp ty) with
   | Core.Type.Meta ({contents = None} as cell) ->
     Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type cx ~find:find_extracted body)
   | _ -> ()
@@ -181,16 +181,16 @@ let rec left_open = function
   | Core.Type.Global_app {type_arguments = args; _} -> List.exists left_open args
   | _ -> false
 
-let violation what = Probe.violation "frozen program" (Pp.str what)
+let violation what = Base.Probe.violation "frozen program" (Pp.str what)
 
 let check_minted ids =
-  if Probe.checking () && Array.exists (fun (_, ty) -> left_open ty) ids then
+  if Base.Probe.checking () && Array.exists (fun (_, ty) -> left_open ty) ids then
     violation
       ( "the local fixpoint " ^ Names.Id.to_string (fst ids.(0))
       ^ " is lowered with a type freezing left open" )
 
 let check_let_lambda ~outer t a =
-  if Probe.checking () then begin
+  if Base.Probe.checking () then begin
     let base = ref None and unsolved = ref false in
     let rec visit = function
       | Core.Type.Meta {contents = None} | Core.Type.Open _ -> unsolved := true
@@ -243,7 +243,7 @@ let rec expr cx ~outer = function
     mint t;
     iter_annotations mint a;
     expr cx ~outer b
-  | e -> Core_util.ast_iter (expr cx ~outer) e
+  | e -> Base.Core_util.ast_iter (expr cx ~outer) e
 
 let structure cx (s : Core.Program.extracted) =
   Modutil.struct_iter
@@ -251,7 +251,7 @@ let structure cx (s : Core.Program.extracted) =
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
           (fun (fd : Core.Recursion.Definition.extracted) ->
-            expr cx ~outer:(Core_util.IntSet.fold max (Core_util.core_tvars fd.type_) 0) fd.body)
-          (Core_util.term_defs d)
+            expr cx ~outer:(Base.Core_util.IntSet.fold max (Base.Core_util.core_tvars fd.type_) 0) fd.body)
+          (Base.Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     ignore ignore s

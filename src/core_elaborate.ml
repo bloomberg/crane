@@ -6,9 +6,9 @@
 
 open Names
 open Util
-open Type_util
+open Base.Type_util
 open Core_query
-open Table
+open Base.Table
 
 (** [classify ~lex id written] -- the role each argument the call of [id]
     writes has, as Core elaborates the call from the call alone
@@ -133,7 +133,7 @@ let classify ~lex id written =
              (Printf.sprintf
                 "crane: call to %s drops %d of %d arguments (%d dummy, %d \
                  value domains declared)"
-                (Table.kername_of_global id)
+                (Base.Table.kername_of_global id)
                 (n_in - n_out) n_in
                 (List.length
                    (List.filter
@@ -196,7 +196,7 @@ let resolve_from_context ~lex ~expected_core ~stated_core (call : Elaborated_cal
       | None -> stated_core
     with
     | Some result when Call_tyargs.interior_holes tyargs <> [] ->
-      let families = Type_util.event_family_core_tvars [fn_core_ty] in
+      let families = Base.Type_util.event_family_core_tvars [fn_core_ty] in
       (* A family is a head, or one applied at the index it erases
          ([BotE _]); [box nat] met at a bare variable is a value type, not
          the family. *)
@@ -204,7 +204,7 @@ let resolve_from_context ~lex ~expected_core ~stated_core (call : Elaborated_cal
         match resolve_meta b with
         | Core.Type.Global_app {type_arguments = []; _} -> true
         | Core.Type.Global_app {type_arguments = args; _} ->
-          Type_util.is_core_erased_ty (List.nth args (List.length args - 1))
+          Base.Type_util.is_core_erased_ty (List.nth args (List.length args - 1))
         | _ -> false
       in
       (* With [~constructors]: an applied variable against an application
@@ -384,8 +384,8 @@ let is_shared_constant_term e =
   in
   match e with
   | Core.Expr.Construct {constructor = (GlobRef.ConstructRef ((kn, i), _) as r); arguments = (_ :: _ as ts); _} ->
-    Table.is_shared_variant (GlobRef.IndRef (kn, i))
-    && (not (Table.is_custom r))
+    Base.Table.is_shared_variant (GlobRef.IndRef (kn, i))
+    && (not (Base.Table.is_custom r))
     && List.exists (function Core.Expr.Erased_value _ -> false | _ -> true) ts
     && List.for_all closed ts
   | _ -> false
@@ -395,15 +395,15 @@ let add_keyed key occ fact m =
   GlobRef.Map_env.update key (fun l -> Some ((occ, fact) :: Option.default [] l)) m
 
 (* Whether the call [use args], standing in [lex], builds a typeclass
-   instance -- its Rocq type says so ({!Table.builds_instance}): a singleton
+   instance -- its Rocq type says so ({!Base.Table.builds_instance}): a singleton
    class's method is a function, so its instance's Core type is an arrow, not
    the class -- from no value of [lex]: its only free variables are instance
    parameters, which C++ takes as template arguments ({!binder_is_instance}).
    Such a call is the same value every time it is evaluated. *)
 let builds_closed_instance ~lex (use : Core.Global_use.t) args =
-  (not (Table.is_custom use.callee))
+  (not (Base.Table.is_custom use.callee))
   && args <> []
-  && Table.builds_instance use.callee
+  && Base.Table.builds_instance use.callee
   && Escape.IntSet.for_all (binder_is_instance lex) (Escape.free_rels 0 (Core.Expr.Apply {callee = Core.Expr.Global use;
                                                                                           arguments = args}))
 
@@ -414,7 +414,7 @@ let builds_closed_instance ~lex (use : Core.Global_use.t) args =
    evaluated.  Not a custom callee, whose text is no function to keep. *)
 let closed_head ~lex use (call : Elaborated_call.t) =
   let n = List.length call.args - List.length call.excess in
-  (not (Table.is_custom call.callee))
+  (not (Base.Table.is_custom call.callee))
   && n > 0 && call.excess <> []
   && Escape.IntSet.for_all (binder_is_instance lex)
        (Escape.free_rels 0 (Core.Expr.Apply {callee = Core.Expr.Global use;
@@ -440,9 +440,9 @@ let member_template_projection ~lex (call : Elaborated_call.t) =
    dictionary, or a binder named as an instance -- at the class's type. *)
 let singleton_dictionary_head lex i =
   match Core.Lexenv.binder lex i with
-  | Some {id; type_; role} when role = Core.Lexenv.Dictionary || Common.is_tc_instance_id id -> (
+  | Some {id; type_; role} when role = Core.Lexenv.Dictionary || Base.Common.is_tc_instance_id id -> (
     match resolve_meta type_ with
-    | Core.Type.Global_app {head = c; _} -> Option.map (fun m -> (c, m)) (Table.singleton_class_method c)
+    | Core.Type.Global_app {head = c; _} -> Option.map (fun m -> (c, m)) (Base.Table.singleton_class_method c)
     | _ -> None )
   | _ -> None
 
@@ -513,7 +513,7 @@ let record w ~position lex (use : Core.Global_use.t) args =
 let argument_position (inst : Elaborated_call.instantiated) i =
   let param_index = Param_pos.of_regular ~leading:(Elaborated_call.leading_params inst.call) i in
   let subst_index =
-    if Table.is_inline_custom inst.call.callee then Some (Param_pos.subst_at_declared param_index)
+    if Base.Table.is_inline_custom inst.call.callee then Some (Param_pos.subst_at_declared param_index)
     else inst.subst_index_of_orig param_index
   in
   match subst_index with
@@ -576,7 +576,7 @@ let lambda_body_position ~n position =
   in
   {position with expected}
 
-let binder role (x, ty) = {Core.Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = role}
+let binder role (x, ty) = {Core.Lexenv.id = Base.Core_util.id_of_binder_name x; type_ = ty; role = role}
 
 (* The binders [ids], innermost first, as [collect_lams] returns them. *)
 let push role ids lex = Core.Lexenv.push (List.map (binder role) ids) lex
@@ -602,7 +602,7 @@ let rec walk w ?(position = no_position) lex e =
     go lex f;
     List.iter (go ~position lex) args
   | Core.Expr.Lambda _ as e ->
-    let ids, body = Core_util.collect_lams e in
+    let ids, body = Base.Core_util.collect_lams e in
     List.iter (fun (_, ty) -> walk_type w lex ty) ids;
     go ~position:(lambda_body_position ~n:(List.length ids) position) (push Core.Lexenv.Value ids lex) body
   (* An alias of a polymorphic function is not bound but put in place of its
@@ -682,7 +682,7 @@ and walk_type w lex ty =
   match resolve_meta ty with
   | Core.Type.Global_app {head = g; type_arguments = tys; index_arguments = args} ->
     List.iter (walk_type w lex) tys;
-    if Table.is_custom g then List.iter (walk {w with caller = None; site = Type_term} lex) args
+    if Base.Table.is_custom g then List.iter (walk {w with caller = None; site = Type_term} lex) args
   | Core.Type.Arrow {parameter = dom; result = cod} ->
     walk_type w lex dom;
     walk_type w lex cod
@@ -692,7 +692,7 @@ and walk_type w lex ty =
 (* The variables a declaration of type [ty] is generated under: the type
    variables of its head, which a let-bound lambda in its body is numbered
    past ({!Local_types}). *)
-let head_variables ty = Core_util.IntSet.fold max (Core_util.core_tvars ty) 0
+let head_variables ty = Base.Core_util.IntSet.fold max (Base.Core_util.core_tvars ty) 0
 
 (* A declaration's own parameters are bound as its parameters, at the types
    its body is generated with ({!Core_query.reconcile_parameter_type}):
@@ -706,7 +706,7 @@ let head_variables ty = Core_util.IntSet.fold max (Core_util.core_tvars ty) 0
    [add := Z.add], calls it; only an axiom's or exception's parameters are
    named here, with no body to bind them. *)
 let declaration_scope ty body =
-  let ty = Core_util.type_simpl ty in
+  let ty = Base.Core_util.type_simpl ty in
   let params, body = declared_parameters ty body in
   let parameter (x, body_ty) sig_ty =
     let body_ty =
@@ -715,7 +715,7 @@ let declaration_scope ty body =
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
   in
-  (Core.Lexenv.push (List.map2 parameter params (List.rev (Type_util.core_domains ty))) Core.Lexenv.empty, body)
+  (Core.Lexenv.push (List.map2 parameter params (List.rev (Base.Type_util.core_domains ty))) Core.Lexenv.empty, body)
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
    every let-bound lambda as translation generates it
@@ -732,10 +732,10 @@ let rec inline_aliases ~n_outer lex e =
     match let_lambda ~lex ~n_outer ty a body with
     | Inlined body -> go lex body
     | At_instance inst ->
-      let subst = Core_util.type_subst_list inst in
+      let subst = Base.Core_util.type_subst_list inst in
       go lex (Core.Expr.Let {binder = x;
                              binder_type = subst ty;
-                             value = Core_util.ast_map_types subst a;
+                             value = Base.Core_util.ast_map_types subst a;
                              body;
                              occurrence = occ})
     | Bound ->
@@ -766,21 +766,21 @@ let rec inline_aliases ~n_outer lex e =
     and defs = Core.Recursion.Group.bodies rec_group
     and occ = rec_group.occurrence in
     Core.Expr.Cofixpoint (Core.Recursion.Group.of_arrays ~selected:i fs (Array.map (under (fix_binders fs)) defs) occ)
-  | e -> Core_util.ast_map (go lex) e
+  | e -> Base.Core_util.ast_map (go lex) e
 
 let generated_definition ty body =
   match body with
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> body
   | _ ->
-    let ty' = Core_util.type_simpl ty in
+    let ty' = Base.Core_util.type_simpl ty in
     let params, _ = collect_typed_lams ty' body in
     let lex, inner = declaration_scope ty body in
-    Core_util.named_lams params (inline_aliases ~n_outer:(head_variables ty') lex inner)
+    Base.Core_util.named_lams params (inline_aliases ~n_outer:(head_variables ty') lex inner)
 
 (* A declaration's calls, read in that scope. *)
 let declaration ?caller ?scope b ty body =
   let lex, body = declaration_scope ty body in
-  let ty = Core_util.type_simpl ty in
+  let ty = Base.Core_util.type_simpl ty in
   let w = walker ?caller ?scope b ~n_outer:(head_variables ty) in
   walk_type w Core.Lexenv.empty ty;
   walk w lex body
@@ -790,12 +790,12 @@ let declaration ?caller ?scope b ty body =
    those arrows ({!Gen_functions.gen_spec}): the slot it initialises is a
    function of the full signature, which no partial application fills. *)
 let constant_at_alias ~caller b ty body =
-  let ty = Core_util.type_simpl ty in
+  let ty = Base.Core_util.type_simpl ty in
   let body =
     match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _}
       | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b in
-  if Type_util.core_domains ty = [] then
-    match Type_util.eta_expand_to (Type_util.expand_core_fun_alias ty) body with
+  if Base.Type_util.core_domains ty = [] then
+    match Base.Type_util.eta_expand_to (Base.Type_util.expand_core_fun_alias ty) body with
     | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Core.Lexenv.empty expanded
     | _ -> ()
 
@@ -808,7 +808,7 @@ let constant_at_alias ~caller b ty body =
    own is generated as that application alone ({!Gen_instances}), so that is
    the only body of it walked: the body as written shares its matches'
    occurrences with the application, which pushes the arguments into a
-   single-branch match ({!Core_util.canonical_app}).  The record as written is
+   single-branch match ({!Base.Core_util.canonical_app}).  The record as written is
    walked too, for the globals it names alone. *)
 let instance_methods b name body ty =
   Option.iter
@@ -918,7 +918,7 @@ let referenced t = GlobRef.Set_env.elements t.named
 type tally = {found : int; recomputed : int; taken : int; live : int}
 
 let no_tally = {found = 0; recomputed = 0; taken = 0; live = 0}
-let tally = State.cell State.Unit no_tally
+let tally = Base.State.cell Base.State.Unit no_tally
 
 (* The walk [walk] says the unit has had, none before it is walked. *)
 let walk_of walk = Option.default empty walk
@@ -959,19 +959,19 @@ let elaboration ~walk ~lex (use : Core.Global_use.t) args =
   let elaborate () = elaborate_arguments ~lex use args in
   let from_core roles =
     let call = of_roles use args roles in
-    if Probe.checking () && not (Elaborated_call.same_roles call (elaborate ())) then
+    if Base.Probe.checking () && not (Elaborated_call.same_roles call (elaborate ())) then
       CErrors.anomaly
         Pp.(
-          str "Crane: a call to " ++ str (Table.kername_of_global use.callee)
+          str "Crane: a call to " ++ str (Base.Table.kername_of_global use.callee)
           ++ str " elaborated from Core disagrees with its elaboration where it is translated." );
     call
   in
-  match Common.get_phase () with
-  | Common.Plan -> (
+  match Base.Common.get_phase () with
+  | Base.Common.Plan -> (
     match roles t use (List.length args) with
     | Some roles -> from_core roles
     | None -> elaborate () )
-  | Common.Emit -> (
+  | Base.Common.Emit -> (
     match roles t use (List.length args) with
     | Some roles ->
       tally := {!tally with found = !tally.found + 1};
@@ -979,9 +979,9 @@ let elaboration ~walk ~lex (use : Core.Global_use.t) args =
     | None ->
       tally := {!tally with recomputed = !tally.recomputed + 1};
       if not (extended t use (List.length args)) then
-        Probe.violation "elaborated calls"
+        Base.Probe.violation "elaborated calls"
           Pp.(
-            str "a call to " ++ str (Table.kername_of_global use.callee)
+            str "a call to " ++ str (Base.Table.kername_of_global use.callee)
             ++ str " is translated where Core elaboration did not reach it." );
       elaborate () )
 
@@ -1014,41 +1014,41 @@ let instantiation ~walk ~lex ~expected_core ~stated_core ~caller ~scope (use : C
   let t = walk_of walk in
   let live () = instantiate ~lex ~expected_core ~stated_core ~caller ~scope call in
   let describe what =
-    Pp.(str "a call to " ++ str (Table.kername_of_global use.callee) ++ str what)
+    Pp.(str "a call to " ++ str (Base.Table.kername_of_global use.callee) ++ str what)
   in
   let from_core p =
     let p = Elaborated_call.at_call p call in
-    if Probe.checking () then begin
+    if Base.Probe.checking () then begin
       let agrees = Elaborated_call.same_instantiation p (live ()) in
-      Probe.hit "elab-plan" (fun () -> if agrees then "agree" else "disagree " ^ Table.kername_of_global use.callee);
+      Base.Probe.hit "elab-plan" (fun () -> if agrees then "agree" else "disagree " ^ Base.Table.kername_of_global use.callee);
       if not agrees then
-        Probe.violation "planned instantiations"
+        Base.Probe.violation "planned instantiations"
           (describe " is instantiated where it is translated otherwise than Core planned it.")
     end;
     p
   in
-  match Common.get_phase () with
-  | Common.Plan -> (
+  match Base.Common.get_phase () with
+  | Base.Common.Plan -> (
     match planned t use (List.length args) with
     | `Planned p -> from_core p
     | `Ambiguous _ | `Unwalked -> live () )
-  | Common.Emit -> (
+  | Base.Common.Emit -> (
     match planned t use (List.length args) with
     | `Planned p ->
       tally := {!tally with taken = !tally.taken + 1};
       from_core p
     | (`Ambiguous _ | `Unwalked) as why ->
       tally := {!tally with live = !tally.live + 1};
-      Probe.hit "elab-plan" (fun () ->
+      Base.Probe.hit "elab-plan" (fun () ->
           (match why with
            | `Ambiguous sites ->
              "ambiguous "
              ^ String.concat "," (List.map (function Body -> "body" | Type_term -> "type") sites)
              ^ " "
            | `Unwalked -> "unwalked ")
-          ^ Table.kername_of_global use.callee);
+          ^ Base.Table.kername_of_global use.callee);
       if not (extended t use (List.length args)) then
-        Probe.violation "planned instantiations"
+        Base.Probe.violation "planned instantiations"
           (describe
              ( match why with
              | `Ambiguous _ -> " has no single instantiation planned for it."
@@ -1068,16 +1068,16 @@ let planned_instantiation ~walk use args =
    the traversal's own environment gives, which is taken where the walk
    planned none or [walk] says the unit is not walked yet. *)
 let lookup what ~walk ~equal ~live planned =
-  let phase = match Common.get_phase () with Common.Plan -> "plan " | Common.Emit -> "" in
+  let phase = match Base.Common.get_phase () with Base.Common.Plan -> "plan " | Base.Common.Emit -> "" in
   match planned with
   | Some _ when Option.is_empty walk -> live ()
   | Some p ->
-    Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " planned");
-    if Probe.checking () && not (equal p (live ())) then
-      Probe.violation what (Pp.str "the answer translation's environment gives differs from Core's");
+    Base.Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " planned");
+    if Base.Probe.checking () && not (equal p (live ())) then
+      Base.Probe.violation what (Pp.str "the answer translation's environment gives differs from Core's");
     p
   | None ->
-    Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " live");
+    Base.Probe.hit "elab-fact" (fun () -> phase ^ String.map (function ' ' -> '_' | c -> c) what ^ " live");
     live ()
 
 (* The one value the answers all give, if they agree on one. *)

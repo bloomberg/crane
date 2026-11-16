@@ -102,7 +102,7 @@ val single_use_nargs : int -> Core.Expr.t -> int
     parameter that escapes is owned unless it is only matched on and returned
     unchanged; a parameter matched with a reuse candidate arm
     ({!is_reuse_scrutinee}) is owned when the declaration being analysed
-    reuses ({!Table.reuse_here}).  A parameter passed directly to an owned
+    reuses ({!Base.Table.reuse_here}).  A parameter passed directly to an owned
     parameter of a callee escapes, since the callee keeps it:
     [callee_flags g] is the ownership of the global [g]'s parameters,
     innermost first, settled across calls ({!Ownership}).
@@ -139,7 +139,7 @@ val returns_receiver_field : this_pos:int -> Core.Expr.t -> bool
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)
-module IntSet = Core_util.IntSet
+module IntSet = Base.Core_util.IntSet
 
 (** [free_rels depth t] returns free de Bruijn indices in [t], shifted by
     [depth]. An index [i > depth] contributes [i - depth].

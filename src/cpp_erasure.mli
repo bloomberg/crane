@@ -256,7 +256,7 @@ val decide_constexpr : settled -> settled
     Writing [std::any] down in a header is the act that decides the
     representation, and from then on the value {e is} boxed.  Doing it once
     on the way out of translation saves every declaration emitter from
-    having to remember {!Type_util.materialise_opaque}, and is
+    having to remember {!Base.Type_util.materialise_opaque}, and is
     print-neutral by construction.
 
     So is the type of a variable a branch of a custom match binds, where it

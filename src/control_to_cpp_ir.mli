@@ -9,7 +9,7 @@
 
     It lowers the loop of direct tail recursion of a top-level
     function ({!Control_ir.Loop.Function}) that the configuration loopifies
-    ({!Table.should_loopify}) and that the recursion plan lowers so
+    ({!Base.Table.should_loopify}) and that the recursion plan lowers so
     ({!Recursion_plan.Tail_loop}).  A recursive group is lowered once all
     of its members are generated, each member alone: its partners' bodies
     are spliced into its Core body ({!Recursion_plan.splice_partners}).
@@ -162,7 +162,7 @@ val lower_struct_methods :
   Cpp_ir.Lowered.phase Cpp_ir.Field.member list
 
 (** [lower_lifted d] is the helper [d], lifted out of a body for the
-    function of a local fixpoint ({!Lifted.fixpoint}), lowered as a
+    function of a local fixpoint ({!Base.Lifted.fixpoint}), lowered as a
     function is above, where Loopify would loopify it: to the loop of that
     member's ControlIR ({!Control_ir.Loop.Member}), entered by the member's
     calls, the variables the helper captures, its first parameters, passed

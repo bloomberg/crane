@@ -10,7 +10,7 @@
     them all before either file is rendered ([Cpp.finish_ahead], via
     {!Unit_program.demands}); the printer demands nothing, and under
     [CRANE_CHECK_IR] what it writes is checked against them
-    ({!Table.written_needs_header}).
+    ({!Base.Table.written_needs_header}).
 
     The same walk also reports the globals, type constructors and promoted
     type variables a declaration writes, for the leaf plan and the
@@ -28,14 +28,14 @@ val acquire_fence : string
 
 (** The headers the finished declaration [d] of the unit [u] needs for what
     it writes. *)
-val of_decl : Unit_context.t -> Cpp_ir.Resolved.Decl.t -> Table.header list
+val of_decl : Unit_context.t -> Cpp_ir.Resolved.Decl.t -> Base.Table.header list
 
 (** The headers the type [t] needs where the unit given writes it. *)
-val of_type : Unit_context.t -> Cpp_ir.Resolved.Type.t -> Table.header list
+val of_type : Unit_context.t -> Cpp_ir.Resolved.Type.t -> Base.Table.header list
 
 (** The headers the concept of a module type needs for what the unit given
     writes in it. *)
-val of_modtype_concept : Unit_context.t -> Modtype_concept.t -> Table.header list
+val of_modtype_concept : Unit_context.t -> Modtype_concept.t -> Base.Table.header list
 
 (** The globals the finished declaration [d] writes the names of, where the
     printer resolves them: a type's, a constant's or a constructor's, an

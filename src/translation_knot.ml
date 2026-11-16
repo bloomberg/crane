@@ -19,7 +19,7 @@
     are the only knot: a module that needs anything else from a later one is
     in the wrong place. *)
 
-open Common
+open Base.Common
 
 (** The entry points, at the types {!Translation_expr.gen_expr} and
     {!Translation_stmts.gen_stmts} have. *)

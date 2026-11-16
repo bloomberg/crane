@@ -14,7 +14,7 @@
 
 open Names
 open Util
-open Type_util
+open Base.Type_util
 
 (** A C++ type, and a template parameter list, as a head is planned in. *)
 type head_type = Cpp_ir.Lowered.Type.t
@@ -34,7 +34,7 @@ let head_type_exists (p : head_type -> bool) (t : head_type) = Cpp_ir.Children.e
 (** The name a variable goes by, whether or not its head was resolved. *)
 let head_tvar_name : head_type -> Id.t option = function
   | Variable (Index (_, Some n) | Named n) -> Some n
-  | Variable (Index (i, None)) -> Some (Common.tvar_id i)
+  | Variable (Index (i, None)) -> Some (Base.Common.tvar_id i)
   | _ -> None
 
 (** Arity of every type variable that [cty] applies to arguments, keyed by
@@ -53,7 +53,7 @@ let applied_tvar_arities (cty : head_type) =
            key on both spellings so the caller's list matches either way. *)
         let arity = List.length args in
         Option.iter (fun n -> Hashtbl.replace arities n arity) name;
-        Hashtbl.replace arities (Common.tvar_id i) arity
+        Hashtbl.replace arities (Base.Common.tvar_id i) arity
       | _ -> () );
       false )
     cty
@@ -64,7 +64,7 @@ let applied_tvar_arities (cty : head_type) =
     [cty] applies to arguments; see {!applied_tvar_arities}.
 
     [core_ty], when given, vetoes the promotion for a variable whose Core type does
-    not demand the higher kind ({!Type_util.higher_kinded_core_tvars}: applied
+    not demand the higher kind ({!Base.Type_util.higher_kinded_core_tvars}: applied
     to something erasure left behind, or written where a generated constructor
     expects a template name).  Being applied is not on its own a reason to be
     higher-kinded -- when neither holds, the application
@@ -77,13 +77,13 @@ let with_applied_tvars ?core_ty (cty : head_type) (temps : head_params) : head_p
     match core_ty with
     | None -> arities
     | Some ty ->
-      let hk = Type_util.higher_kinded_core_tvars [ty] in
+      let hk = Base.Type_util.higher_kinded_core_tvars [ty] in
       let veto = ref [] in
       head_type_exists
         (fun t ->
           ( match t with
           | Apply (Variable (Index (i, name)), _) when not (IntSet.mem i hk) ->
-            veto := Common.tvar_id i :: !veto;
+            veto := Base.Common.tvar_id i :: !veto;
             Option.iter (fun n -> veto := n :: !veto) name
           | _ -> () );
           false )
@@ -95,8 +95,8 @@ let with_applied_tvars ?core_ty (cty : head_type) (temps : head_params) : head_p
          applies it, and no application can be taken back off to make it not
          be.  Added after the veto, which speaks only about applications. *)
       List.iter
-        (fun (i, arity) -> Hashtbl.replace arities (Common.tvar_id i) arity)
-        (Type_util.hkt_arg_core_tvar_arities [ty]);
+        (fun (i, arity) -> Hashtbl.replace arities (Base.Common.tvar_id i) arity)
+        (Base.Type_util.hkt_arg_core_tvar_arities [ty]);
       arities
   in
   if Hashtbl.length arities = 0 then temps
@@ -132,7 +132,7 @@ let template_kinds ?(applied : head_type option) vars tys =
   (* Read from the rendered type where there is one: the Core body still applies
      a variable that erasure removed, and the parameter list has to agree with
      what the users of this name can see.  See
-     {!Type_util.rendered_tvar_arities}. *)
+     {!Base.Type_util.rendered_tvar_arities}. *)
   let arities =
     match applied with
     | Some a ->
@@ -140,7 +140,7 @@ let template_kinds ?(applied : head_type option) vars tys =
          payloads below: applied only at erased or variable arguments --
          [IFun E F := forall T, E T -> F T], whose [T] erases -- is a family,
          and a family is a plain parameter. *)
-      let arities = Type_util.rendered_tvar_arities a in
+      let arities = Base.Type_util.rendered_tvar_arities a in
       let demanded = Hashtbl.create 4 in
       let rec scan : head_type -> unit = function
         | Apply (Variable (Index (i, _)), tys) ->
@@ -187,7 +187,7 @@ let template_kinds ?(applied : head_type option) vars tys =
         | _ -> ()
       in
       List.iter scan tys;
-      let arities = Type_util.applied_core_tvar_arities tys in
+      let arities = Base.Type_util.applied_core_tvar_arities tys in
       Hashtbl.filter_map_inplace
         (fun i a -> if Hashtbl.mem demanded i then Some a else None)
         arities;
@@ -198,9 +198,9 @@ let template_kinds ?(applied : head_type option) vars tys =
      [semantic_function := list nat -> itree E nat] writes no [E] in C++ at
      all, so declaring [E] a [template <typename> class] would demand a
      template of every use site for a position that holds nothing.  It is a
-     plain parameter defaulted to [void], and {!Table.is_phantom_type_param}
+     plain parameter defaulted to [void], and {!Base.Table.is_phantom_type_param}
      is what makes the use sites agree. *)
-  let rendered = Option.map Type_util.get_rendered_tvar_indices applied in
+  let rendered = Option.map Base.Type_util.get_rendered_tvar_indices applied in
   let rendered_in_cpp i =
     match rendered with None -> true | Some l -> List.mem i l
   in
@@ -238,8 +238,8 @@ let template_kinds ?(applied : head_type option) vars tys =
   (* Applied in the definition and still plain: a family position. *)
   let applied_at_all =
     match applied with
-    | Some a -> Type_util.rendered_tvar_arities a
-    | None -> Type_util.applied_core_tvar_arities tys
+    | Some a -> Base.Type_util.rendered_tvar_arities a
+    | None -> Base.Type_util.applied_core_tvar_arities tys
   in
   ( temps,
     { Cpp_ir.Tparam_kinds.template_templates =
@@ -256,7 +256,7 @@ let template_kinds ?(applied : head_type option) vars tys =
 
 (** {!template_kinds}' parameter list, its kinds recorded so that {e uses} of
     [r] pass a bare template name where one is declared
-    ({!Table.is_hkt_ind_param}). *)
+    ({!Base.Table.is_hkt_ind_param}). *)
 let hkt_templates ?applied r vars tys =
   let temps, kinds = template_kinds ?applied vars tys in
   Cpp_ir.Tparam_kinds.record r kinds;
@@ -479,7 +479,7 @@ let relax_applied_param (temps : head_params) (signature : Callable_abi.signatur
       let fresh = ref [] in
       let next_name () =
         let rec pick k =
-          let id = Generated_name.indexed "P" k in
+          let id = Base.Generated_name.indexed "P" k in
           if List.exists (Id.equal id) taken then pick (k + 1) else id
         in
         pick (List.length !fresh)
@@ -644,12 +644,12 @@ let default_unmentioned_temps (temps : head_params) (signature : Callable_abi.si
      otherwise answer for [T1] and no parameter would ever look unmentioned. *)
   let is_tvar id : head_type -> bool = function
     | Variable (Index (_, Some n) | Named n) -> Id.equal n id
-    | Variable (Index (i, None)) -> Id.equal (Common.tvar_id i) id
+    | Variable (Index (i, None)) -> Id.equal (Base.Common.tvar_id i) id
     | _ -> false
   in
   (* Only the arguments a type actually writes count: an argument in a
      position nothing writes is no more deducible than one that is not there. *)
-  let prune = Type_util.prune_unwritten_args in
+  let prune = Base.Type_util.prune_unwritten_args in
   let has_tvar id ty = head_type_exists (is_tvar id) (prune ty) in
   let mentions id =
     let has = has_tvar id in
@@ -723,11 +723,11 @@ let relax_function_head (temps : head_params) (signature : Callable_abi.signatur
 (** Build template parameter list with phantom detection.
 
     Type variables represented concretely in the generated signature (i.e.
-    {!Type_util.primary_tvar_indices}) are emitted as plain [typename T].
+    {!Base.Type_util.primary_tvar_indices}) are emitted as plain [typename T].
     All others (phantom tvars from erased HKT positions or custom-template
     positions that the C++ compiler cannot deduce) are emitted with a [void]
     default ([typename T = void]), except the leading run every call site
-    spells out ({!Type_util.explicit_tvar_prefix}), which stays required.
+    spells out ({!Base.Type_util.explicit_tvar_prefix}), which stays required.
     Applied variables then become template template parameters
     ({!with_applied_tvars}).
 
@@ -748,7 +748,7 @@ let phantom_aware_temps
     ?(force_required = IntSet.empty) ?(also_declared = IntSet.empty) ?core_ty (cty : head_type)
     tvars : head_params =
   (* The leading phantoms are spelled out at every call site
-     ({!Type_util.explicit_tvar_prefix}), so they need no default.  A
+     ({!Base.Type_util.explicit_tvar_prefix}), so they need no default.  A
      default there would let a call that supplies nothing silently pick
      [void] instead of failing to compile. *)
   let undefault n (temps : head_params) : head_params =
@@ -775,7 +775,7 @@ let phantom_aware_temps
     let extra =
       IntSet.fold (fun i acc ->
         if List.exists (fun (j, _) -> j = i) tvars_indexed then acc
-        else (i, Common.tvar_id i) :: acc
+        else (i, Base.Common.tvar_id i) :: acc
       ) (IntSet.union force_required also_declared) []
     in
     let all_tvars_indexed =

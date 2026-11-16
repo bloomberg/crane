@@ -19,8 +19,8 @@ let is_bool : expr -> bool = function
 let rec is_function_type : ty -> bool = function
   | Function _ -> true
   | Entity_application (GlobRef.ConstRef kn, _, _) -> (
-    match Table.lookup_typedef_unchecked kn with
-    | Some ml -> ( match Core_util.core_resolve ml with Core.Type.Arrow _ -> true | _ -> false )
+    match Base.Table.lookup_typedef_unchecked kn with
+    | Some ml -> ( match Base.Core_util.core_resolve ml with Core.Type.Arrow _ -> true | _ -> false )
     | None -> false )
   | In_namespace (_, t) -> is_function_type t
   | _ -> false
@@ -149,7 +149,7 @@ let borrow_bound_matches (stmts : stmt list) =
 (* Under Reuse, a match-only scrutinee may be marked owned so that a reuse arm
    can consume it; one reached through a [const] reference or a pointer cannot
    be, and its matches borrow. *)
-let borrow_bound ss = if Table.reuse_here () then borrow_bound_matches ss else ss
+let borrow_bound ss = if Base.Table.reuse_here () then borrow_bound_matches ss else ss
 
 let rec stmts ss = borrow_bound (bind_by_reference (drop_unused (List.map stmt ss)))
 

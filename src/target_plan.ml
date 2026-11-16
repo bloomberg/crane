@@ -32,7 +32,7 @@ type representation = {
 
 type t = {
   input : Core.Fingerprint.t option;
-  config : Table.unit_config;
+  config : Base.Table.unit_config;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Cpp_ir.Tparam_kinds.t) list;
   modules : Module_plan.t;
@@ -53,17 +53,17 @@ let kind_of t kn = decided t.inductive_kinds kn
 (** The kind [ind] has once [decisions] apply. *)
 let kind_after decisions kn (ind : Core.Inductive.t) = Option.default ind.kind (decided decisions kn)
 
-(** {!Table.is_typeclass}, once [decisions] apply. *)
+(** {!Base.Table.is_typeclass}, once [decisions] apply. *)
 let is_typeclass_after decisions r =
   let of_block kn =
     match decided decisions kn with
     | Some (Core.Inductive.Kind.Type_class _) -> true
     | Some _ -> false
-    | None -> Table.is_typeclass r
+    | None -> Base.Table.is_typeclass r
   in
   match r with
   | GlobRef.IndRef (kn, _) | GlobRef.ConstructRef ((kn, _), _) -> of_block kn
-  | GlobRef.ConstRef _ | GlobRef.VarRef _ -> Table.is_typeclass r
+  | GlobRef.ConstRef _ | GlobRef.VarRef _ -> Base.Table.is_typeclass r
 
 (** Give a functor application's inductives the kind the functor's own body
     gave them.
@@ -238,7 +238,7 @@ let value_use_demotion prior struc =
      natalg]] is a [list alg] whether or not any declaration's type says so. *)
   let scan_body body =
     ignore
-      (Core_util.ast_map_types
+      (Base.Core_util.ast_map_types
          (fun t ->
            scan_type t;
            t )
@@ -252,7 +252,7 @@ let value_use_demotion prior struc =
         (fun (fd : Core.Recursion.Definition.t) ->
           scan_term_type fd.type_;
           scan_body fd.body )
-        (Core_util.term_defs d)
+        (Base.Core_util.term_defs d)
   in
   let scan_spec = function
     | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> scan_ind kn ind
@@ -277,13 +277,13 @@ let value_use_demotion prior struc =
 
 let plan (facts : Program_facts.t) struc =
   let input =
-    if Pipeline_trace.enabled () || Sys.getenv_opt "CRANE_CHECK_IR" <> None then
+    if Base.Pipeline_trace.enabled () || Sys.getenv_opt "CRANE_CHECK_IR" <> None then
       Some (Core.Fingerprint.structure struc)
     else None
   in
   let aligned = functor_alignment struc in
   { input;
-    config = Table.unit_config ~names:facts.used_customs;
+    config = Base.Table.unit_config ~names:facts.used_customs;
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
     modules = Module_plan.empty;
@@ -372,7 +372,7 @@ let equal a b =
   && List.equal
        (fun (r, bs) (r', bs') ->
          GlobRef.UserOrd.equal r r'
-         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Core_util.eq_core_type t t') bs bs' )
+         && List.equal (fun (v, t) (v', t') -> Id.equal v v' && Base.Core_util.eq_core_type t t') bs bs' )
        a.representation.instance_promoted_types b.representation.instance_promoted_types
   && same_callables a.callables b.callables
   && same_instance_methods a.instance_methods b.instance_methods
@@ -383,7 +383,7 @@ let equal a b =
 let record_kinds t struc =
   List.iter
     (fun {block; kind; _} ->
-      Table.add_inductive_kind block kind;
+      Base.Table.add_inductive_kind block kind;
       let record kn (ind : Core.Inductive.t) = if MutInd.UserOrd.equal kn block then ind.kind <- kind in
       Modutil.struct_iter
         (function Core.Decl.Inductive {entity = kn; definition = ind} -> record kn ind | _ -> ())
@@ -396,6 +396,6 @@ let check_kinds_recorded t =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then
   List.iter
     (fun {block; _} ->
-      if not (Option.equal kind_equal (Table.inductive_kind_of (GlobRef.IndRef (block, 0))) (kind_of t block)) then
+      if not (Option.equal kind_equal (Base.Table.inductive_kind_of (GlobRef.IndRef (block, 0))) (kind_of t block)) then
         CErrors.anomaly Pp.(str "Crane: the recorded inductive kinds no longer agree with the plan.") )
     t.inductive_kinds

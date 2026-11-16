@@ -18,7 +18,7 @@ type std_names = {
   get_if : string; (* "std::get_if" or "bsl::get_if" *)
   get : string; (* "std::get" or "bsl::get" *)
   variant : string; (* "std::variant", "bsl::variant" or "crane::variant" *)
-  variant_header : Table.header; (* the header [variant] is declared in *)
+  variant_header : Base.Table.header; (* the header [variant] is declared in *)
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
 }
 
@@ -38,12 +38,12 @@ let default_std_names =
     get_if = "std::get_if";
     get = "std::get";
     variant = "std::variant";
-    variant_header = Table.Standard "variant";
+    variant_header = Base.Table.Standard "variant";
     enable_from_this = "std::enable_shared_from_this";
   }
 
 type t = {
-  config : Table.unit_config;
+  config : Base.Table.unit_config;
   callables : Callable_abi.decided;
   modules : Module_plan.layout;
   pointer_fields : Pointer_fields.t;
@@ -72,9 +72,9 @@ let make ~config =
     names = None;
     loops = Loop_facts.none;
     std_names = default_std_names }
-let detached = make ~config:{Table.concurrent = false}
-let non_atomic_rc u = Table.non_atomic_rc_for u.config
-let count_rc u = Table.count_rc_for u.config
+let detached = make ~config:{Base.Table.concurrent = false}
+let non_atomic_rc u = Base.Table.non_atomic_rc_for u.config
+let count_rc u = Base.Table.count_rc_for u.config
 let is_promoted_inductive u r = Core.Ref.User.Set.mem r u.promoted_inductives
 
 let instance_promoted_types_of u r =

@@ -141,7 +141,7 @@ let rec expr report aliases (e : expr) : effect_ =
   | _, Move (Local x) -> {none with moves = [local aliases x]}
   (* A reuse factory takes the storage of the local it is handed as its
      token, first, to rebuild it in place. *)
-  | _, Call (_, (Type_member (_, f) | Scope (_, f, [])), args) when Generated_name.is_companion "reuse" f -> (
+  | _, Call (_, (Type_member (_, f) | Scope (_, f, [])), args) when Base.Generated_name.is_companion "reuse" f -> (
     match args with
     | Move (Local x) :: rest -> unsequenced report ({none with moves = [Storage x]} :: List.map expr rest)
     | args -> unsequenced report (List.map expr args) )
@@ -355,12 +355,12 @@ let check_body owner ss =
   let report = walk_body ss in
   List.iter
     (fun x ->
-      Probe.violation "moved value read"
+      Base.Probe.violation "moved value read"
         Pp.(str "in " ++ owner ++ str ", " ++ Id.print x ++ str " is read after it is moved") )
     (List.sort_uniq Id.compare (List.filter (fun x -> not (backend x)) report.found));
   List.iter
     (fun (alias, base) ->
-      Probe.violation "borrow outlives its base"
+      Base.Probe.violation "borrow outlives its base"
         Pp.(
           str "in " ++ owner ++ str ", the reference " ++ Id.print alias ++ str " into " ++ Id.print base
           ++ str " is read after " ++ Id.print base ++ str " is given a new value" ) )
@@ -414,7 +414,7 @@ let convention_violations d r params body =
     (Option.bind (Callable_abi.lookup d r) Callable_abi.passing)
 
 let report_conventions owner =
-  List.iter (fun what -> Probe.violation "callable convention" Pp.(str "in " ++ owner ++ str ", " ++ str what))
+  List.iter (fun what -> Base.Probe.violation "callable convention" Pp.(str "in " ++ owner ++ str ", " ++ str what))
 
 let check_convention d owner r params body =
   report_conventions owner (Option.default [] (convention_violations d r params body))
@@ -484,7 +484,7 @@ let escaping ~group ~callees xs ss =
    lambda capturing one by reference; nor its partners by the members of
    its knot they are lent to. *)
 let check_by_reference_closures owner ss =
-  let report what = Probe.violation "closure captures" Pp.(str "in " ++ owner ++ str ", " ++ what) in
+  let report what = Base.Probe.violation "closure captures" Pp.(str "in " ++ owner ++ str ", " ++ what) in
   let rec block ss =
     let planned =
       List.filter_map

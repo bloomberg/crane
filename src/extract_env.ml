@@ -19,10 +19,10 @@ open Libnames
 open Pp
 open CErrors
 open Util
-open Table
+open Base.Table
 open Extraction
 open Modutil
-open Common
+open Base.Common
 
 (****************************************)
 (** {1 Part I: computing Rocq environment} *)
@@ -465,7 +465,7 @@ let rec extract_structure access env mp reso ~all = function
     let ms = extract_structure access env mp reso ~all struc in
     if all || b then (
       List.iter
-        (fun (cst, _) -> Table.add_symbol_rule (ConstRef cst) l)
+        (fun (cst, _) -> Base.Table.add_symbol_rule (ConstRef cst) l)
         rrb.rewrules_rules;
       ms )
     else
@@ -663,7 +663,7 @@ let mk_include s = str ("#include <" ^ s ^ ">")
 let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 
 (** True when BDE (Bloomberg Development Environment) mode is active. *)
-let is_bde () = String.equal (Table.std_lib ()) "BDE"
+let is_bde () = String.equal (Base.Table.std_lib ()) "BDE"
 
 (** Compute the include guard macro name for a given filename. *)
 let include_guard_name s =
@@ -677,12 +677,12 @@ let include_guard_name s =
     share the same accumulator). *)
 let header fn () =
   (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
-     see {!Table.stamp_build}.  The implementation file is stamped as well as
+     see {!Base.Table.stamp_build}.  The implementation file is stamped as well as
      the header because both are compared, and a witness on one of two files
      leaves the other saying nothing. *)
   let build_stamp =
-    if Table.stamp_build () then
-      str ("// crane-plugin " ^ Table.plugin_build_stamp ()) ++ fnl ()
+    if Base.Table.stamp_build () then
+      str ("// crane-plugin " ^ Base.Table.plugin_build_stamp ()) ++ fnl ()
     else mt ()
   in
   (* Component's own header must be first include (BDE Rule 5.5) *)
@@ -716,30 +716,30 @@ let header fn () =
 
 (** Generates the header file preamble: include guard, includes, and BDE
     concept boilerplate (if applicable). *)
-let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
+let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
   (* Headers of the units that already emitted libraries this one depends on
      come first: they are the reason those declarations are absent below. *)
   let imps = List.map (fun u -> u ^ ".h") unit_includes @ get_custom_imports () in
   let himports =
     if is_bde () then
-      let needed = Table.required_standard_headers () in
+      let needed = Base.Table.required_standard_headers () in
       let extra_std =
         List.filter (fun h -> List.mem h needed)
           ["any"; "atomic"; "deque"; "utility"]
       in
       header_imports_bsl @ extra_std
-    else Table.required_standard_headers ()
+    else Base.Table.required_standard_headers ()
   in
   (* A standard header the code demands may be a mapping's import too: each
      is included once, where it first comes. *)
   let included = CList.uniquize (himports @ imps) in
   (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
-     see {!Table.stamp_build}.  Ahead of the include guard so it survives a
+     see {!Base.Table.stamp_build}.  Ahead of the include guard so it survives a
      second inclusion being skipped, and a comment so nothing downstream reads
      it. *)
   let build_stamp =
-    if Table.stamp_build () then
-      str ("// crane-plugin " ^ Table.plugin_build_stamp ()) ++ fnl ()
+    if Base.Table.stamp_build () then
+      str ("// crane-plugin " ^ Base.Table.plugin_build_stamp ()) ++ fnl ()
     else mt ()
   in
   (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
@@ -765,7 +765,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
      this line is absent and rc.h compiles with no arena machinery at all,
      keeping the runtime minimal for programs that never use an arena. *)
   let h =
-    if Table.arena_enabled () then
+    if Base.Table.arena_enabled () then
       h ++ str "#define CRANE_ARENA 1" ++ fnl ()
     else
       h
@@ -775,7 +775,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
      before any runtime header, since lazy.h and crane_fn.h include fn.h
      themselves. *)
   let h =
-    if Table.non_atomic_rc_for config then
+    if Base.Table.non_atomic_rc_for config then
       h ++ str "#define CRANE_NON_ATOMIC_RC 1" ++ fnl ()
     else
       h
@@ -783,50 +783,50 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
   (* [Crane SingleThreaded]: the block heap is one global (pool.h), likewise
      ahead of every runtime header. *)
   let h =
-    if Table.single_threaded_for config then
+    if Base.Table.single_threaded_for config then
       h ++ str "#define CRANE_SINGLE_THREADED 1" ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Cpp_ir.Crane_rt.fn_header then
+    if Base.Table.demanded Cpp_ir.Crane_rt.fn_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.fn_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Cpp_ir.Crane_rt.variant_header then
+    if Base.Table.demanded Cpp_ir.Crane_rt.variant_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.variant_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Cpp_ir.Crane_rt.shared_variant_header then
+    if Base.Table.demanded Cpp_ir.Crane_rt.shared_variant_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.shared_variant_header ++ fnl ()
     else
       h
   in
   (* [crane::immortal], for a function's constants (see {!Cpp_constants}). *)
   let h =
-    if Table.demanded Cpp_ir.Crane_rt.shared_block_header then
+    if Base.Table.demanded Cpp_ir.Crane_rt.shared_block_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.shared_block_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Cpp_ir.Crane_rt.field_header then
+    if Base.Table.demanded Cpp_ir.Crane_rt.field_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.field_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.demanded Cpp_ir.Crane_rt.obj_header then
+    if Base.Table.demanded Cpp_ir.Crane_rt.obj_header then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.obj_header ++ fnl ()
     else
       h
   in
   let h =
-    if Table.has_any_coinductive () then
+    if Base.Table.has_any_coinductive () then
       h ++ mk_include_quoted Cpp_ir.Crane_rt.lazy_header ++ fnl ()
     else
       h
@@ -835,7 +835,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
      add it when the header isn't already pulled in by a user-specified
      [From "crane_itree.h"] directive. *)
   let h =
-    if Table.needs_itree_header ()
+    if Base.Table.needs_itree_header ()
        && not
             (List.exists
                (fun s -> String.equal s Cpp_ir.Crane_rt.itree_header)
@@ -850,7 +850,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
      not emit the template into every generated header (which would be an ODR
      redefinition when several are included in one translation unit). *)
   let h =
-    if Table.needs_erase_fn ()
+    if Base.Table.needs_erase_fn ()
        && not
             (List.exists
                (fun s -> String.equal s Cpp_ir.Crane_rt.erasure_header)
@@ -863,7 +863,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
   (* [crane::arena]/[arena_alloc] (for opt-in arena-mode recursive inductives)
      live in the arena.h runtime header. *)
   let h =
-    if Table.needs_arena ()
+    if Base.Table.needs_arena ()
        && not (List.exists (fun s -> String.equal s "arena.h") included)
     then
       h ++ mk_include_quoted "arena.h" ++ fnl ()
@@ -873,7 +873,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
   (* [crane::rc]/[crane::make_rc]/[crane::enable_rc_from_this] (the non-atomic
      reference-counted pointer selected by [Crane NonAtomicRc]) live in rc.h. *)
   let h =
-    if Table.non_atomic_rc_for config
+    if Base.Table.non_atomic_rc_for config
        && not (List.exists (fun s -> String.equal s "rc.h") included)
     then
       h ++ mk_include_quoted "rc.h" ++ fnl ()
@@ -883,7 +883,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
   (* [crane::counting_ptr] (the measurement-only reference-count-counting
      shared pointer selected by [CRANE_COUNT_RC]) lives in count_rc.h. *)
   let h =
-    if Table.count_rc_for config
+    if Base.Table.count_rc_for config
        && not (List.exists (fun s -> String.equal s "count_rc.h") included)
     then
       h ++ mk_include_quoted "count_rc.h" ++ fnl ()
@@ -893,7 +893,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
   (* [crane::small_vector] (the small-buffer-optimized destructor drain
      worklist) lives in small_vector.h. *)
   let h =
-    if Table.needs_small_vector ()
+    if Base.Table.needs_small_vector ()
        && not (List.exists (fun s -> String.equal s "small_vector.h") included)
     then
       h ++ mk_include_quoted "small_vector.h" ++ fnl ()
@@ -907,7 +907,7 @@ let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
      drains reach for [std::atomic_thread_fence].  [Crane NonAtomicRc] emits no
      fence and so needs no include. *)
   let h =
-    if Table.needs_small_vector () && not (Table.non_atomic_rc_for config)
+    if Base.Table.needs_small_vector () && not (Base.Table.non_atomic_rc_for config)
        && not (List.exists (fun s -> String.equal s "atomic") included)
     then
       h ++ mk_include "atomic" ++ fnl ()
@@ -1080,23 +1080,23 @@ let layout_pass_names =
     [u] is the unit's context, which [k] is handed with the callable plans
     in it. *)
 let plan_layout cx u (acc : Accumulated_plan.t) struc k =
-  Pipeline_trace.event "layout" prepare_layout;
+  Base.Pipeline_trace.event "layout" prepare_layout;
   let modules, names, analysis = Cpp.prepare_structure cx u struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
   with_plans cx {Cpp_state.no_plans with analysis = Some analysis} @@ fun () ->
   with_plan cx {u with names = Some names} acc @@ fun u ->
-  Pipeline_trace.event "layout" plan_names;
+  Base.Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
-  Pipeline_trace.event "layout" plan_referenced_names;
+  Base.Pipeline_trace.event "layout" plan_referenced_names;
   let referenced_names = Cpp.plan_referenced_names struc in
-  Pipeline_trace.event "layout" plan_field_names;
+  Base.Pipeline_trace.event "layout" plan_field_names;
   let field_names = Cpp.plan_field_names struc in
-  Pipeline_trace.event "layout" plan_pointer_fields;
+  Base.Pipeline_trace.event "layout" plan_pointer_fields;
   let pointer_fields = Cpp.plan_pointer_fields cx struc in
   let acc = {acc with pointer_fields = Pointer_fields.add acc.pointer_fields pointer_fields} in
   with_plan cx u acc @@ fun u ->
-  Pipeline_trace.event "layout" plan_unmerged_wrappers;
+  Base.Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers cx () in
   let acc =
     { acc with
@@ -1104,14 +1104,14 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
         List.fold_left (fun m (name, mp) -> CString.Map.add name mp m) acc.unmerged_wrappers unmerged_wrappers }
   in
   with_plan cx u acc @@ fun u ->
-  Pipeline_trace.event "layout" plan_concept_prerequisites;
+  Base.Pipeline_trace.event "layout" plan_concept_prerequisites;
   let modules = Cpp.plan_concept_prerequisites cx modules struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
   with_plan cx u acc @@ fun u ->
-  Pipeline_trace.event "layout" plan_scopes;
+  Base.Pipeline_trace.event "layout" plan_scopes;
   let scopes = Cpp.plan_scopes cx struc in
   with_context cx {u with scopes = Scope_plan.bound_of scopes} @@ fun u ->
-  Pipeline_trace.event "layout" plan_promoted_inductives;
+  Base.Pipeline_trace.event "layout" plan_promoted_inductives;
   let promoted_inductives = Cpp.plan_promoted_inductives u struc in
   let acc =
     { acc with
@@ -1119,16 +1119,16 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
         List.fold_left (fun s r -> Core.Ref.User.Set.add r s) acc.promoted_inductives promoted_inductives }
   in
   with_plan cx u acc @@ fun u ->
-  Pipeline_trace.event "layout" plan_accessors;
+  Base.Pipeline_trace.event "layout" plan_accessors;
   let accessors = Cpp.plan_accessors cx u struc in
   let acc = {acc with accessors = List.fold_left Cpp_state.add_accessor_ref acc.accessors accessors} in
   with_plan cx u acc @@ fun u ->
-  Pipeline_trace.event "layout" plan_nested_structs;
+  Base.Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs cx struc in
   let acc =
     {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
   with_plan cx u acc @@ fun u ->
-  Pipeline_trace.event "layout" plan_instance_promoted_types;
+  Base.Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types cx struc in
   let acc =
     { acc with
@@ -1138,7 +1138,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
           acc.instance_promoted_types instance_promoted_types }
   in
   with_plan cx u acc @@ fun u ->
-  Pipeline_trace.event "layout" elaborate_calls;
+  Base.Pipeline_trace.event "layout" elaborate_calls;
   let elaborations =
     Translation_state.generating_outside_modules cx @@ fun () ->
     Core_elaborate.structure
@@ -1148,7 +1148,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   in
   Translation_state.with_unit_facts cx { (Translation_state.unit_facts cx) with elaborations = Some elaborations }
   @@ fun () ->
-  Pipeline_trace.event "layout" plan_callables;
+  Base.Pipeline_trace.event "layout" plan_callables;
   let ((callables, instance_methods) as planned), (frames, concepts) = Cpp.plan_callables cx struc in
   if
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
@@ -1162,7 +1162,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   let assumed =
     Translation_state.generating_outside_modules cx (fun () -> Translation_calls.assumed_callables cx struc
       callables) in
-  Pipeline_trace.event "layout" decide_callables;
+  Base.Pipeline_trace.event "layout" decide_callables;
   let u = {u with Unit_context.callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
   with_context cx u @@ fun u ->
   k u acc
@@ -1182,8 +1182,8 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
     assumed,
     elaborations )
 
-(** The tables' sizes ({!Table.census}), and how many names emission had
-    decided ({!Common.names_decided_while_emitting}), at one point of a
+(** The tables' sizes ({!Base.Table.census}), and how many names emission had
+    decided ({!Base.Common.names_decided_while_emitting}), at one point of a
     unit's extraction. *)
 type checkpoint = {
   census : (string * int) list;
@@ -1191,7 +1191,7 @@ type checkpoint = {
 }
 
 let checkpoint () =
-  { census = Table.census (); names_decided = List.length (Common.names_decided_while_emitting ()) }
+  { census = Base.Table.census (); names_decided = List.length (Base.Common.names_decided_while_emitting ()) }
 
 (** The tables that grew from [before] to [after], with how much. *)
 let grown before after =
@@ -1207,9 +1207,9 @@ let grown before after =
     [before] to now, while the files were rendered: the headers their text
     demands. *)
 let report_decided_while_rendering before =
-  if Pipeline_trace.enabled () then
+  if Base.Pipeline_trace.enabled () then
     let grown = grown before (checkpoint ()) in
-    Pipeline_trace.event "emit"
+    Base.Pipeline_trace.event "emit"
       ( "decided while rendering: "
       ^ if grown = [] then "nothing"
         else String.concat ", " (List.map (fun (name, n) -> Printf.sprintf "%s +%d" name n) grown) )
@@ -1217,7 +1217,7 @@ let report_decided_while_rendering before =
 (** The tables generating output ahead of the files may add to: the headers
     what is generated needs, the customs it writes, whose imports are headers
     too, and the names of the helpers lifted out of a body as it is
-    generated, which {!Common.names_decided_while_emitting} lists for the
+    generated, which {!Base.Common.names_decided_while_emitting} lists for the
     check below.  Rendering may add to none: the headers are
     demanded from what was generated ({!Cpp_demands}). *)
 let generation_products = ["demands"; "written_customs"; "ref_renaming"; "mp_renaming"; "global_ids"]
@@ -1238,7 +1238,7 @@ let rendering_products = []
     files are rendered, so from [generated] on nothing may be added.
 
     The corpus satisfies this today.  Reported under [CRANE_CHECK_IR], like
-    {!Table.mark_demand}'s late demands, rather than left to surface as C++
+    {!Base.Table.mark_demand}'s late demands, rather than left to surface as C++
     that does not compile. *)
 let check_no_late_decisions ~planned ~generated =
   report_decided_while_rendering generated;
@@ -1267,12 +1267,12 @@ let check_no_late_decisions ~planned ~generated =
           else "the files were being rendered"
         in
         match decided with
-        | Common.Global_name r when i < generated.names_decided && Option.has_some (Lifted.of_ref r) -> ()
-        | Common.Global_name r ->
-          late ~stage Pp.(str "the name of " ++ str (Table.kername_of_global r) ++ str " was decided")
-        | Common.Module_name mp ->
+        | Base.Common.Global_name r when i < generated.names_decided && Option.has_some (Base.Lifted.of_ref r) -> ()
+        | Base.Common.Global_name r ->
+          late ~stage Pp.(str "the name of " ++ str (Base.Table.kername_of_global r) ++ str " was decided")
+        | Base.Common.Module_name mp ->
           late ~stage Pp.(str "the name of module " ++ str (ModPath.to_string mp) ++ str " was decided") )
-      (Common.names_decided_while_emitting ())
+      (Base.Common.names_decided_while_emitting ())
   end
 
 (** {2 Extraction of a ml struct to a file} *)
@@ -1310,7 +1310,7 @@ let get_comment () =
     [Set Crane Format Style "None"].  Text the layout fails on is kept as
     written, with a warning: it is still the C++ the printer meant. *)
 let laid_out ?(file = "") raw =
-  if Table.format_style () = "None" then
+  if Base.Table.format_style () = "None" then
     raw
   else
     match Cpp_layout.layout ~file raw with
@@ -1338,7 +1338,7 @@ let write_laid_out file b =
     therefore Y's content is already (or will be) included when X is compiled).
     The default is no-op; [separate_extraction] sets it for the module it
     prints, and puts the default back however the print leaves. *)
-let opened_filter : (ModPath.t -> bool) ref = State.cell State.Extraction (fun _ -> true)
+let opened_filter : (ModPath.t -> bool) ref = Base.State.cell Base.State.Extraction (fun _ -> true)
 
 (** Under [CRANE_COUNT_GENERATION], report how many top-level bodies each
     phase generated for the unit written to [fn]. *)
@@ -1358,8 +1358,8 @@ let report_body_generations fn =
     the knot of a well-founded recursion tied directly, every read of a
     local its own, and the open types of local definitions
     minted: the rewrites the program goes through before it is frozen. *)
-let core_passes cx to_appear : Core.Program.extracted Pipeline_trace.pass list =
-  let open Pipeline_trace in
+let core_passes cx to_appear : Core.Program.extracted Base.Pipeline_trace.pass list =
+  let open Base.Pipeline_trace in
   [ pass "modutil" (Modutil.optimize_struct to_appear);
     (* Which inductives are shared variants is a property of their
        declarations, final from here; the method registry {!Normalize} builds
@@ -1380,7 +1380,7 @@ let translation_context () =
 
 let core_pass_names =
   let cx = translation_context () in
-  Pipeline_trace.names (core_passes cx ([], []))
+  Base.Pipeline_trace.names (core_passes cx ([], []))
 
 (** {!Normalize}, on the frozen program ({!Core_phase.normalize}), before it is
     analysed: every consumer of the structure (the method registry built
@@ -1392,14 +1392,14 @@ let core_pass_names =
     the body Normalize names the calls of and splices partners into: a call
     written in stages or through a coercion is one call there.  Normalize
     keeps it canonical, which [CRANE_CHECK_IR] checks. *)
-let normalize_passes cx : Core_phase.normalizing Pipeline_trace.pass list =
+let normalize_passes cx : Core_phase.normalizing Base.Pipeline_trace.pass list =
   let rewriting f (p : Core_phase.normalizing) = {p with structure = f p.structure} in
   let lowering =
     { Normalize.app_result_type = (fun f args -> Translation_calls.core_app_result_type cx f args);
       return_type_is_erased = (fun params ret -> Translation.return_type_is_erased cx params ret);
       suspension = Translation_suspension.suspension cx }
   in
-  Pipeline_trace.
+  Base.Pipeline_trace.
     [ pass "eta_expand" (rewriting Normalize.eta_expand);
       pass "let_lambdas" (rewriting Normalize.let_lambdas);
       pass "spines" (rewriting Core_normalize.structure);
@@ -1408,16 +1408,16 @@ let normalize_passes cx : Core_phase.normalizing Pipeline_trace.pass list =
 
 let normalize_pass_names =
   let cx = translation_context () in
-  Pipeline_trace.names (normalize_passes cx)
+  Base.Pipeline_trace.names (normalize_passes cx)
 
 (** Under [CRANE_TRACE_PIPELINE], report the fingerprint of [struc]; under
     it or [CRANE_CHECK_IR], keep its elements' for
     {!check_structure_unchanged}. *)
 let observed_fingerprint ~stage struc =
-  if Pipeline_trace.enabled () then
-    Pipeline_trace.event stage
+  if Base.Pipeline_trace.enabled () then
+    Base.Pipeline_trace.event stage
       ("fingerprint " ^ Core.Fingerprint.to_hex (Core.Fingerprint.structure struc));
-  if Pipeline_trace.enabled () || Probe.checking () then Some (Core.Fingerprint.elements struc)
+  if Base.Pipeline_trace.enabled () || Base.Probe.checking () then Some (Core.Fingerprint.elements struc)
   else None
 
 (** Report the elements rendering changed, and under [CRANE_CHECK_IR] fail
@@ -1436,10 +1436,10 @@ let check_structure_unchanged planned struc =
           (List.combine before (Core.Fingerprint.elements struc))
       in
       List.iter
-        (fun l -> Pipeline_trace.event "emit" ("changed by rendering: " ^ Label.to_string l))
+        (fun l -> Base.Pipeline_trace.event "emit" ("changed by rendering: " ^ Label.to_string l))
         changed;
       if changed <> [] then
-        Probe.violation "frozen program"
+        Base.Probe.violation "frozen program"
           Pp.(
             str "rendering changed "
             ++ prlist_with_sep pr_comma Label.print changed) )
@@ -1455,9 +1455,9 @@ let freeze cx core f =
   let normalized, program =
     Translation_state.generating_outside_modules cx @@ fun () ->
     let normalized =
-      Core_phase.normalize (Pipeline_trace.run ~stage:"normalize" (normalize_passes cx)) (Core_phase.freeze core)
+      Core_phase.normalize (Base.Pipeline_trace.run ~stage:"normalize" (normalize_passes cx)) (Core_phase.freeze core)
     in
-    Pipeline_trace.event "core" "analyze_program";
+    Base.Pipeline_trace.event "core" "analyze_program";
     (normalized, Program_facts.analyze_program cx normalized)
   in
   Translation_state.with_program_facts cx (Program_facts.lowering program) @@ fun () ->
@@ -1467,9 +1467,9 @@ let freeze cx core f =
     ({!core_pass_names}), keeping what [to_appear] names. *)
 let optimize_struct cx to_appear struc =
   let core =
-    Core_phase.optimize (Pipeline_trace.run ~stage:"core" (core_passes cx to_appear)) (Core_phase.extracted struc)
+    Core_phase.optimize (Base.Pipeline_trace.run ~stage:"core" (core_passes cx to_appear)) (Core_phase.extracted struc)
   in
-  if Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core_phase.structure core));
+  if Base.Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core_phase.structure core));
   core
 
 (** The steps of {!analyze_and_plan}, in order. *)
@@ -1485,9 +1485,9 @@ let plan_pass_names = [analyze_program; plan_target; record_kinds]
     computed twice and the two must agree, which is what lets a plan stand
     for its input. *)
 let analyze_and_plan struc =
-  Pipeline_trace.event "plan" analyze_program;
+  Base.Pipeline_trace.event "plan" analyze_program;
   let facts = Program_facts.analyze struc in
-  Pipeline_trace.event "plan" plan_target;
+  Base.Pipeline_trace.event "plan" plan_target;
   let plan = Target_plan.plan facts struc in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     let facts' = Program_facts.analyze struc in
@@ -1497,28 +1497,28 @@ let analyze_and_plan struc =
         && Target_plan.equal plan (Target_plan.plan facts' struc))
     then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.")
   end;
-  Pipeline_trace.event "plan" record_kinds;
+  Base.Pipeline_trace.event "plan" record_kinds;
   Target_plan.record_kinds plan struc;
   (facts, plan)
 
 (** What a unit decides about its structure before its layout, in order.
     [namespace] is the C++ namespace of a separately extracted file. *)
-let unit_passes ~namespace ~config : Core.Program.t Pipeline_trace.pass list =
-  let open Pipeline_trace in
+let unit_passes ~namespace ~config : Core.Program.t Base.Pipeline_trace.pass list =
+  let open Base.Pipeline_trace in
   [ (* The customs the program names decide whether this unit can spawn a
        thread, which is what resolves a [Crane NonAtomicRc] or [Crane
        SingleThreaded] request. *)
-    effect_ "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request config);
+    effect_ "non_atomic_rc" (fun _ -> Base.Table.check_non_atomic_rc_request config);
     (* This file's demands start from nothing, so that one file's needs don't
        leak into a later file of a separate extraction. *)
-    effect_ "reset_demands" (fun _ -> Table.reset_demands ());
+    effect_ "reset_demands" (fun _ -> Base.Table.reset_demands ());
     (* In separate extraction, cross-module references are fully qualified
        ([Datatypes::List] rather than [List]). *)
     effect_ "cross_file_qualification" (fun _ ->
-        if namespace <> None then Common.set_force_cross_file_qualification () ) ]
+        if namespace <> None then Base.Common.set_force_cross_file_qualification () ) ]
 
 let unit_pass_names =
-  Pipeline_trace.names (unit_passes ~namespace:None ~config:(Table.unit_config ~names:Core.Ref.User.Set.empty))
+  Base.Pipeline_trace.names (unit_passes ~namespace:None ~config:(Base.Table.unit_config ~names:Core.Ref.User.Set.empty))
 
 (** The steps of {!plan_representation}, in order. *)
 let template_kinds = "template_kinds"
@@ -1533,7 +1533,7 @@ let elaborate_pass_names = [plan_foreign_callables]
     calls of class fields it may project through an instance. *)
 let elaborate_unit cx (u : Unit_context.t) elaborations =
   Translation_state.generating_outside_modules cx @@ fun () ->
-  Pipeline_trace.event "elaborate" plan_foreign_callables;
+  Base.Pipeline_trace.event "elaborate" plan_foreign_callables;
   let foreign =
     Callable_abi.with_foreign u.callables
       (fun r -> Translation_calls.callee_abi cx ~instances:0 r)
@@ -1546,7 +1546,7 @@ let elaborate_unit cx (u : Unit_context.t) elaborations =
     callables =
       Callable_abi.with_projections u.callables Translation_calls.projection_abi
         (List.filter
-           (fun r -> Table.is_inline_custom r || Table.singleton_method_class r <> None)
+           (fun r -> Base.Table.is_inline_custom r || Base.Table.singleton_method_class r <> None)
            (Core_elaborate.referenced elaborations) ) }
 
 (** Decide the kinds of the template parameters of the unit's inductives and
@@ -1556,7 +1556,7 @@ let elaborate_unit cx (u : Unit_context.t) elaborations =
     {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
     second time, against the first's, and the two must agree. *)
 let plan_representation cx plan struc =
-  Pipeline_trace.event "represent" template_kinds;
+  Base.Pipeline_trace.event "represent" template_kinds;
   let kinds = Cpp_ind.template_kinds cx struc in
   let plan = Target_plan.with_template_kinds plan kinds in
   if
@@ -1581,18 +1581,18 @@ let check_against_plan (plan : Target_plan.t) =
       plan.template_kinds;
     List.iter
       (fun (mp, s) ->
-        if not (Option.equal String.equal (Common.decided_module_name mp) (Some s)) then fail "module names" )
+        if not (Option.equal String.equal (Base.Common.decided_module_name mp) (Some s)) then fail "module names" )
       plan.representation.module_names;
     List.iter
       (fun (r, s) ->
-        if not (Option.equal String.equal (Common.decided_global_name r) (Some s)) then fail "global names" )
+        if not (Option.equal String.equal (Base.Common.decided_global_name r) (Some s)) then fail "global names" )
       (plan.representation.names @ plan.representation.referenced_names);
     List.iter
       (fun (c, ids) ->
-        let ctor = Type_util.ctor_struct_name_of_ref c in
+        let ctor = Base.Type_util.ctor_struct_name_of_ref c in
         List.iteri
           (fun j id ->
-            if not (Id.equal (Common.lookup_ctor_field_name ~owner:c ctor j) id) then fail "constructor field names" )
+            if not (Id.equal (Base.Common.lookup_ctor_field_name ~owner:c ctor j) id) then fail "constructor field names" )
           ids )
       plan.representation.field_names;
     let describe (name, owner) =
@@ -1661,8 +1661,8 @@ let declares struc =
 let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
     (fn, si, mo) dry (loops : Loop_facts.t) (core : Core_phase.normalized Core_phase.program) =
-  let dry = dry || Probe.census_dry () in
-  Probe.census_unit ();
+  let dry = dry || Base.Probe.census_dry () in
+  Base.Probe.census_unit ();
   let struc = Core_phase.structure core in
   Buffer.clear buf;
   let d = descr () in
@@ -1672,8 +1672,8 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   reset_renaming_tables ();
   let unsafe_needs =
     {
-      Backend.erased_values = struct_ast_search Core_util.is_erased_value struc;
-      erased_types = struct_type_search Core_util.is_erased_type struc;
+      Backend.erased_values = struct_ast_search Base.Core_util.is_erased_value struc;
+      erased_types = struct_type_search Base.Core_util.is_erased_type struc;
       unknown_types = struct_type_search (( == ) Core.Type.Unknown) struc;
       magic = false;
     }
@@ -1690,7 +1690,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
       context = u;
       plans = Cpp_state.no_plans }
   @@ fun () ->
-  ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
+  ignore (Base.Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
   let plan = plan_representation cx plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
   plan_layout cx u earlier struc @@ fun u acc (modules, representation, callables, assumed, elaborations) ->
@@ -1711,26 +1711,26 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
      files again once both are rendered, and fails unless each comes out the
      same: rendering is a function of the frozen plan alone. *)
   let render_impl () =
-    Pipeline_trace.event "emit" "render_impl";
+    Base.Pipeline_trace.event "emit" "render_impl";
     d.pp_struct cx struc
   in
   let render_intf () =
-    Pipeline_trace.event "emit" "render_intf";
+    Base.Pipeline_trace.event "emit" "render_intf";
     d.pp_hstruct cx struc
   in
   let intf_first = Sys.getenv_opt "CRANE_RENDER_ORDER" = Some "intf-first" in
   (* Every function is generated before either render, reading the plans
      emission reads, and each pass is handed the position it plans for. *)
   end_planning ();
-  Pipeline_trace.event "emit" "generate_ahead";
+  Base.Pipeline_trace.event "emit" "generate_ahead";
   Cpp.generate_ahead cx u struc;
-  Common.plan_written_files (Cpp.files_named_ahead cx u struc);
-  Table.plan_written_customs (Cpp.customs_written_ahead cx u);
-  Table.check_written_mapping_headers ();
+  Base.Common.plan_written_files (Cpp.files_named_ahead cx u struc);
+  Base.Table.plan_written_customs (Cpp.customs_written_ahead cx u);
+  Base.Table.check_written_mapping_headers ();
   Cpp.plan_function_reads ();
-  Pipeline_trace.event "emit" "plan_file_layout";
+  Base.Pipeline_trace.event "emit" "plan_file_layout";
   Cpp.plan_file_layout cx u struc;
-  Pipeline_trace.event "emit" "plan_ctor_aliases";
+  Base.Pipeline_trace.event "emit" "plan_ctor_aliases";
   let ctor_aliases = Cpp.plan_ctor_aliases cx struc in
   with_plans cx {(Translation_state.plans cx) with ctor_aliases = Some ctor_aliases} @@ fun () ->
   let generated_checkpoint = checkpoint () in
@@ -1753,18 +1753,18 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
             ++ str " again gave another document.")
   end;
   report_body_generations fn;
-  Table.freeze_demands ();
-  Common.check_written_files ();
-  Table.check_concurrency_decided plan.config;
+  Base.Table.freeze_demands ();
+  Base.Common.check_written_files ();
+  Base.Table.check_concurrency_decided plan.config;
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
   Unit_program.check_against_plan ~declares:(declares struc);
   Unit_program.check_against_ahead ();
   check_against_plan plan;
   check_structure_unchanged planned struc;
-  if Pipeline_trace.enabled () then begin
-    Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
-    Pipeline_trace.event "emit" (Core_effects.report facts.effects);
-    Pipeline_trace.event "emit" (Callable_abi.report_foreign u.callables)
+  if Base.Pipeline_trace.enabled () then begin
+    Base.Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
+    Base.Pipeline_trace.event "emit" (Core_effects.report facts.effects);
+    Base.Pipeline_trace.event "emit" (Callable_abi.report_foreign u.callables)
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   (* The header includes every file either of the unit's files names, so a
@@ -1773,11 +1773,11 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
      ([[gnu::used]] inline, see the printer's Dasgn): there is no unit that
      includes a function but not a value it reads, unless the topological
      filter dropped a named file. *)
-  if Probe.checking () then
+  if Base.Probe.checking () then
     List.iter
       (fun mp ->
         if not (!opened_filter mp) then
-          Probe.violation "included files"
+          Base.Probe.violation "included files"
             Pp.(
               str "the unit names" ++ spc () ++ ModPath.print mp
               ++ spc ()
@@ -2006,9 +2006,9 @@ type export = {ref : GlobRef.t; name : string}
     each requested constant, as spelled from where it is declared. *)
 let exports refs =
   let export r =
-    let base, _ = Table.labels_of_ref r in
+    let base, _ = Base.Table.labels_of_ref r in
     let v = toplevel_visibility [base] in
-    {ref = r; name = Cpp_name.to_string (resolve_ref_name v Term r)}
+    {ref = r; name = Base.Cpp_name.to_string (resolve_ref_name v Term r)}
   in
   List.filter_map
     (function GlobRef.ConstRef _ as r -> Some (export r) | _ -> None)
@@ -2045,16 +2045,16 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
               (fun mp ->
                 (not (ModPath.equal mp current))
                 &&
-                match Table.extracted_unit_of mp with
+                match Base.Table.extracted_unit_of mp with
                 | Some unit -> not (String.equal unit target)
                 | None -> false )
               core
           in
-          List.iter (fun (mp, _) -> Table.claim_extracted_unit mp target) (Core_phase.modules own);
+          List.iter (fun (mp, _) -> Base.Table.claim_extracted_unit mp target) (Core_phase.modules own);
           (List.map fst (Core_phase.modules foreign), own)
       in
       let unit_includes =
-        List.sort_uniq String.compare (List.filter_map Table.extracted_unit_of foreign)
+        List.sort_uniq String.compare (List.filter_map Base.Table.extracted_unit_of foreign)
       in
       warns ();
       let filenames = mono_filename f in
@@ -2063,7 +2063,7 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
       | Some fn, _, _ ->
         let source = derive_source_file fn in
         if source <> "" then
-          Doc_comments.set_table (Doc_comments.parse_file source)
+          Base.Doc_comments.set_table (Base.Doc_comments.parse_file source)
       | _ -> () );
       ignore (freeze cx core (print_structure_to_file cx ~unit_includes filenames false));
       read refs )
@@ -2080,12 +2080,12 @@ let full_extr cx opaque_access f refs =
     (e.g. a temporary file) pass [~validate:false]. *)
 let full_extraction ?(validate = true) ~opaque_access f lr =
   let cx = translation_context () in
-  if validate then Option.iter Table.claim_output_target f;
+  if validate then Option.iter Base.Table.claim_output_target f;
   full_extr cx opaque_access f (locate_ref lr)
 
 let full_extraction_exports ?(validate = true) ~opaque_access f lr =
   let cx = translation_context () in
-  if validate then Option.iter Table.claim_output_target f;
+  if validate then Option.iter Base.Table.claim_output_target f;
   full_extr_reading cx opaque_access f (locate_ref lr) exports
 
 (** {2 Separate extraction is similar to recursive extraction, with the output
@@ -2103,7 +2103,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
     ~finally:(fun () ->
       Cpp_state.clear_global_method_registry ();
       Cpp_state.clear_valid_output_modules ();
-      Common.clear_non_output_modules () )
+      Base.Common.clear_non_output_modules () )
   @@ fun () ->
   (* Descend through applications/functors to the underlying struct body,
      returning its substructure (or [] for a bare module identifier). *)
@@ -2137,7 +2137,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
   let decl_names = function
     | Core.Decl.Type_alias {entity = r; _} -> [ref_label r]
     | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-      List.map (fun (fd : Core.Recursion.Definition.t) -> ref_label fd.entity) (Core_util.term_defs d)
+      List.map (fun (fd : Core.Recursion.Definition.t) -> ref_label fd.entity) (Base.Core_util.term_defs d)
     | Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
       Array.to_list (Array.map (fun (ip : Core.Inductive.Packet.t) -> Id.to_string ip.name) ind.packets)
   in
@@ -2153,7 +2153,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
     List.filter_map (fun (mp, sel) -> if has_real_decls sel then Some mp else None) struc
   in
   Cpp_state.set_valid_output_modules valid_mps;
-  Common.set_non_output_modules valid_mps;
+  Base.Common.set_non_output_modules valid_mps;
   (* Build a topological position map for all extracted modules.  The struc
      list is already in topological order (each module after its dependencies).
      We use positions to prune forward includes (A includes B where B comes
@@ -2188,7 +2188,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
             let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
             if in_template && not is_function then
               accessors := Cpp_state.add_accessor_ref !accessors r )
-          (Core_util.term_defs d)
+          (Base.Core_util.term_defs d)
       | Core.Module.Structure_item.Module m ->
         let has_params = match m.expr with
           | Core.Module.Expr.Functor _ -> true
@@ -2202,8 +2202,8 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
               | Core.Module.Signature_item.Declaration (Core.Signature.Declaration.Value {entity = r; type_ = ty; _}) ->
                 let is_function = match ty with Core.Type.Arrow _ -> true | _ -> false in
                 if not is_function then begin
-                  let lbl = Table.label_of_r r in
-                  accessors := Cpp_state.add_accessor !accessors (Table.modpath_of_r r) lbl;
+                  let lbl = Base.Table.label_of_r r in
+                  accessors := Cpp_state.add_accessor !accessors (Base.Table.modpath_of_r r) lbl;
                   Option.iter (fun pmp -> accessors := Cpp_state.add_accessor !accessors pmp lbl) param_mp
                 end
               | Core.Module.Signature_item.Module mt ->
@@ -2244,7 +2244,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
       if is_modfile mp && has_real_decls sel then
         let ns = file_namespace mp sel in
         if not (String.equal ns (ns_of_modfile mp)) then
-          Common.rename_file_namespace mp ns )
+          Base.Common.rename_file_namespace mp ns )
     struc;
   let print earlier (mp, unit) =
     match (mp, Core_phase.structure unit) with
@@ -2280,7 +2280,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
   let program_reads = ref Core.Ref.Can.Set.empty in
   Modutil.struct_iter
     (fun d ->
-      let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core_util.term_defs d) in
+      let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Base.Core_util.term_defs d) in
       Modutil.decl_iter_references
         (fun r -> if not (List.exists (Core.Ref.Can.equal r) own) then program_reads := Core.Ref.Can.Set.add r !program_reads)
         ignore ignore d)
@@ -2314,19 +2314,19 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
       let is_mutual = Array.length ind.packets > 1 in
       Array.iteri (fun i _p ->
         let ind_ref = GlobRef.IndRef (kn, i) in
-        if not (Table.is_custom ind_ref) && not is_mutual then begin
-          if Table.is_enum_inductive_packet ind i then
-            Table.add_enum_inductive ind_ref;
-          if Table.is_flat_inductive_packet kn ind i then
-            Table.add_flat_inductive ind_ref
+        if not (Base.Table.is_custom ind_ref) && not is_mutual then begin
+          if Base.Table.is_enum_inductive_packet ind i then
+            Base.Table.add_enum_inductive ind_ref;
+          if Base.Table.is_flat_inductive_packet kn ind i then
+            Base.Table.add_flat_inductive ind_ref
         end
       ) ind.packets
     | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) when in_struct ->
       List.iter
         (fun {Core.Recursion.Definition.entity = r; type_ = ty; _} ->
           if (match ty with Core.Type.Arrow _ -> false | _ -> true) then
-            accessors := Cpp_state.add_accessor !accessors (Table.modpath_of_r r) (Table.label_of_r r) )
-        (Core_util.term_defs d)
+            accessors := Cpp_state.add_accessor !accessors (Base.Table.modpath_of_r r) (Base.Table.label_of_r r) )
+        (Base.Core_util.term_defs d)
     | _ -> ()
   ) struc;
   (* Each unit is planned with what the units before it planned. *)
@@ -2435,7 +2435,7 @@ let emit_test_status status test_id_str source_file =
 let extract_and_compile ~opaque_access file l =
   (* Take the output target, rejecting one that would escape the output
      directory, before it is turned into a path. *)
-  Option.iter Table.claim_output_target file;
+  Option.iter Base.Table.claim_output_target file;
   let filename =
     match mono_filename file with
     | Some fn, _, _ ->

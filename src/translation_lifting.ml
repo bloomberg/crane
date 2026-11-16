@@ -8,12 +8,12 @@
     group's members named by their helpers, Y-combinator self calls made
     direct. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 module IntSet = Escape.IntSet
@@ -28,7 +28,7 @@ let rec collect_tvars_ast acc = function
     List.fold_left
       (fun acc (_, t) -> collect_tvars acc t)
       acc
-      (Core_util.Var_types.bindings (Core_util.written_type_args use))
+      (Base.Core_util.Var_types.bindings (Base.Core_util.written_type_args use))
   | Core.Expr.Construct {result_type = ty; arguments = args; _} ->
     List.fold_left collect_tvars_ast (collect_tvars acc ty) args
   | Core.Expr.Match {scrutinee_type = ty; scrutinee = e; branches = brs; _} ->
@@ -143,19 +143,19 @@ let stmts_reference_var (target : Id.t) (stmts : Cpp_ir.Lowered.Stmt.t list) : b
 
 (** Build type variable names for a list of Core.Type.Variable indices. Indices within
     [n_outer] reuse names from [outer_tvars]; indices beyond get fresh
-    [Common.tvar_id i] names. Converts [outer_tvars] to an array for O(1) lookup. *)
+    [Base.Common.tvar_id i] names. Converts [outer_tvars] to an array for O(1) lookup. *)
 let build_tvar_names ~outer_tvars tvar_indices =
   let n_outer = List.length outer_tvars in
   let outer_arr = Array.of_list outer_tvars in
   List.map
     (fun i ->
-      if i <= n_outer then outer_arr.(i - 1) else Common.tvar_id i)
+      if i <= n_outer then outer_arr.(i - 1) else Base.Common.tvar_id i)
     tvar_indices
 
 (** Build extended tvar names covering both signature and body Core.Type.Variable indices.
     A body index absent from the signature is mapped, by the offset between
     the smallest such index and the smallest signature index, onto a
-    signature name where that lands in range, and onto [Common.tvar_id i] otherwise;
+    signature name where that lands in range, and onto [Base.Common.tvar_id i] otherwise;
     an index neither covers is named by [anon_tvar_id].
 
     @param sig_indices  sorted Core.Type.Variable indices from the function signature
@@ -183,7 +183,7 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
             let name = List.assoc mapped_sig_idx tvar_name_map in
             (i, name) :: acc
           else
-            (i, Common.tvar_id i) :: acc )
+            (i, Base.Common.tvar_id i) :: acc )
         tvar_name_map
         body_extra_tvars
     else
@@ -201,15 +201,15 @@ let build_extended_tvar_names sig_indices sig_names body_tvars =
 (** The reference under which a helper bound to [binder] by [site], lifted
     out of the declaration currently being generated, is emitted.
 
-    The identity is minted by {!Lifted.make} rather than assembled here, so that
+    The identity is minted by {!Base.Lifted.make} rather than assembled here, so that
     two helpers cannot become one by agreeing on a spelling; see [lifted.mli]. *)
 let lifted_ref site (binder : Id.t) : GlobRef.t =
-  Lifted.ref_of (Lifted.make ~origin:!Table.current_decl_ref ~binder site)
+  Base.Lifted.ref_of (Base.Lifted.make ~origin:!Base.Table.current_decl_ref ~binder site)
 
 (** The helper each member of the local fixpoint group [ids] at [occ] is
     lifted to: a member of its own per function of the group. *)
 let lifted_member_refs occ ids =
-  Array.mapi (fun i (n, _) -> lifted_ref (Lifted.Fixpoint (occ, i)) n) ids
+  Array.mapi (fun i (n, _) -> lifted_ref (Base.Lifted.Fixpoint (occ, i)) n) ids
 
 (** [body], a lifted member's, with each member of its group, which it names
     by [renamed] (in array order), called as the helper [refs] lifts it to at
@@ -425,7 +425,7 @@ let collect_free_rels n_bound body =
 let lifted_free_vars cx ~class_temps env free_indices =
   List.filter_map
     (fun i ->
-      let name = Common.get_db_name i env in
+      let name = Base.Common.get_db_name i env in
       let ty = get_env_type cx i in
       if
         List.exists (fun (_, id) -> Id.equal id name) class_temps
@@ -526,7 +526,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
           List.map2
             (fun (_, x) core ->
               let v : Cpp_ir.Lowered.Expr.t = Local (Option.get x) in
-              if Ownership_ir.worth_moving core && not (Type_util.core_type_is_unit core) then
+              if Ownership_ir.worth_moving core && not (Base.Type_util.core_type_is_unit core) then
                 (Move v : Cpp_ir.Lowered.Expr.t) else v )
             params_rev self.param_core_tys_rev
         in

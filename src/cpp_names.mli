@@ -34,41 +34,41 @@ val inline_customs_named : Names.GlobRef.t list -> Cpp_resolution.key list
 
 (** The name of a global at the position: the replacement text of an inline
     custom mapping, otherwise as resolution settles it there. *)
-val global_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t
+val global_name : Cpp_state.render_ctx -> Base.Common.kind -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** The name a global is declared under, wherever it is declared: the
     replacement text of an inline custom mapping, otherwise its own short
     name. *)
-val declared_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
+val declared_name : Cpp_state.render_ctx -> Base.Common.kind -> Names.GlobRef.t -> string
 
 (** The short name of the global at the position, as resolved there
     ({!Cpp_resolution.Short}): its name in its own scope, unqualified. *)
-val short_name : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
+val short_name : Cpp_state.render_ctx -> Base.Common.kind -> Names.GlobRef.t -> string
 
 (** {!declared_name}, read to compare it with another name rather than to
     write it. *)
-val declared_spelling : Common.kind -> Names.GlobRef.t -> string
+val declared_spelling : Base.Common.kind -> Names.GlobRef.t -> string
 
 (** The name of the struct wrapping the global at namespace scope, its
     declared name spelled by the function given: an inductive's wrapper is
     named after the inductive, capitalised; anything else as itself. *)
-val wrapper_name_from : (Common.kind -> Names.GlobRef.t -> string) -> Names.GlobRef.t -> string
+val wrapper_name_from : (Base.Common.kind -> Names.GlobRef.t -> string) -> Names.GlobRef.t -> string
 
 (** {!wrapper_name_from} of {!declared_spelling}: the wrapper's name read to
     compare it with another rather than to write it. *)
 val wrapper_spelling : Names.GlobRef.t -> string
 
 (** {!global_name} as text. *)
-val str_global : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> string
+val str_global : Cpp_state.render_ctx -> Base.Common.kind -> Names.GlobRef.t -> string
 
 (** {!global_name} as a document. *)
-val pp_global : Cpp_state.render_ctx -> Common.kind -> Names.GlobRef.t -> Pp.t
+val pp_global : Cpp_state.render_ctx -> Base.Common.kind -> Names.GlobRef.t -> Pp.t
 
 (** The name a typeclass concept is declared and referenced under at the
     position: its short name, since a concept may only appear at namespace
     scope and so carries no struct qualifier; a use in another file names
     that file's namespace. *)
-val concept_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+val concept_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** {!concept_name} as text. *)
 val concept_name_of_ref : Cpp_state.render_ctx -> Names.GlobRef.t -> string
@@ -80,7 +80,7 @@ val pp_concept_name_of_ref : Cpp_state.render_ctx -> Names.GlobRef.t -> Pp.t
 
 (** The name of the struct the module resolution names [name] is written
     as: escaped where it is reserved. *)
-val module_struct_name_of : Cpp_name.t -> Pp.t
+val module_struct_name_of : Base.Cpp_name.t -> Pp.t
 
 (** The name the struct the module [mp] is written as, or the alias
     standing for it, is declared under: the module's, escaped where it is
@@ -109,15 +109,15 @@ val is_record_inductive : Names.GlobRef.t -> bool
 val local_at : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
 
 (** The name with its final component capitalized. *)
-val capitalize_base : Cpp_name.t -> Cpp_name.t
+val capitalize_base : Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** [String.capitalize_ascii] of the name's text: the first character of its
     outermost qualifier, or of its base when it has none. *)
-val capitalize_initial : Cpp_name.t -> Cpp_name.t
+val capitalize_initial : Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** An inductive's name, and whether it is a non-local inductive's, which
     is capitalized and stands for the inductive's namespace wrapper. *)
-val inductive_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t * bool
+val inductive_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t * bool
 
 (** Whether an enum name collides with its parent's name. *)
 val enum_name_collides_with_parent : Names.GlobRef.t -> bool
@@ -127,23 +127,23 @@ val capitalize_enum_name : string -> Names.GlobRef.t -> string
 
 (** An enum's name, its final component capitalized unless that collides
     with its parent module's struct name. *)
-val enum_name : Cpp_name.t -> Names.GlobRef.t -> Cpp_name.t
+val enum_name : Base.Cpp_name.t -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** {!enum_name}, the enum's short name read at the position as resolved
     there. *)
-val enum_name_at : Cpp_state.render_ctx -> Cpp_name.t -> Names.GlobRef.t -> Cpp_name.t
+val enum_name_at : Cpp_state.render_ctx -> Base.Cpp_name.t -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** The name of a promoted inductive, which is its module's struct, from its
     resolved name. *)
-val promoted_name : Cpp_name.t -> Cpp_name.t
+val promoted_name : Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** The name without a trailing [A::A] qualifier repeating its final
     component; [allow_bare] also collapses an unqualified-but-for-it [A::A]
     to [A]. *)
-val dedup_tail : ?allow_bare:bool -> Cpp_name.t -> Cpp_name.t
+val dedup_tail : ?allow_bare:bool -> Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** The C++ type name of an inductive. *)
-val inductive_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+val inductive_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** How an inductive's struct is spelled where it is declared. *)
 type struct_spelling =
@@ -178,27 +178,27 @@ val struct_declaration_name :
 
 (** The [typename] prefix the name needs at the position [ctx]: where it
     is qualified inside a class template. *)
-val typename_prefix_for : Cpp_state.render_ctx -> Cpp_name.t -> Pp.t
+val typename_prefix_for : Cpp_state.render_ctx -> Base.Cpp_name.t -> Pp.t
 
 (** {2 Struct and namespace qualification} *)
 
 (** The struct qualifiers needed in front of a global's type name, written
     otherwise as given, at the position the render context says: outside a
     struct's body, in the out-of-line definition of one of its members. *)
-val struct_scopes_for : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
+val struct_scopes_for : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.scope list
 
 (** The global-scope qualifier needed in front of an inductive's type name,
     written otherwise as given, where a nested struct of the unit given
     shadows it. *)
-val global_scopes_for : Unit_context.t -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.scope list
+val global_scopes_for : Unit_context.t -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.scope list
 
 (** {!Cpp_state.wrapper_qualify}. *)
-val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** The name a type is written under from outside the wrapper struct that owns
     it; the name unchanged while that struct's own body is being printed, as
     the render context says. *)
-val wrapper_qualified_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+val wrapper_qualified_type_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** Whether the global must be referenced with a global-scope qualifier at
     the position [ctx]: from the out-of-line definition of a member of a
@@ -221,12 +221,12 @@ val out_of_line_scope : Cpp_state.render_ctx -> Names.GlobRef.t -> Scope_plan.sc
 
 (** The struct a value of the type is built through, named at the position
     given ({!Cpp_resolution.Built_struct}). *)
-val built_struct : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+val built_struct : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** The enum an enumerator of the inductive is named through at the position
     given, at the site given ({!Cpp_resolution.Enumerator_qualifier}). *)
 val enumerator_qualifier :
-  Cpp_state.render_ctx -> Cpp_resolution.enumerator_site -> Names.GlobRef.t -> Cpp_name.t
+  Cpp_state.render_ctx -> Cpp_resolution.enumerator_site -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** Whether the concept of the type class is held back at the position
     given ({!Cpp_resolution.Held_back_concept}). *)
@@ -302,29 +302,29 @@ val modtype_concept_name : Module_plan.layout -> Names.ModPath.t -> string
 
 (** The file whose namespace a name, written for [key] in the unit of the
     files [unit_files], reaches into: what resolving it notes
-    ({!Common.check_written_files}).  A module-type concept a functor's body
+    ({!Base.Common.check_written_files}).  A module-type concept a functor's body
     declares is named at file scope, unqualified. *)
 val file_named_by_key : unit_files:Names.ModPath.t list -> Cpp_resolution.key -> Names.ModPath.t option
 
 (** The name the struct of the inductive is defined under at the position:
     {!struct_spelling}, read there. *)
-val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+val struct_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** The name the scoped enum of the inductive is defined under at the
     position ({!inductive_type_name} there). *)
-val enum_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+val enum_definition_name : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** The name the inductive type is written under as a value: the struct a
     constructor's value is built through, at the position. *)
-val inductive_value : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+val inductive_value : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** The name the type is defined under at the position, declared as the
     definition says, as resolved there ({!Cpp_resolution.Definition}). *)
-val definition_name : Cpp_state.render_ctx -> Cpp_resolution.definition -> Names.GlobRef.t -> Cpp_name.t
+val definition_name : Cpp_state.render_ctx -> Cpp_resolution.definition -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** The struct a member of the inductive type is named through at the
     position, as resolved there ({!Cpp_resolution.Inductive_scope}). *)
-val inductive_scope : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_name.t
+val inductive_scope : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name.t
 
 (** How the global is written as a type's head in the form given at the
     position, as resolved there ({!Cpp_resolution.Type_head}); under
@@ -334,7 +334,7 @@ val type_head : Cpp_state.render_ctx -> Cpp_resolution.head_form -> Names.GlobRe
 (** [checked c key n] is [n], the name the resolution pass gave [key];
     under [CRANE_CHECK_IR], the name the resolver gives it at [c], where it
     is printed ({!live_name}), must be the same. *)
-val checked : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t -> Cpp_name.t
+val checked : Cpp_state.render_ctx -> Cpp_resolution.key -> Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** An anomaly: [key] was printed before it was resolved. *)
 val unresolved : Cpp_resolution.key -> 'a
@@ -343,7 +343,7 @@ val unresolved : Cpp_resolution.key -> 'a
     [frame], {!checked} at [c].  A table not yet resolved, or one that was
     but not for this, is an anomaly. *)
 val name_from :
-  Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
+  Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Base.Cpp_name.t
 
 (** [next entered c] is the position [c] is after entering the scope
     [entered] inside it: a function of the two. *)
@@ -359,7 +359,7 @@ val entering_from : Cpp_state.render_ctx -> Cpp_resolution.entered list -> (Cpp_
 
 (** What is visible at the position [c] ({!Cpp_state.render_ctx.visibility}),
     where [what] happens; an anomaly where nothing planned it. *)
-val visibility_at : Cpp_state.render_ctx -> Pp.t -> Common.visibility
+val visibility_at : Cpp_state.render_ctx -> Pp.t -> Base.Common.visibility
 
 (** [at_frame c frame k] is [k] of the position after entering each scope
     of [frame] from [c], outermost first ({!enter_from}): how resolving what
@@ -371,7 +371,7 @@ val at_frame : Cpp_state.render_ctx -> Cpp_resolution.frame -> (Cpp_state.render
     written: what {!Cpp_resolution.resolve} is given, at each frame, and
     what a printed name is checked against.  A position nothing planned the
     visibility of is an anomaly. *)
-val live_name : Cpp_state.render_ctx -> Cpp_resolution.key -> Cpp_name.t
+val live_name : Cpp_state.render_ctx -> Cpp_resolution.key -> Base.Cpp_name.t
 
 (** What [key] resolves to at the position [c], as the resolver resolves it
     ({!live_name} for a name; a head, an inline custom text, a reference, an

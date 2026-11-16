@@ -18,7 +18,7 @@ type holder_parameter = Cpp_state.holder_parameter = Constructor_parameter of Id
 
 type spelling = Element_of of ModPath.t | Member_of of ModPath.t | Template_in of declared_in
 
-type resolution = Unresolved | Resolved of Cpp_name.t
+type resolution = Unresolved | Resolved of Base.Cpp_name.t
 type module_ref = {path : ModPath.t; name : resolution; in_expression : resolution}
 type global_ref = {global : GlobRef.t; name : resolution}
 
@@ -51,8 +51,8 @@ type defined =
 and defined_name = As_defined | As_inductive_wrapper
 
 type declaration =
-  | Declaration of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
-  | Absorbed of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
+  | Declaration of {env : Base.Common.env; decl : Cpp_ir.Resolved.Decl.t}
+  | Absorbed of {env : Base.Common.env; decl : Cpp_ir.Resolved.Decl.t}
   | Fields of {record : GlobRef.t; vars : Id.t list; fields : (string * Cpp_ir.Resolved.Type.t) list}
   | Modtype_concept of {path : ModPath.t; params : ModPath.t list; concept : Modtype_concept.t}
   | Global_alias of global_alias
@@ -60,7 +60,7 @@ type declaration =
   | Module_alias of {name : declared_module; target : module_expr}
   | Functor_alias of {name : declared_module; functor_ : module_ref; params : (template_param * module_ref) list}
   | Derived_functor of {template : template_param list; name : declared_module; base : module_expr}
-  | Forward_declaration of {env : Common.env; defined : defined}
+  | Forward_declaration of {env : Base.Common.env; defined : defined}
   | Synthesised_template of synthesised
 
 and synthesised = {
@@ -141,7 +141,7 @@ let laid_out position concepts =
 let concept_group position = function [] -> empty | concepts -> Concept_group {position; concepts}
 
 let resolved what = function
-  | Resolved n -> Cpp_name.pp n
+  | Resolved n -> Base.Cpp_name.pp n
   | Unresolved -> invalid_arg ("Cpp_ast: " ^ what ^ " printed before it was resolved")
 
 let pp_list pp l = Pp.(prlist_with_sep (fun () -> str ", ") pp l)

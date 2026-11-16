@@ -12,12 +12,12 @@
     {!Translation_stmts.gen_stmts}, and it lowers the bodies it declares by
     calling back up through {!Translation_knot}. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 open Translation_knot
 open Translation_lambda
@@ -32,7 +32,7 @@ module IntSet = Escape.IntSet
    [fix], generated under [env], reads, by name. *)
 let local_fix_binders cx env fix occ ids compiled =
   let read = ref [] in
-  Core_util.ast_iter_rel_applied (fun n i _ -> if i > n then read := (i - n) :: !read) fix;
+  Base.Core_util.ast_iter_rel_applied (fun n i _ -> if i > n then read := (i - n) :: !read) fix;
   let captured =
     List.filter_map
       (fun db ->
@@ -94,7 +94,7 @@ let local_fix_stmts cx selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowere
 let local_passing cx ~closures funs =
   let n_fix = Array.length funs in
   let member f =
-    let lam_ids, inner = Core_util.collect_lams f in
+    let lam_ids, inner = Base.Core_util.collect_lams f in
     let flags =
       if closures then [] else
         Escape.infer_owned_params ~callee_flags:(settled_ownership cx) (List.length lam_ids + n_fix) inner in
@@ -206,7 +206,7 @@ let gen_local_fix_ycomb cx env ~binders ~passing ~captures renamed_ids funs_with
      takes; the impls before it still copy it.  Under [CRANE_CHECK_IR], the
      impls' C++ captures must agree. *)
   let impl_stmts =
-    if Probe.checking () then begin
+    if Base.Probe.checking () then begin
       let captures : Cpp_ir.Lowered.Stmt.t -> Id.t list = function
         | Bind_variable (_, _, (Lambda _ as l)) -> Cpp_ir.Variables.free_in_expr l
         | _ -> []
@@ -221,7 +221,7 @@ let gen_local_fix_ycomb cx env ~binders ~passing ~captures renamed_ids funs_with
           :: given rest
       in
       if not (List.equal (List.equal Id.equal) (given impl_stmts) moved) then
-        Probe.violation "closure captures"
+        Base.Probe.violation "closure captures"
           (Pp.str "a local fixpoint's closures take by move other variables than their C++ captures give them")
     end;
     List.map2
@@ -416,17 +416,17 @@ let fix_captures cx ~in_place fix = Ownership_ir.captures_by_member ~in_place cx
     before ({!Normalize.let_lambdas}), and translation only binds or lifts
     them. *)
 let ungenerated_let_lambda what =
-  if Probe.checking () then
-    Probe.violation "let-bound lambda" Pp.(str "Core_phase.normalize left " ++ str what ++ str " to translation")
+  if Base.Probe.checking () then
+    Base.Probe.violation "let-bound lambda" Pp.(str "Core_phase.normalize left " ++ str what ++ str " to translation")
 
 (** Under [CRANE_CHECK_IR], the region's plan must have decided as translation
     does whether [let _ : ty := a] binds the closure [a] to a local
     ([local]), which the plan owns and moves; a violation otherwise. *)
 let check_closure_local cx ty a ~local =
-  if Probe.checking () then
+  if Base.Probe.checking () then
     match Ownership_ir.closure_local cx.ctx.lexical.move_plan ty a with
     | Some planned when planned <> local ->
-      Probe.violation "ownership plan"
+      Base.Probe.violation "ownership plan"
         (Pp.str
            (Printf.sprintf "a let-bound closure the plan takes for %s is generated as %s"
               (if planned then "a local" else "no local")
@@ -439,8 +439,8 @@ let check_closure_local cx ty a ~local =
    or in its own bodies, other than as the function a call applies, or
    inside a closure. *)
 let check_fixpoint_escape name ~closures generated_escapes =
-  if Probe.checking () && closures <> generated_escapes () then
-    Probe.violation "closure escape"
+  if Base.Probe.checking () && closures <> generated_escapes () then
+    Base.Probe.violation "closure escape"
       Pp.(
         str "the local fixpoint " ++ Id.print name
         ++ str
@@ -579,7 +579,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
   let outer_tvars = get_current_type_vars cx in
   let n_outer = List.length outer_tvars in
-  let has_extra_tvars = Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+  let has_extra_tvars = Base.Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
   check_closure_local cx let_ty fix_term ~local:(not has_extra_tvars);
   if has_extra_tvars then (
     (* Lift the polymorphic inner fixpoint to a top-level function. Build tvar
@@ -849,12 +849,12 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   (match decision with
   | Bound -> gen_normal_letin ()
   | At_instance inst ->
-    let subst = Core_util.type_subst_list inst in
+    let subst = Base.Core_util.type_subst_list inst in
     ungenerated_let_lambda "a lambda used at one instance";
     with_plan cx (Ownership_ir.bound_at_instance cx.ctx.lexical.move_plan ~let_:let_occ) (fun () ->
         gen_stmts cx ~slot env k (Core.Expr.Let {binder = x;
                                               binder_type = subst t;
-                                              value = Core_util.ast_map_types subst a;
+                                              value = Base.Core_util.ast_map_types subst a;
                                               body = b;
                                               occurrence = let_occ}) )
   | Inlined b ->
@@ -903,7 +903,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
     in
 
     (* 3. Generate the lifted function name *)
-    let lifted_ref = Translation_lifting.lifted_ref (Lifted.Let let_occ) x' in
+    let lifted_ref = Translation_lifting.lifted_ref (Base.Lifted.Let let_occ) x' in
 
     (* 4. Substitution helper for call sites: replace a call [Call (_, Local
        x', args)] with a call of [Entity (lifted_ref, [])] on
@@ -913,7 +913,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
        parameter C++ has to deduce.  A closure has no name to deduce, and
        so cannot agree with the same parameter as settled by another
        argument; {!Translation_coerce.name_fn_arg_for_tvar_param} names it. *)
-    (* {!Core_util.collect_lams} hands the binders back innermost-first, so
+    (* {!Base.Core_util.collect_lams} hands the binders back innermost-first, so
        the source order these are read in is the reverse of [params]. *)
     let param_core_tys =
       List.rev
@@ -1109,7 +1109,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
          An [auto]-returning template with more than one instantiation in
          the same translation unit is then used before any of them is
          defined. *)
-      let core_dom, _ = Core_util.type_decomp t in
+      let core_dom, _ = Base.Core_util.type_decomp t in
       let value_dom =
         List.filter is_runtime_binder_type core_dom
       in
@@ -1178,7 +1178,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
   let fix_tvar_indices = List.sort Int.compare fix_tvar_indices in
   let outer_tvars = get_current_type_vars cx in
   let n_outer = List.length outer_tvars in
-  let has_extra_tvars = Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
+  let has_extra_tvars = Base.Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) in
   (* The arguments the plan reads before the call, its parameters being
      bound to them in order ({!Ownership_ir.evaluated_first}), each
      evaluated into a local of its own ahead of everything the call
@@ -1195,7 +1195,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
            let e =
              match List.nth_opt params i with
              | Some (_, (Core.Type.Arrow _ as ty))
-               when Table.is_erased_fix_group occ && List.exists Core_util.has_unknown (core_domains ty) ->
+               when Base.Table.is_erased_fix_group occ && List.exists Base.Core_util.has_unknown (core_domains ty) ->
                adapt_to_erased_param cx env ty a e
              | _ -> e
            in
@@ -1308,8 +1308,8 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
       let _, fix_params, _, _ = List.nth funs_compiled x in
       let n_provided = List.length args in
       let n_fix_params = List.length fix_params in
-      if Probe.checking () && partial <> (n_provided < n_fix_params) then
-        Probe.violation "partial application"
+      if Base.Probe.checking () && partial <> (n_provided < n_fix_params) then
+        Base.Probe.violation "partial application"
           (Pp.str "a local fixpoint is applied to other arguments than Core counts");
       if partial then begin
         (* Partial application: the fixpoint escapes (returned as a lambda).

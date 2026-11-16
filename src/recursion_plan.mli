@@ -162,7 +162,7 @@ val strategy :
     [occurrence], if the program has that fixpoint: planned from its body as
     a definition's is, every call between the members of its group
     counting.  A helper lifted for that function is planned by it
-    ({!Lifted.fixpoint}). *)
+    ({!Base.Lifted.fixpoint}). *)
 val strategy_at :
   t ->
   pointer_fields:(Names.GlobRef.t -> int list option) ->
@@ -230,7 +230,7 @@ val splice_partners :
 val yields_alike : Core.Type.t -> Core.Type.t -> bool
 
 (** {!adoptable_in} for the function [member] of the local fixpoint
-    [occurrence], lowered as a helper of its own ({!Lifted.fixpoint}): the
+    [occurrence], lowered as a helper of its own ({!Base.Lifted.fixpoint}): the
     fixpoints in its flow naming a member of its group. *)
 val adoptable_at : t -> Core.Occurrence.t * int -> Core.Occurrence.t list
 
@@ -348,7 +348,7 @@ and recomputable = private {
 (** Whether a coercion from [from] into [into] keeps the value's
     representation: two instances of one inductive agreeing on the
     arguments its C++ type takes, those of its parameters
-    ({!Table.get_ind_num_param_vars_opt}); its indices it does not take. *)
+    ({!Base.Table.get_ind_num_param_vars_opt}); its indices it does not take. *)
 val in_place : Core.Type.t -> Core.Type.t -> bool
 
 (** The points binding [b] at which its definition, a member of a group that

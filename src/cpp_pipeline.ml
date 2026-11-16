@@ -33,7 +33,7 @@ let traced decl =
       | [] -> "<anonymous>"
       | rs ->
         String.concat ", "
-          (List.map (fun r -> Pp.string_of_ppcmds (Table.safe_pr_global r)) rs)
+          (List.map (fun r -> Pp.string_of_ppcmds (Base.Table.safe_pr_global r)) rs)
     in
     let contains s sub =
       let n = String.length s and m = String.length sub in
@@ -72,43 +72,43 @@ let rec decl_globref : Cpp_ir.Lowered.Decl.t -> Names.GlobRef.t option = functio
   | _ -> None
 
 (** A pass over a declaration on its way to the seam. *)
-let on_decl = Pipeline_trace.pass
+let on_decl = Base.Pipeline_trace.pass
 
 (** The passes below that discharge an {!obligation}, named once so that
     the list of obligations refers to the pass rather than to its name. *)
 let constraints = on_decl "constraints" Cpp_constraints.settle
 
-let casts = Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
-let free_tvars = Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
-let boxed_reads = Pipeline_trace.pass "boxed_reads" Cpp_erasure.lower_boxed_reads
-let template_args = Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
+let casts = Base.Pipeline_trace.pass "casts" Cpp_erasure.resolve_casts
+let free_tvars = Base.Pipeline_trace.pass "free_tvars" Cpp_erasure.bind_free_tvars
+let boxed_reads = Base.Pipeline_trace.pass "boxed_reads" Cpp_erasure.lower_boxed_reads
+let template_args = Base.Pipeline_trace.pass "template_args" Cpp_erasure.supply_template_args
 (* The method calls of a declaration of the unit [u]. *)
-let method_calls u = Pipeline_trace.pass "method_calls" (Cpp_erasure.lower_method_calls u)
-let projections = Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
-let conditionals = Pipeline_trace.pass "conditionals" Cpp_erasure.lower_conditionals
-let access_moves = Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
-let constexpr = Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
-let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
-let qualifiers = Pipeline_trace.pass "qualifiers" Cpp_erasure.lower_qualifiers
+let method_calls u = Base.Pipeline_trace.pass "method_calls" (Cpp_erasure.lower_method_calls u)
+let projections = Base.Pipeline_trace.pass "projections" Cpp_erasure.lower_projections
+let conditionals = Base.Pipeline_trace.pass "conditionals" Cpp_erasure.lower_conditionals
+let access_moves = Base.Pipeline_trace.pass "access_moves" Cpp_erasure.lower_access_moves
+let constexpr = Base.Pipeline_trace.pass "constexpr" Cpp_erasure.decide_constexpr
+let foreign = Base.Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
+let qualifiers = Base.Pipeline_trace.pass "qualifiers" Cpp_erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
-let pointer_slots u = Pipeline_trace.pass "pointer_slots" (Cpp_erasure.lower_pointer_slots u)
-let unused_bindings = Pipeline_trace.pass "unused_bindings" Cpp_erasure.mark_unused_bindings
-let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
-let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
-let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
+let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Cpp_erasure.lower_pointer_slots u)
+let unused_bindings = Base.Pipeline_trace.pass "unused_bindings" Cpp_erasure.mark_unused_bindings
+let scrutinees = Base.Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
+let captures = Base.Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
+let initialisers = Base.Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
 
 type control_check = unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit
 
 (** Every pass before the {!Cpp_erasure} seam, in the order they run, over a
     declaration of the unit [u]. *)
-let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
+let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_cpp_ir}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)
     on_decl "control" (fun d ->
-        if Probe.checking () then check_control ~unit:u d;
+        if Base.Probe.checking () then check_control ~unit:u d;
         d );
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
@@ -147,7 +147,7 @@ let seam = "materialise"
 
 (** Every pass after the seam, in the order they run, over a declaration of
     the unit [u]. *)
-let settled_passes u : Cpp_erasure.settled Pipeline_trace.pass list =
+let settled_passes u : Cpp_erasure.settled Base.Pipeline_trace.pass list =
   [ casts;
     (* With the heads final, a body naming a type variable no head declares
        is a name nothing in scope introduces; spell it [std::any] rather than
@@ -186,10 +186,10 @@ let instantiation_passes u =
   [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; captures; initialisers]
 
 let pass_names =
-  Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_context.detached)
+  Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_context.detached)
   @ [seam]
-  @ Pipeline_trace.names (settled_passes Unit_context.detached)
-  @ Pipeline_trace.names (instantiation_passes Unit_context.detached)
+  @ Base.Pipeline_trace.names (settled_passes Unit_context.detached)
+  @ Base.Pipeline_trace.names (instantiation_passes Unit_context.detached)
 
 (** {2 What the printer is not owed}
 
@@ -251,7 +251,7 @@ let mentions p (decl : Cpp_erasure.settled) =
     from what the pass decides.  [u] is the unit the declaration is of. *)
 let owes u (decl : Cpp_erasure.settled) (o : obligation) =
   let d = (decl :> Cpp_ir.Lowered.Decl.t) in
-  let rewrites (p : Cpp_erasure.settled Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
+  let rewrites (p : Cpp_erasure.settled Base.Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
   match o with
   | Unresolved_type -> mentions (function Obligation Unresolved_type -> true | _ -> false) decl
   | Opaque_type -> mentions (function Obligation Opaque_type -> true | _ -> false) decl
@@ -283,7 +283,7 @@ let owes u (decl : Cpp_erasure.settled) (o : obligation) =
     by construction.  The check runs only under [CRANE_CHECK_IR], set by the
     test suite: it re-runs the discharging passes over every declaration, and
     it protects an invariant the compiler is meant to establish rather than
-    one a user's input can break.  The declaration is named as {!Table} names
+    one a user's input can break.  The declaration is named as {!Base.Table} names
     any global, since one a pass generated -- a lifted helper -- is not in the
     name table [Printer.pr_global] reads, and would fail the report itself. *)
 let check_settled u obligations (decl : Cpp_erasure.settled) =
@@ -296,7 +296,7 @@ let check_settled u obligations (decl : Cpp_erasure.settled) =
         ++ prlist_with_sep (fun () -> str "; ") (fun o -> str (describe o)) owed
         ++
         match decl_globref (decl :> Cpp_ir.Lowered.Decl.t) with
-        | Some r -> str " in " ++ Table.safe_pr_global r
+        | Some r -> str " in " ++ Base.Table.safe_pr_global r
         | None -> mt () )
 
 (** [resolved d] is [d], which owes the printer nothing, at the phase that
@@ -311,7 +311,7 @@ let resolved (d : Cpp_erasure.settled) =
         ++ str ", which only a lowered declaration may hold"
         ++
         match decl_globref (d :> Cpp_ir.Lowered.Decl.t) with
-        | Some r -> str " in " ++ Table.safe_pr_global r
+        | Some r -> str " in " ++ Base.Table.safe_pr_global r
         | None -> mt () )
 
 (* [resolve_with what resolve x] is [x] at the resolved phase; a form that
@@ -345,10 +345,10 @@ let finish ~check_control u decl =
           else Printf.sprintf "%s %d -> %d" name (node_count before) (node_count after) )
         :: !steps
   in
-  let run : type a. (a -> Cpp_ir.Lowered.Decl.t) -> a Pipeline_trace.pass list -> a -> a =
+  let run : type a. (a -> Cpp_ir.Lowered.Decl.t) -> a Base.Pipeline_trace.pass list -> a -> a =
    fun inj passes d ->
     List.fold_left
-      (fun d (p : _ Pipeline_trace.pass) ->
+      (fun d (p : _ Base.Pipeline_trace.pass) ->
         let d' = p.run d in
         note p.name (inj d) (inj d');
         d' )

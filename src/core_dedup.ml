@@ -43,7 +43,7 @@ let rec canonical self body =
     Core.Expr.Boxed_value {value = canonical self a; occurrence = mocc}
   | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
     Core.Expr.Lambda_group_barrier {value = canonical self a; occurrence = mocc}
-  | e -> Core_util.ast_map (canonical self) e
+  | e -> Base.Core_util.ast_map (canonical self) e
 
 (* A group's members, all named [f] at no type. *)
 and canonical_group self g =
@@ -53,10 +53,10 @@ and canonical_group self g =
 (* A forwarder with [body]'s parameters, calling [target] at its own type
    variables, in order. *)
 let forwarder body target =
-  let params, _ = Core_util.collect_lams body in
+  let params, _ = Base.Core_util.collect_lams body in
   let n = List.length params in
-  Core_util.named_lams params
-    (Core.Expr.Apply {callee = Core.Expr.Global (Core_util.forwarding_use target);
+  Base.Core_util.named_lams params
+    (Core.Expr.Apply {callee = Core.Expr.Global (Base.Core_util.forwarding_use target);
                       arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))})
 
 (* A function definition: a fixpoint, or a term that is a lambda, emitted
@@ -64,7 +64,7 @@ let forwarder body target =
    again -- and so is a mapped one, whose body is never what is emitted, and
    a projection, which is read as a field. *)
 let function_def d =
-  let emitted r = not (Table.is_custom r || Table.is_projection r) in
+  let emitted r = not (Base.Table.is_custom r || Base.Table.is_projection r) in
   match d with
   | Core.Decl.Recursive_group {head = fd; tail = []} when emitted fd.entity -> Some (fd.entity, fd.body, fd.type_)
   | Core.Decl.Value {entity = r; body = (Core.Expr.Lambda _ as body); type_ = ty} when emitted r -> Some (r, body, ty)
@@ -77,8 +77,8 @@ let structure struc =
       let r, body, ty = Option.get (function_def d) in
       (* A forwarder runs its target's precondition checks, so two
          definitions are one only if those are the same too. *)
-      let key = (canonical r body, Table.get_sigma_assertions r) in
-      match List.find_opt (fun (key', _, ty') -> key' = key && Core_util.eq_core_type ty' ty) seen with
+      let key = (canonical r body, Base.Table.get_sigma_assertions r) in
+      match List.find_opt (fun (key', _, ty') -> key' = key && Base.Core_util.eq_core_type ty' ty) seen with
       | Some (_, r', _) ->
         (l, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
                                                                      body = forwarder body r';

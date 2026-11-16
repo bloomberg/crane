@@ -4,20 +4,20 @@
 (** The C++ names of an inductive's constructors: the factory method a
     constructor is built through, and the struct field each of its arguments
     is stored in, from the kernel's binder names and an [Arguments]
-    renaming, registered in {!Common.ctor_field_names}.  Read by lowering,
+    renaming, registered in {!Base.Common.ctor_field_names}.  Read by lowering,
     {!Gen_inductives} and the printer. *)
 
-open Common
+open Base.Common
 open Names
 open Util
-open Type_util
+open Base.Type_util
 
 (** The C++ name of the inductive that [cref] constructs, or [""] when [cref]
     is not a constructor reference. *)
 let owning_type_name cref =
   match cref with
   | GlobRef.ConstructRef ((kn, i), _) ->
-    Common.pp_global_name Type (GlobRef.IndRef (kn, i))
+    Base.Common.pp_global_name Type (GlobRef.IndRef (kn, i))
   | _ -> ""
 
 (** Whether the module that declares constructor [cref]'s inductive also
@@ -34,7 +34,7 @@ let shadows_module_type cref s =
     back to [ctor<fallback_idx>] when [cref] is not a constructor).
     Factory names are the lowercase of the constructor struct name
     (e.g. [Cons] -> ["cons"]). If the lowercased name collides with a C++
-    keyword, one of {!Common.inductive_generated_members}, the enclosing
+    keyword, one of {!Base.Common.inductive_generated_members}, the enclosing
     type's own name (which C++ treats as a constructor declaration), or a
     type declared in the inductive's module ({!shadows_module_type}), the
     original PascalCase is kept with a trailing underscore
@@ -43,12 +43,12 @@ let factory_name_of_ctor ?fallback_idx cref =
   let ctor_struct_name = ctor_struct_name_of_ref ?fallback_idx cref in
   let lc = String.lowercase_ascii ctor_struct_name in
   let collides =
-    Common.is_reserved_cpp_name lc
+    Base.Common.is_reserved_cpp_name lc
     || lc = String.lowercase_ascii (owning_type_name cref)
-    || Id.Set.mem (Id.of_string lc) Common.inductive_generated_members
+    || Id.Set.mem (Id.of_string lc) Base.Common.inductive_generated_members
     || shadows_module_type cref lc
   in
-  if collides then Generated_name.separate_underscores (ctor_struct_name ^ "_")
+  if collides then Base.Generated_name.separate_underscores (ctor_struct_name ^ "_")
   else lc
 
 (** {2 Named Constructor Fields}
@@ -63,10 +63,10 @@ let factory_name_of_ctor ?fallback_idx cref =
       [Core.Inductive.Packet.t.constructor_argument_names] from the kernel binder names.
     + {!compute_and_register_field_names} transforms each binder into a
       C++-safe identifier and registers the mapping in
-      {!Common.ctor_field_names}.
+      {!Base.Common.ctor_field_names}.
     + Access sites (the inductive and record method generators in
       {!Gen_inductives}, record reuse, {!Loopify_tmc.patch_cell_field})
-      call {!Common.lookup_ctor_field_name} to resolve field names. *)
+      call {!Base.Common.lookup_ctor_field_name} to resolve field names. *)
 
 (** Sanitize a Rocq binder name for use as a C++ struct field identifier.
     Lowercases the name, strips trailing primes ([a'] -> [a], [x''] -> [x]),
@@ -115,10 +115,10 @@ let field_name_str_of_idx consarg_names k =
   | Some (Some id) -> (
     match sanitize_binder_name (Id.to_string id) with
     | Some sanitized ->
-      if Common.is_reserved_cpp_name sanitized then
+      if Base.Common.is_reserved_cpp_name sanitized then
         field_param_name k
       else
-        if Table.std_lib () = "BDE" then "d_" ^ sanitized else sanitized
+        if Base.Table.std_lib () = "BDE" then "d_" ^ sanitized else sanitized
     | None -> field_param_name k )
   | _ -> field_param_name k
 
@@ -147,7 +147,7 @@ let compute_field_name ~owner ctor_struct_name field_consarg_names
      way, by falling back to the indexed form. *)
   let type_name = owning_type_name owner in
   let reserved =
-    Id.Set.union Common.inductive_generated_members
+    Id.Set.union Base.Common.inductive_generated_members
       (Id.Set.of_list
          (List.map Id.of_string
             ( ctor_struct_name :: type_name

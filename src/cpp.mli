@@ -112,7 +112,7 @@ val plan_file_layout : Translation_state.t -> Unit_context.t -> Core.Program.t -
 val plan_ctor_aliases : Translation_state.t -> Core.Program.t -> Cpp_state.ctor_alias_plan
 
 (** The C++ name of each global the unit declares, a functor's body
-    included, decided in declaration order ({!Common.pp_global_name}): an
+    included, decided in declaration order ({!Base.Common.pp_global_name}): an
     inductive's, then its constructors', then a record's fields, at the kind
     a declaration is printed at.  A custom mapping's name is its text, and is
     not among them. *)
@@ -131,7 +131,7 @@ val plan_names : Core.Program.t -> (Names.GlobRef.t * string) list
 val plan_referenced_names : Core.Program.t -> (Names.GlobRef.t * string) list
 
 (** The C++ name of each module the unit declares, a functor's body's
-    included, decided in declaration order ({!Common.emitted_module_name}). *)
+    included, decided in declaration order ({!Base.Common.emitted_module_name}). *)
 val plan_module_names : Core.Program.t -> (Names.ModPath.t * string) list
 
 (** The C++ names of the fields of each constructor whose struct the unit

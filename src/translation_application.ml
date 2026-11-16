@@ -7,28 +7,28 @@
     bodies to CppIR that {!Translation} drives; it calls back into
     expression and statement lowering through {!Translation_knot}. *)
 
-open Common
+open Base.Common
 open Names
-open Table
+open Base.Table
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 open Translation_knot
 open Translation_lambda
 
 (** The types of the members of the local fixpoint groups being generated
-   that recurse at a ground instance ({!Table.is_erased_fix_group}), as the
+   that recurse at a ground instance ({!Base.Table.is_erased_fix_group}), as the
    environment binds them: a call of one is written at its own instance, and
    its arguments are adapted to the erased parameters. *)
-let erased_member_types : Core.Type.t list ref = State.cell State.Unit []
+let erased_member_types : Core.Type.t list ref = Base.State.cell Base.State.Unit []
 
 (** Record the members [ids] of the local fixpoint [occ] -- and the type
    [let_ty] of the name it is bound to, if any -- in {!erased_member_types}
    where the group is one.  Kept by identity, so a type recorded for one
    group is no other binding's. *)
 let register_erased_members ?let_ty occ ids =
-  if Table.is_erased_fix_group occ then
+  if Base.Table.is_erased_fix_group occ then
     erased_member_types :=
       (match let_ty with Some t -> [t] | None -> []) @ List.map snd (Array.to_list ids) @ !erased_member_types
 
@@ -37,7 +37,7 @@ let register_erased_members ?let_ty occ ids =
 let erased_member cx i =
   match get_env_type_opt cx i with
   | Some (Core.Type.Arrow _ as t) ->
-    List.memq t !erased_member_types && List.exists Core_util.has_unknown (core_domains t)
+    List.memq t !erased_member_types && List.exists Base.Core_util.has_unknown (core_domains t)
   | _ -> false
 
 (** [expr], the argument [a] to a parameter of type [param_ty] that
@@ -86,7 +86,7 @@ let singleton_call cx env i occ =
     Option.map (fun (_, c, m) -> (c, m))
       (Translation_calls.singleton_dictionary cx env (Core.Expr.Bound_variable {index = i; occurrence = occ})) in
   match Core_elaborate.singleton_dictionary_call ~walk:(elaborations cx) ~live occ with
-  | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Common.get_db_name_opt i env)
+  | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Base.Common.get_db_name_opt i env)
   | None -> None
 
 (** Call class field [x] as a static member of the instance struct [inst].
@@ -98,7 +98,7 @@ let singleton_call cx env i occ =
 let project_through_instance cx env (use : Core.Global_use.t) args (projection : Elaborated_call.static_projection) :
   Cpp_ir.Lowered.Expr.t =
   let inst = List.nth args projection.instance in
-  let x = use.callee and tys = Core_util.written_type_args use in
+  let x = use.callee and tys = Base.Core_util.written_type_args use in
   let operands =
     List.filter
       (fun a ->
@@ -117,7 +117,7 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
      result. *)
   let targs =
     let by_var = List.map (fun (v, t) -> (v, Translation_types.cpp_of_core cx env t))
-      (Core_util.Var_types.bindings tys) in
+      (Base.Core_util.Var_types.bindings tys) in
     Template_application.to_list
       (Template_application.plan
          (Callable_abi.projection (Translation_state.callables cx) Translation_calls.projection_abi x)
@@ -146,7 +146,7 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
     | None -> gen_expr cx env inst
   in
   Cpp_ir.Build.call
-    (Scope (inst_expr, Common.id_of_global Term x, targs))
+    (Scope (inst_expr, Base.Common.id_of_global Term x, targs))
     (List.mapi
        (fun i a ->
          let expected = Translation_types.param_expected_cpp_ty cx env operand_core_tys i in
@@ -240,13 +240,13 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
             | _ -> 0
           in
           let expected = count_arrows param_ty in
-          let actual = Core_util.nb_lams core_arg in
+          let actual = Base.Core_util.nb_lams core_arg in
           if expected > 0 && actual > expected then
             let outer_ids, inner_body =
-              Core_util.collect_n_lams expected core_arg
+              Base.Core_util.collect_n_lams expected core_arg
             in
             let barrier =
-              Core_util.named_lams outer_ids (Core.Expr.Lambda_group_barrier {value = inner_body;
+              Base.Core_util.named_lams outer_ids (Core.Expr.Lambda_group_barrier {value = inner_body;
                                                                            occurrence = Core.Occurrence.fresh ()})
             in
             (* Compute the return type from the substituted param type by
@@ -428,7 +428,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
               {!Translation_erasure.yields_boxed_component}. *)
            || Translation_erasure.yields_boxed_component (as_value ()) )
            && not (match param_ty with
-                   | Core.Type.Global_app {head = g; _} -> Table.is_promoted_type_var g
+                   | Core.Type.Global_app {head = g; _} -> Base.Table.is_promoted_type_var g
                    | _ -> false)
            (* [param_ty] comes from the callee's own (call-site-substituted)
               type signature, whose [Core.Type.Variable] indices are not anchored to this
@@ -443,7 +443,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
               = Translation_types.cpp_of_core cx env param_ty ->
       let cpp_ty = Translation_types.cpp_of_core cx env param_ty in
       ( match Translation_conversion.strip_ns_global_app cpp_ty with
-      | Entity_application (g, [_], _) when is_list_global g && not (Table.is_custom g) ->
+      | Entity_application (g, [_], _) when is_list_global g && not (Base.Table.is_custom g) ->
         let list_any_ty : Cpp_ir.Lowered.Type.t =
           match cpp_ty with
           | In_namespace (ns_g, _) -> In_namespace (ns_g, Entity_application (g, [Any], []))
@@ -465,7 +465,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
           Cpp_erasure.converting_ctor cpp_ty [already_cast]
         | v ->
           Cpp_erasure.converting_ctor cpp_ty [Cpp_erasure.unbox list_any_ty v] )
-      | Entity_application (g, [_], _) when Type_util.is_custom_list_global g ->
+      | Entity_application (g, [_], _) when Base.Type_util.is_custom_list_global g ->
         let clean_cpp_ty = Translation_conversion.clean_self_ns cpp_ty in
         (* Custom-extracted list (e.g. [std::deque]) is boxed as [std::any]
            with fully-erased elements at runtime ([deque<pair<any,any>>]).
@@ -509,7 +509,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
            callee whose parameter element is ALREADY fully erased
            ([deque<pair<any,any>>]) needs no conversion — both keep [inner]. *)
         let needs_concrete =
-          (not (Table.is_inline_custom id))
+          (not (Base.Table.is_inline_custom id))
           &&
           match Translation_conversion.strip_ns_global_app clean_cpp_ty with
           | Entity_application (_, [et], _) ->
@@ -528,7 +528,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
              Suppress boxing here to match the declaration. *)
           let callee_generic_here =
             match Param_pos.nth fn_param_core_tys_orig param_index with
-            | Some t -> Type_util.core_type_contains_tvar t
+            | Some t -> Base.Type_util.core_type_contains_tvar t
             | None -> false
           in
           Container_cast (clean_cpp_ty, inner, callee_generic_here)
@@ -649,7 +649,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
   match f with
   | Core.Expr.Global ({callee = id; _} as use) ->
     let lowered =
-      Translation_calls.lower_call cx ~caller:!Table.current_decl_ref ~slot ?expected_ty env use args
+      Translation_calls.lower_call cx ~caller:!Base.Table.current_decl_ref ~slot ?expected_ty env use args
     in
     let plan = lowered.Translation_calls.plan in
     let {
@@ -673,18 +673,18 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
     (* The C++ arguments of a call by name, from the regular arguments in
        declared order (the given ones, then any eta parameters): a declared
        [unit] parameter has no C++ counterpart
-       ({!Type_util.declaration_drops_binder}), and Rocq's [unit] argument
+       ({!Base.Type_util.declaration_drops_binder}), and Rocq's [unit] argument
        computes nothing worth keeping.  A custom's text takes its arguments by
        position, and a projection reads a field holding a callable value, so
        their lists are left whole. *)
     let passed (l : Cpp_ir.Lowered.Expr.t list) =
-      if Table.is_custom id || Table.is_projection id then l
+      if Base.Table.is_custom id || Base.Table.is_projection id then l
       else
         List.filteri
           (fun i _ ->
             not
               (match Param_pos.nth fn_param_core_tys_orig (Param_pos.of_regular ~leading:leading_params i) with
-               | Some t -> Type_util.declaration_drops_binder t
+               | Some t -> Base.Type_util.declaration_drops_binder t
                | None -> false ) )
           l
     in
@@ -718,7 +718,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
         Option.map
           (fun t ->
             let live = Translation_types.cpp_of_core cx env t in
-            if Probe.checking () then Translation_calls.check_installed_arity cx id live;
+            if Base.Probe.checking () then Translation_calls.check_installed_arity cx id live;
             Cpp_ir.Types.substitute subst live)
           (callee_core_type cx id)
     in
@@ -738,7 +738,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
              && not
                   (List.exists
                      (fun t ->
-                       Type_util.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t )
+                       Base.Type_util.is_typeclass_type_cpp t || is_cpp_dummy_type t || is_skipped_cpp_type t )
                      doms ) ->
         List.map2
           (fun (core_arg, a) into ->
@@ -775,10 +775,10 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
       with
       | [inst], [Some inst_ty], _ :: method_targs
         when Core_elaborate.member_template_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use core_args ->
-        (Scope (Type_name inst_ty, Common.id_of_global Term id, method_targs) : Cpp_ir.Lowered.Expr.t)
+        (Scope (Type_name inst_ty, Base.Common.id_of_global Term id, method_targs) : Cpp_ir.Lowered.Expr.t)
       | _ ->
         mk_cppglob
-          ?yields:(Translation_calls.glob_yields cx env id (Core_util.Var_types.apply tys))
+          ?yields:(Translation_calls.glob_yields cx env id (Base.Core_util.Var_types.apply tys))
           id all_type_args
     in
     (* Check if this is a typeclass instance used as a type (for :: access).
@@ -808,16 +808,16 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
        where the site carries them, and otherwise the one its arguments
        imply. *)
     let inst_tys =
-      if not (Core_util.Var_types.is_empty tys) then tys
+      if not (Base.Core_util.Var_types.is_empty tys) then tys
       else
         match find_type_opt id with
         | Some core_ty -> tvar_instantiation id core_ty primary_core_args
-        | None -> Core_util.Var_types.empty
+        | None -> Base.Core_util.Var_types.empty
     in
     (* The callee's codomain as this call instantiates it. *)
     let instantiated_codomain core_ty =
       let cod = core_codomain core_ty in
-      if Core_util.Var_types.is_empty inst_tys then cod else Core_util.Var_types.apply inst_tys cod
+      if Base.Core_util.Var_types.is_empty inst_tys then cod else Base.Core_util.Var_types.apply inst_tys cod
     in
     let wrap_excess (base : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
       if excess_args = [] then
@@ -831,7 +831,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           match base with
           | Call _ when closed_head ->
             Cpp_ir.Build.call
-              (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r id)))))
+              (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Base.Common.label_of_r id)))))
               [base]
           | _ -> base
         in
@@ -866,10 +866,10 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                  only exist when the return type instantiates to a function.
                  Proof-level excess args are already removed by the
                  [Core.Expr.Erased_value] filter above. *)
-              if Core_util.Var_types.is_empty inst_tys then
+              if Base.Core_util.Var_types.is_empty inst_tys then
                 true
               else
-                let cod_inst = Core_util.Var_types.apply inst_tys cod in
+                let cod_inst = Base.Core_util.Var_types.apply inst_tys cod in
                 ( match resolve_meta cod_inst with
                 | Core.Type.Arrow _ -> true
                 | Core.Type.Global_app _ -> true
@@ -1012,7 +1012,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                        ~agree:(fun p l -> reading p = reading l) env j occ)
                 with
                 | Some (Cpp_ir.Type.Entity_application ((GlobRef.IndRef _ as g), (_ :: _ as args), ns))
-                  when (not (Table.is_custom g))
+                  when (not (Base.Table.is_custom g))
                        && not (List.for_all is_any args) ->
                   Cpp_erasure.converting_ctor (Entity_application (g, List.map (fun _ -> Cpp_ir.Type.Any) args, ns)) [e]
                 | _ -> e )
@@ -1092,7 +1092,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
         let dom =
           List.filter
             (fun t ->
-              (not (Type_util.is_typeclass_type_cpp t))
+              (not (Base.Type_util.is_typeclass_type_cpp t))
               && (not (is_cpp_dummy_type t))
               && not (is_skipped_cpp_type t) )
             dom
@@ -1229,9 +1229,9 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                 match t with
                 | Variable (Index (i, None))
                   when not
-                         (List.exists (Id.equal (Common.tvar_id i))
+                         (List.exists (Id.equal (Base.Common.tvar_id i))
                             cx.ctx.lexical.current_type_vars) ->
-                  Variable (Index (i, Some (Common.tvar_id i)))
+                  Variable (Index (i, Some (Base.Common.tvar_id i)))
                 | t -> t )
             in
             (List.map name_free missing_args, name_free cod)
@@ -1281,7 +1281,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           in
           let tvars = get_current_type_vars cx in
           let erased_eta_param (ty : Cpp_ir.Lowered.Type.t) =
-            Type_util.has_tany_written ty && not (Cpp_ir.Types.prints_as_any ty)
+            Base.Type_util.has_tany_written ty && not (Cpp_ir.Types.prints_as_any ty)
             && (match ty with Shared_pointer _ | Function _ -> false | _ -> true)
           in
           (* Whether the declaration had anything to say about this call's
@@ -1297,7 +1297,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                   match slot_dom i with
                   | Some slot ->
                     let refined =
-                      Type_util.refine_param_from_slot ~tvars ~slot ty
+                      Base.Type_util.refine_param_from_slot ~tvars ~slot ty
                     in
                     if refined <> ty then decl_spoke := true;
                     refined
@@ -1325,7 +1325,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
               (fun i ty ->
                 let ty =
                   match slot_dom i with
-                  | Some slot -> Type_util.refine_param_from_slot ~tvars ~slot ty
+                  | Some slot -> Base.Type_util.refine_param_from_slot ~tvars ~slot ty
                   | None -> ty
                 in
                 (* The callee spells a field this scope cannot -- its own
@@ -1396,7 +1396,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           let cod =
             match decl_cod with
             | Some slot when !decl_spoke ->
-              Type_util.refine_param_from_slot ~tvars ~slot cod
+              Base.Type_util.refine_param_from_slot ~tvars ~slot cod
             (* A result the substitution erased outright has no other
                statement than the declaration's, which is taken whole
                wherever this scope can spell it. *)
@@ -1585,7 +1585,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
               (* If the callee is itself a pair accessor (.first/.second) and
                  its product arg was coerced, result is also std::any *)
               let is_pair_accessor =
-                match Table.find_custom_opt r with
+                match Base.Table.find_custom_opt r with
                 | Some s -> (
                   match Cpp_ir.Foreign.shape_of_text s with
                   | Pair_projection _ -> true
@@ -1622,7 +1622,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                value, so they are not it. *)
             let first_dom =
               try
-                match core_value_domains (Table.find_type n) with
+                match core_value_domains (Base.Table.find_type n) with
                 | t :: _ -> Some (resolve_meta t)
                 | [] -> None
               with Not_found -> None
@@ -1644,7 +1644,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           | _, Any_cast _ -> primary_result
           | Some g, _ when (match glob_tys with
                             | [_; _] ->
-                              not (List.exists Type_util.has_tany_in_type
+                              not (List.exists Base.Type_util.has_tany_in_type
                                      glob_tys)
                             | _ -> false) ->
             (* The accessor's own type arguments name both components
@@ -1720,9 +1720,9 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
     let callee_fun_core_ty =
       match f with
         | Core.Expr.Global ({callee = r; _} as use)
-          when not (Core_util.Var_types.is_empty (Core_util.written_type_args use)) ->
+          when not (Base.Core_util.Var_types.is_empty (Base.Core_util.written_type_args use)) ->
           (match find_type_opt r with
-           | Some ty -> Some (Core_util.instantiate_written ~reader:"callee_fun_core_ty" use ty)
+           | Some ty -> Some (Base.Core_util.instantiate_written ~reader:"callee_fun_core_ty" use ty)
            | None -> infer_core_body_type f)
         | _ ->
           ( match infer_core_body_type f with
@@ -1762,7 +1762,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
         | Core.Type.Arrow {parameter = t; result = rest} ->
           ( match resolve_meta t with
           | Core.Type.Erased _ -> extract_params rest
-          | t when Table.is_typeclass_type t -> extract_params rest
+          | t when Base.Table.is_typeclass_type t -> extract_params rest
           | t -> t :: extract_params rest )
         | Core.Type.Meta {contents = Some t} -> extract_params t
         | _ -> []
@@ -2087,7 +2087,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           | Some idx ->
             ( match case_ty with
             | Core.Type.Global_app {head = r; _} ->
-              let all_ft = Table.record_field_types r in
+              let all_ft = Base.Table.record_field_types r in
               let non_erased = filter_value_types all_ft in
               ( try core_codomain_erases_to_any n (List.nth non_erased idx)
                 with _ -> false )
@@ -2107,8 +2107,8 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
     the method's own type variables. *)
 let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
   let inst, class_ref, method_ref = Option.get (singleton_call cx env i occ) in
-  let ipv = List.length (Table.get_ind_ip_vars class_ref) in
-  let n_own = Type_util.method_tvar_count class_ref (Table.find_type method_ref) in
+  let ipv = List.length (Base.Table.get_ind_ip_vars class_ref) in
+  let n_own = Base.Type_util.method_tvar_count class_ref (Base.Table.find_type method_ref) in
   let tvars = get_current_type_vars cx in
   let targs =
     List.init n_own (fun k ->
@@ -2117,7 +2117,7 @@ let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
   in
   let value_args = List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args in
   Cpp_ir.Build.call
-    (Scope (Local inst, Common.id_of_global Term method_ref, targs))
+    (Scope (Local inst, Base.Common.id_of_global Term method_ref, targs))
     (List.map (gen_expr cx env) value_args)
 
 (** A class field projected through the instance [use] applied to [args]
@@ -2132,11 +2132,11 @@ let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Lowere
     let k = List.length missing in
     let call =
       Core.Expr.Apply {callee = Core.Expr.Global use;
-                       arguments = List.map (Core_util.ast_lift k) args
+                       arguments = List.map (Base.Core_util.ast_lift k) args
                          @ List.init k (fun i -> Core.Expr.fresh_rel (k - i))}
     in
     gen_expr cx ?expected_ty ~slot env
-      (Core_util.named_lams
+      (Base.Core_util.named_lams
          (List.rev (List.mapi (fun i t -> (Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i)), t)) missing))
          call )
 
@@ -2192,7 +2192,7 @@ let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Exp
     match f with
     | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
       let n_runtime =
-        List.length (List.filter (fun a -> not (Core_util.is_erased_value (strip_magic a))) args)
+        List.length (List.filter (fun a -> not (Base.Core_util.is_erased_value (strip_magic a))) args)
       in
       let boxes t =
         match Option.map (fun t -> Translation_types.unfold_cpp_typedef cx env (strip_cpp_ref_const t)) t with
@@ -2225,7 +2225,7 @@ let gen_application cx ~expected_ty ~slot env (f : Core.Expr.t) (args : Core.Exp
      it returns. *)
   let made_of_application (call : Cpp_ir.Lowered.Expr.t) =
     match (f, call) with
-    | Core.Expr.Global use, Call (_, Entity (r, _, _), _) when Common.globref_equal r use.callee ->
+    | Core.Expr.Global use, Call (_, Entity (r, _, _), _) when Base.Common.globref_equal r use.callee ->
       made_of (Core.Global_use.occurrence use) call
     | Core.Expr.Bound_variable {occurrence = occ; _}, Call (_, Local _, _) -> made_of occ call
     | _ -> call

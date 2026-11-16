@@ -25,7 +25,7 @@ val copy : Core.Expr.t -> Core.Expr.t
     instantiations of the uses inside the body -- a rigid self-reference
     there ({!Core.Scheme.Identity}) included, whose variable is the callee's.
     Substitution reaches every variable of the callee's range, as
-    {!Core_util.instantiate_body}'s does: a local definition's own variable
+    {!Base.Core_util.instantiate_body}'s does: a local definition's own variable
     numbered within it ({!Local_types}) is replaced too. *)
 val instance : Core.Global_use.t -> Core.Expr.t -> Core.Expr.t
 

@@ -4,7 +4,7 @@
 open Names
 
 let violation r what =
-  Probe.violation "global use"
+  Base.Probe.violation "global use"
     Pp.(str "the use of " ++ GlobRef.print r ++ str " " ++ str what)
 
 (* The types an instantiation holds: each slot's solution, and the type
@@ -42,7 +42,7 @@ let check_instantiation owners r inst =
       ( "is instantiated at the scheme of "
       ^ Pp.string_of_ppcmds (GlobRef.print owner) );
   let tys = solution_types inst in
-  if List.exists Core_util.type_has_meta tys then
+  if List.exists Base.Core_util.type_has_meta tys then
     violation r "holds a metavariable in its frozen instantiation";
   List.iter
     (fun h ->
@@ -50,7 +50,7 @@ let check_instantiation owners r inst =
       | None -> Hashtbl.add owners h inst
       | Some inst' when inst' = inst -> ()
       | Some inst' ->
-        let show i = String.concat ", " (List.map Core_util.debug_core_type (solution_types i)) in
+        let show i = String.concat ", " (List.map Base.Core_util.debug_core_type (solution_types i)) in
         violation r
           (Printf.sprintf
              "shares hole _%d with a different use (%s against %s); a copied use was not freshened"
@@ -61,7 +61,7 @@ let check_global_use owners (use : _ Core.Global_use.at) =
   Option.iter (check_instantiation owners use.callee) (Core.Global_use.instantiation use)
 
 let structure struc =
-  if Probe.checking () then
+  if Base.Probe.checking () then
     let owners = Hashtbl.create 64 in
     ignore
       (Modutil.struct_ast_search

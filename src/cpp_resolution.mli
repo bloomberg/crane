@@ -65,14 +65,14 @@ type key =
       (** The module as a module expression names it -- a functor applied,
           its arguments, the base a functor derives from: a module absorbed
           into a collision wrapper as a bystander through the wrapper. *)
-  | Global of Common.kind * GlobRef.t
+  | Global of Base.Common.kind * GlobRef.t
       (** The global: an inline custom mapping's text, or its name. *)
-  | Unmapped of Common.kind * GlobRef.t
+  | Unmapped of Base.Common.kind * GlobRef.t
       (** The global's name, whatever an inline custom mapping says. *)
   | Inductive_value of GlobRef.t
       (** The inductive type, written as a value: the struct a constructor's
           value is built through. *)
-  | Short of Common.kind * GlobRef.t  (** Its name in its own scope, unqualified. *)
+  | Short of Base.Common.kind * GlobRef.t  (** Its name in its own scope, unqualified. *)
   | Class_concept of GlobRef.t  (** The concept of the type class. *)
   | Modtype_concept of ModPath.t  (** The concept of the module type, named. *)
   | Modtype_concept_declared of ModPath.t
@@ -128,15 +128,15 @@ val pp_key : key -> Pp.t
     itself, whether it asks for [typename] in front, and whether template
     arguments following it ask for the [template] disambiguator. *)
 type head = {
-  outer : Cpp_name.scope list;  (** qualifiers in front, outermost first *)
-  head : Cpp_name.t;  (** the name itself *)
+  outer : Base.Cpp_name.scope list;  (** qualifiers in front, outermost first *)
+  head : Base.Cpp_name.t;  (** the name itself *)
   typename : bool;  (** whether [typename] goes in front *)
   templated : bool;  (** whether template arguments ask for [template] *)
 }
 
 (** A constant or constructor as an expression names it. *)
 type reference =
-  | Named_value of {name : Cpp_name.t; type_arguments : bool}
+  | Named_value of {name : Base.Cpp_name.t; type_arguments : bool}
       (** By [name], qualified as it is to be written; followed by the
           template arguments of the use if [type_arguments]: a function of
           an eponymous record of no parameters writes none. *)
@@ -158,7 +158,7 @@ type access =
     {!Held_back_concept} whether it holds, an {!Out_of_line_scope} the
     scope or none, anything else a name. *)
 type value =
-  | Name of Cpp_name.t
+  | Name of Base.Cpp_name.t
   | Head of head
   | Inline of string option
   | Reference of reference
@@ -176,7 +176,7 @@ val pp_access : access -> Pp.t
     is any other answer ({!Type_head}, {!Inline_custom}, {!Value_reference},
     {!Value_access}, {!Read_by_a_function} and {!Held_back_concept} keys
     resolve to those). *)
-val name_of : key -> value -> Cpp_name.t
+val name_of : key -> value -> Base.Cpp_name.t
 
 (** A declaration's names, by frame and key. *)
 type table
@@ -196,7 +196,7 @@ type 'a lookup =
 
 (** The name [key] resolved to at [frame]; [key] is one resolving to a name
     ({!name_of}). *)
-val find : table -> frame -> key -> Cpp_name.t lookup
+val find : table -> frame -> key -> Base.Cpp_name.t lookup
 
 (** The head the global resolved to at [frame], in the form given. *)
 val find_head : table -> frame -> head_form -> GlobRef.t -> head lookup

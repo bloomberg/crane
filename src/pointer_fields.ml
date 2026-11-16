@@ -23,7 +23,7 @@ let add m planned =
   List.fold_left
     (fun m (owner, ctor_name, fields) ->
       Map.add
-        (Common.ctor_owner_key owner, ctor_name)
+        (Base.Common.ctor_owner_key owner, ctor_name)
         (List.map (fun (i, recursive) -> if recursive then Recursive i else Boxed i) fields)
         m )
     m planned

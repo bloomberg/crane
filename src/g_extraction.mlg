@@ -26,7 +26,7 @@ DECLARE PLUGIN "rocq-crane.plugin"
 open Stdarg
 open Pp
 open Names
-open Table
+open Base.Table
 open Extract_env
 
 let pr_cppname s = spc () ++ qs s
@@ -191,7 +191,7 @@ END
 
 VERNAC COMMAND EXTEND ExtractionTriviallyCopyable CLASSIFIED AS SIDEFF
 | [ "Crane" "TriviallyCopyable" ne_global_list(l) ]
-  -> { Table.extraction_trivially_copyable l }
+  -> { Base.Table.extraction_trivially_copyable l }
 END
 
 VERNAC COMMAND EXTEND ExtractionReuse CLASSIFIED AS SIDEFF
@@ -355,12 +355,12 @@ END
 
 VERNAC COMMAND EXTEND ExtractionNumeral CLASSIFIED AS SIDEFF
 | [ "Crane" "Extract" "Numeral" global(x) "=>" cppname(fmt) ]
-  -> { Table.extract_numeral x fmt }
+  -> { Base.Table.extract_numeral x fmt }
 END
 
 VERNAC COMMAND EXTEND ExtractionGuardCompare CLASSIFIED AS SIDEFF
 | [ "Crane" "Guard" "Compare" global(f) "=>" global(ret) ]
-  -> { Table.extract_guard_compare f ret }
+  -> { Base.Table.extract_guard_compare f ret }
 END
 
 (* Show the extraction of the current proof *)

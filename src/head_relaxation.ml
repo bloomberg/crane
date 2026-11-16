@@ -27,13 +27,13 @@ module L = Cpp_ir.Lowered
 let lowered_tvar_is id : L.Type.t -> bool = function
   | Variable (Named n) -> Id.equal n id
   | Variable (Index (i, name)) ->
-    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Common.tvar_id i) id
+    (match name with Some n -> Id.equal n id | None -> false) || Id.equal (Base.Common.tvar_id i) id
   | _ -> false
 
 (* The name a type variable is spelled with. *)
 let lowered_tvar_name : L.Type.t -> Id.t option = function
   | Variable (Index (_, Some n) | Named n) -> Some n
-  | Variable (Index (i, None)) -> Some (Common.tvar_id i)
+  | Variable (Index (i, None)) -> Some (Base.Common.tvar_id i)
   | _ -> None
 
 (* The variable [head], declared a plain [typename], applied to [args]. *)
@@ -113,7 +113,7 @@ let param_applications_lowered relaxed deduced =
 let unmentioned_erased_lowered ids =
   let is_tvar id : L.Type.t -> bool = function
     | Variable (Index (_, Some n) | Named n) -> Id.equal n id
-    | Variable (Index (i, None)) -> Id.equal (Common.tvar_id i) id
+    | Variable (Index (i, None)) -> Id.equal (Base.Common.tvar_id i) id
     | _ -> false
   in
   let is_unmentioned (t : L.Type.t) =

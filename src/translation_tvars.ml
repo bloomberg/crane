@@ -7,20 +7,20 @@
     substitution a body's annotations resolve its variables by, and the
     carrier a template argument abstracts over.  Below type conversion. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 module IntSet = Escape.IntSet
 
-(* [ref_is_skipped] and [core_ret_is_skipped] live in {!Type_util}, which
+(* [ref_is_skipped] and [core_ret_is_skipped] live in {!Base.Type_util}, which
    {!Method_registry} also asks. *)
 
-(* {!Type_util.core_type_is_instance} works the answer out; a caller with a
+(* {!Base.Type_util.core_type_is_instance} works the answer out; a caller with a
    global asks {!ref_is_instance} and one with a binder asks
    {!Core_query.binder_is_instance}. *)
 
@@ -53,7 +53,7 @@ type hkt_tvar_position = {
     class parameter: [mret : forall M, Mon M -> forall A, A -> M A] passes the
     variable for [M A] as the type-constructor argument of its [Mon]
     parameter.  Such a variable is not a C++ template parameter but the
-    instance's associated type — see {!Table.get_ind_hkt_params}.
+    instance's associated type — see {!Base.Table.get_ind_hkt_params}.
 
     Instance parameters are numbered as [Gen_functions.gen_dfun] numbers them --
     it walks the binders innermost first, so the source-{e last} instance is
@@ -67,8 +67,8 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
   let rec go i acc = function
     | Core.Type.Arrow {parameter = Core.Type.Global_app {head = class_ref; type_arguments = type_args; _};
                        result = rest}
-      when Table.is_typeclass class_ref ->
-      let ip_vars = Table.get_ind_ip_vars class_ref in
+      when Base.Table.is_typeclass class_ref ->
+      let ip_vars = Base.Table.get_ind_ip_vars class_ref in
       let acc =
         List.fold_left
           (fun acc pos ->
@@ -82,7 +82,7 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
               :: acc
             | _ -> acc )
           acc
-          (Table.get_ind_hkt_params class_ref)
+          (Base.Table.get_ind_hkt_params class_ref)
       in
       go (i + 1) acc rest
     | Core.Type.Arrow {result = rest; _} -> go i acc rest
@@ -119,18 +119,18 @@ let deapply_family_variables : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t =
   Cpp_ir.Types.map (function Apply ((Variable _ as v), _) -> v | t -> t)
 
 (** The number of type parameters [g] is written with in C++: the promoted
-    variables it leads with ({!Table.promoted_type_params}), then an inductive's
+    variables it leads with ({!Base.Table.promoted_type_params}), then an inductive's
     parameters or the variables of a type alias's body.  A family alias under
     a [Params] section is [BotE<ptr, X>], and [BotE<ptr>] is one short. *)
 let written_arity g =
-  let promoted = List.length (Table.promoted_type_params g) in
+  let promoted = List.length (Base.Table.promoted_type_params g) in
   match g with
   | GlobRef.IndRef (kn, _) ->
-    Option.map (( + ) promoted) (Table.get_ind_num_param_vars_opt kn)
+    Option.map (( + ) promoted) (Base.Table.get_ind_num_param_vars_opt kn)
   | GlobRef.ConstRef kn ->
     Option.map
-      (fun body -> promoted + Core_util.type_maxvar body)
-      (Table.lookup_typedef_unchecked kn)
+      (fun body -> promoted + Base.Core_util.type_maxvar body)
+      (Base.Table.lookup_typedef_unchecked kn)
   | _ -> None
 
 (** Whether [t] is a type written with fewer arguments than it has
@@ -320,7 +320,7 @@ let apply_hkt_tyctors cx g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered
          which argument the C++ template varies in, and that is not in general
          the leading one -- [itree]'s is its last.  The printer substitutes the
          sentinel through the mapping rather than into the argument list. *)
-      | Entity_application (g, args, _) when not (Table.is_custom g) -> args
+      | Entity_application (g, args, _) when not (Base.Table.is_custom g) -> args
       | Named (_, args) | External (_, args) | Apply (_, args) -> args
       | _ -> []
     in
@@ -364,11 +364,11 @@ let apply_hkt_tyctors cx g (temps : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered
   in
   List.mapi
     (fun i t ->
-      if Table.is_hkt_ind_param g i then (Type_constructor (abstract_leading_arg t) : Cpp_ir.Lowered.Type.t)
+      if Base.Table.is_hkt_ind_param g i then (Type_constructor (abstract_leading_arg t) : Cpp_ir.Lowered.Type.t)
       else
         match t with
         | Apply ((Variable tv as head), _)
-          when Table.is_phantom_type_param g i
+          when Base.Table.is_phantom_type_param g i
                || Option.cata (is_current_typename_var cx) false
                     (match tv with Index (_, n) -> n | Named x -> Some x) ->
           (* The application cannot be written, so the head alone stands for

@@ -15,7 +15,7 @@ let v x : expr = Local (id x)
 let tree : ty = Entity_application (GlobRef.VarRef (id "tree"), [], [])
 
 (* [tree::node_crane_reuse(args)], the token first. *)
-let reuse args = mk_call (Type_member (tree, Generated_name.companion (id "node") "reuse")) args
+let reuse args = mk_call (Type_member (tree, Base.Generated_name.companion (id "node") "reuse")) args
 
 (* [std::get<tree::Node>(t.v_mut())], the alternative [t] holds. *)
 let alternative t : expr = Variant_get (Member (tree, id "Node"), Some (mk_call (Access (Dot, v t, id "v_mut")) []))

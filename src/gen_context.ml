@@ -8,9 +8,9 @@
     generators ([Gen_functions], [Gen_records], [Gen_instances],
     [Gen_inductives]) that build CppIR declarations from Core ones. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
 
@@ -18,7 +18,7 @@ module IntSet = Escape.IntSet
 
 (** Top-level bodies generated in each phase of the unit being extracted;
     see {!body_generation_counts}. *)
-let body_generations : (Common.phase, int) Hashtbl.t = State.table State.Unit 3
+let body_generations : (Base.Common.phase, int) Hashtbl.t = Base.State.table Base.State.Unit 3
 
 (** How many top-level bodies each phase ([Plan], [Emit]) has generated in
     this unit. *)
@@ -41,9 +41,9 @@ let begin_body cx ~owner ?(function_ = false) () =
   let phase = get_phase () in
   Hashtbl.replace body_generations phase
     (1 + Option.default 0 (Hashtbl.find_opt body_generations phase));
-  if Pipeline_trace.enabled () then
-    Pipeline_trace.event "body"
-      (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Table.safe_pr_global owner));
+  if Base.Pipeline_trace.enabled () then
+    Base.Pipeline_trace.event "body"
+      (phase_name phase ^ " " ^ Pp.string_of_ppcmds (Base.Table.safe_pr_global owner));
   cx.ctx <-
     { input = { cx.ctx.input with body_owner = Some owner; body_function = function_ };
       lexical = { cx.ctx.lexical with move_plan = Ownership_ir.empty; representation = []; planned_reads = [] };
@@ -94,20 +94,20 @@ let count_keep_params sign =
     constructor ([M : Type -> Type]) — becomes an associated type of the
     instance, spelled [typename I::name]. *)
 let is_class_tparam class_ref i =
-  i < Table.get_ind_nb_sign_keeps class_ref
-  && not (Table.is_hkt_param class_ref i)
+  i < Base.Table.get_ind_nb_sign_keeps class_ref
+  && not (Base.Table.is_hkt_param class_ref i)
 
 (** Name of the [i]-th element-type parameter an instance's carrier alias
     template binds. *)
-let hkt_alias_param_name i = Generated_name.indexed "A" i
+let hkt_alias_param_name i = Base.Generated_name.indexed "A" i
 
-(* Re-exports of {!Type_util} helpers the declaration generators read
+(* Re-exports of {!Base.Type_util} helpers the declaration generators read
    through this module. *)
-let recover_method_quantifier = Type_util.recover_method_quantifier
+let recover_method_quantifier = Base.Type_util.recover_method_quantifier
 
-let method_tvar_count = Type_util.method_tvar_count
+let method_tvar_count = Base.Type_util.method_tvar_count
 
-let hkt_carrier_fixed_args = Type_util.hkt_carrier_fixed_args
+let hkt_carrier_fixed_args = Base.Type_util.hkt_carrier_fixed_args
 
 (** Render a type CONSTRUCTOR argument as an alias template body: the [list] of
     [Instance ListContainer : Container list] becomes [List<_A0>], to be
@@ -119,9 +119,9 @@ let hkt_carrier_alias base arity core_ty =
   let is_lambda =
     match core_ty with
     | Core.Type.Global_app {head = r; type_arguments = args; _} ->
-      Core_util.writes_binder ~constructors:(Core_util.constructor_params r) args
-    | Core.Type.Variable_app {arguments = args; _} -> Core_util.writes_binder args
-    | _ -> Core_util.type_has_hole core_ty
+      Base.Core_util.writes_binder ~constructors:(Base.Core_util.constructor_params r) args
+    | Core.Type.Variable_app {arguments = args; _} -> Base.Core_util.writes_binder args
+    | _ -> Base.Core_util.type_has_hole core_ty
   in
   match core_ty with
   (* A carrier with a hole is a type-level lambda whose binder is the hole:
@@ -130,12 +130,12 @@ let hkt_carrier_alias base arity core_ty =
      The alias applies it to its parameter. *)
   | _ when arity = 1 && is_lambda ->
     ( [hkt_alias_param_name 0],
-      Core_util.fill_type_hole
+      Base.Core_util.fill_type_hole
         (Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = base + 1}) core_ty )
   | Core.Type.Global_app {head = r; type_arguments = args; index_arguments = es} ->
     let kept = hkt_carrier_fixed_args arity core_ty in
     let params =
-      max arity (max (List.length args) (Table.get_type_scheme_arity r))
+      max arity (max (List.length args) (Base.Table.get_type_scheme_arity r))
       - List.length kept
     in
     ( List.init params hkt_alias_param_name,
@@ -162,8 +162,8 @@ let hkt_carrier_alias base arity core_ty =
 let class_promoted_concrete ?(tvar_base = 0) class_ref type_args =
   List.mapi
     (fun i ty ->
-      if Table.is_hkt_param class_ref i then
-        hkt_carrier_alias tvar_base (Table.get_ind_hkt_arity class_ref i) ty
+      if Base.Table.is_hkt_param class_ref i then
+        hkt_carrier_alias tvar_base (Base.Table.get_ind_hkt_arity class_ref i) ty
       else ([], ty) )
     type_args
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
@@ -186,18 +186,18 @@ let promoted_var_is_associated_type class_ref v =
     (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
       match (field_opt, field_ty) with
       | Some fr, Core.Type.Global_app {head = r; _}
-        when Id.equal (Common.id_of_global Term fr) v ->
-        Table.is_typeclass r
+        when Id.equal (Base.Common.id_of_global Term fr) v ->
+        Base.Table.is_typeclass r
       | _ -> true )
-    (Table.get_record_field_bindings class_ref)
+    (Base.Table.get_record_field_bindings class_ref)
 
 (** The associated-type ("promoted") variables of a class, in [type_variables] order,
     each paired with its arity: [0] for a plain associated type, [n] for a
     higher-kinded carrier, which is an alias template of [n] parameters. *)
 let class_promoted_vars_arities class_ref =
   List.mapi
-    (fun i v -> (v, Table.get_ind_hkt_arity class_ref i))
-    (Table.get_ind_ip_vars class_ref)
+    (fun i v -> (v, Base.Table.get_ind_hkt_arity class_ref i))
+    (Base.Table.get_ind_ip_vars class_ref)
   |> List.filteri (fun i _ -> not (is_class_tparam class_ref i))
   |> List.filter (fun (v, _) -> promoted_var_is_associated_type class_ref v)
 
@@ -208,7 +208,7 @@ let class_promoted_vars class_ref =
 
 (** A class's fields paired with their Core types, as extraction recorded the
     pairing. *)
-let class_fields_with_types = Table.get_record_field_bindings
+let class_fields_with_types = Base.Table.get_record_field_bindings
 
 (** The associated types an instance parameter provides, as a substitution from
     the bare name a promoted type variable carries to the qualified type it
@@ -244,8 +244,8 @@ let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
     List.concat_map
       (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
         match (field_opt, field_ty) with
-        | Some field_ref, Core.Type.Global_app {head = r; _} when Table.is_typeclass r ->
-          let field_id = Common.id_of_global Term field_ref in
+        | Some field_ref, Core.Type.Global_app {head = r; _} when Base.Table.is_typeclass r ->
+          let field_id = Base.Common.id_of_global Term field_ref in
           List.filter_map
             (fun v ->
               if is_direct v then None
@@ -277,18 +277,18 @@ let promoted_resolutions ?fields class_ref (inst_ty : Cpp_ir.Lowered.Type.t) :
     this one cannot supply is not one to guess at. *)
 let rec class_arg_type ~own_instances sh : Cpp_ir.Lowered.Type.t option =
   match sh with
-  | Table.Carg_unknown -> None
-  | Table.Carg (r, []) -> Some (Entity_application (r, [], []))
-  | Table.Carg (r, [arg]) when Table.is_projection r ->
+  | Base.Table.Carg_unknown -> None
+  | Base.Table.Carg (r, []) -> Some (Entity_application (r, [], []))
+  | Base.Table.Carg (r, [arg]) when Base.Table.is_projection r ->
     (* A class field is an instance of its own class -- [@IPTR P] is an [IPtr]
        -- but it is not applied to the record, it is selected from it.  Spelling
        it as a template gives the undeclared [IPTR<ParamsV<natIPtr>>], and a
        second, wrong answer for every name it owns is indistinguishable from
        none: {!drop_ambiguous} then drops the right one with it. *)
     Option.map
-      (fun t -> Cpp_ir.Type.Member (t, Common.id_of_global Term r))
+      (fun t -> Cpp_ir.Type.Member (t, Base.Common.id_of_global Term r))
       (class_arg_type ~own_instances arg)
-  | Table.Carg (r, args) ->
+  | Base.Table.Carg (r, args) ->
     (* A recorded argument spells itself; an unknown one is the context the
        recorded type shares with [own_instances] -- [PointerV] takes the
        [_tcI0] that [PIV] takes -- and is filled by position.  A list of a
@@ -315,13 +315,13 @@ let resolutions_of_shapes ~own_instances arg_shapes =
   List.concat_map
     (fun sh ->
       match sh with
-      | Table.Carg_unknown -> []
-      | Table.Carg (arg_ref, _) -> (
+      | Base.Table.Carg_unknown -> []
+      | Base.Table.Carg (arg_ref, _) -> (
         match
-          ( Table.get_instance_class_shape arg_ref
+          ( Base.Table.get_instance_class_shape arg_ref
           , class_arg_type ~own_instances sh )
         with
-        | Some (arg_class, _), Some inst_ty when Table.is_typeclass arg_class ->
+        | Some (arg_class, _), Some inst_ty when Base.Table.is_typeclass arg_class ->
           promoted_resolutions arg_class inst_ty
         | _ -> [] ) )
     arg_shapes
@@ -329,17 +329,17 @@ let resolutions_of_shapes ~own_instances arg_shapes =
 (** {!resolutions_of_shapes} for the recorded class arguments of the instance
     [inst_ref]; [] when it has no recorded class shape. *)
 let instance_arg_resolutions ~own_instances inst_ref =
-  match Table.get_instance_class_shape inst_ref with
+  match Base.Table.get_instance_class_shape inst_ref with
   | None -> []
   | Some (_, arg_shapes) -> resolutions_of_shapes ~own_instances arg_shapes
 
 (** The resolution a declaration's own type supplies when that type is an
     inductive whose constructor fields name an instance -- see
-    {!Table.get_type_class_args}.  [boxed : @dval natIPtr] is what says which
+    {!Base.Table.get_type_class_args}.  [boxed : @dval natIPtr] is what says which
     [IPtr] the [ptr] inside [dval] belongs to, and the only thing that does:
     the Core type keeps neither the argument nor the dependence. *)
 let ind_type_resolutions r =
-  match Table.get_instance_class_shape r with
+  match Base.Table.get_instance_class_shape r with
   | Some (head, arg_shapes) ->
     let own_instances =
       (* The arguments the declaration's own type writes, spelled as written:
@@ -353,7 +353,7 @@ let ind_type_resolutions r =
          variables, not only the ones its fields name: a field whose type
          unfolds a projection spells the class variable of the context
          instance directly, and [@frame natIPtr] is what says which. *)
-      (arg_shapes @ Table.get_type_class_args head)
+      (arg_shapes @ Base.Table.get_type_class_args head)
   | None -> []
 
 (** Drop a promoted name the list answers with two different types.
@@ -407,13 +407,13 @@ let promoted_resolutions_of_body cx ?r ?ty b =
      record is taken at extraction, before the tables that would say so are
      filled, so the question is asked here instead. *)
   let instance_class r =
-    match Table.get_instance_class_shape r with
-    | Some (class_ref, _) when Table.is_typeclass class_ref -> Some class_ref
+    match Base.Table.get_instance_class_shape r with
+    | Some (class_ref, _) when Base.Table.is_typeclass class_ref -> Some class_ref
     | _ -> None
   in
   let add inst_ref (inst_ty : Cpp_ir.Lowered.Type.t) =
-    match Table.get_instance_class_shape inst_ref with
-    | Some (class_ref, _) when Table.is_typeclass class_ref ->
+    match Base.Table.get_instance_class_shape inst_ref with
+    | Some (class_ref, _) when Base.Table.is_typeclass class_ref ->
       let own_instances =
         match inst_ty with Entity_application (_, args, _) -> args | _ -> []
       in
@@ -433,7 +433,7 @@ let promoted_resolutions_of_body cx ?r ?ty b =
     let ok = ref true in
     let rec go t =
       (match t with Core.Expr.Bound_variable _ -> ok := false | _ -> ());
-      Core_util.ast_iter go t
+      Base.Core_util.ast_iter go t
     in
     go e;
     !ok
@@ -446,15 +446,15 @@ let promoted_resolutions_of_body cx ?r ?ty b =
     match instance_class r with
     | Some _ as c -> c
     | None -> (
-      match Table.find_type r with
+      match Base.Table.find_type r with
       | ty -> (
-        match Core_util.type_simpl (Type_util.core_codomain ty) with
-        | Core.Type.Global_app {head = c; _} when Table.is_typeclass c -> Some c
+        match Base.Core_util.type_simpl (Base.Type_util.core_codomain ty) with
+        | Core.Type.Global_app {head = c; _} when Base.Table.is_typeclass c -> Some c
         | _ -> None )
       | exception Not_found -> None )
   in
   let add_at class_ref inst_ref inst_ty =
-    match Table.get_instance_class_shape inst_ref with
+    match Base.Table.get_instance_class_shape inst_ref with
     | Some _ -> add inst_ref inst_ty
     | None -> found := !found @ promoted_resolutions class_ref inst_ty
   in
@@ -470,13 +470,13 @@ let promoted_resolutions_of_body cx ?r ?ty b =
     | None -> []
     | Some ty ->
       let binders, _ = collect_lams b in
-      let doms = Type_util.core_domains ty in
+      let doms = Base.Type_util.core_domains ty in
       let tc_names = ref (Translation_tvars.collect_typeclass_param_ids ty) in
       let outer_first =
         List.mapi
           (fun j _ ->
             match List.nth_opt doms j with
-            | Some d when Table.is_typeclass_type d -> (
+            | Some d when Base.Table.is_typeclass_type d -> (
               match !tc_names with
               | n :: rest -> tc_names := rest; Some n
               | [] -> None )
@@ -501,7 +501,7 @@ let promoted_resolutions_of_body cx ?r ?ty b =
       match t with
       | Core.Expr.Lambda {body = b; _} -> go (depth + 1) b
       | Core.Expr.Let {value = a; body = b; _} -> go depth a; go (depth + 1) b
-      | _ -> Core_util.ast_iter (go depth) t
+      | _ -> Base.Core_util.ast_iter (go depth) t
     in
     go 0 e;
     !ok
@@ -536,7 +536,7 @@ let promoted_resolutions_of_body cx ?r ?ty b =
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk_at (d + Array.length ids)) funs
-    | e' -> Core_util.ast_iter (walk_at d) e'
+    | e' -> Base.Core_util.ast_iter (walk_at d) e'
   in
   let rec walk e =
         match Core_query.strip_magic e with
@@ -559,14 +559,14 @@ let promoted_resolutions_of_body cx ?r ?ty b =
           | _ -> walk a )
         args
     | Core.Expr.Global {callee = r; _} -> add r (Entity_application (r, [], []))
-    | _ -> Core_util.ast_iter walk e
+    | _ -> Base.Core_util.ast_iter walk e
   in
   walk b;
   (if leading <> [] then
      let _, inner = collect_lams b in
      walk_at 0 inner);
   (* What the declaration's own type applies to its class binders -- see
-     {!Table.get_context_instance_apps} -- read as the application it is, over
+     {!Base.Table.get_context_instance_apps} -- read as the application it is, over
      the template names those binders take. *)
   ( match (r, ty) with
   | Some r, Some ty ->
@@ -580,11 +580,11 @@ let promoted_resolutions_of_body cx ?r ?ty b =
            [@PTR Pa] is [_tcI0::PTR], which the binder already resolves. *)
         | Some class_ref, names
           when List.for_all Option.has_some names
-               && not (Table.is_projection inst) ->
+               && not (Base.Table.is_projection inst) ->
           let names = List.map Option.get names in
           let n = List.length names in
           let app =
-            Core.Expr.Apply {callee = Core.Expr.Global (Core_util.open_reference inst);
+            Core.Expr.Apply {callee = Core.Expr.Global (Base.Core_util.open_reference inst);
                              arguments = List.init n (fun i -> Core.Expr.fresh_rel (n - i))}
           in
           Option.iter (add_at class_ref inst)
@@ -592,7 +592,7 @@ let promoted_resolutions_of_body cx ?r ?ty b =
                (List.rev names, snd (empty_env ()))
                app )
         | _ -> () )
-      (Table.get_context_instance_apps r)
+      (Base.Table.get_context_instance_apps r)
   | _ -> () );
   drop_ambiguous !found
 
@@ -609,7 +609,7 @@ let type_resolutions_of_referenced_globals b =
     ( match Core_query.strip_magic e with
     | Core.Expr.Global {callee = r; _} -> found := !found @ ind_type_resolutions r
     | _ -> () );
-    Core_util.ast_iter walk e
+    Base.Core_util.ast_iter walk e
   in
   walk b;
   drop_ambiguous !found
@@ -622,7 +622,7 @@ let type_resolutions_of_referenced_globals b =
 let with_body_resolutions cx r b f =
   with_promoted_var_map cx
     ( cx.ctx.lexical.promoted_var_map
-    @ promoted_resolutions_of_body cx ~r ?ty:(try Some (Table.find_type r) with Not_found -> None) b
+    @ promoted_resolutions_of_body cx ~r ?ty:(try Some (Base.Table.find_type r) with Not_found -> None) b
     @ ind_type_resolutions r
     @ type_resolutions_of_referenced_globals b )
     f
@@ -667,12 +667,12 @@ let apply_hkt_resolutions_decl resolutions (decl : Cpp_ir.Lowered.Decl.t) =
 
 (** The arguments for the promoted variables [r] mentions without declaring,
     which are template parameters of whatever [r] is generated as -- see
-    {!Table.promoted_type_params}.  They trail a concept's arguments (the
+    {!Base.Table.promoted_type_params}.  They trail a concept's arguments (the
     instance comes first, see {!Gen_records.gen_typeclass_cpp}) and lead a
     record struct's (see [Gen_records]); every use has to supply them in this
     order, or it names a different template. *)
 let mentioned_promoted_args r =
-  List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Table.promoted_type_params r)
+  List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Base.Table.promoted_type_params r)
 
 (** [deapply_families name vars ty] takes the application off each of
     [name]'s family parameters in [ty], spelled at [vars].  A family is a plain
@@ -680,7 +680,7 @@ let mentioned_promoted_args r =
     from another instantiation declares in its place, which the struct-level
     {!Plan_templates.deapply_plain_tvars} does not see. *)
 let deapply_families name vars =
-  let families = List.filteri (fun i _ -> Table.is_family_ind_param name i) vars in
+  let families = List.filteri (fun i _ -> Base.Table.is_family_ind_param name i) vars in
   Cpp_ir.Types.map (function
     | Apply ((Variable (Index (_, Some v) | Named v) as head), _)
       when List.exists (Id.equal v) families ->
@@ -716,7 +716,7 @@ let conversion_to_other_instantiation cx ~leading ~name ~templates ~vars ~fields
   else
     let n_vars = List.length vars in
     let u_var_names =
-      List.mapi (fun i _ -> Generated_name.member "U" ~of_:n_vars i) vars
+      List.mapi (fun i _ -> Base.Generated_name.member "U" ~of_:n_vars i) vars
     in
     let converted =
       List.map
@@ -728,7 +728,7 @@ let conversion_to_other_instantiation cx ~leading ~name ~templates ~vars ~fields
                namespace-qualified. *)
             ~skip:(fun g ->
               GlobRef.CanOrd.equal g name
-              || Table.same_mutual_block g name
+              || Base.Table.same_mutual_block g name
               || spells_bare cx g )
             ~src_ty:(deapply_families name vars (at vars))
             ~dst_ty:(deapply_families name u_var_names (at u_var_names))

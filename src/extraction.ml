@@ -23,9 +23,9 @@ open Reductionops
 open Retyping
 open Inductiveops
 open Namegen
-open Table
-open Core_util
-open Common
+open Base.Table
+open Base.Core_util
+open Base.Common
 open Context.Rel.Declaration
 (*i*)
 
@@ -37,7 +37,7 @@ exception I of Core.Inductive.Kind.t
 (* The constants of the fixpoint group {!extract_fixpoint} is extracting, so
    a call inside the group is told apart from a call to an outside constant
    ({!extract_cst_app}); [[]] outside a group. *)
-let current_fixpoints = State.cell State.Extraction ([] : Constant.t list)
+let current_fixpoints = Base.State.cell Base.State.Extraction ([] : Constant.t list)
 
 (** The local fixpoint a [let] binds while it is extracted, with the
     applications of its name in the [let]'s body: the group's entries
@@ -148,7 +148,7 @@ let is_info_scheme env sg t =
     [ParamsV {IP : IPtr} {IPT : IPtrTheory IP}] with [IPtrTheory] a [Prop]
     class is emitted as [template <IPtr _tcI0> struct ParamsV]: the proof
     argument takes no template parameter.  A class-argument record
-    ({!Table.class_arg}) is read from the Rocq type, upstream of that erasure,
+    ({!Base.Table.class_arg}) is read from the Rocq type, upstream of that erasure,
     and spelled downstream of it, so it must be projected through the erasure
     where it is taken -- the reader has no Rocq type left to ask. *)
 let arg_survives_extraction env sg a =
@@ -165,7 +165,7 @@ let arg_survives_extraction env sg a =
     try info_of_quality (sort_of env sg (type_of env sg a)) != Logic
     with Retyping.RetypeError _ -> true
 
-(** The class-argument shape an applied term writes ({!Table.class_arg}), if
+(** The class-argument shape an applied term writes ({!Base.Table.class_arg}), if
     its head is a constant.  Recursive: [@ParamsV natIPtr] and [@ParamsV IP]
     differ only in the argument, and the reader has to spell one of them.  An
     argument whose head is not a constant is [Carg_unknown] -- the position is
@@ -176,13 +176,13 @@ let rec class_arg_shape env sg a =
   match EConstr.kind sg h with
   | Const (c, _) ->
     Some
-      (Table.Carg
+      (Base.Table.Carg
          ( GlobRef.ConstRef c,
            List.filter_map
              (fun x ->
                if arg_survives_extraction env sg x then
                  Some
-                   (Option.default Table.Carg_unknown (class_arg_shape env sg x))
+                   (Option.default Base.Table.Carg_unknown (class_arg_shape env sg x))
                else None )
              (Array.to_list a_args) ))
   | _ -> None
@@ -259,7 +259,7 @@ let rec type_scheme_nb_args env sg c =
 (** Positions, 0-based among the [Core.Signature.Argument.Runtime] entries of [type_sign], of the
     parameters that are type CONSTRUCTORS ([F : Type -> Type]) rather than
     plain types ([A : Type]), each paired with that constructor's arity.
-    {!Table.add_ind_hkt_params} records these for
+    {!Base.Table.add_ind_hkt_params} records these for
     inductives so that a type class parameterised by a type constructor can be
     generated as an associated type instead of a C++ template parameter. *)
 let hkt_keep_positions env sg c =
@@ -664,7 +664,7 @@ and extract_spine env sg db j c args =
     assert (List.is_empty args);
     let env' = push_rel_assum (n, t) env in
     (* The binder's entry: the kill reason its arrow's domain carries, read
-       as {!Core_util.type_to_signature} reads it, and the variable it was
+       as {!Base.Core_util.type_to_signature} reads it, and the variable it was
        numbered, if any. *)
     let binder ~tvar dom (spine_ty, spine) =
       if Int.equal j 0 then (spine_ty, [])
@@ -749,7 +749,7 @@ and extract_spine env sg db j c args =
          uses are met in.  Which class it is, the projection's own type says:
          it takes the record it projects from as its first argument. *)
       let () =
-        if lang () == Cpp && args <> [] && not (Table.is_promoted_type_var r)
+        if lang () == Cpp && args <> [] && not (Base.Table.is_promoted_type_var r)
         then
           match EConstr.kind sg (whd_all env sg typ) with
           | Prod (_, dom, _) -> (
@@ -761,7 +761,7 @@ and extract_spine env sg db j c args =
             | _ -> () )
           | _ -> ()
       in
-      if lang () == Cpp && args <> [] && Table.is_promoted_type_var r then
+      if lang () == Cpp && args <> [] && Base.Table.is_promoted_type_var r then
         let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in
         let reduced =
           try whd_all env sg full
@@ -838,7 +838,7 @@ and extract_spine env sg db j c args =
     erased -- must see the monad itself, as it does where the source writes
     it.  A reified monad is a tree, a value C++ spells; its alias is kept. *)
 and sequential_monad_alias env sg (kn, u) args =
-  if lang () != Cpp || Table.is_monad (GlobRef.ConstRef kn) then None
+  if lang () != Cpp || Base.Table.is_monad (GlobRef.ConstRef kn) then None
   else
     let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in
     match whd_all env sg full with
@@ -851,7 +851,7 @@ and sequential_monad_alias env sg (kn, u) args =
         | _ -> None
       in
       match head with
-      | Some m when Table.is_monad m && not (Table.is_monad_reified m) -> Some unfolded
+      | Some m when Base.Table.is_monad m && not (Base.Table.is_monad_reified m) -> Some unfolded
       | Some _ | None -> None )
 
 (** Extracts a type application (inductive applied to arguments), given a type
@@ -936,7 +936,7 @@ and extract_type_scheme env sg db c p =
     whose binders all range over types is a type constructor, and has no Core
     type: [None] -- unless it ignores them: [fun T => list nat] is the
     carrier [list nat], whatever it is applied to (see
-    {!Core_util.apply_core_type}).  Anything else is the plain {!extract_type}
+    {!Base.Core_util.apply_core_type}).  Anything else is the plain {!extract_type}
     question. *)
 and extract_family_type env sg db c =
   (* A type function bound by a [let] is its definition: [N.binary_rect]
@@ -1021,7 +1021,7 @@ and extract_really_ind env kn mib =
         let info = fst (flag_of_type env sg ar) = Info in
         let s, vl = if info then type_sign_vl env sg ar else ([], []) in
         if info then
-          Table.add_ind_hkt_params
+          Base.Table.add_ind_hkt_params
             (GlobRef.IndRef (kn, i))
             (hkt_keep_positions env sg ar);
         let t = Array.make (Array.length mip.mind_nf_lc) [] in
@@ -1085,7 +1085,7 @@ and extract_really_ind env kn mib =
            PointerV] -- makes this inductive depend on the instances the
            projection is applied to, and on whatever they are applied to in
            turn.  Nothing of that survives into the Core inductive, so it is
-           recorded here; see {!Table.add_ind_class_arg}. *)
+           recorded here; see {!Base.Table.add_ind_class_arg}. *)
         List.iter
           (fun decl ->
             let fty = Context.Rel.Declaration.get_type decl in
@@ -1095,7 +1095,7 @@ and extract_really_ind env kn mib =
                 Array.iter
                   (fun a ->
                     match class_arg_shape epar sg (EConstr.of_constr a) with
-                    | Some sh -> Table.add_ind_class_arg (GlobRef.IndRef (kn, 0)) sh
+                    | Some sh -> Base.Table.add_ind_class_arg (GlobRef.IndRef (kn, 0)) sh
                     | None -> () )
                   cargs
               | _ -> () );
@@ -1141,7 +1141,7 @@ and extract_really_ind env kn mib =
                         with_extracting mind (fun () ->
                             try ignore (extract_ind env mind)
                             with e when CErrors.noncritical e -> () );
-                      Table.is_typeclass (GlobRef.IndRef (mind, i))
+                      Base.Table.is_typeclass (GlobRef.IndRef (mind, i))
                     in
                     match Constr.kind t with
                     | Ind (ind, _) -> of_ind ind
@@ -1305,7 +1305,7 @@ and extract_really_ind env kn mib =
          representation has no such problem -- it puts recursive occurrences
          behind a smart pointer -- so fall back to it.  (The single-
          constructor "flat" layout declines self-referential types for the
-         same reason, {!Table.is_flat_inductive_packet}; records reach the
+         same reason, {!Base.Table.is_flat_inductive_packet}; records reach the
          flat struct by a different route and need the same guard.)  Rocq
          rejects recursive [Record]s outright, so this only fires for the
          [Inductive]-with-named-fields spelling.  The occurrence is looked
@@ -1452,7 +1452,7 @@ and type_constant_body env r =
   match r with
   | IndRef _ | ConstructRef _ | VarRef _ -> None
   | ConstRef kn ->
-    if Table.is_custom r then None
+    if Base.Table.is_custom r then None
       (* A promoted type variable is a name, not an abbreviation.  Its Rocq
          body is the record projection -- a [match] -- which [extract_type]
          can only answer [Core.Type.Unknown] for, so delta-reducing it replaces the
@@ -1460,7 +1460,7 @@ and type_constant_body env r =
          erasure.  [frame := list ptr] then expands to [list unk] and the
          parameter is written [List<std::any>] against a return type that
          still names [frame<typename I::PTR::ptr>]. *)
-    else if Table.is_promoted_type_var r then None
+    else if Base.Table.is_promoted_type_var r then None
     else
     let cb = Environ.lookup_constant kn env in
     ( match cb.const_body with
@@ -1514,7 +1514,7 @@ and record_constant_type env sg kn opt_typ =
      declared implicit ([Crane Extraction Implicit]) is dropped from the
      declaration as an erased one is, so its domain is a [Core.Type.Erased] there,
      carrying the signature's [Core.Erasure_reason.Configured_implicit] -- the binder's role,
-     [Erased (Implicit _)], as {!Type_util.binder_role} reads it. *)
+     [Erased (Implicit _)], as {!Base.Type_util.binder_role} reads it. *)
   let register extracted_ty =
     let r = GlobRef.ConstRef kn in
     let rec mark s t =
@@ -1558,7 +1558,7 @@ and record_constant_type env sg kn opt_typ =
     let schema = Core.Schema.make (GlobRef.ConstRef kn) frozen_ty spine in
     List.iter
       (fun problem ->
-        Probe.violation "schema"
+        Base.Probe.violation "schema"
           Pp.(str "the scheme of " ++ Names.Constant.print kn ++ str ": " ++ str problem) )
       (Core.Schema.validate schema);
     add_cst_type kn cb schema;
@@ -1849,7 +1849,7 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
       let () =
         match head with
         | Core.Expr.Fixpoint {occurrence = occ; _} | Core.Expr.Cofixpoint {occurrence = occ; _} ->
-          Table.add_erased_fix_group occ
+          Base.Table.add_erased_fix_group occ
         | _ -> ()
       in
       let applied = type_recomp (arg_tys, extracted_ty) in
@@ -1882,7 +1882,7 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
     assert (args = []);
     (* Unify expected type with Core.Type.String so let-bound string match
        variables get the correct C++ type instead of std::any. *)
-    Core_util.try_mgu extracted_ty Core.Type.String;
+    Base.Core_util.try_mgu extracted_ty Core.Type.String;
     Core.Expr.String s
   | Array (_u, t, def, _ty) ->
     assert (args = []);
@@ -1978,7 +1978,7 @@ and observe_type_arg env sg db a =
     | Ind ((kn, i), _) ->
       let ind_ref = GlobRef.IndRef (kn, i) in
       let has_cpp_template_params =
-        match Table.get_ind_num_param_vars_opt kn with
+        match Base.Table.get_ind_num_param_vars_opt kn with
         | Some n -> n > 0
         | None -> false
       in
@@ -1986,7 +1986,7 @@ and observe_type_arg env sg db a =
         try (extract_ind env kn).packets.(i).logical
         with e when CErrors.noncritical e -> false
       in
-      if logical || Table.is_custom ind_ref || has_cpp_template_params then None
+      if logical || Base.Table.is_custom ind_ref || has_cpp_template_params then None
       else Some (Core.Type.Global_app {head = ind_ref; type_arguments = []; index_arguments = []})
     | Rel n ->
       let is_type_param =
@@ -2000,7 +2000,7 @@ and observe_type_arg env sg db a =
 (** {2 Extraction of a constant applied to arguments} *)
 
 (** The use's instantiation of [schema]: for each variable, the type its
-    metavariable in [metas] was solved to, frozen ({!Core_util.freeze_types}), or
+    metavariable in [metas] was solved to, frozen ({!Base.Core_util.freeze_types}), or
     [Identity] for a variable a call within the recursive group keeps [rigid];
     and the argument the call wrote at the variable's binder, if the call
     reaches that binder -- [observed = None] where what was written could not
@@ -2420,7 +2420,7 @@ and extract_cons_app env sg type_env extracted_ty ((((kn, i) as ip), j) as cp) a
         (* Split: outer lambda has [context_arity_before_unify] params, inner
            lambda has the rest. The inner lambda captures the outer params and
            applies the constructor with all args. We wrap the inner lambda in
-           [Core.Expr.Lambda_group_barrier (_, _)] so that {!Core_util.collect_lams} stops at the
+           [Core.Expr.Lambda_group_barrier (_, _)] so that {!Base.Core_util.collect_lams} stops at the
            outer lambda boundary: it only collects consecutive [Core.Expr.Lambda] nodes.
            [Core.Expr.Lambda_group_barrier] carries no coercion, so the C++ translation renders the
            inner lambda as the return value of the outer lambda. *)
@@ -2683,7 +2683,7 @@ let rec try_peano_nat env sg t =
     @param body The predicate body under a lambda (witness is [Rel 1])
     @return An [AssertExpr] with a [%N] format string, or [AssertComment] for unrecognized patterns *)
 let translate_predicate_body env sg body =
-  let open Table in
+  let open Base.Table in
   let body = whd_all env sg body in
   match EConstr.kind sg body with
   (* Pattern: @eq T x y -> False ~~> neq *)
@@ -2793,7 +2793,7 @@ let translate_predicate_body env sg body =
     parameters and registers them.
     @param env Rocq environment, extended with each parameter binder as the walk proceeds
     @param sg Evar map for reduction and predicate body translation
-    @param kn Constant name of the function being analyzed (used as key in [Table.add_sigma_assertion])
+    @param kn Constant name of the function being analyzed (used as key in [Base.Table.add_sigma_assertion])
     @param typ The full Rocq type of [kn]; sigma-typed parameters are detected in the products *)
 let detect_sigma_assertions env sg kn typ =
   let func_ref = GlobRef.ConstRef kn in
@@ -2819,10 +2819,10 @@ let detect_sigma_assertions env sg kn typ =
             EConstr.push_rel (Context.Rel.Declaration.LocalAssum (x, x_ty)) env
           in
           let assertion = translate_predicate_body env' sg body in
-          Table.add_sigma_assertion func_ref info_idx assertion
+          Base.Table.add_sigma_assertion func_ref info_idx assertion
         | _ ->
           let s = Pp.string_of_ppcmds (Printer.pr_econstr_env env sg pred) in
-          Table.add_sigma_assertion func_ref info_idx (Table.AssertComment s) )
+          Base.Table.add_sigma_assertion func_ref info_idx (Base.Table.AssertComment s) )
       | _ -> () );
       (* sig types may be classified as non-informative but still kept as
          params *)
@@ -2855,7 +2855,7 @@ let extract_std_constant env sg kn body typ =
      the class's method, and is extracted at the method's type: unfolded at
      the class in [typ], the method's own [forall]s are type variables the
      body's annotations can name, where the class spelling erases them. *)
-  let singleton = Table.singleton_instance_class ~env (GlobRef.ConstRef kn) <> None in
+  let singleton = Base.Table.singleton_instance_class ~env (GlobRef.ConstRef kn) <> None in
   let typ_body, t_body =
     if not singleton then (typ, t)
     else
@@ -3036,11 +3036,11 @@ let extract_constant access env kn cb =
       (match t with
        | Core.Type.Unknown | Core.Type.Axiom -> add_erased_type_const r
        | _ -> ());
-      Table.add_type_scheme_arity r (List.length vl);
+      Base.Table.add_type_scheme_arity r (List.length vl);
       (* An alias body is where a type-level [Definition] under a [Context]
          writes its dependence on that context; see
-         {!Table.add_type_alias_body}. *)
-      Table.add_type_alias_body r (Core.Freezer.type_ (Core.Freezer.create ()) t);
+         {!Base.Table.add_type_alias_body}. *)
+      Base.Table.add_type_alias_body r (Core.Freezer.type_ (Core.Freezer.create ()) t);
       Core.Decl.Type_alias {entity = r; parameters = vl; body = t}
     end
   in
@@ -3073,7 +3073,7 @@ let extract_constant access env kn cb =
      belongs to [PointerV] and [prov] to [ProvenanceV], and neither reaches the
      Core type, which records the class alone.  This is the last point at which
      the connection is written down, so it is recorded here rather than
-     rediscovered; see {!Table.add_instance_class_shape}.
+     rediscovered; see {!Base.Table.add_instance_class_shape}.
 
      No [is_typeclass] test: the tables it would consult are filled as
      extraction proceeds, and the reader runs after all of it. *)
@@ -3118,7 +3118,7 @@ let extract_constant access env kn cb =
                   EConstr.Vars.closed0 sg x
                   && (try is_info_scheme env sg (type_of env sg x)
                       with e when best_effort_failure e -> false)
-                then Some Table.Carg_unknown
+                then Some Base.Table.Carg_unknown
                 else None )
             (List.filter
                (arg_survives_extraction env sg)
@@ -3146,13 +3146,13 @@ let extract_constant access env kn cb =
     in
     let _, concl = EConstr.decompose_prod sg typ in
     match search typ with
-    | Some sh -> Table.add_instance_class_shape r sh
+    | Some sh -> Base.Table.add_instance_class_shape r sh
     | None -> (
       (* Nothing in the type applies a class.  The conclusion's head is still
          worth recording: what it reaches through its own payloads
-         ({!Table.get_type_class_args}) is read from the head alone. *)
+         ({!Base.Table.get_type_class_args}) is read from the head alone. *)
       match shape_of concl with
-      | Some sh -> Table.add_instance_class_shape r sh
+      | Some sh -> Base.Table.add_instance_class_shape r sh
       | None -> () )
   in
   (* The instances the type applies to the declaration's own class binders --
@@ -3160,7 +3160,7 @@ let extract_constant access env kn cb =
      reaches the Core type without its dictionary arguments, and a body that
      only forwards to another declaration names no instance, so nothing
      downstream says which instance [memM]'s [state] belongs to; see
-     {!Table.add_context_instance_apps}.  A binder is given by its ordinal
+     {!Base.Table.add_context_instance_apps}.  A binder is given by its ordinal
      among the informative class-typed ones, the ones that become the
      declaration's [_tcI] template parameters. *)
   let record_context_instance_apps () =
@@ -3203,7 +3203,7 @@ let extract_constant access env kn cb =
     in
     List.iteri (fun p (_, t) -> search p 0 t) outer_first;
     search (List.length outer_first) 0 concl;
-    if !found <> [] then Table.add_context_instance_apps r !found
+    if !found <> [] then Base.Table.add_context_instance_apps r !found
   in
   let mk_def c =
     record_class_shape ();
@@ -3217,12 +3217,12 @@ let extract_constant access env kn cb =
        the parameters that uncovers.  A call site reads the registered type to
        work out how many arguments the declaration takes, so when the two
        disagree on that count the unfolded type is the one to keep. *)
-    ( match Table.find_extracted_type r with
+    ( match Base.Table.find_extracted_type r with
     | exception Not_found -> ()
     | short ->
       if
-        List.length (Type_util.core_value_domains short)
-        < List.length (Type_util.core_value_domains t)
+        List.length (Base.Type_util.core_value_domains short)
+        < List.length (Base.Type_util.core_value_domains t)
       then register_glob_def r t );
     Core.Decl.Value {entity = r; body = e; type_ = t}
   in
@@ -3310,14 +3310,14 @@ let extract_constant_spec env kn cb =
       let value_dep = List.length s > List.length vl in
       ( match cb.const_body with
       | Undef _ | OpaqueDef _ | Primitive _ | Symbol _ ->
-        if value_dep then Table.add_value_dep_type_scheme r;
+        if value_dep then Base.Table.add_value_dep_type_scheme r;
         Core.Signature.Declaration.Type {entity = r; parameters = vl; body = None}
       | Def body ->
         let db = db_from_sign s in
         let body = get_body body in
         let t = extract_type_scheme env sg db body (List.length s) in
         ( match t with
-        | (Core.Type.Unknown | Core.Type.Axiom) when value_dep -> Table.add_value_dep_type_scheme r
+        | (Core.Type.Unknown | Core.Type.Axiom) when value_dep -> Base.Table.add_value_dep_type_scheme r
         | _ -> () );
         Core.Signature.Declaration.Type {entity = r; parameters = vl; body = Some t} )
     | Info, Default ->

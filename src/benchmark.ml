@@ -159,7 +159,7 @@ let split_last_label labels =
 
 (** Construct the qualified name emitted by Rocq's built-in OCaml extraction. *)
 let ocaml_callable reference =
-  let _, labels = Table.labels_of_ref reference in
+  let _, labels = Base.Table.labels_of_ref reference in
   let modules, _ = split_last_label labels in
   let term =
     let open Extraction_plugin in
@@ -558,7 +558,7 @@ let run_hyperfine benchmarks =
 let run ~opaque_access requested_subjects configurations =
   (* A census extracts the subjects to check what extracting them reports;
      it compiles and times nothing. *)
-  let census = Probe.census () in
+  let census = Base.Probe.census () in
   if (not census) && not (Subprocess.executable_available "hyperfine") then
     benchmark_error "Hyperfine is not available: cannot run benchmarks.";
   let subjects = List.map validate_subject requested_subjects in

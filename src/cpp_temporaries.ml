@@ -12,7 +12,7 @@
     out of: Normalize only binds a call from a strictly evaluated position,
     in evaluation order, and never out of a branch, a lambda or a let body.
 
-    A temporary is known by its name ({!Core_util.is_temporary_id}).  It goes
+    A temporary is known by its name ({!Base.Core_util.is_temporary_id}).  It goes
     back when it is read exactly once, by the first statement after the run
     of temporaries it heads, at a position that statement evaluates
     unconditionally -- never into a reference's initialiser or the scrutinee
@@ -97,7 +97,7 @@ let subst_stmt x v (s : stmt) : stmt option =
 
 (* Whether [s] declares a temporary Normalize introduced. *)
 let is_temporary : stmt -> bool = function
-  | Bind_variable (y, Declare _, _) -> Core_util.is_temporary_id y
+  | Bind_variable (y, Declare _, _) -> Base.Core_util.is_temporary_id y
   | _ -> false
 
 (* Every local [e] names. *)
@@ -150,7 +150,7 @@ let restorer ~lambdas =
       let rest = block rest in
       let s : stmt = stmt s in
       match s with
-      | Bind_variable (x, Declare _, v) when Core_util.is_temporary_id x && count_stmts x rest = 1 ->
+      | Bind_variable (x, Declare _, v) when Base.Core_util.is_temporary_id x && count_stmts x rest = 1 ->
         Option.default (s :: rest) (inline_into x v rest)
       | _ -> s :: rest )
   and stmt s = Cpp_ir.Map.stmt (children ()) s

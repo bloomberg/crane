@@ -21,15 +21,15 @@ let () =
   let abi =
     of_head ~callee ~scheme:(Some scheme)
       ~minted:
-        [ (Common.tc_instance_id 0, Instance_param 0);
-          (Common.tvar_id 2, Scheme_param 2);
-          (Common.fun_tparam_id 0, Callable_param 0);
-          (Common.tvar_id 1, Scheme_param 1) ]
-      [ (Typename, Common.tc_instance_id 0);
-        (Typename, Common.tvar_id 2);
-        (Callable_declared ([], Void), Common.fun_tparam_id 0);
+        [ (Base.Common.tc_instance_id 0, Instance_param 0);
+          (Base.Common.tvar_id 2, Scheme_param 2);
+          (Base.Common.fun_tparam_id 0, Callable_param 0);
+          (Base.Common.tvar_id 1, Scheme_param 1) ]
+      [ (Typename, Base.Common.tc_instance_id 0);
+        (Typename, Base.Common.tvar_id 2);
+        (Callable_declared ([], Void), Base.Common.fun_tparam_id 0);
         (Typename, id "CraneP0");
-        (Typename_default Void, Common.tvar_id 1) ]
+        (Typename_default Void, Base.Common.tvar_id 1) ]
   in
   let origins = List.map (fun p -> p.origin) (template_head abi) in
   check "origins"
@@ -49,7 +49,7 @@ let () =
   (* The origin is what the builder recorded, not what the name says: a
      parameter spelled as a variable's is none without the record, and one
      spelled otherwise is the variable recorded. *)
-  let other = of_head ~callee ~scheme:(Some scheme) [(Typename, Common.tvar_id 1)] in
+  let other = of_head ~callee ~scheme:(Some scheme) [(Typename, Base.Common.tvar_id 1)] in
   check "an unrecorded T1 is no variable"
     (match template_head other with [{origin = Derived _; _}] -> true | _ -> false);
   let renamed =

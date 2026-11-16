@@ -5,13 +5,13 @@
     from Core.  See [position_plan.mli]. *)
 
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 open Cpp_ir.Type
 
 let push ids lex =
   Core.Lexenv.push
-    (List.map (fun (x, ty) -> {Core.Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = Core.Lexenv.Value}) ids)
+    (List.map (fun (x, ty) -> {Core.Lexenv.id = Base.Core_util.id_of_binder_name x; type_ = ty; role = Core.Lexenv.Value}) ids)
     lex
 
 (* The return type a let's right-hand side is generated under
@@ -26,7 +26,7 @@ let let_result cx env ~(ret : Cpp_ir.Lowered.Type.t option) t =
 (* An environment naming the binders of [lex] as they are bound, for the
    conversions that look a binder's name up (an instance passed as a
    template argument); a position's type names none. *)
-let named_env (lex : Core.Lexenv.t) : Common.env =
+let named_env (lex : Core.Lexenv.t) : Base.Common.env =
   (List.map (fun (b : Core.Lexenv.binder) -> b.id) (lex :> Core.Lexenv.binder list), Names.Id.Set.empty)
 
 (* The slot a coercion's inner term is generated in
@@ -44,7 +44,7 @@ let coerced_slot cx env ~(pos : Cpp_ir.Lowered.Type.t option) slot ~from ~into =
 
 let region cx ~outer ~reads body =
   let found = ref [] in
-  let env = Common.empty_env () in
+  let env = Base.Common.empty_env () in
   let is_boxed _ occ =
     match List.assq_opt occ reads with Some r -> r.Translation_state.Planned_read.boxed | None -> false
   in
@@ -62,7 +62,7 @@ let region cx ~outer ~reads body =
                              occurrence = occ} | Core.Expr.Lambda_group_barrier {value = t; occurrence = occ} ->
       found := (occ, pos) :: !found;
       expr ~pos:(match t with Core.Expr.Lambda _ -> pos | _ -> None) ~ret ~slot lex t
-    | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when Table.is_custom r ->
+    | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when Base.Table.is_custom r ->
       with_cpp_return_type cx ret (fun () -> custom ~pos ~slot lex ty r ts)
     | Core.Expr.Construct {arguments = []; _} -> ()
     | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} ->
@@ -70,7 +70,7 @@ let region cx ~outer ~reads body =
     (* Only the returned value is generated, at no position. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use;
                        arguments = (_ :: _ as args)} when Translation_monadic.is_effect cx Core_effects.Return use ->
-      expr ~pos:None ~ret lex (Common.last args)
+      expr ~pos:None ~ret lex (Base.Common.last args)
     (* A sequential bind in an expression is the statements it desugars to. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use;
                        arguments = _ :: _ :: _} when Translation_monadic.is_sequential_effect cx
@@ -94,7 +94,7 @@ let region cx ~outer ~reads body =
       | Match_kind.Variant ->
         let is_enum =
           match typ with Core.Type.Global_app {head = (Names.GlobRef.IndRef _ as r); _} ->
-            Table.is_enum_inductive r | _ -> false
+            Base.Table.is_enum_inductive r | _ -> false
         in
         let ret =
           if is_enum && Translation_match_types.iife_void_return cx env typ branches = Some Void then Some Void else ret
@@ -102,7 +102,7 @@ let region cx ~outer ~reads body =
         Array.iter (branch ~ret lex) branches )
     (* A lambda's body is a region of its own, planned where it begins. *)
     | Core.Expr.Lambda _ -> ()
-    | e -> Core_util.ast_iter (expr ~pos:None ~ret lex) e
+    | e -> Base.Core_util.ast_iter (expr ~pos:None ~ret lex) e
   (* A value a constructor stores ({!Translation_construct.gen_stored_value}). *)
   and stored ~pos ~ret ~slot lex e =
     match e with
@@ -116,7 +116,7 @@ let region cx ~outer ~reads body =
     let slot = Translation_constructors.into_erased_return cx slot in
     let ty = Translation_constructors.refined_by_slot slot ty in
     with_in_constructor_expr cx true @@ fun () ->
-    match Table.record_fields_of_type ty with
+    match Base.Table.record_fields_of_type ty with
     | [] ->
       let c = Translation_constructors.regular cx env ~expected_ty:pos ty r ts in
       List.iteri
@@ -176,15 +176,15 @@ let region cx ~outer ~reads body =
     | Core.Expr.Apply {callee = Core.Expr.Global use;
                        arguments = (_ :: _ :: _ as args)} when Translation_monadic.is_effect cx Core_effects.Bind use ->
       if Translation_monadic.is_sequential_effect cx Core_effects.Bind use then (
-        let a, f = Common.last_two args in
+        let a, f = Base.Common.last_two args in
         expr ~pos:None ~ret lex a;
-        let ids, body = Core_util.collect_lams f in
+        let ids, body = Base.Core_util.collect_lams f in
         stmts ~ret ~slot (push ids lex) body )
       else expr ~pos:None ~ret lex e
     | Core.Expr.Apply {callee = Core.Expr.Global use;
                        arguments = (_ :: _ as args)} when Translation_monadic.is_effect cx Core_effects.Return use ->
       if Translation_monadic.is_sequential_effect cx Core_effects.Return use then (
-        if ret <> Some Void then expr ~pos:ret ~ret lex (Common.last args) )
+        if ret <> Some Void then expr ~pos:ret ~ret lex (Base.Common.last args) )
       else expr ~pos:None ~ret lex e
     | e -> expr ~pos:ret ~ret ~slot lex e
   (* A global call's arguments, each against the parameter it is passed at
@@ -229,5 +229,5 @@ let region cx ~outer ~reads body =
   (* A walk that fails leaves the coercions it did not reach unplanned,
      which lowering reports. *)
   (try stmts ~ret:(current_cpp_return_type cx ()) outer body
-   with e when CErrors.noncritical e -> Probe.hit "magic-pos-walk" (fun () -> Printexc.to_string e));
+   with e when CErrors.noncritical e -> Base.Probe.hit "magic-pos-walk" (fun () -> Printexc.to_string e));
   !found

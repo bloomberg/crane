@@ -39,7 +39,7 @@ type tmc_cell_alloc = {
           value's spelling, is not *)
   ctor_name : string;
       (** The constructor struct's name
-          ({!Type_util.ctor_struct_name_of_ref}), e.g. ["Cons"] *)
+          ({!Base.Type_util.ctor_struct_name_of_ref}), e.g. ["Cons"] *)
   rec_field_idx : int;
       (** Index of the recursive argument (the hole) among the constructor
           args, in declared order *)
@@ -100,7 +100,7 @@ let storage_of (planned : planned_result) ret_ty = if planned.values then Value_
 (* Whether a result may be assembled in cells a reuse cursor recycles: one
    of values under the reuse policy, unless a shared variant. *)
 let recyclable_result u (planned : planned_result) =
-  planned.values && Table.reuse_here () && Unit_context.non_atomic_rc u && not planned.shared
+  planned.values && Base.Table.reuse_here () && Unit_context.non_atomic_rc u && not planned.shared
 
 (** The value type a cell holds behind its pointer, when cells are values. *)
 let cell_value_type = function
@@ -126,18 +126,18 @@ let cell_value_type = function
 
     A factory call records the constructor it builds ({!Cpp_ir.Expr.Call.signature}),
     and the struct is named after that constructor
-    ({!Type_util.ctor_struct_name_of_ref}).  The factory's own name does
+    ({!Base.Type_util.ctor_struct_name_of_ref}).  The factory's own name does
     not say: it is the struct's lowercased, so [PeanoSucc] and [WW] have
     factories [peanosucc] and [ww], from which no capitalisation recovers
     them. *)
 let is_ctor_factory_call ~unit = function
   | Call ({constructs = Some c; yields; _}, (Type_member (qualifier, _) as factory), args) ->
     let ty = match yields with Yields t -> t | Untyped -> qualifier in
-    let struct_name = Type_util.ctor_struct_name_of_ref c in
+    let struct_name = Base.Type_util.ctor_struct_name_of_ref c in
     (* A TMC-wrapping constructor has a field behind the pointer -- the hole
        the recursion writes into -- so it has pointer fields ({!pointer_fields_of});
        one that has none is no cell. *)
-    if not (Option.has_some (pointer_fields_of unit (Common.ctor_owner_key c, struct_name))) then None
+    if not (Option.has_some (pointer_fields_of unit (Base.Common.ctor_owner_key c, struct_name))) then None
     else Some (c, factory, ty, struct_name, args)
   | _ -> None
 
@@ -147,7 +147,7 @@ let is_ctor_factory_call ~unit = function
 let make_cell ~unit ~constructor ~factory ~cell_ty ~ctor_name args idx =
   let n_args = List.length args in
   let uptr_idxs =
-    match pointer_fields_of unit (Common.ctor_owner_key constructor, ctor_name) with
+    match pointer_fields_of unit (Base.Common.ctor_owner_key constructor, ctor_name) with
     | Some fields -> fields
     | None -> [Recursive idx]
   in
@@ -195,7 +195,7 @@ let control_shapes into =
 let planned_result shapes ret_ty =
   let read_off_type =
     let rec shared = function
-      | Entity_application (r, _, _) -> Table.is_shared_variant r
+      | Entity_application (r, _, _) -> Base.Table.is_shared_variant r
       | In_namespace (_, t) | Const t -> shared t
       | _ -> false
     in
@@ -208,16 +208,16 @@ let planned_result shapes ret_ty =
   in
   match List.sort_uniq GlobRef.CanOrd.compare (List.filter_map outermost shapes) with
   | [r] ->
-    let planned = {values = (not (Table.is_coinductive r)) && not (Table.is_custom r);
-                   shared = Table.is_shared_variant r} in
-    if Probe.checking () && planned <> read_off_type then
-      Probe.violation "tail modulo cons plan"
+    let planned = {values = (not (Base.Table.is_coinductive r)) && not (Base.Table.is_custom r);
+                   shared = Base.Table.is_shared_variant r} in
+    if Base.Probe.checking () && planned <> read_off_type then
+      Base.Probe.violation "tail modulo cons plan"
         Pp.(
           str "the result the turns of a loop tail modulo cons build, " ++ Names.GlobRef.print r
           ++ str ", is not stored as its C++ return type says" );
     planned
   | _ ->
-    Probe.violation "tail modulo cons plan"
+    Base.Probe.violation "tail modulo cons plan"
       Pp.(str "the turns of a loop tail modulo cons build no one inductive outermost");
     read_off_type
 
@@ -232,7 +232,7 @@ let branch_along ~unit shapes check expr =
     | (constructor, hole) :: inner -> (
       let expr = match expr with Move e -> e | e -> e in
       match is_ctor_factory_call ~unit expr with
-      | Some (c, factory, cell_ty, ctor_name, args) when Common.globref_equal c constructor ->
+      | Some (c, factory, cell_ty, ctor_name, args) when Base.Common.globref_equal c constructor ->
         let held = if hole < 0 then None else List.nth_opt args hole in
         let this = make_cell ~unit ~constructor:c ~factory ~cell_ty ~ctor_name args hole in
         Option.bind held (fun held ->
@@ -287,10 +287,10 @@ let branch_along ~unit shapes check expr =
 
     The field index is the hole's argument index [rec_field_idx].  The
     actual field name is
-    resolved via {!Common.lookup_ctor_field_name}, which returns the
+    resolved via {!Base.Common.lookup_ctor_field_name}, which returns the
     descriptive Rocq binder name (e.g. [d_tl]) when one was registered
     during inductive definition, or falls back to the positional name
-    ({!Common.field_param_name}: [a{idx}], or [d_a{idx}] under BDE).
+    ({!Base.Common.field_param_name}: [a{idx}], or [d_a{idx}] under BDE).
 
     {!cell_rec_field} returns that lvalue split as [(object, field)], because
     the write-pointer update needs to take its address rather than assign to
@@ -304,7 +304,7 @@ let cell_rec_field ?(access : Cpp_ir.Expr.Access.t = Arrow) cell ptr =
   let field_idx = cell.rec_field_idx in
   let v_mut = Access_call (access, ptr, id_v_mut, []) in
   ( Variant_get (cell_struct cell, Some v_mut),
-    Common.lookup_ctor_field_name ~owner:cell.constructor cell.ctor_name field_idx )
+    Base.Common.lookup_ctor_field_name ~owner:cell.constructor cell.ctor_name field_idx )
 
 (** [ptr]'s recursive field, as {!cell_rec_field} reaches it, assigned
     [val_expr]. *)
@@ -638,7 +638,7 @@ let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call ar
     match (List.nth_opt varying cursor.parameter, shadow, field (List.nth_opt args cursor.parameter)) with
     | Some true, Some (cursor_id, Pointer _), Some field -> Some (step, cursor_id, field)
     | _ ->
-      Probe.violation "reuse cursor"
+      Base.Probe.violation "reuse cursor"
         Pp.(str "a turn the cursor steps at does not walk a pointer shadow on to a field of its cell");
       raise Cursor_declined
 
@@ -676,7 +676,7 @@ let cursor_jump ?cursor ~cursor_used ~derefs ~updates varying shadow_params call
     let reads, _, args = read_before_step step varying shadow_params [] args in
     step_stmts reads field @ advance_cursor cursor_id (updates args)
   | Some ({action = Recycle _; _}, _, _) ->
-    Probe.violation "reuse cursor" Pp.(str "a turn building nothing would recycle the cell it leaves");
+    Base.Probe.violation "reuse cursor" Pp.(str "a turn building nothing would recycle the cell it leaves");
     raise Cursor_declined
 
 (** Generate statements for a TMC branch with possibly nested constructor cells.
@@ -713,7 +713,7 @@ let build_tmc_branch_stmts ~unit ?(cursor_used = ref false) ?cursor ?(derefs = [
       let reads, cells, rec_args = read_before_step step varying shadow_params br.cells br.rec_args in
       (Some cursor_id, step_stmts reads field, {br with cells = cells; rec_args = rec_args})
     | Some ({action = Release; _}, _, _) ->
-      Probe.violation "reuse cursor" Pp.(str "a turn building cells would release the cell it leaves");
+      Base.Probe.violation "reuse cursor" Pp.(str "a turn building cells would release the cell it leaves");
       raise Cursor_declined
     | None -> (None, [], br)
   in

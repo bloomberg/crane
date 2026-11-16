@@ -125,7 +125,7 @@ let no_control_ir = "the loop has no ControlIR"
 let planned_jumps ~unit loop check =
   match Option.bind loop (Lower_control.loop (Unit_context.control unit)) with
   | None ->
-    Probe.violation "control IR" (Pp.str no_control_ir);
+    Base.Probe.violation "control IR" (Pp.str no_control_ir);
     raise (Not_linearisable no_control_ir)
   | Some t ->
     let continues = Control_ir.Term.continues t in
@@ -143,16 +143,16 @@ let checked_tail_loop ~unit loop transform =
   let jumps = ref [] in
   let body = transform (fun e -> jumps := made_of e :: !jumps) in
   ( match loop with
-  | Some l when Probe.checking () -> (
+  | Some l when Base.Probe.checking () -> (
     let what () =
       match l with
-      | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
+      | Control_ir.Loop.Function r -> Pp.str (Base.Table.kername_of_global r)
       | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
     in
     match (Lower_control.loop (Unit_context.control unit)) l with
-    | None -> Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
+    | None -> Base.Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
     | Some t when not (made_as_planned (Control_ir.Term.continues t) (List.rev !jumps)) ->
-      Probe.violation "control IR"
+      Base.Probe.violation "control IR"
         Pp.(str "the calls the loop of " ++ what () ++ str " jumps at are not its Continues")
     | Some _ -> () )
   | Some _ | None -> () );
@@ -167,7 +167,7 @@ let checked_tail_loop ~unit loop transform =
 let machine_disagreement ~unit l entries =
   let what () =
     match l with
-    | Control_ir.Loop.Function r -> Pp.str (Table.kername_of_global r)
+    | Control_ir.Loop.Function r -> Pp.str (Base.Table.kername_of_global r)
     | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
   in
   let within a b = List.for_all (fun o -> List.exists (Core.Occurrence.equal o) b) a in
@@ -200,7 +200,7 @@ let checked_frame_machine ~unit loop transform =
   else
     match Option.bind loop (fun l -> machine_disagreement ~unit l !entries) with
     | Some why ->
-      Probe.violation "control IR" why;
+      Base.Probe.violation "control IR" why;
       None
     | None -> Some (body, !entries)
 
@@ -216,10 +216,10 @@ let planned_local_strategy ~unit (fixpoint : local_fixpoint option) =
     match Recursion_plan.strategy_at (Unit_context.recursion unit) ~pointer_fields member with
     | Some planned -> planned
     | None ->
-      Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
+      Base.Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       Recursion_plan.No_loop )
   | None ->
-    Probe.violation "recursion plan"
+    Base.Probe.violation "recursion plan"
       (Pp.str "a local fixpoint's body was reached with no Core fixpoint recorded on it");
     No_loop
 
@@ -227,7 +227,7 @@ let planned_local_strategy ~unit (fixpoint : local_fixpoint option) =
     recursion plan names what a point resumes after: its own. *)
 let entered_by_function r (c : Recursion_plan.call) =
   match c.target with
-  | Function g -> Common.globref_equal g r
+  | Function g -> Base.Common.globref_equal g r
   | Member _ | Entering _ -> false
 
 (** The calls the machine of the function [member] of a local fixpoint is
@@ -241,8 +241,8 @@ let entered_by_member (occurrence, member) (c : Recursion_plan.call) =
     function's own, or those of the member of the local fixpoint a helper
     lifted out for it lowers. *)
 let entered_by_definition r =
-  match Lifted.of_ref r with
-  | Some h -> Option.map entered_by_member (Lifted.fixpoint h)
+  match Base.Lifted.of_ref r with
+  | Some h -> Option.map entered_by_member (Base.Lifted.fixpoint h)
   | None -> Some (entered_by_function r)
 
 (** The recursive calls of the definition [r], each by the occurrence the
@@ -251,8 +251,8 @@ let entered_by_definition r =
     fixpoint a helper lifted for it lowers.  A call of one of them left in
     its finished body is one it still recurses by. *)
 let definition_calls ~unit r =
-  match Lifted.of_ref r with
-  | Some h -> Option.cata (Recursion_plan.member_calls (Unit_context.recursion unit)) [] (Lifted.fixpoint h)
+  match Base.Lifted.of_ref r with
+  | Some h -> Option.cata (Recursion_plan.member_calls (Unit_context.recursion unit)) [] (Base.Lifted.fixpoint h)
   | None -> (Recursion_plan.calls (Unit_context.recursion unit)) r
 
 (** The calls a finished body of the function [f] still recurses by
@@ -273,7 +273,7 @@ let method_survivors ~unit (mf : meth) = calls_checker (Option.cata (definition_
    that are not void, last first: the order Loopify keeps a local
    fixpoint's parameters in, the reverse of the lambda's own. *)
 let kept_positions (l : Control_ir.Term.loop) =
-  List.filteri (fun _ (_, ty) -> not (Type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
+  List.filteri (fun _ (_, ty) -> not (Base.Type_util.void_binder ty)) (List.mapi (fun i (_, ty) -> (i, ty)) l.parameters)
   |> List.rev_map fst
 
 (** Why a local fixpoint whose ControlIR says nothing of the parameters its
@@ -589,7 +589,7 @@ let loopify_inner_lambdas ~unit ?(tail_only = false) ~tparams ?(outer_env = []) 
     generates invalid C++ that references the nonexistent [v_mut()] method.
 
     {b Custom-extracted coinductive types} (e.g. [itree] in reified mode)
-    bypass the [lazy_] wrapping because [Table.is_coinductive_type] returns
+    bypass the [lazy_] wrapping because [Base.Table.is_coinductive_type] returns
     [false] for custom inductives.  Their bodies are normal (non-lazy) and
     flow through the standard loopification path.
 
@@ -688,7 +688,7 @@ let apply_nontail_loopification ~unit ?(param_inits = []) ?fn_name ?adopted ?ent
       in
       if classify check tmc = No_recursion then Some tmc
       else (
-        Probe.violation "tail modulo cons plan"
+        Base.Probe.violation "tail modulo cons plan"
           (Pp.str "a self-call survived the transform the recursion plan's chains describe");
         None )
     | None -> None
@@ -713,7 +713,7 @@ let fundef_display_name (path : phase Cpp_ir.Function.path) =
 (** The loop a tail loop of the function [r] is: a local fixpoint's member,
     for a helper lifted for one; none for one lifted for a lambda. *)
 let function_loop r =
-  match Option.map Lifted.site (Lifted.of_ref r) with
+  match Option.map Base.Lifted.site (Base.Lifted.of_ref r) with
   | Some (Fixpoint (occurrence, member)) -> Some (Control_ir.Loop.Member (occurrence, member))
   | Some (Let _) -> None
   | None -> Some (Control_ir.Loop.Function r)
@@ -735,26 +735,26 @@ let planned_strategy ~unit r =
   | Some r -> (
     let pointer_fields = constructor_pointer_fields unit in
     let planned =
-      match Option.map Lifted.site (Lifted.of_ref r) with
+      match Option.map Base.Lifted.site (Base.Lifted.of_ref r) with
       | Some (Fixpoint (occurrence, member)) ->
         (Recursion_plan.strategy_at (Unit_context.recursion unit)) ~pointer_fields (occurrence, member)
       | Some (Let occurrence) -> (Recursion_plan.strategy_of_let (Unit_context.recursion unit)) occurrence
       | None -> (Recursion_plan.strategy (Unit_context.recursion unit)) ~pointer_fields r
     in
-    let what () = Pp.str (Table.kername_of_global r) in
+    let what () = Pp.str (Base.Table.kername_of_global r) in
     match planned with
     | Some planned -> planned
     | None ->
-      Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
+      Base.Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
       No_loop )
 
 (** The local fixpoints the machine of [r] may adopt, as the recursion plan
     has them ({!Recursion_plan.adoptable}): a helper lifted for a local
     fixpoint's function is planned by it. *)
 let planned_adoptable ~unit r =
-  match Lifted.of_ref r with
+  match Base.Lifted.of_ref r with
   | Some h -> (
-    match Lifted.fixpoint h with Some m -> (Recursion_plan.adoptable_at (Unit_context.recursion unit)) m | None -> [] )
+    match Base.Lifted.fixpoint h with Some m -> (Recursion_plan.adoptable_at (Unit_context.recursion unit)) m | None -> [] )
   | None -> (Recursion_plan.adoptable_in (Unit_context.recursion unit)) r
 
 (** The chains a strategy lowers tail modulo cons around, if it does. *)
@@ -775,8 +775,8 @@ let modulo_cons_loop ~unit ~jumped ?cursor ~varying ~parts ~shapes ~tparams chec
     (* A loop tail modulo cons enters by no second entry, and the plan
        lowers so only a function every non-tail call of which is a chain's:
        a local fixpoint calling back into it is a call it would leave. *)
-    Probe.violation "control IR"
-      Pp.(str "the loop tail modulo cons of " ++ str (Table.kername_of_global r) ++ str " has a body to adopt");
+    Base.Probe.violation "control IR"
+      Pp.(str "the loop tail modulo cons of " ++ str (Base.Table.kername_of_global r) ++ str " has a body to adopt");
     None
   end
   else
@@ -812,8 +812,8 @@ let frame_machine ~unit ~loop ?entry ?entered_pointers ~varying ~parts ~tparams 
   if not as_planned then begin
     (* The plan has the machine adopt the entry, and Loopify could not
        install it: a fixpoint named as a value, or copied, say. *)
-    Probe.violation "control IR"
-      Pp.(str "the machine of " ++ str (Table.kername_of_global r)
+    Base.Probe.violation "control IR"
+      Pp.(str "the machine of " ++ str (Base.Table.kername_of_global r)
           ++ str " does not adopt the entry its ControlIR enters");
     declined
   end
@@ -963,7 +963,7 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
         let parked = ref 0 in
         let replace_at pos x l = List.mapi (fun i y -> if i = pos then x else y) l in
         let is_self r =
-          match mf.globref with Some sr -> Common.globref_equal r sr | None -> false
+          match mf.globref with Some sr -> Base.Common.globref_equal r sr | None -> false
         in
         let parks (cs : signature) =
           match cs.occurrence with Some o -> List.exists (Core.Occurrence.equal o) park | None -> false in
@@ -997,7 +997,7 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
         | _ -> (body_with_self, 0)
       in
       if parked <> List.length park then begin
-        Probe.violation "control lowering"
+        Base.Probe.violation "control lowering"
           Pp.(str "the tail loop of the method " ++ str name
               ++ str " has a turn making its receiver that no tail call parks");
         record_outcome name (Declined value_receiver);

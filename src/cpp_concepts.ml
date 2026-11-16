@@ -8,7 +8,7 @@
 open Pp
 open Util
 open Names
-open Common
+open Base.Common
 open Cpp_state
 open Cpp_names
 open Cpp_print
@@ -57,8 +57,8 @@ let pp_concept_def name body =
 (** The type member [name] of [M], an enum's capitalised, applied to [args]
     when it is a template. *)
 let pp_member_type ~enum name r args =
-  let name = Cpp_name.pp (if enum then enum_name name r else name) in
-  let m = Cpp_name.pp_scope (Cpp_name.Parameter Structure_analysis.concept_self_param) in
+  let name = Base.Cpp_name.pp (if enum then enum_name name r else name) in
+  let m = Base.Cpp_name.pp_scope (Base.Cpp_name.Parameter Structure_analysis.concept_self_param) in
   match args with
   | [] -> str "typename " ++ m ++ name
   | _ ->
@@ -137,7 +137,7 @@ let rec pp_concept_type cx ctx names frame (t : Modtype_concept.concept_type) : 
     pp_member_type ~enum (name_in ctx names frame (Global (Type, member))) member (List.map pp_concept_type arguments)
   | Parameter ty -> str "typename " ++ pp_type ctx ty
   | Foreign {custom; pieces; arguments} ->
-    Common.writes_custom custom;
+    Base.Common.writes_custom custom;
     pp_type_pieces custom pieces (fun i ->
         Option.map pp_concept_type (List.nth_opt arguments i) )
   | Global (r, []) -> pp_type ctx (Entity_application (r, [], []))
@@ -164,7 +164,7 @@ let rec pp_concept_type cx ctx names frame (t : Modtype_concept.concept_type) : 
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
     ++ str ">"
   | Function (dom, cod) ->
-    writes (Table.Runtime Cpp_ir.Crane_rt.fn_header);
+    writes (Base.Table.Runtime Cpp_ir.Crane_rt.fn_header);
     str Cpp_ir.Crane_rt.fn ++ str "<"
     ++ pp_concept_type cod
     ++ str "("
@@ -185,7 +185,7 @@ let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
     let placeholders = List.init arity (fun _ -> pp_type ctx Any) in
     pp_member_type ~enum (name (Short (Type, member))) member placeholders ++ str ";" ++ fnl ()
   | Type_member {member; arity} ->
-    let name = Cpp_name.pp (name (Unmapped (Type, member))) in
+    let name = Base.Cpp_name.pp (name (Unmapped (Type, member))) in
     if arity = 0 then str ("typename " ^ self_scope) ++ name ++ str ";" ++ fnl ()
     else
       str ("typename " ^ self_scope ^ "template ")
@@ -195,21 +195,21 @@ let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
       ++ str ">;"
       ++ fnl ()
   | Instance_member {value; class_; arguments} ->
-    let value = Cpp_name.pp (name (Unmapped (Term, value))) in
+    let value = Base.Cpp_name.pp (name (Unmapped (Term, value))) in
     writes_standard "concepts";
     str ("typename " ^ self_scope)
     ++ value
     ++ str ";"
     ++ fnl ()
     ++ str "requires "
-    ++ str (Cpp_name.to_string (name (Short (Type, class_))))
+    ++ str (Base.Cpp_name.to_string (name (Short (Type, class_))))
     ++ str ("<typename " ^ self_scope)
     ++ value
     ++ prlist (fun a -> str ", " ++ pp_concept_type a) arguments
     ++ str ">;"
     ++ fnl ()
   | Nullary_member {value; result} ->
-    let name = Cpp_name.pp (name (Unmapped (Term, value))) in
+    let name = Base.Cpp_name.pp (name (Unmapped (Term, value))) in
     let convertible_to = (std_names_of ctx.unit).convertible_to in
     writes_standard "concepts";
     let qualified_ret = pp_concept_type result in
@@ -234,7 +234,7 @@ let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
     ++ str ");"
     ++ fnl ()
   | Function_member {value; parameters; result} ->
-    let name = Cpp_name.pp (name (Unmapped (Term, value))) in
+    let name = Base.Cpp_name.pp (name (Unmapped (Term, value))) in
     let same_as = (std_names_of ctx.unit).same_as in
     let declval = (std_names_of ctx.unit).declval in
     writes_standard "concepts";
@@ -254,7 +254,7 @@ let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
     ++ fnl ()
   | Submodule {label; module_type} ->
     str "  requires "
-    ++ Cpp_name.pp (name (Modtype_concept module_type))
+    ++ Base.Cpp_name.pp (name (Modtype_concept module_type))
     ++ str ("<typename " ^ self_scope)
     ++ str (Label.to_string label)
     ++ str ">;"
@@ -267,7 +267,7 @@ let pp_requirement cx ctx names frame : Modtype_concept.requirement -> Pp.t =
     the signature and the functor parameters visible in it visible, which
     is the frame [names] names them at. *)
 let rec pp_constraint cx ctx names frame : Modtype_concept.constraint_ -> Pp.t list * module_constraint = function
-  | Named kn -> ([], Name (Cpp_name.pp (name_in ctx names frame (Module kn))))
+  | Named kn -> ([], Name (Base.Cpp_name.pp (name_in ctx names frame (Module kn))))
   | Requirements {signature; parameters; items} ->
     let entered = Cpp_resolution.Signature {signature; parameters} in
     let frame = entered :: frame in
@@ -277,7 +277,7 @@ let rec pp_constraint cx ctx names frame : Modtype_concept.constraint_ -> Pp.t l
       | Nested (path, c) ->
         let inner, nested = pp_constraint cx ctx names frame c in
         let def =
-          pp_concept_def (Cpp_name.pp (name_in ctx names frame (Modtype_concept_declared path)))
+          pp_concept_def (Base.Cpp_name.pp (name_in ctx names frame (Modtype_concept_declared path)))
             (concept_body_pp nested) in
         (def :: List.rev_append inner hoisted, reqs)
     in
@@ -310,7 +310,7 @@ let pp_refinements ctx refinements =
     it constrains, and over [params], the parameters of a functor declaring
     it, which its requirements may mention. *)
 let pp_modtype_concept cx ctx ~names ~params path (c : Modtype_concept.t) =
-  let here key = Cpp_name.pp (name_in ctx names [] key) in
+  let here key = Base.Cpp_name.pp (name_in ctx names [] key) in
   let name = here (Modtype_concept_declared path) in
   let head =
     str ("template<typename " ^ Structure_analysis.concept_self_param)
@@ -336,14 +336,14 @@ let pp_modtype_concept cx ctx ~names ~params path (c : Modtype_concept.t) =
 let pp_assertion ctx (a : Cpp_ast.assertion) =
   let concept =
     match a.concept with
-    | Of_module_type c -> Cpp_name.pp (resolved_concept ctx c)
-    | Of_class c -> Cpp_name.pp (resolved_class_concept ctx c)
+    | Of_module_type c -> Base.Cpp_name.pp (resolved_concept ctx c)
+    | Of_class c -> Base.Cpp_name.pp (resolved_class_concept ctx c)
   in
   let subject =
     match a.subject with
     | Module m -> module_struct_name_of (resolved_module ctx m)
     | Instance {instance; args} ->
-      Cpp_name.pp (resolved_type_name ctx instance) ++ prlist (fun ty -> str ", " ++ pp_type ctx ty) args
+      Base.Cpp_name.pp (resolved_type_name ctx instance) ++ prlist (fun ty -> str ", " ++ pp_type ctx ty) args
   in
   fnl () ++ str "static_assert(" ++ concept ++ str "<" ++ subject ++ str ">);"
 

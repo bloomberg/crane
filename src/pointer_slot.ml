@@ -6,9 +6,9 @@ open Names
 type t = Shared | At_instantiation | Pointer
 
 let rec of_pointee : type p. p Cpp_ir.Type.t -> t = function
-  | Entity_application (r, _, _) when Table.is_shared_variant r -> Shared
+  | Entity_application (r, _, _) when Base.Table.is_shared_variant r -> Shared
   | Entity_application (GlobRef.IndRef (kn, _), _, _)
-    when Table.shared_variant () && Common.under_mp_bound (MutInd.modpath kn) ->
+    when Base.Table.shared_variant () && Base.Common.under_mp_bound (MutInd.modpath kn) ->
     At_instantiation
   | In_namespace (_, t) | Const t -> of_pointee t
   | _ -> Pointer

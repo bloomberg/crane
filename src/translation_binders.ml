@@ -9,7 +9,7 @@
 open Names
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 
 (** Binder-type state: {!Translation_state.cpp_binder_types}, every binder's
     C++ type tagged with what decided it. *)
@@ -108,15 +108,15 @@ let read_is_boxed cx i occ =
   in
   match List.assq_opt occ cx.ctx.lexical.planned_reads with
   | Some {boxed = rd_boxed; kind = rd_kind} ->
-    ( if Probe.checking () then
+    ( if Base.Probe.checking () then
         let live = live () in
         let agrees = rd_boxed = live in
-        Probe.hit "repr-read" (fun () ->
+        Base.Probe.hit "repr-read" (fun () ->
             (if agrees then "agree " else "disagree ")
             ^ binder_kind_name rd_kind
             ^ if live then " live-boxed" else " live-value");
         if not agrees then
-          Probe.violation "variable read representation"
+          Base.Probe.violation "variable read representation"
             (describe live ((if rd_boxed then "boxes" else "does not") ^ " (" ^ binder_kind_name rd_kind ^ ")")) );
     rd_boxed
   | None ->
@@ -162,17 +162,17 @@ let planned_binder_type cx ~use ~agree i occ =
   let show = function Some t -> type_shape t | None -> "none" in
   match List.assq_opt occ cx.ctx.lexical.planned_reads with
   | Some {type_; kind; _} ->
-    ( if Probe.checking () then
+    ( if Base.Probe.checking () then
         let live = binder_cpp_type cx i in
         let agrees = agree type_ live in
-        Probe.hit "repr-type" (fun () ->
+        Base.Probe.hit "repr-type" (fun () ->
             use ^ (if agrees then " agree " else " disagree ") ^ binder_kind_name kind ^ " plan " ^ show type_
             ^ " live " ^ show live
             ^
               (match cx.ctx.input.body_owner with Some r -> " in "
                 ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> ""));
         if not agrees then
-          Probe.violation "variable read binder type"
+          Base.Probe.violation "variable read binder type"
             Pp.(
               str "a read for " ++ str use
               ++ (match cx.ctx.input.body_owner with Some r -> str " in " ++ GlobRef.print r | None -> mt ())
@@ -197,12 +197,12 @@ let planned_position cx occ ~(live : Cpp_ir.Lowered.Type.t option) =
     match cx.ctx.input.body_owner with Some r -> " in " ^ Pp.string_of_ppcmds (GlobRef.print r) | None -> "" in
   match List.find_opt (fun (o, _) -> Core.Occurrence.equal o occ) cx.ctx.lexical.planned_positions with
   | Some (_, planned) ->
-    if Probe.checking () then begin
+    if Base.Probe.checking () then begin
       let agrees = planned = live in
-      Probe.hit "magic-pos"
+      Base.Probe.hit "magic-pos"
         (fun () -> if agrees then "agree" else "disagree plan " ^ show planned ^ " live " ^ show live ^ owner ());
       if not agrees then
-        Probe.violation "coercion position"
+        Base.Probe.violation "coercion position"
           Pp.(str
               ("a coercion" ^ owner () ^ " is lowered against " ^ show live
                 ^ ", the plan's position is " ^ show planned))

@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Common
+open Base.Common
 
 type t = Cpp_state.module_frame = {
   eponymous_type : GlobRef.t option;
@@ -40,8 +40,8 @@ let eponymous ~name sel =
    inductive declared after [epon_ref] is left a function: neither is
    visible from inside the inductive's struct. *)
 let method_candidates epon_ref sel ~enclosing =
-  let epon_modpath = Table.modpath_of_r epon_ref in
-  let same_module r = ModPath.equal (Table.modpath_of_r r) epon_modpath in
+  let epon_modpath = Base.Table.modpath_of_r epon_ref in
+  let same_module r = ModPath.equal (Base.Table.modpath_of_r r) epon_modpath in
   let module_type_aliases =
     Method_registry.collect_module_type_aliases
       ~extract_decl:(fun (_, se) -> match se with Core.Module.Structure_item.Declaration d -> Some d | _ -> None)
@@ -80,7 +80,7 @@ let method_candidates epon_ref sel ~enclosing =
             | Some c -> c :: acc
             | None -> acc
           else acc )
-        acc (Core_util.term_defs d)
+        acc (Base.Core_util.term_defs d)
     | _ -> acc
   in
   let candidates = List.fold_left candidates_of (List.fold_left candidates_of [] sel) enclosing in
@@ -88,7 +88,7 @@ let method_candidates epon_ref sel ~enclosing =
      frame what the type's struct is given: a function of the module the
      scan made a method of the type and the frame does not is called as a
      method nothing declares. *)
-  if Probe.checking () then
+  if Base.Probe.checking () then
     List.iter
       (fun (_, se) ->
         match se with
@@ -99,12 +99,12 @@ let method_candidates epon_ref sel ~enclosing =
               | Some (e, _)
                 when same_module r && globref_equal e epon_ref
                      && not (List.exists (fun (r', _, _, _) -> globref_equal r r') candidates) ->
-                Probe.violation "method registry"
+                Base.Probe.violation "method registry"
                   Pp.(
                     str "the registry's scan made " ++ GlobRef.print r ++ str " a method of " ++ GlobRef.print epon_ref
                     ++ str ", which its module's frame does not" )
               | _ -> () )
-            (Core_util.term_defs d)
+            (Base.Core_util.term_defs d)
         | _ -> () )
       sel;
   candidates
@@ -113,7 +113,7 @@ let method_candidates epon_ref sel ~enclosing =
    spells: those depend on where the reference is written from. *)
 let concept_collision layout mp sel =
   let concept_name r =
-    match Module_plan.concept_name layout r with Some name -> Some name | None -> Common.decided_global_name r
+    match Module_plan.concept_name layout r with Some name -> Some name | None -> Base.Common.decided_global_name r
   in
   List.exists
     (fun (_, se) ->
@@ -122,7 +122,7 @@ let concept_collision layout mp sel =
         (Core.Decl.Inductive
           {entity = kn; definition = ({Core.Inductive.kind = Core.Inductive.Kind.Type_class _; _} as ind)}) ->
         List.exists
-          (fun (r, _) -> Option.equal String.equal (concept_name r) (Some (Common.emitted_module_name mp)))
+          (fun (r, _) -> Option.equal String.equal (concept_name r) (Some (Base.Common.emitted_module_name mp)))
           (inductive_refs kn ind)
       | _ -> false )
     sel
@@ -132,7 +132,7 @@ let concept_collision layout mp sel =
    types out of reach from outside it.  An enum is never promoted: its
    declaration is an [enum class], not members a struct can take over.  The
    promoted variables the payloads
-   name are parameters too ({!Table.ind_promoted_params}): the head spelled
+   name are parameters too ({!Base.Table.ind_promoted_params}): the head spelled
    for the module is the one the inductive's struct is generated with. *)
 let promoted scopes mp sel eponymous_type =
   let has_submodules = List.exists (function _, Core.Module.Structure_item.Module _ -> true | _ -> false) sel in
@@ -148,8 +148,8 @@ let promoted scopes mp sel eponymous_type =
         | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           List.fold_left
             (fun found (r, p) ->
-              if globref_equal r epon && not (Table.is_enum_inductive r) then
-                Some (Table.ind_promoted_params kn @ fst (Table.ind_param_vars ind p))
+              if globref_equal r epon && not (Base.Table.is_enum_inductive r) then
+                Some (Base.Table.ind_promoted_params kn @ fst (Base.Table.ind_param_vars ind p))
               else found )
             None (inductive_refs kn ind)
         | _ -> None )
@@ -161,7 +161,7 @@ let of_module (u : Unit_context.t) mp ~name sel ~enclosing =
   let method_candidates =
     match (eponymous_type, eponymous_record) with
     | (Some r, _ | None, Some (r, _, _))
-      when not (Table.is_custom r || Table.is_enum_inductive r) ->
+      when not (Base.Table.is_custom r || Base.Table.is_enum_inductive r) ->
       method_candidates r sel ~enclosing
     | _ -> []
   in

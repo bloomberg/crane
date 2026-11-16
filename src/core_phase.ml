@@ -29,7 +29,7 @@ let modules (type g t) (Program p : (g * t) program) : (Names.ModPath.t * (g * t
     declared types, the types bodies annotate, constructor argument types and
     type definitions. *)
 let iter_types f (Program p : frozen program) =
-  let visit_body b = ignore (Core_util.ast_map_types (fun t -> f t; t) b) in
+  let visit_body b = ignore (Base.Core_util.ast_map_types (fun t -> f t; t) b) in
   let visit_ind (ind : Core.Inductive.t) =
     Array.iter
       (fun (pk : Core.Inductive.Packet.t) -> Array.iter (List.iter f) pk.constructor_argument_types)
@@ -40,7 +40,7 @@ let iter_types f (Program p : frozen program) =
       | Core.Decl.Inductive {definition = ind; _} -> visit_ind ind
       | Core.Decl.Type_alias {body = t; _} -> f t
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> f fd.type_; visit_body fd.body) (Core_util.term_defs d) )
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> f fd.type_; visit_body fd.body) (Base.Core_util.term_defs d) )
     (function
       | Core.Signature.Declaration.Inductive {definition = ind; _} -> visit_ind ind
       | Core.Signature.Declaration.Type {body = t; _} -> Option.iter f t
@@ -103,7 +103,7 @@ let zonk (Program p : optimized program) : frozen program =
     | Core.Signature.Declaration.Value {entity = r; body = b; type_ = t} ->
       Core.Signature.Declaration.Value {entity = r; body = body b; type_ = ty t}
   in
-  Table.freeze_types ty;
+  Base.Table.freeze_types ty;
   Program { structure = Core.Retype.program ~spec ~with_type:ty decl p.structure; splices = p.splices }
 
 (** No reference is declared twice. *)
@@ -120,13 +120,13 @@ let check_declared_once (Program p : frozen program) =
         Array.iteri (fun i _ -> declare (Names.GlobRef.IndRef (kn, i))) ind.packets
       | Core.Decl.Type_alias {entity = r; _} -> declare r
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> declare fd.entity) (Core_util.term_defs d) )
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> declare fd.entity) (Base.Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     p.structure
 
 (** Every polymorphic use is instantiated at its callee's own scheme, the
-    one {!Core_util.reference_scheme} names, so that two readings of one
+    one {!Base.Core_util.reference_scheme} names, so that two readings of one
     callee's variables meet the same variables; and no instantiation holds a
     metavariable: extraction froze each into an immutable hole. *)
 let check_instantiations (Program p : frozen program) =
@@ -152,7 +152,7 @@ let check_instantiations (Program p : frozen program) =
         let scheme = Core.Scheme.Instantiation.scheme inst in
         if not (Names.GlobRef.UserOrd.equal (Core.Scheme.Id.owner scheme) r) then
           fail ("instantiates a use of " ^ name () ^ " at another declaration's scheme");
-        match Core_util.reference_scheme r with
+        match Base.Core_util.reference_scheme r with
         | Some own when Core.Scheme.Id.equal own scheme -> ()
         | Some own when Core.Scheme.Id.arity own <> Core.Scheme.Id.arity scheme ->
           fail ("instantiates a use of " ^ name () ^ " at a scheme of another arity")
@@ -163,13 +163,13 @@ let check_instantiations (Program p : frozen program) =
       fail ("holds a metavariable in the instantiation of a use of " ^ name ())
   in
   let rec check_body = function
-    | Core.Expr.Global use as e -> check_use use; Core_util.ast_iter check_body e
-    | e -> Core_util.ast_iter check_body e
+    | Core.Expr.Global use as e -> check_use use; Base.Core_util.ast_iter check_body e
+    | e -> Base.Core_util.ast_iter check_body e
   in
   Modutil.struct_iter
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Core_util.term_defs d)
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> check_body fd.body) (Base.Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     (fun _ -> ())
     (fun _ -> ())
@@ -197,10 +197,10 @@ let iter_occurrences f (Program p : _ program) =
               | Core.Expr.Cofixpoint {occurrence = o; _} -> f fd.entity "local fixpoint" o
               | Core.Expr.Global use -> f fd.entity "use" (Core.Global_use.occurrence use)
               | _ -> () );
-              Core_util.ast_iter walk e
+              Base.Core_util.ast_iter walk e
             in
             walk fd.body )
-          (Core_util.term_defs d)
+          (Base.Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
     (fun _ -> ())
     (fun _ -> ())
@@ -218,7 +218,7 @@ let check_occurrences phase p =
     iter_occurrences
       (fun r what o' ->
         if Core.Occurrence.equal o o' then
-          holders := (what ^ " in " ^ Table.kername_of_global r) :: !holders )
+          holders := (what ^ " in " ^ Base.Table.kername_of_global r) :: !holders )
       p;
     failure phase ("holds one occurrence at several terms: " ^ String.concat ", " (List.rev !holders))
 
@@ -230,14 +230,14 @@ let freeze p =
     check_instantiations p;
     check_occurrences "frozen" p
   end;
-  if Pipeline_trace.enabled () then
-    Pipeline_trace.event "freeze" (Printf.sprintf "open annotations: %d" (open_annotations p));
+  if Base.Pipeline_trace.enabled () then
+    Base.Pipeline_trace.event "freeze" (Printf.sprintf "open annotations: %d" (open_annotations p));
   p
 
 (** The top-level elements of [p] that normalizing [p] again would
     rewrite, and whether it would decide the partners it splices alike. *)
 let not_normal pass (p : normalizing) =
-  let again = Core_util.preserving_meta_supply (fun () -> pass p) in
+  let again = Base.Core_util.preserving_meta_supply (fun () -> pass p) in
   ( List.filter_map
       (fun ((l, fp), (_, fp')) -> if Core.Fingerprint.equal fp fp' then None else Some l)
       (List.combine (Core.Fingerprint.elements p.structure) (Core.Fingerprint.elements again.structure)),

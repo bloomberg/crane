@@ -17,7 +17,7 @@ let add_accessor a mp lbl =
   if List.exists known a.accessor_names then a else {a with accessor_names = (mp, lbl) :: a.accessor_names}
 
 let add_accessor_ref a r =
-  let a = add_accessor a (Table.modpath_of_r r) (Table.label_of_r r) in
+  let a = add_accessor a (Base.Table.modpath_of_r r) (Base.Table.label_of_r r) in
   match r with
   | GlobRef.ConstRef c ->
     let kn = Constant.canonical c in
@@ -35,13 +35,13 @@ type nested_structs = nested_struct_owner list CString.Map.t
 
 let nested_struct_owner_equal a b =
   match (a, b) with
-  | Global x, Global y -> Common.globref_equal x y
+  | Global x, Global y -> Base.Common.globref_equal x y
   | Module x, Module y -> ModPath.equal x y
   | _ -> false
 
 let nested_struct_owner_covers r = function
-  | Global r' -> Common.globref_equal r r'
-  | Module mp -> ModPath.equal mp (Table.modpath_of_r r)
+  | Global r' -> Base.Common.globref_equal r r'
+  | Module mp -> ModPath.equal mp (Base.Table.modpath_of_r r)
 
 let add_nested_struct_name m (name, owner) =
   let prev = Option.default [] (CString.Map.find_opt name m) in

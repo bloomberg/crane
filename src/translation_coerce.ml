@@ -6,11 +6,11 @@
     [crane_erase_fn], eta-expansion, currying to an expected arity, the
     adapter lambdas these build. *)
 
-open Common
+open Base.Common
 open Names
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 (** [recover_carrier_result ~fun_ty ~n_args ~want expr] converts a call whose
@@ -182,7 +182,7 @@ let eta_expand_to_expected ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~core_a
 
     It first classifies the source side as boxed, opaque, concrete or unknown,
     and then reads the answer off that.  The classification rests on
-    {!Type_util.is_boxed_type}, not on {!Cpp_ir.Types.prints_as_any}:
+    {!Base.Type_util.is_boxed_type}, not on {!Cpp_ir.Types.prints_as_any}:
     an opaque type also prints as [std::any], but it is an admission that
     the representation is unknown, and nothing may be boxed or cast on the
     strength of it.  A boundary with an opaque type on either side is therefore
@@ -241,7 +241,7 @@ let rec coerce cx ?term ?(from : Cpp_ir.Lowered.Type.t option) ~(into : Cpp_ir.L
         match Cpp_erasure.erased_list_shape into with
         (* A custom list has no converting constructor to unbox its elements
            with, so it stays at the flat shape until a consumer converts it. *)
-        | Some (g, shape) when Table.is_custom g -> Cpp_erasure.unbox shape expr
+        | Some (g, shape) when Base.Table.is_custom g -> Cpp_erasure.unbox shape expr
         | Some (_, shape) -> Cpp_erasure.converting_ctor into [Cpp_erasure.unbox shape expr]
         | None -> Cpp_erasure.unbox into expr ) )
     (* Nothing may be boxed or cast on the strength of an admission that the
@@ -341,7 +341,7 @@ let value_cpp_type cx ~agree env e =
   match strip_magic e with
   | Core.Expr.Bound_variable {index = j; occurrence = occ} ->
     Translation_binders.planned_binder_type_or_derive cx ~use:"value's type" ~agree env j occ
-  | Core.Expr.Global ({callee = r; _} as use) when Core_util.Var_types.is_empty (Core_util.written_type_args use) ->
+  | Core.Expr.Global ({callee = r; _} as use) when Base.Core_util.Var_types.is_empty (Base.Core_util.written_type_args use) ->
     Option.map (Translation_types.cpp_of_core cx env) (callee_core_type cx r)
   | _ -> None
 
@@ -361,7 +361,7 @@ let value_cpp_type cx ~agree env e =
     same branch where extraction recorded no coercion at all and a bare [tt]
     reaches a [return]; both throw {!Translation_cpp_build.dead_branch_message}. *)
 let absurd_coercion cx from (into : Cpp_ir.Lowered.Type.t) =
-  Type_util.core_type_is_unit from
+  Base.Type_util.core_type_is_unit from
   && (not (is_cpp_unit_type into))
   && into <> Void
   && not (Translation_types.resolves_to_any_type cx into)
@@ -477,7 +477,7 @@ let stored_adapter params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
     {v [](uint64_t _ec0) { return [=](uint64_t _ec1) { return f(_ec0, _ec1); }; } v}
 
     A definition with a function-typed parameter is declared as a template
-    deducing that parameter ({!Common.fun_tparam_name}), and its name alone is
+    deducing that parameter ({!Base.Common.fun_tparam_name}), and its name alone is
     an overload set rather than a value; one flat lambda gives the call the
     argument it deduces from:
 

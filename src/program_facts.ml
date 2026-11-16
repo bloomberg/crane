@@ -50,7 +50,7 @@ let used_customs struc =
   let used = ref Core.Ref.User.Set.empty in
   let add r = used := Core.Ref.User.Set.add r !used in
   let mark r =
-    if Table.is_custom r then begin
+    if Base.Table.is_custom r then begin
       add r;
       (* Imports registered on an inductive are due when a constructor of it
          is used. *)
@@ -69,11 +69,11 @@ let used_customs struc =
 let higher_order_projections struc =
   let found = ref Core.Ref.User.Set.empty in
   let rec scan = function
-    | Core.Expr.Global {callee = r; _} when Table.is_projection r -> found := Core.Ref.User.Set.add r !found
-    | a -> Core_util.ast_iter scan a
+    | Core.Expr.Global {callee = r; _} when Base.Table.is_projection r -> found := Core.Ref.User.Set.add r !found
+    | a -> Base.Core_util.ast_iter scan a
   in
   Modutil.struct_iter
-    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> scan fd.body) (Core_util.term_defs d))
+    (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> scan fd.body) (Base.Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;

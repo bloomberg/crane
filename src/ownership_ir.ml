@@ -151,11 +151,11 @@ let closure_reads d t =
   go d [] t
 
 let worth_moving_ref worth r args =
-  (not (Table.is_enum_inductive r))
-  && (not (Table.is_coinductive r))
-  && ( (not (Table.is_custom r))
+  (not (Base.Table.is_enum_inductive r))
+  && (not (Base.Table.is_coinductive r))
+  && ( (not (Base.Table.is_custom r))
      || List.exists worth args
-     || not (Table.is_custom_scalar_ref r || Table.is_trivially_copyable_ref r) )
+     || not (Base.Table.is_custom_scalar_ref r || Base.Table.is_trivially_copyable_ref r) )
 
 let rec worth_moving = function
   | Core.Type.Global_app {head = r; type_arguments = args; _} -> worth_moving_ref worth_moving r args
@@ -183,7 +183,7 @@ let rec worth_moving_cpp : type p. p Cpp_ir.Type.t -> bool = function
 
 (* A value of the global type [r] is a handle on a counted block: a
    coinductive's node, a shared variant's alternative. *)
-let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r
+let shares_ref r = Base.Table.is_coinductive r || Base.Table.is_shared_variant r
 
 (* What a copy of a value of the Core type [ty] is: a retain of a block a
    closure or a handle points at, its bits where moving it gains nothing
@@ -196,15 +196,15 @@ let shares_ref r = Table.is_coinductive r || Table.is_shared_variant r
 let rec copy_of_type ty =
   match ty with
   | Core.Type.Meta {contents = Some t} -> copy_of_type t
-  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d -> copy_of_type rest
+  | Core.Type.Arrow {parameter = d; result = rest} when Base.Core_util.is_erased_type d -> copy_of_type rest
   | Core.Type.Arrow _ -> Some Retain
   (* An instance of a class is an object of its own, a singleton class's
      too, whatever its method's type. *)
-  | Core.Type.Global_app {head = r; _} when Table.is_typeclass r -> Some Duplicate
+  | Core.Type.Global_app {head = r; _} when Base.Table.is_typeclass r -> Some Duplicate
   | Core.Type.Global_app {head = (Names.GlobRef.ConstRef kn as r); type_arguments = args; _}
-    when (not (Table.is_custom r)) && not (Table.is_promoted_type_var r || Table.is_erased_type_const r) -> (
-    match Table.lookup_typedef_unchecked kn with
-    | Some body -> copy_of_type (Core_util.type_subst_list args body)
+    when (not (Base.Table.is_custom r)) && not (Base.Table.is_promoted_type_var r || Base.Table.is_erased_type_const r) -> (
+    match Base.Table.lookup_typedef_unchecked kn with
+    | Some body -> copy_of_type (Base.Core_util.type_subst_list args body)
     | None -> Some Duplicate )
   | Core.Type.Global_app {head = r; _} when shares_ref r -> Some Retain
   (* A mapped type's copy copies its arguments: it is its bits only where
@@ -231,11 +231,11 @@ let rec copy_of_cpp : type p. p Cpp_ir.Type.t -> copy =
   | Shared_pointer _ | Function _ -> Retain
   | Entity_application (r, _, _) when shares_ref r -> Retain
   | Entity_application ((Names.GlobRef.ConstRef kn as r), args, _)
-    when (not (Table.is_custom r))
-         && (not (Table.is_promoted_type_var r || Table.is_erased_type_const r))
-         && Option.has_some (Table.lookup_typedef_unchecked kn) -> (
+    when (not (Base.Table.is_custom r))
+         && (not (Base.Table.is_promoted_type_var r || Base.Table.is_erased_type_const r))
+         && Option.has_some (Base.Table.lookup_typedef_unchecked kn) -> (
     let rec body = function Core.Type.Meta {contents = Some t} -> body t | t -> t in
-    match body (Option.get (Table.lookup_typedef_unchecked kn)) with
+    match body (Option.get (Base.Table.lookup_typedef_unchecked kn)) with
     (* One of its arguments, under another name. *)
     | Core.Type.Variable {variable = j; _} when j >= 1 && j <= List.length args -> copy_of_cpp (List.nth args (j - 1))
     | _ -> (
@@ -292,8 +292,8 @@ let leave parents d s =
    [t] standing [d] binders deep: [r] is an inline custom spelled as the
    projection of its argument's [first] or [second] member. *)
 let projected d r t =
-  match (Table.inline_custom_text r, t) with
-  | Some s, Core.Expr.Bound_variable {index = i; occurrence = o} when Table.is_inline_custom r -> (
+  match (Base.Table.inline_custom_text r, t) with
+  | Some s, Core.Expr.Bound_variable {index = i; occurrence = o} when Base.Table.is_inline_custom r -> (
     match Cpp_ir.Foreign_template.pair_projection_field s with
     | Some "first" -> Some (component (d - i) 0, o)
     | Some "second" -> Some (component (d - i) 1, o)
@@ -386,8 +386,8 @@ let closure_local ~n_outer ty a =
   match a with
   | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
     let ids = Core.Recursion.Group.functions rec_group in
-    not (Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
-  | Core.Expr.Lambda _ -> not (Type_util.own_type_variables ~n_outer [ty])
+    not (Base.Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)))
+  | Core.Expr.Lambda _ -> not (Base.Type_util.own_type_variables ~n_outer [ty])
   | _ -> false
 
 let at_instance arms occurrence =
@@ -402,18 +402,18 @@ let at_instance arms occurrence =
 let reads_at_uses ~n_outer ~arms ty a occurrence =
   match strip a with
   | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> true
-  | Core.Expr.Lambda _ -> Type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
+  | Core.Expr.Lambda _ -> Base.Type_util.own_type_variables ~n_outer [ty] && not (at_instance arms occurrence)
   | _ -> false
 
 (* A record's field read out of it, by its projection or by the match
    taking the record apart that returns one field: the record read. *)
 let field_of = function
-  | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = [t]} when Table.is_projection r -> Some t
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = [t]} when Base.Table.is_projection r -> Some t
   | Core.Expr.Match {scrutinee_type = ty;
                      scrutinee = t;
                      branches = [|{Core.Match.Branch.binders = ids;
                                    body = Core.Expr.Bound_variable {index = k; _}; _}|]; _}
-    when Table.record_fields_of_type ty <> [] && k <= List.length ids ->
+    when Base.Table.record_fields_of_type ty <> [] && k <= List.length ids ->
     Some t
   | _ -> None
 
@@ -440,7 +440,7 @@ let scrutinee_consumed ty scrut branches =
     let uses =
       List.length
         (List.filter (( = ) Cpp_ir.Foreign_template.Scrut)
-           (Cpp_ir.Foreign_template.match_template (Table.find_custom_match branches)) )
+           (Cpp_ir.Foreign_template.match_template (Base.Table.find_custom_match branches)) )
     in
     uses <= 1 || not (spelled_in_place scrut)
   | Record _ -> true
@@ -449,15 +449,15 @@ let scrutinee_consumed ty scrut branches =
       (fun {Core.Match.Branch.pattern = pat; _} ->
         match pat with
         | Core.Pattern.Constructor {constructor = Names.GlobRef.ConstructRef (ip, _); _} ->
-          Table.is_enum_inductive (Names.GlobRef.IndRef ip)
+          Base.Table.is_enum_inductive (Names.GlobRef.IndRef ip)
         | _ -> true )
       branches
 
 (* How many times an argument of [r] is evaluated: an inline custom splices
    it as often as its template names it. *)
 let evaluations r =
-  match Table.inline_custom_text r with
-  | Some s when Table.is_inline_custom r -> Cpp_ir.Foreign_template.arg_mentions s
+  match Base.Table.inline_custom_text r with
+  | Some s when Base.Table.is_inline_custom r -> Cpp_ir.Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
 let sequential_bind effects use = Core_effects.lookup effects use = Some {operation = Bind; mode = Sequential}
@@ -546,7 +546,7 @@ let machine_call resumes d f =
     | Core.Expr.Fixpoint {occurrence = at; _} | Core.Expr.Cofixpoint {occurrence = at; _} -> Some (at, `Fixpoint)
     | _ -> (
       match (call_head f, entry_captures) with
-      | Core.Expr.Global {callee; occurrence; _}, _ when Common.globref_equal callee origin -> Some (occurrence, `Plain)
+      | Core.Expr.Global {callee; occurrence; _}, _ when Base.Common.globref_equal callee origin -> Some (occurrence, `Plain)
       | Core.Expr.Bound_variable {index = i; occurrence}, Some k when d - i = -k -> Some (occurrence, `Member)
       | Core.Expr.Bound_variable {occurrence; _}, _ -> Some (occurrence, `Plain)
       | _ -> None ) )
@@ -650,7 +650,7 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
       let l, occurrence = Option.get (projected d r (strip arg)) in
       read l occurrence
     (* A field is read out of its record where the projection stands. *)
-    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = [arg]} when Table.is_projection r ->
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = [arg]} when Base.Table.is_projection r ->
       walk ~consumed ~pinned parents d live arg
     | Core.Expr.Match {scrutinee = scrut; _} when field_of t <> None -> walk ~consumed ~pinned parents d live scrut
     (* A bind generated as sequencing runs its action and then its
@@ -658,8 +658,8 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
        an inline custom where it is generated as a call. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)}
       when sequential_bind effects use -> (
-      let action, k = Common.last_two args in
-      match Core_util.collect_lams k with
+      let action, k = Base.Common.last_two args in
+      match Base.Core_util.collect_lams k with
       | [], _ -> walk ~pinned parents d (walk ~consumed:false ~pinned parents d live k) action
       | ids, body ->
         let n = List.length ids in
@@ -668,7 +668,7 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
         let live_body = walk ~consumed ?tail ~pinned parents' (d + n) live body in
         walk ?tail:(saved_at d action use.occurrence ~outside:(Levels.union live pinned)) ~pinned parents d
           (leave parents' d live_body) action )
-    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args} when Table.is_inline_custom r ->
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args} when Base.Table.is_inline_custom r ->
       unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
     (* A local fixpoint applied where it is written binds its parameters to
        its arguments in order: each is followed by the later ones alone, and
@@ -829,10 +829,10 @@ module Binding = struct
   let pair_by_value ~owned scrut branches =
     Array.length branches = 1
     && (match matched_inductive branches with
-       | Some r -> Type_util.is_prod_global r
+       | Some r -> Base.Type_util.is_prod_global r
        | None -> false )
-    && Table.is_custom_match branches
-    && Cpp_ir.Foreign_template.structured_binding (Table.find_custom_match branches) <> None
+    && Base.Table.is_custom_match branches
+    && Cpp_ir.Foreign_template.structured_binding (Base.Table.find_custom_match branches) <> None
     &&
     match scrutinee_var scrut with
     | Some (i, o) ->
@@ -936,9 +936,9 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
        the action's value. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)}
       when sequential_bind effects use -> (
-      let action, k = Common.last_two args in
+      let action, k = Base.Common.last_two args in
       own owned d action;
-      match Core_util.collect_lams k with
+      match Base.Core_util.collect_lams k with
       | [], _ -> own owned d k
       | ((_, ty) :: _ as ids), body ->
         let n = List.length ids in
@@ -991,10 +991,10 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
           let enclosing = !handles in
           List.iteri (fun i (_, ty) -> bound (d + i) ty) ids;
           ( match pat with
-          | Core.Pattern.Constructor {constructor = r; _} when not (Table.is_custom_match branches) ->
-            let stored = Type_util.Ctor_fields.of_ctor r in
+          | Core.Pattern.Constructor {constructor = r; _} when not (Base.Table.is_custom_match branches) ->
+            let stored = Base.Type_util.Ctor_fields.of_ctor r in
             List.iteri
-              (fun i _ -> if Type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
+              (fun i _ -> if Base.Type_util.Ctor_fields.behind_pointer stored i then handles := Levels.add (d + i) !handles)
               ids
           | _ -> () );
           own (branch_owned owned d t ty scrut branches k branch) (d + List.length ids) body;
@@ -1033,7 +1033,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
     | _, (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ | Core.Expr.Lambda _) ->
       at_instance arms occurrence || closure_local ~n_outer ty a
     | _ ->
-      (not (Type_util.core_type_is_unit ty))
+      (not (Base.Type_util.core_type_is_unit ty))
       && worth_moving ty
       && not (Binding.projects_in_place ~owned:(owned_var owned d) ~fate:(fate_in reads) ty a)
   and branch_owned owned d case ty scrut branches k {Core.Match.Branch.binders = ids; pattern = pat; body = body; _} =
@@ -1070,7 +1070,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
       | Variant -> (
         match (pat, ind) with
         | Core.Pattern.Constructor {constructor = r; _}, Some ind
-          when (not (Table.is_enum_inductive ind)) && not (Table.is_shared_variant ind) ->
+          when (not (Base.Table.is_enum_inductive ind)) && not (Base.Table.is_shared_variant ind) ->
           (* An owned variant is matched through references into it: it is
              not read whole by value while the branch runs, and its fields
              are the branch's own unless the branch reads it whole. *)
@@ -1081,8 +1081,8 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
             | _ -> owned
           in
           if consumed && not (reads_scrutinee body) then
-            let stored = Type_util.Ctor_fields.of_ctor r in
-            Levels.union owned (fields (fun i _ -> not (Type_util.Ctor_fields.behind_pointer stored i)))
+            let stored = Base.Type_util.Ctor_fields.of_ctor r in
+            Levels.union owned (fields (fun i _ -> not (Base.Type_util.Ctor_fields.behind_pointer stored i)))
           else owned
         | _ -> owned ) )
   in
@@ -1140,7 +1140,7 @@ let branches_at root o =
                        branches = brs; _}
                          when Option.equal Core.Occurrence.equal (Option.map snd (scrutinee_var scrut)) (Some o) ->
       raise (Found brs)
-    | a -> Core_util.ast_iter find a
+    | a -> Base.Core_util.ast_iter find a
   in
   match find root with () -> None | exception Found brs -> Some brs
 
@@ -1155,12 +1155,12 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
       | Some brs when branch < Array.length brs ->
         let {Core.Match.Branch.body = body; _} = brs.(branch) in
         List.filter
-          (function Core.Expr.Construct {constructor = r; _} -> Common.globref_equal r constructor | _ -> false)
+          (function Core.Expr.Construct {constructor = r; _} -> Base.Common.globref_equal r constructor | _ -> false)
           (Escape.tail_constructions body)
       | _ -> []
     in
-    if consumers = [] && Probe.checking () then
-      Probe.violation "reuse plan"
+    if consumers = [] && Base.Probe.checking () then
+      Base.Probe.violation "reuse plan"
         Pp.(str "a branch rebuilding in its scrutinee's storage returns no construction to take it");
     plan ~effects:p.effects ~n_outer:p.n_outer ~outer:p.outer ~resumes:p.resumes ~certain:p.certain p.root
       p.root_owned p.root_copied
@@ -1236,7 +1236,7 @@ let use ?(whole = false) ?(boxed = false) p o : Use.t option =
     | Some None | None ->
       (* Inference left the type unsolved where the read is lowered: no
          reading of the C++ declaration stands in for it. *)
-      Probe.violation "copy mode" (Pp.str "a read whose Core type inference left unsolved is copied");
+      Base.Probe.violation "copy mode" (Pp.str "a read whose Core type inference left unsolved is copied");
       Some Clone )
   | Unplanned -> None
 
@@ -1321,7 +1321,7 @@ let continue_moves ~effects (l : Control_ir.Term.loop) =
       ||
       let rec erase n t =
         match t with Core.Expr.Bound_variable {index = j; _}
-          when j = n -> Core.Expr.Erased_value Core.Erasure_reason.Proof | t -> Core_util.ast_map_lift erase n t in
+          when j = n -> Core.Expr.Erased_value Core.Erasure_reason.Proof | t -> Base.Core_util.ast_map_lift erase n t in
       let arguments (c' : Control_ir.Term.continue_) =
         if Core.Occurrence.equal c'.occurrence c.occurrence then
           List.mapi (fun j a -> if j = i then a else erase k a) c'.arguments
@@ -1367,7 +1367,7 @@ let continue_moves ~effects (l : Control_ir.Term.loop) =
 let rec takes_record ~throws p t =
   match t with
   | Core.Expr.Bound_variable {occurrence = o; _} -> moves p o
-  | Core.Expr.Global {callee = r; _} -> Table.is_cofixpoint r || throws r
+  | Core.Expr.Global {callee = r; _} -> Base.Table.is_cofixpoint r || throws r
   | t -> ( match field_of t with Some r -> takes_record ~throws p r | None -> true )
 
 let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p)
@@ -1487,7 +1487,7 @@ let eta_captures p ts =
 module Local_passing = struct
   type t = Callable_abi.passing option list
 
-  let recorded : ((Core.Occurrence.t * int) * t) list ref = State.cell State.Extraction []
+  let recorded : ((Core.Occurrence.t * int) * t) list ref = Base.State.cell Base.State.Extraction []
 
   let same (o, j) (o', j') = Core.Occurrence.equal o o' && Int.equal j j'
 
@@ -1497,7 +1497,7 @@ module Local_passing = struct
     match lookup member with
     | Some t' when t' = t -> ()
     | Some _ ->
-      Probe.violation "local passing"
+      Base.Probe.violation "local passing"
         (Pp.str "a local fixpoint is generated passing its parameters otherwise than it was before");
       recorded := (member, t) :: List.filter (fun (m, _) -> not (same m member)) !recorded
     | None -> recorded := (member, t) :: !recorded
@@ -1509,7 +1509,7 @@ let kept_by_frame p b =
     p.saves
 
 module Local_captures = struct
-  let recorded : ((Core.Occurrence.t * int) * Capture.t list) list ref = State.cell State.Extraction []
+  let recorded : ((Core.Occurrence.t * int) * Capture.t list) list ref = Base.State.cell Base.State.Extraction []
 
   let lookup member = List.find_map (fun (m, t) -> if Local_passing.same m member then Some t else None) !recorded
 
@@ -1539,7 +1539,7 @@ let save_moves p let_ =
 module Frame_save = struct
   type t = Core.Binder.t list
 
-  let recorded : (Core.Binder.t * t) list ref = State.cell State.Extraction []
+  let recorded : (Core.Binder.t * t) list ref = Base.State.cell Base.State.Extraction []
 
   let same b b' = Core.Binder.equal b b' && Core.Binder.same_site b b'
 
@@ -1549,7 +1549,7 @@ module Frame_save = struct
     match lookup binder with
     | Some t' when List.equal Core.Binder.equal t t' -> ()
     | Some t' ->
-      Probe.violation "frame save"
+      Base.Probe.violation "frame save"
         (Pp.str "a let a frame machine resumes at is generated saving its frame otherwise than it was before");
       let both = List.filter (fun b -> List.exists (Core.Binder.equal b) t') t in
       recorded := (binder, both) :: List.filter (fun (b, _) -> not (same b binder)) !recorded
@@ -1594,7 +1594,7 @@ type region_plan = t
 module Entry_moves = struct
   type t = Core.Binder.t list
 
-  let recorded : (Core.Occurrence.t * t) list ref = State.cell State.Extraction []
+  let recorded : (Core.Occurrence.t * t) list ref = Base.State.cell Base.State.Extraction []
 
   let lookup call = List.find_map (fun (c, t) -> if Core.Occurrence.equal c call then Some t else None) !recorded
 
@@ -1602,7 +1602,7 @@ module Entry_moves = struct
     match lookup call with
     | Some t' when List.equal Core.Binder.equal t t' -> ()
     | Some t' ->
-      Probe.violation "entry moves"
+      Base.Probe.violation "entry moves"
         (Pp.str "a call entering an adopted entry is planned moving otherwise than it was before");
       let both = List.filter (fun b -> List.exists (Core.Binder.equal b) t') t in
       recorded := (call, both) :: List.filter (fun (c, _) -> not (Core.Occurrence.equal c call)) !recorded

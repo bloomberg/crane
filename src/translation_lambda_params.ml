@@ -6,12 +6,12 @@
     erased domains), whether a binder is emitted at all, and the by-value
     captures of a closure that is returned. *)
 
-open Common
+open Base.Common
 open Names
 open Util
-open Type_util
+open Base.Type_util
 open Core_query
-open Table
+open Base.Table
 
 (** Whether a reference was methodified: spelled [x.f(...)] rather than
     [f(x, ...)]. *)
@@ -35,7 +35,7 @@ let return_captures_by_value (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lower
   let closure (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t =
     match l.capture with
     | Runs_in_place ->
-      Probe.violation "closure capture" (Pp.str "a lambda holding references into its frame is returned");
+      Base.Probe.violation "closure capture" (Pp.str "a lambda holding references into its frame is returned");
       {l with capture = Stored}
     | _ -> l
   in
@@ -119,7 +119,7 @@ let rec has_open_meta t =
     this one type: correct it at the declaration and the body decomposes the
     pair at the type it really has, while correcting the spelling alone
     leaves the body unboxing at the erased view its own generation assumed
-    (see {!Type_util.refine_param_from_slot}, which for that reason may
+    (see {!Base.Type_util.refine_param_from_slot}, which for that reason may
     only refine as far as still-erased).  A signature's domains are in source
     order, so they index [args] the opposite way.
 
@@ -161,19 +161,19 @@ let slot_refined_lambda cx env ~expected_core_ty args body =
             let d = doms.(n - 1 - i) in
             let d = if has_open_meta ty then erase_unscoped d else d in
             let writable t = Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env t) in
-            (x, Type_util.refine_erased ~fills ~writable ty d) )
+            (x, Base.Type_util.refine_erased ~fills ~writable ty d) )
         args
     | None -> args
   in
-  let args = List.map (fun (x, t) -> (x, Type_util.fill_holes_type !fills t)) args in
-  (args, Type_util.fill_holes !fills body)
+  let args = List.map (fun (x, t) -> (x, Base.Type_util.fill_holes_type !fills t)) args in
+  (args, Base.Type_util.fill_holes !fills body)
 
 (* Whether [body] takes its single binder apart: matches on it, or applies to
    it a projection spelled as member access (an inline custom [%a0.first]). *)
 let body_reads_members_of_binder body =
   let member_access g =
-    Table.is_inline_custom g
-    && ( match Table.find_custom_opt g with
+    Base.Table.is_inline_custom g
+    && ( match Base.Table.find_custom_opt g with
        | Some txt ->
          String.length txt > 4 && String.sub txt 0 4 = "%a0."
        | None -> false )
@@ -196,7 +196,7 @@ let body_reads_members_of_binder body =
       Array.exists (reads (depth + Array.length ids)) funs
     | e ->
       let found = ref false in
-      Core_util.ast_iter (fun x -> if reads depth x then found := true) e;
+      Base.Core_util.ast_iter (fun x -> if reads depth x then found := true) e;
       !found
   in
   (match body with
@@ -224,7 +224,7 @@ let binder_matched_at body =
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
       let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
       Array.iter (walk (depth + Array.length ids)) funs
-    | e -> Core_util.ast_iter (walk depth) e
+    | e -> Base.Core_util.ast_iter (walk depth) e
   in
   walk 0 body;
   !found
@@ -257,7 +257,7 @@ let lambda_binder_emitted cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~
     in
     match Option.bind expected_ty alias_ref with
     | Some kn -> (
-      match Table.lookup_typedef_unchecked kn with
+      match Base.Table.lookup_typedef_unchecked kn with
       | Some body -> value_doms body
       | None -> [] )
     | None -> []
@@ -278,7 +278,7 @@ let lambda_binder_emitted cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~
   in
   slot_keeps binders i
   || (is_runtime_binder_type ty && ty <> Core.Type.Axiom)
-  || Core_util.ast_occurs (i + 1) body
+  || Base.Core_util.ast_occurs (i + 1) body
 
 (** The C++ type a lambda declares its parameter [(id, ty, owned)] at
     ({!Translation_lambda.gen_lambda}), and the substitution its body is
@@ -315,7 +315,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
   let body_subst =
     match (bare_cpp_ty, stored_cpp_ty) with
     | Entity_application (g1, [], _), Shared_pointer (Entity_application (g2, [], _))
-      when globref_equal g1 g2 && Table.is_coinductive g2 ->
+      when globref_equal g1 g2 && Base.Table.is_coinductive g2 ->
       Some (id, (Dereference (Local id) : Cpp_ir.Lowered.Expr.t))
     | _ -> None
   in
@@ -358,7 +358,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
       Translation_ownership.wrap_param_by_ownership cx ~is_owned:owned
         (Option.get slot_param_cpp_ty)
     | None
-      when Type_util.has_tany_written bare_cpp_ty
+      when Base.Type_util.has_tany_written bare_cpp_ty
            && n_params = 1
            && (body_reads_members_of_binder body || binder_matched_at body <> None) ->
       (* A pattern lambda: the body decomposes this parameter with a
@@ -389,7 +389,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
         match (binder_matched_at body, slot_dom) with
         | Some t, _ -> Translation_types.cpp_of_core cx env t
         | None, Some slot ->
-          Type_util.refine_param_from_slot ~tvars ~slot
+          Base.Type_util.refine_param_from_slot ~tvars ~slot
             bare_cpp_ty
         | None, None -> bare_cpp_ty
       in
@@ -406,7 +406,7 @@ let lambda_param_cpp_type cx env ~ns ~tvars ~rank2_carrier ~reified ~n_params ~b
          an erased tree.  The slot is still emitted; see the parameter filter
          in {!Translation_expr.gen_expr}. *)
       Reference (Lvalue, Const Auto)
-    | None when Type_util.has_tany_written bare_cpp_ty ->
+    | None when Base.Type_util.has_tany_written bare_cpp_ty ->
       (* The type is spelled with erased positions (std::any).  Use
          [const auto&] so the C++ compiler deduces the concrete type at the
          call site -- explicit std::any in the param type would block valid

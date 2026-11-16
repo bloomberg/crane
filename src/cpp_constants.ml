@@ -31,7 +31,7 @@ let names_in (body : stmt list) =
   let rec fe (e : expr) =
     ( match e with
     | Local id -> add id
-    | Entity (r, _, _) -> add (Label.to_id (Common.label_of_r r))
+    | Entity (r, _, _) -> add (Label.to_id (Base.Common.label_of_r r))
     | _ -> () );
     Cpp_ir.Map.expr (children ()) e
   and fs (s : stmt) =

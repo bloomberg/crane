@@ -19,7 +19,7 @@
     {!Ownership} settles for the whole program and translation reads back
     when it chooses parameter passing and the reuse path of a match. *)
 
-open Table
+open Base.Table
 
 (** {2 Utility: occurrence counting} *)
 
@@ -45,9 +45,9 @@ let nb_occur_match =
       Array.fold_left (fun total body -> total + nb k' body) 0 bodies
     | Core.Expr.Lambda {body; _} -> nb (k + 1) body
     | Core.Expr.Apply {callee = (Core.Expr.Global {callee = r; _} as head);
-                       arguments = args} when Table.is_inline_custom r ->
+                       arguments = args} when Base.Table.is_inline_custom r ->
       let mentions =
-        match Table.inline_custom_text r with
+        match Base.Table.inline_custom_text r with
         | Some s -> Cpp_ir.Foreign_template.arg_mentions s
         | None -> fun _ -> 1
       in
@@ -368,12 +368,12 @@ let find_reuse_candidates (pv : Core.Match.Branch.t array) =
     is settled for the whole program ({!Ownership.summarize}) before any
     unit's concurrency is decided, and a function's parameters are owned the
     same way in every unit that calls it.  A unit refused the request
-    because it starts a thread ({!Table.non_atomic_rc_for}) owns such a
+    because it starts a thread ({!Base.Table.non_atomic_rc_for}) owns such a
     parameter and recycles nothing through it: the rewrite itself is gated
     on the granted answer. *)
 let is_reuse_scrutinee k body =
   let recyclable = function
-    | Core.Type.Global_app {head = r; _} when Table.is_shared_variant r -> true
+    | Core.Type.Global_app {head = r; _} when Base.Table.is_shared_variant r -> true
     | _ -> non_atomic_rc_requested ()
   in
   let found = ref false in
@@ -445,7 +445,7 @@ let infer_owned_params ~callee_flags n_params body =
      inference does not defer to loopify; it asks only whether reuse can be
      performed at all.  The consumer that actually emits a reuse rewrite,
      translation's dual-path match, defers to loopify via
-     [Table.reuse_loopify_ok]. *)
+     [Base.Table.reuse_loopify_ok]. *)
   List.init n_params (fun i ->
     let k = i + 1 in
     ( escapes ~query:Of_param ~callee_flags k body
@@ -462,7 +462,7 @@ let infer_sub_bindings_escape_params n_params body =
 (** {2 Projections} *)
 
 let returns_receiver_field ~this_pos fn =
-  let params, body = Core_util.collect_lams fn in
+  let params, body = Base.Core_util.collect_lams fn in
   let receiver = List.length params - this_pos in
   let bare = Core.Expr.strip_crossings in
   List.length params = 1
@@ -479,7 +479,7 @@ let returns_receiver_field ~this_pos fn =
 (** {2 Utility functions} *)
 
 (** Set of integers for tracking de Bruijn indices. *)
-module IntSet = Core_util.IntSet
+module IntSet = Base.Core_util.IntSet
 
 (** Compute free de Bruijn indices in [t], shifted by [depth]. An index
     [i > depth] in [t] contributes [i - depth] to the result. *)

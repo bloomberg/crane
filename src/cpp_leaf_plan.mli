@@ -30,7 +30,7 @@ end
 (** [read_decl ctx env decl] is a finished declaration printed at the
     position [ctx], its names resolved there first, its type constructors
     written as planned, or, before anything is planned, as decided. *)
-val read_decl : Cpp_state.render_ctx -> Common.env -> Cpp_ir.Resolved.Decl.t -> Pp.t
+val read_decl : Cpp_state.render_ctx -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> Pp.t
 
 (** The types the declaration, written at namespace scope, introduces
     there, by the entity each declares: its own, through a template head and
@@ -52,12 +52,12 @@ val is_held_back_assertion : Cpp_state.render_ctx -> Cpp_ir.Resolved.Decl.t -> b
     a template argument. *)
 val resolved_names_into_a_struct : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_ir.Resolved.Decl.t -> bool option
 
-(** Whether one thing a rendering writes ({!Cpp_name.written}) is a
+(** Whether one thing a rendering writes ({!Base.Cpp_name.written}) is a
     qualifier naming into a struct or a template parameter rather than a
     namespace: a tagged scope by its kind, untagged text by the identifier in
     front of each [::], which passes only as an included library's
     namespace. *)
-val writes_into_a_struct : Cpp_name.written -> bool
+val writes_into_a_struct : Base.Cpp_name.written -> bool
 
 (** Whether a declaration, written as a member of a struct body, is a static
     function declaration ending at its semicolon. *)
@@ -83,7 +83,7 @@ val absorbs : homed:(Names.GlobRef.t * Names.ModPath.t) list -> Cpp_ir.Resolved.
 
 (** [write_decl ctx env decl] is {!read_decl}, with what placing the
     declarations it needs reads ({!Cpp_ast.Needs}). *)
-val write_decl : Cpp_state.render_ctx -> Common.env -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.t
+val write_decl : Cpp_state.render_ctx -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.t
 
 (** The position a synthesised template declared where the second argument
     says is written at, in the file the first is written in
@@ -94,19 +94,19 @@ val ctor_alias_render_ctx : Cpp_state.render_ctx -> Cpp_ast.declared_in -> Cpp_s
     {!write_decl} writes it at the position [ctx], each wrapper struct
     holding a wrapper module's declarations a {!Cpp_ast.Wrapper_struct}. *)
 val write_absorbing :
-  Cpp_state.render_ctx -> homed:(Names.GlobRef.t * ModPath.t) list -> Common.env -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.t
+  Cpp_state.render_ctx -> homed:(Names.GlobRef.t * ModPath.t) list -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.t
 
 (** What placing the declarations [decl], written in the module [module_] in
     the file [file], needs reads ({!Cpp_ast.Needs}), as planned in the plans
     given. *)
 val planned_needs :
-  Cpp_state.plans -> file:Common.file -> module_:Names.ModPath.t -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.Needs.t
+  Cpp_state.plans -> file:Base.Common.file -> module_:Names.ModPath.t -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.Needs.t
 
 (** [unprinted ctx ~module_ env decl] is [decl], written at the position
     [ctx] in the module [module_], to be printed where the tree puts it
     ({!Cpp_ast.print}), with what placing the declarations it needs reads,
     as planned. *)
-val unprinted : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.t
+val unprinted : Cpp_state.render_ctx -> module_:Names.ModPath.t -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> Cpp_ast.t
 
 (** [unprinted_fields ctx ~module_ ~vl r fields] is the fields [fields] of
     the eponymous record [r], each by its name and type, their type
@@ -204,12 +204,12 @@ type forward_declaration = {
     it defines them, written as an element of [module_] and printed as the
     definition prints its head. *)
 val forward_declarations :
-  Cpp_state.render_ctx -> module_:Names.ModPath.t -> Common.env -> Cpp_ir.Resolved.Decl.t -> forward_declaration list
+  Cpp_state.render_ctx -> module_:Names.ModPath.t -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> forward_declaration list
 
 (** [plan_ctor_aliases written] is the plan of the templates each file
     writes, [written file] being what is read off what [file] writes, in the
     order written: the header's, then the implementation's. *)
-val plan_ctor_aliases : (Common.file -> Ctor_aliases_read.t list) -> Cpp_state.ctor_alias_plan
+val plan_ctor_aliases : (Base.Common.file -> Ctor_aliases_read.t list) -> Cpp_state.ctor_alias_plan
 
 (** The declaration of a template, written where the tree puts it as
     declared where it is ({!Cpp_ast.Template_in}). *)
@@ -218,11 +218,11 @@ val ctor_alias_declaration : Cpp_print.ctor_alias -> Cpp_ast.t
 (** The templates the file [file] declares, each once, in the order
     planned in [plans]: the aliases it writes, and, in the header, every
     holder the unit writes. *)
-val ctor_aliases_declared_in : Cpp_state.plans -> file:Common.file -> Cpp_print.ctor_alias list
+val ctor_aliases_declared_in : Cpp_state.plans -> file:Base.Common.file -> Cpp_print.ctor_alias list
 
 (** Under [CRANE_CHECK_IR], check what the file [file] spelled against the
     plan [plans] has. *)
-val check_ctor_alias_plan : Cpp_state.plans -> file:Common.file -> unit
+val check_ctor_alias_plan : Cpp_state.plans -> file:Base.Common.file -> unit
 
 (** The structs the file being written has constrained forward declarations
     of; a written declaration needs those it names or defines

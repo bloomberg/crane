@@ -7,19 +7,19 @@
     typedef unfolding.  Reaches expression generation only through
     {!type_term_arg}. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
-open Table
+open Base.Core_util
+open Base.Table
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 (** [promoted_var_binding var_id] -- what the scope says the promoted variable
     named [var_id] stands for, by name.  Reached from a globref through
     {!promoted_var_resolution}, and by name alone where only the name survives
-    -- see {!Table.ind_promoted_params}. *)
+    -- see {!Base.Table.ind_promoted_params}. *)
 let promoted_var_binding cx var_id =
   let r = Option.map snd
     (List.find_opt
@@ -34,7 +34,7 @@ let promoted_var_binding cx var_id =
 
     Such a variable is a type the definition does not own: it belongs to
     whichever instance was in scope where it was declared, so it is a
-    parameter there (see {!Table.promoted_type_params} and its uses in
+    parameter there (see {!Base.Table.promoted_type_params} and its uses in
     [Cpp_ind] and [Gen_decls.gen_type_alias]) and an argument at every use.  Inside the inductive's own
     declaration the argument is that parameter, which is what the [Tpromoted]
     fallback spells; a scope that knows no instance spells the file-scope
@@ -45,7 +45,7 @@ let ind_promoted_type_args cx g : Cpp_ir.Lowered.Type.t list =
       match promoted_var_binding cx v with
       | Some t -> t
       | None -> Promoted_member v )
-    (Table.promoted_type_params g)
+    (Base.Table.promoted_type_params g)
 
 (** [convert_core_type_to_cpp_type] only resolves [Core.Type.Variable] indices within
     [tvars]; anything out of range comes back as [Core.Type.Variable (Tv_index (_, None))], which
@@ -82,7 +82,7 @@ let spell_in_scope cx ty =
     [promoted_var_map].  A variable the scope does not answer has no spelling
     here, which is a different thing from having an erased one. *)
 let promoted_var_resolution cx g =
-  match Table.promoted_type_var_name g with
+  match Base.Table.promoted_type_var_name g with
   | Some var_id -> promoted_var_binding cx var_id
   | None -> None
 
@@ -94,7 +94,7 @@ let mentions_unresolved_promoted cx (ty : Cpp_ir.Lowered.Type.t) =
     (fun (t : Cpp_ir.Lowered.Type.t) ->
       match t with
       | Promoted_member v -> promoted_var_binding cx v = None
-      | Entity_application (g, _, _) -> Table.is_promoted_type_var g && promoted_var_resolution cx g = None
+      | Entity_application (g, _, _) -> Base.Table.is_promoted_type_var g && promoted_var_resolution cx g = None
       | _ -> false )
     ty
 
@@ -183,8 +183,8 @@ let rec cpp_ir_of_core_type cx
         populated, resolve to qualified types like [typename _tcI0::m_carrier]
      2. Module-level (constructor expressions): Use module aliases ([std::any])
      3. No context: Mark with [Tpromoted] for later resolution *)
-  | Core.Type.Global_app {head = g; type_arguments = ts; _} when Table.is_promoted_type_var g ->
-    ( match Table.promoted_type_var_name g with
+  | Core.Type.Global_app {head = g; type_arguments = ts; _} when Base.Table.is_promoted_type_var g ->
+    ( match Base.Table.promoted_type_var_name g with
     | Some var_id ->
       ( match promoted_var_resolution cx g with
       | Some resolved -> resolved
@@ -197,7 +197,7 @@ let rec cpp_ir_of_core_type cx
         if cx.ctx.lexical.in_constructor_expr then Any
         else Promoted_member var_id )
     | None -> Any )
-  | Core.Type.Global_app {head = g; _} when Table.is_value_dep_type_scheme g ->
+  | Core.Type.Global_app {head = g; _} when Base.Table.is_value_dep_type_scheme g ->
     (* Value-dependent type scheme (e.g. [sym_semty : sym -> Type]) applied to a
        runtime value — not representable as a C++ type, so erase to [std::any].
        This keeps erasure consistent: such values are already stored as
@@ -220,7 +220,7 @@ let rec cpp_ir_of_core_type cx
            get_ind_num_param_vars_opt to determine how many to keep. For
            local/self-references with non-empty tvars, we can use tvars length
            as a fallback, but prefer the table lookup for accuracy. *)
-        ( match Table.get_ind_num_param_vars_opt kn with
+        ( match Base.Table.get_ind_num_param_vars_opt kn with
         | Some num_param_vars ->
           (* Only keep the first num_param_vars type args - the rest are
              indices *)
@@ -252,7 +252,7 @@ let rec cpp_ir_of_core_type cx
          [sigT A (P : A -> Type)] -- does erasing the earlier one erase the
          later.  An erased family ([tree void1 R], [void1] logical) is
          nothing [R] depends on. *)
-      | GlobRef.IndRef _ when Table.has_dependent_params g ->
+      | GlobRef.IndRef _ when Base.Table.has_dependent_params g ->
         let rec first_ktype_idx i = function
           | [] -> max_int
           | (Core.Type.Erased Core.Erasure_reason.Type_argument
@@ -320,7 +320,7 @@ let rec cpp_ir_of_core_type cx
         in
         if
           (is_self_ref || is_mutual_sibling)
-          && not (Table.is_coinductive g)
+          && not (Base.Table.is_coinductive g)
           && is_uniform_self_ref
         then
           (* Recursive value-type self/mutual references are owned by their
@@ -330,7 +330,7 @@ let rec cpp_ir_of_core_type cx
              shared_ptr to a raw arena pointer at the field-declaration site in
              gen_decls, so that method return/parameter positions are unaffected.) *)
           Shared_pointer core
-        else if (is_self_ref || is_mutual_sibling) && Table.is_coinductive g
+        else if (is_self_ref || is_mutual_sibling) && Base.Table.is_coinductive g
         then
           (* A coinductive value is already a handle on one shared node, so
              a field holding one holds it by value.  The constructor struct
@@ -381,21 +381,21 @@ let rec cpp_ir_of_core_type cx
      it, leaves the parameter to deduction, or declines before converting:
      one reaching a C++ type is a reader that did none of these. *)
   | Core.Type.Hole hole ->
-    Probe.violation "inference hole"
+    Base.Probe.violation "inference hole"
       Pp.(str "hole _" ++ int hole ++ str " reached a C++ type");
     Obligation Opaque_type
   | Core.Type.Axiom -> Entity_application (GlobRef.VarRef (Id.of_string "axiom"), [], [])
 
 (** [resolves_to_any_type ty] — true if [ty] ultimately resolves to
     [std::any].  Handles direct [Tany], erased-type constants (aliases for
-    [std::any] registered via {!Table.is_erased_type_const}), and type
+    [std::any] registered via {!Base.Table.is_erased_type_const}), and type
     aliases that expand to an erased type.  Used to decide whether a
     scrutinee's template argument makes a constructor field store its
     value as [std::any] at runtime. *)
 let rec resolves_to_any_type cx : Cpp_ir.Lowered.Type.t -> bool = function
   | Any | Obligation Opaque_type -> true
   | Erased _ -> false
-  | Entity_application (g, [], _) when Table.is_erased_type_const g -> true
+  | Entity_application (g, [], _) when Base.Table.is_erased_type_const g -> true
   | Entity_application (g, [], _) ->
     let via_core_ty =
       match find_type_opt g with
@@ -405,7 +405,7 @@ let rec resolves_to_any_type cx : Cpp_ir.Lowered.Type.t -> bool = function
       | None ->
         (match g with
          | GlobRef.ConstRef kn ->
-           (match Table.lookup_typedef_unchecked kn with
+           (match Base.Table.lookup_typedef_unchecked kn with
             | Some core_ty ->
               let tvars = get_current_type_vars cx in
               Some (cpp_ir_of_core_type cx (empty_env ()) tvars core_ty)
@@ -423,7 +423,7 @@ let rec resolves_to_any_type cx : Cpp_ir.Lowered.Type.t -> bool = function
 let box_kind_of_cpp_type t = if names_erased_alias t then Family_box else Var_box
 
 (** The representation a value takes in a slot of C++ type [t]: the one
-    classifier a slot's {!Type_util.slot_repr} is decided by.  A type that
+    classifier a slot's {!Base.Type_util.slot_repr} is decided by.  A type that
     resolves to [std::any] is boxed, as a [Family_box] where it names a
     declaration whose body erased, spelled through its alias -- a
     value-indexed family -- and as a [Var_box] otherwise
@@ -529,12 +529,12 @@ let rec unfold_cpp_typedef cx env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowe
   match cpp_ty with
   | In_namespace (_, inner) -> unfold_cpp_typedef cx env inner
   | Entity_application (GlobRef.ConstRef kn, args, _) -> (
-    match Table.lookup_typedef_unchecked kn with
+    match Base.Table.lookup_typedef_unchecked kn with
     | Some core_ty ->
       let body = cpp_of_core cx env core_ty in
       let n_promoted =
-        let n = List.length (Table.promoted_type_params (GlobRef.ConstRef kn)) in
-        if List.length args >= n + Core_util.type_maxvar core_ty then n else 0
+        let n = List.length (Base.Table.promoted_type_params (GlobRef.ConstRef kn)) in
+        if List.length args >= n + Base.Core_util.type_maxvar core_ty then n else 0
       in
       if args = [] then body
       else Cpp_ir.Types.substitute (fun i -> if i >= 1 then List.nth_opt args (n_promoted + i - 1) else None) body
@@ -542,14 +542,14 @@ let rec unfold_cpp_typedef cx env (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowe
   | _ -> cpp_ty
 
 (** [t] with every type variable named by the default spelling of its
-    index ({!Common.tvar_name}) written by the index alone: the two
+    index ({!Base.Common.tvar_name}) written by the index alone: the two
     print the same, and lowering records a binder's type before its
     variables are named. *)
 let default_tvar_names (t : Cpp_ir.Lowered.Type.t) =
   Cpp_ir.Types.map
     (fun (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t ->
       match t with
-      | Variable (Index (i, Some n)) when String.equal (Id.to_string n) (Common.tvar_name i) ->
+      | Variable (Index (i, Some n)) when String.equal (Id.to_string n) (Base.Common.tvar_name i) ->
         Variable (Index (i, None))
       | t -> t )
     t
@@ -565,7 +565,7 @@ let rec normalize_erased_types cx : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type
   | t -> t
 
 (** How many of [id]'s leading template parameters no signature mentions,
-    counted by {!Type_util.explicit_tvar_prefix} off its declared type: its
+    counted by {!Base.Type_util.explicit_tvar_prefix} off its declared type: its
     leading phantoms.  Nothing deduces them, so a call writes them, and
     {!Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
     declaration emitter counts the same run and leaves those parameters

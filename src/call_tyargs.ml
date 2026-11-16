@@ -69,7 +69,7 @@ let holes t = List.filter (is_hole t) (vars t)
 
 (* The last variable known or written unreadably. *)
 let last_spoken t =
-  Core_util.last_var
+  Base.Core_util.last_var
     (List.filter_map
        (fun (v, s) ->
          match s with
@@ -104,12 +104,12 @@ let answers e answer vs t =
         | _ -> None )
     vs
 
-(* [t] with the slots [found] replaced, each reported to {!Probe} as a
+(* [t] with the slots [found] replaced, each reported to {!Base.Probe} as a
    resolution from [e]. *)
 let with_answers e t found =
   List.iter
     (fun (v, _) ->
-      Probe.hit
+      Base.Probe.hit
         ("RESOLVE_" ^ evidence_name e)
         (fun () ->
           Pp.string_of_ppcmds (Names.GlobRef.print t.callee)
@@ -140,7 +140,7 @@ let resolved_from e t =
     t.slots
 
 let by_variable t =
-  Core_util.Var_types.through (last_spoken t) (fun v ->
+  Base.Core_util.Var_types.through (last_spoken t) (fun v ->
       match slot t v with
       | Known (ty, _) -> ty
       | Unreadable | Unwritten -> Core.Type.Erased Core.Erasure_reason.Type_argument )

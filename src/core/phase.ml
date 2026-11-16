@@ -18,7 +18,7 @@
     is made by extraction and again by control lowering and call lowering
     after freezing; [Type.Hole] stands in a frozen instantiation from
     extraction on; and [Type.Open], though freezing mints it, is also what
-    {!Core_util.new_meta} makes when a later declaration of the same
+    {!Base.Core_util.new_meta} makes when a later declaration of the same
     extraction is reconstructed after an earlier program was frozen.
     Inductives take no index: their constructor types are frozen as
     extraction stores them, so the table and the program share one frozen

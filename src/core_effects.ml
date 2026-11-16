@@ -12,18 +12,18 @@ type operation =
 
 type effect_ = {operation : operation; mode : mode}
 
-let mode_of_monad m = if Table.is_monad_reified m then Reified else Sequential
+let mode_of_monad m = if Base.Table.is_monad_reified m then Reified else Sequential
 
 (* The mode a declaration of type [ty] is generated in: its codomain's
    monad's, and [Sequential], the mode a generation starts in, for a
    codomain that is no monad. *)
 let declaration_mode ty =
-  match Type_util.codomain_monad ty with
+  match Base.Type_util.codomain_monad ty with
   | Some m -> mode_of_monad m
   | None -> Sequential
 
 let operation_of r =
-  if Table.is_bind r then Some Bind else if Table.is_ret r then Some Return else None
+  if Base.Table.is_bind r then Some Bind else if Base.Table.is_ret r then Some Return else None
 
 type entry = {occurrence : Core.Occurrence.t; effect_ : effect_}
 
@@ -45,12 +45,12 @@ let analyze struc =
   in
   let rec body mode = function
     | Core.Expr.Global use -> record mode use
-    | a -> Core_util.ast_iter (body mode) a
+    | a -> Base.Core_util.ast_iter (body mode) a
   in
   Modutil.struct_iter
     (fun d ->
       List.iter (fun (fd : Core.Recursion.Definition.t) -> body (declaration_mode fd.type_) fd.body)
-        (Core_util.term_defs d))
+        (Base.Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -60,7 +60,7 @@ let equal =
   Core.Ref.User.Map.equal
     (List.equal (fun a b -> Core.Occurrence.equal a.occurrence b.occurrence && a.effect_ = b.effect_))
 
-let found_count = State.cell State.Unit 0
+let found_count = Base.State.cell Base.State.Unit 0
 
 (* A body's annotations may be rewritten before it is translated, which
    rebuilds every node, so the use's occurrence is what identifies it. *)

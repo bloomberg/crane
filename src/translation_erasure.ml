@@ -7,12 +7,12 @@
     questions {!Translation_coerce} and lowering decide boxing and recovery
     by; builds nothing. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 (** Check if the return type of a Core function type is erased, i.e. it
@@ -21,12 +21,12 @@ open Core_query
     - [Core.Type.Unknown] arising from dependent type families.
     - Erased type constants — non-promoted type-valued record fields
       (e.g. [Hom : Obj -> Obj -> Type] in [PreCategory]) registered during
-      extraction via {!Table.add_erased_type_const}. *)
+      extraction via {!Base.Table.add_erased_type_const}. *)
 let rec core_return_type_is_erased = function
   | Core.Type.Arrow {result = ret; _} -> core_return_type_is_erased ret
   | Core.Type.Meta { contents = Some t } -> core_return_type_is_erased t
-  | Core.Type.Global_app {head = g; _} when Table.is_promoted_type_var g -> true
-  | Core.Type.Global_app {head = g; _} when Table.is_erased_type_const g -> true
+  | Core.Type.Global_app {head = g; _} when Base.Table.is_promoted_type_var g -> true
+  | Core.Type.Global_app {head = g; _} when Base.Table.is_erased_type_const g -> true
   | Core.Type.Unknown -> true
   | _ -> false
 
@@ -60,7 +60,7 @@ let core_projection_field_type = function
     ( match projected proj_body with
     | Some (idx, nargs) ->
       ( match
-          List.nth_opt (filter_value_types (Table.record_field_types r)) idx
+          List.nth_opt (filter_value_types (Base.Table.record_field_types r)) idx
         with
       | Some field_ty -> if nargs = 0 then Some field_ty
                          else strip_arrows_n nargs field_ty
@@ -88,7 +88,7 @@ let rec core_body_returns_erased_field = function
     let direct =
       match find_type_opt r with
       | Some ty ->
-        let ty = Core_util.instantiate_written ~reader:"core_body_returns_erased_field" use ty in
+        let ty = Base.Core_util.instantiate_written ~reader:"core_body_returns_erased_field" use ty in
         ( match strip_arrows_n (count_real_core_args args) ty with
         | Some ret_ty -> core_return_type_is_erased ret_ty
         | None -> false )
@@ -147,7 +147,7 @@ let value_indexed_family r =
   (* A class's or record's type field is a function of the instance, not a
      family over a value. *)
   | GlobRef.ConstRef kn
-    when Table.is_projection r || Structures.Structure.is_projection kn ->
+    when Base.Table.is_projection r || Structures.Structure.is_projection kn ->
     false
   | GlobRef.ConstRef _ -> (
     try
@@ -248,7 +248,7 @@ let reads_erased_pair_component cx env t =
     planned at, or the term's own Core type. *)
 let app_reads_erased_value cx env args =
   let carries t =
-    Type_util.has_erased_type_in_type (Translation_types.unfold_cpp_typedef cx env t)
+    Base.Type_util.has_erased_type_in_type (Translation_types.unfold_cpp_typedef cx env t)
   in
   (* A typeclass dictionary is not one of the values the result is read out
      of: it is how the call states its type arguments, and C++ resolves the
@@ -257,7 +257,7 @@ let app_reads_erased_value cx env args =
     match infer_core_body_type (strip_magic a) with
     | Some ty -> (
       match resolve_meta ty with
-      | Core.Type.Global_app {head = r; _} -> Table.is_typeclass r
+      | Core.Type.Global_app {head = r; _} -> Base.Table.is_typeclass r
       | _ -> false )
     | None -> false
   in
@@ -324,7 +324,7 @@ let core_expr_is_function_value cx ?(var = fun i occ -> (Translation_binders.rea
     physically inside a [std::any], and so may be read back out with an
     [any_cast].
 
-    {!Type_util.is_boxed_type} answers this structurally, which misses a
+    {!Base.Type_util.is_boxed_type} answers this structurally, which misses a
     named alias for the box: a [Type]-valued definition is emitted as
     [using sel = std::any], and only following the alias chain reveals that a
     parameter of type [sel] is a box.  An opaque type is deliberately
@@ -356,8 +356,8 @@ let is_boxed_source cx (t : Cpp_ir.Lowered.Type.t) =
       cast on the strength of it.
     - [`Concrete t] -- an ordinary type.
 
-    Prefer this to assembling an answer out of {!Type_util.prints_as_any},
-    {!Type_util.is_boxed_type} and {!Translation_types.resolves_to_any_type} at each site:
+    Prefer this to assembling an answer out of {!Base.Type_util.prints_as_any},
+    {!Base.Type_util.is_boxed_type} and {!Translation_types.resolves_to_any_type} at each site:
     those sit at different layers (see [type_util.mli]) and a site that
     picks the wrong one silently gets [false]. *)
 let classify_erasure cx : Cpp_ir.Lowered.Type.t option -> _ = function

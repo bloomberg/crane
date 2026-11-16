@@ -9,13 +9,13 @@
     {!Translation_expr} in the chain of lowering modules
     ({!Translation_knot}). *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
-open Table
+open Base.Core_util
+open Base.Table
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 open Translation_knot
 open Translation_match
@@ -214,7 +214,7 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
                     let try_unfold_typedef resolved =
                       match resolved with
                       | Core.Type.Global_app {head = GlobRef.ConstRef kn; _} ->
-                        (match Table.lookup_typedef_unchecked kn with
+                        (match Base.Table.lookup_typedef_unchecked kn with
                          | Some expanded -> expanded
                          | None -> resolved)
                       | _ -> resolved
@@ -301,7 +301,7 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
                 { params = params;
                   return_type = Some ret_ty;
                   _ }
-                when List.exists Type_util.has_tany_in_type dom ->
+                when List.exists Base.Type_util.has_tany_in_type dom ->
                 let strip_tmod : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
                   | Const t -> t
                   | t -> t
@@ -312,7 +312,7 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
                 Function (param_tys, ret_ty)
               | _, Lambda _ -> cpp_ty
               | _, _
-                when Type_util.has_erased_type_in_type cpp_ty
+                when Base.Type_util.has_erased_type_in_type cpp_ty
                      || Cpp_ir.Types.exists
                           (fun (t : Cpp_ir.Lowered.Type.t) -> match t with Promoted_member _ -> true | _ -> false)
                           cpp_ty ->
@@ -380,7 +380,7 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
                      occurrence = case_occ}
                        when Core_elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Match_kind.Custom ->
     gen_custom_cpp_case cx env k typ t pv case_occ
-  | Core.Expr.Construct {constructor = r; arguments = []; _} when Table.is_tt_constructor r
+  | Core.Expr.Construct {constructor = r; arguments = []; _} when Base.Table.is_tt_constructor r
       && returns_void cx ->
     (* tt (unit constructor) in tail position of a void-returning function *)
     if cx.ctx.input.itree_mode = Reified then [k (Translation_monadic.mk_itree_ret Void [])]

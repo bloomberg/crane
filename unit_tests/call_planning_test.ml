@@ -28,7 +28,7 @@ let occ = Core.Occurrence.fresh
 let id s = Core.Binder_name.Source (Id.of_string s)
 
 let declare s ty =
-  Table.add_frozen_type (r s) ty;
+  Base.Table.add_frozen_type (r s) ty;
   Core.Expr.Global (Core.Global_use.monomorphic (r s))
 
 let mono s = Core.Global_use.monomorphic (r s)
@@ -48,7 +48,7 @@ let instantiate ?(lex = Core.Lexenv.empty) ?caller ?(scope = []) use args =
 let var_type (inst : Elaborated_call.instantiated) i =
   List.find_map
     (fun (var, ty) -> if Core.Scheme.Var.ordinal var = i then Some ty else None)
-    (Core_util.Var_types.bindings inst.tys)
+    (Base.Core_util.Var_types.bindings inst.tys)
 
 let mutind m l = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string m])) (Label.make l))
 let unit_path = ModPath.MPfile (DirPath.make [Id.of_string "CP"])
@@ -62,7 +62,7 @@ let walk decls =
 (* The walk's answers are told apart from the live ones by asking in an
    environment, or of a term, that disagrees; under [CRANE_CHECK_IR] that
    disagreement is a violation, so those checks run only without it. *)
-let checking = Probe.checking ()
+let checking = Base.Probe.checking ()
 
 (* A partial application is eta-expanded into a lambda spelled in the
    caller's scope: a callee variable nothing instantiates is bound by the
@@ -70,7 +70,7 @@ let checking = Probe.checking ()
 let () =
   let a = declare "pa" nat in
   let f = r "pf" in
-  Table.add_frozen_type f (Core.Type.Arrow {parameter = v 1; result = Core.Type.Arrow {parameter = v 1; result = v 2}});
+  Base.Table.add_frozen_type f (Core.Type.Arrow {parameter = v 1; result = Core.Type.Arrow {parameter = v 1; result = v 2}});
   let partial = instantiate (unwritten f ~arity:2) [a] in
   check "a partial application binds the variables it leaves open"
     (var_type partial 1 = Some (v 1) && var_type partial 2 = Some (v 2));
@@ -81,11 +81,11 @@ let () =
     (var_type colliding 2 = Some Core.Type.Unknown && var_type colliding 1 = Some (v 1));
   let self = instantiate ~caller:f (unwritten f ~arity:2) [a] in
   check "a self-call reads its variables as the caller's own"
-    (Core_util.Var_types.is_empty self.tys
+    (Base.Core_util.Var_types.is_empty self.tys
     && not (Call_tyargs.resolved_from Call_tyargs.Eta_parameter self.reading));
   let full = instantiate (unwritten f ~arity:2) [a; a] in
   check "a full application leaves its holes to deduction"
-    (Core_util.Var_types.is_empty full.tys && Call_tyargs.holes full.reading <> []);
+    (Base.Core_util.Var_types.is_empty full.tys && Call_tyargs.holes full.reading <> []);
   check "the declared parameters are the callee's, at any arity"
     (Param_pos.to_list full.params_orig = [v 1; v 1]
     && Param_pos.to_list partial.params_orig = [v 1; v 1])
@@ -95,7 +95,7 @@ let () =
 let () =
   let g = declare "fg" (Core.Type.Arrow {parameter = nat; result = nat}) and b = declare "fb" nat in
   let f = r "ff" in
-  Table.add_frozen_type f (Core.Type.Arrow {parameter = Core.Type.Arrow {parameter = v 1; result = nat};
+  Base.Table.add_frozen_type f (Core.Type.Arrow {parameter = Core.Type.Arrow {parameter = v 1; result = nat};
                                      result = Core.Type.Arrow {parameter = nat; result = v 1}});
   let partial = instantiate (unwritten f ~arity:1) [g] in
   check "an undeducible hole is filled from the argument's type" (var_type partial 1 = Some nat);
@@ -116,7 +116,7 @@ let () =
 let () =
   let a = declare "xa" nat in
   let k = r "xk" in
-  Table.add_frozen_type k (Core.Type.Arrow {parameter = nat; result = nat});
+  Base.Table.add_frozen_type k (Core.Type.Arrow {parameter = nat; result = nat});
   let over = instantiate (Core.Global_use.monomorphic k) [a; a] in
   check "an over-application's excess is not a parameter"
     (over.call.excess = [a] && over.call.primary = [a] && Param_pos.to_list over.params = [nat]);
@@ -135,17 +135,17 @@ let () =
 let () =
   let kn = mutind "CP" "C" in
   let fld = r "fld" and fld_mono = r "fld_mono" in
-  Table.add_inductive_kind kn
+  Base.Table.add_inductive_kind kn
     (Core.Inductive.Kind.Type_class
        [ {Core.Record.Field.projection = Some fld; type_ = Core.Type.Arrow {parameter = v 1; result = v 1}};
          {Core.Record.Field.projection = Some fld_mono; type_ = Core.Type.Arrow {parameter = nat; result = nat}} ]);
   let cls = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
-  Table.add_frozen_type fld
+  Base.Table.add_frozen_type fld
     (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = v 1; result = v 1}});
-  Table.add_frozen_type fld_mono
+  Base.Table.add_frozen_type fld_mono
     (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let g = r "cg" in
-  Table.add_frozen_type g (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
+  Base.Table.add_frozen_type g (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let c = declare "cc" nat in
   (* [d inst y := (g inst c y, g inst y y, fld inst y, fld_mono inst y)],
      each a call the walk meets with [inst] the declaration's dictionary. *)
@@ -210,7 +210,7 @@ let () =
 let () =
   let kn = mutind "CP" "S" in
   let ind = GlobRef.IndRef (kn, 0) in
-  Table.add_shared_variant ind;
+  Base.Table.add_shared_variant ind;
   let ty = Core.Type.Global_app {head = ind; type_arguments = []; index_arguments = []} in
   let ctor = GlobRef.ConstructRef ((kn, 0), 1) in
   let constant = Core.Expr.Construct {result_type = ty;
@@ -220,7 +220,7 @@ let () =
                                           Core.Expr.Erased_value Core.Erasure_reason.Proof];
                                       occurrence = occ ()} in
   check "without the option no construction is a shared constant"
-    ((not (Table.is_shared_variant ind)) && not (Core_elaborate.shared_constant ~walk:None constant));
+    ((not (Base.Table.is_shared_variant ind)) && not (Core_elaborate.shared_constant ~walk:None constant));
   let walk = Some (walk [Core.Decl.Value {entity = r "sd"; body = constant; type_ = ty}]) in
   check "the walk agrees for the occurrence" (not (Core_elaborate.shared_constant ~walk constant));
   check "a term that is no construction is never one"
@@ -230,11 +230,11 @@ let () =
 let () =
   let kn = mutind "CP" "R" and kc = mutind "CP" "K" in
   let fx = r "rx" and fy = r "ry" in
-  Table.add_inductive_kind kn
+  Base.Table.add_inductive_kind kn
     (Core.Inductive.Kind.Record
        [ {Core.Record.Field.projection = Some fx; type_ = nat};
          {Core.Record.Field.projection = Some fy; type_ = Core.Type.Arrow {parameter = nat; result = nat}} ]);
-  Table.add_inductive_kind kc (Core.Inductive.Kind.Type_class [{Core.Record.Field.projection = Some fx; type_ = nat}]);
+  Base.Table.add_inductive_kind kc (Core.Inductive.Kind.Type_class [{Core.Record.Field.projection = Some fx; type_ = nat}]);
   let rec_ty = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0);
                                      type_arguments = [];
                                      index_arguments = []}
@@ -291,7 +291,7 @@ let () =
 (* Canonical spines: each call read whole, written once. *)
 let () =
   let f = mono "nf" and a = declare "na" nat and b = declare "nb" nat in
-  Table.add_frozen_type (r "nf")
+  Base.Table.add_frozen_type (r "nf")
     (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let staged = Core.Expr.Apply {callee = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a]};
                                 arguments = [b]} in

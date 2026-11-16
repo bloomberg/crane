@@ -7,10 +7,10 @@
     throw.  Read by lowering, {!Recursion_plan} and the function
     generators. *)
 
-open Common
+open Base.Common
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 (** Why a global is emitted as a function of no parameters, so that naming it
@@ -23,7 +23,7 @@ type thunk_reason = Cofixpoint | Throws | Monadic
 (** The {!thunk_reason} of the global [r], if it has one: the one place that
     decides it, which the declaration of [r] and every reference to it read. *)
 let thunk_reason cx r =
-  if Table.is_cofixpoint r then Some Cofixpoint
+  if Base.Table.is_cofixpoint r then Some Cofixpoint
   else if is_throwing_value cx r then Some Throws
   else
     match find_type_opt r with
@@ -72,8 +72,8 @@ let calls_eagerly r body =
     match e with
     | Core.Expr.Global {callee = r'; _} when globref_equal r r' -> raise Found
     | Core.Expr.Lambda _ -> ()
-    | Core.Expr.Construct {result_type = ty; _} when Table.is_coinductive_type ty -> ()
-    | _ -> Core_util.ast_iter walk e
+    | Core.Expr.Construct {result_type = ty; _} when Base.Table.is_coinductive_type ty -> ()
+    | _ -> Base.Core_util.ast_iter walk e
   in
   try walk body; false with Found -> true
 
@@ -82,7 +82,7 @@ let calls_eagerly r body =
     constructor -- Rocq's guard condition holds only up to unfolding.  Any
     other coinductive body is suspended at its constructors
     ({!suspend_ctor}). *)
-let suspends_whole r core_ret b = Table.is_coinductive_type core_ret && calls_eagerly r b
+let suspends_whole r core_ret b = Base.Table.is_coinductive_type core_ret && calls_eagerly r b
 
 (** Whether the arguments [ts] of a coinductive constructor may run the
     corecursion the constructor guards, so that only a suspension keeps them
@@ -94,7 +94,7 @@ let suspends_whole r core_ret b = Table.is_coinductive_type core_ret && calls_ea
     of the binder at de Bruijn index [i] where the constructor stands; a
     binder whose type is not known counts as corecursive. *)
 let args_may_corecurse ~self ~binder_type ts =
-  let yields_coinductive ty = Table.is_coinductive_type (core_codomain ty) in
+  let yields_coinductive ty = Base.Table.is_coinductive_type (core_codomain ty) in
   let rec corec depth t =
     match t with
     | Core.Expr.Global {callee = g; _} -> (
@@ -115,7 +115,7 @@ let args_may_corecurse ~self ~binder_type ts =
       || Array.exists (fun {Core.Match.Branch.binders = ids; body = b; _} -> corec (depth + List.length ids) b) brs
     | e ->
       let exception Found in
-      (try Core_util.ast_iter (fun c -> if corec depth c then raise Found) e; false
+      (try Base.Core_util.ast_iter (fun c -> if corec depth c then raise Found) e; false
        with Found -> true)
   in
   List.exists (corec 0) ts
@@ -125,7 +125,7 @@ let args_may_corecurse ~self ~binder_type ts =
     values and may run the corecursion ({!args_may_corecurse}, which [self]
     and [binder_type] are passed to). *)
 let suspends_constructor cx ~self ~binder_type n ts =
-  Table.is_coinductive n
+  Base.Table.is_coinductive n
   && (not (List.for_all (core_is_value cx) ts))
   && args_may_corecurse ~self ~binder_type ts
 

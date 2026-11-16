@@ -77,11 +77,11 @@ type t = {
   core_type : Core.Type.t option;
       (** the callee's Core type the plan was made against: the signature a
           call's head is rebuilt from, before relaxation *)
-  phase : Common.phase;  (** when the plan was decided, for diagnostics *)
+  phase : Base.Common.phase;  (** when the plan was decided, for diagnostics *)
 }
 
 (* The Core type recorded for [r], if any. *)
-let recorded_core_type r = try Some (Table.find_type r) with Not_found -> None
+let recorded_core_type r = try Some (Base.Table.find_type r) with Not_found -> None
 
 let callee abi = abi.callee
 let relaxations abi = abi.relaxations
@@ -169,7 +169,7 @@ let of_head ?omitted ?(phantom_prefix = 0) ?(relaxed = fun _ -> false) ?(deduced
     variables = scheme_variables ?omitted scheme;
     relaxations;
     core_type = recorded_core_type callee;
-    phase = Common.get_phase () }
+    phase = Base.Common.get_phase () }
 
 let passing abi = abi.passing
 let signature abi = abi.signature
@@ -304,21 +304,21 @@ let describe abi =
        abi.head )
 
 let phase_name = function
-  | Common.Plan -> "while planning"
-  | Common.Emit -> "while emitting"
+  | Base.Common.Plan -> "while planning"
+  | Base.Common.Emit -> "while emitting"
 
 (* Reports each of {!validate}'s violations. *)
 let validated abi =
   List.iter
     (fun problem ->
-      Probe.violation "callable ABI"
+      Base.Probe.violation "callable ABI"
         Pp.(str "the plan of " ++ GlobRef.print abi.callee ++ str ": " ++ str problem) )
     (validate abi)
 
 (* [abi], decided after [old], against it. *)
 let reproduces old abi =
   if not (same_head old abi) then
-    Probe.violation "callable ABI"
+    Base.Probe.violation "callable ABI"
       Pp.(
         str "the declaration of " ++ GlobRef.print abi.callee ++ str " was decided with the head <"
         ++ str (describe abi) ++ str "> " ++ str (phase_name abi.phase)
@@ -382,7 +382,7 @@ let deduces_callable d r pos =
 let with_dictionaries instances abi =
   let dictionaries =
     List.init instances (fun k ->
-        let name = Common.tc_instance_id k in
+        let name = Base.Common.tc_instance_id k in
         { id = {Template_param.position = k; name};
           origin = From_instance k;
           kind = Typename;
@@ -396,7 +396,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
   let variables =
     List.map
       (fun v ->
-        let name = Common.tvar_id (Core.Scheme.Var.ordinal v) in
+        let name = Base.Common.tvar_id (Core.Scheme.Var.ordinal v) in
         if relaxed (Core.Scheme.Var.ordinal v) then
           ((Typename_default Void : kind), name, Derived name)
         else
@@ -423,7 +423,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
       variables = scheme_variables ?omitted scheme;
       relaxations = [];
       core_type = recorded_core_type callee;
-      phase = Common.get_phase () }
+      phase = Base.Common.get_phase () }
 
 let with_foreign d derive callees =
   (* [derive] plans through {!plan}, which must derive afresh rather than
@@ -451,13 +451,13 @@ let plan d ?omitted ?(instances = 0) ?higher_kinded ?kept ?reachable ?relaxed ?p
     let derive () =
       foreign ?omitted ?higher_kinded ?kept ?reachable ?relaxed ?phantom_prefix ~callee ~scheme ()
     in
-    let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
+    let emitting = match Base.Common.get_phase () with Base.Common.Emit -> true | Base.Common.Plan -> false in
     let base =
       match GlobRef.Map_env.find_opt callee d.foreign with
       | Some base ->
         if emitting then incr d.foreign_found;
-        if Probe.checking () && not (same_head base (derive ())) then
-          Probe.violation "callable ABI"
+        if Base.Probe.checking () && not (same_head base (derive ())) then
+          Base.Probe.violation "callable ABI"
             Pp.(str "the foreign plan of " ++ GlobRef.print callee ++ str " differs from the one planned");
         base
       | None when emitting -> unplanned Pp.(str "the callee " ++ GlobRef.print callee)
@@ -471,14 +471,14 @@ let with_projections d derive fields =
 let projection d derive x =
   match GlobRef.Map_env.find_opt x d.projections with
   | Some abi ->
-    if Probe.checking () && not (same_head abi (derive x)) then
-      Probe.violation "callable ABI"
+    if Base.Probe.checking () && not (same_head abi (derive x)) then
+      Base.Probe.violation "callable ABI"
         Pp.(str "the projection plan of " ++ GlobRef.print x ++ str " differs from the one planned");
     abi
   | None -> (
-    match Common.get_phase () with
-    | Common.Emit -> unplanned Pp.(str "the projection " ++ GlobRef.print x)
-    | Common.Plan -> derive x )
+    match Base.Common.get_phase () with
+    | Base.Common.Emit -> unplanned Pp.(str "the projection " ++ GlobRef.print x)
+    | Base.Common.Plan -> derive x )
 
 let report_foreign d =
   Printf.sprintf "foreign callable plans: %d planned; emission found %d"

@@ -51,7 +51,7 @@ let lends_field (m : method_) =
    promises ({!reads_one_field}) is a violation. *)
 let is_projection (m : method_) =
   let lends = lends_field m in
-  ( if Probe.checking () then
+  ( if Base.Probe.checking () then
       let unsplit =
         match m.receiver with
         | Instance {is_const = true; ref_qualifier = Any; _} -> true
@@ -62,7 +62,7 @@ let is_projection (m : method_) =
         && match m.return_type with Reference _ | Void -> false | _ -> true
       in
       if shaped <> lends then
-        Probe.violation "borrowed projection"
+        Base.Probe.violation "borrowed projection"
           Pp.(
             str "the Core function of " ++ Id.print m.name
             ++ str (if lends then " returns a receiver field its body does not read"
@@ -94,12 +94,12 @@ let rec check_decl (d : Cpp_ir.Lowered.Decl.t) =
   match d with
   | Template (_, _, inner) -> check_decl inner
   | Namespace (_, ds) -> List.iter check_decl ds
-  | (Struct s | Merged_struct_members s) when Table.is_coinductive s.ref_ ->
+  | (Struct s | Merged_struct_members s) when Base.Table.is_coinductive s.ref_ ->
     List.iter
       (fun ((f, _, _) : _ Cpp_ir.Field.member) ->
         match f with
         | Method m when lends_field m ->
-          Probe.violation "borrowed projection"
+          Base.Probe.violation "borrowed projection"
             Pp.(str "the projection " ++ Id.print m.name ++ str " reached the printer unsplit")
         | _ -> () )
       s.fields

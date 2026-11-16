@@ -294,7 +294,7 @@ let make_call_frame_name (prefix : string) (counter : int ref)
   let id = !counter in
   counter := id + 1;
   let candidate =
-    Generated_name.separate_underscores
+    Base.Generated_name.separate_underscores
       (match branch_ctx with
        | Some s -> prefix ^ "_" ^ s
        | None -> prefix ^ string_of_int id)
@@ -938,7 +938,7 @@ let planned_frame ctx ~keeps (p : Recursion_plan.resume) =
     (fun b ->
       match List.filter (fun (x, _) -> stands_for ctx b x) ctx.binders with
       | [] ->
-        Probe.violation "frame plan"
+        Base.Probe.violation "frame plan"
           (Pp.str "a binder the recursion plan finds live across a call has no local in scope standing for it");
         None
       | standing -> List.find_map (fun (x, _) -> if keeps b x then Some x else None) standing )
@@ -966,11 +966,11 @@ let planned_point ctx id (tgt : binding) =
   match Option.map (Recursion_plan.resumes_binding (Unit_context.recursion ctx.unit)) binder with
   | Some [p] -> p
   | Some points ->
-    Probe.violation "frame plan"
+    Base.Probe.violation "frame plan"
       Pp.(str "the recursion plan has " ++ int (List.length points) ++ str " resume points for a call's result");
     raise (Not_linearisable no_resume_point)
   | None ->
-    Probe.violation "frame plan" (Pp.str "a call the machine resumes after binds a local standing for no Core binder");
+    Base.Probe.violation "frame plan" (Pp.str "a call the machine resumes after binds a local standing for no Core binder");
     raise (Not_linearisable no_resume_point)
 
 (** Whether the statement binding [e] to [id] by [tgt] is a point the
@@ -1011,7 +1011,7 @@ let resume_disagreement =
   "the recursion plan and the finished body disagree on whether a statement resumes after a recursive call"
 
 (* Report {!resume_disagreement} under [CRANE_CHECK_IR]. *)
-let resume_violation () = Probe.violation "resume plan" (Pp.str resume_disagreement)
+let resume_violation () = Base.Probe.violation "resume plan" (Pp.str resume_disagreement)
 
 (** Rewrite a single return statement for the [CraneEnter] handler in frame-based
     non-tail recursion transformation.
@@ -1185,7 +1185,7 @@ and rewrite_enter_stmts ctx stmts =
       let remat =
         let kept v = List.exists (Id.equal v) cont_vars || Id.equal v id || Id.equal v id_result in
         let rebuilt = rebuilt_bindings ctx ~kept rest_free in
-        ( if Probe.checking () then
+        ( if Base.Probe.checking () then
             let recomputed = rebuilt_binders ctx p in
             let rebindable (v, st) =
               ( match binder_of ctx v with
@@ -1194,7 +1194,7 @@ and rewrite_enter_stmts ctx stmts =
               && match st with Bind_variable (_, _, e) -> calls_nothing e | _ -> false
             in
             if not (List.for_all rebindable rebuilt) then
-              Probe.violation "frame plan"
+              Base.Probe.violation "frame plan"
                 (Pp.str "a continuation binds again a local the recursion plan neither keeps nor finds recomputable") );
         rebuilt
       in
@@ -1217,10 +1217,10 @@ and rewrite_enter_stmts ctx stmts =
       in
       (* Each kept at the type its local was declared at: the binder's. *)
       let cont_types = saved_local_types env cont_vars in
-      if Probe.checking ()
+      if Base.Probe.checking ()
         && List.exists (function (Obligation Unresolved_type) | Auto -> true | _ -> false) cont_types then
-        Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
-      let call_name = make_call_frame_name (Generated_name.role "Cont") call_counter seen ?branch_ctx () in
+        Base.Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
+      let call_name = make_call_frame_name (Base.Generated_name.role "Cont") call_counter seen ?branch_ctx () in
       let field_names = derive_field_names cont_vars in
       let bindings = make_cont_bindings ~field_names cont_vars cont_types in
       (* The rest sees the result binding too: a later frame saving it needs
@@ -1277,7 +1277,7 @@ and rewrite_enter_stmts ctx stmts =
         List.partition
           (function
             | Bind_variable (v, _, _) ->
-              (not (Core_util.is_temporary_id v)) || List.exists (Id.equal v) read_by_remat
+              (not (Base.Core_util.is_temporary_id v)) || List.exists (Id.equal v) read_by_remat
             | _ -> true )
           bindings
       in
@@ -1302,7 +1302,7 @@ and rewrite_enter_stmts ctx stmts =
         | Some moved -> moved
         | None ->
           if cont_vars <> [] then
-            Probe.violation "frame save"
+            Base.Probe.violation "frame save"
               (Pp.str "a machine saves a frame at a point the ownership plan did not plan the save of");
           []
       in
@@ -1312,7 +1312,7 @@ and rewrite_enter_stmts ctx stmts =
           | Some b -> Some (List.exists (Core.Binder.equal b) p.read_by_call)
           | None -> None
         in
-        if Probe.checking () then begin
+        if Base.Probe.checking () then begin
           (* A read of a binder the plan finds recomputable -- a closure, a
              field -- reads what it is recomputed from. *)
           let rec through b =
@@ -1326,7 +1326,7 @@ and rewrite_enter_stmts ctx stmts =
           let read = List.concat_map (fun v -> Option.cata through [] (binder_of ctx v)) (free_vars_expr enter) in
           let reads cid = Option.cata (fun b -> List.exists (Core.Binder.equal b) read) false (binder_of ctx cid) in
           if List.exists (fun cid -> read_by_call cid = Some false && reads cid) cont_vars then
-            Probe.violation "frame plan"
+            Base.Probe.violation "frame plan"
               (Pp.str "the call a frame is saved for reads a local the frame keeps the recursion plan says it does not")
         end;
         let owned cid =
@@ -1346,8 +1346,8 @@ and rewrite_enter_stmts ctx stmts =
                the call does not read -- would: it moves more where a binder
                the C++ finds aliased is one it owns, a structured binding's
                by value or a field of an owned match. *)
-            if Probe.checking () && (not pointer) && owned cid && read_by_call cid = Some false && not planned then
-              Probe.violation "frame save"
+            if Base.Probe.checking () && (not pointer) && owned cid && read_by_call cid = Some false && not planned then
+              Base.Probe.violation "frame save"
                 (Pp.str "a frame save the plan decides keeps a local the C++ reading would move");
             if planned then Move (Local cid) else Local cid )
           cont_vars pointers
@@ -1382,7 +1382,7 @@ and rewrite_enter_stmts ctx stmts =
       resume_violation ();
       raise (Not_linearisable resume_disagreement)
     | None, _ ->
-      Probe.violation "resume plan" (Pp.str no_resume_plan);
+      Base.Probe.violation "resume plan" (Pp.str no_resume_plan);
       raise (Not_linearisable no_resume_plan) )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
@@ -1434,7 +1434,7 @@ and rewrite_enter_stmts ctx stmts =
 
   | stmt :: rest ->
     ( match stmt with
-    | Bind_variable (id, tgt, e) when Probe.checking () && planned_resume ctx id tgt e = Some true ->
+    | Bind_variable (id, tgt, e) when Base.Probe.checking () && planned_resume ctx id tgt e = Some true ->
       resume_violation ()
     | _ -> () );
     (* Extend the environment with any variable bound by this statement so
@@ -2036,7 +2036,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
             ad.captures
         in
         if unnameable_param || List.compare_lengths capture_params ad.captures <> 0 then begin
-          Probe.violation "control lowering"
+          Base.Probe.violation "control lowering"
             Pp.(
               str "the machine of " ++ str (Option.default "a function" fn_name)
               ++ str " cannot store what " ++ str ad.what ++ str ", which its ControlIR enters, takes" );
@@ -2349,7 +2349,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
         else
           match strip_ref_type p.ty with
           | Const _ -> None  (* const-ref bind: not owned *)
-          | Entity_application (r, _, _) when Table.is_coinductive r -> None
+          | Entity_application (r, _, _) when Base.Table.is_coinductive r -> None
           | t when not (copies_cheaply t) -> Some p.name
           | _ -> None )
       ee.Entry_emission.params

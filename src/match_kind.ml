@@ -23,10 +23,10 @@ type t =
    coercion; its [field] counts from the first binder, where [Core.Expr.Bound_variable i]
    counts from the last. *)
 let classify ty branches =
-  if Table.is_custom_match branches then Custom
+  if Base.Table.is_custom_match branches then Custom
   else
     match branches with
-    | [|{Core.Match.Branch.binders = ids; body = body; _}|] when Table.record_fields_of_type ty <> [] ->
+    | [|{Core.Match.Branch.binders = ids; body = body; _}|] when Base.Table.record_fields_of_type ty <> [] ->
       let n = List.length ids in
       let body =
         match (match body with Core.Expr.Coerce {value = b; _} | Core.Expr.Boxed_value {value = b; _}
@@ -43,7 +43,7 @@ let classify ty branches =
           Projection {field = n - i; application = Coerced_call}
         | _ -> Destructure
       in
-      Record {typeclass = Table.is_typeclass_type ty; body}
+      Record {typeclass = Base.Table.is_typeclass_type ty; body}
     | _ -> Variant
 
 let is_record = function Record _ -> true | Custom | Variant -> false

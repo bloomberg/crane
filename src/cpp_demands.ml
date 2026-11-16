@@ -5,15 +5,15 @@ let acquire_fence = "std::atomic_thread_fence(std::memory_order_acquire);"
 
 (* The header an external type, spelled [name], is declared in. *)
 let of_external name =
-  if String.equal name Cpp_ir.Crane_rt.small_vector then Some Table.small_vector_header
-  else if String.equal name Cpp_ir.Crane_rt.itree then Some Table.itree_header
-  else if String.equal name Cpp_ir.Crane_rt.field then Some (Table.Runtime Cpp_ir.Crane_rt.field_header)
-  else if String.equal name (Cpp_state.std_namespace () ^ "::optional") then Some (Table.Standard "optional")
-  else if String.equal name "std::vector" then Some (Table.Standard "vector")
-  else if String.equal name Cpp_ir.Crane_rt.constant_tc then Some (Table.Runtime Cpp_ir.Crane_rt.obj_header)
+  if String.equal name Cpp_ir.Crane_rt.small_vector then Some Base.Table.small_vector_header
+  else if String.equal name Cpp_ir.Crane_rt.itree then Some Base.Table.itree_header
+  else if String.equal name Cpp_ir.Crane_rt.field then Some (Base.Table.Runtime Cpp_ir.Crane_rt.field_header)
+  else if String.equal name (Cpp_state.std_namespace () ^ "::optional") then Some (Base.Table.Standard "optional")
+  else if String.equal name "std::vector" then Some (Base.Table.Standard "vector")
+  else if String.equal name Cpp_ir.Crane_rt.constant_tc then Some (Base.Table.Runtime Cpp_ir.Crane_rt.obj_header)
   else if String.equal name Cpp_ir.Crane_rt.shared_box || String.equal name Cpp_ir.Crane_rt.shared_or then
-    Some (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header)
-  else if String.equal name Cpp_ir.Crane_rt.rc then Some (Table.Standard "memory")
+    Some (Base.Table.Runtime Cpp_ir.Crane_rt.shared_variant_header)
+  else if String.equal name Cpp_ir.Crane_rt.rc then Some (Base.Table.Standard "memory")
   else None
 
 (* Where a mapping is written -- a match, a block, a type or a term --
@@ -53,11 +53,11 @@ module Ir = struct
       Fun.protect ~finally:(fun () -> cell := saved) k
     in
     let need h = if not (List.mem h !found) then found := h :: !found in
-    let std h = need (Table.Standard h) in
-    let rt h = need (Table.Runtime h) in
+    let std h = need (Base.Table.Standard h) in
+    let rt h = need (Base.Table.Runtime h) in
     let obj () = rt Cpp_ir.Crane_rt.obj_header in
     let variant () = need (Cpp_state.std_names_of unit).variant_header in
-    let erase_fn () = need Table.erase_fn_header in
+    let erase_fn () = need Base.Table.erase_fn_header in
     let string_literal : expr -> unit = function Literal (String _) -> std "string" | _ -> () in
     let rec ty (t : ty) =
       ( match t with
@@ -77,13 +77,13 @@ module Ir = struct
       | In_namespace (r, _) -> global r
       | Promoted_member id ->
         promoted id;
-        Option.iter global (Table.promoted_type_var_field id)
+        Option.iter global (Base.Table.promoted_type_var_field id)
       | _ -> () );
       match t with
-      | In_namespace ((Names.GlobRef.IndRef _ as r), Entity_application (r', tys, _)) when Common.globref_equal r r' ->
+      | In_namespace ((Names.GlobRef.IndRef _ as r), Entity_application (r', tys, _)) when Base.Common.globref_equal r r' ->
         List.iter ty tys
       | Entity_application (r, tys, _) -> (
-        match Table.inline_custom_text r with
+        match Base.Table.inline_custom_text r with
         | Some "" -> List.iter ty tys
         | Some _ -> CErrors.anomaly Pp.(str "a mapped type reached demands uninstantiated: " ++ Names.GlobRef.print r)
         | None ->
@@ -121,7 +121,7 @@ module Ir = struct
       | Allocate (Heap, _) -> std "memory"
       | Allocate (Arena_scoped, _) ->
         if Unit_context.non_atomic_rc unit then std "memory"
-        else if not (String.equal (Table.std_lib ()) "BDE") then need Table.arena_header
+        else if not (String.equal (Base.Table.std_lib ()) "BDE") then need Base.Table.arena_header
       | Converting_construct (t, _) when at_type_variable t -> obj ()
       | Conditional (_, Call (_, Allocate (Heap, _), _), Literal Null_pointer) -> std "memory"
       | Convertible_to _ -> std "concepts"
@@ -173,7 +173,7 @@ module Ir = struct
         erase_fn ();
         if at_type_variable t then obj ()
       | Foreign_text text when String.equal text acquire_fence -> std "atomic"
-      | Foreign_text text when Common.contains_substring text "std::vector" -> std "vector"
+      | Foreign_text text when Base.Common.contains_substring text "std::vector" -> std "vector"
       | Match (scrut, _, _) ->
         variant ();
         if scrut.owned then std "utility"
@@ -291,7 +291,7 @@ let promoted_of_type t = ir_promoted (fun ~decl:_ ~ty -> ty t)
 let of_modtype_concept unit (c : Modtype_concept.t) =
   let found = ref [] in
   let need hs = List.iter (fun h -> if not (List.mem h !found) then found := h :: !found) hs in
-  let concepts () = need [Table.Standard "concepts"] in
+  let concepts () = need [Base.Table.Standard "concepts"] in
   let rec cty : Modtype_concept.concept_type -> unit = function
     | Member {arguments; _} -> List.iter cty arguments
     | Parameter t | Plain t -> need (of_type unit t)
@@ -309,7 +309,7 @@ let of_modtype_concept unit (c : Modtype_concept.t) =
     | Shared_pointer t -> cty t
     | Variant (_, ts) -> List.iter cty ts
     | Function (dom, cod) ->
-      need [Table.Runtime Cpp_ir.Crane_rt.fn_header];
+      need [Base.Table.Runtime Cpp_ir.Crane_rt.fn_header];
       List.iter cty dom;
       cty cod
   in

@@ -18,18 +18,18 @@
 
 module IntMap = Map.Make (Int)
 
-open Common
+open Base.Common
 open Names
 open Core_query
 
 (** An [Entity] for the global [r] at [tys], its custom extraction
-    ({!Table.inline_custom_text}) looked up once here.  [yields] is what
+    ({!Base.Table.inline_custom_text}) looked up once here.  [yields] is what
     the global evaluates to, and is worth passing whenever the caller has the
     global's instantiated type: for a [%result] block template in value
     position it is the only record of the type, since there is no call node to
     carry one. *)
 let mk_cppglob ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_ir.Lowered.Expr.t =
-  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r);
+  Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Base.Table.inline_custom_text r);
                         custom_yields = yields})
 
 (** What a binder of the lexical environment stands for ({!Core.Lexenv.role}). *)
@@ -320,7 +320,7 @@ type threaded = {
      ([_mp0], [_mp1], ...). Reset at function boundaries. *)
   match_param_counter : int;
   (** Counter for generating unique scrutinee cache variable names
-     ({!Common.scrutinee_cache_id}) for a custom match whose template reads
+     ({!Base.Common.scrutinee_cache_id}) for a custom match whose template reads
      its scrutinee more than once. Reset at function boundaries. *)
   cs_counter : int;
 }
@@ -552,26 +552,26 @@ let callables cx = (unit_context cx).callables
 let callee_core_type cx (r : GlobRef.t) : Core.Type.t option =
   match Callable_abi.planned_core_type (callables cx) r with
   | Some planned ->
-    if Probe.checking () then begin
+    if Base.Probe.checking () then begin
       let live = find_type_opt r in
       let agrees =
         match (planned, live) with
-        | Some a, Some b -> a == b || Core_util.eq_core_type a b
+        | Some a, Some b -> a == b || Base.Core_util.eq_core_type a b
         | None, None -> true
         | _ -> false
       in
-      Probe.hit "callee-ml-type" (fun () -> if agrees then "planned agree" else "planned disagree");
+      Base.Probe.hit "callee-ml-type" (fun () -> if agrees then "planned agree" else "planned disagree");
       if not agrees then
-        Probe.violation "callee signature"
+        Base.Probe.violation "callee signature"
           Pp.(str "the plan of " ++ GlobRef.print r ++ str " records an ML type the table does not have")
     end;
     planned
   | None ->
-    let emitting = match Common.get_phase () with Common.Emit -> true | Common.Plan -> false in
-    Probe.hit "callee-ml-type"
+    let emitting = match Base.Common.get_phase () with Base.Common.Emit -> true | Base.Common.Plan -> false in
+    Base.Probe.hit "callee-ml-type"
       (fun () -> (if emitting then "unplanned emit " else "unplanned plan ") ^ Pp.string_of_ppcmds (GlobRef.print r));
     if emitting && Option.has_some (find_type_opt r) then
-      Probe.violation "callee signature"
+      Base.Probe.violation "callee signature"
         Pp.(str "emission reads the signature of " ++ GlobRef.print r ++ str ", which no plan covers");
     find_type_opt r
 
@@ -765,7 +765,7 @@ let set_current_parameters cx (bs : Core.Binder.t list) =
     collecting its helpers ({!collecting_lifted}).
 
     A helper's identity is the declaration it comes out of and the binder it
-    was bound to there ({!Lifted}), so a generation lifting one identity
+    was bound to there ({!Base.Lifted}), so a generation lifting one identity
     twice lifts one helper and keeps the first.  That is sound only where
     both are the same declaration, which [CRANE_CHECK_IR] holds it to. *)
 let add_lifted_decl cx (d : Cpp_ir.Lowered.Decl.t) =
@@ -783,7 +783,7 @@ let add_lifted_decl cx (d : Cpp_ir.Lowered.Decl.t) =
     | None -> cx.lifted <- Some (d :: ds)
     | Some d' ->
       if compare d d' <> 0 then
-        Probe.violation "lifted helpers"
+        Base.Probe.violation "lifted helpers"
           Pp.(
             str "one generation lifted two different helpers as "
             ++ Option.cata GlobRef.print (mt ()) (Cpp_ir.Globrefs.declared d)) )

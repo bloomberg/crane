@@ -79,7 +79,7 @@ type t = {
   input : Core.Fingerprint.t option;
       (** The structure planned, where something reads it: under
           [CRANE_CHECK_IR] or [CRANE_TRACE_PIPELINE]. *)
-  config : Table.unit_config;
+  config : Base.Table.unit_config;
       (** The unit's configuration, from the customs its program names:
           whether it runs on several threads, which withholds a [Crane
           NonAtomicRc] or [Crane SingleThreaded] request.  Generation, the
@@ -121,7 +121,7 @@ val plan : Program_facts.t -> Core.Program.t -> t
 (** [record_kinds t struc] records each kind [t] decided where an
     inductive's kind is kept: in its declaration in [struc], the frozen
     program every reader of the unit takes a declaration from, and in the
-    extracted environment ({!Table.inductive_kind_of}), which answers for
+    extracted environment ({!Base.Table.inductive_kind_of}), which answers for
     an inductive another declaration -- or a later unit of a separate
     extraction -- names.  The decision is the plan's; the program records
     its result, as it records any other fact about a declaration, so no

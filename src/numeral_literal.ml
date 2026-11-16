@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 open Names
-open Type_util
+open Base.Type_util
 
 let strip_magic = Core.Expr.strip_crossings
 
@@ -78,7 +78,7 @@ let num_uint expr =
   | _ -> None
 
 let converter_literal r arg =
-  match Option.bind (Table.numeral_ind_of_converter r) Table.get_numeral_info with
+  match Option.bind (Base.Table.numeral_ind_of_converter r) Base.Table.get_numeral_info with
   | None -> None
   | Some info -> (
     match num_uint arg with
@@ -100,14 +100,14 @@ let rec positive expr =
    its zero constructor. *)
 let rec peano info expr =
   let index = function
-    | GlobRef.ConstructRef (ind, cidx) when GlobRef.CanOrd.equal (GlobRef.IndRef ind) info.Table.ind ->
+    | GlobRef.ConstructRef (ind, cidx) when GlobRef.CanOrd.equal (GlobRef.IndRef ind) info.Base.Table.ind ->
       Some cidx
     | _ -> None
   in
   match strip_magic expr with
-  | Core.Expr.Construct {constructor = cr; arguments = []; _} when index cr = Some info.Table.zero_ctor ->
+  | Core.Expr.Construct {constructor = cr; arguments = []; _} when index cr = Some info.Base.Table.zero_ctor ->
     Some Z.zero
-  | Core.Expr.Construct {constructor = cr; arguments = [inner]; _} when index cr = Some info.Table.succ_ctor ->
+  | Core.Expr.Construct {constructor = cr; arguments = [inner]; _} when index cr = Some info.Base.Table.succ_ctor ->
     Option.map Z.succ (peano info inner)
   | _ -> None
 
@@ -117,7 +117,7 @@ let registered name r = Rocqlib.has_ref name && Rocqlib.check_ref name r
 let constructor_literal = function
   | Core.Expr.Construct {constructor = (GlobRef.ConstructRef ((kn, i), _) as r); arguments = args; _} as e -> (
     let ind = GlobRef.IndRef (kn, i) in
-    match Table.get_numeral_info ind with
+    match Base.Table.get_numeral_info ind with
     | None -> None
     | Some info when registered "num.pos.type" ind -> Option.map (fun n -> (info, n)) (positive e)
     | Some info -> (
@@ -138,7 +138,7 @@ let literal = function
 
 let fold e =
   match literal e with
-  | Some (info, n) -> Core.Expr.Numeral {inductive = info.Table.ind; value = n}
+  | Some (info, n) -> Core.Expr.Numeral {inductive = info.Base.Table.ind; value = n}
   | None -> e
 
 let folds e = Option.has_some (literal e)

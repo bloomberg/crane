@@ -3,19 +3,19 @@
 
 
 type owner =
-  | Source of Entity_id.t
-  | Generated of Generated_entity_id.t
+  | Source of Base.Entity_id.t
+  | Generated of Base.Generated_entity_id.t
 
 let compare_owner a b =
   match (a, b) with
-  | Source x, Source y -> Entity_id.compare x y
-  | Generated x, Generated y -> Generated_entity_id.compare x y
+  | Source x, Source y -> Base.Entity_id.compare x y
+  | Generated x, Generated y -> Base.Generated_entity_id.compare x y
   | Source _, Generated _ -> -1
   | Generated _, Source _ -> 1
 
 let pp_owner = function
-  | Source e -> Entity_id.pp e
-  | Generated g -> Generated_entity_id.pp g
+  | Source e -> Base.Entity_id.pp e
+  | Generated g -> Base.Generated_entity_id.pp g
 
 module Owner_set = Set.Make (struct
   type t = owner
@@ -50,27 +50,27 @@ module Id_map = Map.Make (struct
 end)
 
 type helper = {
-  helper_id : Generated_entity_id.t;
+  helper_id : Base.Generated_entity_id.t;
   helper_decl : Cpp_ir.Lowered.Decl.t;
 }
 
 let helper_declaration h = {owner = Generated h.helper_id; part = Declaration 0}
 
 type entity = {
-  entity_id : Entity_id.t;
+  entity_id : Base.Entity_id.t;
   declarations : id list;
   helpers : helper list;
 }
 
 let helper d =
   Option.map
-    (fun h -> { helper_id = Generated_entity_id.lifted_helper h; helper_decl = d })
-    (Option.bind (Cpp_ir.Globrefs.declared d) Lifted.of_ref)
+    (fun h -> { helper_id = Base.Generated_entity_id.lifted_helper h; helper_decl = d })
+    (Option.bind (Cpp_ir.Globrefs.declared d) Base.Lifted.of_ref)
 
 let dependencies decls =
-  let found = ref Entity_id.Set.empty in
+  let found = ref Base.Entity_id.Set.empty in
   List.iter
-    (Cpp_ir.Globrefs.iter (fun r -> found := Entity_id.Set.add (Entity_id.of_ref r) !found))
+    (Cpp_ir.Globrefs.iter (fun r -> found := Base.Entity_id.Set.add (Base.Entity_id.of_ref r) !found))
     decls;
   !found
 
@@ -93,7 +93,7 @@ type t = {
   by_id : declaration Id_map.t;
       (** Each finished declaration by its id: how a file's render finds
           it. *)
-  demands : Table.header list;
+  demands : Base.Table.header list;
       (** The headers the finished declarations need, sorted, each once. *)
   globals : Names.GlobRef.t list;
       (** The globals the finished declarations write the names of. *)
@@ -160,15 +160,15 @@ let generated_declarations t =
 
 (** The unit's program: the generations recorded ahead of the files as the
     walk records them, then, once installed, what they finished as. *)
-let program : t ref = State.cell State.Unit empty
+let program : t ref = Base.State.cell Base.State.Unit empty
 
 (** The entities the files have taken so far, either file, newest first. *)
-let taken : entity list ref = State.cell State.Unit []
+let taken : entity list ref = Base.State.cell Base.State.Unit []
 
 let record e =
-  ( match Common.get_phase () with
-  | Common.Emit -> taken := e :: !taken
-  | Common.Plan -> CErrors.anomaly Pp.(str "Crane: a declaration was generated while planning.") );
+  ( match Base.Common.get_phase () with
+  | Base.Common.Emit -> taken := e :: !taken
+  | Base.Common.Plan -> CErrors.anomaly Pp.(str "Crane: a declaration was generated while planning.") );
   e
 
 (* A helper is lifted by one generation: the same declaration may be handed
@@ -177,12 +177,12 @@ let record e =
    both would be written. *)
 let record_helper_ahead h =
   let t = !program in
-  match List.find_opt (fun h' -> Generated_entity_id.equal h'.helper_id h.helper_id) t.lifted with
+  match List.find_opt (fun h' -> Base.Generated_entity_id.equal h'.helper_id h.helper_id) t.lifted with
   | None -> program := { t with lifted = h :: t.lifted }
   | Some h' ->
     if h'.helper_decl != h.helper_decl then
-      let id = Generated_entity_id.pp h.helper_id in
-      Probe.violation "lifted helpers" Pp.(str "two generations lifted the helper " ++ id)
+      let id = Base.Generated_entity_id.pp h.helper_id in
+      Base.Probe.violation "lifted helpers" Pp.(str "two generations lifted the helper " ++ id)
 
 let record_lifted_ahead ds = List.iter (fun d -> Option.iter record_helper_ahead (helper d)) ds
 
@@ -200,19 +200,19 @@ let finish ~check_control u jobs =
     (fun (id, d) ->
       match Id_map.find_opt id !sources with
       | Some d' ->
-        if Probe.checking () && not (same_source d d') then
-          Probe.violation "unit program" Pp.(str "two declarations finished as " ++ pp_id id)
+        if Base.Probe.checking () && not (same_source d d') then
+          Base.Probe.violation "unit program" Pp.(str "two declarations finished as " ++ pp_id id)
       | None ->
-        (* Passes that ask a per-function setting ({!Table.reuse_here}) ask
+        (* Passes that ask a per-function setting ({!Base.Table.reuse_here}) ask
            it of the entity the declaration was generated for. *)
         let owner_ref =
           match id.owner with
-          | Source e -> Some (Entity_id.to_ref e)
-          | Generated g -> Option.map Entity_id.to_ref (Generated_entity_id.owner g)
+          | Source e -> Some (Base.Entity_id.to_ref e)
+          | Generated g -> Option.map Base.Entity_id.to_ref (Base.Generated_entity_id.owner g)
         in
         let finish () = Cpp_pipeline.finish ~check_control u d in
-        let finished = match owner_ref with Some r -> Table.with_decl_ref r finish | None -> finish () in
-        Probe.hit "cpp_ir" (fun () -> "converted");
+        let finished = match owner_ref with Some r -> Base.Table.with_decl_ref r finish | None -> finish () in
+        Base.Probe.hit "cpp_ir" (fun () -> "converted");
         demands := List.rev_append (Cpp_demands.of_decl u finished) !demands;
         globals := List.rev_append (Cpp_demands.globals_of_decl finished) !globals;
         promoted := List.rev_append (Cpp_demands.promoted_of_decl finished) !promoted;
@@ -228,17 +228,17 @@ let finish ~check_control u jobs =
     promoted = List.rev !promoted }
 
 let check_finished t =
-  if Probe.checking () then begin
+  if Base.Probe.checking () then begin
     let generated = generated_declarations t in
     let finished = Id_set.of_list (List.map (fun d -> d.id) t.declarations) in
     let show s = Pp.(prlist_with_sep (fun () -> str ", ") pp_id (Id_set.elements s)) in
     let ungenerated = Id_set.diff finished generated in
     if not (Id_set.is_empty ungenerated) then
-      Probe.violation "unit program"
+      Base.Probe.violation "unit program"
         Pp.(str "declarations finished that no generation of the unit gave: " ++ show ungenerated);
     let unfinished = Id_set.diff generated finished in
     if not (Id_set.is_empty unfinished) then
-      Probe.violation "unit program" Pp.(str "declarations generated and not finished: " ++ show unfinished)
+      Base.Probe.violation "unit program" Pp.(str "declarations generated and not finished: " ++ show unfinished)
   end
 
 let install t = program := t
@@ -271,14 +271,14 @@ let refinish ~check_control u jobs =
     jobs
 
 let check_against_plan ~declares =
-  if Probe.checking () then
+  if Base.Probe.checking () then
     let emitted = Owner_set.union (owners !program) (entities_owners !taken) in
     let planned = function
-      | Source e -> declares (Entity_id.to_ref e)
+      | Source e -> declares (Base.Entity_id.to_ref e)
       | Generated g -> (
-        match Generated_entity_id.owner g with
+        match Base.Generated_entity_id.owner g with
         | None -> true
-        | Some e -> declares (Entity_id.to_ref e) || Owner_set.mem (Source e) emitted )
+        | Some e -> declares (Base.Entity_id.to_ref e) || Owner_set.mem (Source e) emitted )
     in
     let unplanned = Owner_set.filter (fun id -> not (planned id)) emitted in
     if not (Owner_set.is_empty unplanned) then
@@ -288,7 +288,7 @@ let check_against_plan ~declares =
           ++ prlist_with_sep (fun () -> str ", ") pp_owner (Owner_set.elements unplanned))
 
 let check_against_ahead () =
-  if Probe.checking () then
+  if Base.Probe.checking () then
     let declarations es =
       List.fold_left (fun s (e : entity) -> Id_set.union s (Id_set.of_list e.declarations)) Id_set.empty es in
     let taken_owners = entities_owners !taken and ahead_owners = entities_owners !program.entities in

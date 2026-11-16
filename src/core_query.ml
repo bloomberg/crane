@@ -10,19 +10,19 @@
     it before translation runs. *)
 
 open Names
-open Core_util
-open Table
+open Base.Core_util
+open Base.Table
 open Util
-open Type_util
+open Base.Type_util
 
-(** {!Table.find_type}, [None] where [r] has no recorded type. *)
+(** {!Base.Table.find_type}, [None] where [r] has no recorded type. *)
 let find_type_opt (r : GlobRef.t) : Core.Type.t option =
-  try Some (Table.find_type r) with Not_found -> None
+  try Some (Base.Table.find_type r) with Not_found -> None
 
 (** A declaration's parameter of type [ty] is its dictionary exactly when
     [ty] is a class: the one criterion the head generators promote a
     parameter to an instance by. *)
-let parameter_role ty = if Table.is_typeclass_type ty then Core.Lexenv.Dictionary else Core.Lexenv.Value
+let parameter_role ty = if Base.Table.is_typeclass_type ty then Core.Lexenv.Dictionary else Core.Lexenv.Value
 
 (** Like [List.firstn] but returns [min(n, length lst)] elements instead of
     raising when [n > length lst]. Needed because extraction sometimes produces
@@ -42,7 +42,7 @@ let safe_firstn n lst =
 
 (** Collect all Core.Type.Variable indices from a Core.Type.t. Used to find type variables beyond
     those of the containing inductive/record. *)
-let collect_tvars_set acc ty = IntSet.union acc (Core_util.core_tvars ty)
+let collect_tvars_set acc ty = IntSet.union acc (Base.Core_util.core_tvars ty)
 
 (** Convert an IntSet of type variable indices back to a list, wrapping
     [collect_tvars_set]. Used to collect all Core.Type.Variable indices from a Core.Type.t. *)
@@ -83,8 +83,8 @@ let reconcile_parameter_type body_ty sig_ty =
     | _ -> body_ty
   in
   let promoted_alias t =
-    match Core_util.type_simpl t with
-    | Core.Type.Global_app {head = (GlobRef.ConstRef _ as g); _} -> Table.promoted_type_params g <> []
+    match Base.Core_util.type_simpl t with
+    | Core.Type.Global_app {head = (GlobRef.ConstRef _ as g); _} -> Base.Table.promoted_type_params g <> []
     | _ -> false
   in
   let body_ty = merge_unknown body_ty sig_ty in
@@ -113,21 +113,21 @@ let rec spelled_tvars_of ?(plain = fun _ -> false) acc = function
     let l =
       match r with
       | GlobRef.IndRef (kn, _) -> (
-        match Table.get_ind_num_param_vars_opt kn with
+        match Base.Table.get_ind_num_param_vars_opt kn with
         | Some n -> safe_firstn n l
         | None -> l )
       | _ -> l
     in
     (* Nor are the arguments a mapping's text does not place: [itree E R] is
        [std::shared_ptr<ITree<R>>], and [E] cannot be read off it. *)
-    let l = List.filteri (fun i _ -> Type_util.type_arg_is_written r i) l in
+    let l = List.filteri (fun i _ -> Base.Type_util.type_arg_is_written r i) l in
     List.fold_left (spelled_tvars_of ~plain) acc l
   | Core.Type.Meta {contents = Some t} -> spelled_tvars_of ~plain acc t
   | _ -> acc
 
 (** The variables [core_ty]'s declaration takes as template names.
 
-    {!Type_util.higher_kinded_core_tvars} less those the declaration only
+    {!Base.Type_util.higher_kinded_core_tvars} less those the declaration only
     ever applies, in its parameters and nowhere else: each such application is
     relaxed there to a fresh deduced parameter
     ({!Plan_templates.relax_applied_param}), and the variable left a plain
@@ -155,7 +155,7 @@ let declared_higher_kinded_tvars core_ty =
     && not (IntSet.mem j (collect_tvars_set IntSet.empty (core_return_type core_ty)))
   in
   IntSet.filter (fun j -> not (relaxed j))
-    (Type_util.higher_kinded_core_tvars [core_ty])
+    (Base.Type_util.higher_kinded_core_tvars [core_ty])
 
 (** The type variables of [id] a C++ compiler could read off the call's value
     arguments. *)
@@ -185,7 +185,7 @@ let deducible_tvars_of_glob id =
     so the frame a loopified call builds is typed instead of falling back on
     [decltype(lambda)].
 
-    Instantiation goes through {!Core_util.Var_types.apply}, by the callee's
+    Instantiation goes through {!Base.Core_util.Var_types.apply}, by the callee's
     variables: a second substituter here would be a second oracle, free to
     disagree. *)
 let rec infer_core_body_type (a : Core.Expr.t) : Core.Type.t option =
@@ -197,10 +197,10 @@ let rec infer_core_body_type (a : Core.Expr.t) : Core.Type.t option =
          ones the call site wrote, by variable, or, where it wrote none, the
          ones its arguments imply. *)
       let ty =
-        if not (Core_util.Var_types.is_empty (Core_util.written_type_args use)) then
-          Core_util.instantiate_written ~reader:"infer_core_body_type" use ty
+        if not (Base.Core_util.Var_types.is_empty (Base.Core_util.written_type_args use)) then
+          Base.Core_util.instantiate_written ~reader:"infer_core_body_type" use ty
         else
-          Core_util.Var_types.apply
+          Base.Core_util.Var_types.apply
             (tvar_instantiation r ty
                (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args) )
             ty
@@ -278,9 +278,9 @@ and tvar_instantiation_found
     | (Core.Type.Global_app {head = g1; _} as f), Core.Type.Global_app {head = (GlobRef.ConstRef kn as g2);
                                                                         type_arguments = a2; _}
       when (not (GlobRef.CanOrd.equal g1 g2))
-           && Option.has_some (Table.lookup_typedef_unchecked kn) ->
-      let body = Option.get (Table.lookup_typedef_unchecked kn) in
-      unify f (if a2 = [] then body else Core_util.type_subst_list a2 body)
+           && Option.has_some (Base.Table.lookup_typedef_unchecked kn) ->
+      let body = Option.get (Base.Table.lookup_typedef_unchecked kn) in
+      unify f (if a2 = [] then body else Base.Core_util.type_subst_list a2 body)
     (* Where both sides open with type abstractions, they may abstract
        different numbers of them -- [E ~> M]'s one against a handler written
        [fun T => intr], itself abstracting its own [T] -- and the value
@@ -335,7 +335,7 @@ and tvar_instantiation_found
                   match resolve_meta t with
                   | Core.Type.Global_app {type_arguments = []; _} -> true
                   | Core.Type.Global_app {type_arguments = args; _} ->
-                    Type_util.is_core_erased_ty (List.nth args (List.length args - 1))
+                    Base.Type_util.is_core_erased_ty (List.nth args (List.length args - 1))
                   | _ -> false )
                 (List.filteri (fun i _ -> i < List.length a2 - List.length a1) a2) ->
       let n_fixed = List.length a2 - List.length a1 in
@@ -349,8 +349,8 @@ and tvar_instantiation_found
        same form, and the alias's arguments are what its own parameters stand
        for. *)
     | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = cargs; _}, actual when constructors ->
-      ( match Table.lookup_typedef_unchecked kn with
-      | Some body -> unify (Core_util.type_subst_list cargs body) actual
+      ( match Base.Table.lookup_typedef_unchecked kn with
+      | Some body -> unify (Base.Core_util.type_subst_list cargs body) actual
       | None -> () )
     | _ -> ()
   in
@@ -377,13 +377,13 @@ and tvar_instantiation_found
     one found: a variable no argument mentions keeps itself, so substituting
     leaves it alone. *)
 and tvar_instantiation r callee_ty args =
-  match Core_util.reference_scheme r with
-  | None -> Core_util.Var_types.empty
+  match Base.Core_util.reference_scheme r with
+  | None -> Base.Core_util.Var_types.empty
   | Some scheme ->
     let found = tvar_instantiation_found callee_ty args in
     let at v = List.assoc_opt (Core.Scheme.Var.ordinal v) found in
-    Core_util.Var_types.through
-      (Core_util.last_var (List.filter (fun v -> Option.has_some (at v)) (Core.Scheme.Var.all scheme)))
+    Base.Core_util.Var_types.through
+      (Base.Core_util.last_var (List.filter (fun v -> Option.has_some (at v)) (Core.Scheme.Var.all scheme)))
       (fun v ->
         match at v with
         | Some t -> t
@@ -423,7 +423,7 @@ and resolve_from_argument_types ~lex tyargs args =
     Core erases a [Type -> Type] argument, but the callee still declares a
     template parameter for it -- and the erasure is contagious: template
     arguments are positional, so the all-or-nothing rule in
-    {!Type_util.filter_erased_type_args} drops the concrete arguments
+    {!Base.Type_util.filter_erased_type_args} drops the concrete arguments
     beside it.  One lost family therefore costs every type argument the call
     could have written, including the ones nothing can deduce.
 
@@ -440,7 +440,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
     (* Only a variable the callee applies: this pass exists because Core
        erases a [Type -> Type] argument, and a plain type argument that came
        out erased is erased for a reason a value argument cannot undo. *)
-    let applied = Type_util.applied_core_tvar_arities [callee_ty] in
+    let applied = Base.Type_util.applied_core_tvar_arities [callee_ty] in
     (* Nor one a type alias in a domain is applied to: [ReSum_id : Id_ obj C
        -> ...] takes the category's morphism constructor [C], a type-level
        function erased for that reason alone, and the definitional class
@@ -498,15 +498,15 @@ let sole_instance ~lex ~n_outer t body =
   let exception Not_sole in
   try
     let instances = ref [] in
-    Core_util.ast_iter_rel_applied
+    Base.Core_util.ast_iter_rel_applied
       (fun n i args ->
         if Int.equal i (n + 1) then begin
           if args = [] then raise Not_sole;
           let args =
             List.map
               (fun a ->
-                if Core_util.ast_occurs_itvl 1 (n + 1) a then raise Not_sole
-                else Core_util.ast_lift (-(n + 1)) a )
+                if Base.Core_util.ast_occurs_itvl 1 (n + 1) a then raise Not_sole
+                else Base.Core_util.ast_lift (-(n + 1)) a )
               args
           in
           instances := tvar_instantiation_found ~lex t args :: !instances
@@ -516,7 +516,7 @@ let sole_instance ~lex ~n_outer t body =
     let outer_only ty = IntSet.for_all (fun k -> k <= n_outer) (collect_tvars_set IntSet.empty ty) in
     let agreed k =
       match List.map (List.assoc_opt k) !instances with
-      | Some ty :: rest when List.for_all (function Some ty' -> Core_util.eq_core_type ty ty' | None -> false) rest ->
+      | Some ty :: rest when List.for_all (function Some ty' -> Base.Core_util.eq_core_type ty ty' | None -> false) rest ->
         Some ty
       | _ -> None
     in
@@ -588,7 +588,7 @@ type let_lambda =
     ({!Core_elaborate.generated_definition}), after which translation meets
     only lambdas it binds or lifts. *)
 let let_lambda ~lex ~n_outer t a b =
-  if not (Type_util.own_type_variables ~n_outer [t]) then Bound
+  if not (Base.Type_util.own_type_variables ~n_outer [t]) then Bound
   else
     match sole_instance ~lex ~n_outer t b with
     | Some inst -> At_instance inst
@@ -616,7 +616,7 @@ let let_lambda ~lex ~n_outer t a b =
 (** Check if a GlobRef returns a typeclass type (possibly through Core.Type.Arrow layers). *)
 let ref_returns_typeclass r =
   match find_type_opt r with
-  | Some ty -> Table.is_typeclass_type (core_return_type ty)
+  | Some ty -> Base.Table.is_typeclass_type (core_return_type ty)
   | None -> false
 
 (** Check if a function returns a skipped type (e.g., ReSum instances whose
@@ -643,8 +643,8 @@ let strip_magic = Core.Expr.strip_crossings
 let rec strip_dictionary e =
   match strip_magic e with
   | Core.Expr.Lambda {parameter_type = ty; body = b; _} when erased_by_extraction ty
-    && not (Core_util.ast_occurs 1 b) ->
-    strip_dictionary (Core_util.ast_pop b)
+    && not (Base.Core_util.ast_occurs 1 b) ->
+    strip_dictionary (Base.Core_util.ast_pop b)
   | e -> e
 
 (** [subst_dict_carrier carrier ty] puts [carrier] in place of the leading
@@ -655,7 +655,7 @@ let rec strip_dictionary e =
 
     [carrier] is a type constructor written as an application whose
     placeholders stand for what it is applied to, so applying it is filling
-    them -- which is what {!Core_util.apply_core_type} does, including for the
+    them -- which is what {!Base.Core_util.apply_core_type} does, including for the
     type-level lambda [fun T => holder T (box T)] whose binder occurs twice.
 
     An occurrence that cannot be filled is left as the [Core.Type.Variable_app] it was: a type of
@@ -664,7 +664,7 @@ let rec strip_dictionary e =
 let subst_dict_carrier ?(at = 1) carrier ty =
   let apply k xs =
     match carrier with
-    | Core.Type.Global_app _ -> Core_util.apply_core_type carrier xs
+    | Core.Type.Global_app _ -> Base.Core_util.apply_core_type carrier xs
     | _ -> Core.Type.Variable_app {head = k; arguments = xs}
   in
   let rec go t =
@@ -854,7 +854,7 @@ let with_dict_carrier ~lex ~caller id value_args ty =
     arguments [tys] after {!with_dict_carrier} has substituted the carrier
     its dictionary argument fixes. *)
 let instantiate_at_call ~lex ~caller id tys value_args ty =
-  Core_util.Var_types.apply tys (with_dict_carrier ~lex ~caller id value_args ty)
+  Base.Core_util.Var_types.apply tys (with_dict_carrier ~lex ~caller id value_args ty)
 
 (** Whether the binder at de Bruijn index [i] in [lex] is an instance
     argument rather than a value: a declaration's dictionary parameter, or
@@ -914,14 +914,14 @@ let is_typeclass_instance_arg ~lex core_arg =
       (* Try to get the field type from the record definition *)
       let field_is_tc =
         match case_ty with
-        | Core.Type.Global_app {head = r; _} when Table.is_typeclass r ->
-          let field_types = Table.record_field_types r in
+        | Core.Type.Global_app {head = r; _} when Base.Table.is_typeclass r ->
+          let field_types = Base.Table.record_field_types r in
           let non_dummy =
             filter_value_types field_types
           in
           ( try
               let fty = List.nth non_dummy idx in
-              Table.is_typeclass_type fty
+              Base.Table.is_typeclass_type fty
             with _ -> false )
         | _ -> false
       in
@@ -957,7 +957,7 @@ let instance_arg_is_erased ~lex core_arg =
    is recorded. *)
 let instance_class_ty ~lex core_arg =
   let of_ref r =
-    match Table.find_type r with
+    match Base.Table.find_type r with
     | ty -> core_return_type ty
     | exception Not_found -> Core.Type.Unknown
   in
@@ -1006,7 +1006,7 @@ let kept_instance_of_projection ~lex x args =
    and the erased type arguments all stand in front of the value
    parameters. *)
 let projection_value_domains ~lex (use : Core.Global_use.t) inst =
-  match Table.find_type use.callee with
+  match Base.Table.find_type use.callee with
   | exception Not_found -> []
   | ty ->
     let ty =
@@ -1015,11 +1015,11 @@ let projection_value_domains ~lex (use : Core.Global_use.t) inst =
       | _ -> ty
     in
     core_domains
-      (Core_util.instantiate_written ~reader:"projection_value_domains" use ty)
+      (Base.Core_util.instantiate_written ~reader:"projection_value_domains" use ty)
     |> List.filter (fun t ->
            match resolve_meta t with
            | Core.Type.Erased _ -> false
-           | t -> not (Table.is_typeclass_type t))
+           | t -> not (Base.Table.is_typeclass_type t))
 
 (** [static_projection ~lex use args] -- where the call [use args], standing
     in [lex], calls a class field as a static member of the instance it
@@ -1036,8 +1036,8 @@ let projection_value_domains ~lex (use : Core.Global_use.t) inst =
 let static_projection ~lex (use : Core.Global_use.t) args : Elaborated_call.static_projection option =
   let x = use.callee in
   let inst =
-    if Table.is_inline_custom x then kept_instance_of_projection ~lex x args
-    else if Table.singleton_method_class x <> None then
+    if Base.Table.is_inline_custom x then kept_instance_of_projection ~lex x args
+    else if Base.Table.singleton_method_class x <> None then
       List.find_opt (fun a -> is_typeclass_instance_arg ~lex a && not (instance_arg_is_erased ~lex a)) args
     else None
   in
@@ -1045,9 +1045,9 @@ let static_projection ~lex (use : Core.Global_use.t) args : Elaborated_call.stat
     (fun inst ->
       let domains = projection_value_domains ~lex use inst in
       let missing =
-        if Table.is_inline_custom x then []
+        if Base.Table.is_inline_custom x then []
         else
-          let operands = List.filter (fun a -> not (Core_util.is_erased_value a || a == inst)) args in
+          let operands = List.filter (fun a -> not (Base.Core_util.is_erased_value a || a == inst)) args in
           List.filteri (fun i _ -> i >= List.length operands) domains
       in
       let rec position i = function

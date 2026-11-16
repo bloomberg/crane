@@ -136,7 +136,7 @@ val region :
 (** Whether, as [p] plans it, [let x : ty := a] binds the closure [a] to a
     C++ local, which the region owns: [a] is a local fixpoint or a lambda
     with no type variable of its own past the head's
-    ({!Type_util.own_type_variables}).  [None] where nothing is planned. *)
+    ({!Base.Type_util.own_type_variables}).  [None] where nothing is planned. *)
 val closure_local : t -> Core.Type.t -> Core.Expr.t -> bool option
 
 (** [reuse_arm p ~scrutinee ~branch ~constructor] is [p] for the branch

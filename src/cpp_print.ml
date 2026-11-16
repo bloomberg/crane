@@ -25,8 +25,8 @@
 
 open Pp
 open Names
-open Table
-open Common
+open Base.Table
+open Base.Common
 open Cpp_state
 open Cpp_names
 module I = Cpp_ir
@@ -113,11 +113,11 @@ let writes_variant ctx = writes (sn ctx.unit).variant_header
 let library_name s =
   match List.rev (Str.split (Str.regexp_string "::") s) with
   | base :: rev_namespaces ->
-    Cpp_name.name (List.rev_map (fun ns -> Cpp_name.Namespace ns) rev_namespaces) base
-  | [] -> Cpp_name.unqualified s
+    Base.Cpp_name.name (List.rev_map (fun ns -> Base.Cpp_name.Namespace ns) rev_namespaces) base
+  | [] -> Base.Cpp_name.unqualified s
 
 (** {!library_name} as a document. *)
-let pp_library_name s = Cpp_name.pp (library_name s)
+let pp_library_name s = Base.Cpp_name.pp (library_name s)
 
 (** Print a library template applied: [label<s>].
 
@@ -173,7 +173,7 @@ let print_cpp_type_var vl i =
 let file_scope_types_written : GlobRef.Set.t ref = ref GlobRef.Set.empty
 
 let note_file_scope_name ctx r =
-  if Probe.checking () && not ctx.in_struct then
+  if Base.Probe.checking () && not ctx.in_struct then
     file_scope_types_written := GlobRef.Set.add r !file_scope_types_written
 
 (** The type a declaration introduces, by the entity it declares: an
@@ -211,7 +211,7 @@ let identifier_tokens text =
     to find out whether one is needed at all: rendering the constructor
     applied to it says whether the application is just a head plus this
     argument. *)
-let ctor_alias_tvar = Generated_name.role "TcArg"
+let ctor_alias_tvar = Base.Generated_name.role "TcArg"
 
 (** A template synthesised to stand where a type constructor is written as a
     template template argument but has no template name of its own.
@@ -262,7 +262,7 @@ let note_ctor_alias_spelled ctx a =
   let add spelled = if not (List.mem a !spelled) then spelled := !spelled @ [a] in
   match ctx.aliases with
   | Some found -> add found
-  | None -> if Probe.checking () then add ctor_aliases_spelled
+  | None -> if Base.Probe.checking () then add ctor_aliases_spelled
 
 let start_ctor_alias_census () = ctor_aliases_spelled := []
 
@@ -325,7 +325,7 @@ let foreign_text (fr : foreign) =
     the record's struct was written -- a record with a field named [this] has
     one named [this_], and a projection of it has to say so too. *)
 let projection_field_name (r : GlobRef.t) : string =
-  Common.modular_rename (Label.to_id (label_of_r r))
+  Base.Common.modular_rename (Label.to_id (label_of_r r))
 
 
 (** Whether a definition whose eligibility the seam decided
@@ -339,17 +339,17 @@ let may_be_constexpr : I.Resolved.phase I.Decl.Constexpr.t -> _ = function
 let writes_qualifier doc =
   List.exists
     (function
-      | Cpp_name.Scope _ -> true
-      | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> String.contains text ':')
-    (Cpp_name.written doc)
+      | Base.Cpp_name.Scope _ -> true
+      | Base.Cpp_name.Foreign_text text | Base.Cpp_name.Untagged text -> String.contains text ':')
+    (Base.Cpp_name.written doc)
 
 (** What a type is as the qualifier of a member type named through it: a
     template parameter, which defers the lookup, when it is one or is a chain
     of member types through one; a struct otherwise. *)
 let rec member_kind : ty -> _ = function
-  | Variable _ | Instance _ -> fun s -> Cpp_name.Parameter s
+  | Variable _ | Instance _ -> fun s -> Base.Cpp_name.Parameter s
   | Member (t, _) -> member_kind t
-  | _ -> fun s -> Cpp_name.Class s
+  | _ -> fun s -> Base.Cpp_name.Class s
 
 (** The qualifiers a member of the struct being defined out of line is
     written with when it is named outside that struct's body (a [Named] or
@@ -380,7 +380,7 @@ let member_scopes (ctx : render_ctx) (t : ty) =
   in
   match ctx.scope with
   | Some {scope; file_scope_aliases} when (not ctx.in_struct) && not (at_file_scope file_scope_aliases) ->
-    Some (List.map (fun s -> Cpp_name.Class s) scope.Scope_plan.qualifier)
+    Some (List.map (fun s -> Base.Cpp_name.Class s) scope.Scope_plan.qualifier)
   | _ -> None
 
 (** A type's name as the type printer writes it: the qualifiers written in
@@ -388,8 +388,8 @@ let member_scopes (ctx : render_ctx) (t : ty) =
     for [typename], and whether it is followed by template arguments that
     need the [template] disambiguator. *)
 type written_head = {
-  outer : Cpp_name.scope list;
-  head : Cpp_name.t;
+  outer : Base.Cpp_name.scope list;
+  head : Base.Cpp_name.t;
   typename : bool;
   template_keyword : bool;
 }
@@ -411,8 +411,8 @@ let inductive_head ctx r ~applied = written_head ~applied (Cpp_names.type_head c
 (** [h] written, the [typename] it asks for only if [lead]. *)
 let pp_written_head ~lead h =
   (if lead && h.typename then str "typename " else mt ())
-  ++ Cpp_name.pp_scopes h.outer
-  ++ Cpp_name.pp ~template_keyword:h.template_keyword h.head
+  ++ Base.Cpp_name.pp_scopes h.outer
+  ++ Base.Cpp_name.pp ~template_keyword:h.template_keyword h.head
 
 (** The spelling of an external type's name: the configured library's vector
     for the standard one. *)
@@ -454,7 +454,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
          hoisted body whose owner is some other struct must resolve to that
          one, not to a member that does not exist. *)
       ( match member_scopes ctx t with
-      | Some scopes -> Cpp_name.pp_scopes scopes ++ Id.print id
+      | Some scopes -> Base.Cpp_name.pp_scopes scopes ++ Id.print id
       | None -> Id.print id )
     | Variable (Index (_, Some id) | Named id) -> Id.print id
     (* A local type reference (e.g., a nested struct inside a module): no
@@ -463,7 +463,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
        prepend struct name. *)
     | Named (id, args) ->
       let scopes = Option.default [] (member_scopes ctx t) in
-      Cpp_name.pp_scopes scopes ++ Id.print id
+      Base.Cpp_name.pp_scopes scopes ++ Id.print id
       ++ (match args with [] -> mt () | _ -> str "<" ++ pp_list (pp_rec false) args ++ str ">")
     | Non_deduced t ->
       cpp_angle "std::type_identity_t" (pp_rec false t)
@@ -483,7 +483,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
           writes_obj ();
           id_s
         end else if String.equal id_s Cpp_ir.Crane_rt.shared_box || String.equal id_s Cpp_ir.Crane_rt.shared_or then begin
-          writes (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
+          writes (Base.Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
           id_s
         end else if String.equal id_s Cpp_ir.Crane_rt.rc then begin
           (* rc.h transitively includes arena.h. *)
@@ -516,7 +516,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
         ++ (match tys with [] -> mt () | l -> str "<" ++ pp_list (pp_rec false) l ++ str ">") )
     | Foreign fr -> pp_foreign ctx (empty_env ()) vl fr
     | Function (d, c) ->
-      writes (Table.Runtime Cpp_ir.Crane_rt.fn_header);
+      writes (Base.Table.Runtime Cpp_ir.Crane_rt.fn_header);
       cpp_angle
         Cpp_ir.Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
@@ -532,7 +532,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       | _ ->
         (* Fallback: generic namespace-qualified type *)
         leading_typename
-        ++ Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.inductive_scope ctx r)
+        ++ Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Cpp_names.inductive_scope ctx r)
         ++ pp_rec false t )
     | (Member _ | Apply (Member _, _)) as qualified_ty ->
       (* An associated type may itself be an alias template — the carrier of a
@@ -570,7 +570,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
         | ty -> pp_chain_base ty
       in
       leading_typename
-      ++ Cpp_name.pp_type_qualifier (member_kind base_ty) (pp_qualified_chain base_ty)
+      ++ Base.Cpp_name.pp_type_qualifier (member_kind base_ty) (pp_qualified_chain base_ty)
       ++ ( if targs = [] then Id.print nested_id
            else
              str "template " ++ Id.print nested_id
@@ -581,9 +581,9 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
          as nothing, and nothing followed by [<args>] is a syntax error
          ([crane_event_as<<typename I::PROV>>]) -- was replaced by its
          argument at the seam ({!Cpp_erasure.instantiate_foreign}). *)
-      if Probe.checking () then begin
+      if Base.Probe.checking () then begin
         match head with
-        | Entity_application (r, _, _) when Type_util.ref_has_no_cpp_name r ->
+        | Entity_application (r, _, _) when Base.Type_util.ref_has_no_cpp_name r ->
           CErrors.anomaly (Pp.str "pp_cpp_type: a nameless constructor applied, not removed at the seam")
         | _ -> ()
       end;
@@ -607,14 +607,14 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes_variant ctx;
       cpp_angle (sn ctx.unit).variant (pp_list (pp_rec false) tys)
     | Variant (Shared, tys) ->
-      writes (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
+      writes (Base.Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
       cpp_angle Cpp_ir.Crane_rt.shared_variant (pp_list (pp_rec false) tys)
     (* The slot a pointer is held in was written down at the seam
        ({!Cpp_erasure.lower_pointer_slots}): what is left is a pointer -- to
        an inductive only a functor's instantiation knows the representation
        of, the pointer [shared_or_t] is given as its alternative. *)
     | Shared_pointer t ->
-      if Probe.checking () && Pointer_slot.of_pointee t = Pointer_slot.Shared then
+      if Base.Probe.checking () && Pointer_slot.of_pointee t = Pointer_slot.Shared then
         CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_erasure.lower_pointer_slots)");
       writes_standard "memory";
       cpp_angle (sn ctx.unit).shared_ptr (pp_rec false t)
@@ -682,7 +682,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', _, _)) when globref_equal r r' ->
       pp_written_head ~lead:false (inductive_head ctx r' ~applied:true)
     | In_namespace (r, t) ->
-      Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.inductive_scope ctx r) ++ template_name t
+      Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Cpp_names.inductive_scope ctx r) ++ template_name t
     | Shared_pointer _ ->
       writes_standard "memory";
       pp_library_name (sn ctx.unit).shared_ptr
@@ -690,7 +690,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes_variant ctx;
       pp_library_name (sn ctx.unit).variant
     | Variant (Shared, _) ->
-      writes (Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
+      writes (Base.Table.Runtime Cpp_ir.Crane_rt.shared_variant_header);
       pp_library_name Cpp_ir.Crane_rt.shared_variant
     | t ->
       CErrors.anomaly
@@ -720,8 +720,8 @@ and tyctor_written ctx vl t =
     ( match List.find_opt same !noted with
     | None -> noted := !noted @ [{constructor = t; vars = vl; alias = alias}]
     | Some u ->
-      if Probe.checking () && compare u.alias alias <> 0 then
-        Probe.violation "constructor alias uses"
+      if Base.Probe.checking () && compare u.alias alias <> 0 then
+        Base.Probe.violation "constructor alias uses"
           Pp.(str "a type constructor is decided twice, otherwise the second time, where one declaration writes it") );
     alias
   | Planned uses -> (
@@ -788,19 +788,19 @@ and pp_cpp_expr ctx env args (t : expr) =
   | Projection_value r ->
     str "[](const auto &_x) { return _x." ++ str (projection_field_name r) ++ str "; }"
   | Entity (x, tys, _) ->
-    let class_ s = Cpp_name.Class s in
+    let class_ s = Base.Cpp_name.Class s in
     let type_args () = str "<" ++ pp_list (pp_cpp_type ctx false []) tys ++ str ">" in
     (* A name followed by the use's template arguments: one named through a
        qualifier takes the [template] disambiguator, [C::template empty<T>]. *)
-    let named n = match tys with [] -> Cpp_name.pp n | _ -> Cpp_name.pp ~template_keyword:true n ++ type_args () in
+    let named n = match tys with [] -> Base.Cpp_name.pp n | _ -> Base.Cpp_name.pp ~template_keyword:true n ++ type_args () in
     let full_name =
       match x with
       | GlobRef.IndRef _ -> named (inductive_value ctx x)
-      | GlobRef.VarRef v -> named (Cpp_name.unqualified (Id.to_string v))
+      | GlobRef.VarRef v -> named (Base.Cpp_name.unqualified (Id.to_string v))
       | _ -> (
         match Cpp_names.value_reference ctx x with
         | Named_value {name; type_arguments = true} -> named name
-        | Named_value {name; type_arguments = false} -> Cpp_name.pp name
+        | Named_value {name; type_arguments = false} -> Base.Cpp_name.pp name
         | Record_member {record; type_params} ->
           (* A function inside an eponymous template struct: the struct is
              named with placeholder arguments, and the use's arguments go on
@@ -809,7 +809,7 @@ and pp_cpp_expr ctx env args (t : expr) =
           let struct_name = short_name ctx Type record in
           let func_name = short_name ctx Term x in
           let placeholder_args = gen_placeholder_args type_params in
-          Cpp_name.pp_type_qualifier class_
+          Base.Cpp_name.pp_type_qualifier class_
             (str (String.capitalize_ascii struct_name) ++ str "<" ++ str placeholder_args ++ str ">")
           ++ match tys with [] -> str func_name | _ -> str "template " ++ str func_name ++ type_args () )
     in
@@ -943,15 +943,15 @@ and pp_cpp_expr ctx env args (t : expr) =
        runtime whenever no arena scope is open at the call site.  A unit of
        non-atomic pointers has its pointer's factory instead, chosen at the
        seam ({!Cpp_erasure.lower_pointer_slots}). *)
-    ( if Probe.checking () then
+    ( if Base.Probe.checking () then
         if Unit_context.non_atomic_rc ctx.unit then
           CErrors.anomaly (Pp.str "pp_cpp_expr: an arena allocation of a non-atomic pointer reached the printer") );
     let inner = pp_cpp_type ctx false [] t in
-    if Table.std_lib () = "BDE" then
+    if Base.Table.std_lib () = "BDE" then
       (* No runtime arena under BDE (arena.h is std-only): plain factory. *)
       cpp_angle (sn ctx.unit).make_shared inner
     else begin
-      writes Table.arena_header;
+      writes Base.Table.arena_header;
       cpp_angle Cpp_ir.Crane_rt.arena_make_shared inner
     end
   | Aggregate {struct_ = id; type_args = tys; values = es} ->
@@ -963,7 +963,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     in
     let struct_name = Cpp_names.built_struct ctx id in
     typename_prefix_for ctx struct_name
-    ++ Cpp_name.pp struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
+    ++ Base.Cpp_name.pp struct_name ++ templates ++ str "{" ++ es_s ++ str "}"
   | Local_aggregate {struct_ = id; type_args = tys; values = es} ->
     let es_s = pp_list (pp_cpp_expr ctx env args) es in
     let templates =
@@ -1094,7 +1094,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     (* [EnumType::Constructor] for an enum class value, the enum named as
        resolution qualifies it where it is written
        ({!Cpp_names.enumerator_qualifier}). *)
-    Cpp_name.pp_qualifier (fun s -> Cpp_name.Class s) (Cpp_names.enumerator_qualifier ctx Enumerator_value ind)
+    Base.Cpp_name.pp_qualifier (fun s -> Base.Cpp_name.Class s) (Cpp_names.enumerator_qualifier ctx Enumerator_value ind)
     ++ Id.print ctor
   | Literal Null_pointer -> str "nullptr"
   | In_place ->
@@ -1124,16 +1124,16 @@ and pp_cpp_expr ctx env args (t : expr) =
      noted as needed. *)
   | Runtime h ->
     (match h with
-     | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box -> writes Table.erase_fn_header
-     | Cpp_ir.Crane_rt.Unbox_field -> writes (Table.Runtime Cpp_ir.Crane_rt.field_header)
-     | Cpp_ir.Crane_rt.Apply2 -> writes (Table.Runtime Cpp_ir.Crane_rt.fn_header)
+     | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box -> writes Base.Table.erase_fn_header
+     | Cpp_ir.Crane_rt.Unbox_field -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.field_header)
+     | Cpp_ir.Crane_rt.Apply2 -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.fn_header)
      | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal ->
-       writes (Table.Runtime Cpp_ir.Crane_rt.shared_block_header)
+       writes (Base.Table.Runtime Cpp_ir.Crane_rt.shared_block_header)
      | Cpp_ir.Crane_rt.Make_rc_reusing_unchecked | Cpp_ir.Crane_rt.Reuse_step
      | Cpp_ir.Crane_rt.Share_child -> ());
     str (Cpp_ir.Crane_rt.name h)
   | Numeral (r, n) ->
-    Common.writes_custom r;
+    Base.Common.writes_custom r;
     str n.text
   | Foreign_text code -> str code
   | Binary (op, lhs, rhs) ->
@@ -1203,7 +1203,7 @@ and pp_cpp_expr ctx env args (t : expr) =
     let caster =
       match t with
       | Tolerant_any_cast _ ->
-        writes Table.erase_fn_header;
+        writes Base.Table.erase_fn_header;
         Cpp_ir.Crane_rt.any_cast
       | _ -> Cpp_ir.Crane_rt.obj_cast
     in
@@ -1214,14 +1214,14 @@ and pp_cpp_expr ctx env args (t : expr) =
     (* A global never changes, so neither does its adapter: made once.  A
        method is never a global here: it is named through a lambda
        ({!Cpp_ir.Expr.Method_value}), never as itself. *)
-    writes Table.erase_fn_header;
+    writes Base.Table.erase_fn_header;
     str Cpp_ir.Crane_rt.erase_global ++ str "<" ++ pp_cpp_expr ctx env args g
     ++ ( match shape with
        | Boxed_whole -> mt ()
        | At_signature ty -> str ", " ++ pp_cpp_type ctx false [] ty )
     ++ str ">()"
   | Erase_callable (shape, e) ->
-    writes Table.erase_fn_header;
+    writes Base.Table.erase_fn_header;
     str Cpp_ir.Crane_rt.erase_fn
     ++ ( match shape with
        | Boxed_whole -> mt ()
@@ -1243,16 +1243,16 @@ and pp_cpp_expr ctx env args (t : expr) =
     ++ pp_cpp_expr ctx env args a
     ++ str ")"
   | Tolerant_call (f, call_args) ->
-    writes Table.erase_fn_header;
+    writes Base.Table.erase_fn_header;
     str Cpp_ir.Crane_rt.call_erased
     ++ str "("
     ++ prlist_with_sep pr_comma (pp_cpp_expr ctx env args) (f :: call_args)
     ++ str ")"
   | Function_value e ->
-    writes (Table.Runtime Cpp_ir.Crane_rt.fn_header);
+    writes (Base.Table.Runtime Cpp_ir.Crane_rt.fn_header);
     str Cpp_ir.Crane_rt.fn ++ str "(" ++ pp_cpp_expr ctx env args e ++ str ")"
   | Convert (ty, e) ->
-    writes Table.erase_fn_header;
+    writes Base.Table.erase_fn_header;
     str Cpp_ir.Crane_rt.convert
     ++ str "<"
     ++ pp_cpp_type ctx false [] ty
@@ -1262,7 +1262,7 @@ and pp_cpp_expr ctx env args (t : expr) =
   (* Whether the target boxes its elements was decided at the seam
      ({!Cpp_erasure.instantiate_foreign}). *)
   | Container_cast (ty, e, _) ->
-    writes Table.erase_fn_header;
+    writes Base.Table.erase_fn_header;
     str Cpp_ir.Crane_rt.container_cast ++ str "<"
     ++ pp_cpp_type ctx false [] ty
     ++ str ">("
@@ -1333,7 +1333,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
     (* A switch over an enum class, each case label qualified with the enum
        as resolution names it at a case label
        ({!Cpp_names.enumerator_qualifier}). *)
-    let type_name = Cpp_name.pp (Cpp_names.enumerator_qualifier ctx Case_label ind) in
+    let type_name = Base.Cpp_name.pp (Cpp_names.enumerator_qualifier ctx Case_label ind) in
     let ends_with_return (stmts : stmt list) =
       match List.rev stmts with
       | Return _ :: _ -> true
@@ -1394,7 +1394,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
   (* A compile-time branch on whether one type converts to another
      ({!Cpp_ir.Crane_rt.convertible}). *)
   | If_constexpr {test = Convertible (t1, t2); then_ = then_stmts; else_ = else_stmts} ->
-    writes Table.erase_fn_header;
+    writes Base.Table.erase_fn_header;
     str "if constexpr (" ++ str Cpp_ir.Crane_rt.convertible ++ str "<"
     ++ pp_cpp_type ctx false [] t1
     ++ str ", "
@@ -1440,7 +1440,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
           ++ fnl ()
           ++ str "}")
   | Foreign_text code ->
-    if Common.contains_substring code "std::vector" then
+    if Base.Common.contains_substring code "std::vector" then
       writes_standard "vector";
     str code
   | Comment text ->
@@ -1497,7 +1497,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
        in [Translation_match.gen_custom_cpp_case], which prepends a declaration before this node
        when the template uses %scrut more than once with a non-trivial
        scrutinee.  The printer writes the pieces. *)
-    Common.writes_custom cmatch.inductive;
+    Base.Common.writes_custom cmatch.inductive;
     let unbound what =
       CErrors.anomaly
         Pp.(str ("Custom syntax: unbound " ^ what ^ " in the match of ") ++ GlobRef.print cmatch.inductive) in
@@ -1767,11 +1767,11 @@ and pp_spliced ctx env ~followed_by_dot (arg_expr : expr) =
    pointer operator exactly where the tree says so
    ({!Cpp_ir.Written.written_with_leading_pointer_operator}). *)
 and check_leading_pointer_operator e printed =
-  if Probe.checking () then
+  if Base.Probe.checking () then
     let s = Pp.string_of_ppcmds printed in
     let rendered = String.length s > 0 && (s.[0] = '*' || s.[0] = '&') in
     if rendered <> I.Written.written_with_leading_pointer_operator e then
-      Probe.violation "leading pointer operator"
+      Base.Probe.violation "leading pointer operator"
         Pp.(str "the expression written " ++ str s ++ str (if rendered then " begins" else " does not begin")
             ++ str " with a prefix pointer operator, which its tree says it "
             ++ str (if rendered then "does not" else "does"))
@@ -1780,7 +1780,7 @@ and check_leading_pointer_operator e printed =
    arguments the use supplies written erased; a block's [%result] spelled
    [result]. *)
 and pp_foreign ?result ctx env vl (fr : foreign) =
-  Common.writes_custom fr.custom;
+  Base.Common.writes_custom fr.custom;
   let arg i = pp_cpp_type ctx false vl (Option.default I.Type.Any (List.nth_opt fr.types i)) in
   let piece ~followed_by_dot : I.Foreign.piece -> _ = function
     | (Text _ | Type_argument _ | Element _) as p -> pp_type_piece fr.custom arg p
@@ -1884,7 +1884,7 @@ let pp_template_param_redecl ctx (tt, id) = pp_template_type ctx tt ++ spc () ++
             present *)
 let pp_requires_of_tparams ctx tparams =
   let invocable_r =
-    if String.equal (Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
+    if String.equal (Base.Table.std_lib ()) "BDE" then "bsl::is_invocable_r_v"
     else "std::is_invocable_r_v"
   in
   let clauses =
@@ -1967,7 +1967,7 @@ let struct_template_head ~pp_param ctx env tparams cstr =
 
     @param indent  optional prefix prepended to every line (e.g. ["  "] for
     indented contexts such as enum values).  Defaults to [""]. *)
-let pp_doc_comment_for_name = Doc_comments.pp
+let pp_doc_comment_for_name = Base.Doc_comments.pp
 
 (** Where a member is being written.
 
@@ -2339,9 +2339,9 @@ and pp_cpp_fields_with_vis ~(struct_name : Pp.t) ctx env fields =
                     before use inside the function body
     @param expr_pp  already pretty-printed initializer expression *)
 let pp_meyers_singleton ctx env id (ty : ty) expr_pp =
-  if Probe.checking () then
+  if Base.Probe.checking () then
     if not (is_template_static_accessor ctx.unit (modpath_of_r id) (label_of_r id)) then
-      Probe.violation "template static accessors"
+      Base.Probe.violation "template static accessors"
         Pp.(str "the accessor " ++ GlobRef.print id ++ str " was printed without being planned");
   let bare_ty =
     match ty with
@@ -2375,13 +2375,13 @@ let nspace_wrapper_name ctx id = wrapper_name_from (declared_name ctx) id
     decision is asked again of what is printed: a sole struct, and a wrapper
     no other declaration of its module was planned into. *)
 let nspace_merges ctx (w : I.Decl.Namespace.wrapper) (members : decl list) =
-  ( if Probe.checking () then
+  ( if Base.Probe.checking () then
       let asked =
         (match members with [Struct _] -> true | _ -> false)
         && not (in_unmerged_wrapper_named ctx.unit (short_name ctx Type w.ref_) w.ref_)
       in
       if asked <> w.merges then
-        Probe.violation "wrapper merges"
+        Base.Probe.violation "wrapper merges"
           Pp.(
             str "the wrapper of " ++ str (nspace_wrapper_name ctx w.ref_) ++ str " was built "
             ++ str (if w.merges then "merged" else "unmerged")
@@ -2389,10 +2389,10 @@ let nspace_merges ctx (w : I.Decl.Namespace.wrapper) (members : decl list) =
   w.merges
 
 (** The name the struct of [id] is defined under. *)
-let struct_definition_name ctx id = Cpp_name.pp (Cpp_names.definition_name ctx Struct_definition id)
+let struct_definition_name ctx id = Base.Cpp_name.pp (Cpp_names.definition_name ctx Struct_definition id)
 
 (** The name the scoped enum of [r] is defined under. *)
-let enum_definition_name ctx r = Cpp_name.pp (Cpp_names.definition_name ctx Enum_definition r)
+let enum_definition_name ctx r = Base.Cpp_name.pp (Cpp_names.definition_name ctx Enum_definition r)
 
 (** The forward declaration of a struct or a scoped enum defined later: a
     struct's template head repeats the definition's constraint
@@ -2411,14 +2411,14 @@ let start_file_scope_census () = file_scope_types_written := GlobRef.Set.empty
 (** Under [CRANE_CHECK_IR], the types the file [file] introduced at file
     scope must be the ones planned for it. *)
 let check_file_scope_types ~file =
-  if Probe.checking () then begin
+  if Base.Probe.checking () then begin
     let written = !file_scope_types_written and planned = Cpp_state.file_scope_types_of file in
     file_scope_types_written := GlobRef.Set.empty;
     if not (GlobRef.Set.equal written planned) then
       let refs s = Pp.prlist_with_sep Pp.pr_comma GlobRef.print (GlobRef.Set.elements s) in
-      Probe.violation "file-scope types"
+      Base.Probe.violation "file-scope types"
         Pp.(
-          str "the " ++ str (Common.file_name file) ++ str " introduced "
+          str "the " ++ str (Base.Common.file_name file) ++ str " introduced "
           ++ refs (GlobRef.Set.diff written planned)
           ++ str " unplanned, and not "
           ++ refs (GlobRef.Set.diff planned written) )
@@ -2685,7 +2685,7 @@ and pp_leaf_decl ctx env (d : decl) =
       } ->
     let struct_name = struct_definition_name ctx id in
     note_file_scope_name ctx id;
-    if Probe.checking () then if ctx.in_struct then
+    if Base.Probe.checking () then if ctx.in_struct then
       printed_nested_struct (Pp.string_of_ppcmds struct_name) (Global id);
     let f_s =
       entering_from ctx
@@ -2723,7 +2723,7 @@ and pp_leaf_decl ctx env (d : decl) =
     ++ str "};"
   | Variable {ref_ = id; type_ = ty; init = e; constexpr = da_constexpr} ->
     let expr_pp = pp_initialiser ctx env ty e in
-    if ctx.in_template || (ctx.in_struct && Common.get_force_cross_file_qualification ()) then
+    if ctx.in_template || (ctx.in_struct && Base.Common.get_force_cross_file_qualification ()) then
       (* In template context or separate-extraction struct: use Meyers
          singleton so that module-type-parameter references via L::val()
          work for both template and non-template implementing modules. *)
@@ -2863,7 +2863,7 @@ and pp_leaf_decl ctx env (d : decl) =
        same way -- the standard library's [comparison] is emitted globally and
        a user type spelled [Comparison] inside the struct would otherwise
        capture every unqualified mention of it. *)
-    if Probe.checking () then if ctx.in_struct then
+    if Base.Probe.checking () then if ctx.in_struct then
       printed_nested_struct (Pp.string_of_ppcmds struct_name) (Global name);
     str "enum class "
     ++ struct_name
@@ -2888,14 +2888,14 @@ let resolved_type_name ctx (g : Cpp_ast.global_ref) = resolved ctx (Global (Type
 let resolved_concept ctx (c : Cpp_ast.concept_ref) = resolved ctx (Modtype_concept c.module_type) c.name
 (* The name a module declaration declares, as resolved. *)
 let pp_declared_module ctx (m : Cpp_ast.declared_module) =
-  Cpp_name.pp (resolved ctx (Module_declared m.declares) m.name)
+  Base.Cpp_name.pp (resolved ctx (Module_declared m.declares) m.name)
 
 let name_in ctx names frame key = name_from ctx names frame key
 
 (* A module named in a module expression, and its resolution. *)
 let pp_module_name ctx (m : Cpp_ast.module_ref) =
   let r = resolved_module ctx m in
-  (str (Cpp_name.to_string (resolved ctx (Module_in_expression m.path) m.in_expression)), r)
+  (str (Base.Cpp_name.to_string (resolved ctx (Module_in_expression m.path) m.in_expression)), r)
 
 (* Inside a class template a qualified module is a dependent name: an
    argument is preceded by [typename], and a functor applied is named
@@ -2904,7 +2904,7 @@ let pp_application ctx {Cpp_ast.functor_; args} =
   let in_template = ctx.in_template in
   let head =
     match pp_module_name ctx functor_ with
-    | _, r when in_template && resolved_is_qualified r -> Cpp_name.pp ~template_keyword:true r
+    | _, r when in_template && resolved_is_qualified r -> Base.Cpp_name.pp ~template_keyword:true r
     | head, _ -> head
   in
   let arg m =
@@ -2947,7 +2947,7 @@ let pp_functor_alias ctx name functor_ params =
   ++ str "using " ++ pp_declared_module ctx name ++ str " = "
   ++ str (resolved_string (resolved_module ctx functor_))
   ++ str "<"
-    ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Cpp_name.pp (resolved_module ctx m)) params ++ str ">;"
+    ++ prlist_with_sep (fun () -> str ", ") (fun (_, m) -> Base.Cpp_name.pp (resolved_module ctx m)) params ++ str ">;"
 
 (* The base is written inside the functor's template; a base specifier
    names a type, so a dependent one takes no [typename]. *)
@@ -2961,24 +2961,24 @@ let pp_derived_functor ctx template name (base : Cpp_ast.module_expr) =
    ({!Cpp_state.holder_parameter}). *)
 let pp_synthesised ctx (s : Cpp_ast.synthesised) =
   let body = Pp.string_of_ppcmds (pp_cpp_type ctx false s.vars s.body) in
-  if Probe.checking () && not (String.equal body s.planned) then
-    Probe.violation "constructor aliases"
+  if Base.Probe.checking () && not (String.equal body s.planned) then
+    Base.Probe.violation "constructor aliases"
       (str "the template " ++ str s.name ++ str " is declared with the body " ++ str body ++ str ", planned as "
      ++ str s.planned );
   match s.holder with
   | None ->
     str "template <typename " ++ str ctor_alias_tvar ++ str "> using " ++ str s.name ++ str " = " ++ str body ++ str ";"
   | Some params ->
-    (if Probe.checking () then
+    (if Base.Probe.checking () then
        let names = identifier_tokens body in
        let rec read i =
-         let f = Generated_name.indexed "F" i and p = Generated_name.indexed "P" i in
+         let f = Base.Generated_name.indexed "F" i and p = Base.Generated_name.indexed "P" i in
          if List.mem (Id.to_string f) names then Cpp_ast.Constructor_parameter f :: read (i + 1)
          else if List.mem (Id.to_string p) names then Cpp_ast.Type_parameter p :: read (i + 1)
          else []
        in
        if read 0 <> params then
-         Probe.violation "holder parameters"
+         Base.Probe.violation "holder parameters"
            (str "the holder " ++ str s.name ++ str " writes other parameters in its body than were planned for it"));
     let param : Cpp_ast.holder_parameter -> _ = function
       | Constructor_parameter f -> str "template <typename> class " ++ Id.print f
@@ -3014,7 +3014,7 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
     let tparams, name =
       match a with
       | Alias_of_type {target; definition; tparams} ->
-        (tparams, Cpp_name.pp (resolved ctx (Definition (definition, target.global)) target.name))
+        (tparams, Base.Cpp_name.pp (resolved ctx (Definition (definition, target.global)) target.name))
       | Alias_of_module m -> ([], Cpp_names.module_struct_name_of (resolved_module ctx m))
     in
     let args =
@@ -3029,4 +3029,4 @@ let pp_cpp_type_at ctx par vl t = pp_cpp_type ctx par vl t
 
 (* The type printer's entry for a type written outside every declaration of
    the tree, at the start of the header of the unit [u]. *)
-let pp_cpp_type ?lead u plans par vl t = pp_cpp_type ?lead (file_start u plans Common.Intf) par vl t
+let pp_cpp_type ?lead u plans par vl t = pp_cpp_type ?lead (file_start u plans Base.Common.Intf) par vl t

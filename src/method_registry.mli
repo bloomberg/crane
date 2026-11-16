@@ -103,7 +103,7 @@ type t
 
     Enum inductives (all-nullary constructors with no type parameters) are
     detected early during this pass and registered via
-    [Table.add_enum_inductive], since the method scanner needs to exclude them.
+    [Base.Table.add_enum_inductive], since the method scanner needs to exclude them.
 *)
 val create :
   ret_is_erased:(Id.t list -> Core.Type.t -> bool) ->
@@ -111,7 +111,7 @@ val create :
   t
 
 (** Tell the naming layer which functions the registry emits inside their
-    inductive's struct ({!Common.reserve_methodified}).  {!create} does not:
+    inductive's struct ({!Base.Common.reserve_methodified}).  {!create} does not:
     the unit being named reserves the methods of the registry it renders with
     ({!Cpp.prepare_structure}), after the unit's renaming tables are emptied. *)
 val reserve_names : t -> unit

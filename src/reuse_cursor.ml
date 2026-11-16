@@ -177,7 +177,7 @@ let own_value ty value =
   (* A custom computes a value of its own unless its text binds the result
      itself or yields its argument, or a field of it, as an lvalue. *)
   let computes r =
-    match Table.find_custom_opt r with
+    match Base.Table.find_custom_opt r with
     | None -> true
     | Some text -> (
       let t = Cpp_ir.Foreign.template_of_text text in
@@ -193,7 +193,7 @@ let own_value ty value =
     | Core.Expr.Tuple _ | Core.Expr.UInt63 _ | Core.Expr.Numeral _ | Core.Expr.Float64 _ | Core.Expr.String _ -> true
     | _ -> false
   in
-  fresh && (not (Type_util.is_prod_core_type ty)) && closure_free value
+  fresh && (not (Base.Type_util.is_prod_core_type ty)) && closure_free value
 
 exception Not_walked
 
@@ -224,7 +224,7 @@ let steps ~pointer_fields ~in_place (l : Term.loop) cursor =
   in
   let recycle env result (into : Term.continue_into) field =
     ( match result with
-    | Some ty when into.cells <> [] && Core_util.eq_core_type ty cursor_type -> ()
+    | Some ty when into.cells <> [] && Base.Core_util.eq_core_type ty cursor_type -> ()
     | Some _ | None -> raise Not_walked );
     let cells_read_first =
       List.concat

@@ -5,14 +5,14 @@
 
 
 (* A group recursing at a ground instance stays one under its new
-   occurrence ({!Table.add_erased_fix_group}). *)
+   occurrence ({!Base.Table.add_erased_fix_group}). *)
 let fix_occurrence occ =
   let occ' = Core.Occurrence.fresh () in
-  if Table.is_erased_fix_group occ then Table.add_erased_fix_group occ';
+  if Base.Table.is_erased_fix_group occ then Base.Table.add_erased_fix_group occ';
   occ'
 
 let rec term e =
-  match Core_util.ast_map term e with
+  match Base.Core_util.ast_map term e with
   | Core.Expr.Bound_variable {index = i; _} -> Core.Expr.fresh_rel i
   | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
     Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; occurrence = Core.Occurrence.fresh ()}

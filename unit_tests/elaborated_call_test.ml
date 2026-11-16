@@ -20,7 +20,7 @@ let nat_ref = r "nat"
 let nat = Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []}
 
 let declare s ty =
-  Table.add_frozen_type (r s) ty;
+  Base.Table.add_frozen_type (r s) ty;
   Core.Expr.Global (Core.Global_use.monomorphic (r s))
 
 let binder ?(role = Core.Lexenv.Value) s ty = {Core.Lexenv.id = Id.of_string s; type_ = ty; role = role}
@@ -31,7 +31,7 @@ let elaborate ?(lex = Core.Lexenv.empty) f args =
 let () =
   let a = declare "a" nat and b = declare "b" nat and c = declare "c" nat in
   let f = r "f" in
-  Table.add_frozen_type f (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
+  Base.Table.add_frozen_type f (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let exact = elaborate f [a; b] in
   check "a call at the callee's arity passes every argument"
     (exact.primary = [a; b] && exact.excess = [] && exact.regular = [a; b]);
@@ -47,7 +47,7 @@ let () =
   let partial = elaborate f [a] in
   check "a partial application passes what it has" (partial.primary = [a] && partial.excess = []);
   let g = r "g" in
-  Table.add_frozen_type g (Core.Type.Arrow {parameter = nat;
+  Base.Table.add_frozen_type g (Core.Type.Arrow {parameter = nat;
                                      result = Core.Type.Arrow
                                        {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = nat;
@@ -56,17 +56,17 @@ let () =
   check "a dummy at an erased domain is not a value argument"
     (eta.primary = [a; b] && eta.excess = []
     && eta.roles = [Elaborated_call.Regular; Dropped; Regular]);
-  check "the callee's declared type is kept" (eta.callee_type = Table.find_type g)
+  check "the callee's declared type is kept" (eta.callee_type = Base.Table.find_type g)
 
 (* A variable argument is a dictionary by the role its binder was bound
    with, not by its name: a declaration's class-typed parameter is one, a
    class-typed binder inside the body is a value. *)
 let () =
   let kn = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string "T"])) (Label.make "C")) in
-  Table.add_inductive_kind kn (Core.Inductive.Kind.Type_class []);
+  Base.Table.add_inductive_kind kn (Core.Inductive.Kind.Type_class []);
   let class_ty = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
   let h = r "h" in
-  Table.add_frozen_type h
+  Base.Table.add_frozen_type h
     (Core.Type.Arrow {parameter = class_ty; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let lex = Core.Lexenv.push [binder "x" nat; binder ~role:Core.Lexenv.Dictionary "inst" class_ty] Core.Lexenv.empty in
   let call = elaborate ~lex h [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1] in
@@ -83,7 +83,7 @@ let () =
    translated: a polymorphic use is rebuilt by every rewrite of its types. *)
 let () =
   let f = r "pf" in
-  Table.add_frozen_type f (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
+  Base.Table.add_frozen_type f (Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                                      variable = 1};
                                      result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                                   variable = 1}});
@@ -122,7 +122,7 @@ let () =
   check "the globals the declaration names, applied or not, are referenced"
     (List.sort GlobRef.UserOrd.compare (Core_elaborate.referenced elaborated)
     = List.sort GlobRef.UserOrd.compare [f; r "pa"]);
-  Common.end_planning ();
+  Base.Common.end_planning ();
   let walk = Some elaborated in
   ignore (Core_elaborate.elaboration ~walk ~lex:Core.Lexenv.empty rewritten [a]);
   ignore (Core_elaborate.elaboration ~walk ~lex:Core.Lexenv.empty again [a]);
@@ -154,7 +154,7 @@ let () =
 let () =
   let f = r "pk" in
   let a1 = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1} in
-  Table.add_frozen_type f (Core.Type.Arrow {parameter = a1;
+  Base.Table.add_frozen_type f (Core.Type.Arrow {parameter = a1;
                                      result = Core.Type.Arrow
                                        {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = a1;
@@ -184,7 +184,7 @@ let () =
     (Option.bind (inst.subst_index_of_orig (Param_pos.of_regular ~leading:0 0)) (Param_pos.nth inst.params)
     = Some nat);
   check "a call at its arity keeps the reading it was elaborated with"
-    (Core_util.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))
+    (Base.Core_util.Var_types.equal inst.tys (Call_tyargs.by_variable inst.call.tyargs))
 
 (* A function generated as a method of its inductive is generated, and its
    calls elaborated, at its variables renumbered so the inductive's come

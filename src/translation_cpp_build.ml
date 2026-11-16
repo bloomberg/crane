@@ -10,7 +10,7 @@
 open Names
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 
 (** What a branch throws when the scrutinee's indices rule it out.
 
@@ -60,7 +60,7 @@ let abort_ty : Cpp_ir.Lowered.Type.t option -> Cpp_ir.Lowered.Type.t = function
     no fields -- and the same object otherwise. *)
 let guard_compare n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_ir.Lowered.Stmt.t list) :
     Cpp_ir.Lowered.Stmt.t list =
-  match Table.find_guard_compare n with
+  match Base.Table.find_guard_compare n with
   | None -> body
   | Some ctor_ref ->
     let strip_wrappers t =
@@ -86,10 +86,10 @@ let guard_compare n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_ir.L
     | Some (p1, p2) ->
       let ctor_expr : Cpp_ir.Lowered.Expr.t =
         match ctor_ref with
-        | _ when Table.is_custom ctor_ref -> mk_cppglob ctor_ref []
+        | _ when Base.Table.is_custom ctor_ref -> mk_cppglob ctor_ref []
         | GlobRef.ConstructRef ((kn, i), cidx)
-          when Table.is_enum_inductive (GlobRef.IndRef (kn, i)) ->
-          let ctor_name = Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) in
+          when Base.Table.is_enum_inductive (GlobRef.IndRef (kn, i)) ->
+          let ctor_name = Id.of_string (Base.Common.enum_ctor_name_of_ref kn i cidx) in
           Enum_value (GlobRef.IndRef (kn, i), ctor_name)
         | GlobRef.ConstructRef ((kn, i), _cidx) ->
           let ind = GlobRef.IndRef (kn, i) in
@@ -102,7 +102,7 @@ let guard_compare n (ids : (Id.t * Cpp_ir.Lowered.Type.t) list) (body : Cpp_ir.L
       in
       let same : Cpp_ir.Lowered.Expr.t =
         match strip_wrappers (snd (List.find (fun (i, _) -> i = p1) ids)) with
-        | Entity_application (r, _, _) when Table.is_shared_variant r ->
+        | Entity_application (r, _, _) when Base.Table.is_shared_variant r ->
           let v x = Cpp_ir.Build.call (Access (Dot, Local x, Id.of_string "v")) [] in
           Access_call (Dot, v p1, Id.of_string "same_as", [v p2])
         | _ -> Binary (Equal, Unary (Address_of, Local p1), Unary (Address_of, Local p2))
@@ -279,7 +279,7 @@ let cpp_integer_range = function
     compiler at best and wraps silently at worst, so refuse it here, where the
     Rocq definition responsible can still be named. *)
 let render_numeral info (n : Z.t) : Cpp_ir.Lowered.Expr.t =
-  let cpp_ty = Table.find_custom_opt info.Table.ind in
+  let cpp_ty = Base.Table.find_custom_opt info.Base.Table.ind in
   ( match Option.bind cpp_ty cpp_integer_range with
   | Some (lo, hi) when Z.lt n lo || Z.gt n hi ->
     CErrors.user_err
@@ -287,7 +287,7 @@ let render_numeral info (n : Z.t) : Cpp_ir.Lowered.Expr.t =
          str "Crane: the literal " ++ str (Z.to_string n)
          ++ str " does not fit in " ++ str (Option.get cpp_ty)
          ++ str ", the C++ type "
-         ++ Printer.pr_global info.Table.ind
+         ++ Printer.pr_global info.Base.Table.ind
          ++ str " extracts to."))
   | _ -> () );
-  Numeral (info.Table.ind, {value = n; text = Common.render_template [("%n", Z.to_string n)] info.Table.fmt})
+  Numeral (info.Base.Table.ind, {value = n; text = Base.Common.render_template [("%n", Z.to_string n)] info.Base.Table.fmt})

@@ -28,7 +28,7 @@
     For the C++ backend it also records facts later stages cannot recover from
     the Core term alone: promoted type variables of type classes, higher-kinded
     parameter positions, class-argument shapes of instances, sigma-type
-    preconditions, and value-dependent type schemes (all in {!Table}). *)
+    preconditions, and value-dependent type schemes (all in {!Base.Table}). *)
 
 open Names
 open Declarations
@@ -38,7 +38,7 @@ open Evd
 (** Extract a single constant definition into a Core declaration: a [Core.Decl.Type_alias]
     for a type scheme, a [Core.Decl.Value] for anything else (an axiom's body is
     [Core.Expr.Axiom_value], a logical constant's [Core.Expr.Erased_value]).  A definition also records its
-    instance class shape and context instance applications in {!Table}.
+    instance class shape and context instance applications in {!Base.Table}.
     @param access Indirect accessor used to force opaque proof bodies when [access_opaque ()] is set
     @param env Rocq global environment
     @param kn The constant name to extract
@@ -53,7 +53,7 @@ val extract_constant :
     [Core.Signature.Declaration.Type]'s abbreviation; a term's [Def] body is
     extracted as the [Core.Signature.Declaration.Value]'s value.  A type scheme
     taking a value argument whose body does not extract is recorded with
-    {!Table.add_value_dep_type_scheme}. *)
+    {!Base.Table.add_value_dep_type_scheme}. *)
 val extract_constant_spec :
   env -> Constant.t -> ('a, 'b) pconstant_body -> Core.Signature.Declaration.extracted
 
@@ -67,7 +67,7 @@ val extract_with_type :
 
 (** Extract a mutual fixpoint definition into one [Core.Decl.Recursive_group], each member's body
     with the group's recursive [Rel]s replaced by its constants.  A cofixpoint
-    group's members are registered with {!Table.add_cofixpoint}.
+    group's members are registered with {!Base.Table.add_cofixpoint}.
     @param env Rocq global environment
     @param sg Evar map for universe and constraint tracking
     @param vkn Array of constant names for each mutually recursive component
@@ -83,7 +83,7 @@ val extract_fixpoint :
 
 (** Extract a (mutual) inductive type definition.  The result's constructor
     argument lists omit erased and implicit arguments; the cached
-    {!Table.lookup_ind} entry keeps them. *)
+    {!Base.Table.lookup_ind} entry keeps them. *)
 val extract_inductive : env -> MutInd.t -> Core.Inductive.t
 
 (** Extract a single term, for [Crane Show Extraction] on the current proof.

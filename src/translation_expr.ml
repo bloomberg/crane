@@ -8,13 +8,13 @@
     local fixpoint (as an immediately invoked lambda over statements) go to
     their modules, which recurse back through {!Translation_knot}. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
-open Table
+open Base.Core_util
+open Base.Table
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 open Translation_application
 open Translation_construct
@@ -23,10 +23,10 @@ open Translation_stmts
 
 (** The type variable the definition whose body is being generated returns
     boxed, its arguments carrying it only as a type index
-    ({!Type_util.index_only_result_tvar}): [Some 1] in [eval : expr A ->
+    ({!Base.Type_util.index_only_result_tvar}): [Some 1] in [eval : expr A ->
     A]. *)
 let own_index_only_result cx =
-  Option.bind (Option.bind cx.ctx.input.body_owner find_type_opt) Type_util.index_only_result_tvar
+  Option.bind (Option.bind cx.ctx.input.body_owner find_type_opt) Base.Type_util.index_only_result_tvar
 
 (** Under [CRANE_CHECK_IR], that the variable at de Bruijn index [i] is one
     binder to both of the scopes translation keeps: [env], which names it, and
@@ -38,13 +38,13 @@ let own_index_only_result cx =
     binder named and not typed: inside its methods it is a template parameter
     of the enclosing struct. *)
 let check_binder_scopes cx env i =
-  if Probe.checking () then
+  if Base.Probe.checking () then
     match (get_db_name_opt i env, get_env_binder_opt cx i) with
     | Some x, Some b when Id.equal x b.id -> ()
-    | Some x, None when Common.is_tc_instance_id x -> ()
+    | Some x, None when Base.Common.is_tc_instance_id x -> ()
     | x, b ->
       let name = Option.cata Id.print (Pp.str "nothing") in
-      Probe.violation "binder scopes"
+      Base.Probe.violation "binder scopes"
         Pp.(
           str "the variable at index " ++ int i ++ str " is " ++ name x ++ str " to the names in scope and "
           ++ name (Option.map (fun b -> b.id) b)
@@ -52,27 +52,27 @@ let check_binder_scopes cx env i =
 
 (** [unit_parameter_adapter x cglob] is the callable value of the global
     function [x], named [cglob], where its declaration left a [unit]
-    parameter out ({!Type_util.declaration_drops_binder}): a lambda taking one
+    parameter out ({!Base.Type_util.declaration_drops_binder}): a lambda taking one
     parameter per value domain of [x]'s type, as a slot of that type calls
     it, and forwarding the ones the declaration kept.  [None] where the
     declaration keeps every parameter, or is not one Crane writes. *)
 let unit_parameter_adapter cx x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t option =
-  if Table.is_custom x || Table.is_projection x || Option.has_some (Cpp_names.lookup_method_this_pos x) then None
+  if Base.Table.is_custom x || Base.Table.is_projection x || Option.has_some (Cpp_names.lookup_method_this_pos x) then None
   else
     match callee_core_type cx x with
     | None -> None
     | Some ty ->
       let doms =
-        List.filter (fun d -> not (Table.is_typeclass_type d)) (Type_util.core_value_domains ty)
+        List.filter (fun d -> not (Base.Table.is_typeclass_type d)) (Base.Type_util.core_value_domains ty)
       in
-      if not (List.exists Type_util.declaration_drops_binder doms) then None
+      if not (List.exists Base.Type_util.declaration_drops_binder doms) then None
       else
         let params =
           List.mapi
             (fun j d ->
               ( ( (Reference (Lvalue, Const Auto) : Cpp_ir.Lowered.Type.t),
                   Some (Id.of_string (Printf.sprintf "_wa%d" j)) ),
-                Type_util.declaration_drops_binder d ) )
+                Base.Type_util.declaration_drops_binder d ) )
             doms
         in
         let args =
@@ -111,7 +111,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     (core_e : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match core_e with
   (* [unit] has one value, so a read of a [unit] binder is that value: the
-     binder may have no C++ parameter at all ({!Type_util.declaration_drops_binder}). *)
+     binder may have no C++ parameter at all ({!Base.Type_util.declaration_drops_binder}). *)
   | Core.Expr.Bound_variable {index = i; _}
     when (match get_env_type_opt cx i with Some t -> core_type_is_unit t | None -> false) ->
     Translation_monadic.mk_tt_expr ()
@@ -125,17 +125,17 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
        component of it Core reads.  Never move a typeclass instance -- it is a type reference in the concept
        paradigm, not an owned value, and wrapping it produces invalid C++ like
        [std::move(_tcI0)::method()].  Recognised by identity rather than by Core
-       type: this binder is synthesised by {!Common.tc_instance_id}, and inside
+       type: this binder is synthesised by {!Base.Common.tc_instance_id}, and inside
        a generated instance method it is a template parameter of the enclosing
        struct, with no entry of its own in [env_types]. *)
     let move_candidate =
-      (not (Common.is_tc_instance_id x))
+      (not (Base.Common.is_tc_instance_id x))
       &&
       match Ownership_ir.use ~boxed:boxed_read cx.ctx.lexical.move_plan occ with
       | Some ((Share | Clone | Copy) as copy) ->
         (* The copy the plan names is the one the variable's declaration
            makes, where Core says what its type is. *)
-        ( if Probe.checking () && Ownership_ir.read_is_typed cx.ctx.lexical.move_plan occ then
+        ( if Base.Probe.checking () && Ownership_ir.read_is_typed cx.ctx.lexical.move_plan occ then
             match Translation_binders.binder_cpp_type cx i with
             (* [auto] says nothing of the type it deduces. *)
             | Some Cpp_ir.Type.(Auto | Const Auto | Reference (_, (Auto | Const Auto))) -> ()
@@ -143,7 +143,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
               let name : Ownership_ir.Use.t -> string = function
                 | Share -> "shares" | Clone -> "clones" | Copy -> "copies" | Move -> "moves" | Borrow -> "borrows"
               in
-              Probe.violation "copy mode"
+              Base.Probe.violation "copy mode"
                 Pp.(
                   str "the plan " ++ str (name copy) ++ str " " ++ Id.print x ++ str " where its declaration "
                   ++ str (name (Ownership_ir.copy_of_declared declared)) ++ str " it" )
@@ -151,7 +151,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
         false
       | Some use -> use = Move
       | None ->
-        Probe.violation "unplanned read"
+        Base.Probe.violation "unplanned read"
           Pp.(str "the read of " ++ Id.print x ++ str " is in no plan of the region it is lowered in");
         false
     in
@@ -251,9 +251,9 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
      ({!Core_normalize}): no head here is a global already applied, a
      coercion, or a one-branch match, and no numeral literal is spelled
      as a converter's application or as a constructor term. *)
-  | (Core.Expr.Apply _ | Core.Expr.Construct _) as e when Probe.checking ()
+  | (Core.Expr.Apply _ | Core.Expr.Construct _) as e when Base.Probe.checking ()
     && not (Core_normalize.canonical_application e) ->
-    Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
+    Base.Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
     gen_expr cx ?expected_ty ~slot env (Core_normalize.spine e)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: l} when Translation_monadic.is_effect cx Core_effects.Return use ->
@@ -290,14 +290,14 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     match built with
     | Call _ ->
       Cpp_ir.Build.call
-        (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Common.label_of_r f))))) [built]
+        (Runtime (Cpp_ir.Crane_rt.Constant (String.lowercase_ascii (Label.to_string (Base.Common.label_of_r f))))) [built]
     | _ -> built )
   | Core.Expr.Apply {callee = f; arguments = args} ->
     Translation_application.gen_application cx ~expected_ty ~slot env f args
   | Core.Expr.Lambda _ as a ->
     Translation_lambda.gen_lambda cx ~expected_ty ~slot env a
   | Core.Expr.Global ({callee = x; _} as use) when is_inline_custom x ->
-    let tys = Core_util.written_type_args use in
+    let tys = Base.Core_util.written_type_args use in
     let core_ty = callee_core_type_exn cx x in
     let ty = Translation_types.cpp_of_core cx env core_ty in
     ( match ty with
@@ -306,12 +306,12 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     | _ ->
       mk_cppglob
         ?yields:
-          (Translation_calls.glob_yields cx env x (Core_util.instantiate_written ~reader:"glob_yields" use))
+          (Translation_calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use))
         x
         (Translation_types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env
-           (List.map snd (Core_util.Var_types.bindings tys)) ) )
+           (List.map snd (Base.Core_util.Var_types.bindings tys)) ) )
   | Core.Expr.Global ({callee = x; _} as use) ->
-    let tys = Core_util.written_type_args use in
+    let tys = Base.Core_util.written_type_args use in
     let tvars = get_current_type_vars cx in
     (* Each argument with the variable it was written for. *)
     let by_var =
@@ -322,7 +322,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
             match t with
             | Variable (Index (_, None)) when tvars <> [] -> Cpp_ir.Type.Erased Type
             | _ -> t ) )
-        (Core_util.Var_types.bindings tys)
+        (Base.Core_util.Var_types.bindings tys)
     in
     (* An erased variable bound by a result: the [i]th of [names] stands for
        variable [i]. *)
@@ -377,7 +377,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     in
     let tys_cpp = List.map snd by_var in
     let yields =
-      Translation_calls.glob_yields cx env x (Core_util.instantiate_written ~reader:"glob_yields" use)
+      Translation_calls.glob_yields cx env x (Base.Core_util.instantiate_written ~reader:"glob_yields" use)
     in
     let cglob =
       mk_cppglob ?yields x (Translation_calls.written_at_variables cx x (filter_erased_keyed by_var))
@@ -459,7 +459,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
       match r with
       | GlobRef.ConstructRef ((kn, i), cidx) ->
         ( GlobRef.IndRef (kn, i),
-          Id.of_string (Common.enum_ctor_name_of_ref kn i cidx) )
+          Id.of_string (Base.Common.enum_ctor_name_of_ref kn i cidx) )
       | _ ->
         CErrors.anomaly
           (Pp.str "gen_expr: enum constructor expected ConstructRef")
@@ -479,7 +479,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     let built = gen_expr cx ?expected_ty ~slot:{slot with Translation_slot.building_constant = true} env e in
     match built with
     | Call (_, Type_member (Entity_application (n, _, _), _), _)
-      when Table.is_shared_variant n && ts <> [] ->
+      when Base.Table.is_shared_variant n && ts <> [] ->
       Cpp_ir.Build.call (Runtime (Cpp_ir.Crane_rt.Constant (constant_name e))) [built]
     | _ -> built )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} as construction ->
@@ -507,7 +507,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
   | Core.Expr.String s -> Literal (String s)
   | Core.Expr.UInt63 x -> Literal (Uint63 x)
   | Core.Expr.Numeral {inductive = ind; value = n} -> (
-    match Table.get_numeral_info ind with
+    match Base.Table.get_numeral_info ind with
     | Some info -> Translation_cpp_build.render_numeral info n
     | None ->
       CErrors.anomaly Pp.(str "a literal of " ++ Printer.pr_global ind ++ str ", which has no numeral mapping") )
@@ -546,7 +546,7 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
      consumer recovers it with a fixed [any_cast] and cannot know the
      concrete component types.  Extraction recorded both sides of this
      boundary, so ask for that shape whenever [into] is the erased one and
-     [from] is not.  See {!Type_util.slot_repr}. *)
+     [from] is not.  See {!Base.Type_util.slot_repr}. *)
   let into_box_kind =
     match coercion with
     | Some (from, into)
@@ -612,7 +612,7 @@ and gen_crossing cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot env ~coe
   in
   ( match expected_ty with
     | Some ty when not (Cpp_ir.Types.prints_as_any ty) && ty <> Void
-                  && not (match ty with Entity_application (g, _, _) -> Table.is_erased_type_const g | _ -> false) ->
+                  && not (match ty with Entity_application (g, _, _) -> Base.Table.is_erased_type_const g | _ -> false) ->
       (* The position's type, as the expressions below write it. *)
       let ty_ir = ty in
       let rec is_cpp_erased_var_rec = function

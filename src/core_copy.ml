@@ -23,7 +23,7 @@ let rec solve_rigid rigid e =
                 | _ -> s )
               inst ) )
     | _ -> e )
-  | e -> Core_util.ast_map (solve_rigid rigid) e
+  | e -> Base.Core_util.ast_map (solve_rigid rigid) e
 
 (* The callee's own open annotations and holes are renamed before [types]
    instantiates it: what the use solves a variable to belongs to the caller,
@@ -31,7 +31,7 @@ let rec solve_rigid rigid e =
    a number with one of them. *)
 let copy_with ~types ~rigid e =
   Fresh_occurrences.term
-    (solve_rigid rigid (Core_util.ast_map_types types (Core_util.freshen_holes (Core_util.freshen_metas e))))
+    (solve_rigid rigid (Base.Core_util.ast_map_types types (Base.Core_util.freshen_holes (Base.Core_util.freshen_metas e))))
 
 (* A copy at no instantiation. *)
 let copy = copy_with ~types:Fun.id ~rigid:(fun _ -> None)
@@ -50,7 +50,7 @@ let solutions use =
           | Core.Scheme.Type t -> Some t
           | Core.Scheme.Identity -> None )
     in
-    ((fun t -> (Core_util.Partial.instantiate inst t : Core.Phase.frozen Core_util.Partial.t :> Core.Type.t)), rigid)
+    ((fun t -> (Base.Core_util.Partial.instantiate inst t : Core.Phase.frozen Base.Core_util.Partial.t :> Core.Type.t)), rigid)
 
 let instance use body =
   let types, rigid = solutions use in
@@ -60,9 +60,9 @@ let instance use body =
    each argument then stands for its parameter, by substitution or a let. *)
 let call ~ty use body args =
   let types, _ = solutions use in
-  let ty = Core_util.type_simpl (types ty) in
-  let params, body = Type_util.collect_typed_lams ty (instance use body) in
-  let domains = Type_util.core_domains ty in
+  let ty = Base.Core_util.type_simpl (types ty) in
+  let params, body = Base.Type_util.collect_typed_lams ty (instance use body) in
+  let domains = Base.Type_util.core_domains ty in
   if List.length params <> List.length domains || List.length args <> List.length params then None
   else
     (* At the type {!Core_elaborate.declaration_scope} binds the parameter
@@ -77,11 +77,11 @@ let call ~ty use body args =
     let rec bind lifted = function
       | [] -> body
       | (_, ((Core.Expr.Bound_variable _ | Core.Expr.Erased_value _) as a)) :: rest ->
-        Core_util.ast_subst (Core_util.ast_lift lifted a) (bind (lifted + 1) rest)
+        Base.Core_util.ast_subst (Base.Core_util.ast_lift lifted a) (bind (lifted + 1) rest)
       | (((x, annotated), declared), a) :: rest ->
         Core.Expr.Let {binder = x;
                        binder_type = parameter_type annotated declared;
-                       value = Core_util.ast_lift lifted a;
+                       value = Base.Core_util.ast_lift lifted a;
                        body = bind (lifted + 1) rest;
                        occurrence = Core.Occurrence.fresh ()}
     in

@@ -4,7 +4,7 @@
 (** A term or program taken from one phase to another by mapping each of
     its annotations: what freezing a program does ({!Core_phase.freeze}),
     and what widening a frozen term does ({!Widen}).  The annotations are
-    visited in the order {!Core_util.ast_map_types} and
+    visited in the order {!Base.Core_util.ast_map_types} and
     {!Modutil.map_struct} visit them, so a mapping with an effect -- minting
     an open annotation for each unsolved metavariable it meets -- has it in
     the same order. *)

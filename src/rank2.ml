@@ -4,11 +4,11 @@
 open Names
 open Cpp_ir.Type
 
-let carrier_name = Generated_name.id "X"
+let carrier_name = Base.Generated_name.id "X"
 
 let quantifies_erased_type ty =
   let rec go ty =
-    match Type_util.resolve_meta ty with
+    match Base.Type_util.resolve_meta ty with
     | Core.Type.Unknown -> true
     | Core.Type.Global_app {type_arguments = args; _} | Core.Type.Variable_app {arguments = args; _} ->
       List.exists go args
@@ -33,6 +33,6 @@ let type_args_at_carrier x r =
     | GlobRef.IndRef (kn, _) | GlobRef.ConstructRef ((kn, _), _) -> Some kn
     | _ -> None
   in
-  match Option.bind kn Table.get_ind_num_param_vars_opt with
+  match Option.bind kn Base.Table.get_ind_num_param_vars_opt with
   | Some n when n > 0 -> Some (List.init n (fun _ -> carrier_type x))
   | _ -> None

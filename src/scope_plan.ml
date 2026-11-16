@@ -15,7 +15,7 @@ type t = {
   scopes : (ModPath.t * scope) list;
   nested : ModPath.t list;
   templated : ModPath.t list;
-  visibility : (ModPath.t * Common.visibility) list;
+  visibility : (ModPath.t * Base.Common.visibility) list;
   local_inductives : (ModPath.t * GlobRef.t list) list;
   frames : (ModPath.t * ModPath.t list) list;
 }
@@ -27,7 +27,7 @@ let equal_plans a b =
   && List.equal ModPath.equal a.nested b.nested
   && List.equal ModPath.equal a.templated b.templated
   && List.equal
-       (fun (mp, v) (mp', v') -> ModPath.equal mp mp' && Common.equal_visibility v v')
+       (fun (mp, v) (mp', v') -> ModPath.equal mp mp' && Base.Common.equal_visibility v v')
        a.visibility b.visibility
   && List.equal
        (fun (mp, l) (mp', l') -> ModPath.equal mp mp' && List.equal GlobRef.UserOrd.equal l l')
@@ -40,7 +40,7 @@ type bound = {
   scope_of : scope MPmap.t;
   nested_in : MPset.t;
   templated_in : MPset.t;
-  visibility_of : Common.visibility MPmap.t;
+  visibility_of : Base.Common.visibility MPmap.t;
   local_inductives_of : GlobRef.t list MPmap.t;
   frames_of : ModPath.t list MPmap.t;
 }
@@ -67,11 +67,11 @@ let frames b mp = MPmap.find_opt mp b.frames_of
 
 let of_declaration layout b r =
   let origin =
-    match Lifted.of_ref r with
+    match Base.Lifted.of_ref r with
     | Some helper -> (
-      match Lifted.origin helper with
+      match Base.Lifted.origin helper with
       | Some o when Module_plan.is_namespace_scope_ref layout o -> None
       | origin -> origin )
     | None -> Some r
   in
-  Option.bind origin (fun o -> of_module b (Table.modpath_of_r o))
+  Option.bind origin (fun o -> of_module b (Base.Table.modpath_of_r o))

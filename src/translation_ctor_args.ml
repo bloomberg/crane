@@ -9,9 +9,9 @@
 open Names
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
-open Table
+open Base.Table
 
 (** [core_ast_type_hint e] is the Core type [e] carries, when it carries one: a
     constructor's own annotation, or the source type of a coercion extraction
@@ -20,7 +20,7 @@ open Table
 let rec core_ast_type_hint = function
   | Core.Expr.Construct {result_type = t; _} -> Some t
   | Core.Expr.Coerce {source_type = from; value = inner; _} ->
-    ( match Type_util.resolve_meta from with
+    ( match Base.Type_util.resolve_meta from with
     | Core.Type.Unknown | Core.Type.Erased _ -> core_ast_type_hint inner
     (* A function value's representation at a slot it is coerced into is the
        boxed one [crane_erase_fn] produces, never its own arrow type: grounding
@@ -134,7 +134,7 @@ let expected_type_args_from_return cx env ?slot ind ~arity =
     | Entity_application (_, tys, _) when List.exists (fun t -> go t <> None) tys ->
       List.find_map go tys
     | Entity_application (GlobRef.ConstRef kn, _, _) -> (
-      match Table.lookup_typedef_unchecked kn with
+      match Base.Table.lookup_typedef_unchecked kn with
       | Some core_ty ->
         go (Translation_types.cpp_of_core cx env core_ty)
       | None -> None )
@@ -155,7 +155,7 @@ let ctor_arg_is_passthrough r i =
   match r with
   | GlobRef.ConstructRef ((kn, mi), cidx) ->
     ( try
-        let tmpl = List.nth (Table.find_custom_ctor_templates (kn, mi)) (cidx - 1) in
+        let tmpl = List.nth (Base.Table.find_custom_ctor_templates (kn, mi)) (cidx - 1) in
         String.trim tmpl = Printf.sprintf "%%a%d" i
       with _ -> false )
   | _ -> false
@@ -165,7 +165,7 @@ let ctor_arg_is_passthrough r i =
     the inductive's parameters, converted, where every one erases the
     promoted types of [promoted_active]'s arity or, failing that, [return]'s
     arguments when it is the same inductive; an unresolved one written down as
-    a box ({!Type_util.materialise_opaque}). *)
+    a box ({!Base.Type_util.materialise_opaque}). *)
 let ctor_draft_temps cx env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t option) (ty : Core.Type.t) =
   let temps =
     match ty with
@@ -173,7 +173,7 @@ let ctor_draft_temps cx env ~promoted_active ~(return : Cpp_ir.Lowered.Type.t op
       let tys =
         match cn with
         | GlobRef.IndRef (kn, _) -> (
-          match Table.get_ind_num_param_vars_opt kn with
+          match Base.Table.get_ind_num_param_vars_opt kn with
           | Some nv -> safe_firstn nv raw_tys
           | None -> raw_tys )
         | _ -> raw_tys
@@ -222,7 +222,7 @@ let stores_erased_fn cx ?var env r ~field_tys ~(temps : Cpp_ir.Lowered.Type.t li
 let erased_fn_lambda cx env e =
   match strip_magic e with
   | Core.Expr.Lambda {parameter = id; parameter_type = ty; body} ->
-    if Type_util.has_tany_in_type (Translation_types.cpp_of_core cx env ty) then
+    if Base.Type_util.has_tany_in_type (Translation_types.cpp_of_core cx env ty) then
       Core.Expr.Lambda {parameter = id; parameter_type = ty; body = mark_own_param_for_pair_erasure 1 body}
     else Core.Expr.Lambda {parameter = id;
                            parameter_type = Core.Type.Unknown;

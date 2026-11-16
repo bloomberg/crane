@@ -23,8 +23,8 @@
     ]}
 
     {b Side-effect caveat.} Unlike a naive render-time resolver, {!create} must
-    avoid [Common.pp_global] / [Common.pp_global_name], because those mutate
-    [Common]'s renaming tables; touching them at cache-creation time would emit
+    avoid [Base.Common.pp_global] / [Base.Common.pp_global_name], because those mutate
+    [Base.Common]'s renaming tables; touching them at cache-creation time would emit
     premature renaming entries and change the output. This is why no name is
     pre-computed. *)
 

@@ -20,28 +20,28 @@
 
 open Pp
 open Names
-open Table
-open Common
+open Base.Table
+open Base.Common
 
 (** {2 Owned cells}
 
     Every mutable cell this module owns is created by one of the constructors
-    below, which enrol it in {!reset_cpp_state} and in {!Table.census} at the
+    below, which enrol it in {!reset_cpp_state} and in {!Base.Table.census} at the
     point it is defined, so no cell can exist that the reset or the census
     misses. *)
 
-let on_reset f = State.on_reset State.Extraction f
+let on_reset f = Base.State.on_reset Base.State.Extraction f
 
 (** A hash table owned by this module, emptied between extractions.
 
     @param census
-      report the table's size to {!Table.census} under [name].  Pass [false] for
+      report the table's size to {!Base.Table.census} under [name].  Pass [false] for
       a cell that emission legitimately fills, which the census's late-decision
       check reads as a decision taken too late. *)
 let owned_table ?(census = true) name =
   let t = Hashtbl.create 16 in
   on_reset (fun () -> Hashtbl.clear t);
-  if census then Table.register_census name (fun () -> Hashtbl.length t);
+  if census then Base.Table.register_census name (fun () -> Hashtbl.length t);
   t
 
 (** A list-valued ref owned by this module, emptied between extractions.  See
@@ -49,7 +49,7 @@ let owned_table ?(census = true) name =
 let owned_list ?(census = true) name =
   let r = ref [] in
   on_reset (fun () -> r := []);
-  if census then Table.register_census name (fun () -> List.length !r);
+  if census then Base.Table.register_census name (fun () -> List.length !r);
   r
 
 (** A ref owned by this module, restored to [init] between extractions.  It
@@ -315,7 +315,7 @@ let keywords =
        [std::shared_ptr] from every member after it. *)
     (List.fold_right
        (fun s -> Id.Set.add (Id.of_string s))
-       Table.reserved_global_cpp_names Id.Set.empty)
+       Base.Table.reserved_global_cpp_names Id.Set.empty)
 
 (** Names the C and POSIX libraries declare at global scope.
 
@@ -329,7 +329,7 @@ let keywords =
 
     So these are reserved only where a declaration reaches global scope, and
     left alone inside a namespace or struct, where no C library name can reach
-    them.  See {!Common.is_reserved_at_global_scope}. *)
+    them.  See {!Base.Common.is_reserved_at_global_scope}. *)
 let c_library_globals =
   List.fold_right
     (fun s -> Id.Set.add (Id.of_string s))
@@ -558,8 +558,8 @@ type naming = No_names | Naming_live of live_namers | Names_resolved of Cpp_reso
    answers any key: what the naming functions shared with the printer call
    where the resolver uses them. *)
 and live_namers = {
-  key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
-  global : render_ctx -> Common.kind -> GlobRef.t -> Cpp_name.t;
+  key : render_ctx -> Cpp_resolution.key -> Base.Cpp_name.t;
+  global : render_ctx -> Base.Common.kind -> GlobRef.t -> Base.Cpp_name.t;
   inline : GlobRef.t -> string option;
   head : render_ctx -> Cpp_resolution.head_form -> GlobRef.t -> Cpp_resolution.head;
   value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
@@ -583,7 +583,7 @@ and tyctor_decision = {
     position is installed anywhere for a reader to find. *)
 and render_ctx = {
   (* The file being written. *)
-  file : Common.file;
+  file : Base.Common.file;
   (* Inside a struct body? Affects qualification of nested type references. *)
   in_struct : bool;
   (* Type_class concepts already emitted for the current module? *)
@@ -608,7 +608,7 @@ and render_ctx = {
      planned it, where nothing may be named.  The layers of the scopes
      entered inside it are added where the resolver reads it
      ({!Cpp_names.visibility_at}). *)
-  visibility : Common.visibility option;
+  visibility : Base.Common.visibility option;
   (* Where the synthesised templates spelled from here are collected, if
      anything collects them. *)
   aliases : ctor_alias list ref option;
@@ -654,17 +654,17 @@ end
    variables' aliases.  A definition written out of line qualifies the plain
    names in its signature with its struct's, which is right for a member and
    wrong for one of these aliases. *)
-let header_file_scope : File_scope.t option ref = State.cell State.Unit None
+let header_file_scope : File_scope.t option ref = Base.State.cell Base.State.Unit None
 
 let file_scope_types_of file =
   match (file, !header_file_scope) with
-  | Common.Intf, Some fs -> fs.types
-  | (Common.Intf | Common.Impl), _ -> GlobRef.Set.empty
+  | Base.Common.Intf, Some fs -> fs.types
+  | (Base.Common.Intf | Base.Common.Impl), _ -> GlobRef.Set.empty
 
 let file_scope_aliases_of file =
   match (file, !header_file_scope) with
-  | Common.Intf, Some fs -> fs.aliases
-  | (Common.Intf | Common.Impl), _ -> Id.Set.empty
+  | Base.Common.Intf, Some fs -> fs.aliases
+  | (Base.Common.Intf | Base.Common.Impl), _ -> Id.Set.empty
 
 (** The modules whose module types are file-scope concepts of a functor
     ({!Module_plan.concept_scope}): a functor's body, an application of the
@@ -695,7 +695,7 @@ let concept_plan plans mp =
       Pp.(str "Crane: the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned concepts.")
 
 let planned_held_back plans scopes ~file mp =
-  match (file : Common.file) with
+  match (file : Base.Common.file) with
   | Intf -> (
     match Scope_plan.frames scopes mp with
     | Some frames -> List.concat_map (fun m -> (concept_plan plans m).held_back) frames
@@ -846,7 +846,7 @@ type std_names = Unit_context.std_names = {
   get_if : string; (* "std::get_if" or "bsl::get_if" *)
   get : string; (* "std::get" or "bsl::get" *)
   variant : string; (* "std::variant", "bsl::variant" or "crane::variant" *)
-  variant_header : Table.header; (* the header [variant] is declared in *)
+  variant_header : Base.Table.header; (* the header [variant] is declared in *)
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
 }
 
@@ -864,15 +864,15 @@ let mk_std_names prefix =
       convertible_to = "convertible_to";
       holds_alternative = p ^ "holds_alternative";
       get_if = p ^ "get_if"; get = p ^ "get";
-      variant = p ^ "variant"; variant_header = Table.Standard "variant";
+      variant = p ^ "variant"; variant_header = Base.Table.Standard "variant";
       enable_from_this = p ^ "enable_shared_from_this" }
   | _ -> default_std_names
 
-let std_namespace () = if Table.std_lib () = "BDE" then "bsl" else "std"
+let std_namespace () = if Base.Table.std_lib () = "BDE" then "bsl" else "std"
 
 let std_names_of (u : Unit_context.t) =
   let base =
-    if Table.std_lib () = "BDE" then mk_std_names "bsl::"
+    if Base.Table.std_lib () = "BDE" then mk_std_names "bsl::"
     else mk_std_names "std::"
   in
   (* [Crane NonAtomicRc]: swap the recursive-field smart pointer to the
@@ -881,20 +881,20 @@ let std_names_of (u : Unit_context.t) =
   (* [Crane FastVariant]: alternatives in [crane::variant], and the matching
      accessors. *)
   let base =
-    if Table.fast_variant () then
+    if Base.Table.fast_variant () then
       { base with
         variant = Cpp_ir.Crane_rt.variant;
-        variant_header = Table.Runtime Cpp_ir.Crane_rt.variant_header;
+        variant_header = Base.Table.Runtime Cpp_ir.Crane_rt.variant_header;
         holds_alternative = "crane::holds_alternative";
         get_if = "crane::get_if";
         get = "crane::get" }
-    else if Table.shared_variant () then
+    else if Base.Table.shared_variant () then
       (* [Crane SharedVariant] without FastVariant: inline types keep
          [std::variant], and every match reads through the [crane::]
          accessors, which take a shared variant and forward a [std::variant]
          to [std::]. *)
       { base with
-        variant_header = Table.Runtime Cpp_ir.Crane_rt.variant_header;
+        variant_header = Base.Table.Runtime Cpp_ir.Crane_rt.variant_header;
         holds_alternative = "crane::holds_alternative";
         get_if = "crane::get_if";
         get = "crane::get" }
@@ -952,15 +952,15 @@ let unmerged_wrapper (u : Unit_context.t) name = CString.Map.find_opt name u.unm
     another file is not in one of them. *)
 let in_unmerged_wrapper_named u short r =
   let mp = modpath_of_r r in
-  (not (Common.under_mp_bound mp))
+  (not (Base.Common.under_mp_bound mp))
   &&
   match unmerged_wrapper u (String.capitalize_ascii short) with
   | None -> false
   | Some wrapped ->
-    (not (Common.get_force_cross_file_qualification ()))
+    (not (Base.Common.get_force_cross_file_qualification ()))
     || ModPath.equal (base_mp mp) (base_mp wrapped)
 
-let in_unmerged_wrapper u r = in_unmerged_wrapper_named u (Common.pp_global_name Type r) r
+let in_unmerged_wrapper u r = in_unmerged_wrapper_named u (Base.Common.pp_global_name Type r) r
 
 type nested_struct_owner = Struct_plan.nested_struct_owner = Global of GlobRef.t | Module of ModPath.t
 
@@ -968,18 +968,18 @@ let nested_struct_owner_equal = Struct_plan.nested_struct_owner_equal
 
 (** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]:
     the unit's planned ones must be exactly these. *)
-let rendered_promotions : GlobRef.t list ref = State.cell State.Unit []
+let rendered_promotions : GlobRef.t list ref = Base.State.cell Base.State.Unit []
 
-let rendered_promotion r = if Probe.checking () then rendered_promotions := r :: !rendered_promotions
+let rendered_promotion r = if Base.Probe.checking () then rendered_promotions := r :: !rendered_promotions
 
 (** The nested structs the printer printed, under [CRANE_CHECK_IR]: the
     unit's planned ones must be exactly these ({!printed_nested_struct}). *)
-let printed_nested_structs : (string * nested_struct_owner) list ref = State.cell State.Unit []
+let printed_nested_structs : (string * nested_struct_owner) list ref = Base.State.cell Base.State.Unit []
 
 (** Record that the printer printed [owner] as a nested struct named
     [name]. *)
 let printed_nested_struct name owner =
-  if Probe.checking () then printed_nested_structs := (name, owner) :: !printed_nested_structs
+  if Base.Probe.checking () then printed_nested_structs := (name, owner) :: !printed_nested_structs
 
 let add_nested_struct_name = Struct_plan.add_nested_struct_name
 
@@ -988,7 +988,7 @@ let add_nested_struct_name = Struct_plan.add_nested_struct_name
     struct, so the reference needs the enclosing struct's qualifier. *)
 let is_nested_struct_ref (u : Unit_context.t) r =
   CString.Map.exists
-    (fun _name owners -> List.exists (function Global r' -> Common.globref_equal r r' | _ -> false) owners)
+    (fun _name owners -> List.exists (function Global r' -> Base.Common.globref_equal r r' | _ -> false) owners)
     u.nested_structs
 
 (** Whether [r], rendered unqualified as [name], is shadowed by some nested
@@ -1002,7 +1002,7 @@ let is_shadowed_global_name (u : Unit_context.t) name r =
     | Global r' -> ModPath.equal (base_mp (modpath_of_r r')) (base_mp (modpath_of_r r))
     | Module mp -> ModPath.equal (base_mp mp) (base_mp (modpath_of_r r))
   in
-  let may_shadow owner = (not (Common.get_force_cross_file_qualification ())) || same_file owner in
+  let may_shadow owner = (not (Base.Common.get_force_cross_file_qualification ())) || same_file owner in
   match CString.Map.find_opt name u.nested_structs with
   | Some owners ->
     let owners = List.filter may_shadow owners in
@@ -1011,10 +1011,10 @@ let is_shadowed_global_name (u : Unit_context.t) name r =
 
 (** The struct a bystander [mp] keeps inside its collision wrapper: its
     module's name, which planning decided when it planned the wrapper
-    ({!Common.decided_module_name}).  Read, never decided: a name first
+    ({!Base.Common.decided_module_name}).  Read, never decided: a name first
     decided here would be decided by whatever wrote a reference first. *)
 let bystander_struct_name mp =
-  match Common.decided_module_name mp with
+  match Base.Common.decided_module_name mp with
   | Some name -> name
   | None ->
     CErrors.anomaly
@@ -1036,26 +1036,26 @@ let bystander_struct_name mp =
       wrapping [N]); a bystander's stays, the wrapper's name going in front of
       it unless already there.  Under an ordinary wrapper ([List] wrapping
       [list]) the qualification is already complete. *)
-let wrapper_qualify layout (r : GlobRef.t) (name : Cpp_name.t) : Cpp_name.t =
+let wrapper_qualify layout (r : GlobRef.t) (name : Base.Cpp_name.t) : Base.Cpp_name.t =
   match r with
   | GlobRef.VarRef _ -> name
   | _ when Module_plan.is_namespace_scope_ref layout r -> name
   | _ -> (
     let mp = modpath_of_r r in
     match (Module_plan.wrapper layout mp, name) with
-    | None, _ | _, Cpp_name.Foreign _ -> name
-    | Some (struct_name, role), Cpp_name.Name {scopes = []; base} ->
+    | None, _ | _, Base.Cpp_name.Foreign _ -> name
+    | Some (struct_name, role), Base.Cpp_name.Name {scopes = []; base} ->
       let through_child =
-        if role = Module_plan.Bystander then [Cpp_name.Class (bystander_struct_name mp)]
+        if role = Module_plan.Bystander then [Base.Cpp_name.Class (bystander_struct_name mp)]
         else []
       in
-      Cpp_name.name (Cpp_name.Class struct_name :: through_child) base
-    | Some (_, Module_plan.Flattened), Cpp_name.Name {scopes = Cpp_name.Global :: _; _} -> name
-    | Some (struct_name, Module_plan.Flattened), Cpp_name.Name {scopes = _ :: inner; base} ->
-      Cpp_name.name (Cpp_name.Class struct_name :: inner) base
-    | Some (struct_name, Module_plan.Bystander), Cpp_name.Name {scopes = first :: _; _} ->
-      if first <> Cpp_name.Global && String.equal (Cpp_name.scope_text first) struct_name then name
-      else Cpp_name.within (Cpp_name.Class struct_name) name
+      Base.Cpp_name.name (Base.Cpp_name.Class struct_name :: through_child) base
+    | Some (_, Module_plan.Flattened), Base.Cpp_name.Name {scopes = Base.Cpp_name.Global :: _; _} -> name
+    | Some (struct_name, Module_plan.Flattened), Base.Cpp_name.Name {scopes = _ :: inner; base} ->
+      Base.Cpp_name.name (Base.Cpp_name.Class struct_name :: inner) base
+    | Some (struct_name, Module_plan.Bystander), Base.Cpp_name.Name {scopes = first :: _; _} ->
+      if first <> Base.Cpp_name.Global && String.equal (Base.Cpp_name.scope_text first) struct_name then name
+      else Base.Cpp_name.within (Base.Cpp_name.Class struct_name) name
     | Some _, _ -> name )
 
 (** The candidate a function the render meets is as a method of [epon_ref]
@@ -1108,7 +1108,7 @@ let current_structure_decls : (Label.t * Core.Module.Structure_item.t) list ref 
     cannot affect the next.  Every cell created by {!owned_table},
     {!owned_list} or {!owned_ref} is emptied; the rest is state other modules
     own that only this one knows to reset. *)
-let reset_cpp_state () = State.reset State.Extraction
+let reset_cpp_state () = Base.State.reset Base.State.Extraction
 
 (** Check if a function is a projection for the eponymous record. Such
     projections are redundant when the record fields are merged into the module
@@ -1117,8 +1117,8 @@ let is_eponymous_record_projection r =
   match !eponymous_record with
   | None -> false
   | Some (epon_ref, _, _) ->
-    if Table.is_projection r then
-      let ip, _arity = Table.projection_info r in
+    if Base.Table.is_projection r then
+      let ip, _arity = Base.Table.projection_info r in
       (* Check if this projection's inductive matches the eponymous record *)
       globref_equal (GlobRef.IndRef ip) epon_ref
     else
@@ -1127,7 +1127,7 @@ let is_eponymous_record_projection r =
 (** Whether a projection is suppressed: [higher_order] does not say it is
     used as a function value, so it is not rendered as a standalone
     function. *)
-let is_suppressed_projection ~higher_order r = Table.is_projection r && not (higher_order r)
+let is_suppressed_projection ~higher_order r = Base.Table.is_projection r && not (higher_order r)
 
 (** Filter a Core.Decl.Recursive_group group, removing entries that are inline customs, registered
     methods (every method candidate is one), eponymous record projections, or

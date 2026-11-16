@@ -8,7 +8,7 @@
     nothing else in translation; every lowering module and the position and
     representation plans pass slots. *)
 
-open Type_util
+open Base.Type_util
 
 (** What the position a subterm occupies tells the generator about how to
     build it.  These properties travel together down every position whose

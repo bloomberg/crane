@@ -15,7 +15,7 @@ type field = Recursive of int | Boxed of int
 (** The 0-based index of the field. *)
 val index : field -> int
 
-(** A constructor struct's key: {!Common.ctor_owner_key} of its inductive
+(** A constructor struct's key: {!Base.Common.ctor_owner_key} of its inductive
     and the struct's capitalised name (e.g. ["Cons"]); the owner is part of
     it because a constructor name alone does not identify a struct -- two
     inductives may each have a [Cons], with different fields. *)

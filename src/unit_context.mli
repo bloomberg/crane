@@ -28,7 +28,7 @@ type std_names = {
   get_if : string;
   get : string;
   variant : string;  (** the tagged union inductives store alternatives in *)
-  variant_header : Table.header;  (** the header declaring {!variant} *)
+  variant_header : Base.Table.header;  (** the header declaring {!variant} *)
   enable_from_this : string;  (** the base a type that hands out pointers to itself derives from *)
 }
 
@@ -36,7 +36,7 @@ type std_names = {
 val default_std_names : std_names
 
 type t = {
-  config : Table.unit_config;
+  config : Base.Table.unit_config;
       (** The unit's configuration ({!Target_plan.t.config}): whether it
           runs on several threads, which withholds a [Crane NonAtomicRc] or
           [Crane SingleThreaded] request. *)
@@ -93,16 +93,16 @@ type t = {
 
 (** [make ~config] is the context of a unit configured as [config], with
     no plan decided. *)
-val make : config:Table.unit_config -> t
+val make : config:Base.Table.unit_config -> t
 
 (** The context of a declaration extracted outside every unit: one that
     runs on one thread. *)
 val detached : t
 
-(** {!Table.non_atomic_rc_for} the unit's configuration. *)
+(** {!Base.Table.non_atomic_rc_for} the unit's configuration. *)
 val non_atomic_rc : t -> bool
 
-(** {!Table.count_rc_for} the unit's configuration. *)
+(** {!Base.Table.count_rc_for} the unit's configuration. *)
 val count_rc : t -> bool
 
 (** Whether the inductive is promoted in the unit

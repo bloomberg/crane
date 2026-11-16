@@ -37,7 +37,7 @@
     captures by reference ({!Ownership_ir.Local_captures}) must be written
     capturing by reference and must not escape the block that binds it.
 
-    Under [CRANE_CHECK_IR] each violation is reported ({!Probe.violation}). *)
+    Under [CRANE_CHECK_IR] each violation is reported ({!Base.Probe.violation}). *)
 
 (** Check every function and method body of a declaration, nested
     namespaces, templates and structs included, and report each violation

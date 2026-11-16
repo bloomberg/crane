@@ -18,8 +18,8 @@
 
 open Pp
 open Names
-open Table
-open Common
+open Base.Table
+open Base.Common
 open Cpp_state
 
 (** {2 Global name printing} *)
@@ -27,13 +27,13 @@ open Cpp_state
 (* The resolver's naming of a key at a position ({!live_name}), for the
    checks below only: it is defined last, since it names through the
    functions here. *)
-let live_name_for_checks : (render_ctx -> Cpp_resolution.key -> Cpp_name.t) ref =
+let live_name_for_checks : (render_ctx -> Cpp_resolution.key -> Base.Cpp_name.t) ref =
   ref
     (fun _ key ->
       CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " checked before the resolver exists."))
 
 let violation_resolved key n here =
-  Probe.violation "names resolved"
+  Base.Probe.violation "names resolved"
     Pp.(
       Cpp_resolution.pp_key key ++ str " was resolved as " ++ str n
       ++ str " where the declaration naming it is written, and is named " ++ str here ++ str " where it is printed" )
@@ -42,9 +42,9 @@ let violation_resolved key n here =
    under CRANE_CHECK_IR it must be [key]'s name at [c], where it is
    printed. *)
 let checked c key n =
-  ( if Probe.checking () then
+  ( if Base.Probe.checking () then
       let here = !live_name_for_checks c key in
-      if not (Cpp_name.equal n here) then violation_resolved key (Cpp_name.to_string n) (Cpp_name.to_string here) );
+      if not (Base.Cpp_name.equal n here) then violation_resolved key (Base.Cpp_name.to_string n) (Base.Cpp_name.to_string here) );
   n
 
 (* The resolver's writing of a global type's head at a position, for the
@@ -78,11 +78,11 @@ let inside_inductive_struct r v =
   match r with
   | GlobRef.IndRef ((kn, i) as ind) ->
     let ctors =
-      List.init (Option.default 0 (Table.get_ind_nb_ctors_opt kn i)) (fun j ->
-          Type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)) )
+      List.init (Option.default 0 (Base.Table.get_ind_nb_ctors_opt kn i)) (fun j ->
+          Base.Type_util.ctor_struct_id_of_ref (GlobRef.ConstructRef (ind, j + 1)) )
     in
     let scope =
-      Label.make (Printf.sprintf "%sstruct_%s_%d" Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
+      Label.make (Printf.sprintf "%sstruct_%s_%d" Base.Common.crane_local_prefix (Label.to_string (MutInd.label kn)) i)
     in
     let innermost =
       match visible_mps v with mp :: _ -> mp | [] -> CErrors.anomaly (Pp.str "Crane: no scope is visible.") in
@@ -122,7 +122,7 @@ let named (c : render_ctx) key =
   | Names_resolved names -> name_from c names c.frame key
 
 let pp_head (h : Cpp_resolution.head) =
-  Pp.string_of_ppcmds (Cpp_name.pp_scopes h.outer) ^ Cpp_name.to_string h.head
+  Pp.string_of_ppcmds (Base.Cpp_name.pp_scopes h.outer) ^ Base.Cpp_name.to_string h.head
 
 (** How the global [r] is written as a type's head in the form [form] at the
     position [c]: as resolved for what is being written, at the frame
@@ -136,7 +136,7 @@ let type_head (c : render_ctx) form r =
   | Names_resolved names -> (
     match Cpp_resolution.find_head names c.frame form r with
     | Found h ->
-      ( if Probe.checking () then
+      ( if Base.Probe.checking () then
           let here = !live_head_for_checks c form r in
           if here <> h then violation_resolved key (pp_head h) (pp_head here) );
       h
@@ -148,12 +148,12 @@ let type_head (c : render_ctx) form r =
 
 let live_custom_text r =
   match written_custom_text r with
-  | Some text -> Cpp_name.foreign text
+  | Some text -> Base.Cpp_name.foreign text
   | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no custom mapping to write.")
 
 (* The text [r] is written as where it has an inline custom mapping. *)
 let live_inline_custom_text r =
-  if to_inline r && is_custom r then Some (Cpp_name.to_string (live_custom_text r)) else None
+  if to_inline r && is_custom r then Some (Base.Cpp_name.to_string (live_custom_text r)) else None
 
 let inline_custom_text (c : render_ctx) r =
   match c.names with
@@ -169,7 +169,7 @@ let inline_custom_text (c : render_ctx) r =
               ++ str ", whose inline custom mapping resolving it did not ask about.")
       | Unresolved -> unresolved (Inline_custom r)
     in
-    ( if Probe.checking () then
+    ( if Base.Probe.checking () then
         let here = live_inline_custom_text r in
         if here <> text then
           violation_resolved (Inline_custom r) (Option.default "no inline custom text" text)
@@ -181,7 +181,7 @@ let custom_texts_named globals =
 
 (* Asked of every global, inline or not, so that a global no request
    covered is a miss and not a global written otherwise; asked without
-   reading the text: a request writes nothing ({!Table.check_written_custom}). *)
+   reading the text: a request writes nothing ({!Base.Table.check_written_custom}). *)
 let inline_customs_named globals = List.map (fun r -> Cpp_resolution.Inline_custom r) globals
 
 (** The name of a global reference at the position [c]: the replacement text
@@ -194,21 +194,21 @@ let global_name c k r =
   | No_names -> named_nowhere (Global (k, r))
   | Names_resolved _ -> (
     match inline_custom_text c r with
-    | Some custom_str -> Cpp_name.foreign custom_str
+    | Some custom_str -> Base.Cpp_name.foreign custom_str
     | None -> named c (Unmapped (k, r)) )
 
 (* {!global_name} as the resolver names it at [c]. *)
 let live_global_name c k r =
   match live_inline_custom_text r with
-  | Some custom_str -> Cpp_name.foreign custom_str
-  | None -> Common.resolve_ref_name (visible_at c (Unmapped (k, r))) k r
+  | Some custom_str -> Base.Cpp_name.foreign custom_str
+  | None -> Base.Common.resolve_ref_name (visible_at c (Unmapped (k, r))) k r
 
 (** {!global_name} as text. *)
-let str_global c k r = Cpp_name.to_string (global_name c k r)
+let str_global c k r = Base.Cpp_name.to_string (global_name c k r)
 
 (** The short name of [r] at the position [c] ({!Cpp_resolution.Short}):
     its name in its own scope, unqualified. *)
-let short_name c k r = Cpp_name.to_string (named c (Short (k, r)))
+let short_name c k r = Base.Cpp_name.to_string (named c (Short (k, r)))
 
 (** The name [r] is declared under, wherever it is declared, written at the
     position [c]: the replacement text of an inline custom mapping, as
@@ -218,13 +218,13 @@ let declared_name c k r = match inline_custom_text c r with Some custom_str -> c
 (** {!declared_name}, read to compare it with another name rather than to
     write it. *)
 let declared_spelling k r =
-  match Table.inline_custom_text r with Some custom_str -> custom_str | None -> Common.pp_global_name k r
+  match Base.Table.inline_custom_text r with Some custom_str -> custom_str | None -> Base.Common.pp_global_name k r
 
 (** The name of the struct wrapping [id] at namespace scope, its declared
     name [declared] as [declared] spells it: an inductive's wrapper is named
     after the inductive, capitalised; anything else is spelled as itself. *)
 let wrapper_name_from declared id =
-  Table.escape_reserved_struct_name
+  Base.Table.escape_reserved_struct_name
     (match id with GlobRef.IndRef _ -> String.capitalize_ascii (declared Type id) | _ -> declared Type id)
 
 (** {!wrapper_name_from} of {!declared_spelling}: the wrapper's name read to
@@ -232,7 +232,7 @@ let wrapper_name_from declared id =
 let wrapper_spelling id = wrapper_name_from declared_spelling id
 
 (** {!global_name} as a document. *)
-let pp_global c k r = Cpp_name.pp (global_name c k r)
+let pp_global c k r = Base.Cpp_name.pp (global_name c k r)
 
 (** The name a typeclass concept is declared and referenced under.  A concept
     may only appear at namespace scope, so it is hoisted out of every
@@ -246,25 +246,25 @@ let live_concept_name layout v r =
   let name =
     match Module_plan.concept_name layout r with
     | Some name -> name
-    | None -> Common.pp_global_name Type r
+    | None -> Base.Common.pp_global_name Type r
   in
-  match Common.resolve_file_qualifier v Type r with
-  | Some file -> Cpp_name.name [Cpp_name.Namespace file] name
-  | None -> Cpp_name.unqualified name
+  match Base.Common.resolve_file_qualifier v Type r with
+  | Some file -> Base.Cpp_name.name [Base.Cpp_name.Namespace file] name
+  | None -> Base.Cpp_name.unqualified name
 
 (** {!concept_name} as text. *)
-let concept_name_of_ref c r = Cpp_name.to_string (concept_name c r)
+let concept_name_of_ref c r = Base.Cpp_name.to_string (concept_name c r)
 
 (** {!concept_name} as a document. *)
-let pp_concept_name_of_ref c r = Cpp_name.pp (concept_name c r)
+let pp_concept_name_of_ref c r = Base.Cpp_name.pp (concept_name c r)
 
 let module_struct_name_of name =
-  let raw = Cpp_name.pp name in
+  let raw = Base.Cpp_name.pp name in
   let s = Pp.string_of_ppcmds raw in
-  let escaped = Table.escape_reserved_struct_name s in
+  let escaped = Base.Table.escape_reserved_struct_name s in
   if String.equal s escaped then raw else Pp.str escaped
 
-let module_declared_name mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp)
+let module_declared_name mp = Base.Table.escape_reserved_struct_name (Base.Common.emitted_module_name mp)
 
 (** Whether the inductive [r] is promoted at the position [c]: promoted by
     the unit's plan, which nothing demotes in place, and not demoted in the
@@ -316,7 +316,7 @@ let mp_relation_to ~struct_mp r =
     original case. *)
 let is_record_inductive r =
   match r with
-  | GlobRef.IndRef _ -> Table.get_record_fields r <> []
+  | GlobRef.IndRef _ -> Base.Table.get_record_fields r <> []
   | _ -> false
 
 (** Whether [r] is an inductive spelled bare at the position [c]: one the body
@@ -338,28 +338,28 @@ let local_at (c : render_ctx) r =
 let capitalize_initial n =
   let cap = String.capitalize_ascii in
   match n with
-  | Cpp_name.Name {scopes = []; base} -> Cpp_name.unqualified (cap base)
-  | Cpp_name.Name {scopes = Cpp_name.Global :: _; _} -> n
-  | Cpp_name.Name {scopes = s :: rest; base} ->
+  | Base.Cpp_name.Name {scopes = []; base} -> Base.Cpp_name.unqualified (cap base)
+  | Base.Cpp_name.Name {scopes = Base.Cpp_name.Global :: _; _} -> n
+  | Base.Cpp_name.Name {scopes = s :: rest; base} ->
     let s =
       match s with
-      | Cpp_name.Namespace t -> Cpp_name.Namespace (cap t)
-      | Cpp_name.Class t -> Cpp_name.Class (cap t)
-      | Cpp_name.Parameter t -> Cpp_name.Parameter (cap t)
-      | Cpp_name.Global -> Cpp_name.Global
+      | Base.Cpp_name.Namespace t -> Base.Cpp_name.Namespace (cap t)
+      | Base.Cpp_name.Class t -> Base.Cpp_name.Class (cap t)
+      | Base.Cpp_name.Parameter t -> Base.Cpp_name.Parameter (cap t)
+      | Base.Cpp_name.Global -> Base.Cpp_name.Global
     in
-    Cpp_name.name (s :: rest) base
-  | Cpp_name.Foreign text -> Cpp_name.foreign (cap text)
+    Base.Cpp_name.name (s :: rest) base
+  | Base.Cpp_name.Foreign text -> Base.Cpp_name.foreign (cap text)
 
 (** The name with its final component capitalized. *)
-let capitalize_base = Cpp_name.map_base String.capitalize_ascii
+let capitalize_base = Base.Cpp_name.map_base String.capitalize_ascii
 
 (** A type's struct name is its own, capitalized: under separate
     extraction's full qualification that is the final component; otherwise
     the name's initial, which is the final component's whenever the name is
     unqualified. *)
 let capitalize_struct n =
-  if Common.get_force_cross_file_qualification () then capitalize_base n else capitalize_initial n
+  if Base.Common.get_force_cross_file_qualification () then capitalize_base n else capitalize_initial n
 
 (** The name of the inductive [r] at the position [ctx], and whether it is
     a non-local inductive's, which stands for its namespace wrapper:
@@ -375,12 +375,12 @@ let inductive_name ctx r =
   let n, needs_ns =
     match r with
     | GlobRef.IndRef _ when Module_plan.is_eponymous_record ctx.unit.modules r ->
-      (Cpp_name.unqualified (Common.pp_type_name_capitalized r), false)
+      (Base.Cpp_name.unqualified (Base.Common.pp_type_name_capitalized r), false)
     | GlobRef.IndRef _ when promoted_at ctx r ->
       (capitalize_struct (global_name ctx Type r), false)
     | GlobRef.IndRef _ when local_at ctx r ->
-      if Common.get_force_cross_file_qualification () then
-        (Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r)), false)
+      if Base.Common.get_force_cross_file_qualification () then
+        (Base.Cpp_name.unqualified (String.capitalize_ascii (Base.Common.pp_global_name Type r)), false)
       else (global_name ctx Type r, false)
     | GlobRef.IndRef _ -> (capitalize_struct (global_name ctx Type r), true)
     | _ -> (global_name ctx Type r, false)
@@ -402,7 +402,7 @@ let enum_name_collides base_name r =
     | _ -> false )
   | _ -> false
 
-let enum_name_collides_with_parent r = enum_name_collides (Common.pp_global_name Type r) r
+let enum_name_collides_with_parent r = enum_name_collides (Base.Common.pp_global_name Type r) r
 
 (** Capitalize an enum type name, avoiding collision with parent module.
     @param s the base (unqualified) name string of the enum type
@@ -428,13 +428,13 @@ let enum_name_at c n r = if enum_name_collides (short_name c Type r) r then n el
     [Ns::Trie]; otherwise the final component is capitalized. *)
 let promoted_name n =
   match n with
-  | Cpp_name.Name {scopes; base} -> (
+  | Base.Cpp_name.Name {scopes; base} -> (
     match List.rev scopes with
-    | (Cpp_name.Namespace parent | Cpp_name.Class parent | Cpp_name.Parameter parent) :: rev_outer
+    | (Base.Cpp_name.Namespace parent | Base.Cpp_name.Class parent | Base.Cpp_name.Parameter parent) :: rev_outer
       when String.equal (String.lowercase_ascii parent) (String.lowercase_ascii base) ->
-      Cpp_name.name (List.rev rev_outer) (String.capitalize_ascii parent)
+      Base.Cpp_name.name (List.rev rev_outer) (String.capitalize_ascii parent)
     | _ -> capitalize_base n )
-  | Cpp_name.Foreign _ -> capitalize_base n
+  | Base.Cpp_name.Foreign _ -> capitalize_base n
 
 (** The name without a trailing [A::A]: when its innermost qualifier is its
     final component, the qualifier goes -- if another qualifier is left in
@@ -442,56 +442,56 @@ let promoted_name n =
     [A]).  A leading [::] names the global scope and is no qualifier here. *)
 let dedup_tail ?(allow_bare = false) n =
   match n with
-  | Cpp_name.Name {scopes; base} -> (
+  | Base.Cpp_name.Name {scopes; base} -> (
     let global, inner =
-      match scopes with Cpp_name.Global :: rest -> ([Cpp_name.Global], rest) | s -> ([], s)
+      match scopes with Base.Cpp_name.Global :: rest -> ([Base.Cpp_name.Global], rest) | s -> ([], s)
     in
     match List.rev inner with
     | last :: rev_outer
-      when last <> Cpp_name.Global
-           && String.equal (Cpp_name.scope_text last) base
+      when last <> Base.Cpp_name.Global
+           && String.equal (Base.Cpp_name.scope_text last) base
            && (rev_outer <> [] || allow_bare) ->
-      Cpp_name.name (global @ List.rev rev_outer) base
+      Base.Cpp_name.name (global @ List.rev rev_outer) base
     | _ -> n )
-  | Cpp_name.Foreign _ -> n
+  | Base.Cpp_name.Foreign _ -> n
 
 (** The C++ type name for an inductive reference, handling eponymous records,
     promoted inductives, enums, locals, and merged/unmerged wrappers. *)
 let inductive_type_name ctx r =
-  let force = Common.get_force_cross_file_qualification () in
+  let force = Base.Common.get_force_cross_file_qualification () in
   match r with
   | GlobRef.IndRef _ when Module_plan.is_eponymous_record ctx.unit.modules r ->
-    let cap_name = Common.pp_type_name_capitalized r in
-    if force && Cpp_name.is_qualified (global_name ctx Type r) then
-      Cpp_name.name [Cpp_name.Class cap_name] cap_name
-    else Cpp_name.unqualified cap_name
+    let cap_name = Base.Common.pp_type_name_capitalized r in
+    if force && Base.Cpp_name.is_qualified (global_name ctx Type r) then
+      Base.Cpp_name.name [Base.Cpp_name.Class cap_name] cap_name
+    else Base.Cpp_name.unqualified cap_name
   | GlobRef.IndRef _ when promoted_at ctx r ->
     if local_at ctx r then
-      Cpp_name.unqualified (String.capitalize_ascii (Common.pp_global_name Type r))
+      Base.Cpp_name.unqualified (String.capitalize_ascii (Base.Common.pp_global_name Type r))
     else promoted_name (global_name ctx Type r)
   | GlobRef.IndRef _ when is_record_inductive r -> global_name ctx Type r
   | GlobRef.IndRef _ when is_enum_inductive r ->
     let n = global_name ctx Type r in
     enum_name
-      (if Cpp_name.is_qualified n then n
-       else Cpp_name.unqualified (Common.pp_global_name Type r))
+      (if Base.Cpp_name.is_qualified n then n
+       else Base.Cpp_name.unqualified (Base.Common.pp_global_name Type r))
       r
   | GlobRef.IndRef _ when local_at ctx r ->
     if force then capitalize_base (global_name ctx Type r) else global_name ctx Type r
   | GlobRef.IndRef _ ->
     let n = global_name ctx Type r in
-    if Cpp_name.is_qualified n then
+    if Base.Cpp_name.is_qualified n then
       if not force then n
       else if merged_at ctx r then promoted_name n
       else capitalize_base n
     else if merged_at ctx r then capitalize_initial n
-    else Cpp_name.inside (capitalize_initial n) (fun s -> Cpp_name.Class s) n
+    else Base.Cpp_name.inside (capitalize_initial n) (fun s -> Base.Cpp_name.Class s) n
   | _ -> global_name ctx Type r
 
 (** Whether the name [n] needs [typename] at the position [ctx]: C++
     requires it in front of a qualified, possibly dependent, type name inside
     a class template. *)
-let needs_typename (ctx : render_ctx) n = ctx.in_template && Cpp_name.is_qualified n
+let needs_typename (ctx : render_ctx) n = ctx.in_template && Base.Cpp_name.is_qualified n
 
 (** The [typename] prefix the name [n] needs at the position [ctx]: C++
     requires it in front of a qualified, possibly dependent, type name inside
@@ -502,7 +502,7 @@ let typename_prefix_for (ctx : render_ctx) n =
 (** Whether the qualifiers [quals], outermost first, are written in [n],
     one after another. *)
 let names_through n quals =
-  let texts = List.map Cpp_name.scope_text (Cpp_name.scopes n) in
+  let texts = List.map Base.Cpp_name.scope_text (Base.Cpp_name.scopes n) in
   let rec starts_with = function
     | _, [] -> true
     | t :: ts, q :: qs -> String.equal t q && starts_with (ts, qs)
@@ -513,8 +513,8 @@ let names_through n quals =
     | _ :: rest as ts -> starts_with (ts, quals) || somewhere rest
   in
   match n with
-  | Cpp_name.Foreign text -> Common.contains_substring text (String.concat "::" quals ^ "::")
-  | Cpp_name.Name _ -> somewhere texts
+  | Base.Cpp_name.Foreign text -> Base.Common.contains_substring text (String.concat "::" quals ^ "::")
+  | Base.Cpp_name.Name _ -> somewhere texts
 
 (** The struct qualifiers to write in front of [r]'s type name [n] when
     generating out-of-struct definitions.
@@ -530,7 +530,7 @@ let names_through n quals =
 let struct_scopes_for (ctx : render_ctx) r n =
   match ctx.scope with
   | Some {scope = scope; _} when not ctx.in_struct ->
-    let classes = List.map (fun s -> Cpp_name.Class s) in
+    let classes = List.map (fun s -> Base.Cpp_name.Class s) in
     let struct_scopes = classes scope.Scope_plan.qualifier in
     (* How [r]'s module stands to the struct's, by kernel path: the textual
        tests below fire on a sibling module whose path merely contains the
@@ -560,7 +560,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
        so they never need the struct prefix. *)
     else if is_record_inductive r && not (local_at ctx r) then []
     (* Enums at global scope need no prefix; those inside the struct do. *)
-    else if Table.is_enum_inductive r then
+    else if Base.Table.is_enum_inductive r then
       if Module_plan.is_global_scope_enum ctx.unit.modules r then []
       else if member_of_struct () then struct_scopes
       else []
@@ -594,7 +594,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
          out-of-line members ({!Scope_plan.qualifier}). *)
       | Ancestor -> (
         match Scope_plan.of_module ctx.unit.scopes (modpath_of_r r) with
-        | Some sc when Common.is_struct_module (modpath_of_r r) -> classes sc.Scope_plan.qualifier
+        | Some sc when Base.Common.is_struct_module (modpath_of_r r) -> classes sc.Scope_plan.qualifier
         | _ -> [] ) )
   | _ -> []
 
@@ -613,8 +613,8 @@ let struct_scopes_for (ctx : render_ctx) r n =
     [CRANE_CHECK_IR], that it printed exactly those. *)
 let global_scopes_for u r n =
   match r with
-  | GlobRef.IndRef _ when not (Cpp_name.is_qualified n) ->
-    if Cpp_state.is_shadowed_global_name u (Cpp_name.to_string n) r then [Cpp_name.Global] else []
+  | GlobRef.IndRef _ when not (Base.Cpp_name.is_qualified n) ->
+    if Cpp_state.is_shadowed_global_name u (Base.Cpp_name.to_string n) r then [Base.Cpp_name.Global] else []
   | _ -> []
 
 let wrapper_qualify = Cpp_state.wrapper_qualify
@@ -649,7 +649,7 @@ let wrapper_qualify = Cpp_state.wrapper_qualify
 let wrapper_qualified_type_name (ctx : render_ctx) r n =
   match r with
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> n
-  | _ when Table.is_typeclass r -> n
+  | _ when Base.Table.is_typeclass r -> n
   | _ when Module_plan.is_global_scope_type ctx.unit.modules r -> n
   | _ -> if ctx.in_struct then n else wrapper_qualify ctx.unit.modules r n
 
@@ -660,7 +660,7 @@ let wrapper_qualified_type_name (ctx : render_ctx) r n =
 let needs_global_qualifier (ctx : render_ctx) x =
   match ctx.scope with
   | Some {scope = scope; _} ->
-    (not (Cpp_name.is_qualified (global_name ctx Term x)))
+    (not (Base.Cpp_name.is_qualified (global_name ctx Term x)))
     && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
   | None -> false
 
@@ -676,7 +676,7 @@ let answered (c : render_ctx) key ~find ~read ~equal ~pp =
   | Names_resolved names -> (
     match find names c.frame with
     | Cpp_resolution.Found a ->
-      ( if Probe.checking () then
+      ( if Base.Probe.checking () then
           let here = read (!live_value_for_checks c key) in
           if not (equal a here) then
             violation_resolved key (Pp.string_of_ppcmds (pp a)) (Pp.string_of_ppcmds (pp here)) );
@@ -692,8 +692,8 @@ let not_answered key =
 
 let reference_equal (a : Cpp_resolution.reference) (b : Cpp_resolution.reference) =
   match (a, b) with
-  | Named_value a, Named_value b -> Cpp_name.equal a.name b.name && a.type_arguments = b.type_arguments
-  | Record_member a, Record_member b -> Common.globref_equal a.record b.record && a.type_params = b.type_params
+  | Named_value a, Named_value b -> Base.Cpp_name.equal a.name b.name && a.type_arguments = b.type_arguments
+  | Record_member a, Record_member b -> Base.Common.globref_equal a.record b.record && a.type_params = b.type_params
   | _ -> false
 
 (** How the constant or constructor [r] is written as a value at the
@@ -745,8 +745,8 @@ let live_value_reference ctx x : Cpp_resolution.reference =
     let name = global_name ctx Term x in
     let qualified = wrapper_qualify ctx.unit.modules x name in
     let name =
-      if not (Cpp_name.equal qualified name) then qualified
-      else if needs_global_qualifier ctx x then Cpp_name.within Cpp_name.Global name
+      if not (Base.Cpp_name.equal qualified name) then qualified
+      else if needs_global_qualifier ctx x then Base.Cpp_name.within Base.Cpp_name.Global name
       else name
     in
     Named_value {name; type_arguments = Option.is_empty containing}
@@ -783,10 +783,10 @@ let live_access (u : Unit_context.t) x : Cpp_resolution.access =
     || (match x with
        | GlobRef.ConstRef c -> Cpp_state.is_template_static_accessor_constant u c
        | _ -> false)
-    || Common.under_mp_bound x_mp
+    || Base.Common.under_mp_bound x_mp
        && List.exists (fun (_, reg_lbl) -> Label.equal x_lbl reg_lbl) (Cpp_state.template_static_accessor_names u)
   in
-  if not accessor then Variable else if Common.under_mp_bound x_mp then Either_form else Accessor
+  if not accessor then Variable else if Base.Common.under_mp_bound x_mp then Either_form else Accessor
 
 (** {2 Name-resolution cache and cached predicates} *)
 
@@ -854,7 +854,7 @@ let struct_spelling (u : Unit_context.t) ~merged ~promoted ~local id =
   | GlobRef.IndRef _ when is_eponymous_record_cached u.modules id -> Eponymous_record_name
   | GlobRef.IndRef _ when promoted id -> Capitalized
   | GlobRef.IndRef _ when is_record_cached u id -> As_declared
-  | GlobRef.IndRef _ when Common.get_force_cross_file_qualification () -> Capitalized
+  | GlobRef.IndRef _ when Base.Common.get_force_cross_file_qualification () -> Capitalized
   | GlobRef.IndRef _ when (not local) && merged id ->
     (* An inductive written straight into an enclosing struct has no
        namespace wrapper to be merged with, so nothing capitalised its
@@ -866,14 +866,14 @@ let struct_spelling (u : Unit_context.t) ~merged ~promoted ~local id =
   | _ -> As_declared
 
 (** An enum's name where it is declared: its own, unqualified there. *)
-let enum_declaration_name r = capitalize_enum_name (Common.pp_global_name Type r) r
+let enum_declaration_name r = capitalize_enum_name (Base.Common.pp_global_name Type r) r
 
 (** {!struct_spelling} as a string. *)
 let struct_declaration_name u ~merged ~promoted ~local id =
   match struct_spelling u ~merged ~promoted ~local id with
-  | Eponymous_record_name -> Common.pp_type_name_capitalized id
-  | Capitalized -> String.capitalize_ascii (Common.pp_global_name Type id)
-  | As_declared -> Common.pp_global_name Type id
+  | Eponymous_record_name -> Base.Common.pp_type_name_capitalized id
+  | Capitalized -> String.capitalize_ascii (Base.Common.pp_global_name Type id)
+  | As_declared -> Base.Common.pp_global_name Type id
 
 (** Look up method info for a function reference in the method registry,
     where every candidate a render collects is registered
@@ -930,16 +930,16 @@ let modtype_concept_ref ctx v kn =
     (* Declared at the file scope of the functor declaring it, and named
        after the functor. *)
     let name = modtype_concept_name ctx.unit.modules kn in
-    match Common.resolve_module_file_qualifier v functor_ with
-    | Some file -> Cpp_name.name [Cpp_name.Namespace file] name
-    | None -> Cpp_name.unqualified name )
-  | MPdot (mp0, _), None when Common.get_force_cross_file_qualification () ->
+    match Base.Common.resolve_module_file_qualifier v functor_ with
+    | Some file -> Base.Cpp_name.name [Base.Cpp_name.Namespace file] name
+    | None -> Base.Cpp_name.unqualified name )
+  | MPdot (mp0, _), None when Base.Common.get_force_cross_file_qualification () ->
     (* A top-level module type of another file is a concept in a namespace
        of the same name, which from outside the namespace names the
        namespace: [C::C].  The file is the one holding the module whose
        element is being written, which the plan says, not the visibility in
        effect. *)
-    let resolved = Common.resolve_module_in v kn in
+    let resolved = Base.Common.resolve_module_in v kn in
     let rec file_of = function
       | ModPath.MPfile _ as mp -> mp
       | MPdot (mp, _) -> file_of mp
@@ -948,24 +948,24 @@ let modtype_concept_ref ctx v kn =
     let foreign_file =
       match mp0 with MPfile _ -> not (ModPath.equal mp0 (file_of (module_written ctx))) | _ -> false
     in
-    if foreign_file && not (Cpp_name.is_qualified resolved) then
-      Cpp_name.inside resolved
-        (fun s -> Cpp_name.Namespace s)
-        (Cpp_name.unqualified (modtype_concept_name ctx.unit.modules kn))
+    if foreign_file && not (Base.Cpp_name.is_qualified resolved) then
+      Base.Cpp_name.inside resolved
+        (fun s -> Base.Cpp_name.Namespace s)
+        (Base.Cpp_name.unqualified (modtype_concept_name ctx.unit.modules kn))
     else resolved
   | MPdot _, None ->
     (* Monolithic extraction: resolving the module records the file it names;
        the short label is the concept's name everywhere in the one file. *)
-    ignore (Common.resolve_module_in v kn);
-    Cpp_name.unqualified (modtype_concept_name ctx.unit.modules kn)
-  | (MPfile _ | MPbound _), None -> Common.resolve_module_in v kn
+    ignore (Base.Common.resolve_module_in v kn);
+    Base.Cpp_name.unqualified (modtype_concept_name ctx.unit.modules kn)
+  | (MPfile _ | MPbound _), None -> Base.Common.resolve_module_in v kn
 
 let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = function
-  | Module mp | Module_in_expression mp -> Common.file_of_module_named ~unit_files mp
+  | Module mp | Module_in_expression mp -> Base.Common.file_of_module_named ~unit_files mp
   | Modtype_concept kn -> (
     match concept_scope_of kn with
-    | Some {functor_; _} -> Common.file_of_module_named ~unit_files functor_
-    | None -> Common.file_of_module_named ~unit_files kn )
+    | Some {functor_; _} -> Base.Common.file_of_module_named ~unit_files functor_
+    | None -> Base.Common.file_of_module_named ~unit_files kn )
   | Global (_, r)
   | Unmapped (_, r)
   | Inductive_scope r
@@ -973,7 +973,7 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
   | Value_reference r
   | Built_struct r
   | Enumerator_qualifier (_, r) ->
-    Common.file_named_by ~unit_files r
+    Base.Common.file_named_by ~unit_files r
   | Module_declared _ | Short _ | Inductive_value _ | Class_concept _ | Modtype_concept_declared _ | Definition _
   | Custom_text _ | Inline_custom _ | Value_access _ | Read_by_a_function _ | Held_back_concept _
   | Out_of_line_scope _ ->
@@ -982,9 +982,9 @@ let file_named_by_key ~unit_files : Cpp_resolution.key -> ModPath.t option = fun
 let struct_definition_name ctx id =
   let local = local_at ctx id and merged = merged_at ctx and promoted = promoted_at ctx in
   match struct_spelling ctx.unit ~merged ~promoted ~local id with
-  | As_declared -> Cpp_name.unqualified (declared_name ctx Type id)
+  | As_declared -> Base.Cpp_name.unqualified (declared_name ctx Type id)
   | Eponymous_record_name | Capitalized ->
-    Cpp_name.unqualified (struct_declaration_name ctx.unit ~merged ~promoted ~local id)
+    Base.Cpp_name.unqualified (struct_declaration_name ctx.unit ~merged ~promoted ~local id)
 
 let enum_definition_name ctx r =
   match r with GlobRef.IndRef _ -> inductive_type_name ctx r | _ -> global_name ctx Type r
@@ -1017,12 +1017,12 @@ let rec at_frame c (frame : Cpp_resolution.frame) k =
 let inductive_value_name ctx v x =
   let ns_name, needs_ns = inductive_name ctx x in
   let type_name = global_name ctx Type x in
-  let force = Common.get_force_cross_file_qualification () in
+  let force = Base.Common.get_force_cross_file_qualification () in
   (* Check eponymous record FIRST because they can also be local *)
-  if is_eponymous_record_cached ctx.unit.modules x then Cpp_name.unqualified (Common.pp_type_name_capitalized x)
+  if is_eponymous_record_cached ctx.unit.modules x then Base.Cpp_name.unqualified (Base.Common.pp_type_name_capitalized x)
   else if promoted_at ctx x then
     dedup_tail (if force then capitalize_base type_name else capitalize_initial type_name)
-  else if Cpp_name.is_qualified type_name then
+  else if Base.Cpp_name.is_qualified type_name then
     let cap = if force then capitalize_base type_name else type_name in
     if merged_at ctx x then
       let allow_bare =
@@ -1034,9 +1034,9 @@ let inductive_value_name ctx v x =
   else if needs_ns then
     if merged_at ctx x then
       (* Merged non-local inductive: use capitalized name directly *)
-      List.fold_right Cpp_name.within (global_scopes_for ctx.unit x ns_name) ns_name
+      List.fold_right Base.Cpp_name.within (global_scopes_for ctx.unit x ns_name) ns_name
     else (* Unmerged non-local inductive: Wrapper::inner *)
-      Cpp_name.inside ns_name (fun s -> Cpp_name.Class s) type_name
+      Base.Cpp_name.inside ns_name (fun s -> Base.Cpp_name.Class s) type_name
   else if force then capitalize_initial type_name
   else (* Local inductive: use original name directly *)
     type_name
@@ -1089,25 +1089,25 @@ let live_glob_head ctx r : Cpp_resolution.head =
    (CHT, not CHT::cHT). *)
 let live_inductive_head ctx r : Cpp_resolution.head =
   let name, needs_ns = inductive_name ctx r in
-  let class_ s = Cpp_name.Class s in
+  let class_ s = Base.Cpp_name.Class s in
   let type_name = global_name ctx Type r in
   (* Check eponymous record FIRST because they can also be local *)
   if is_eponymous_record_cached ctx.unit.modules r then
-    let cap_name = Common.pp_type_name_capitalized r in
-    if Common.get_force_cross_file_qualification () && not (local_at ctx r)
-    then unqualified_head (Cpp_name.name [class_ cap_name] cap_name)
-    else unqualified_head (Cpp_name.unqualified cap_name)
+    let cap_name = Base.Common.pp_type_name_capitalized r in
+    if Base.Common.get_force_cross_file_qualification () && not (local_at ctx r)
+    then unqualified_head (Base.Cpp_name.name [class_ cap_name] cap_name)
+    else unqualified_head (Base.Cpp_name.unqualified cap_name)
   else if is_enum_cached ctx.unit r then
     (* Enum types at global scope need no struct qualification. Enums inside
        structs (e.g., Comparison::cmp) need it. *)
     let qualifier = if is_global_scope_enum_cached ctx.unit.modules r then [] else struct_scopes_for ctx r type_name in
     {(unqualified_head (enum_name type_name r)) with outer = qualifier}
-  else if Cpp_name.is_qualified type_name then
+  else if Base.Cpp_name.is_qualified type_name then
     let cap =
-      if Common.get_force_cross_file_qualification () then capitalize_base type_name else type_name
+      if Base.Common.get_force_cross_file_qualification () then capitalize_base type_name else type_name
     in
     let cap =
-      if merged_at ctx r then dedup_tail ~allow_bare:(Table.modular () && not needs_ns) cap
+      if merged_at ctx r then dedup_tail ~allow_bare:(Base.Table.modular () && not needs_ns) cap
       else cap
     in
     (* The qualified name is relative to the enclosing module struct, so
@@ -1123,7 +1123,7 @@ let live_inductive_head ctx r : Cpp_resolution.head =
        so it is in scope under its own name; the merged-wrapper spelling
        ([Opt] for [opt]) names nothing there. *)
     let cap = capitalize_initial type_name in
-    if needs_ns && Table.modular () then unqualified_head (Cpp_name.inside cap class_ cap)
+    if needs_ns && Base.Table.modular () then unqualified_head (Base.Cpp_name.inside cap class_ cap)
     else
       (* A file whose declarations were folded into a struct keeps its
          inductives there too, so the struct is their scope -- the same
@@ -1131,9 +1131,9 @@ let live_inductive_head ctx r : Cpp_resolution.head =
       let qualified =
         if Cpp_state.is_nested_struct_ref ctx.unit r then wrapper_qualify ctx.unit.modules r cap else cap
       in
-      if not (Cpp_name.equal qualified cap) then unqualified_head qualified
+      if not (Base.Cpp_name.equal qualified cap) then unqualified_head qualified
       else {(unqualified_head cap) with outer = global_scopes_for ctx.unit r cap}
-  else if needs_ns then unqualified_head (Cpp_name.inside name class_ type_name)
+  else if needs_ns then unqualified_head (Base.Cpp_name.inside name class_ type_name)
   else {(unqualified_head type_name) with outer = global_scopes_for ctx.unit r type_name}
 
 (* {!type_head} as the resolver writes it at [c]. *)
@@ -1144,8 +1144,8 @@ let rec live_name c (key : Cpp_resolution.key) =
   let ctx = {c with names = Naming_live live_namers} in
   let v = visible_at c key in
   match key with
-  | Module mp -> Common.resolve_module_in v mp
-  | Module_declared mp -> Cpp_name.unqualified (module_declared_name mp)
+  | Module mp -> Base.Common.resolve_module_in v mp
+  | Module_declared mp -> Base.Cpp_name.unqualified (module_declared_name mp)
   | Module_in_expression mp -> (
     (* The wrapper's name in front of the module's, unless already there.
        Only a bystander: the wrapper nests it under its own name, so that
@@ -1154,26 +1154,26 @@ let rec live_name c (key : Cpp_resolution.key) =
        Whether an argument needs [typename] is decided on the module's own
        name ({!Cpp_resolution.Module}): a bystander's struct is a concrete
        one, never dependent. *)
-    let n = Common.resolve_module_in v mp in
+    let n = Base.Common.resolve_module_in v mp in
     match Module_plan.wrapper c.unit.modules mp with
     | Some (struct_name, Module_plan.Bystander)
-      when not (String.starts_with ~prefix:(struct_name ^ "::") (Cpp_name.to_string n)) ->
-      Cpp_name.within (Cpp_name.Class struct_name) n
+      when not (String.starts_with ~prefix:(struct_name ^ "::") (Base.Cpp_name.to_string n)) ->
+      Base.Cpp_name.within (Base.Cpp_name.Class struct_name) n
     | _ -> n )
   | Global (k, r) -> live_global_name ctx k r
-  | Unmapped (k, r) -> Common.resolve_ref_name v k r
+  | Unmapped (k, r) -> Base.Common.resolve_ref_name v k r
   | Inductive_value r -> inductive_value_name ctx v r
-  | Short (k, r) -> Cpp_name.unqualified (Common.pp_global_name k r)
+  | Short (k, r) -> Base.Cpp_name.unqualified (Base.Common.pp_global_name k r)
   | Class_concept r -> live_concept_name c.unit.modules v r
   | Modtype_concept mp -> modtype_concept_ref ctx v mp
-  | Modtype_concept_declared mp -> Cpp_name.unqualified (modtype_concept_name c.unit.modules mp)
+  | Modtype_concept_declared mp -> Base.Cpp_name.unqualified (modtype_concept_name c.unit.modules mp)
   | Definition (Enum_definition, r) -> enum_definition_name ctx r
   | Definition (Struct_definition, r) -> struct_definition_name ctx r
   | Definition (Alias_definition, r) -> live_global_name ctx Type r
   | Custom_text r -> live_custom_text r
   | Inline_custom r -> (
     match live_inline_custom_text r with
-    | Some text -> Cpp_name.foreign text
+    | Some text -> Base.Cpp_name.foreign text
     | None -> CErrors.anomaly Pp.(str "Crane: " ++ GlobRef.print r ++ str " has no inline custom mapping."))
   | Inductive_scope r -> fst (inductive_name ctx r)
   | Built_struct r -> (
@@ -1185,7 +1185,7 @@ let rec live_name c (key : Cpp_resolution.key) =
       | Enumerator_value -> enum_name_at ctx (global_name ctx Type r) r
       | Case_label -> (type_head ctx Glob_head r).head
     in
-    List.fold_right Cpp_name.within (global_scopes_for c.unit r n) n
+    List.fold_right Base.Cpp_name.within (global_scopes_for c.unit r n) n
   | Type_head _ | Value_reference _ | Value_access _ | Read_by_a_function _ | Held_back_concept _
   | Out_of_line_scope _ ->
     CErrors.anomaly Pp.(str "Crane: " ++ Cpp_resolution.pp_key key ++ str " is not a name.")

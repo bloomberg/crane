@@ -7,11 +7,11 @@
     {!Translation_construct.gen_construction} lowers a constructor by these, and
     {!Position_plan} plans the coercions it stores by them. *)
 
-open Common
+open Base.Common
 open Names
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 open Cpp_ir.Type
 
@@ -62,7 +62,7 @@ let list_propagated_args (ty : Core.Type.t) ts =
   | Core.Type.Global_app {head = n; type_arguments = tys_orig; index_arguments = schema_opt} ->
     (* Only run type propagation for list constructors *)
     let is_list =
-      try String.equal (Common.pp_global_name Type n) "list"
+      try String.equal (Base.Common.pp_global_name Type n) "list"
       with _ -> false
     in
     if not is_list then
@@ -71,7 +71,7 @@ let list_propagated_args (ty : Core.Type.t) ts =
       let tys_filt =
         match n with
         | GlobRef.IndRef (kn, _) ->
-          ( match Table.get_ind_num_param_vars_opt kn with
+          ( match Base.Table.get_ind_num_param_vars_opt kn with
           | Some num_param_vars -> safe_firstn num_param_vars tys_orig
           | None -> tys_orig )
         | _ -> tys_orig
@@ -201,7 +201,7 @@ let temps_from_slot cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ind (te
   in
   match
     Option.map
-      (fun t -> Translation_types.unfold_cpp_typedef cx env (Type_util.unqualify_ty t))
+      (fun t -> Translation_types.unfold_cpp_typedef cx env (Base.Type_util.unqualify_ty t))
       slot_ty
   with
   | Some (Entity_application (ind', args, _))
@@ -287,7 +287,7 @@ let regular cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type
     | Core.Type.Global_app {head = n; type_arguments = tys_orig; _} ->
       let tys_filt = match n with
         | GlobRef.IndRef (kn, _) ->
-          ( match Table.get_ind_num_param_vars_opt kn with
+          ( match Base.Table.get_ind_num_param_vars_opt kn with
           | Some num_param_vars -> safe_firstn num_param_vars tys_orig
           | None -> tys_orig )
         | _ -> tys_orig
@@ -302,7 +302,7 @@ let regular cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type
         erase_past_type_arg
           (temps_from_slot n (Translation_types.template_params_of_core cx ~site:Declared env tys_filt))
       in
-      if Table.has_dependent_params n then
+      if Base.Table.has_dependent_params n then
         let expected_temps =
           Translation_ctor_args.expected_type_args_from_return cx env ?slot:expected_ty n
             ~arity:(List.length temps)
@@ -326,11 +326,11 @@ let regular cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) (ty : Core.Type
       else temps
     | _ -> []
   in
-  let field_types_raw = match Table.get_ctor_ip_types_opt r with
+  let field_types_raw = match Base.Table.get_ctor_ip_types_opt r with
     | Some ft -> ft
     | None -> [] in
   let field_types =
-    List.filter (fun t -> not (Core_util.is_erased_type t)) field_types_raw in
+    List.filter (fun t -> not (Base.Core_util.is_erased_type t)) field_types_raw in
   { ty = ty; args = ts_updated; ty_core_tparams = ty_core_tparams; ctor_temps = ctor_temps;
     field_types = field_types }
 
@@ -408,7 +408,7 @@ let regular_field cx env ~is_boxed c ~slot i e =
            arguments.  The substitution is done on the Core type: only
            there does applying [option] to [nat] reduce, since the C++
            side of a custom-extracted [option] is a template string. *)
-        let ct = Translation_types.cpp_of_core cx env (Core_util.type_subst_list ty_core_tparams ft) in
+        let ct = Translation_types.cpp_of_core cx env (Base.Core_util.type_subst_list ty_core_tparams ft) in
         if Cpp_ir.Types.prints_as_any ct || has_tany_in_type ct then None else Some ct
       | _ when is_erased_rel ->
         let ct = Translation_types.cpp_of_core cx env ft in
@@ -443,7 +443,7 @@ let regular_field cx env ~is_boxed c ~slot i e =
             List.exists Fun.id
               (List.mapi
                  (fun i a ->
-                   if Table.is_family_ind_param fg i then Cpp_ir.Types.prints_as_any a
+                   if Base.Table.is_family_ind_param fg i then Cpp_ir.Types.prints_as_any a
                    else erased_outside_family_apps a)
                  args)
           | Apply (_, args) ->
@@ -465,7 +465,7 @@ let regular_field cx env ~is_boxed c ~slot i e =
               ( fg,
                 List.mapi
                   (fun i a ->
-                    if Table.is_family_ind_param fg i then
+                    if Base.Table.is_family_ind_param fg i then
                       let rec unapply = function
                         | Apply (h, _) -> unapply h
                         | In_namespace (n, t) -> In_namespace (n, unapply t)
@@ -549,12 +549,12 @@ let regular_field cx env ~is_boxed c ~slot i e =
   let expected_core_for_arg =
     match ft_opt with
     | Some ft -> (
-      let inst = Core_util.type_subst_list ty_core_tparams ft in
+      let inst = Base.Core_util.type_subst_list ty_core_tparams ft in
       match ft with
       | Core.Type.Variable_app _ -> Some inst
       | _
         when (not (core_type_contains_erased ~in_arrows:true inst))
-             && not (Type_util.core_type_contains_tvar inst) ->
+             && not (Base.Type_util.core_type_contains_tvar inst) ->
         Some inst
       | Core.Type.Global_app {head = g; _}
         when ( match resolve_meta ty with
@@ -581,7 +581,7 @@ let regular_field cx env ~is_boxed c ~slot i e =
     parameters of the struct ({!Translation_types.ind_promoted_type_args}), spelled resolved. *)
 let record_promoted_map cx (ty : Core.Type.t) =
   let mentioned =
-    match ty with Core.Type.Global_app {head = n; _} -> Table.promoted_type_params n | _ -> []
+    match ty with Core.Type.Global_app {head = n; _} -> Base.Table.promoted_type_params n | _ -> []
   in
   List.filter (fun (v, _) -> List.exists (Id.equal v) mentioned) cx.ctx.lexical.promoted_var_map
 
@@ -592,8 +592,8 @@ let record_promoted_map cx (ty : Core.Type.t) =
       otherwise every field from the first erased one on is read off by
       the type of its predecessor. *)
 let record_field_types r =
-  match Table.get_ctor_ip_types_opt r with
-  | Some ft -> List.filter (fun t -> not (Core_util.is_erased_type t)) ft
+  match Base.Table.get_ctor_ip_types_opt r with
+  | Some ft -> List.filter (fun t -> not (Base.Core_util.is_erased_type t)) ft
   | None -> []
 
 (** [record_declared_field_cpp_ty env ty ft]: the type the struct declares a field at: a record that renders no
@@ -608,8 +608,8 @@ let record_declared_field_cpp_ty cx env (ty : Core.Type.t) ft =
     let t =
       Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton n) tvars ft
     in
-    if Table.get_ind_num_param_vars_opt kn = Some 0 then
-      Type_util.tvar_erase_type t
+    if Base.Table.get_ind_num_param_vars_opt kn = Some 0 then
+      Base.Type_util.tvar_erase_type t
     else t
   | _ -> Translation_types.cpp_of_core cx env ft
 
@@ -662,7 +662,7 @@ let record_field cx env ~is_boxed (ty : Core.Type.t) r ~slot i e =
         in
         match ty with
         | Core.Type.Global_app {type_arguments = tys; _} -> (
-          let ct = Translation_types.cpp_of_core cx env (Core_util.type_subst_list tys ft) in
+          let ct = Translation_types.cpp_of_core cx env (Base.Core_util.type_subst_list tys ft) in
           match codomain ct with
           | Some cod
             when Option.has_some (codomain cod) && (not (Cpp_ir.Types.prints_as_any ct))
@@ -678,7 +678,7 @@ let record_field cx env ~is_boxed (ty : Core.Type.t) r ~slot i e =
       | _ when (match strip_magic e with Core.Expr.Apply _ -> true | _ -> false) -> (
         match ty with
         | Core.Type.Global_app {type_arguments = tys; _} ->
-          let ct = Translation_types.cpp_of_core cx env (Core_util.type_subst_list tys ft) in
+          let ct = Translation_types.cpp_of_core cx env (Base.Core_util.type_subst_list tys ft) in
           if Cpp_ir.Types.prints_as_any ct || not (Translation_types.names_only_scoped_tvars cx ct) then None
           else Some ct
         | _ -> None )
@@ -700,13 +700,13 @@ let record_field cx env ~is_boxed (ty : Core.Type.t) r ~slot i e =
          erased at its own one argument and is not -- the [std::pair] it
          stands for keeps a concrete second component. *)
       match
-        Type_util.unqualify_ty
+        Base.Type_util.unqualify_ty
           (Translation_types.unfold_cpp_typedef cx env (declared_field_cpp_ty ft))
       with
       | Entity_application (_, (_ :: _ as args), _) as d
         when List.for_all
                (fun a ->
-                 Cpp_ir.Types.prints_as_any a || Type_util.is_cpp_dummy_type a )
+                 Cpp_ir.Types.prints_as_any a || Base.Type_util.is_cpp_dummy_type a )
                args
              && List.exists Cpp_ir.Types.prints_as_any args ->
         Some d
@@ -754,8 +754,8 @@ let custom_refined_annotation cx env ~(expected_ty : Cpp_ir.Lowered.Type.t optio
                 | Some t -> Translation_types.resolves_to_any_type cx t
                 | None -> false ) ->
       let field_tys =
-        match Table.get_ctor_ip_types_opt r with
-        | Some l -> List.filter (fun t -> not (Core_util.is_erased_type t)) l
+        match Base.Table.get_ctor_ip_types_opt r with
+        | Some l -> List.filter (fun t -> not (Base.Core_util.is_erased_type t)) l
         | None -> []
       in
       let recovered = Array.of_list tys in
@@ -825,7 +825,7 @@ let custom_refined_annotation cx env ~(expected_ty : Cpp_ir.Lowered.Type.t optio
       match slot.Translation_slot.expected_core_ty with
       | None -> ty
       | Some want ->
-        Type_util.refine_erased
+        Base.Type_util.refine_erased
           ~writable:(fun t -> Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env t))
           ty want
   in
@@ -842,7 +842,7 @@ let custom_refined_annotation cx env ~(expected_ty : Cpp_ir.Lowered.Type.t optio
       | Some _ -> expected_ty
       | None -> current_cpp_return_type cx ()
     in
-    match (ty, Option.map (fun t -> Type_util.unqualify_ty (Translation_types.unfold_cpp_typedef cx env t))
+    match (ty, Option.map (fun t -> Base.Type_util.unqualify_ty (Translation_types.unfold_cpp_typedef cx env t))
       expected) with
     | Core.Type.Global_app {head = n;
                             type_arguments = tys;
@@ -932,7 +932,7 @@ let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core
                a bare [T1]. *)
             List.map2 (fun local outer ->
               if core_type_contains_erased ~in_arrows:true local
-                 && not (Type_util.core_type_contains_tvar outer)
+                 && not (Base.Type_util.core_type_contains_tvar outer)
               then outer else local) tys exp_tys
           | _ -> tys)
         | None -> tys
@@ -956,8 +956,8 @@ let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core
   (* Pre-compute field types and draft template types so we can wrap lambdas
      that are stored in erased (std::any) fields.  This mirrors the logic in
      wrap_if_needed_for_field for the standard Core.Expr.Construct path. *)
-  let field_types_for_wrap = match Table.get_ctor_ip_types_opt r with
-    | Some ft -> List.filter (fun t -> not (Core_util.is_erased_type t)) ft
+  let field_types_for_wrap = match Base.Table.get_ctor_ip_types_opt r with
+    | Some ft -> List.filter (fun t -> not (Base.Core_util.is_erased_type t)) ft
     | None -> [] in
   let draft_ctor_temps_for_wrap =
     Translation_ctor_args.ctor_draft_temps cx env ~promoted_active:(cx.ctx.lexical.promoted_var_map <> [])
@@ -994,8 +994,8 @@ let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core
             (* Erased only in part -- [pair<std::any, ...>] where a field's
                class variable had no instance in scope -- the destination
                fills the part it knows, [St<ptr>]. *)
-            else if Type_util.has_tany_written local then
-              Type_util.refine_erased_by ~expected:slot local
+            else if Base.Type_util.has_tany_written local then
+              Base.Type_util.refine_erased_by ~expected:slot local
             else local )
           draft_ctor_temps_for_wrap eargs
       | _ -> draft_ctor_temps_for_wrap )
@@ -1046,7 +1046,7 @@ let custom cx env ~(expected_ty : Cpp_ir.Lowered.Type.t option) ~slot (ty : Core
     match r with
     | GlobRef.ConstructRef ((kn, _), _) ->
       let ind = GlobRef.IndRef (kn, 0) in
-      Type_util.is_custom_list_global ind
+      Base.Type_util.is_custom_list_global ind
     | _ -> false
   in
   (* "A sibling field is erased" is a statement about fields, so only the
@@ -1106,7 +1106,7 @@ let custom_field cx ?var env c ~slot r i e =
       | Some (Core.Type.Erased _) | None -> Some ft
       | x -> x )
     | Some ft when ty_args_for_expected <> [] ->
-      Some (Core_util.type_subst_list ty_args_for_expected ft)
+      Some (Base.Core_util.type_subst_list ty_args_for_expected ft)
     | Some ft -> Some ft
     | None ->
     match List.nth_opt ty_args_for_expected i with
@@ -1142,7 +1142,7 @@ let custom_field cx ?var env c ~slot r i e =
     match r with
     | GlobRef.ConstructRef ((kn, _), _) ->
       let ind = GlobRef.IndRef (kn, 0) in
-      Type_util.is_custom_list_global ind
+      Base.Type_util.is_custom_list_global ind
     | _ -> false
   in
   let propagate_erased_ctx =
@@ -1163,10 +1163,10 @@ let custom_field cx ?var env c ~slot r i e =
          and a nested constructor built at the erased one boxes it. *)
       let cpp_ty =
         match List.nth_opt field_types_for_wrap i with
-        | Some (Core.Type.Variable {variable = j; _}) when Type_util.has_tany_written cpp_ty -> (
+        | Some (Core.Type.Variable {variable = j; _}) when Base.Type_util.has_tany_written cpp_ty -> (
           match List.nth_opt ctor_temps_at_slot (j - 1) with
           | Some t when not (Cpp_ir.Types.prints_as_any t) ->
-            Type_util.refine_erased_by ~expected:t cpp_ty
+            Base.Type_util.refine_erased_by ~expected:t cpp_ty
           | _ -> cpp_ty )
         | _ -> cpp_ty
       in
@@ -1193,7 +1193,7 @@ let custom_field cx ?var env c ~slot r i e =
       match List.nth_opt field_types_for_wrap i with
       | Some (Core.Type.Variable {variable = j; _}) -> (
         match
-          Option.map Type_util.tvar_erase_type
+          Option.map Base.Type_util.tvar_erase_type
             (List.nth_opt ctor_temps_at_slot (j - 1))
         with
         | Some t when partially_erased_fun_ty t -> Some t

@@ -40,7 +40,7 @@ let () =
     in
     let t = Call_tyargs.of_use use in
     check "starts as what the use wrote"
-      (Core_util.Var_types.equal (Call_tyargs.by_variable t) (Core_util.written_type_args use));
+      (Base.Core_util.Var_types.equal (Call_tyargs.by_variable t) (Base.Core_util.written_type_args use));
     check "a variable is a hole unless the use wrote a readable type"
       (List.for_all
          (fun (v, s) ->
@@ -51,7 +51,7 @@ let () =
       (List.for_all
          (fun (v, s) -> Call_tyargs.is_unwritten t v = (s = Core.Scheme.Not_written))
          sources );
-    let spoken = List.map fst (Core_util.Var_types.bindings (Call_tyargs.by_variable t)) in
+    let spoken = List.map fst (Base.Core_util.Var_types.bindings (Call_tyargs.by_variable t)) in
     let within v = List.exists (Core.Scheme.Var.equal v) spoken in
     check "interior holes and the variables beyond partition by the extent"
       (List.for_all within (Call_tyargs.interior_holes t)
@@ -73,16 +73,16 @@ let () =
     let before = Call_tyargs.by_variable t in
     List.iter
       (fun (j, ty) ->
-        match Core_util.Var_types.find before j with
+        match Base.Core_util.Var_types.find before j with
         | Some (Core.Type.Erased _) | None -> ()
         | Some b -> check "a known variable keeps its type" (b = ty) )
-      (Core_util.Var_types.bindings after);
+      (Base.Core_util.Var_types.bindings after);
     check "no resolution is an erased placeholder"
       (List.for_all
          (fun v ->
            Call_tyargs.is_hole r v
            || (not (Call_tyargs.is_hole t v))
-           || match Core_util.Var_types.find after v with
+           || match Base.Core_util.Var_types.find after v with
               | Some (Core.Type.Erased _) | None -> false
               | Some _ -> true )
          (Call_tyargs.vars t) );
@@ -112,12 +112,12 @@ let () =
     check "a variable is found where the callee's type spells it"
       (List.for_all
          (fun v ->
-           Core_util.Var_types.find tys v = Core_util.Var_types.find_tvar tys (Core.Scheme.Var.ordinal v) )
+           Base.Core_util.Var_types.find tys v = Base.Core_util.Var_types.find_tvar tys (Core.Scheme.Var.ordinal v) )
          (Call_tyargs.vars r) );
     let other = List.hd (Core.Scheme.Var.all (Core.Scheme.Id.fresh callee ~arity)) in
     check "another scheme's variable is never read as this one's"
-      ( Core_util.Var_types.is_empty tys
-      || match Core_util.Var_types.find tys other with
+      ( Base.Core_util.Var_types.is_empty tys
+      || match Base.Core_util.Var_types.find tys other with
          | exception Invalid_argument _ -> true
          | _ -> false )
   done

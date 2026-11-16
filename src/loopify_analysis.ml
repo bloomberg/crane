@@ -140,13 +140,13 @@ let converting_ctor (ty : ty) (args : expr list) : expr =
     [Core.Binder_name.Source.of_string] allocations across the loopify modules. *)
 
 let id_result       = Id.of_string "_result"
-let id_enter        = Generated_name.id "Enter"
+let id_enter        = Base.Generated_name.id "Enter"
 let id_f            = Id.of_string "_f"
 let id_stack        = Id.of_string "_stack"
 let id_head         = Id.of_string "_head"
 let id_write        = Id.of_string "_write"
 let id_frame        = Id.of_string "_frame"
-let id_Frame        = Generated_name.id "Frame"
+let id_Frame        = Base.Generated_name.id "Frame"
 let id_self         = Id.of_string "_self"
 
 (** The move-analysis key for a read of the frame field [_f.x].  Reads of a
@@ -272,7 +272,7 @@ let body_exists (pred : expr -> bool) (stmts : stmt list) : bool =
     [shared_ptr] because the constructor's recursive field is [shared_ptr].
     Handles [In_namespace] wrapping for out-of-line (.cpp) method definitions. *)
 let rec is_value_type_ret = function
-  | Entity_application (r, _, _) -> not (Table.is_coinductive r) && not (Table.is_custom r)
+  | Entity_application (r, _, _) -> not (Base.Table.is_coinductive r) && not (Base.Table.is_custom r)
   | In_namespace (_, t) -> is_value_type_ret t
   | _ -> false
 
@@ -289,8 +289,8 @@ let rec is_trivially_copyable_type = function
   | Named (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
   | External (s, ts) -> is_trivially_copyable_named s ts
   | Entity_application (r, ts, _) ->
-    Table.is_enum_inductive r || Table.is_custom_scalar_ref r
-    || Table.is_trivially_copyable_ref r
+    Base.Table.is_enum_inductive r || Base.Table.is_custom_scalar_ref r
+    || Base.Table.is_trivially_copyable_ref r
        && List.for_all is_trivially_copyable_type ts
   | _ -> false
 
@@ -301,7 +301,7 @@ let rec is_trivially_copyable_type = function
     names.  It is the whole question for a mapped type like [std::pair], which
     the user declares with [Crane TriviallyCopyable]. *)
 and is_trivially_copyable_named s ts =
-  Table.is_trivially_copyable_cpp_name s
+  Base.Table.is_trivially_copyable_cpp_name s
   && List.for_all is_trivially_copyable_type ts
 
 (** Whether a value of type [t] is worth a [std::move]
@@ -328,7 +328,7 @@ let rec is_borrowed = function
 let movable ty = (not (is_borrowed ty)) && (ty = Auto || worthwhile_move_type ty)
 
 (* Global mutable state in this file and their lifetimes:
-   - outcomes : reset per generated file (State.Unit) *)
+   - outcomes : reset per generated file (Base.State.Unit) *)
 
 (** A constructor field stored behind the smart pointer
     ({!Pointer_fields.field}). *)
@@ -346,14 +346,14 @@ let pointer_fields_of (u : Unit_context.t) key = Pointer_fields.find u.pointer_f
     in the unit [u], as planned, or [None] where it stores none. *)
 let constructor_pointer_fields u c =
   Option.map (List.map ptr_field_index)
-    (pointer_fields_of u (Common.ctor_owner_key c, Type_util.ctor_struct_name_of_ref c))
+    (pointer_fields_of u (Base.Common.ctor_owner_key c, Base.Type_util.ctor_struct_name_of_ref c))
 
 (** Check the pointer fields read off a generated constructor struct against
     the ones planned before rendering, under [CRANE_CHECK_IR]. *)
 let agree_ptr_fields u owner ctor_name fields =
-  let key = (Common.ctor_owner_key owner, ctor_name) in
+  let key = (Base.Common.ctor_owner_key owner, ctor_name) in
   if pointer_fields_of u key <> Some fields then
-    Probe.violation "constructor pointer fields"
+    Base.Probe.violation "constructor pointer fields"
       Pp.(
         str "the struct " ++ str ctor_name ++ str " of " ++ GlobRef.print owner
         ++ str " stores other fields behind the pointer than planned" )
@@ -443,7 +443,7 @@ let outcomes : (string * loopify_outcome) list ref = ref []
 
 let clear_outcomes () = outcomes := []
 
-let () = State.on_reset State.Unit clear_outcomes
+let () = Base.State.on_reset Base.State.Unit clear_outcomes
 
 (* A function generated again is lowered again, alike, and one lowered and
    then left -- a member of a recursive group whose partners were not all
@@ -480,13 +480,13 @@ let record_outcome name outcome =
 let report_outcomes ?(unit_name = "") () =
   let final = get_outcomes () in
   let where = if unit_name = "" then "" else unit_name ^ " " in
-  if Table.loopify_diagnostics () then
+  if Base.Table.loopify_diagnostics () then
     List.iter
       (fun (name, outcome) ->
         Feedback.msg_notice
           (Pp.str ("[loopify] " ^ where ^ name ^ ": " ^ string_of_outcome outcome)))
       final;
-  if Table.loopify_strict () then
+  if Base.Table.loopify_strict () then
     List.iter
       (function
         | (name, Declined why) ->
@@ -640,7 +640,7 @@ let method_checker
  fun e ->
    match (e, self_ref) with
    | Call (_, Entity (r, _, _), args), Some self_ref ->
-     if Common.globref_equal r self_ref then
+     if Base.Common.globref_equal r self_ref then
        let args_normal = args in
        if has_self_param then
          let self_arg, rest = extract_at this_position args_normal in
@@ -971,7 +971,7 @@ let arity_mismatch ~args ~params =
     Printf.sprintf "a recursive call passes %d argument%s where its loop has %d parameter%s" args (plural args) params
       (plural params)
   in
-  Probe.violation "control lowering" (Pp.str why);
+  Base.Probe.violation "control lowering" (Pp.str why);
   raise (Not_linearisable why)
 
 (** Filter a list keeping only elements at positions where [mask] is [true].

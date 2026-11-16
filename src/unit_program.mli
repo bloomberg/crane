@@ -37,8 +37,8 @@
 (** Whose generation a declaration belongs to: a source declaration's, or a
     helper lifted out of one. *)
 type owner =
-  | Source of Entity_id.t  (** a declaration of the unit's Core program *)
-  | Generated of Generated_entity_id.t  (** a helper lifted out of a body *)
+  | Source of Base.Entity_id.t  (** a declaration of the unit's Core program *)
+  | Generated of Base.Generated_entity_id.t  (** a helper lifted out of a body *)
 
 (** Source entities before helpers, each kind by its own order. *)
 val compare_owner : owner -> owner -> int
@@ -73,8 +73,8 @@ val pp_id : id -> Pp.t
 
 (** A helper lifted out of a body. *)
 type helper = {
-  helper_id : Generated_entity_id.t;
-      (** The helper's identity, made from its {!Lifted.t}. *)
+  helper_id : Base.Generated_entity_id.t;
+      (** The helper's identity, made from its {!Base.Lifted.t}. *)
   helper_decl : Cpp_ir.Lowered.Decl.t;
       (** The declaration that defines it. *)
 }
@@ -88,7 +88,7 @@ val helper_declaration : helper -> id
 
 (** One source declaration's generation. *)
 type entity = {
-  entity_id : Entity_id.t;
+  entity_id : Base.Entity_id.t;
       (** The source declaration generated. *)
   declarations : id list;
       (** The declarations generating it gave to finish, in order: its own,
@@ -102,7 +102,7 @@ type entity = {
 
 (** The globals [decls] name ({!Cpp_ir.Globrefs.iter}): what has to be
     declared before them. *)
-val dependencies : Cpp_ir.Lowered.Decl.t list -> Entity_id.Set.t
+val dependencies : Cpp_ir.Lowered.Decl.t list -> Base.Entity_id.Set.t
 
 (** {2 The program} *)
 
@@ -131,11 +131,11 @@ val entities : t -> entity list
 val declarations : t -> declaration list
 
 (** The finished helpers of a program, in the order they were finished. *)
-val helpers : t -> (Generated_entity_id.t * Cpp_ir.Resolved.Decl.t) list
+val helpers : t -> (Base.Generated_entity_id.t * Cpp_ir.Resolved.Decl.t) list
 
 (** The headers the declarations of a program need for what they write down
     ({!Cpp_demands}). *)
-val demands : t -> Table.header list
+val demands : t -> Base.Table.header list
 
 (** The globals the declarations of a program write the names of
     ({!Cpp_demands.globals_of_decl}). *)
@@ -225,14 +225,14 @@ val installed_promoted : unit -> Names.Id.t list
     Nothing is generated while planning. *)
 val record : entity -> entity
 
-(** When checking ({!Probe.checking}), an anomaly unless every entity
+(** When checking ({!Base.Probe.checking}), an anomaly unless every entity
     generated ahead of the files or taken by them is one the unit
     [declares], and every helper was lifted out of an entity the unit
     declares or generated, or out of none: emission generates what was
     planned, and the helpers its bodies lift. *)
 val check_against_plan : declares:(Names.GlobRef.t -> bool) -> unit
 
-(** When checking ({!Probe.checking}), an anomaly unless the entities the
+(** When checking ({!Base.Probe.checking}), an anomaly unless the entities the
     two files took, with the helpers they claimed and the declarations they
     name, are exactly those generated ahead of them: the walk ahead
     generates what the renders write, and nothing else. *)

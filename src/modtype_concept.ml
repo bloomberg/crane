@@ -89,7 +89,7 @@ let rec constraint_refs ~visible note = function
   | Named _ -> ()
   | Requirements {signature; items; _} ->
     let visible = signature :: visible in
-    let note r = if not (List.exists (fun s -> is_under s (Table.modpath_of_r r)) visible) then note r in
+    let note r = if not (List.exists (fun s -> is_under s (Base.Table.modpath_of_r r)) visible) then note r in
     List.iter
       (function
         | Requirement req -> requirement_refs note req
@@ -98,7 +98,7 @@ let rec constraint_refs ~visible note = function
 
 let names_member mp c =
   let names = ref false in
-  let note r = if is_under mp (Table.modpath_of_r r) then names := true in
+  let note r = if is_under mp (Base.Table.modpath_of_r r) then names := true in
   ( match c with
   | Alias {refinements; _} -> List.iter (fun (_, ty) -> cpp_type_refs note ty) refinements
   | Constraint c -> constraint_refs ~visible:[] note c );

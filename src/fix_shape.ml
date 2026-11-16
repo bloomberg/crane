@@ -15,15 +15,15 @@ let rec float_lets_under_lams = function
                         parameter_type = ty;
                         body = float_lets_under_lams (Core.Expr.Let {binder = x;
                                                                      binder_type = t;
-                                                                     value = Core_util.ast_lift 1 a;
-                                                                     body = Core_util.permut_rels 1 1 c;
+                                                                     value = Base.Core_util.ast_lift 1 a;
+                                                                     body = Base.Core_util.permut_rels 1 1 c;
                                                                      occurrence = occ})}
     | b -> Core.Expr.Let {binder = x; binder_type = t; value = a; body = b; occurrence = occ} )
   | e -> e
 
 (* [cofix o := Cons 1 o] as [(cofix o (_ : unit) := Cons 1 (o tt)) tt]. *)
 let thunk_nullary_cofix x ids funs occ =
-  match (Table.resolve_unit_type (), Table.resolve_tt_ctor ()) with
+  match (Base.Table.resolve_unit_type (), Base.Table.resolve_tt_ctor ()) with
   | Some u, Some tt ->
     let unit_ty = Core.Type.Global_app {head = u; type_arguments = []; index_arguments = []} in
     let tt_v = Core.Expr.Construct {result_type = unit_ty;
@@ -36,13 +36,13 @@ let thunk_nullary_cofix x ids funs occ =
     let rec call_self k = function
       | Core.Expr.Bound_variable {index = i; _} as f when i > k && i <= k + n ->
         Core.Expr.Apply {callee = f; arguments = [tt_v]}
-      | t -> Core_util.ast_map_lift call_self k t
+      | t -> Base.Core_util.ast_map_lift call_self k t
     in
     let thunk f =
       Core.Expr.Lambda
         { parameter = Core.Binder_name.Source (Id.of_string "u");
           parameter_type = unit_ty;
-          body = call_self 1 (Core_util.ast_lift 1 f) }
+          body = call_self 1 (Base.Core_util.ast_lift 1 f) }
     in
     let ids = Array.map (fun (id, ty) -> (id, Core.Type.Arrow {parameter = unit_ty; result = ty})) ids in
     Core.Expr.Apply
@@ -53,7 +53,7 @@ let thunk_nullary_cofix x ids funs occ =
 (* Bottom-up: every fixpoint's functions get their [let]s floated, then a
    cofixpoint none of whose functions is a lambda is thunked. *)
 let rec expr e =
-  match Core_util.ast_map expr e with
+  match Base.Core_util.ast_map expr e with
   | Core.Expr.Fixpoint g -> Core.Expr.Fixpoint (Core.Recursion.Group.map_bodies float_lets_under_lams g)
   | Core.Expr.Cofixpoint g ->
     let g = Core.Recursion.Group.map_bodies float_lets_under_lams g in

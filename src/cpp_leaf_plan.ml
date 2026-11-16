@@ -343,22 +343,22 @@ let text_names_into_a_struct text =
   in
   scan 0
 
-(** Whether one thing a rendering writes ({!Cpp_name.written}) is a qualifier
+(** Whether one thing a rendering writes ({!Base.Cpp_name.written}) is a qualifier
     naming into a struct or a template parameter rather than a namespace. *)
 let writes_into_a_struct = function
-  | Cpp_name.Scope (Cpp_name.Namespace _ | Cpp_name.Global) -> false
-  | Cpp_name.Scope (Cpp_name.Class _ | Cpp_name.Parameter _) -> true
-  | Cpp_name.Foreign_text text | Cpp_name.Untagged text -> text_names_into_a_struct text
+  | Base.Cpp_name.Scope (Base.Cpp_name.Namespace _ | Base.Cpp_name.Global) -> false
+  | Base.Cpp_name.Scope (Base.Cpp_name.Class _ | Base.Cpp_name.Parameter _) -> true
+  | Base.Cpp_name.Foreign_text text | Base.Cpp_name.Untagged text -> text_names_into_a_struct text
 
 (* Whether any of the qualifiers names into a struct or a template
    parameter. *)
-let scopes_name_into_a_struct = List.exists (fun s -> writes_into_a_struct (Cpp_name.Scope s))
+let scopes_name_into_a_struct = List.exists (fun s -> writes_into_a_struct (Base.Cpp_name.Scope s))
 
 (** Whether the head [h] is written through a struct or a template
     parameter. *)
 let head_names_into_a_struct h =
-  scopes_name_into_a_struct (h.outer @ Cpp_name.scopes h.head)
-  || match h.head with Cpp_name.Foreign text -> text_names_into_a_struct text | Cpp_name.Name _ -> false
+  scopes_name_into_a_struct (h.outer @ Base.Cpp_name.scopes h.head)
+  || match h.head with Base.Cpp_name.Foreign text -> text_names_into_a_struct text | Base.Cpp_name.Name _ -> false
 
 (** Whether the type [t] writes a qualifier into a struct or a template
     parameter, asked of the type rather than of its rendering: each name is
@@ -385,7 +385,7 @@ let type_names_into_a_struct ctx (t : ty) =
     | None ->
       head_names_into_a_struct (glob_head ctx r ~applied:(tys <> [])) ||? any tys )
   | Foreign fr -> text_names_into_a_struct (foreign_text fr) ||? any fr.types
-  | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', args, _)) when Common.globref_equal r r' ->
+  | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', args, _)) when Base.Common.globref_equal r r' ->
     head_names_into_a_struct (inductive_head ctx r' ~applied:(args <> [])) ||? any args
   | In_namespace _ | Member _ | Apply (Member _, _) -> Some true
   | Apply (head, args) -> any (head :: args)
@@ -544,8 +544,8 @@ let plan_ctor_aliases written =
       reads;
     (dedup (List.concat_map (fun (r : Ctor_aliases_read.t) -> r.aliases) reads), writes)
   in
-  let intf, intf_writes = planned Common.Intf in
-  let impl, impl_writes = planned Common.Impl in
+  let intf, intf_writes = planned Base.Common.Intf in
+  let impl, impl_writes = planned Base.Common.Impl in
   {intf; impl; intf_writes; impl_writes}
 
 (** The declaration of the template [a], printed where the tree puts it as
@@ -570,8 +570,8 @@ let ctor_aliases_declared_in plans ~file =
   let declared =
     match (plans.ctor_aliases, file) with
     | None, _ -> []
-    | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> Option.has_some a.holder) plan.impl
-    | Some plan, Common.Impl -> List.filter (fun a -> Option.is_empty a.holder) plan.impl
+    | Some plan, Base.Common.Intf -> plan.intf @ List.filter (fun a -> Option.has_some a.holder) plan.impl
+    | Some plan, Base.Common.Impl -> List.filter (fun a -> Option.is_empty a.holder) plan.impl
   in
   List.fold_left
     (fun acc a ->
@@ -589,13 +589,13 @@ let planned_writes plans ~file ~module_ w =
   match plans.ctor_aliases with
   | None -> None
   | Some plan -> (
-    let writes = match file with Common.Intf -> plan.intf_writes | Common.Impl -> plan.impl_writes in
+    let writes = match file with Base.Common.Intf -> plan.intf_writes | Base.Common.Impl -> plan.impl_writes in
     match Written.find_opt writes (module_, w) with
     | Some planned -> Some planned
     | None ->
       let what = match w with Written_declaration _ -> "a declaration" | Written_fields _ -> "the fields of a record" in
       CErrors.anomaly
-        Pp.(str "Crane: " ++ str what ++ str " of the " ++ str (Common.file_name file) ++ str " in "
+        Pp.(str "Crane: " ++ str what ++ str " of the " ++ str (Base.Common.file_name file) ++ str " in "
             ++ str (ModPath.to_string module_)
             ++ str " are written that were not read when their templates were planned.") )
 
@@ -612,12 +612,12 @@ let planned_tyctors plans ~file ~module_ w = Option.map snd (planned_writes plan
 (** Under [CRANE_CHECK_IR], the templates the file [file] spelled must be
     the ones planned for it. *)
 let check_ctor_alias_plan plans ~file =
-  if Probe.checking () then begin
+  if Base.Probe.checking () then begin
     let planned =
       match (plans.ctor_aliases, file) with
       | None, _ -> []
-      | Some plan, Common.Intf -> plan.intf
-      | Some plan, Common.Impl -> plan.impl
+      | Some plan, Base.Common.Intf -> plan.intf
+      | Some plan, Base.Common.Impl -> plan.impl
     in
     let spelled = take_ctor_aliases_spelled () in
     let describe a =
@@ -628,9 +628,9 @@ let check_ctor_alias_plan plans ~file =
     match (missing spelled planned, missing planned spelled) with
     | [], [] -> ()
     | unplanned, unspelled ->
-      Probe.violation "constructor aliases"
+      Base.Probe.violation "constructor aliases"
         Pp.(
-          str "the " ++ str (Common.file_name file) ++ str " spells "
+          str "the " ++ str (Base.Common.file_name file) ++ str " spells "
           ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unplanned
           ++ str " unplanned, and does not spell "
           ++ prlist_with_sep pr_comma (fun a -> str (describe a)) unspelled
@@ -639,7 +639,7 @@ let check_ctor_alias_plan plans ~file =
 
 (** The structs the file being written has constrained forward declarations
     of, planned with its layout, each by its reference. *)
-let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
+let constrained_structs : GlobRef.t list ref = Base.State.cell Base.State.Unit []
 
 (* Of [globals], those whose name is decided -- printing decides none --
    asked for at each of [frames], each as the type and the expression
@@ -648,7 +648,7 @@ let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
    function reads it, and, of a type class, whether its concept is held
    back. *)
 let global_names u frames globals =
-  let decided r = Option.has_some (Common.decided_global_name r) in
+  let decided r = Option.has_some (Base.Common.decided_global_name r) in
   let globals =
     List.sort_uniq GlobRef.UserOrd.compare
       (List.concat_map (function GlobRef.ConstructRef (ind, _) as r -> [r; GlobRef.IndRef ind] | r -> [r]) globals)
@@ -674,7 +674,7 @@ let global_names u frames globals =
     @ List.concat_map
         (fun r ->
           Cpp_resolution.[Value_access r; Read_by_a_function r]
-          @ if Table.is_typeclass r then [Cpp_resolution.Held_back_concept r] else [] )
+          @ if Base.Table.is_typeclass r then [Cpp_resolution.Held_back_concept r] else [] )
         globals
   in
   List.concat_map (fun frame -> List.map (fun key -> (frame, key)) keys) frames
@@ -840,7 +840,7 @@ let ctor_alias_home ctx body =
     (* The struct at namespace scope [cur] is written in: what it declares,
        at any depth, is incomplete in front of it. *)
     let rec outermost mp =
-      match mp with ModPath.MPdot (parent, _) when not (Table.is_modfile parent) -> outermost parent | _ -> mp
+      match mp with ModPath.MPdot (parent, _) when not (Base.Table.is_modfile parent) -> outermost parent | _ -> mp
     in
     let struct_ = outermost cur in
     let rec inside mp =
@@ -854,7 +854,7 @@ let ctor_alias_home ctx body =
           | _ -> false )
         body
     in
-    if names_struct && not (Table.is_modfile cur) then Some cur else None
+    if names_struct && not (Base.Table.is_modfile cur) then Some cur else None
 
 (** Where the template abbreviating [body], spelled at [ctx], is declared:
     in the struct of its home ({!ctor_alias_home}), or at namespace scope
@@ -866,7 +866,7 @@ let ctor_alias_declared ctx body : Cpp_ast.declared_in =
   | Some home -> In_struct_of home
   | None ->
     let visible = visibility_at ctx (Pp.str "a template is declared at namespace scope") in
-    At_namespace_scope (List.rev (List.filter Table.is_modfile (Common.visible_mps visible)))
+    At_namespace_scope (List.rev (List.filter Base.Table.is_modfile (Base.Common.visible_mps visible)))
 
 (** The visibility a template is declared, and so its body written, in: the
     body of its home module, as planned, or outside every module body. *)
@@ -877,7 +877,7 @@ let ctor_alias_visibility scopes : Cpp_ast.declared_in -> _ = function
     | None ->
       CErrors.anomaly
         Pp.(str "Crane: the module " ++ str (ModPath.to_string home) ++ str " has no planned visibility.") )
-  | At_namespace_scope files -> Common.toplevel_visibility files
+  | At_namespace_scope files -> Base.Common.toplevel_visibility files
 
 (** The position a template declared at [declared] is written at, in the
     file [ctx] is written in: at namespace scope; in the header, inside its
@@ -894,10 +894,10 @@ let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   in
   match (declared, ctx.file) with
   | At_namespace_scope _, _ -> start
-  | In_struct_of home, Common.Intf ->
+  | In_struct_of home, Base.Common.Intf ->
     {start with in_struct = true; in_template = Scope_plan.templated ctx.unit.scopes home; module_ = Some home}
-  | In_struct_of home, Common.Impl ->
-    let out_of_line scope = {scope; Cpp_state.Out_of_line.file_scope_aliases = file_scope_aliases_of Common.Impl} in
+  | In_struct_of home, Base.Common.Impl ->
+    let out_of_line scope = {scope; Cpp_state.Out_of_line.file_scope_aliases = file_scope_aliases_of Base.Common.Impl} in
     {start with scope = Option.map out_of_line (Scope_plan.of_module ctx.unit.scopes home); module_ = Some home}
 
 (* The indices of the type variables writing [t], naming the variables [vl]
@@ -985,7 +985,7 @@ let rec ctor_alias_at ctx vl (t : ty) =
                 match p with Element (i, _) when i = last -> Element (i, None) | p -> p )
               fr.pieces }
       in
-      ctor_alias_of_probe ctx vl ~base:(Common.pp_global_name Type fr.custom) (Cpp_ir.Type.Foreign probe)
+      ctor_alias_of_probe ctx vl ~base:(Base.Common.pp_global_name Type fr.custom) (Cpp_ir.Type.Foreign probe)
     | _ -> None
   in
   if exists_type (fun s -> s = Carrier_parameter) t then
@@ -1063,8 +1063,8 @@ and ctor_alias_of_probe ctx vl ~base probe =
     String.equal rendered (cut_at_argument_list rendered ^ "<" ^ ctor_alias_tvar ^ ">")
   in
   let alone = applied_to_sentinel_alone probe in
-  if Probe.checking () && alone <> head_alone () then
-    Probe.violation "constructor alias shape"
+  if Base.Probe.checking () && alone <> head_alone () then
+    Base.Probe.violation "constructor alias shape"
       Pp.(str "the type constructor written " ++ str (Lazy.force rendered) ++ str " is read off its structure as "
           ++ str (if alone then "" else "not ") ++ str "a template name applied to its argument alone");
   if alone then None
@@ -1082,10 +1082,10 @@ and ctor_alias_of_probe ctx vl ~base probe =
     let written = vars_written (snd (Lazy.force rendered_with_uses)) vl probe in
     let all = captured probe in
     let captured = List.filter (fun (i, _) -> List.mem i written) all in
-    ( if Probe.checking () then
+    ( if Base.Probe.checking () then
         let names = identifier_tokens rendered in
         if List.filter (fun (i, name) -> List.mem (written_var i name) names) all <> captured then
-          Probe.violation "captured variables"
+          Base.Probe.violation "captured variables"
             Pp.(str "the body " ++ str rendered
                 ++ str " is read off its structure as writing other variables than its text names") );
     (* A class instance the body reads a type out of -- [typename
@@ -1116,8 +1116,8 @@ and ctor_alias_of_probe ctx vl ~base probe =
          is still a variable: a holder nested in the body captures it under
          its new name, and is applied to that. *)
       let var_names =
-        List.mapi (fun k (i, _) -> (i, Generated_name.indexed (if List.mem i bare_vars then "P" else "F") k)) vars
-      and instance_names = List.mapi (fun j id -> (id, Generated_name.indexed "P" (List.length vars + j))) instances in
+        List.mapi (fun k (i, _) -> (i, Base.Generated_name.indexed (if List.mem i bare_vars then "P" else "F") k)) vars
+      and instance_names = List.mapi (fun j id -> (id, Base.Generated_name.indexed "P" (List.length vars + j))) instances in
       let renamed =
         rewrite_type
           (function
@@ -1160,14 +1160,14 @@ and written_body at vl t =
   tyctors_spelled (deciding at noted) vl t;
   let uses = !noted in
   let body = Pp.string_of_ppcmds (pp_cpp_type_at {(resolved_for at t) with tyctors = Planned uses} false vl t) in
-  ( if Probe.checking () then
+  ( if Base.Probe.checking () then
       let noted' = ref [] in
       let at' = {at with aliases = Option.map ref found_before} in
       let body' = Pp.string_of_ppcmds (pp_cpp_type_at (deciding (resolved_for at' t) noted') false vl t) in
       if (not (String.equal body body')) || compare !noted' uses <> 0
          || compare (Option.map ( ! ) at'.aliases) (Option.map ( ! ) at.aliases) <> 0
       then
-        Probe.violation "structural spelling"
+        Base.Probe.violation "structural spelling"
           (Pp.str ("the body " ^ body ^ " decides other type constructors than rendering it does")) );
   (body, uses)
 
@@ -1187,7 +1187,7 @@ let ctor_aliases_found ctx visit =
         let spell ctx = tyctor_spelled ctx vl x in
         ( match owner with Some r -> enter_from ctx (Inductive_struct r) spell | None -> spell ctx )
       | _ -> () );
-  ( if Probe.checking () then
+  ( if Base.Probe.checking () then
       let found' = ref [] and noted' = ref [] in
       let ctx' = deciding {ctx with aliases = Some found'} noted' in
       visit (fun ~vl ~owner (t : ty) ->
@@ -1197,7 +1197,7 @@ let ctor_aliases_found ctx visit =
             ( match owner with Some r -> enter_from ctx' (Inductive_struct r) spell | None -> spell ctx' )
           | _ -> () );
       if compare !found' !found <> 0 || compare !noted' !noted <> 0 then
-        Probe.violation "structural spelling"
+        Base.Probe.violation "structural spelling"
           (Pp.str "a declaration decides other type constructors than rendering them does") );
   (!found, !noted)
 
@@ -1224,9 +1224,9 @@ let ctor_aliases_planned ctx (d : Cpp_ir.Resolved.Decl.t) =
   else
     let file = ctx.file in
     let aliases = planned_ctor_aliases ctx.plans ~file ~module_:(module_written ctx) d in
-    if Probe.checking () && (ctor_aliases_written ctx d).aliases <> aliases then
-      Probe.violation "constructor aliases"
-        Pp.(str "a declaration of the " ++ str (Common.file_name file)
+    if Base.Probe.checking () && (ctor_aliases_written ctx d).aliases <> aliases then
+      Base.Probe.violation "constructor aliases"
+        Pp.(str "a declaration of the " ++ str (Base.Common.file_name file)
             ++ str " writes other templates than were planned for it");
     aliases
 
@@ -1262,10 +1262,10 @@ let needs_of ~templates d =
 let fields_needs ctx ~module_ ~vl r types =
   let file = ctx.file in
   let aliases = planned_aliases ctx.plans ~file ~module_ (Written_fields r) in
-  if Probe.checking () && alias_plan_made ctx && (ctor_aliases_of_fields ctx ~vl r types).aliases <> aliases
+  if Base.Probe.checking () && alias_plan_made ctx && (ctor_aliases_of_fields ctx ~vl r types).aliases <> aliases
   then
-    Probe.violation "constructor aliases"
-      Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
+    Base.Probe.violation "constructor aliases"
+      Pp.(str "the fields of a record in the " ++ str (Base.Common.file_name file)
           ++ str " write other templates than were planned for them");
   let names, _ =
     constrained_named ~names:(fun () -> List.concat_map Cpp_demands.globals_of_type types) ~defined:(fun () -> [])
@@ -1354,7 +1354,7 @@ let unmerged_wrappers_written d = unmerged_wrappers_named ~name:(fun r -> (r, wr
 (* The wrapper module [homed] says the struct of the wrapper [r] holds the
    declarations of, if any. *)
 let home_of ~homed r =
-  List.find_map (fun (r', wrapped) -> if Common.globref_equal r r' then Some wrapped else None) homed
+  List.find_map (fun (r', wrapped) -> if Base.Common.globref_equal r r' then Some wrapped else None) homed
 
 (** The names of the wrapper structs [d] writes that hold a wrapper module's
     declarations: those of the wrappers [homed] gives a module. *)
@@ -1404,10 +1404,10 @@ let write_absorbing ctx ~homed env d =
   in
   let tree = absorbing (writing ctx d) ~homed ?tyctors env d in
   let needs = printed_needs ctx d in
-  ( if Probe.checking () then
+  ( if Base.Probe.checking () then
       let written = Cpp_ast.wrapper_structs tree and absorbing = absorbed_by ~homed d in
       if List.sort String.compare written <> List.sort String.compare absorbing then
-        Probe.violation "wrapper homes"
+        Base.Probe.violation "wrapper homes"
           Pp.(
             str "a declaration wrote the declarations of the wrappers "
             ++ prlist_with_sep pr_comma str written
@@ -1438,7 +1438,7 @@ let unprinted_fields ctx ~module_ ~vl r fields =
     where they are printed, must be what was planned where they were made. *)
 let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   let text = Cpp_print.print_unprinted ctx ~modtype_concept ~assertion u in
-  ( if Probe.checking () then
+  ( if Base.Probe.checking () then
       let tyctors =
         match u.declaration with
         | Declaration {decl; _} -> Some (ctor_aliases_written ctx decl).uses
@@ -1448,7 +1448,7 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
         | _ -> u.tyctors
       in
       if Option.has_some u.tyctors && tyctors <> u.tyctors then
-        Probe.violation "constructor alias uses"
+        Base.Probe.violation "constructor alias uses"
           (Pp.str "a declaration printed where the tree puts it writes its type constructors otherwise than planned");
       let needs =
         match u.declaration with
@@ -1458,7 +1458,7 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
         | _ -> u.needs
       in
       if needs <> u.needs then
-        Probe.violation "unprinted declarations"
+        Base.Probe.violation "unprinted declarations"
           (Pp.str
             "a declaration printed where the tree puts it needs other declarations than planned where it was made") );
   text

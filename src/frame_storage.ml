@@ -23,11 +23,11 @@ type parameter =
 
 let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
-    (not (Table.is_coinductive r)) && (not (Table.is_custom r)) && not (Table.is_enum_inductive r)
+    (not (Base.Table.is_coinductive r)) && (not (Base.Table.is_custom r)) && not (Base.Table.is_enum_inductive r)
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
-                          type_arguments = args; _} when abbreviations && not (Table.is_custom r) -> (
-    match Table.lookup_typedef_unchecked kn with
-    | Some t -> value_inductive ~abbreviations (Core_util.type_subst_list args t)
+                          type_arguments = args; _} when abbreviations && not (Base.Table.is_custom r) -> (
+    match Base.Table.lookup_typedef_unchecked kn with
+    | Some t -> value_inductive ~abbreviations (Base.Core_util.type_subst_list args t)
     | None -> false )
   | Core.Type.Meta {contents = Some t} -> value_inductive ~abbreviations t
   | _ -> false
@@ -35,7 +35,7 @@ let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
 let passed_holdable u passing ty =
   match passing with
   | Some Callable_abi.Borrowed -> value_inductive ~abbreviations:true ty
-  | Some Owned -> Table.reuse_here () && Unit_context.non_atomic_rc u && value_inductive ~abbreviations:true ty
+  | Some Owned -> Base.Table.reuse_here () && Unit_context.non_atomic_rc u && value_inductive ~abbreviations:true ty
   | Some Forwarded | None -> false
 
 let local_holdable u (l : Term.loop) i =
@@ -48,8 +48,8 @@ let local_holdable u (l : Term.loop) i =
       (Ownership_ir.Local_passing.lookup (o, j))
 
 let check_local i ~planned ~declared =
-  if Probe.checking () && planned && not (declared ()) then
-    Probe.violation "frame storage"
+  if Base.Probe.checking () && planned && not (declared ()) then
+    Base.Probe.violation "frame storage"
       Pp.(
         str "the plan of a local fixpoint lends its parameter " ++ int i
         ++ str " for a frame to hold by pointer, at a declared type no pointer spells" )
@@ -102,8 +102,8 @@ let declared_arguments (b : Term.branch) =
    fields may be bound as copies, and a custom match binds what its
    template computes. *)
 let branch_binders ~pointer_fields ty k (b : Term.branch) =
-  let record = Table.record_fields_of_type ty <> [] in
-  let custom = function GlobRef.ConstructRef (ind, _) -> Table.is_custom (GlobRef.IndRef ind) | _ -> false in
+  let record = Base.Table.record_fields_of_type ty <> [] in
+  let custom = function GlobRef.ConstructRef (ind, _) -> Base.Table.is_custom (GlobRef.IndRef ind) | _ -> false in
   List.map
     (function
       | Some (r, j) when not (custom r) ->

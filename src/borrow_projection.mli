@@ -26,7 +26,7 @@
 val lend :
   coinductive:bool -> Cpp_ir.Lowered.phase Cpp_ir.Field.member -> Cpp_ir.Lowered.phase Cpp_ir.Field.member list
 
-(** [check_decl d] -- a {!Probe.violation} for each projection of a
+(** [check_decl d] -- a {!Base.Probe.violation} for each projection of a
     coinductive [d] declares unsplit.  Run on each finished declaration
     under [CRANE_CHECK_IR]. *)
 val check_decl : Cpp_ir.Lowered.Decl.t -> unit

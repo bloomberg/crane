@@ -88,7 +88,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
           let ids = Core.Recursion.Group.functions rec_group
           and funs = Core.Recursion.Group.bodies rec_group in
           Array.iter (walk (depth + Array.length ids)) funs
-        | e -> Core_util.ast_iter (walk depth) e
+        | e -> Base.Core_util.ast_iter (walk depth) e
     in
     walk depth e;
     !n
@@ -97,7 +97,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
      body, under the fixpoint's name and its parameters, continuing itself
      and every loop the scope does. *)
   and entered callee depth occurrence fix =
-    let parameters, inner = Core_util.collect_lams fix in
+    let parameters, inner = Base.Core_util.collect_lams fix in
     let arity = List.length parameters in
     let target = Loop.Member (occurrence, 0) in
     let callee ~depth:d f =
@@ -156,7 +156,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       continue_ f (Option.get (named callee ~depth f (List.length args))) args
     | Core.Expr.Construct {constructor = c; arguments = [a]; _} when Recursion_plan.identity c -> lower callee depth a
     | Core.Expr.Apply {callee = Core.Expr.Global use;
-                       arguments = [a]} when Recursion_plan.identity use.callee && Table.to_inline use.callee ->
+                       arguments = [a]} when Recursion_plan.identity use.callee && Base.Table.to_inline use.callee ->
       lower callee depth a
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
       match List.rev args with
@@ -224,7 +224,7 @@ let rec fixpoints wanted acc e =
     | _ -> acc
   in
   let acc = ref acc in
-  Core_util.ast_iter (fun e -> acc := fixpoints wanted !acc e) e;
+  Base.Core_util.ast_iter (fun e -> acc := fixpoints wanted !acc e) e;
   !acc
 
 let lower ~methods plan program =
@@ -238,12 +238,12 @@ let lower ~methods plan program =
     (fun d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) -> defs := Names.GlobRef.Map_env.add fd.entity fd !defs)
-        (Core_util.term_defs d) )
+        (Base.Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     struc;
   let generated (fd : Core.Recursion.Definition.t) =
-    Type_util.declared_parameters (Core_util.type_simpl fd.type_) fd.body
+    Base.Type_util.declared_parameters (Base.Core_util.type_simpl fd.type_) fd.body
   in
   (* The body of a function lowered tail modulo cons is read with
      Normalize's temporaries put back, as the plan reads its chains. *)
@@ -271,12 +271,12 @@ let lower ~methods plan program =
      machine [lowered] lowers it as ({!Splices.entered_copy}). *)
   let check_entered r lowered =
     match Splices.entered_copy (Core_phase.splices program) r with
-    | Some o when Probe.checking () ->
+    | Some o when Base.Probe.checking () ->
       let enters t =
         List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.Term.entries t) in
       if not (Option.cata enters false lowered) then
-        Probe.violation "entered partner"
-          Pp.(str "the machine of " ++ str (Table.kername_of_global r)
+        Base.Probe.violation "entered partner"
+          Pp.(str "the machine of " ++ str (Base.Table.kername_of_global r)
               ++ str " does not enter the partner spliced into its body")
     | Some _ | None -> ()
   in
@@ -311,7 +311,7 @@ let lower ~methods plan program =
             (fun (occ, funs) ->
               let builds = List.exists (Core.Occurrence.equal occ) local_modulo_cons in
               let frames = List.exists (Core.Occurrence.equal occ) frame_locals in
-              let parameters, inner = Core_util.collect_lams funs.(0) in
+              let parameters, inner = Base.Core_util.collect_lams funs.(0) in
               let inner = if builds then Recursion_plan.restore_temporaries inner else inner in
               let arity = List.length parameters in
               let callee ~depth f =
@@ -324,7 +324,7 @@ let lower ~methods plan program =
             (List.rev_map
                (fun (occ, _, funs) -> (occ, funs))
                (fixpoints (locals @ local_modulo_cons @ frame_locals) [] body) ) )
-        (Core_util.term_defs d) )
+        (Base.Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -341,7 +341,7 @@ let held_occurrences t =
   let rec ast = function
     | Core.Expr.Bound_variable {occurrence = o; _} -> found := o :: !found
     | Core.Expr.Global {occurrence; _} -> found := occurrence :: !found
-    | e -> Core_util.ast_iter ast e
+    | e -> Base.Core_util.ast_iter ast e
   in
   let continue_ (c : Control_ir.Term.continue_) = List.iter ast c.arguments in
   let rec go : Control_ir.Term.t -> unit = function

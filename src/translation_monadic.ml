@@ -10,7 +10,7 @@
 open Names
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 (** Extract the innermost result type from a (possibly monadic) Core type.
@@ -22,16 +22,16 @@ open Core_query
 let core_result_type ty =
   let cod = core_codomain ty in
   match cod with
-  | Core.Type.Global_app {head = r; type_arguments = args; _} when Table.is_monad r ->
+  | Core.Type.Global_app {head = r; type_arguments = args; _} when Base.Table.is_monad r ->
     (match List.rev args with r :: _ -> r | [] -> cod)
   | _ -> cod
 
 (** Check if a monad reference uses the reified ITree extraction mode
     (i.e. its monad template string contains ["ITree"]).
 
-    Lives in {!Table} because {!Type_util} asks it too, to recognise an
+    Lives in {!Base.Table} because {!Base.Type_util} asks it too, to recognise an
     event family. *)
-let is_monad_reified = Table.is_monad_reified
+let is_monad_reified = Base.Table.is_monad_reified
 
 (** The effect operation the use [use] heads, as Core elaborated it
     ({!Core_effects}): its operation, and the mode it is generated in, read
@@ -42,7 +42,7 @@ let is_monad_reified = Table.is_monad_reified
 let effect_of cx (use : Core.Global_use.t) =
   let found = Core_effects.lookup cx.ctx.input.unit.effects use in
   if Option.has_some found then Core_effects.tally ();
-  if Probe.checking () then begin
+  if Base.Probe.checking () then begin
     let here =
       Option.map
         (fun operation -> {Core_effects.operation; mode = cx.ctx.input.itree_mode})
@@ -50,14 +50,14 @@ let effect_of cx (use : Core.Global_use.t) =
     in
     match (found, here) with
     | Some e, here when here <> Some e ->
-      Probe.violation "effect operations"
+      Base.Probe.violation "effect operations"
         Pp.(
-          str "an effect operation of " ++ str (Table.kername_of_global use.callee)
+          str "an effect operation of " ++ str (Base.Table.kername_of_global use.callee)
           ++ str " elaborated from Core disagrees with the generation translating it")
     | None, Some _ ->
-      Probe.violation "effect operations"
+      Base.Probe.violation "effect operations"
         Pp.(
-          str "an effect operation of " ++ str (Table.kername_of_global use.callee)
+          str "an effect operation of " ++ str (Base.Table.kername_of_global use.callee)
           ++ str " is translated where Core did not reach it")
     | _ -> ()
   end;
@@ -82,13 +82,13 @@ let apply_unit_void unit_void (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type
 (** Generate the C++ expression for Rocq's [tt] (the unit constructor).
     Does NOT call [gen_expr] — it checks the extraction table directly. *)
 let mk_tt_expr () : Cpp_ir.Lowered.Expr.t =
-  match Table.resolve_tt_ctor () with
-  | Some tt_ref when Table.is_custom tt_ref -> mk_cppglob tt_ref []
+  match Base.Table.resolve_tt_ctor () with
+  | Some tt_ref when Base.Table.is_custom tt_ref -> mk_cppglob tt_ref []
   | Some tt_ref ->
     let ind_ref, ctor_name =
       match tt_ref with
       | GlobRef.ConstructRef ((kn, i), cidx) ->
-        (GlobRef.IndRef (kn, i), Id.of_string (Common.enum_ctor_name_of_ref kn i cidx))
+        (GlobRef.IndRef (kn, i), Id.of_string (Base.Common.enum_ctor_name_of_ref kn i cidx))
       | _ -> CErrors.anomaly (Pp.str "mk_tt_expr: tt is not a ConstructRef")
     in
     Enum_value (ind_ref, ctor_name)
@@ -97,7 +97,7 @@ let mk_tt_expr () : Cpp_ir.Lowered.Expr.t =
 (** Whether [ty]'s codomain is a monad extracted as a reified tree. *)
 let codomain_is_reified_monad (ty : Core.Type.t) : bool =
   match core_codomain ty with
-  | Core.Type.Global_app {head = r; _} -> Table.is_monad r && is_monad_reified r
+  | Core.Type.Global_app {head = r; _} -> Base.Table.is_monad r && is_monad_reified r
   | _ -> false
 
 (** Whether [ty] is the type of something whose C++ call returns [void]: a
@@ -112,9 +112,9 @@ let codomain_is_reified_monad (ty : Core.Type.t) : bool =
     the call -- it drops the tree, and with it the sequencing the program was
     expressed in. *)
 let core_type_is_void_call (ty : Core.Type.t) : bool =
-  (match Type_util.resolve_meta ty with
+  (match Base.Type_util.resolve_meta ty with
   | Core.Type.Arrow _ -> true
-  | Core.Type.Global_app {head = r; _} -> Table.is_monad r
+  | Core.Type.Global_app {head = r; _} -> Base.Table.is_monad r
   | _ -> false)
   && core_type_is_unit (core_result_type ty)
   && not (codomain_is_reified_monad ty)
@@ -130,7 +130,7 @@ let is_void_ified_ref (r : GlobRef.t) : bool =
   match find_type_opt r with
   | Some ty ->
     core_type_is_void_call ty
-    || Table.is_inline_custom r
+    || Base.Table.is_inline_custom r
        && core_type_is_unit (core_result_type ty)
        && codomain_is_reified_monad ty
   | None -> false
@@ -150,8 +150,8 @@ let wrap_void_call_as_value (call_expr : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered
 let rec core_callee_is_void cx = function
   (* A record field of a [unit]-returning function type is stored as a
      [std::function<void(...)>]: [globals_object.(globals_set) gs]. *)
-  | Core.Expr.Global {callee = r; _} when Table.is_projection r -> (
-    try core_type_is_void_call (Table.find_type r) with Not_found -> false )
+  | Core.Expr.Global {callee = r; _} when Base.Table.is_projection r -> (
+    try core_type_is_void_call (Base.Table.find_type r) with Not_found -> false )
   | Core.Expr.Global {callee = r; _} -> is_void_ified_ref r
   | Core.Expr.Coerce {value = inner; _}
   | Core.Expr.Boxed_value {value = inner; _}
@@ -274,14 +274,14 @@ let rec is_reified_monadic_expr cx core_expr =
      it is stepped over without spending an argument; an alias still owed
      arguments is the arrows it names ([stateT S M T] is [S -> M (S * T)]). *)
   let rec core_result_after n ty =
-    match Type_util.resolve_meta ty with
-    | Core.Type.Arrow {parameter = dom; result = res} when (match Type_util.resolve_meta dom with
+    match Base.Type_util.resolve_meta ty with
+    | Core.Type.Arrow {parameter = dom; result = res} when (match Base.Type_util.resolve_meta dom with
             | Core.Type.Erased _ -> true
             | _ -> false) ->
       core_result_after n res
     | Core.Type.Arrow {result = res; _} when n > 0 -> core_result_after (n - 1) res
     | Core.Type.Global_app _ as t when n > 0 -> (
-      match Type_util.expand_core_fun_alias t with
+      match Base.Type_util.expand_core_fun_alias t with
       | Core.Type.Arrow _ as f -> core_result_after n f
       | _ -> t )
     | t -> t
@@ -300,12 +300,12 @@ let rec is_reified_monadic_expr cx core_expr =
   let instance_carrier_is_reified g =
     match Option.map core_codomain (find_type_opt g) with
     | Some t -> (
-      match Type_util.resolve_meta t with
+      match Base.Type_util.resolve_meta t with
       | Core.Type.Global_app {type_arguments = targs; _} ->
         List.exists
           (fun t ->
-            match Type_util.resolve_meta t with
-            | Core.Type.Global_app {head = m; _} -> Table.is_monad m && is_monad_reified m
+            match Base.Type_util.resolve_meta t with
+            | Core.Type.Global_app {head = m; _} -> Base.Table.is_monad m && is_monad_reified m
             | _ -> false )
           targs
       | _ -> false )
@@ -315,7 +315,7 @@ let rec is_reified_monadic_expr cx core_expr =
     (* A carrier of arrow kind stands in its class's argument list as the
        [Core.Type.Variable_app] it would be if applied, with nothing applied to it yet. *)
     let names_carrier t =
-      match Type_util.resolve_meta t with
+      match Base.Type_util.resolve_meta t with
       | Core.Type.Variable {variable = i; _} | Core.Type.Variable_app {head = i; _} -> Int.equal i head
       | _ -> false
     in
@@ -324,7 +324,7 @@ let rec is_reified_monadic_expr cx core_expr =
       | dom :: doms', _ when erased_by_extraction dom -> go doms' args
       | dom :: doms', a :: args' ->
         let fills_this_carrier =
-          match Type_util.resolve_meta dom with
+          match Base.Type_util.resolve_meta dom with
           | Core.Type.Global_app {type_arguments = targs; _} -> List.exists names_carrier targs
           | _ -> false
         in
@@ -334,7 +334,7 @@ let rec is_reified_monadic_expr cx core_expr =
         | _ -> go doms' args' )
       | _ -> false
     in
-    go (Type_util.core_domains ty) args
+    go (Base.Type_util.core_domains ty) args
   in
   (* A local's type may say nothing -- a rank-2 [D ~> itree E] parameter is
      erased, so what it returns is a type variable -- and then the Rocq
@@ -343,9 +343,9 @@ let rec is_reified_monadic_expr cx core_expr =
      monad is a tree.  Only a type that says something else is evidence of a
      plain value. *)
   let says_monadic ty =
-    Option.has_some (Type_util.type_monad ty)
+    Option.has_some (Base.Type_util.type_monad ty)
     ||
-    match Type_util.resolve_meta ty with
+    match Base.Type_util.resolve_meta ty with
     | Core.Type.Variable _ | Core.Type.Unknown | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
     | _ -> false
   in
@@ -377,13 +377,13 @@ let rec is_reified_monadic_expr cx core_expr =
     && ( match find_type_opt r with
        | Some ty ->
          let res = core_result_after nargs ty in
-         ( match Type_util.resolve_meta res with
+         ( match Base.Type_util.resolve_meta res with
          | Core.Type.Variable_app {head; _} ->
            let args = match core_expr with Core.Expr.Apply {arguments = args; _} -> args | _ -> [] in
            reified_via_dictionary ty args head
          | _ -> (
-           match Type_util.type_monad res with
-           | Some m -> (not (Table.is_inline_custom r)) || is_monad_reified m
+           match Base.Type_util.type_monad res with
+           | Some m -> (not (Base.Table.is_inline_custom r)) || is_monad_reified m
            | None -> false ) )
        | None -> false )
   | Core.Expr.Construct {result_type = ty; _} -> is_monadic_core_type ty

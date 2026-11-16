@@ -24,7 +24,7 @@ val read_off :
 
 (** The flags of [struc]'s functions, settled across calls: each
     function's, innermost first, for the parameters its head declares,
-    eta-expansion's included ({!Type_util.declared_parameters}).  A
+    eta-expansion's included ({!Base.Type_util.declared_parameters}).  A
     custom constant has none: its mapping, not its body, is what a call to
     it runs.  [receiver r] is the position, outermost first, of the
     parameter the function [r] generated as a method takes as its receiver,

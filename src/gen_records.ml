@@ -8,10 +8,10 @@
     and {!Gen_instances} for the constraint on a class-typed parameter.
     The declarations it returns are {!Cpp_ir.Lowered.Decl.t}. *)
 
-open Common
+open Base.Common
 open Names
 open Util
-open Type_util
+open Base.Type_util
 open Gen_context
 
 module IntSet = Escape.IntSet
@@ -24,19 +24,19 @@ module IntSet = Escape.IntSet
     counterpart in a plain struct (unlike typeclasses, which turn them into
     [typename I::field] requirements).  The promoted variables the fields
     {e mention} without the record declaring them are the exception: those
-    lead the template parameter list, see {!Table.promoted_type_params}.
+    lead the template parameter list, see {!Base.Table.promoted_type_params}.
     The struct also carries a conversion to every other instantiation of
     its parameters, from {!Gen_context.conversion_to_other_instantiation}. *)
 let gen_record_cpp cx name fields (ind : Core.Inductive.Packet.t) =
   let nb_keep = count_keep_params ind.signature in
   let param_ip_vars = List.filteri (fun i _ -> i < nb_keep) ind.type_variables in
-  let vars = List.map Common.tparam_name param_ip_vars in
+  let vars = List.map Base.Common.tparam_name param_ip_vars in
   (* Use full type_variables for type name resolution so Tvars resolve to names,
      then replace promoted Tvars (not in template params) with std::any. *)
-  let all_vars = List.map Common.tparam_name ind.type_variables in
+  let all_vars = List.map Base.Common.tparam_name ind.type_variables in
   let promoted_var_names =
     List.filteri (fun i _ -> i >= nb_keep) ind.type_variables
-    |> List.map (fun id -> Id.to_string (Common.tparam_name id))
+    |> List.map (fun id -> Id.to_string (Base.Common.tparam_name id))
   in
   let replace_promoted : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
     | (Promoted_member id | Variable (Index (_, Some id) | Named id))
@@ -44,7 +44,7 @@ let gen_record_cpp cx name fields (ind : Core.Inductive.Packet.t) =
       Any
     (* Any record's or class's promoted field: a plain struct has no
        instance to name it through, whoever owns it. *)
-    | Entity_application (g, _, _) when Table.is_promoted_type_var g -> Any
+    | Entity_application (g, _, _) when Base.Table.is_promoted_type_var g -> Any
     | ty -> ty
   in
   (* A field's type at a given spelling of the template parameters.  The
@@ -88,9 +88,9 @@ let gen_record_cpp cx name fields (ind : Core.Inductive.Packet.t) =
   in
   (* A record's fields are payloads like any other, so the promoted variables
      they name are template parameters here too -- see
-     {!Table.promoted_type_params} and its use for the other inductive
+     {!Base.Table.promoted_type_params} and its use for the other inductive
      kinds. *)
-  let ty_vars = Cpp_ir.Build.typenames (Table.promoted_type_params name @ vars) in
+  let ty_vars = Cpp_ir.Build.typenames (Base.Table.promoted_type_params name @ vars) in
   let conversion_field =
     conversion_to_other_instantiation cx ~leading:(mentioned_promoted_args name)
       ~name ~templates:(Cpp_ir.Build.typenames vars) ~vars
@@ -98,7 +98,7 @@ let gen_record_cpp cx name fields (ind : Core.Inductive.Packet.t) =
         (List.mapi
            (fun i {Core.Record.Field.projection = x; type_ = t} ->
              ( Id.of_string_soft
-                 (Common.pp_global_name Type (field_name i x)),
+                 (Base.Common.pp_global_name Type (field_name i x)),
                fun param_names -> field_cpp_ty param_names t ) )
            fields)
   in
@@ -132,12 +132,12 @@ let concept_constraint_of_class_type cx ty : Cpp_ir.Lowered.phase Cpp_ir.Templat
   match ty with
   | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} ->
     let kept =
-      if Table.get_ind_nb_tparams class_ref = 0 then []
-      else List.map (Translation_types.cpp_ir_of_core_type cx (empty_env ()) []) (Table.drop_hkt_args class_ref
+      if Base.Table.get_ind_nb_tparams class_ref = 0 then []
+      else List.map (Translation_types.cpp_ir_of_core_type cx (empty_env ()) []) (Base.Table.drop_hkt_args class_ref
         type_args)
     in
     let mentioned =
-      List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Table.promoted_type_params class_ref)
+      List.map (fun v : Cpp_ir.Lowered.Type.t -> Promoted_member v) (Base.Table.promoted_type_params class_ref)
     in
     Some (Concept (class_ref, kept @ mentioned))
   | _ -> None
@@ -158,26 +158,26 @@ let concept_constraint_of_class_type cx ty : Cpp_ir.Lowered.phase Cpp_ir.Templat
    is checked with a CppIR [Convertible_to], which the printer renders.
 *)
 let gen_typeclass_cpp cx name fields =
-  let ip_vars = Table.get_ind_ip_vars name in
-  let nb_keep = Table.get_ind_nb_sign_keeps name in
+  let ip_vars = Base.Table.get_ind_ip_vars name in
+  let nb_keep = Base.Table.get_ind_nb_sign_keeps name in
   let inst_id =
     let param_names =
       List.mapi (fun i x -> if i < nb_keep
-                            then Id.to_string (Common.tparam_name x)
+                            then Id.to_string (Base.Common.tparam_name x)
                             else "") ip_vars
     in
-    if List.mem "I" param_names then Generated_name.id "Inst"
+    if List.mem "I" param_names then Base.Generated_name.id "Inst"
     else Id.of_string "I"
   in
   (* Split type_variables into param vars (real type params) and promoted vars
-     (associated types).  Param vars go through {!Common.tparam_name}, which
+     (associated types).  Param vars go through {!Base.Common.tparam_name}, which
      prefixes them with t_ under the BDE convention. *)
   (* A parameter that is itself a type constructor ([M : Type -> Type]) is not
      a C++ template type parameter but an associated type of the instance
      ([typename I::M]), the same treatment promoted Type-valued fields get. *)
   let is_tparam i = is_class_tparam name i in
   let prefixed_ip_vars =
-    List.mapi (fun i x -> if is_tparam i then Common.tparam_name x else x)
+    List.mapi (fun i x -> if is_tparam i then Base.Common.tparam_name x else x)
       ip_vars
   in
   let param_vars = List.filteri (fun i _ -> is_tparam i) prefixed_ip_vars in
@@ -193,7 +193,7 @@ let gen_typeclass_cpp cx name fields =
      are on {!gen_record_cpp}'s struct: the text spells them bare, and bare is
      what a template parameter of that name makes correct. *)
   let all_params =
-    Cpp_ir.Build.typenames ((inst_id :: param_vars) @ Table.promoted_type_params name)
+    Cpp_ir.Build.typenames ((inst_id :: param_vars) @ Base.Table.promoted_type_params name)
   in
   (* Build typename requirements for promoted vars: typename I::field; *)
   (* A higher-kinded carrier is an alias template, so the concept cannot ask
@@ -249,7 +249,7 @@ let gen_typeclass_cpp cx name fields =
      and should NOT generate method requirements in the concept body. *)
   let is_typeclass_field_type ty =
     match ty with
-    | Core.Type.Global_app {head = r; _} -> Table.is_typeclass r
+    | Core.Type.Global_app {head = r; _} -> Base.Table.is_typeclass r
     | _ -> false
   in
   (* This is the same question {!Gen_context.promoted_var_is_associated_type} asks, so the
@@ -263,12 +263,12 @@ let gen_typeclass_cpp cx name fields =
       (fun {Core.Record.Field.projection = field_opt; type_ = field_ty} ->
         match field_opt with
         | Some fr when not (is_typeclass_field_type field_ty) ->
-          let fid = Common.id_of_global Term fr in
+          let fid = Base.Common.id_of_global Term fr in
           if List.exists (Id.equal fid) promoted_vars then
             CErrors.user_err
               Pp.(
                 str "Crane: concept '"
-                ++ Id.print (Common.id_of_global Type name)
+                ++ Id.print (Base.Common.id_of_global Type name)
                 ++ str "' requires '" ++ Id.print fid
                 ++ str "' both as a type and as a method." )
         | _ -> () )
@@ -281,7 +281,7 @@ let gen_typeclass_cpp cx name fields =
     match field_opt with
     | None -> None (* Anonymous field, skip *)
     | Some field_ref ->
-      let method_name = Common.pp_global_name Term field_ref in
+      let method_name = Base.Common.pp_global_name Term field_ref in
       if is_typeclass_field_type field_ty then
         (* Type_class-typed field (a superclass instance).  It carries no
            method of its own: the instance exposes it as a nested type, so
@@ -290,7 +290,7 @@ let gen_typeclass_cpp cx name fields =
            type (e.g. [std::shared_ptr<PreCategory>]), which is invalid. *)
         Some
           (`Type
-            (Member (Instance (inst_id, name), Common.id_of_global Term field_ref)
+            (Member (Instance (inst_id, name), Base.Common.id_of_global Term field_ref)
               : Cpp_ir.Lowered.Type.t))
       else if is_bare_promoted_tvar field_ty then
         (* Field type is a bare promoted Core.Type.Variable (e.g., fun_ind_prf :
@@ -319,7 +319,7 @@ let gen_typeclass_cpp cx name fields =
            template) *)
         let args =
           List.filter (fun t ->
-            not (Table.is_typeclass_type t) && not (erased_by_extraction t)) args
+            not (Base.Table.is_typeclass_type t) && not (erased_by_extraction t)) args
         in
         let ret_cpp = converted ret in
         (* Emit each argument inline as [std::declval<ArgType>()] rather than
@@ -340,7 +340,7 @@ let gen_typeclass_cpp cx name fields =
            arguments are spelled out rather than deduced: a nullary method
            ([I::empty()]) offers nothing to deduce from, and defaulting the
            parameters instead would let a call that fails to deduce silently
-           fall back to [std::any].  {!Type_util.method_tvar_count} is the same count
+           fall back to [std::any].  {!Base.Type_util.method_tvar_count} is the same count
            the instance binds. *)
         let ntv =
           method_tvar_count
@@ -351,7 +351,7 @@ let gen_typeclass_cpp cx name fields =
              own type variables. *)
           + List.length
               (List.filter
-                 Table.is_typeclass_type
+                 Base.Table.is_typeclass_type
                  (fst (get_args_and_ret [] field_ty)) )
         in
         let callee = inst_scope method_name (List.init ntv (fun _ : Cpp_ir.Lowered.Type.t -> Any)) in

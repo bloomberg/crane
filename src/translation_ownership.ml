@@ -9,7 +9,7 @@
 open Names
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 
 (** Whether a parameter declared
     at [ty] is a reference the body does not own. *)
@@ -41,8 +41,8 @@ let infer_owned_flags cx ?owner body params =
   let read_off_body () = Ownership.read_off ~settled:(settled_ownership cx) params body in
   match Option.bind owner (settled_ownership cx) with
   | Some settled when List.length settled = List.length params ->
-    if Probe.checking () && settled <> read_off_body () then
-      Probe.violation "ownership summary"
+    if Base.Probe.checking () && settled <> read_off_body () then
+      Base.Probe.violation "ownership summary"
         Pp.(
           str "the parameters of " ++ Names.GlobRef.print (Option.get owner)
           ++ str " are not owned as their body reads them" );
@@ -57,12 +57,12 @@ let infer_owned_flags cx ?owner body params =
 let rec names_value_inductive (cpp_ty : Cpp_ir.Lowered.Type.t) =
   ( match cpp_ty with
   | Entity_application ((GlobRef.IndRef _ as g), _, _) | In_namespace ((GlobRef.IndRef _ as g), _) ->
-    (not (Table.is_enum_inductive g)) && (not (Table.is_coinductive g)) && not (Table.is_custom_scalar_ref g)
+    (not (Base.Table.is_enum_inductive g)) && (not (Base.Table.is_coinductive g)) && not (Base.Table.is_custom_scalar_ref g)
   | _ -> false )
   ||
   match cpp_ty with
-  | Entity_application ((GlobRef.ConstRef kn as r), args, _) when not (Table.is_custom r) -> (
-    match Table.lookup_typedef_unchecked kn with
+  | Entity_application ((GlobRef.ConstRef kn as r), args, _) when not (Base.Table.is_custom r) -> (
+    match Base.Table.lookup_typedef_unchecked kn with
     | Some body -> abbreviates_value_inductive args body
     | None -> false )
   | _ -> false
@@ -73,11 +73,11 @@ let rec names_value_inductive (cpp_ty : Cpp_ir.Lowered.Type.t) =
 and abbreviates_value_inductive args body =
   match resolve_meta body with
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
-    (not (Table.is_enum_inductive r)) && (not (Table.is_coinductive r)) && not (Table.is_custom_scalar_ref r)
+    (not (Base.Table.is_enum_inductive r)) && (not (Base.Table.is_coinductive r)) && not (Base.Table.is_custom_scalar_ref r)
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r);
-                          type_arguments = inner; _} when not (Table.is_custom r) -> (
-    match Table.lookup_typedef_unchecked kn with
-    | Some body -> abbreviates_value_inductive args (Core_util.type_subst_list inner body)
+                          type_arguments = inner; _} when not (Base.Table.is_custom r) -> (
+    match Base.Table.lookup_typedef_unchecked kn with
+    | Some body -> abbreviates_value_inductive args (Base.Core_util.type_subst_list inner body)
     | None -> false )
   | Core.Type.Variable {variable = j; _} when j >= 1 -> (
     match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
@@ -98,7 +98,7 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
     match t with
     | Function _ -> true
     | Non_deduced t | In_namespace (_, t) -> shared_block t
-    | Entity_application (r, _, _) -> Table.is_coinductive r
+    | Entity_application (r, _, _) -> Base.Table.is_coinductive r
     | _ -> false
   in
   match cpp_ty with
@@ -120,26 +120,26 @@ let rec core_lent_by_reference cx ty =
   match resolve_meta ty with
   | ty when is_monadic_core_type ty && cx.ctx.input.itree_mode = Reified -> Some true
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
-    Some ((not (Table.is_enum_inductive r)) && not (Table.is_custom_scalar_ref r))
+    Some ((not (Base.Table.is_enum_inductive r)) && not (Base.Table.is_custom_scalar_ref r))
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = args; _}
-    when (not (Table.is_custom r)) && not (Table.is_promoted_type_var r || Table.is_erased_type_const r) -> (
-    match Table.lookup_typedef_unchecked kn with
+    when (not (Base.Table.is_custom r)) && not (Base.Table.is_promoted_type_var r || Base.Table.is_erased_type_const r) -> (
+    match Base.Table.lookup_typedef_unchecked kn with
     | Some body -> (
       (* As {!names_value_inductive} reads an abbreviation: its body a value
          inductive, or a variable standing for one. *)
-      match resolve_meta (Core_util.type_subst_list args body) with
+      match resolve_meta (Base.Core_util.type_subst_list args body) with
       | Core.Type.Global_app {head = (GlobRef.IndRef _ | GlobRef.ConstRef _); _} as unfolded -> (
         match core_lent_by_reference cx unfolded with
         | Some lent ->
           Some
-            (lent && match unfolded with Core.Type.Global_app {head = r; _} -> not (Table.is_coinductive r) | _ -> true)
+            (lent && match unfolded with Core.Type.Global_app {head = r; _} -> not (Base.Table.is_coinductive r) | _ -> true)
         | None -> None )
       | _ -> Some false )
     | None -> None )
-  | Core.Type.Global_app {head = r; _} when Table.is_custom r -> Some false
+  | Core.Type.Global_app {head = r; _} when Base.Table.is_custom r -> Some false
   (* A type abstraction erasure removes is no closure: what it returns is
      the value. *)
-  | Core.Type.Arrow {parameter = d; result = rest} when Core_util.is_erased_type d -> core_lent_by_reference cx rest
+  | Core.Type.Arrow {parameter = d; result = rest} when Base.Core_util.is_erased_type d -> core_lent_by_reference cx rest
   | Core.Type.Arrow _ | Core.Type.Variable _ -> Some true
   | _ -> None
 
@@ -154,8 +154,8 @@ let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowere
   let lent =
     match Option.bind core (core_lent_by_reference cx) with
     | Some by_core ->
-      if Probe.checking () && by_core <> by_cpp then
-        Probe.violation "parameter convention"
+      if Base.Probe.checking () && by_core <> by_cpp then
+        Base.Probe.violation "parameter convention"
           Pp.(
             str "the Core type of a parameter says it is "
             ++ str (if by_core then "lent by reference" else "copied")

@@ -75,7 +75,7 @@ type spelling =
 
 (** The name a reference is written with where the declaration holding it
     is written, once {!resolve} has resolved it there. *)
-type resolution = Unresolved | Resolved of Cpp_name.t
+type resolution = Unresolved | Resolved of Base.Cpp_name.t
 
 (** A module a declaration names, by its path, and its name where the
     declaration is written; in a module expression, also as the expression
@@ -146,9 +146,9 @@ and defined_name =
 
 (** What a declaration not yet printed declares. *)
 type declaration =
-  | Declaration of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
+  | Declaration of {env : Base.Common.env; decl : Cpp_ir.Resolved.Decl.t}
       (** A finished declaration, printed in the name environment [env]. *)
-  | Absorbed of {env : Common.env; decl : Cpp_ir.Resolved.Decl.t}
+  | Absorbed of {env : Base.Common.env; decl : Cpp_ir.Resolved.Decl.t}
       (** A member of the struct a declaration writes around a wrapper
           module's declarations, printed in [env].  What it needs is placed
           with that declaration, which is what was planned. *)
@@ -179,7 +179,7 @@ type declaration =
   | Derived_functor of {template : template_param list; name : declared_module; base : module_expr}
       (** [template <template> struct name : base {};]: a functor whose body
           is another module, its own parameters visible to [base]. *)
-  | Forward_declaration of {env : Common.env; defined : defined}
+  | Forward_declaration of {env : Base.Common.env; defined : defined}
       (** The forward declaration of what a declaration defines, printed in
           the name environment [env]. *)
   | Synthesised_template of synthesised
@@ -361,11 +361,11 @@ val decl : needs:Needs.t -> Pp.t -> t
 (** [unprinted ~needs ?tyctors env d] is [d], printed in [env] where the
     tree puts it, writing its type constructors as [tyctors] says
     ({!unprinted.tyctors}). *)
-val unprinted : needs:Needs.t -> ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Cpp_ir.Resolved.Decl.t -> t
+val unprinted : needs:Needs.t -> ?tyctors:Cpp_state.tyctor_use list -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> t
 
 (** [absorbed ?tyctors env d] is {!Absorbed}, printed where the tree puts
     it. *)
-val absorbed : ?tyctors:Cpp_state.tyctor_use list -> Common.env -> Cpp_ir.Resolved.Decl.t -> t
+val absorbed : ?tyctors:Cpp_state.tyctor_use list -> Base.Common.env -> Cpp_ir.Resolved.Decl.t -> t
 
 (** [fields ~needs ?tyctors ~record ~vars fields] is {!Fields}, printed
     where the tree puts it. *)
@@ -407,7 +407,7 @@ val derived_functor : template:template_param list -> ModPath.t -> module_expr -
 
 (** [forward_declaration env d] is {!Forward_declaration}, printed where
     the tree puts it.  It needs nothing placed in front of it. *)
-val forward_declaration : Common.env -> defined -> t
+val forward_declaration : Base.Common.env -> defined -> t
 
 (** [synthesised_template ~tyctors s] is {!Synthesised_template}, printed
     wherever the tree puts it as declared in its home, its body writing its

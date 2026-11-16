@@ -131,7 +131,7 @@ let expand fresh (l : lambda) args =
     incr fresh;
     let prefix = Printf.sprintf "_lc%d" !fresh in
     let renamed =
-      List.map (fun x -> (x, Generated_name.prefixed prefix x)) (List.map fst params @ declared_here l.body)
+      List.map (fun x -> (x, Base.Generated_name.prefixed prefix x)) (List.map fst params @ declared_here l.body)
     in
     let f x = match List.assoc_opt x renamed with Some y -> y | None -> x in
     (* An unnamed parameter's argument is evaluated for what it does, and a
@@ -278,14 +278,14 @@ let specialize_local_records fresh stmts =
          those. *)
       let live_fields =
         List.filter_map
-          (fun {Core.Record.Field.projection = fr; type_ = ty} -> if Core_util.is_erased_type ty then None else Some fr)
-          (Table.get_record_field_bindings record)
+          (fun {Core.Record.Field.projection = fr; type_ = ty} -> if Base.Core_util.is_erased_type ty then None else Some fr)
+          (Base.Table.get_record_field_bindings record)
       in
       let field_lambda r =
         if List.length live_fields <> List.length fields then None
         else
           let rec find = function
-            | Some fr :: _, l :: _ when Common.globref_equal fr r -> l
+            | Some fr :: _, l :: _ when Base.Common.globref_equal fr r -> l
             | _ :: frs, _ :: ls -> find (frs, ls)
             | _ -> None
           in

@@ -19,7 +19,7 @@
     and class dictionaries, an eta-reduced instance's included.  [lam_params]
     is every binder stripped, outermost first; [dictionaries] the
     class-typed ones, each named the way the instance's template parameter for
-    it is ({!Common.tc_instance_id}), with the class the instance's type
+    it is ({!Base.Common.tc_instance_id}), with the class the instance's type
     states. *)
 type layers = {
   inner_ty : Core.Type.t;

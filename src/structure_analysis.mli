@@ -12,7 +12,7 @@
     + {b Enum registration.} Identifies inductives whose constructors are all
       nullary and have no type parameters. These are rendered as [enum class] in
       C++ rather than the usual [std::variant]-based struct. Results are
-      registered in {!Table} via [Table.add_enum_inductive] so the rest of the
+      registered in {!Base.Table} via [Base.Table.add_enum_inductive] so the rest of the
       pipeline can query them.
     + {b Inductive name collection.} Builds a list of
       [(capitalized_name, defining_modpath)] pairs for every inductive in the
@@ -43,7 +43,7 @@
     - Runs {i before} any rendering: [Cpp.prepare_structure] turns the {!t}
       result into the unit's {!Module_plan}, which rendering iterates in the
       correct order.
-    - The enum registration side-effect ([Table.add_enum_inductive]) is also
+    - The enum registration side-effect ([Base.Table.add_enum_inductive]) is also
       needed by {!Method_registry}, which is why enum detection also happens
       during the method registry pass (for inductives encountered before this
       analysis runs). *)
@@ -170,7 +170,7 @@ type t = {
     {!Method_registry} is obtained.
 
     Side effects:
-    - Calls [Table.add_enum_inductive] for each detected enum.
+    - Calls [Base.Table.add_enum_inductive] for each detected enum.
 
     @param method_registry
       Used by the topological sort to detect cross-module dependencies arising
@@ -182,7 +182,7 @@ type t = {
 val analyze : Method_registry.t -> Core.Program.t -> t
 
 (** Register the inductives stored as shared variants
-    ([Table.is_shared_variant_packet]), once the structure's declarations are
+    ([Base.Table.is_shared_variant_packet]), once the structure's declarations are
     final and before anything asks: the type's declaration, every slot holding
     it and the method registry must give one answer. *)
 val register_shared_variants : 'p Core.Program.at -> unit

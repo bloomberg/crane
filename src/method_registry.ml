@@ -22,8 +22,8 @@
 
 open Util
 open Names
-open Table
-open Common
+open Base.Table
+open Base.Common
 
 (** Metadata for a function that has been promoted to a method. *)
 type method_info = {
@@ -99,7 +99,7 @@ type renumbering = {
    Tvar2 -> 1; Tvar1 is the function's own and becomes position 2, its
    template parameter T1. *)
 let renumbering ~num_ind_vars ~this_pos ty =
-  let all_args, _ = Type_util.get_args_and_ret [] ty in
+  let all_args, _ = Base.Type_util.get_args_and_ret [] ty in
   let ind_tvar_map =
     match List.nth_opt all_args this_pos with
     | Some (Core.Type.Global_app {type_arguments = tvar_args; _}) ->
@@ -111,16 +111,16 @@ let renumbering ~num_ind_vars ~this_pos ty =
         (List.concat
            (List.mapi
               (fun pos t ->
-                match Table.type_var_of_arg t with
+                match Base.Table.type_var_of_arg t with
                 | Some i -> [(i, pos + 1)]
                 | None -> [] )
               tvar_args ) )
     | _ -> List.init num_ind_vars (fun i -> (i + 1, i + 1))
   in
-  let ind_tvar_set = Core_util.IntSet.of_list (List.map fst ind_tvar_map) in
+  let ind_tvar_set = Base.Core_util.IntSet.of_list (List.map fst ind_tvar_map) in
   let extra =
-    List.filter (fun i -> not (Core_util.IntSet.mem i ind_tvar_set))
-      (Core_util.IntSet.elements (Core_util.core_tvars ty))
+    List.filter (fun i -> not (Base.Core_util.IntSet.mem i ind_tvar_set))
+      (Base.Core_util.IntSet.elements (Base.Core_util.core_tvars ty))
   in
   let renamed = (not (List.for_all (fun (src, dst) -> src = dst) ind_tvar_map)) || extra <> [] in
   let full = ind_tvar_map @ List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra in
@@ -146,7 +146,7 @@ let renumber_type r ty =
   in
   if r.renamed then go ty else ty
 
-let renumber_body r body = if r.renamed then Core_util.remap_tvars r.rename body else body
+let renumber_body r body = if r.renamed then Base.Core_util.remap_tvars r.rename body else body
 
 (** {2 Body safety check} *)
 
@@ -293,7 +293,7 @@ let find_eponymous_inductive module_name_str decls =
           else
             let _p = ind.packets.(i) in
             let ind_ref = GlobRef.IndRef (kn, i) in
-            let ind_name = Common.pp_global_name Type ind_ref in
+            let ind_name = Base.Common.pp_global_name Type ind_ref in
             if String.lowercase_ascii ind_name = lowercase_module then
               match
                 ind.kind
@@ -338,7 +338,7 @@ let find_epon_arg_pos epon_ref ty =
       let param_tvar_args = List.firstn (min nparams (List.length tvar_args)) tvar_args in
       let ind_tvar_positions =
         List.filter_map
-          (fun t -> Option.map (fun i -> i - 1) (Table.type_var_of_arg t))
+          (fun t -> Option.map (fun i -> i - 1) (Base.Table.type_var_of_arg t))
           param_tvar_args
       in
       Some (pos, ind_tvar_positions)
@@ -367,7 +367,7 @@ let find_all_module_inductives decls =
           | Core.Inductive.Kind.Coinductive -> None  (* Coinductives use lazy eval, methods
                                     would capture this in closures *)
           | _ ->
-            if Table.is_enum_inductive ind_ref then None
+            if Base.Table.is_enum_inductive ind_ref then None
             else if Array.length p.constructor_argument_types = 0 then None
                    (* Empty types have no constructors — can't instantiate *)
             else Some ind_ref
@@ -431,14 +431,14 @@ let find_best_inductive ind_refs ty =
     template parameter or skipped outright -- the three the method's own
     parameter list filters out. *)
 let arg_reaches_cpp d =
-  (not (Core_util.is_erased_type d))
-  && (not (Type_util.core_type_is_void d))
-  && not (Type_util.core_type_is_instance d)
+  (not (Base.Core_util.is_erased_type d))
+  && (not (Base.Type_util.core_type_is_void d))
+  && not (Base.Type_util.core_type_is_instance d)
 
 (** Number of value parameters in a curried Core type: the arrows whose domain
     reaches C++ as a parameter. *)
 let core_value_arity ty =
-  List.length (List.filter arg_reaches_cpp (Type_util.core_domains ty))
+  List.length (List.filter arg_reaches_cpp (Base.Type_util.core_domains ty))
 
 (** [pos] counted among the arguments C++ is given, rather than among all the
     arrows of the Core type.
@@ -450,7 +450,7 @@ let core_value_arity ty =
     position 1 and at C++ position 0, and a printer told 1 reaches past the
     receiver for it. *)
 let cpp_arg_pos ty pos =
-  let doms = Type_util.core_domains ty in
+  let doms = Base.Type_util.core_domains ty in
   List.length
     (List.filter arg_reaches_cpp (List.filteri (fun i _ -> i < pos) doms))
 
@@ -507,14 +507,14 @@ let file_calls modpath decls =
   let add r =
     if
       ModPath.equal (modpath_of_r r) modpath
-      && not (Table.is_any_inline_custom r)
+      && not (Base.Table.is_any_inline_custom r)
     then Core.Ref.User.Tbl.replace terms r ()
   in
   List.iter
     (fun (_l, se) ->
       match se with
       | Core.Module.Structure_item.Declaration d ->
-        List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) (Core_util.term_defs d)
+        List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity) (Base.Core_util.term_defs d)
       | _ -> () )
     decls;
   fun body ->
@@ -551,7 +551,7 @@ let settle_file_calls ~already_method ~calls ~ref_of cands =
 (** The receiver position of function [func]'s [body : ty] as a method of
     [epon_ref], and the inductive's type variables among its parameters, when
     it may be one.  Not where reuse would consume the receiver: a method's
-    [this] is borrowed, and where [func] reuses ({!Table.should_reuse}) a
+    [this] is borrowed, and where [func] reuses ({!Base.Table.should_reuse}) a
     shared variant's match rebuilds into the matched value's own block, which
     only an owned parameter can give up. *)
 let method_receiver ~func epon_ref body ty =
@@ -560,9 +560,9 @@ let method_receiver ~func epon_ref body ty =
     when body_safe_for_method ~this_pos:pos
            ~ret_has_shared_epon:(core_return_type_has_ref epon_ref ty)
            body ->
-    let params, inner = Core_util.collect_lams body in
+    let params, inner = Base.Core_util.collect_lams body in
     let consumed () =
-      Table.should_reuse func && Table.is_shared_variant epon_ref
+      Base.Table.should_reuse func && Base.Table.is_shared_variant epon_ref
       && Escape.is_reuse_scrutinee (List.length params - pos) inner
     in
     if consumed () then None else r
@@ -610,7 +610,7 @@ let register_methods_for_epon
     ?(top_level_siblings = false)
     epon_ref
     decls =
-  if is_custom epon_ref || Table.is_enum_inductive epon_ref then
+  if is_custom epon_ref || Base.Table.is_enum_inductive epon_ref then
     ()
   else
     let epon_modpath = modpath_of_r epon_ref in
@@ -641,7 +641,7 @@ let register_methods_for_epon
        into the type's header: [ZArith_dec.Z_le_dec], a "wrapper" of [Z] by
        its name, calls [BinInt], which itself includes [BinNums]. *)
     let same_file r =
-      (not (Table.modular ()))
+      (not (Base.Table.modular ()))
       || ModPath.equal (base_mp (modpath_of_r r)) (base_mp epon_modpath)
     in
     let same_module r =
@@ -702,7 +702,7 @@ let register_methods_for_epon
           match se with
           | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _})
             when ModPath.equal (modpath_of_r r) epon_modpath
-                 && not (Table.is_any_inline_custom r) ->
+                 && not (Base.Table.is_any_inline_custom r) ->
             Some r
           | _ -> None )
         decls
@@ -743,7 +743,7 @@ let register_methods_for_epon
                 | Some (pos, ind_tvar_positions) ->
                   consider r body ty pos ind_tvar_positions
                 | _ -> () )
-            (Core_util.term_defs d)
+            (Base.Core_util.term_defs d)
         | _ -> () )
       decls;
     if top_level_siblings then begin
@@ -775,7 +775,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     List.filter_map (fun (_l, se) ->
       match se with
       | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _})
-        when not (Table.is_any_inline_custom r) -> Some r
+        when not (Base.Table.is_any_inline_custom r) -> Some r
       | _ -> None
     ) decls
   in
@@ -864,7 +864,7 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
     | Core.Module.Structure_item.Declaration d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) -> process_func fd.entity fd.body fd.type_)
-        (Core_util.term_defs d)
+        (Base.Core_util.term_defs d)
     | _ -> ()
   ) decls
 
@@ -914,8 +914,8 @@ let rec pre_register_methods_from_structure
                  enums before trying to register methods, because enum types
                  should not have methods attached. *)
               if (not (is_custom ind_ref)) && not is_mutual then
-                if Table.is_enum_inductive_packet ind i then
-                  Table.add_enum_inductive ind_ref;
+                if Base.Table.is_enum_inductive_packet ind i then
+                  Base.Table.add_enum_inductive ind_ref;
               (* Skip type classes (C++ concepts) and standalone records.
                  Records have their own eponymous merging path and don't
                  support methods via the multi-inductive heuristic.
@@ -933,7 +933,7 @@ let rec pre_register_methods_from_structure
                   sel;
                 (* Also check parent-level declarations for wrapper module
                    functions (e.g. [ListAux.foo] taking a [list] argument). *)
-                let ind_name = Common.pp_global_name Type ind_ref in
+                let ind_name = Base.Common.pp_global_name Type ind_ref in
                 register_methods_for_epon
                   tbl
                   cands
@@ -961,8 +961,8 @@ let rec pre_register_methods_from_structure
                   (fun i' p' ->
                     let ind_ref' = GlobRef.IndRef (kn', i') in
                     if (not (is_custom ind_ref')) && not is_mutual' then
-                      if Table.is_enum_inductive_packet ind' i' then
-                        Table.add_enum_inductive ind_ref' )
+                      if Base.Table.is_enum_inductive_packet ind' i' then
+                        Base.Table.add_enum_inductive ind_ref' )
                   ind'.packets
               | _ -> () )
             inner_sel;
@@ -1069,17 +1069,17 @@ let compute_returns_any
           Array.iteri
             (fun i p ->
               let ind_ref = GlobRef.IndRef (kn, i) in
-              let (param_vars, _) = Table.ind_param_vars ind p in
+              let (param_vars, _) = Base.Table.ind_param_vars ind p in
               (* Including the promoted variables the payloads name: those are
                  parameters of the generated struct too, so they are in scope
-                 in a method's return type.  See {!Table.ind_promoted_params}. *)
+                 in a method's return type.  See {!Base.Table.ind_promoted_params}. *)
               Core.Ref.User.Tbl.replace ind_param_vars ind_ref
-                (Table.ind_promoted_params kn @ param_vars) )
+                (Base.Table.ind_promoted_params kn @ param_vars) )
             ind.packets
         | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
           List.iter
             (fun (fd : Core.Recursion.Definition.t) -> Core.Ref.User.Tbl.replace method_types fd.entity fd.type_)
-            (Core_util.term_defs d)
+            (Base.Core_util.term_defs d)
         | Core.Module.Structure_item.Module m ->
           ( match m.expr with
           | Core.Module.Expr.Structure {path = _mp; items = inner_sel} -> collect_from_sel inner_sel
@@ -1114,9 +1114,9 @@ let compute_returns_any
 
 (** Tell the naming layer which functions [reg] emits inside their
     inductive's struct, whose C++ names must keep clear of the members that
-    struct generates ({!Common.reserve_methodified}). *)
+    struct generates ({!Base.Common.reserve_methodified}). *)
 let reserve_names (reg : t) =
-  RefTbl.iter (fun func_ref (info : method_info) -> Common.reserve_methodified ~ind:info.epon_ref func_ref) reg.methods
+  RefTbl.iter (fun func_ref (info : method_info) -> Base.Common.reserve_methodified ~ind:info.epon_ref func_ref) reg.methods
 
 
 (** Build the complete method registry from the full extraction structure.
@@ -1215,7 +1215,7 @@ let planned_candidate (reg : t) (epon_ref : GlobRef.t) (func_ref : GlobRef.t)
     match RefTbl.find_opt reg.methods func_ref with
     | Some info when globref_equal info.epon_ref epon_ref -> Some (func_ref, body, ty, pos)
     | _ ->
-      Probe.violation "method registry"
+      Base.Probe.violation "method registry"
         Pp.(
           str "rendering found " ++ GlobRef.print func_ref ++ str " a method of "
           ++ GlobRef.print epon_ref ++ str ", which the registry's scan did not" );
@@ -1235,7 +1235,7 @@ let collect_module_type_aliases ~extract_decl modpath decls =
       match extract_decl item with
       | Some (Core.Decl.Type_alias {entity = r; _})
         when Names.ModPath.equal (modpath_of_r r) modpath
-          && not (Table.is_any_inline_custom r) ->
+          && not (Base.Table.is_any_inline_custom r) ->
         r :: acc
       | _ -> acc)
     [] decls

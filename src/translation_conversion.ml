@@ -33,7 +33,7 @@ let rec qualify_inductives ?(skip = fun _ -> false) (t : Cpp_ir.Lowered.Type.t) 
     let core : Cpp_ir.Lowered.Type.t = Entity_application (g, List.map go ts, es) in
     match g with
     | GlobRef.IndRef _ when skip g -> core
-    | GlobRef.IndRef _ when Table.is_inline_custom g -> core
+    | GlobRef.IndRef _ when Base.Table.is_inline_custom g -> core
     | GlobRef.IndRef _ -> In_namespace (g, core)
     | _ -> core )
   | In_namespace (g, t) -> (
@@ -165,7 +165,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
       if inner = dst_ty then derefed else Cpp_erasure.converting_ctor orig_dst_ty [derefed]
     | _, Shared_pointer inner -> Cpp_ir.Build.call (Allocate (Heap, inner)) [expr]
     | Entity_application (g1, src_ts, _), Entity_application (g2, dst_ts, _)
-      when GlobRef.CanOrd.equal g1 g2 && src_ts <> dst_ts && not (Table.is_inline_custom g1) ->
+      when GlobRef.CanOrd.equal g1 g2 && src_ts <> dst_ts && not (Base.Table.is_inline_custom g1) ->
       (* Same type at different arguments.  A converting constructor is the
          usual way across, but not every type has one -- [std::pair]'s asks
          each component to be constructible from the other's, and an erased
@@ -211,7 +211,7 @@ let gen_type_conversion_expr ?(skip = fun _ -> false) ~(src_ty : Cpp_ir.Lowered.
     (* A custom-mapped list at a known element type, under any namespace
        wrapper: only an erased source needs unboxing. *)
     | _, (Entity_application (g, [elem_ty], _) | In_namespace (_, Entity_application (g, [elem_ty], _)))
-      when Type_util.is_custom_list_global g && elem_ty <> Any && elem_ty <> Auto -> (
+      when Base.Type_util.is_custom_list_global g && elem_ty <> Any && elem_ty <> Auto -> (
       match src_ty with
       | Any -> Cpp_erasure.unbox (Entity_application (g, [Any], [])) expr
       | _ -> expr )

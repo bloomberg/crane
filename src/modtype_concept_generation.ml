@@ -19,7 +19,7 @@ let rec base_mp = function MPdot (parent, _) -> base_mp parent | mp -> mp
 (* A parameter of a functor declaring a module type is an argument of its
    concept, named as itself. *)
 let is_functor_param_ref r =
-  let b = base_mp (Table.modpath_of_r r) in
+  let b = base_mp (Base.Table.modpath_of_r r) in
   List.exists
     (fun (key, ({functor_; args} : Module_plan.concept_scope)) ->
       ModPath.equal key functor_ && List.exists (ModPath.equal b) args)
@@ -29,7 +29,7 @@ let is_functor_param_ref r =
    at [Core.Signature.t] constrains: declared in it, or reached through a functor
    parameter that is not one of the concept's own. *)
 let is_member_ref signature r =
-  let rmp = Table.modpath_of_r r in
+  let rmp = Base.Table.modpath_of_r r in
   is_under signature rmp
   || match base_mp rmp with MPbound _ -> not (is_functor_param_ref r) | _ -> false
 
@@ -39,11 +39,11 @@ let is_member_ref signature r =
 let rec concept_type cx signature (ty : Cpp_ir.Lowered.Type.t) =
   let args = List.map (concept_type cx signature) in
   match ty with
-  | Entity_application (r, tys, _) when (not (Table.is_custom r)) && is_member_ref signature r ->
+  | Entity_application (r, tys, _) when (not (Base.Table.is_custom r)) && is_member_ref signature r ->
     Member {member = r; enum = Cpp_names.is_enum_cached (Translation_state.unit_context cx) r; arguments = args tys}
-  | Entity_application (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
+  | Entity_application (r, [], _) when (not (Base.Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
   | Entity_application (r, tys, _) -> (
-    match Table.find_custom_opt r with
+    match Base.Table.find_custom_opt r with
     | Some text ->
       let pieces = Cpp_erasure.type_pieces r text tys in
       (* A type argument the text names and the use does not supply is
@@ -73,18 +73,18 @@ let rec arrows = function
   | ret -> ([], ret)
 
 (* A Core type as translation converts it, outside any function. *)
-let convert cx t = Translation_types.cpp_ir_of_core_type cx (Common.empty_env ()) [] t
+let convert cx t = Translation_types.cpp_ir_of_core_type cx (Base.Common.empty_env ()) [] t
 
 (* The requirements one specification of the signature at [Core.Signature.t]
    asks of [M]; none for an inline custom, whose mapping stands in for the
    member. *)
 let requirements cx signature = function
-  | Core.Signature.Declaration.Value {entity = r; _} when Table.is_inline_custom r -> []
-  | Core.Signature.Declaration.Type {entity = r; _} when Table.is_inline_custom r -> []
+  | Core.Signature.Declaration.Value {entity = r; _} when Base.Table.is_inline_custom r -> []
+  | Core.Signature.Declaration.Type {entity = r; _} when Base.Table.is_inline_custom r -> []
   (* A record's projection is a data member of the record's struct, which
      [typename M::pt] already requires: a module emits no static function for
      it, and the functor body reads the field off the value. *)
-  | Core.Signature.Declaration.Value {entity = r; _} when Table.is_projection r -> []
+  | Core.Signature.Declaration.Value {entity = r; _} when Base.Table.is_projection r -> []
   | Core.Signature.Declaration.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
     (* A parameterised inductive is a class template, which only an
        instantiation names: any one will do. *)
@@ -99,7 +99,7 @@ let requirements cx signature = function
          ind.packets )
   (* A polymorphic value is a member template, which a requires-expression
      cannot name without choosing its arguments: it asks nothing. *)
-  | Core.Signature.Declaration.Value {type_ = t; _} when Type_util.has_tvar t -> []
+  | Core.Signature.Declaration.Value {type_ = t; _} when Base.Type_util.has_tvar t -> []
   | Core.Signature.Declaration.Value {entity = r; type_ = t; _} -> (
     let args, ret = arrows t in
     let result = convert cx ret in
@@ -108,7 +108,7 @@ let requirements cx signature = function
        emits as a nested struct satisfying the class's concept: a concept
        name is not a type, so the member type is asked for and
        constrained. *)
-    | Core.Type.Global_app {head = cls; type_arguments = cls_args; _} when args = [] && Table.is_typeclass cls ->
+    | Core.Type.Global_app {head = cls; type_arguments = cls_args; _} when args = [] && Base.Table.is_typeclass cls ->
       [ Instance_member
           { value = r;
             class_ = cls;

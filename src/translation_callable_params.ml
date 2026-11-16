@@ -7,12 +7,12 @@
     not generalise to a deduced template parameter.  Read by
     {!Program_facts} before translation and by the function generators. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 
 module IntSet = Escape.IntSet
 
@@ -394,7 +394,7 @@ let partner_closure_params groups struc =
         (fun (fd : Core.Recursion.Definition.t) ->
           if Recursive_groups.group groups fd.entity <> None then
             members := (fd.entity, fd.body) :: !members )
-        (Core_util.term_defs d) )
+        (Base.Core_util.term_defs d) )
     (fun _ -> ())
     (fun _ -> ())
     struc;
@@ -468,13 +468,13 @@ let ungeneralised_callable_params cx ~self_ref ~suspended n_params body =
     @ escaping_params cx ~suspended n_params body)
 
 (** {!ungeneralised_callable_params} for the definition of [r] at type [ty]
-    with body [b], over the parameters {!Type_util.declared_parameters}
+    with body [b], over the parameters {!Base.Type_util.declared_parameters}
     finds, written or eta-expanded: the ones its function is generated
     with. *)
 let ungeneralised_callables_of_definition cx r ty b =
   let params, body = declared_parameters ty b in
   ungeneralised_callable_params cx ~self_ref:r
-    ~suspended:(Table.is_coinductive_type (core_return_type ty))
+    ~suspended:(Base.Table.is_coinductive_type (core_return_type ty))
     (List.length params) body
 
 (** Whether a function takes a callable parameter of C++ type [f] as a

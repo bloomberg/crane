@@ -30,7 +30,7 @@
       hands to every later stage ({!Unit_context}), the inductive kinds, recorded in the
       structure ({!Target_plan.record_kinds}), then, once the unit's
       preparation has run, the template-parameter kinds.
-    + {b Layout} ([Common.Plan]): {!Cpp.prepare_structure} runs
+    + {b Layout} ([Base.Common.Plan]): {!Cpp.prepare_structure} runs
       {!Structure_analysis.analyze} and decides the layout ({!Module_plan});
       then the names of every global and module the unit declares and refers
       to are decided ({!Cpp.plan_names}, {!Cpp.plan_referenced_names}), the
@@ -39,7 +39,7 @@
       target plan; each decision a reader asks about is bound for the rest
       of the unit as it is taken, over what the earlier units of a separate
       extraction decided ({!Accumulated_plan}).
-    + {b Emission} ([Common.Emit]): every declaration is generated and
+    + {b Emission} ([Base.Common.Emit]): every declaration is generated and
       finished ahead of the files ({!Cpp.generate_ahead}), what the files
       write of it is planned ({!Cpp.plan_file_layout},
       {!Cpp.plan_ctor_aliases}), and then each file is rendered once, taking
@@ -52,7 +52,7 @@
       target plan ([check_against_plan]: the inductive and
       template-parameter kinds, the decided names, the promoted inductives
       and nested structs rendered).
-    + {b Demands} are frozen ([Table.freeze_demands]) and each file is written
+    + {b Demands} are frozen ([Base.Table.freeze_demands]) and each file is written
       with the preamble its body demanded, then formatted.
 
     Each Core declaration is generated ahead of the files
@@ -64,7 +64,7 @@
     captures), and printed ({!Cpp_print.read_cpp_decl}, which accepts only a
     {!Cpp_erasure.settled} declaration).
 
-    Mutable state is registered with {!State} under one of two scopes:
+    Mutable state is registered with {!Base.State} under one of two scopes:
     [Extraction] (one command) and [Unit] (one generated file).
     [CRANE_COUNT_GENERATION] reports how many bodies each phase translated;
     [CRANE_TRACE_PASSES] reports what each finishing pass changed. *)
@@ -147,7 +147,7 @@ val show_extraction : pstate:Declare.Proof.t -> unit
 
 (** {2 Pass order}
 
-    The names of the passes each stage runs, in order; see {!Pipeline_trace}.
+    The names of the passes each stage runs, in order; see {!Base.Pipeline_trace}.
     Read by [unit_tests/pipeline_manifest.ml]. *)
 
 (** Rewrites and analyses of the extracted structure, once per extraction. *)

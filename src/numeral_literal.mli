@@ -14,12 +14,12 @@
 val registered_constructor : string -> Names.GlobRef.t -> int option
 
 (** [converter_literal r arg]: the numeral mapping and the value of the
-    converter [r] (a registered one, see {!Table.extract_numeral}) applied to
+    converter [r] (a registered one, see {!Base.Table.extract_numeral}) applied to
     the digit chain [arg], a [Number.uint] or a [Number.int], where it is
     one.  The one place both Core, which writes the application as the
     literal ({!fold}), and dependency collection, which then leaves the
     converter and its digit inductives out, decide that it folds. *)
-val converter_literal : Names.GlobRef.t -> 'p Core.Expr.at -> (Table.numeral_info * Z.t) option
+val converter_literal : Names.GlobRef.t -> 'p Core.Expr.at -> (Base.Table.numeral_info * Z.t) option
 
 (** [constructor_literal e]: the numeral mapping and the value of the
     constructor term [e] of a numeral inductive, where it is a literal: a
@@ -27,7 +27,7 @@ val converter_literal : Names.GlobRef.t -> 'p Core.Expr.at -> (Table.numeral_inf
     [Npos] around one ([Zneg (xI xH)] is -3), or else a chain of the
     inductive's successor constructor down to its zero constructor
     ([S (S O)], [Z0]). *)
-val constructor_literal : 'p Core.Expr.at -> (Table.numeral_info * Z.t) option
+val constructor_literal : 'p Core.Expr.at -> (Base.Table.numeral_info * Z.t) option
 
 (** [fold e]: [e], where it is a numeral literal -- a numeral converter
     applied to a digit chain ({!converter_literal}) or a constructor term

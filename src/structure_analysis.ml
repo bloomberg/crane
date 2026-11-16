@@ -15,8 +15,8 @@
 
 open Util
 open Names
-open Table
-open Common
+open Base.Table
+open Base.Common
 
 (** Information about a single module in the extraction structure. *)
 type module_info = {
@@ -207,7 +207,7 @@ let collect_functor_concept_scopes (s : Core.Program.t) : (ModPath.t * Module_pl
 (** Register enum inductives by scanning the whole structure.
 
     An inductive qualifies as an enum when ALL of the following hold (the
-    last three are {!Table.is_enum_inductive_packet}):
+    last three are {!Base.Table.is_enum_inductive_packet}):
     - It is not a custom-extracted type ([is_custom] returns false).
     - It is not part of a mutual inductive block (only single inductives).
     - All constructors are nullary (no arguments — [constructor_argument_types] are all [[]]).
@@ -217,8 +217,8 @@ let collect_functor_concept_scopes (s : Core.Program.t) : (ModPath.t * Module_pl
     Records and type classes are excluded upfront since they have different
     representations.
 
-    Detected enums are registered via [Table.add_enum_inductive], which sets a
-    global flag queryable by [Table.is_enum_inductive].
+    Detected enums are registered via [Base.Table.add_enum_inductive], which sets a
+    global flag queryable by [Base.Table.is_enum_inductive].
 
     Recurses into sub-modules to find enums at any nesting depth. *)
 let register_enum_inductives (s : Core.Program.t) : unit =
@@ -233,20 +233,20 @@ let register_enum_inductives (s : Core.Program.t) : unit =
             if
               (not (is_custom ind_ref))
               && (not is_mutual)
-              && Table.is_enum_inductive_packet ind i
-            then Table.add_enum_inductive ind_ref )
+              && Base.Table.is_enum_inductive_packet ind i
+            then Base.Table.add_enum_inductive ind_ref )
         (element_inductives se) )
     s
 
 let register_shared_variants (s : _ Core.Program.at) : unit =
-  if Table.shared_variant () then
+  if Base.Table.shared_variant () then
     iter_structure
       (fun _mp _l se ->
         List.iter
           (fun (ind_ref, i, ind) ->
             match ind_ref with
-            | GlobRef.IndRef (kn, _) when Table.is_shared_variant_packet kn ind i ->
-              Table.add_shared_variant ind_ref
+            | GlobRef.IndRef (kn, _) when Base.Table.is_shared_variant_packet kn ind i ->
+              Base.Table.add_shared_variant ind_ref
             | _ -> () )
           (element_inductives se) )
       s
@@ -265,7 +265,7 @@ let throwing_values (s : Core.Program.t) : GlobRef.t list =
     (fun _mp _l se ->
       match se with
       | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = e; _})
-        when Core_util.only_throws e ->
+        when Base.Core_util.only_throws e ->
         found := r :: !found
       | _ -> () )
     s;
@@ -294,10 +294,10 @@ let collect_inductive_names (s : Core.Program.t) : (string * ModPath.t) list =
              mapped to and never declared, so its Rocq name is not taken:
              [nat] mapped to [uint64_t] must not push a module called [Nat]
              into a collision wrapper. *)
-          if Table.is_custom ind_ref then
+          if Base.Table.is_custom ind_ref then
             acc
           else
-            (Common.pp_global_name Type ind_ref, modpath_of_r ind_ref) :: acc )
+            (Base.Common.pp_global_name Type ind_ref, modpath_of_r ind_ref) :: acc )
         acc
         (element_inductives se) )
     s []
@@ -308,7 +308,7 @@ let collect_inductive_names (s : Core.Program.t) : (string * ModPath.t) list =
     entries, not nested inside sub-modules).
 
     This must run AFTER [register_enum_inductives] has been called, because it
-    relies on [Table.is_enum_inductive] to identify enums.
+    relies on [Base.Table.is_enum_inductive] to identify enums.
 
     Global-scope enums are emitted as [enum class] declarations before any
     wrapper modules or the main module, ensuring they are in scope for all
@@ -328,7 +328,7 @@ let collect_global_scope_enums (s : Core.Program.t) : GlobRef.t list =
             Array.iteri
               (fun i _p ->
                 let ind_ref = GlobRef.IndRef (kn, i) in
-                if Table.is_enum_inductive ind_ref then
+                if Base.Table.is_enum_inductive ind_ref then
                   acc := ind_ref :: !acc )
               ind.packets
           | _ -> () )
@@ -392,7 +392,7 @@ let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
   in
   if has_bare && all_bare && is_modfile mp && has_func && not is_main then
     let name =
-      Table.escape_reserved_struct_name
+      Base.Table.escape_reserved_struct_name
         (String.capitalize_ascii (string_of_modfile mp))
     in
     (* The wrapper is a struct at file scope, and an eponymous inductive there
@@ -583,7 +583,7 @@ let methods_by_owner (reg : Method_registry.t) (s : Core.Program.t) =
         (fun (_l, se) ->
           match se with
           | Core.Module.Structure_item.Declaration d ->
-            List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity d) (Core_util.term_defs d)
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity d) (Base.Core_util.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -600,7 +600,7 @@ let decls_by_ref (s : Core.Program.t) =
           match se with
           | Core.Module.Structure_item.Declaration d ->
             List.iter (fun (fd : Core.Recursion.Definition.t) -> Core.Ref.User.Tbl.replace tbl fd.entity d)
-              (Core_util.term_defs d)
+              (Base.Core_util.term_defs d)
           | _ -> () )
         sel )
     s;
@@ -736,7 +736,7 @@ let child_has_eponymous_ind (child_name : string) (se : Core.Module.Structure_it
       (fun i _p ->
         let n =
           String.capitalize_ascii
-            (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
+            (Base.Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
         in
         if String.equal n child_name then found := true )
       ind.packets;
@@ -768,7 +768,7 @@ let has_sibling_inductive
           (fun i _p ->
             let n =
               String.capitalize_ascii
-                (Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
+                (Base.Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
             in
             if String.equal n child_name then found := true )
           ind.packets;
@@ -831,7 +831,7 @@ let collect_collision_wrappers
              two would collide in turn; the wrapper is the incidental one, so
              it is the side that takes the suffix. *)
           let base =
-            Table.escape_reserved_struct_name
+            Base.Table.escape_reserved_struct_name
               (String.capitalize_ascii (string_of_modfile mp))
           in
           let taken_by_sibling =
@@ -839,7 +839,7 @@ let collect_collision_wrappers
               (fun (l, se) ->
                 match se with
                 | Core.Module.Structure_item.Module _ ->
-                  String.equal base (Common.emitted_module_name (MPdot (mp, l)))
+                  String.equal base (Base.Common.emitted_module_name (MPdot (mp, l)))
                 | _ -> false )
               sel
           in
@@ -854,7 +854,7 @@ let collect_collision_wrappers
                 | Core.Module.Structure_item.Declaration d ->
                   List.iter
                     (fun (fd : Core.Recursion.Definition.t) -> add (modpath_of_r fd.entity) parent_name)
-                    (Core_util.term_defs d)
+                    (Base.Core_util.term_defs d)
                 | _ -> () )
               inner_sel
           in
@@ -915,14 +915,14 @@ let collect_eponymous_records (s : Core.Program.t) : GlobRef.t list =
          (* Under separate extraction a file is a namespace, which has no
             body to merge a record into -- and needs none, since
             [namespace CFG { struct CFG; }] is legal as it stands. *)
-         if Common.get_force_cross_file_qualification () then None
+         if Base.Common.get_force_cross_file_qualification () then None
          else Some (String.lowercase_ascii (string_of_modfile mp)) )
          (* The name that matters is the one the module struct is emitted
             under, suffix included: a module renamed out of the way of its
             inductive is no longer eponymous with it, and the merge that
             renaming was there to prevent must not happen after all. *)
        ~enter:(fun _ mp ->
-         Some (String.lowercase_ascii (Common.emitted_module_name mp)) )
+         Some (String.lowercase_ascii (Base.Common.emitted_module_name mp)) )
        (fun module_name _mp _l se acc ->
          List.fold_left
            (fun acc (ind_ref, _i, (ind : Core.Inductive.t)) ->
@@ -931,7 +931,7 @@ let collect_eponymous_records (s : Core.Program.t) : GlobRef.t list =
                when Option.equal String.equal
                       (Some
                          (String.lowercase_ascii
-                            (Common.pp_global_name Type ind_ref) ) )
+                            (Base.Common.pp_global_name Type ind_ref) ) )
                       module_name ->
                ind_ref :: acc
              | _ -> acc )
@@ -945,12 +945,12 @@ let collect_eponymous_records (s : Core.Program.t) : GlobRef.t list =
 let concept_self_param = "M"
 
 (** The C++ concept identifier a module type labelled [l] takes unless a
-    clash qualifies it: the label as {!Common.modular_rename} escapes any
+    clash qualifies it: the label as {!Base.Common.modular_rename} escapes any
     identifier -- C++ keywords and primes -- and one escape more, since a
     concept named [concept_self_param] would be shadowed by its own template
     parameter. *)
 let concept_name_of_label l =
-  let s = Common.modular_rename (Label.to_id l) in
+  let s = Base.Common.modular_rename (Label.to_id l) in
   if String.equal s concept_self_param then s ^ "_" else s
 
 (** Decide the name every concept is emitted under, for the type classes and
@@ -977,7 +977,7 @@ let collect_concept_renames (s : Core.Program.t) :
           ( List.fold_left
               (fun acc (ind_ref, _i, (ind : Core.Inductive.t)) ->
                 match ind.kind with
-                | Core.Inductive.Kind.Type_class _ -> (ind_ref, Common.pp_global_name Type ind_ref) :: acc
+                | Core.Inductive.Kind.Type_class _ -> (ind_ref, Base.Common.pp_global_name Type ind_ref) :: acc
                 | _ -> acc )
               classes (element_inductives se),
             modtypes ) )
@@ -990,7 +990,7 @@ let collect_concept_renames (s : Core.Program.t) :
   let renames scope_of =
     List.filter_map (fun (holder, b) ->
         if Hashtbl.find counts b > 1 then
-          Some (holder, Common.emitted_module_name (scope_of holder) ^ "_" ^ b)
+          Some (holder, Base.Common.emitted_module_name (scope_of holder) ^ "_" ^ b)
         else None )
   in
   ( renames modpath_of_r (List.rev classes),
@@ -1004,7 +1004,7 @@ let is_instance_type (ty : Core.Type.t) : bool =
     | t -> t
   in
   match return_type ty with
-  | Core.Type.Global_app {head = class_ref; _} -> Table.is_typeclass class_ref
+  | Core.Type.Global_app {head = class_ref; _} -> Base.Table.is_typeclass class_ref
   | _ -> false
 
 (** The instances a wrapper struct does not keep.  An instance is emitted as a
@@ -1067,7 +1067,7 @@ let analyze (reg : Method_registry.t) (s : Core.Program.t) : t =
   in
   let enum_names =
     List.map
-      (fun r -> String.capitalize_ascii (Common.pp_global_name Type r))
+      (fun r -> String.capitalize_ascii (Base.Common.pp_global_name Type r))
       global_scope_enums
   in
   (* A wrapper named after a type another module declares is merged into that
@@ -1095,7 +1095,7 @@ let analyze (reg : Method_registry.t) (s : Core.Program.t) : t =
               in
               match se with
               | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
-                List.for_all (fun (fd : Core.Recursion.Definition.t) -> methodified fd.entity) (Core_util.term_defs d)
+                List.for_all (fun (fd : Core.Recursion.Definition.t) -> methodified fd.entity) (Base.Core_util.term_defs d)
               | _ -> true )
             sel )
   in

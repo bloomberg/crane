@@ -9,12 +9,12 @@
     and the backend calls it to plan an instance's callables before
     rendering ({!plan_instance_methods}) and to generate its struct. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Translation
 open Gen_context
 open Gen_records
@@ -49,7 +49,7 @@ let instance_layers cx ty body =
 let instance_promoted_types cx name body ty =
   let inner_ty, inner_body, _, lam_params = instance_layers cx ty body in
   match (inner_ty : Core.Type.t) with
-  | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Table.is_typeclass class_ref -> (
+  | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Base.Table.is_typeclass class_ref -> (
     match Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
     | Core.Expr.Construct {result_type = cons_ty; _} ->
       let type_args = Instance_methods.record_type_args cons_ty type_args in
@@ -62,7 +62,7 @@ let instance_promoted_types cx name body ty =
                element parameters ([Core.Type.Variable 1 ...] here) have no meaning
                outside the instance, so they are erased. *)
             ( var_name,
-              Core_util.type_subst_list (List.map (fun _ -> Core.Type.Unknown) params) core_ty ) )
+              Base.Core_util.type_subst_list (List.map (fun _ -> Core.Type.Unknown) params) core_ty ) )
           promoted_vars promoted_concrete
       else []
     | _ -> [] )
@@ -177,7 +177,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
     List.map (Translation_types.cpp_ir_of_core_type cx (empty_env ()) []) args
     @ List.map
         (fun v -> resolve_mentioned (Promoted_member v))
-        (Table.promoted_type_params class_ref)
+        (Base.Table.promoted_type_params class_ref)
   in
   with_promoted_var_map cx
     ( promoted_var_resolutions @ specialised_arg_resolutions
@@ -198,10 +198,10 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
   (* Now inner_ty should be Core.Type.Global_app(class_ref, type_args, _) and inner_body should
      be Core.Expr.Construct(...) *)
   match inner_ty with
-  | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Table.is_typeclass class_ref ->
+  | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Base.Table.is_typeclass class_ref ->
     (* Get the type class fields (method names) and field types (from
        ind_packet) *)
-    let fields = Table.record_field_bindings_of_type inner_ty in
+    let fields = Base.Table.record_field_bindings_of_type inner_ty in
     (* Promoted dependent records may have their constructor wrapped in
        Core.Expr.Coerce due to Core.Type.Variable/Core.Type.Global_app mismatches during extraction unification. *)
     let inner_body = Instance_methods.record_body name class_ref inner_ty lam_params inner_body in
@@ -238,16 +238,16 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
       (* The concrete types it gives its class's promoted variables, which
          call sites substitute, were planned before rendering
          ({!instance_promoted_types}). *)
-      if Probe.checking () then begin
+      if Base.Probe.checking () then begin
         let planned = Unit_context.instance_promoted_types_of (Translation_state.unit_context cx) name in
         let generated = instance_promoted_types cx name body ty in
         if
           not
             (List.equal
-               (fun (v, t) (v', t') -> Id.equal v v' && Core_util.eq_core_type t t')
+               (fun (v, t) (v', t') -> Id.equal v v' && Base.Core_util.eq_core_type t t')
                planned generated )
         then
-          Probe.violation "instance promoted types"
+          Base.Probe.violation "instance promoted types"
             Pp.(str "the instance " ++ GlobRef.print name
                 ++ str " gives its promoted variables other types than planned")
       end;
@@ -261,8 +261,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
       (* Set up type variable context for fixpoint lifting. Without this,
          fixpoints inside methods get lifted with wrong names and missing
          template parameters. *)
-      let saved_decl_ref = !Table.current_decl_ref in
-      Table.current_decl_ref := Some name;
+      let saved_decl_ref = !Base.Table.current_decl_ref in
+      Base.Table.current_decl_ref := Some name;
       set_current_type_vars cx type_var_names;
       (* Generate static methods for each field *)
       let gen_method (field_ref, field_core_ty) field_body =
@@ -275,14 +275,14 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
              static method returning the typeclass. *)
           let is_tc_field =
             match field_core_ty with
-            | Core.Type.Global_app {head = r; _} -> Table.is_typeclass r
+            | Core.Type.Global_app {head = r; _} -> Base.Table.is_typeclass r
             | _ -> false
           in
           if is_tc_field then
             None
           else
           let method_name =
-            Common.id_of_global Term method_ref
+            Base.Common.id_of_global Term method_ref
           in
           let m = Instance_methods.prepare_method inst method_ref field_core_ty field_body in
           let {Instance_methods.field_core_ty;
@@ -301,7 +301,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
             match n_method_tvars with
             | 0 -> ([], type_var_names)
             | n ->
-              let ipv = List.length (Table.get_ind_ip_vars class_ref) in
+              let ipv = List.length (Base.Table.get_ind_ip_vars class_ref) in
               let names = List.init n hkt_alias_param_name in
               let pad =
                 List.init
@@ -366,7 +366,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
           let offer_declared have want =
             if method_tvars <> [] then want
             else
-              Type_util.refine_erased
+              Base.Type_util.refine_erased
                 ~writable:(fun t ->
                   not
                     (Cpp_ir.Types.exists
@@ -420,7 +420,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                         name = id_of_binder_name id;
                         core_ty = resolved_ty;
                         cpp_ty = param_cpp_ty n resolved_ty;
-                        kind = (if Table.is_typeclass_type resolved_ty then `Instance else `Value);
+                        kind = (if Base.Table.is_typeclass_type resolved_ty then `Instance else `Value);
                       } ) )
                 0 params
             in
@@ -536,11 +536,11 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                   match body_ref inner_body with
                   | Some r -> (
                     try
-                      let bty = Table.find_type r in
+                      let bty = Base.Table.find_type r in
                       let bargs, _ = get_args_and_ret [] bty in
                       let bargs = List.filter (fun t ->
                         not (erased_by_extraction t)
-                        && not (Table.is_typeclass_type t)) bargs in
+                        && not (Base.Table.is_typeclass_type t)) bargs in
                       if List.length bargs = List.length params then
                         Some bargs
                       else None
@@ -815,7 +815,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
             (fun ({Core.Record.Field.projection = fld; type_ = fty}, body) ->
               match (fld, fty) with
               | Some field_ref, Core.Type.Global_app {head = r; _}
-                when Table.is_typeclass r ->
+                when Base.Table.is_typeclass r ->
                 let has_erased_tc_args =
                   match body with
                   | Core.Expr.Apply {arguments = args; _} ->
@@ -830,7 +830,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                      field. *)
                   None
                 else
-                  let field_id = Common.id_of_global Term field_ref in
+                  let field_id = Base.Common.id_of_global Term field_ref in
                   let cpp_ty = core_expr_to_cpp_type body in
                   if cpp_ty = Any then None else Some (using [] field_id cpp_ty)
               | _ -> None )
@@ -839,7 +839,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
           []
       in
       (* Restore type variable context *)
-      Table.current_decl_ref := saved_decl_ref;
+      Base.Table.current_decl_ref := saved_decl_ref;
       clear_current_type_vars cx;
       (* Compute promoted vars and generate using fields. Promoted vars are
          type_variables entries beyond the real type parameter count (as determined by
@@ -853,7 +853,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
          is no template parameter, so [type_var_names] does not count it. *)
       let alias_tvar_base =
         List.fold_left
-          (fun n t -> max n (Core_util.type_maxvar t))
+          (fun n t -> max n (Base.Core_util.type_maxvar t))
           (List.length type_var_names)
           type_args
       in
@@ -982,7 +982,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                   (fun {Core.Record.Field.projection = fld_opt; type_ = fml_ty} ->
                     match fld_opt with
                     | Some fld_ref ->
-                      if Id.equal (Common.id_of_global Term fld_ref) using_name
+                      if Id.equal (Base.Common.id_of_global Term fld_ref) using_name
                       then Some fml_ty
                       else None
                     | None -> None)
@@ -990,7 +990,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
               in
               ( match field_core_ty with
               | Some (Core.Type.Global_app {head = tc_ref; _})
-                when Table.is_typeclass tc_ref ->
+                when Base.Table.is_typeclass tc_ref ->
                 let nested_promoted = class_promoted_vars tc_ref in
                 List.filter_map
                   (fun v ->
@@ -1057,5 +1057,5 @@ let plan_instance_methods cx ~finish name body ty =
     [ty] is a type class. *)
 let is_typeclass_instance (ty : Core.Type.t) : bool =
   match core_return_type ty with
-  | Core.Type.Global_app {head = class_ref; _} -> Table.is_typeclass class_ref
+  | Core.Type.Global_app {head = class_ref; _} -> Base.Table.is_typeclass class_ref
   | _ -> false

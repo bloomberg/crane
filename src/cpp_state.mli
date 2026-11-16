@@ -18,7 +18,7 @@
 (** {2 Owned cells}
 
     A cell made by one of these is emptied by {!reset_cpp_state}, enrolled where
-    it is defined.  [census] reports the size to {!Table.census}. *)
+    it is defined.  [census] reports the size to {!Base.Table.census}. *)
 
 (** [owned_table name] is a fresh hash table emptied on reset, reported to
     the census under [name] unless [~census:false]. *)
@@ -278,8 +278,8 @@ type naming =
     custom text of a global, if it has one, writes a global type's head,
     and answers any key. *)
 and live_namers = {
-  key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
-  global : render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t;
+  key : render_ctx -> Cpp_resolution.key -> Base.Cpp_name.t;
+  global : render_ctx -> Base.Common.kind -> Names.GlobRef.t -> Base.Cpp_name.t;
   inline : Names.GlobRef.t -> string option;
   head : render_ctx -> Cpp_resolution.head_form -> Names.GlobRef.t -> Cpp_resolution.head;
   value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
@@ -309,7 +309,7 @@ and tyctor_decision = {
     ({!Cpp_names.next}).  No position is installed anywhere for a reader to
     find. *)
 and render_ctx = {
-  file : Common.file;  (** The file being written. *)
+  file : Base.Common.file;  (** The file being written. *)
   in_struct : bool;
       (** Inside a struct body; affects how nested type references are
           qualified and whether a held-back concept may be named. *)
@@ -330,7 +330,7 @@ and render_ctx = {
           inside the one it is written in, innermost first
           ({!Cpp_names.enter_from}). *)
   names : naming;  (** What the names written here are read off ({!naming}). *)
-  visibility : Common.visibility option;
+  visibility : Base.Common.visibility option;
       (** The scopes whose names are visible where the declaration being
           written is written, innermost first: its planned visibility
           ({!Scope_plan.visibility}); none where nothing planned it, where
@@ -355,11 +355,11 @@ and render_ctx = {
 
 (** The context at the start of the file [file] of the unit [u], whose
     backend's passes planned [plans]: file scope, outside every struct. *)
-val file_start : Unit_context.t -> plans -> Common.file -> render_ctx
+val file_start : Unit_context.t -> plans -> Base.Common.file -> render_ctx
 
 (** What a file declares at file scope: the types, by the entity each
     declaration declares, and the promoted type variables among them, by
-    the name their one alias is declared under ({!Table.promoted_type_var_field}). *)
+    the name their one alias is declared under ({!Base.Table.promoted_type_var_field}). *)
 module File_scope : sig
   type t = {
     types : Names.GlobRef.Set.t;  (** The types it declares at file scope. *)
@@ -375,11 +375,11 @@ val header_file_scope : File_scope.t option ref
 
 (** The types the file [file] declares at file scope, as planned: none
     before they are planned. *)
-val file_scope_types_of : Common.file -> Names.GlobRef.Set.t
+val file_scope_types_of : Base.Common.file -> Names.GlobRef.Set.t
 
 (** The promoted type variables whose alias the file [file] declares at
     file scope, as planned: none before they are planned. *)
-val file_scope_aliases_of : Common.file -> Names.Id.Set.t
+val file_scope_aliases_of : Base.Common.file -> Names.Id.Set.t
 
 
 
@@ -407,7 +407,7 @@ val concept_plan : plans -> Names.ModPath.t -> concept_plan
     [scopes]) holds back,
     as [plans] has them ({!concept_plan}); in the implementation, which
     declares no concept, none. *)
-val planned_held_back : plans -> Scope_plan.bound -> file:Common.file -> Names.ModPath.t -> held_concept list
+val planned_held_back : plans -> Scope_plan.bound -> file:Base.Common.file -> Names.ModPath.t -> held_concept list
 
 (** Whether the struct the position is in holds concept [c] back: declared
     after it, so a constraint inside it cannot name [c] yet.  What is held
@@ -539,7 +539,7 @@ type std_names = Unit_context.std_names = {
   get_if : string;
   get : string;
   variant : string;  (** the tagged union inductives store alternatives in *)
-  variant_header : Table.header;  (** the header declaring {!variant} *)
+  variant_header : Base.Table.header;  (** the header declaring {!variant} *)
   enable_from_this : string;  (** the base a type that hands out pointers to itself derives from *)
 }
 
@@ -551,16 +551,16 @@ val default_std_names : std_names
 val mk_std_names : string -> std_names
 
 (** The bare namespace of the standard library configured
-    ([Table.std_lib ()]): ["bsl"] for BDE, ["std"] otherwise; the [ns] of
+    ([Base.Table.std_lib ()]): ["bsl"] for BDE, ["std"] otherwise; the [ns] of
     every unit's {!sn}. *)
 val std_namespace : unit -> string
 
 (** The names a file of the unit [u] is written with, computed: the BDE flavor when
-    [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
-    [Table.fast_variant ()] or [Table.shared_variant ()], the [crane::]
+    [Base.Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
+    [Base.Table.fast_variant ()] or [Base.Table.shared_variant ()], the [crane::]
     variant accessors (and, for the former, [crane::variant]); then, under
-    [Table.count_rc_for], the counting pointer, or else under
-    [Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
+    [Base.Table.count_rc_for], the counting pointer, or else under
+    [Base.Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
     [crane::enable_rc_from_this], in [u]'s configuration. *)
 val std_names_of : Unit_context.t -> std_names
 
@@ -636,7 +636,7 @@ val is_shadowed_global_name : Unit_context.t -> string -> Names.GlobRef.t -> boo
     collision-wrapped modules, whose child qualifier is replaced by the wrapper
     struct name.  The wrappers are those [layout] plans.
     @return the possibly-qualified name *)
-val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** {2 Method registration} *)
 

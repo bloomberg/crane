@@ -6,12 +6,12 @@
     scrutinee and binders, the constructor a branch tests, and the type a
     match lowered to an IIFE returns. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
+open Base.Core_util
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 
 (** For inductives with dependent parameters (e.g. [sigT]), unresolved
@@ -21,7 +21,7 @@ open Core_query
     template parameter. *)
 let retype_dependent_params (typ : Core.Type.t) ids =
   let is_dep_ind = match typ with
-    | Core.Type.Global_app {head = GlobRef.IndRef _ as g; _} -> Table.has_dependent_params g
+    | Core.Type.Global_app {head = GlobRef.IndRef _ as g; _} -> Base.Table.has_dependent_params g
     | _ -> false
   in
   if is_dep_ind then
@@ -51,11 +51,11 @@ let ctor_field_types_at ctor (typ : Core.Type.t) =
     | Core.Type.Meta {contents = Some t} -> within_scope t
     | _ -> true
   in
-  match Table.get_ctor_ip_types_opt ctor with
+  match Base.Table.get_ctor_ip_types_opt ctor with
   | Some tys ->
-    let tys = List.filter (fun t -> not (Core_util.is_erased_type t)) tys in
+    let tys = List.filter (fun t -> not (Base.Core_util.is_erased_type t)) tys in
     if List.for_all within_scope tys then
-      Some (List.map (Core_util.type_subst_list tyargs) tys)
+      Some (List.map (Base.Core_util.type_subst_list tyargs) tys)
     else None
   | None -> (
     match typ with
@@ -104,8 +104,8 @@ let recover_pattern_var_types_from_scrutinee ~ctor (typ : Core.Type.t) ids =
         match core_ty with
         | Core.Type.Meta {contents = None} | Core.Type.Open _ -> (x, fty)
         | _
-          when Type_util.is_core_erased_ty core_ty
-               && not (Type_util.is_core_erased_ty fty) ->
+          when Base.Type_util.is_core_erased_ty core_ty
+               && not (Base.Type_util.is_core_erased_ty fty) ->
           (x, fty)
         | _ -> (x, core_ty))
       ids
@@ -255,7 +255,7 @@ let pattern_field_pins cx ~scrut_pinned ~cname ~typ ~env ~n_fields
        [std::optional<std::any>] the mapping produced really does hold a
        box. *)
     | Core.Type.Global_app {head = g; type_arguments = args; _} ->
-      not (Table.is_custom g) || List.exists (Translation_erasure.core_erases_to_box cx env) args
+      not (Base.Table.is_custom g) || List.exists (Translation_erasure.core_erases_to_box cx env) args
     | _ -> true
   in
   (* Whether one of the scrutinee's template arguments holds a boxed value.
@@ -286,7 +286,7 @@ let pattern_field_pins cx ~scrut_pinned ~cname ~typ ~env ~n_fields
         args
     else args
   in
-  let num_pv = Table.get_ctor_num_param_vars cname in
+  let num_pv = Base.Table.get_ctor_num_param_vars cname in
   (* The scrutinee's template argument that fixes this field's type, if the
      field's definition-site type is one of the inductive's own parameters.
      [Core.Type.Variable_app (k, _)] counts: [sigT]'s payload field is written [P x], a
@@ -348,7 +348,7 @@ let match_scrutinee_type cx env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type
      concrete type is known. *)
   let rec resolvable_here = function
     | Core.Type.Global_app {head = g; type_arguments = ts; _} ->
-      ( (not (Table.is_promoted_type_var g))
+      ( (not (Base.Table.is_promoted_type_var g))
       || Translation_types.promoted_var_resolution cx g <> None )
       && List.for_all resolvable_here ts
     | Core.Type.Arrow {parameter = a; result = b} -> resolvable_here a && resolvable_here b
@@ -371,13 +371,13 @@ let match_scrutinee_type cx env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type
          match spells [std::any] where the value has a type.  The candidate is
          the declaration the scrutinee was produced by, so it may fill what the
          annotation left open, and nothing more: see
-         {!Type_util.refine_erased}.  A promoted variable this scope cannot
+         {!Base.Type_util.refine_erased}.  A promoted variable this scope cannot
          resolve is not an answer, and neither is an erased one. *)
-      Type_util.refine_erased
+      Base.Type_util.refine_erased
         ~writable:(fun t ->
           resolvable_here t
           && Translation_types.names_only_scoped_tvars cx (Translation_types.cpp_of_core cx env t)
-          && not (Type_util.has_tany_in_type (Translation_types.cpp_of_core cx env t)) )
+          && not (Base.Type_util.has_tany_in_type (Translation_types.cpp_of_core cx env t)) )
         typ candidate
   in
   let typ =
@@ -413,7 +413,7 @@ let match_scrutinee_type cx env (typ : Core.Type.t) t pv ~var_type ~var_cpp_type
          [Sum1<BE, cE, std::any>] inside [Sum1<AE, _, X>], whose Core type
          says [X] -- the match spells it erased too. *)
       let rec erase_as ml (cpp : Cpp_ir.Lowered.Type.t) =
-        match (resolve_meta ml, Type_util.unqualify_ty cpp) with
+        match (resolve_meta ml, Base.Type_util.unqualify_ty cpp) with
         | Core.Type.Global_app {head = g; type_arguments = mas; index_arguments = x}, Entity_application (g', cas, _)
           when GlobRef.CanOrd.equal g g' && List.length mas = List.length cas ->
           Core.Type.Global_app {head = g; type_arguments = List.map2
@@ -474,7 +474,7 @@ let record_field_cpp_ty cx env typ fld : Cpp_ir.Lowered.Type.t option =
           match f with
           | Some f when GlobRef.CanOrd.equal f fld -> Some ty
           | _ -> None )
-        (Table.record_field_bindings_of_type typ)
+        (Base.Table.record_field_bindings_of_type typ)
     in
     match declared with
     | Some core_ty -> (
@@ -482,7 +482,7 @@ let record_field_cpp_ty cx env typ fld : Cpp_ir.Lowered.Type.t option =
         Some
           (Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton r)
              (get_current_type_vars cx)
-             (Core_util.type_subst_list args core_ty))
+             (Base.Core_util.type_subst_list args core_ty))
       with e when CErrors.noncritical e -> None )
     | None -> None )
   | _ -> None
@@ -512,7 +512,7 @@ let ctor_type_of_match cx env (typ : Core.Type.t) (cname : GlobRef.t) : Cpp_ir.L
     let tys =
       match r with
       | GlobRef.IndRef (kn, _) ->
-        ( match Table.get_ind_num_param_vars_opt kn with
+        ( match Base.Table.get_ind_num_param_vars_opt kn with
         | Some num_param_vars ->
           (* A class template has to be spelled with all of its arguments.
              The scrutinee's type can be short of them -- the body of an
@@ -617,7 +617,7 @@ let custom_match_scrutinee cx env (typ : Core.Type.t) t pv ~var_boxed ~var_type 
     | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use); arguments = args} ->
       ( match callee_core_type cx r with
       | Some fty ->
-        let fty = Core_util.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
+        let fty = Base.Core_util.instantiate_written ~reader:"scrut_callee_ret_erased" use fty in
         ( match strip_arrows_n (count_real_core_args args) fty with
         | Some rty ->
           (* Both spellings of "is a [std::any] at run time" are needed here:
@@ -672,7 +672,7 @@ let custom_match_scrutinee cx env (typ : Core.Type.t) t pv ~var_boxed ~var_type 
          declared [pair<std::any, exp<std::any>>] holds that pair. *)
       || (not scrut_is_trivial_core)
          && (is_all_erased typ || Translation_types.resolves_to_any_type cx typ) &&
-         ( Type_util.has_tany_in_type concrete_match_type
+         ( Base.Type_util.has_tany_in_type concrete_match_type
            || (match concrete_match_type with
                | Entity_application (_, args, _) -> List.exists (Translation_types.resolves_to_any_type cx) args
                | _ -> false) ) )

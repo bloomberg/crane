@@ -6,12 +6,12 @@
     bodies to CppIR that {!Translation} drives; it calls back into
     expression and statement lowering through {!Translation_knot}. *)
 
-open Common
+open Base.Common
 open Names
-open Table
+open Base.Table
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Core_query
 open Translation_constructors
 open Translation_knot
@@ -308,7 +308,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
       let tys =
         match n with
         | GlobRef.IndRef (kn, _) ->
-          ( match Table.get_ind_num_param_vars_opt kn with
+          ( match Base.Table.get_ind_num_param_vars_opt kn with
           | Some num_param_vars ->
             (* Take first num_param_vars elements, or fewer if list is short *)
             safe_firstn num_param_vars tys
@@ -389,7 +389,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
         match r with
         | GlobRef.ConstructRef ((kn, _), _) ->
           let ind = GlobRef.IndRef (kn, 0) in
-          Type_util.is_custom_list_global ind
+          Base.Type_util.is_custom_list_global ind
         | _ -> false
       in
       let rec core_ty_all_dummy = function
@@ -411,7 +411,7 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
          concrete element type must be preserved. *)
       let hollow_container =
         is_custom_list && List.exists core_ty_all_dummy tys
-        && List.exists Type_util.has_erased_type_in_type temps
+        && List.exists Base.Type_util.has_erased_type_in_type temps
       in
       let temps =
         if hollow_container && temps <> [] then
@@ -500,7 +500,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
       in
       match Translation_conversion.strip_ns_global_app clean_ct with
       | Entity_application (g, [elem_ty], _)
-        when Type_util.is_custom_list_global g
+        when Base.Type_util.is_custom_list_global g
              && not (Translation_types.resolves_to_any_type cx elem_ty) ->
         (* [expr] came out as the erased [deque<std::any>] from the
            Core.Expr.Bound_variable/Core.Expr.Coerce path; rebuild it as the concrete element container. *)
@@ -523,7 +523,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
         let tys =
           match n with
           | GlobRef.IndRef (kn, _) ->
-            ( match Table.get_ind_num_param_vars_opt kn with
+            ( match Base.Table.get_ind_num_param_vars_opt kn with
             | Some num_param_vars -> safe_firstn num_param_vars tys
             | None -> tys )
           | _ -> tys
@@ -601,7 +601,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
            arg.  Erase the duplicate to [Any] to avoid mismatched template
            instantiations. *)
         let temps =
-          if Table.has_dependent_params n then
+          if Base.Table.has_dependent_params n then
             let expected_temps =
               Translation_ctor_args.expected_type_args_from_return cx env ?slot:expected_ty n
                 ~arity:(List.length temps)
@@ -699,7 +699,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
         let temps =
           let slot_erases_something =
             match expected_ty with
-            | Some e -> Type_util.has_tany_in_type (Translation_types.unfold_cpp_typedef cx env e)
+            | Some e -> Base.Type_util.has_tany_in_type (Translation_types.unfold_cpp_typedef cx env e)
             | None -> true
           in
           if Translation_slot.boxed slot && not slot_erases_something then temps
@@ -738,7 +738,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
           Call
             ( ctor_sig args,
               Type_member
-                (type_expr, Generated_name.companion (Id.of_string fname) "reuse"),
+                (type_expr, Base.Generated_name.companion (Id.of_string fname) "reuse"),
               List.rev args )
         | _ ->
           if
@@ -808,7 +808,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
             | _ -> expr )
           | ct when Cpp_ir.Types.prints_as_any ct
                     || (match ct with
-                        | Entity_application (g, [], _) -> Table.is_erased_type_const g
+                        | Entity_application (g, [], _) -> Base.Table.is_erased_type_const g
                         | _ -> false) ->
             ( match expr with
             | Lambda
@@ -836,10 +836,10 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               in
               let expand_core_type core_ty =
                 let abbrev r = match r with
-                  | GlobRef.ConstRef kn -> Table.lookup_typedef_unchecked kn
+                  | GlobRef.ConstRef kn -> Base.Table.lookup_typedef_unchecked kn
                   | _ -> None
                 in
-                Core_util.type_expand abbrev core_ty
+                Base.Core_util.type_expand abbrev core_ty
               in
               (* Canonical erased shape for a list-typed erased param is
                  [deque<std::any>] -- a bare [std::any] per element, not a
@@ -851,7 +851,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                  [std::bad_any_cast] at runtime.  See the matching
                  invariant in [gen_expr]'s [Core.Expr.Bound_variable]/[Core.Expr.Coerce] cases. *)
               let erase_custom_list_elems : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t = function
-                | Entity_application (g, _ :: _, ns) when Type_util.is_custom_list_global g ->
+                | Entity_application (g, _ :: _, ns) when Base.Type_util.is_custom_list_global g ->
                   Entity_application (g, [Cpp_ir.Type.Any], ns)
                 | t -> t
               in
@@ -957,7 +957,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               let rec is_custom_list_cons = function
                 | Core.Expr.Construct {constructor = GlobRef.ConstructRef ((kn, _), _); _} ->
                   let ind = GlobRef.IndRef (kn, 0) in
-                  Type_util.is_custom_list_global ind
+                  Base.Type_util.is_custom_list_global ind
                 | Core.Expr.Coerce {value = inner; _}
                 | Core.Expr.Boxed_value {value = inner; _}
                 | Core.Expr.Lambda_group_barrier {value = inner; _} ->
@@ -1166,7 +1166,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
           (* A type computed from a value -- [memCType c] -- erases to
              [std::any] as surely as an erased variable does. *)
           | Core.Type.Global_app {head = g; _}
-            when Table.is_value_dep_type_scheme g || Table.is_erased_type_const g ->
+            when Base.Table.is_value_dep_type_scheme g || Base.Table.is_erased_type_const g ->
             true
           | Core.Type.Arrow {parameter = a; result = b} -> ft_has_erased_tvar a || ft_has_erased_tvar b
           | _ -> false
@@ -1349,8 +1349,8 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
              (match resolve_meta ft with
               | Core.Type.Global_app {head = g; _} -> globref_equal g n_ind
               | _ -> false)
-             && (not (Table.is_coinductive n_ind))
-             && not (Table.is_shared_variant n_ind)
+             && (not (Base.Table.is_coinductive n_ind))
+             && not (Base.Table.is_shared_variant n_ind)
            | _ -> false
       in
       if shares_child then Cpp_ir.Build.call (Runtime Cpp_ir.Crane_rt.Share_child) [expr] else expr
@@ -1372,7 +1372,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
         let tys =
           match n with
           | GlobRef.IndRef (kn, _) ->
-            ( match Table.get_ind_num_param_vars_opt kn with
+            ( match Base.Table.get_ind_num_param_vars_opt kn with
             | Some num_param_vars -> safe_firstn num_param_vars tys
             | None -> tys )
           | _ -> tys
@@ -1385,7 +1385,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
           Translation_types.ind_promoted_type_args cx n
           @ Translation_types.template_params_of_core cx ~site:Cpp_ir.Types.Through_tvar env tys
         in
-        if Table.is_coinductive n then
+        if Base.Table.is_coinductive n then
           Cpp_ir.Build.call
             (Allocate (Heap, Entity_application (n, temps, [])))
             [Aggregate {struct_ = n; type_args = temps; values = args}]

@@ -36,7 +36,7 @@ open Loopify_analysis
 
 (** Create a shadow variable name for tail-recursion loop variables:
     [_loop_x], or [_loop_self] for [_self]. *)
-let shadow_name (id : Id.t) : Id.t = Generated_name.prefixed "_loop" id
+let shadow_name (id : Id.t) : Id.t = Base.Generated_name.prefixed "_loop" id
 
 (** Strip reference and const modifiers from a type, converting it to a value
     type suitable for local variable declarations. [const shared_ptr<T> &]
@@ -99,7 +99,7 @@ let borrowed_value_param_pointee u = function
   | Reference (Lvalue, Const t) when is_value_type_ret t -> Some t
   | Const (Reference (Lvalue, t)) when is_value_type_ret t -> Some t
   | Const t when is_value_type_ret t -> Some t
-  | t when Table.reuse_here () && Unit_context.non_atomic_rc u && is_value_type_ret t ->
+  | t when Base.Table.reuse_here () && Unit_context.non_atomic_rc u && is_value_type_ret t ->
     Some t
   | _ -> None
 
@@ -456,7 +456,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
         else
           s
       in
-      Generated_name.prefixed "_next" (Id.of_string base)
+      Base.Generated_name.prefixed "_next" (Id.of_string base)
     in
     (* Phase 1: emit temp declarations for hazardous variables, and direct
        assignments for non-hazardous ones. *)
@@ -857,7 +857,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
            partial application eta-expanded -- whose capture takes it as
            the plan's captures say ({!Ownership_ir.captures}). *)
         if not (!bare = 0 && !moved + !captured = 1) then
-          Probe.violation "ownership plan"
+          Base.Probe.violation "ownership plan"
             Pp.(str "a jump the plan moves " ++ Id.print x ++ str " into its next value at reads it "
                 ++ int !bare ++ str " times");
         arg
@@ -884,7 +884,7 @@ let moving_jumps ~moves ~subs ~shadow_params params (check : call_checker) : cal
                 match (List.assoc_opt id subs, (move : Ownership_ir.Continue_move.t)) with
                 | Some shadow, Move_parameter when by_value shadow ->
                   if spelled_elsewhere k shadow then begin
-                    Probe.violation "ownership plan"
+                    Base.Probe.violation "ownership plan"
                       Pp.(str "a jump the plan moves " ++ Id.print shadow
                           ++ str " into its next value at reads it in another argument");
                     arg

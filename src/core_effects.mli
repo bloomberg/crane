@@ -34,7 +34,7 @@ type operation =
 type effect_ = {operation : operation; mode : mode}
 
 (** The mode a monad's computations are generated in: {!Reified} for one
-    extracted as a tree ({!Table.is_monad_reified}). *)
+    extracted as a tree ({!Base.Table.is_monad_reified}). *)
 val mode_of_monad : Names.GlobRef.t -> mode
 
 (** The operation the global is registered as, if it is one. *)

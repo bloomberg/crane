@@ -4,14 +4,14 @@
 (** A per-extraction cache of how each inductive type is rendered.  See
     [name_resolution.mli].
 
-    IMPORTANT: This module must NOT call Common.pp_global or
-    Common.pp_global_name during [create], because those functions have side
-    effects on the Common.ml renaming tables. Calling them at cache-creation
+    IMPORTANT: This module must NOT call Base.Common.pp_global or
+    Base.Common.pp_global_name during [create], because those functions have side
+    effects on the Base.Common.ml renaming tables. Calling them at cache-creation
     time (before normal rendering) would trigger premature renaming entries and
     produce different output. *)
 
 open Names
-open Table
+open Base.Table
 module Kind = Cpp_ir.Inductive.Kind
 
 (** Name resolution cache: the inductive kind of each scanned inductive,
@@ -42,7 +42,7 @@ let create layout s =
   let ind_kinds = Core.Ref.User.Tbl.create 64 in
   (* Pre-classify all inductive types using side-effect-free queries only. We do
      NOT call pp_global_name or pp_global here: those have side effects on
-     Common.ml's renaming tables that would change the output. *)
+     Base.Common.ml's renaming tables that would change the output. *)
   let rec scan_sel sel =
     List.iter
       (fun (_l, se) ->

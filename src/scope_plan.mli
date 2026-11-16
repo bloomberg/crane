@@ -39,7 +39,7 @@ type t = {
   scopes : (ModPath.t * scope) list;
   nested : ModPath.t list;
   templated : ModPath.t list;
-  visibility : (ModPath.t * Common.visibility) list;
+  visibility : (ModPath.t * Base.Common.visibility) list;
   local_inductives : (ModPath.t * GlobRef.t list) list;
   frames : (ModPath.t * ModPath.t list) list;
 }
@@ -86,7 +86,7 @@ val of_declaration : Module_plan.layout -> bound -> GlobRef.t -> scope option
 (** The visibility the body of the module [mp] is written in: the scopes
     enclosing it and its own, innermost first, each with the names it
     declares and the functor parameters it binds. *)
-val visibility : bound -> ModPath.t -> Common.visibility option
+val visibility : bound -> ModPath.t -> Base.Common.visibility option
 
 (** The inductives the body of the module [mp] spells bare: those it and
     each module body enclosing it declare, as [Cpp.inductives_declared_in]

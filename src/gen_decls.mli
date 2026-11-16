@@ -12,7 +12,7 @@
     to lower function bodies) and below {!Cpp}, which drives the whole pipeline
     and consumes the declarations produced here. *)
 
-open Common
+open Base.Common
 open Names
 
 (** {2 Declaration Generation} *)
@@ -204,4 +204,4 @@ val is_typeclass_instance : Core.Type.t -> bool
     generated -- none while planning, then the implementation and header
     emissions; [CRANE_COUNT_GENERATION] reports these counts so any
     repetition stays visible. *)
-val body_generation_counts : unit -> (Common.phase * int) list
+val body_generation_counts : unit -> (Base.Common.phase * int) list

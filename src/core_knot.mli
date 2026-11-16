@@ -9,7 +9,7 @@
     (fun y => f y)] tying the knot.  Its recursion is hidden in a closure it
     passes, which no loop can be made of.
 
-    Where Loopify loopifies [f] ({!Table.should_loopify}), its body becomes
+    Where Loopify loopifies [f] ({!Base.Table.should_loopify}), its body becomes
     the functional's, each call of [rec] a call of [f] itself: ordinary
     recursion, planned and lowered as any other.  Only that knot is tied:
     [f]'s body is a call of a functional defined without recursion, at the

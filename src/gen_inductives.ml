@@ -13,13 +13,13 @@
     is built.  A method is CppIR from the statements translation generates
     for its body on. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
-open Table
+open Base.Core_util
+open Base.Table
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Translation
 open Plan_templates
 open Gen_context
@@ -340,7 +340,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
      body *)
   let ids_normal_order = List.rev all_ids in
   let this_arg_id_opt, param_ids_with_pos =
-    Common.extract_at_pos
+    Base.Common.extract_at_pos
       this_pos
       (List.mapi (fun i (id, ty) -> (id, ty, i)) ids_normal_order)
   in
@@ -350,12 +350,12 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
       (fun (_, ty, i) ->
         (* An instance is either promoted to a template parameter or skipped
            outright; either way it is not among the arguments a call passes,
-           and {!Type_util.core_type_is_instance} is where both cases are
+           and {!Base.Type_util.core_type_is_instance} is where both cases are
            recognised -- a skipped class is a [ConstRef] mapped to the empty
            string, which [is_typeclass_type] alone does not see. *)
-        Type_util.is_runtime_binder_type ty
-        && (not (Type_util.declaration_drops_parameter decl_ty i ty))
-        && not (Type_util.core_type_is_instance ty) )
+        Base.Type_util.is_runtime_binder_type ty
+        && (not (Base.Type_util.declaration_drops_parameter decl_ty i ty))
+        && not (Base.Type_util.core_type_is_instance ty) )
       param_ids_with_pos
   in
 
@@ -377,7 +377,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
      holds on to it. *)
   let ungeneralised =
     Translation_callable_params.ungeneralised_callable_params cx ~self_ref:func_ref
-      ~suspended:(Table.is_coinductive_type ret_ty) n_method_params inner_body
+      ~suspended:(Base.Table.is_coinductive_type ret_ty) n_method_params inner_body
   in
   let params_with_idx =
     List.mapi
@@ -539,13 +539,13 @@ let method_head cx vars s =
   let body_names =
     let annotations = ref [] in
     ignore
-      (Core_util.ast_map_types
+      (Base.Core_util.ast_map_types
          (fun t ->
            annotations := t :: !annotations;
            t )
          inner_body );
     (* A hole names no variable; it is declined rather than converted. *)
-    let declined = Core_util.map_core_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
+    let declined = Base.Core_util.map_core_type (function Core.Type.Hole _ -> Core.Type.Unknown | t -> t) in
     let annotations =
       with_type_vars cx (vars @ extra_tvar_names) (fun () ->
           List.rev_map
@@ -621,7 +621,7 @@ let method_head cx vars s =
     [h]: a parameter for one of its own variables declares the function's
     variable it was renumbered from ({!method_scope}). *)
 let method_plan func_ref s h =
-  let scheme = Core_util.reference_scheme func_ref in
+  let scheme = Base.Core_util.reference_scheme func_ref in
   Callable_abi.of_head ~minted:s.minted
     ~omitted:(Translation_tvars.type_arg_omission func_ref)
     ~deduced_callables:s.deduced_callables ~passing:s.passing
@@ -648,7 +648,7 @@ let plan_method cx name vars ((func_ref, _, ty, _) as candidate) =
     again ({!method_head}) and checked against the plan. *)
 let planned_method_head cx func_ref vars s =
   let abi = Callable_abi.planned (Translation_state.callables cx) func_ref in
-  if Probe.checking () then
+  if Base.Probe.checking () then
     Callable_abi.check (Translation_state.callables cx) (method_plan func_ref s (method_head cx vars s));
   match Callable_abi.receiver abi with
   | Some r ->
@@ -665,7 +665,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
      function returns: see {!method_scope}. *)
   with_itree_mode_for cx ty @@ fun () ->
   let tparams, ret, return_only, dropped_names = planned_method_head cx func_ref vars s in
-  let func_name = Common.id_of_global Term func_ref in
+  let func_name = Base.Common.id_of_global Term func_ref in
   let {
     ty = ty;
     ret_ty = ret_ty;
@@ -715,10 +715,10 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
            first, [i] innermost first. *)
         (not (this_arg_id <> None && i = method_n_params - 1 - this_pos))
         &&
-        match List.assoc_opt (Common.get_db_name (i + 1) env) params with
+        match List.assoc_opt (Base.Common.get_db_name (i + 1) env) params with
         | Some ty -> not (Translation_ownership.declared_by_reference ty)
         | None -> List.nth method_owned_flags i )
-      ~declared:(fun i -> List.assoc_opt (Common.get_db_name (i + 1) env) params)
+      ~declared:(fun i -> List.assoc_opt (Base.Common.get_db_name (i + 1) env) params)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
   in
   (* The receiver becomes [this]; a closure reading it captures a copy of
@@ -753,7 +753,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
   in
   (* Add type args to recursive self-calls. Inside fixpoint bodies, the
      extraction produces a self reference whose variables stand for themselves
-     and are written nowhere ({!Core_util.self_reference}). When the function is a
+     and are written nowhere ({!Base.Core_util.self_reference}). When the function is a
      method, the recursive call needs
      explicit template args for non-deducible params. Replace [Entity (func_ref,
      [], _)] with [Entity (func_ref, all_type_args, _)].
@@ -791,7 +791,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
          return positions produce a value copy rather than a raw pointer.
          For shared_ptr/coinductive methods, keep bare [This]. *)
       let this_expr : Cpp_ir.Lowered.Expr.t =
-        if not (Table.is_coinductive name) && not (is_enum_inductive name) then
+        if not (Base.Table.is_coinductive name) && not (is_enum_inductive name) then
           Dereference This
         else This
       in
@@ -863,11 +863,11 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
   in
   (* A variable the head drops must be one the body does not name either:
      the body would name a parameter no longer declared. *)
-  if Probe.checking () then
+  if Base.Probe.checking () then
     List.iter
       (fun name ->
         if stmt_has_tvar name stmts then
-          Probe.violation "method head"
+          Base.Probe.violation "method head"
             Pp.(
               str "the body of " ++ GlobRef.print func_ref ++ str " names " ++ Id.print name
               ++ str ", which none of its annotations does" ) )
@@ -938,7 +938,7 @@ let methods_ahead :
     Core.Ref.User.Tbl.t =
   Core.Ref.User.Tbl.create 16
 
-let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset methods_ahead)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Core.Ref.User.Tbl.reset methods_ahead)
 
 (** [generate_method_ahead name vars candidate] generates the method made of
     [candidate] in the inductive [name], whose variables are [vars], before
@@ -982,7 +982,7 @@ let gen_single_method cx name vars ((func_ref, _, _, _) as candidate) =
   with
   | Some (field, lifted) ->
     relift cx lifted;
-    if Probe.checking ()
+    if Base.Probe.checking ()
        && compare field (fst (collecting_lifted cx (fun () -> generate_method cx name vars candidate))) <> 0
     then
       CErrors.anomaly
@@ -1006,7 +1006,7 @@ let gen_methods cx ?(merged = false) name vars candidates =
   in
   Control_to_cpp_ir.lower_struct_methods ~unit:(Translation_state.unit_context cx) ~merged name vars
     (List.concat_map
-       (fun c -> Borrow_projection.lend ~coinductive:(Table.is_coinductive name) (gen_single_method cx name vars c))
+       (fun c -> Borrow_projection.lend ~coinductive:(Base.Table.is_coinductive name) (gen_single_method cx name vars c))
        candidates )
 
 (** Does the Core type [core_ty] contain [ind_ref] (or a mutual sibling) anywhere
@@ -1052,7 +1052,7 @@ let core_type_recurses_through_boxed_container ~ind_ref core_ty =
   let rec find_boxed_rec t =
     match t with
     | Core.Type.Global_app {head = g; type_arguments = args; _} ->
-      ( match Table.find_boxed_wrapper_opt g with
+      ( match Base.Table.find_boxed_wrapper_opt g with
       | Some _ when core_type_has_nested_self_ref ~ind_ref t -> true
       | _ -> List.exists find_boxed_rec args )
     | Core.Type.Arrow {parameter = a; result = b} -> find_boxed_rec a || find_boxed_rec b
@@ -1072,7 +1072,7 @@ let core_type_recurses_through_boxed_container ~ind_ref core_ty =
     type. *)
 let maybe_record_boxed_recursive_ind ~ind_ref core_ty =
   if core_type_recurses_through_boxed_container ~ind_ref core_ty then
-    Table.add_boxed_recursive_ind ind_ref
+    Base.Table.add_boxed_recursive_ind ind_ref
 
 (** The type a constructor struct of the inductive [name] stores field [ty]
     at, under the variable names [var_names]: recursive occurrences and,
@@ -1235,7 +1235,7 @@ let rec qualify_inductives_lowered ~skip (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lo
     let core : Cpp_ir.Lowered.Type.t = Entity_application (g, List.map go ts, es) in
     match g with
     | GlobRef.IndRef _ when skip g -> core
-    | GlobRef.IndRef _ when Table.is_inline_custom g -> core
+    | GlobRef.IndRef _ when Base.Table.is_inline_custom g -> core
     | GlobRef.IndRef _ -> In_namespace (g, core)
     | _ -> core )
   | In_namespace (g, t) -> (
@@ -1271,7 +1271,7 @@ let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_i
     {- {b Enum}: a plain [enum class], for a non-mutual, non-custom inductive
        without parameters whose constructors are all nullary.}
     {- {b Flat}: a plain struct of public fields, for a flat inductive
-       ({!Table.is_flat_inductive}), with [clone], a conversion to another
+       ({!Base.Table.is_flat_inductive}), with [clone], a conversion to another
        instantiation and one factory.}
     {- {b Variant}: a struct with a nested struct per constructor
        alternative (e.g. [Leaf {}], [Node { ... }]), [using variant_t =
@@ -1331,8 +1331,8 @@ let gen_ind_header_v2 cx
      recursive ([std::any]) types whose special field handling the runtime-arena
      path does not cover -- those keep the plain make_shared factory too. *)
   let arena_runtime_ok =
-    Table.arena_enabled ()
-    && Table.should_use_arena_at_runtime name
+    Base.Table.arena_enabled ()
+    && Base.Table.should_use_arena_at_runtime name
     && (not is_coinductive)
     && not is_mutual
   in
@@ -1362,14 +1362,14 @@ let gen_ind_header_v2 cx
     let all_nullary = Array.for_all (fun tys_list -> tys_list = []) tys in
     if all_nullary && vars = [] && (not is_mutual) && not (is_custom name) then (
       (* Register as enum inductive for type/constructor/match generation *)
-      Table.add_enum_inductive name;
+      Base.Table.add_enum_inductive name;
       let ctor_names =
         Array.to_list
           (Array.map
              (fun c ->
                match c with
                | GlobRef.ConstructRef ((kn, i), cidx) ->
-                 Id.of_string (Common.enum_ctor_name_of_ref kn i cidx)
+                 Id.of_string (Base.Common.enum_ctor_name_of_ref kn i cidx)
                | _ -> ctor_fallback_id 0 )
              cnames )
       in
@@ -1378,7 +1378,7 @@ let gen_ind_header_v2 cx
           (Array.map
              (fun c ->
                match c with
-               | GlobRef.ConstructRef _ -> Common.pp_global_name Type c
+               | GlobRef.ConstructRef _ -> Base.Common.pp_global_name Type c
                | _ -> "" )
              cnames )
       in
@@ -1389,8 +1389,8 @@ let gen_ind_header_v2 cx
       let self_ty = T.Entity_application (name, ty_vars, []) in
 
       (* Preparation registered the flat inductives
-         ({!Table.is_flat_inductive_packet}). *)
-      if Table.is_flat_inductive name then begin
+         ({!Base.Table.is_flat_inductive_packet}). *)
+      if Base.Table.is_flat_inductive name then begin
         let tys_list = tys.(0) in
         let c = cnames.(0) in
         let cname_str = ctor_struct_name_of_ref ~fallback_idx:0 c in
@@ -1489,7 +1489,7 @@ let gen_ind_header_v2 cx
           List.mapi
             (fun k (r, rvars) ->
               ( (r, List.length rvars),
-                ( Generated_name.indexed "S" k,
+                ( Base.Generated_name.indexed "S" k,
                   (T.Entity_application (r, List.map B.named_variable rvars, []) : Cpp_ir.Lowered.Type.t) ) ) )
             group
         in
@@ -1555,7 +1555,7 @@ let gen_ind_header_v2 cx
       (* Note: nested structs inherit template params from parent, so don't add <A> to them *)
       let variant_ty : Cpp_ir.Lowered.Type.t =
         T.Variant
-          ( (if Table.is_shared_variant name then Shared else Inline),
+          ( (if Base.Table.is_shared_variant name then Shared else Inline),
             Array.to_list
              (Array.mapi
                 (fun i c ->
@@ -1566,7 +1566,7 @@ let gen_ind_header_v2 cx
                 cnames ) )
       in
       (* Collision detection: internal names must not equal the enclosing type name *)
-      let type_name_str = Common.pp_global_name Type name in
+      let type_name_str = Base.Common.pp_global_name Type name in
       let escape_if_clashes base =
         if String.equal base type_name_str then base ^ "_" else base
       in
@@ -1578,7 +1578,7 @@ let gen_ind_header_v2 cx
          leaves it alone, as the family's own struct it is, rather than
          reading its erased index as an element (see [obj.h]). *)
       let element_using : Cpp_ir.Lowered.phase F.member list =
-        if List.exists (fun i -> Table.is_family_ind_param name i)
+        if List.exists (fun i -> Base.Table.is_family_ind_param name i)
              (List.init (List.length vars) Fun.id)
         then
           [ ( F.Nested_type_alias ([], Id.of_string "crane_family_tag", T.Void),
@@ -1589,7 +1589,7 @@ let gen_ind_header_v2 cx
       (* A coinductive value is a lazy cell, as cheap to copy as a pointer:
          a [crane::field] of it is not boxed (see field.h). *)
       let element_using =
-        if is_coinductive && Table.boxed_fields () then
+        if is_coinductive && Base.Table.boxed_fields () then
           element_using
           @ [(F.Nested_type_alias ([], Id.of_string "crane_cheap_copy", T.Void), V.Public, Sec.Types)]
         else element_using
@@ -1598,7 +1598,7 @@ let gen_ind_header_v2 cx
       (* 3. Private variant member: v_ for inductive, lazy_v_ for coinductive *)
       let variant_member_name =
         escape_if_clashes
-          (if Table.std_lib () = "BDE" then
+          (if Base.Table.std_lib () = "BDE" then
              (if is_coinductive then "d_lazyV_" else "d_v_")
            else
              (if is_coinductive then "lazy_v_" else "v_"))
@@ -1690,7 +1690,7 @@ let gen_ind_header_v2 cx
            refcounting still drives destruction), so the
            iterative destructor that drains those smart-pointer chains is
            needed here exactly as for any other recursive type. *)
-        if is_coinductive || Table.is_shared_variant name then []
+        if is_coinductive || Base.Table.is_shared_variant name then []
         else
           let is_direct_self_ref t = is_ref_to name vars t in
           (* Does [t] mention the inductive being generated anywhere, at any
@@ -1729,9 +1729,9 @@ let gen_ind_header_v2 cx
              with [Self], plus any that name [Self] outright. *)
           let wrapper_self_fields g args =
             match g with
-            | GlobRef.IndRef (kn, i) when Table.is_flat_inductive g ->
+            | GlobRef.IndRef (kn, i) when Base.Table.is_flat_inductive g ->
               let ctor = GlobRef.ConstructRef ((kn, i), 1) in
-              (match Table.get_ctor_ip_types_opt ctor with
+              (match Base.Table.get_ctor_ip_types_opt ctor with
                | None -> []
                | Some ip_types ->
                  let cname_str = ctor_struct_name_of_ref ~fallback_idx:0 ctor in
@@ -1746,7 +1746,7 @@ let gen_ind_header_v2 cx
                        | t -> is_direct_self_ref t
                      in
                      if holds_self fty
-                     then Some (Common.lookup_ctor_field_name ~owner:ctor cname_str j)
+                     then Some (Base.Common.lookup_ctor_field_name ~owner:ctor cname_str j)
                      else None)
                    (List.mapi (fun j t -> (j, t)) ip_types))
             | _ -> []
@@ -1766,19 +1766,19 @@ let gen_ind_header_v2 cx
             match g with
             | GlobRef.IndRef (kn, i) ->
               let ctor j =
-                Table.get_ctor_ip_types_opt (GlobRef.ConstructRef ((kn, i), j))
+                Base.Table.get_ctor_ip_types_opt (GlobRef.ConstructRef ((kn, i), j))
               in
               (* A third constructor means this is not the Nil/Cons shape. *)
               ctor 3 = None
               && (match (ctor 1, ctor 2) with
                   | Some [], Some [elem; tail] ->
                     let is_first_tvar t =
-                      match Type_util.resolve_meta t with
+                      match Base.Type_util.resolve_meta t with
                       | Core.Type.Variable {variable = 1; _} -> true
                       | _ -> false
                     in
                     let is_self t =
-                      match Type_util.resolve_meta t with
+                      match Base.Type_util.resolve_meta t with
                       | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
                       | _ -> false
                     in
@@ -1841,7 +1841,7 @@ let gen_ind_header_v2 cx
              balanced-paren matching, so it may itself contain parentheses
              (e.g. [std::move(%scrut.front())]). *)
           let expand_drain_template ~scrut ~self tmpl =
-            let subst s = Common.render_template [("%scrut", scrut)] s in
+            let subst s = Base.Common.render_template [("%scrut", scrut)] s in
             List.map
               (function
                 | Cpp_ir.Foreign_template.Drain_text t -> S.Foreign_text (subst t)
@@ -2011,7 +2011,7 @@ let gen_ind_header_v2 cx
             | GlobRef.IndRef (kn, i) ->
               let rec go j acc =
                 match
-                  Table.get_ctor_ip_types_opt (GlobRef.ConstructRef ((kn, i), j))
+                  Base.Table.get_ctor_ip_types_opt (GlobRef.ConstructRef ((kn, i), j))
                 with
                 | None -> List.rev acc
                 | Some ftys -> go (j + 1) ((j, ftys) :: acc)
@@ -2034,7 +2034,7 @@ let gen_ind_header_v2 cx
              [g] stored behind a smart pointer? *)
           let field_is_ptr g fty =
             let root_is_g =
-              match Type_util.resolve_meta fty with
+              match Base.Type_util.resolve_meta fty with
               | Core.Type.Global_app {head = g'; _} -> globref_equal g' g
               | _ -> false
             in
@@ -2048,12 +2048,12 @@ let gen_ind_header_v2 cx
           in
           let rec harvest_val fuel ty e =
             if fuel <= 0 then raise Harvest_bail;
-            let ty = Type_util.resolve_meta ty in
+            let ty = Base.Type_util.resolve_meta ty in
             if is_direct_self_ref ty then [push_self_stmt e]
             else
               match ty with
               | Core.Type.Global_app {head = g; type_arguments = args; _} when List.exists contains_self args ->
-                (match Table.find_custom_opt g with
+                (match Base.Table.find_custom_opt g with
                  | Some tmpl when starts_with "std::optional" tmpl ->
                    (match args with
                     | [a] ->
@@ -2126,7 +2126,7 @@ let gen_ind_header_v2 cx
                        else
                          let fe =
                            access
-                             (Common.lookup_ctor_field_name ~owner:g cname_str k)
+                             (Base.Common.lookup_ctor_field_name ~owner:g cname_str k)
                          in
                          (* A field boxed for its own type is a pointer like a
                             recursive one. *)
@@ -2144,13 +2144,13 @@ let gen_ind_header_v2 cx
                 (* Rocq [Record]s are emitted as a plain struct whose members
                    are named after the projections, not as a variant with
                    generic [aN] constructor fields. *)
-                match (ctors, Table.get_record_fields g) with
+                match (ctors, Base.Table.get_record_fields g) with
                 | ([(_, ftys)], (_ :: _ as fs))
                   when List.length fs = List.length ftys ->
                   (try
                      Some (List.map
                              (function
-                              | Some fr -> Common.pp_global_name Common.Term fr
+                              | Some fr -> Base.Common.pp_global_name Base.Common.Term fr
                               | None -> raise Exit)
                              fs)
                    with Exit -> None)
@@ -2173,7 +2173,7 @@ let gen_ind_header_v2 cx
                          then harvest_ptr (fuel - 1) inst fe
                          else harvest_val (fuel - 1) inst fe)
                      ftys)
-              | [(j, ftys)] when Table.is_flat_inductive g ->
+              | [(j, ftys)] when Base.Table.is_flat_inductive g ->
                 (* Single-constructor "flat" inductives and records are laid
                    out as a plain struct: no variant, direct member access. *)
                 let cname_str =
@@ -2283,13 +2283,13 @@ let gen_ind_header_v2 cx
                    an allocation-free intrusive worklist -- a larger redesign
                    deferred here; bounded call-stack depth is the property that
                    matters for the adversarial-depth attack. *)
-                if Table.is_custom list_g then
+                if Base.Table.is_custom list_g then
                   (* A [Drain "..."] clause on the custom container mapping spells
                      out how to iteratively yield children -- required for bare
                      value-type containers (deque, immer::flex_vector) that have
                      no [use_count]/[reset]. Without it we fall back to assuming a
                      smart-pointer-wrapped container. *)
-                  begin match Table.find_custom_drain_opt list_g with
+                  begin match Base.Table.find_custom_drain_opt list_g with
                   | Some tmpl ->
                     expand_drain_template
                       ~scrut:(Id.to_string _alt_id ^ "->"
@@ -2307,10 +2307,10 @@ let gen_ind_header_v2 cx
                   let (_nil_s, cons_s) = list_ctor_struct_names list_g in
                   let cons_id = Id.of_string_soft cons_s in
                   let elem_field =
-                    Common.lookup_ctor_field_name ~owner:list_g cons_s 0
+                    Base.Common.lookup_ctor_field_name ~owner:list_g cons_s 0
                   in
                   let tail_field =
-                    Common.lookup_ctor_field_name ~owner:list_g cons_s 1
+                    Base.Common.lookup_ctor_field_name ~owner:list_g cons_s 1
                   in
                   let lp = Id.of_string "_lp" and lc = Id.of_string "_lc" in
                   let tail = E.Access (Dot, E.Local lc, tail_field) in
@@ -2363,7 +2363,7 @@ let gen_ind_header_v2 cx
                       ctor_struct_name_of_ref ~fallback_idx:i cnames_arr.(i)
                     in
                     let field_id =
-                      Common.lookup_ctor_field_name ~owner:cnames_arr.(i)
+                      Base.Common.lookup_ctor_field_name ~owner:cnames_arr.(i)
                         cname_str j
                     in
                     let effective_cls =
@@ -2377,9 +2377,9 @@ let gen_ind_header_v2 cx
                        read: with no [Drain] to say otherwise, the container
                        frees its children itself. *)
                     | `List g
-                      when Table.is_custom g
-                           && Table.find_custom_drain_opt g = None
-                           && Table.find_boxed_wrapper_opt g <> None ->
+                      when Base.Table.is_custom g
+                           && Base.Table.find_custom_drain_opt g = None
+                           && Base.Table.find_boxed_wrapper_opt g <> None ->
                       None
                     | `List g -> Some (field_id, `List g)
                     | `Wrapper fs -> Some (field_id, `Wrapper fs)
@@ -2435,7 +2435,7 @@ let gen_ind_header_v2 cx
                              Some
                                (Some
                                   ( ctor_struct_id_of_ref ~fallback_idx:i cnames.(i),
-                                    Common.lookup_ctor_field_name ~owner:cnames.(i)
+                                    Base.Common.lookup_ctor_field_name ~owner:cnames.(i)
                                       cname_str j ))
                            | _ -> Some None )
                          (List.mapi (fun j ty -> (j, ty)) tys_list)
@@ -2516,7 +2516,7 @@ let gen_ind_header_v2 cx
                              in
                              Some
                                (Some
-                                  (Common.lookup_ctor_field_name ~owner:cnames.(i)
+                                  (Base.Common.lookup_ctor_field_name ~owner:cnames.(i)
                                      cname_str j))
                            | _ -> Some None)
                          (List.mapi (fun j ty -> (j, ty)) tys_list)
@@ -2887,7 +2887,7 @@ let gen_ind_header_v2 cx
            whose cells are made differently. *)
         let child_field (_, storage_ty, _) ty =
           Translation_state.non_atomic_rc cx && (not is_coinductive) && (not arena_runtime_ok)
-          && (not (Table.is_shared_variant name))
+          && (not (Base.Table.is_shared_variant name))
           && is_ref_to name vars ty
           && (match (storage_ty : Cpp_ir.Lowered.Type.t) with Shared_pointer _ -> true | _ -> false)
         in
@@ -2929,7 +2929,7 @@ let gen_ind_header_v2 cx
         let token_field =
           List.find_map
             (fun ((j, storage_ty, _), ty) ->
-              match ((storage_ty : Cpp_ir.Lowered.Type.t), Core_util.core_resolve ty) with
+              match ((storage_ty : Cpp_ir.Lowered.Type.t), Base.Core_util.core_resolve ty) with
               | Shared_pointer inner, Core.Type.Global_app {head = r; _}
                 when GlobRef.CanOrd.equal r name ->
                 Some (j, inner)
@@ -2960,21 +2960,21 @@ let gen_ind_header_v2 cx
           in
           [ ( Method
                 (static_method
-                   ~name:(Generated_name.companion (Id.of_string fname) "reuse")
+                   ~name:(Base.Generated_name.companion (Id.of_string fname) "reuse")
                    ~ret:ret_ty ~params:((tok_id, ret_ty) :: params) ~body),
               V.Public,
               Sec.Creators ) ]
         in
         let reuse_factory : Cpp_ir.Lowered.phase F.member list =
-          if Table.reuse_anywhere () && (not is_coinductive) && Table.is_shared_variant name then
+          if Base.Table.reuse_anywhere () && (not is_coinductive) && Base.Table.is_shared_variant name then
             (* A constructor with no fields has no block to write into. *)
             if tys_list = [] then [] else shared_reuse_factory ()
           else
           match token_field with
           | Some (tok_j, rec_inner)
-            when Table.reuse_anywhere () && Translation_state.non_atomic_rc cx && (not is_coinductive)
+            when Base.Table.reuse_anywhere () && Translation_state.non_atomic_rc cx && (not is_coinductive)
                  (* A shared variant's slot holds no cell to recycle. *)
-                 && not (Table.is_shared_variant name) ->
+                 && not (Base.Table.is_shared_variant name) ->
               let tok_id = Id.of_string "_tok" in
               let reuse_params =
                 (tok_id, T.Shared_pointer rec_inner) :: params
@@ -2995,7 +2995,7 @@ let gen_ind_header_v2 cx
               let reuse_body = [S.Return (Some (build i cname reuse_ctor_args))] in
               [ ( Method
                     (static_method
-                       ~name:(Generated_name.companion (Id.of_string fname) "reuse")
+                       ~name:(Base.Generated_name.companion (Id.of_string fname) "reuse")
                        ~ret:ret_ty ~params:reuse_params ~body:reuse_body),
                   V.Public,
                   Sec.Creators ) ]
@@ -3083,7 +3083,7 @@ let gen_ind_header_v2 cx
             else
               let n_vars = List.length vars in
               let u_var_names =
-                List.mapi (fun i _ -> Generated_name.member "U" ~of_:n_vars i) vars
+                List.mapi (fun i _ -> Base.Generated_name.member "U" ~of_:n_vars i) vars
               in
               let u_tys =
                 List.map B.named_variable u_var_names
@@ -3115,7 +3115,7 @@ let gen_ind_header_v2 cx
                       let promoted_as var_names t =
                         let promoted =
                           match name with
-                          | GlobRef.IndRef (kn, _) -> Table.ind_promoted_params kn
+                          | GlobRef.IndRef (kn, _) -> Base.Table.ind_promoted_params kn
                           | _ -> []
                         in
                         let name_at id =
@@ -3176,7 +3176,7 @@ let gen_ind_header_v2 cx
                            it must not be namespace-qualified. *)
                         ~skip:(fun g ->
                           GlobRef.CanOrd.equal g name
-                          || Table.same_mutual_block g name
+                          || Base.Table.same_mutual_block g name
                           || spells_bare cx g)
                         ~src_ty:src_fty ~dst_ty:dst_fty
                         src_expr)

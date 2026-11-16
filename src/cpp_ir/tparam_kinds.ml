@@ -7,7 +7,7 @@
     when the declaration's header is generated; read back wherever a use of
     the declaration is converted.
 
-    It lives below {!Table} so that {!Cpp_leaf_plan} can ask it directly, with
+    It lives below {!Base.Table} so that {!Cpp_leaf_plan} can ask it directly, with
     no hook installed at load time: rebuilding an application
     ([Cpp_leaf_plan.map_type]) has to know whether its head is parameterised
     by a family. *)

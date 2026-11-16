@@ -18,10 +18,10 @@ type key =
   | Module of ModPath.t
   | Module_declared of ModPath.t
   | Module_in_expression of ModPath.t
-  | Global of Common.kind * GlobRef.t
-  | Unmapped of Common.kind * GlobRef.t
+  | Global of Base.Common.kind * GlobRef.t
+  | Unmapped of Base.Common.kind * GlobRef.t
   | Inductive_value of GlobRef.t
-  | Short of Common.kind * GlobRef.t
+  | Short of Base.Common.kind * GlobRef.t
   | Class_concept of GlobRef.t
   | Modtype_concept of ModPath.t
   | Modtype_concept_declared of ModPath.t
@@ -92,7 +92,7 @@ let compare_entered a b =
     | c -> c )
   | _ -> Int.compare (rank a) (rank b)
 
-let compare_kind (a : Common.kind) b = compare a b
+let compare_kind (a : Base.Common.kind) b = compare a b
 
 let compare_key a b =
   let rank = function
@@ -153,15 +153,15 @@ module Map = Map.Make (struct
   let compare (fa, ka) (fb, kb) = match List.compare compare_entered fa fb with 0 -> compare_key ka kb | c -> c
 end)
 
-type head = {outer : Cpp_name.scope list; head : Cpp_name.t; typename : bool; templated : bool}
+type head = {outer : Base.Cpp_name.scope list; head : Base.Cpp_name.t; typename : bool; templated : bool}
 type reference =
-  | Named_value of {name : Cpp_name.t; type_arguments : bool}
+  | Named_value of {name : Base.Cpp_name.t; type_arguments : bool}
   | Record_member of {record : GlobRef.t; type_params : int}
 
 type access = Variable | Accessor | Either_form
 
 type value =
-  | Name of Cpp_name.t
+  | Name of Base.Cpp_name.t
   | Head of head
   | Inline of string option
   | Reference of reference
@@ -171,7 +171,7 @@ type value =
 
 let pp_reference = function
   | Named_value {name; type_arguments} ->
-    Pp.(str (Cpp_name.to_string name) ++ if type_arguments then str " with its type arguments" else mt ())
+    Pp.(str (Base.Cpp_name.to_string name) ++ if type_arguments then str " with its type arguments" else mt ())
   | Record_member {record; type_params} ->
     Pp.(str "a member of " ++ GlobRef.print record ++ str " of " ++ int type_params ++ str " parameters")
 

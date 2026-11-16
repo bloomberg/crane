@@ -44,7 +44,7 @@ type program = {
 
 (** [analyze_program p] analyses the normalized program [p].  Its one write
     is the enum inductives {!Method_registry.create} registers
-    ({!Table.add_enum_inductive}), a property of their declarations. *)
+    ({!Base.Table.add_enum_inductive}), a property of their declarations. *)
 val analyze_program : Translation_state.t -> Core_phase.normalized Core_phase.program -> program
 
 (** What lowering reads of [program] ({!Translation_state.program_facts}). *)

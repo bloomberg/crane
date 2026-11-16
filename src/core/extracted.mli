@@ -7,7 +7,7 @@
     the program ({!Core_phase.freeze}) replaces each by its solution, or by a
     {!Core.Type.Open} where there is none, in the program and in the types its
     globals are registered at, and from then on none is made
-    ({!Core_util.new_meta} makes an open annotation instead) and none solved:
+    ({!Base.Core_util.new_meta} makes an open annotation instead) and none solved:
     under [CRANE_CHECK_IR] a solve after it is an anomaly. *)
 
 module Meta : sig
@@ -16,7 +16,7 @@ module Meta : sig
       A local definition's open types are minted before freezing
       ({!Local_types}), and after it a slot that fills a hole carries the
       answer to the terms mentioning the hole instead of writing it
-      ({!Type_util.refine_erased}). *)
+      ({!Base.Type_util.refine_erased}). *)
 
   (** A metavariable cell ({!Core.Type.Meta}): read anywhere, made and solved
       only here. *)

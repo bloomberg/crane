@@ -29,22 +29,22 @@ val pp_cpp_type_at : Cpp_state.render_ctx -> bool -> Id.t list -> ty -> Pp.t
     [CRANE_CHECK_IR], checked against the name resolution gives it at the
     position it is printed at ({!Cpp_names.live_name}).  A module not yet
     resolved is an anomaly. *)
-val resolved_module : Cpp_state.render_ctx -> Cpp_ast.module_ref -> Cpp_name.t
+val resolved_module : Cpp_state.render_ctx -> Cpp_ast.module_ref -> Base.Cpp_name.t
 
 (** {!resolved_module} for the concept of a type class. *)
-val resolved_class_concept : Cpp_state.render_ctx -> Cpp_ast.global_ref -> Cpp_name.t
+val resolved_class_concept : Cpp_state.render_ctx -> Cpp_ast.global_ref -> Base.Cpp_name.t
 
 (** {!resolved_module} for a type. *)
-val resolved_type_name : Cpp_state.render_ctx -> Cpp_ast.global_ref -> Cpp_name.t
+val resolved_type_name : Cpp_state.render_ctx -> Cpp_ast.global_ref -> Base.Cpp_name.t
 
 (** {!resolved_module} for the concept of a module type. *)
-val resolved_concept : Cpp_state.render_ctx -> Cpp_ast.concept_ref -> Cpp_name.t
+val resolved_concept : Cpp_state.render_ctx -> Cpp_ast.concept_ref -> Base.Cpp_name.t
 
 (** [name_in ctx names frame key] is the name [names] gives [key] at
     [frame], checked as {!resolved_module} is, at the position [ctx].  A
     table not yet resolved, or one that was but not for this, is an
     anomaly. *)
-val name_in : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Cpp_name.t
+val name_in : Cpp_state.render_ctx -> Cpp_resolution.table -> Cpp_resolution.frame -> Cpp_resolution.key -> Base.Cpp_name.t
 
 (** The text of a declaration not yet printed, printed at the position its
     spelling enters, a module type's concept by [modtype_concept] and an
@@ -64,7 +64,7 @@ val print_unprinted :
 
 (** [read_cpp_decl ctx env decl] renders [decl] at the position [ctx]: for
     a declaration whose text is read, not written. *)
-val read_cpp_decl : Cpp_state.render_ctx -> Common.env -> decl -> Pp.t
+val read_cpp_decl : Cpp_state.render_ctx -> Base.Common.env -> decl -> Pp.t
 
 
 (** How a member is written: in the struct with or without its body, or out
@@ -78,7 +78,7 @@ val pp_cpp_field :
   struct_name:Pp.t ->
   ?mode:member_mode ->
   Cpp_state.render_ctx ->
-  Common.env ->
+  Base.Common.env ->
   Cpp_ir.Resolved.phase Cpp_ir.Field.t ->
   Pp.t
 
@@ -112,14 +112,14 @@ val cut2 : unit -> Pp.t
     [typename], and whether template arguments following it need the
     [template] disambiguator. *)
 type written_head = {
-  outer : Cpp_name.scope list;
-  head : Cpp_name.t;
+  outer : Base.Cpp_name.scope list;
+  head : Base.Cpp_name.t;
   typename : bool;
   template_keyword : bool;
 }
 
 (** A name written with nothing in front of it. *)
-val unqualified_head : Cpp_name.t -> written_head
+val unqualified_head : Base.Cpp_name.t -> written_head
 
 (** The head of a global type no custom mapping inlines, at the position,
     [applied] when template arguments follow it. *)
@@ -131,7 +131,7 @@ val inductive_head : Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> writte
 (** The qualifiers a member of the struct being defined out of line is
     written with when named outside that struct's body, or [None] where it
     is written bare. *)
-val member_scopes : Cpp_state.render_ctx -> ty -> Cpp_name.scope list option
+val member_scopes : Cpp_state.render_ctx -> ty -> Base.Cpp_name.scope list option
 
 (** The spelling of an external type's name in a file of the unit given. *)
 val external_type_name : Unit_context.t -> string -> string
@@ -229,5 +229,5 @@ val start_file_scope_census : unit -> unit
 
 (** Under [CRANE_CHECK_IR], check those against the ones planned
     ({!Cpp_state.file_scope_types_of}). *)
-val check_file_scope_types : file:Common.file -> unit
+val check_file_scope_types : file:Base.Common.file -> unit
 

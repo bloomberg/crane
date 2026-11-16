@@ -33,7 +33,7 @@ let with_method_ns_for_locals cx ?base (f : unit -> 'a) : 'a =
   let full_ns =
     List.fold_left
       (fun acc g ->
-        if Table.has_recursive_fields g && not (Table.is_enum_inductive g)
+        if Base.Table.has_recursive_fields g && not (Base.Table.is_enum_inductive g)
         then Core.Ref.User.Set.add g acc
         else acc)
       (Option.default cx.Translation_state.ctx.input.method_self_ns base)
@@ -49,4 +49,4 @@ let with_method_ns_for_locals cx ?base (f : unit -> 'a) : 'a =
     because it is a question about C++ types, and the registry is deliberately
     kept below the type translation. *)
 let return_type_is_erased cx (param_vars : Id.t list) (ret : Core.Type.t) : bool =
-  Type_util.type_is_erased (Translation_types.cpp_ir_of_core_type cx (Common.empty_env ()) param_vars ret)
+  Base.Type_util.type_is_erased (Translation_types.cpp_ir_of_core_type cx (Base.Common.empty_env ()) param_vars ret)

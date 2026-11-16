@@ -36,11 +36,11 @@ let make_error_file prefix infile =
   Filename.temp_file (prefix ^ Filename.basename infile ^ "_error") ".log"
 
 (** Report whether Crane is currently targeting the BDE standard library. *)
-let is_bde () = String.equal (Table.std_lib ()) "BDE"
+let is_bde () = String.equal (Base.Table.std_lib ()) "BDE"
 
 (** Return the configured BDE root without a trailing slash. *)
 let normalize_bde_dir () =
-  let directory = Table.bde_dir () in
+  let directory = Base.Table.bde_dir () in
   let length = String.length directory in
   if length > 0 && Char.equal directory.[length - 1] '/' then
     String.sub directory 0 (length - 1)

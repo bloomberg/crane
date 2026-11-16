@@ -7,7 +7,7 @@
     is decided ({!Cpp_ind.template_kinds}), and recorded again when
     the declaration's header is generated
     ({!Plan_templates.hkt_templates}, [Cpp_ind]); emptied by
-    [Table.reset_tables]. *)
+    [Base.Table.reset_tables]. *)
 
 open Names
 
@@ -26,10 +26,10 @@ type t = {
     order. *)
 val equal : t -> t -> bool
 
-(** Forget every recorded declaration.  Registered with [Table]'s reset. *)
+(** Forget every recorded declaration.  Registered with [Base.Table]'s reset. *)
 val reset : unit -> unit
 
-(** Table sizes, for [Table.census]. *)
+(** Table sizes, for [Base.Table.census]. *)
 val sizes : unit -> (string * int) list
 
 (** Record [r]'s kinds. *)

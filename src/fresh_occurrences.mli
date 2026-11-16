@@ -7,7 +7,7 @@
 
     A rewrite that copies a term copies its occurrences with it: a local
     fixpoint's outer parameters, passed again at each of its recursive calls
-    once {!Core_util.optimize_fix} has made them its own, are one read in as
+    once {!Base.Core_util.optimize_fix} has made them its own, are one read in as
     many places; a body inlined or specialized into another definition --
     [ITree.iter] into the interpreter it is specialized for, the functional
     of a well-founded recursion into the function whose knot is tied -- is

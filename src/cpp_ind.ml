@@ -32,18 +32,18 @@
 
 open Util
 open Names
-open Table
-open Common
+open Base.Table
+open Base.Common
 open Gen_decls
 open Cpp_state
 open Cpp_names
 
 (** Declarations as generated, each with the name environment it is printed
     in. *)
-type generated = (Common.env * Cpp_ir.Lowered.Decl.t) list
+type generated = (Base.Common.env * Cpp_ir.Lowered.Decl.t) list
 
 (** Declarations finished for the printer. *)
-type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
+type rendered = (Base.Common.env * Cpp_ir.Resolved.Decl.t) list
 
 
 (** Print the declarations an entry point answered with. *)
@@ -82,7 +82,7 @@ let ind_template_kinds kn (ind : Core.Inductive.t) =
             ( r,
               snd
                 (Plan_templates.template_kinds
-                   (Common.ind_struct_tparams kn ind p)
+                   (Base.Common.ind_struct_tparams kn ind p)
                    (List.concat (Array.to_list p.constructor_argument_types)) ) ) )
       (List.mapi (fun i p -> (i, p)) (Array.to_list ind.packets))
 
@@ -95,8 +95,8 @@ let alias_template_kinds cx r l t =
     | t ->
       not
         ( is_any_inline_custom r
-        || Table.singleton_class_method r <> None
-        || Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type cx (empty_env ()) l t) )
+        || Base.Table.singleton_class_method r <> None
+        || Base.Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type cx (empty_env ()) l t) )
   in
   if written then [(r, type_alias_kinds cx r l t)] else []
 
@@ -226,7 +226,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
                  (see param_vars below at the struct gen site). Parameters
                  (before the colon) become template params; indices (after the
                  colon) are erased. *)
-              let param_vars = Common.ind_struct_tparams kn ind p in
+              let param_vars = Base.Common.ind_struct_tparams kn ind p in
               (* The forward declaration carries the same name and the same
                  template parameters as the full definition below; both are
                  built from [param_vars] and printed by the same node. *)
@@ -249,7 +249,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
          member functions. Skip method registration entirely so that functions
          like [negb : bool -> bool] are not registered as methods of [Bool0],
          which would produce invalid [a0->negb()] or [this->negb()] calls. *)
-      if Table.is_enum_inductive ind_ref then []
+      if Base.Table.is_enum_inductive ind_ref then []
       else
       let ind_modpath = modpath_of_r ind_ref in
       let module_type_aliases =
@@ -308,7 +308,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
           | Core.Module.Structure_item.Declaration d ->
             List.iter
               (fun (fd : Core.Recursion.Definition.t) -> consider fd.entity fd.body fd.type_)
-              (Core_util.term_defs d)
+              (Base.Core_util.term_defs d)
           | _ -> () )
         !current_structure_decls;
       (* A call to a method of any type is rendered on its receiver, so only
@@ -467,7 +467,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
           in
           (* The template parameters: the kept Rocq parameters (before the
              colon).  Indices (after the colon) are erased. *)
-          let param_vars = Common.ind_struct_tparams kn ind p in
+          let param_vars = Base.Common.ind_struct_tparams kn ind p in
           let mutual_partners =
             if is_mutual then
               let partners = ref [] in
@@ -613,7 +613,7 @@ let plan_instance_methods cx r a t =
    [CRANE_CHECK_IR] the head it was generated with is checked against it. *)
 let planned_methods cx ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
   let planned (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
-    if Probe.checking () then
+    if Base.Probe.checking () then
       Callable_abi.check_instance_method (Translation_state.callables cx) ~instance:r m.name
         (Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:r m);
     let abi = Callable_abi.planned_instance_method (Translation_state.callables cx) ~instance:r m.name in
@@ -722,7 +722,7 @@ let functions cx ~module_ ~lifted (funs : Gen_decls.generated_fun list) =
     whichever file is being written: emission decides nothing the plan has
     not -- {!Extract_env} checks that no table grows -- and what a
     generation reads beyond its declaration and module is planned
-    ({!in_template}, {!Common.end_planning}).  So every function is
+    ({!in_template}, {!Base.Common.end_planning}).  So every function is
     generated once, ahead of both files ({!generating_ahead}), and each
     file's pass takes it from here.  Under [CRANE_CHECK_IR] a pass
     translates it again anyway and checks the two agree. *)
@@ -739,7 +739,7 @@ end)
 let generated : (ModPath.t * Gen_decls.generated_fun list) list Node_table.t =
   Node_table.create 64
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset generated)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Node_table.reset generated)
 
 (** What an emission pass over the unit's declarations does with what is
     generated ahead of the files. *)
@@ -837,15 +837,15 @@ let in_node_table table node =
     ({!header_claim}).  Only the header places an element's helpers. *)
 
 (** The helpers some element of the header places, as planned so far. *)
-let header_placed : GlobRef.t list ref = State.cell State.Unit []
+let header_placed : GlobRef.t list ref = Base.State.cell Base.State.Unit []
 
 (** The helpers the header has placed so far as it takes its elements, under
     [CRANE_CHECK_IR]; emptied as each render begins ({!start_render}). *)
-let header_took : GlobRef.t list ref = State.cell State.Unit []
+let header_took : GlobRef.t list ref = Base.State.cell Base.State.Unit []
 
 (** The file the render begun last writes ({!start_render}): the header's
     claims are checked as it takes its elements. *)
-let rendering : Common.file option ref = State.cell State.Unit None
+let rendering : Base.Common.file option ref = Base.State.cell Base.State.Unit None
 
 let start_render ~file =
   header_took := [];
@@ -863,7 +863,7 @@ let newly_placed placed d =
     identity of the generation. *)
 let header_claims : Cpp_ir.Lowered.Decl.t list Node_table.t = Node_table.create 64
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset header_claims)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Node_table.reset header_claims)
 
 (** [plan_header_claim key lifted] plans that the generation [key], whose
     bodies lifted [lifted], places those of them no earlier element of the
@@ -883,10 +883,10 @@ let planned_claim key =
 let header_claim key lifted =
   match Node_table.find_opt header_claims (Obj.repr key) with
   | Some planned ->
-    if Probe.checking () && !rendering = Some Common.Intf then begin
+    if Base.Probe.checking () && !rendering = Some Base.Common.Intf then begin
       let claimed = List.filter (newly_placed header_took) lifted in
       if not (List.equal ( == ) planned claimed) then
-        Probe.violation "header claims"
+        Base.Probe.violation "header claims"
           Pp.(str "the header places other helpers at a generation than planned: "
               ++ prlist_with_sep (fun () -> str ", ")
                    (fun d -> Option.cata GlobRef.print (str "?") (Cpp_ir.Globrefs.declared d))
@@ -918,7 +918,7 @@ let generated_once cx ~module_ ?(on_reuse = ignore) ?(on_peek = ignore) ?planned
     of the files, by the Core node of the alias. *)
 let aliases_written : (ModPath.t * bool) list Node_table.t = Node_table.create 16
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Node_table.reset aliases_written)
 
 (** [alias_written ~module_ d l t] is {!ahead_once} for whether the type [t]
     over [l] the alias [d] abbreviates is written in C++, asked of the type
@@ -927,7 +927,7 @@ let () = State.on_reset State.Unit (fun () -> Node_table.reset aliases_written)
 let alias_written cx ~module_ d l t =
   let recorded, record = in_node_table aliases_written d in
   ahead_once cx ~module_ ~what:(fun () -> Pp.str "an alias") ~recorded ~record ~same:Bool.equal (fun () ->
-      not (Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type cx (empty_env ()) l t)) )
+      not (Base.Type_util.has_no_cpp_spelling (Translation_types.cpp_ir_of_core_type cx (empty_env ()) l t)) )
 
 (** [generate scope ~module_ d] is what the Core declaration [d], an
     element of [module_] written in the header scope [scope], generates, for
@@ -956,13 +956,13 @@ let generate cx scope ~module_ d =
   | Core.Decl.Value {entity = r; _} when skipped r -> Nothing
   | Core.Decl.Inductive {entity = kn; definition = ind} -> Header_only (fun () -> ind_header_decls cx scope kn ind)
   (* A singleton class is a concept, declared where concepts are. *)
-  | Core.Decl.Type_alias {entity = r; _} when Table.singleton_class_method r <> None ->
+  | Core.Decl.Type_alias {entity = r; _} when Base.Table.singleton_class_method r <> None ->
     if scope.in_struct || scope.concepts_hoisted then Nothing
     else
       Header_only
         (fun () ->
           declarations_only
-            [(empty_env (), gen_typeclass_cpp cx r (Table.get_record_field_bindings r))] )
+            [(empty_env (), gen_typeclass_cpp cx r (Base.Table.get_record_field_bindings r))] )
   | Core.Decl.Type_alias {entity = r; parameters = l; body = t} ->
     ( match t with
     | Core.Type.Erased Core.Erasure_reason.Type_argument -> Nothing (* erased Type aliases *)
@@ -1021,7 +1021,7 @@ let generate cx scope ~module_ d =
     finishes a declaration again under [CRANE_CHECK_IR] to compare, and
     finds one missing only as an anomaly. *)
 
-let source r = Unit_program.Source (Entity_id.of_ref r)
+let source r = Unit_program.Source (Base.Entity_id.of_ref r)
 
 (** [declaration owner n] is the [n]th declaration of [owner]'s generation. *)
 let declaration owner n = {Unit_program.owner; part = Declaration n}
@@ -1210,7 +1210,7 @@ let decl_entity = function
 (** [entity r ids helpers] is the generation of [r]: the declarations
     [ids], and the helpers among [helpers]. *)
 let entity r ids helpers : Unit_program.entity =
-  { entity_id = Entity_id.of_ref r;
+  { entity_id = Base.Entity_id.of_ref r;
     declarations = ids;
     helpers = List.filter_map Unit_program.helper helpers }
 
@@ -1243,7 +1243,7 @@ type element = {
 let instances_generated : (ModPath.t * (generated * Cpp_ir.Lowered.Decl.t list)) list Node_table.t =
   Node_table.create 16
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset instances_generated)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Node_table.reset instances_generated)
 
 (* Whether two generations are the same declarations, each in the same name
    environment, compared as {!same_generation} compares. *)
@@ -1274,7 +1274,7 @@ let instance_entity cx ~module_ r a t =
 
 (** {2 The header's scope of a module} *)
 
-let header_scopes : header_scope MPmap.t ref = State.cell State.Unit MPmap.empty
+let header_scopes : header_scope MPmap.t ref = Base.State.cell Base.State.Unit MPmap.empty
 
 let plan_header_scope mp scope = header_scopes := MPmap.add mp scope !header_scopes
 
@@ -1338,7 +1338,7 @@ let planned_visibility (u : Unit_context.t) mp =
 let spelling_position cx ~file spelling =
   let u = Translation_state.unit_context cx in
   let element mp c = {c with module_ = Some mp; visibility = Some (planned_visibility u mp)} in
-  match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
+  match ((file : Base.Common.file), (spelling : Cpp_ast.spelling)) with
   | Intf, Element_of mp -> element mp (header_element_position cx u mp)
   | Intf, Member_of mp -> element mp {(header_element_position cx u mp) with in_struct = true}
   (* The implementation writes every element of a module at file scope:
@@ -1366,7 +1366,7 @@ let head_resolver_at cx ~file spelling frame key =
    names them again under CRANE_CHECK_IR ({!Cpp_names.checked}); a struct's
    head is printed as resolved, so its names are noted here. *)
 let resolver_at cx ~file spelling frame key =
-  Common.without_noting_written_files (fun () -> head_resolver_at cx ~file spelling frame key)
+  Base.Common.without_noting_written_files (fun () -> head_resolver_at cx ~file spelling frame key)
 
 (* The names a declaration asks resolution for: those its leaves print and
    those its concepts name. *)
@@ -1375,7 +1375,7 @@ let requested cx d =
   Cpp_leaf_plan.unprinted_names u d @ Cpp_concepts.names_requested cx u d
 
 let resolve_tree cx ~file t =
-  Common.without_noting_written_files (fun () ->
+  Base.Common.without_noting_written_files (fun () ->
       Cpp_ast.resolve_tree ~requested:(requested cx) ~resolve:(resolver_at cx ~file)
         ~resolve_head:(head_resolver_at cx ~file) t )
 
@@ -1407,7 +1407,7 @@ let render_section ctx (groups : section) =
     declaring it, by the class. *)
 let concepts_generated : (ModPath.t * Cpp_ir.Lowered.Decl.t) list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16
 
-let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset concepts_generated)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Core.Ref.User.Tbl.reset concepts_generated)
 
 (** [concept r fields] is the concept of the class [r], of fields [fields]:
     generated ahead of the files ({!generating_ahead}) and taken from there
@@ -1424,7 +1424,7 @@ let concept cx ~module_ r fields =
 (** The concept of each module type, generated ahead of the files where
     the header writes it, by the module type's path. *)
 let modtype_concepts_generated : (ModPath.t * Modtype_concept.t) list MPmap.t ref =
-  State.cell State.Unit MPmap.empty
+  Base.State.cell Base.State.Unit MPmap.empty
 
 (** [modtype_concept path ~params mt] is the concept of the module type
     [mt] at [path], over the functor parameters [params]: generated ahead of
@@ -1444,7 +1444,7 @@ let record_methods_generated :
     Core.Ref.User.Tbl.t =
   Core.Ref.User.Tbl.create 8
 
-let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset record_methods_generated)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Core.Ref.User.Tbl.reset record_methods_generated)
 
 (** [record_methods r vars candidates] is the methods the eponymous record
     [r], of variables [vars], is given, made of [candidates], with the
@@ -1466,7 +1466,7 @@ let record_methods cx ~module_ r vars candidates =
 let record_field_types_generated : (ModPath.t * Cpp_ir.Resolved.Type.t list) list Core.Ref.User.Tbl.t =
   Core.Ref.User.Tbl.create 8
 
-let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset record_field_types_generated)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Core.Ref.User.Tbl.reset record_field_types_generated)
 
 (** [record_field_types r vars fields] is the C++ type of each of the fields
     [fields] of the eponymous record [r], of variables [vars], as the header
@@ -1525,7 +1525,7 @@ let finished_record_methods cx r vars fields =
 let headers_generated : (ModPath.t * (header_generation * Cpp_ir.Lowered.Decl.t list)) list Node_table.t =
   Node_table.create 64
 
-let () = State.on_reset State.Unit (fun () -> Node_table.reset headers_generated)
+let () = Base.State.on_reset Base.State.Unit (fun () -> Node_table.reset headers_generated)
 
 let same_header_generation a b =
   same_generated a.decls b.decls

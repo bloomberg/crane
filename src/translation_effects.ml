@@ -5,23 +5,23 @@
     as interaction-tree constructors in reified mode.  One of the modules
     lowering Core bodies to CppIR that {!Translation} drives. *)
 
-open Common
+open Base.Common
 open Names
-open Core_util
-open Table
+open Base.Core_util
+open Base.Table
 open Util
 open Translation_state
-open Type_util
+open Base.Type_util
 open Translation_knot
 
 (** [ret] of an effect monad, the global [use] (at [r]) applied to [a1 :: l],
     in expression position: the returned value in sequential mode, an
     [ITree<R>::ret] in reified mode. *)
 let gen_return_expr cx env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
-  let ret_tys = Core_util.written_type_args use in
+  let ret_tys = Base.Core_util.written_type_args use in
   if not (Translation_monadic.is_sequential_effect cx Core_effects.Return use) then begin
     (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
-    let t = Common.last (a1 :: l) in
+    let t = Base.Common.last (a1 :: l) in
     match t with
     | Core.Expr.Global {callee = g; _} when is_ghost g ->
       Translation_monadic.mk_itree_ret Void []
@@ -32,18 +32,18 @@ let gen_return_expr cx env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
          extraction could not read says nothing. *)
       let r_cpp =
         let value_var =
-          match List.rev (Type_util.core_value_domains (find_type r)) with
+          match List.rev (Base.Type_util.core_value_domains (find_type r)) with
           | Core.Type.Variable {variable = j; _} :: _ -> Some j
           | _ -> None
         in
-        match Option.bind value_var (Core_util.Var_types.find_tvar ret_tys) with
-        | Some r_core when not (Core_util.is_erased_type r_core) -> Translation_types.cpp_of_core cx env r_core
+        match Option.bind value_var (Base.Core_util.Var_types.find_tvar ret_tys) with
+        | Some r_core when not (Base.Core_util.is_erased_type r_core) -> Translation_types.cpp_of_core cx env r_core
         | _ -> Void
       in
       Translation_monadic.mk_itree_ret r_cpp [inner]
   end
   else begin
-    let t = Common.last (a1 :: l) in
+    let t = Base.Common.last (a1 :: l) in
     gen_expr cx env t
   end
 
@@ -62,16 +62,16 @@ let gen_bind_expr cx env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
     [bind] call as an expression in reified mode. *)
 let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~r ~use ~a1 ~a2
   ~l : Cpp_ir.Lowered.Stmt.t list =
-  let bind_tys = Core_util.written_type_args use in
+  let bind_tys = Base.Core_util.written_type_args use in
   (* The action's result type: the argument written for the variable the
      continuation takes, [A] in [bind : forall A B, M A -> (A -> M B) -> M
      B].  One extraction could not read ({!Extraction.observe_type_arg}: a
      type constructor such as an HKT carrier) says nothing. *)
   let action_result_ty =
-    match List.rev (Type_util.core_value_domains (find_type r)) with
+    match List.rev (Base.Type_util.core_value_domains (find_type r)) with
     | Core.Type.Arrow {parameter = Core.Type.Variable {variable = j; _}; _} :: _ -> (
-      match Core_util.Var_types.find_tvar bind_tys j with
-      | Some t when not (Core_util.is_erased_type t) -> Some t
+      match Base.Core_util.Var_types.find_tvar bind_tys j with
+      | Some t when not (Base.Core_util.is_erased_type t) -> Some t
       | _ -> None )
     | _ -> None
   in
@@ -80,7 +80,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
     Translation_cpp_build.inline_iife k ((gen_expr cx ~slot env ast))
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
-    let a_core, f = Common.last_two (a1 :: a2 :: l) in
+    let a_core, f = Base.Common.last_two (a1 :: a2 :: l) in
     let a = gen_expr cx env a_core in
     let ids', f = collect_lams f in
   let ids, env =
@@ -198,7 +198,7 @@ let gen_return_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.S
   end
   else begin
     (* Sequential mode: eliminate Ret, just use the value. *)
-    let t = Common.last (a1 :: l) in
+    let t = Base.Common.last (a1 :: l) in
     if returns_void cx then
       (* Void-returning function: discard the value and return. *)
       [Return None]

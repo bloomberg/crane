@@ -28,12 +28,12 @@
 
 (** Declarations as generated, each with the name environment it is printed
     in. *)
-type generated = (Common.env * Cpp_ir.Lowered.Decl.t) list
+type generated = (Base.Common.env * Cpp_ir.Lowered.Decl.t) list
 
 (** Declarations finished for the printer: what one Core declaration
     became, as the unit's program finished it ({!Unit_program.finish}), in
     CppIR. *)
-type rendered = (Common.env * Cpp_ir.Resolved.Decl.t) list
+type rendered = (Base.Common.env * Cpp_ir.Resolved.Decl.t) list
 
 (** Print the declarations an entry point answered with, at the position
     given. *)
@@ -79,7 +79,7 @@ val generating_ahead : (unit -> 'a) -> 'a
 (** Begin a render of the file [file]: under [CRANE_CHECK_IR] the header
     claims the helpers it places afresh, to check them against the planned
     claims. *)
-val start_render : file:Common.file -> unit
+val start_render : file:Base.Common.file -> unit
 
 (** [source r] is the source entity [r], as an owner. *)
 val source : Names.GlobRef.t -> Unit_program.owner
@@ -190,7 +190,7 @@ val header_scope : Names.ModPath.t -> header_scope option
 (** [spelling_position ~file spelling] is the position a declaration
     spelled [spelling] is written at in [file], a function of the plan
     alone. *)
-val spelling_position : Translation_state.t -> file:Common.file -> Cpp_ast.spelling -> Cpp_state.render_ctx
+val spelling_position : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_state.render_ctx
 
 (** A group of finished declarations the header writes at file scope, away
     from the module [source] they were generated in.  They are spelled as
@@ -211,28 +211,28 @@ val render_section : Cpp_state.render_ctx -> section -> Cpp_ast.t list
 (** [resolver_at ~file spelling] names what a declaration spelled
     [spelling] names where it is written in [file], in the visibility planned
     there, at a frame inside it ({!Cpp_ast.resolve}). *)
-val resolver_at : Translation_state.t -> file:Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
+val resolver_at : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
 
 (** {!Cpp_ast.resolve_tree} by {!resolver_at}, a declaration naming what
     {!Cpp_leaf_plan.unprinted_names} and {!Cpp_concepts.names_requested} say,
     for a question about [t] rather than to write it: nothing it names is
-    noted as written ({!Common.check_written_files}). *)
-val resolve_tree : Translation_state.t -> file:Common.file -> Cpp_ast.t -> Cpp_ast.t
+    noted as written ({!Base.Common.check_written_files}). *)
+val resolve_tree : Translation_state.t -> file:Base.Common.file -> Cpp_ast.t -> Cpp_ast.t
 
 (** {!Cpp_ast.resolve} as {!resolve_tree} resolves each section, to write
     it: what a struct's head names is noted as written. *)
-val resolve : Translation_state.t -> file:Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
+val resolve : Translation_state.t -> file:Base.Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
 
 (** {!Cpp_leaf_plan.resolved_names_into_a_struct} of a declaration as [file]
     writes it spelled [spelling]: at the position printing it is at, and of
     the names resolution settles there ({!resolver_at}), which are the ones
     printing it reads. *)
 val names_into_a_struct_as_written :
-  Translation_state.t -> file:Common.file -> Cpp_ast.spelling -> Cpp_ir.Resolved.Decl.t -> bool option
+  Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ir.Resolved.Decl.t -> bool option
 
 (** Print a declaration not yet printed as the tree spells it
     ({!Cpp_ast.print}). *)
-val write_unprinted : Translation_state.t -> file:Common.file -> Cpp_ast.spelling -> Cpp_ast.unprinted -> Pp.t
+val write_unprinted : Translation_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ast.unprinted -> Pp.t
 
 (** Where the header declares one of a module's concepts.  No concept can
     be declared inside a struct, so a module nested in one declares its

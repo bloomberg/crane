@@ -28,7 +28,7 @@ let () =
     in
     let entries =
       List.init (Random.int 2) (fun k ->
-          ((Typename : Callable_abi.kind), Common.tc_instance_id k, Instance_param k) )
+          ((Typename : Callable_abi.kind), Base.Common.tc_instance_id k, Instance_param k) )
       @ List.concat_map
           (fun v ->
             let i = Core.Scheme.Var.ordinal v in
@@ -38,9 +38,9 @@ let () =
               | 1 -> Typename_default Void
               | _ -> Typename
             in
-            (kind, Common.tvar_id i, Scheme_param i)
+            (kind, Base.Common.tvar_id i, Scheme_param i)
             :: ( if Random.int 4 = 0 then
-                   [(Callable_declared ([], Void), Common.fun_tparam_id i, Callable_param i)]
+                   [(Callable_declared ([], Void), Base.Common.fun_tparam_id i, Callable_param i)]
                  else [] ) )
           shuffled
     in

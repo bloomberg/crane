@@ -19,7 +19,7 @@
     metavariable is replaced by its solution and each unsolved one by an
     immutable open annotation ({!Core.Type.Open}), read as erased, in the
     program and in the types its globals are registered at
-    ({!Table.freeze_types}).  That no metavariable survives it is the type's
+    ({!Base.Table.freeze_types}).  That no metavariable survives it is the type's
     guarantee, not a check.  A local definition's open types are minted
     before it ({!Local_types}), and a slot filling a hole hands the answer to
     the terms that mention the hole.  [CRANE_CHECK_IR] checks the program's
