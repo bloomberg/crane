@@ -1972,9 +1972,9 @@ let pp_doc_comment_for_name = Doc_comments.pp
     printer serves them: what differs is the name it is written under, and
     whether the body follows. *)
 type member_mode =
-  | Mm_inline  (** In the struct, with its body. *)
-  | Mm_declared  (** In the struct, without its body: ends at the [;]. *)
-  | Mm_defined of Pp.t * tparams
+  | Inline  (** In the struct, with its body. *)
+  | Declared  (** In the struct, without its body: ends at the [;]. *)
+  | Defined of Pp.t * tparams
       (** Out of line, under the given qualifier, for a struct with the given
           template parameters. *)
 
@@ -1988,7 +1988,7 @@ let pp_owner_template ctx = function
     @param struct_name  the enclosing struct's pretty-printed name, forwarded
                         to constructor and destructor printers that need it
     @param env          name environment for sub-expression pretty-printing *)
-let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : field) =
+let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Inline) ctx env (f : field) =
   match f with
   | Data (id, ty) ->
     (* Strip d_ prefix for doc comment lookup (C++ fields are d_fst, Rocq
@@ -2042,14 +2042,14 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
        exempts it from the one-definition rule. *)
     let static_s =
       match mode with
-      | Mm_defined _ -> mt ()
-      | Mm_inline | Mm_declared -> if mf_is_static then str "static " else mt ()
+      | Defined _ -> mt ()
+      | Inline | Declared -> if mf_is_static then str "static " else mt ()
     in
     let inline_s =
       match mode with
-      | Mm_inline -> if mf_is_inline then str "inline " else mt ()
-      | Mm_declared -> mt ()
-      | Mm_defined (_, owner_tps) ->
+      | Inline -> if mf_is_inline then str "inline " else mt ()
+      | Declared -> mt ()
+      | Defined (_, owner_tps) ->
         if owner_tps = [] && mf_tparams = [] then str "inline " else mt ()
     in
     let body_s = pp_list_stmt (pp_cpp_stmt ctx env []) mf_body in
@@ -2079,9 +2079,9 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
     let qualifier = if may_be_constexpr mf_constexpr then str "constexpr " else mt () in
     let owner_template_s, qual_s =
       match mode with
-      | Mm_defined (qual, owner_tps) ->
+      | Defined (qual, owner_tps) ->
         (pp_owner_template ctx owner_tps, qual ++ str "::")
-      | Mm_inline | Mm_declared -> (mt (), mt ())
+      | Inline | Declared -> (mt (), mt ())
     in
     (* A conversion function has no return type of its own -- its name is the
        type it converts to -- and none of the qualifiers apply. *)
@@ -2102,8 +2102,8 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
     ++ template_s
     ++
     ( match mode with
-    | Mm_declared -> head ++ str ";"
-    | Mm_inline | Mm_defined _ -> head ++ str " {" ++ fnl () ++ body_s ++ str "}" )
+    | Declared -> head ++ str ";"
+    | Inline | Defined _ -> head ++ str " {" ++ fnl () ++ body_s ++ str "}" )
   | Constructor
       { type_params = fc_tparams; params = fc_params; inits = fc_inits; body = fc_body; explicit = fc_explicit;
         noexcept = fc_noexcept } ->
@@ -2143,14 +2143,14 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
   | Destructor body ->
     let sname = struct_name in
     ( match mode with
-    | Mm_declared -> (str "~" ++ sname ++ str "();")
-    | Mm_inline ->
+    | Declared -> (str "~" ++ sname ++ str "();")
+    | Inline ->
       (str "~" ++ sname ++ str "() {")
       ++ fnl ()
       ++ pp_list_stmt (pp_cpp_stmt ctx env []) body
       ++ fnl ()
       ++ str "}"
-    | Mm_defined (qual, owner_tps) ->
+    | Defined (qual, owner_tps) ->
       pp_owner_template ctx owner_tps
       ++ h
            ( (if owner_tps = [] then str "inline " else mt ())
@@ -2208,7 +2208,7 @@ let rec pp_cpp_field ~(struct_name : Pp.t) ?(mode = Mm_inline) ctx env (f : fiel
       ++ pp_type ctx ty
       ++ str ";" )
   | Out_of_line_declaration m ->
-    pp_cpp_field ctx ~struct_name ~mode:Mm_declared env (I.Field.of_out_of_line m)
+    pp_cpp_field ctx ~struct_name ~mode:Declared env (I.Field.of_out_of_line m)
   | Deleted_default_constructor ->
     let sname = struct_name in
     (sname ++ str "() = delete;")
@@ -2817,7 +2817,7 @@ and pp_leaf_decl ctx env (d : decl) =
     entering_from ctx
       ((if dm_tparams = [] then [] else [Cpp_resolution.In_template]) @ [Inductive_struct dm_owner])
       (fun ctx ->
-        pp_cpp_field ~struct_name:(str own_name) ctx ~mode:(Mm_defined (qual, dm_tparams)) env
+        pp_cpp_field ~struct_name:(str own_name) ctx ~mode:(Defined (qual, dm_tparams)) env
           (I.Field.of_out_of_line dm_field) )
   | Merged_struct_members ds ->
     let struct_name =
