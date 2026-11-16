@@ -3,15 +3,18 @@
 
 open Names
 
-type instance = Grammar.Global_use.instance =
+type 'p instance = 'p Grammar.Global_use.instance =
   | Monomorphic
-  | Polymorphic of Type.t Scheme.Instantiation.t
+  | Polymorphic of 'p Type.at Scheme.Instantiation.t
 
-type t = Grammar.Global_use.t = private {
+type 'p at = 'p Grammar.Global_use.at = private {
   callee : GlobRef.t;
-  instance : instance;
+  instance : 'p instance;
   occurrence : Occurrence.t;
 }
+
+type t = Phase.frozen at
+type extracted = Phase.extracted at
 
 let callee g = g.callee
 let occurrence g = g.occurrence

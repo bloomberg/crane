@@ -77,16 +77,16 @@ and Type : sig
   end
 
   (** An erased type expression, the residue of a PCUIC type after logical
-      and type-only content is removed. *)
-  type t =
+      and type-only content is removed, at the phase ['p] ({!Phase}). *)
+  type 'p at =
     | Arrow of {
-        parameter : t;
-        result : t;
+        parameter : 'p at;
+        result : 'p at;
       }  (** a (non-dependent) function arrow *)
     | Global_app of {
         head : GlobRef.t;
-        type_arguments : t list;
-        index_arguments : Expr.t list;
+        type_arguments : 'p at list;
+        index_arguments : 'p Expr.at list;
       }
         (** the named inductive or type constant [head] applied to type
             arguments, with the value arguments of its indexed or dependent
@@ -111,12 +111,15 @@ and Type : sig
             [rigidity]: the back end does not care which flavour it has. *)
     | Variable_app of {
         head : int;
-        arguments : t list;
+        arguments : 'p at list;
       }
         (** A type variable of arrow kind applied to arguments: the [M A] of
             [mret : forall A, A -> M A], where [M : Type -> Type] is a
             higher-kinded class parameter.  [head] is a [Variable] index. *)
-    | Meta of Meta.t  (** a unification variable of type reconstruction *)
+    | Meta of 'p Meta.t
+        (** a unification variable of type reconstruction; only an
+            [extracted] type can hold one, since only an [extracted] cell can
+            be made *)
     | Hole of int
         (** An inference hole: a scheme variable a use's local unification
             left unsolved, frozen into the use's instantiation in place of the
@@ -149,20 +152,20 @@ and Meta : sig
       identifies it and [contents] is filled in with the resolved type once
       unification succeeds (staying [None] until then).  Read anywhere, but
       made and solved only through {!Core.Extracted.Meta}. *)
-  type t = private {
+  type 'p t = private {
     id : int;
-    mutable contents : Type.t option;
+    mutable contents : 'p Type.at option;
   }
 
   (** [make id contents] is the cell [id] holding [contents]. *)
-  val make : int -> Type.t option -> t
+  val make : int -> 'p Type.at option -> 'p t
 
   (** [set m t] solves [m] to [t]. *)
-  val set : t -> Type.t -> unit
+  val set : 'p t -> 'p Type.at -> unit
 end = struct
-  type t = {
+  type 'p t = {
     id : int;
-    mutable contents : Type.t option;
+    mutable contents : 'p Type.at option;
   }
 
   let make id contents = {id; contents}
@@ -181,7 +184,7 @@ and Record : sig
         arguments the selection dropped. *)
     type t = {
       projection : GlobRef.t option;
-      type_ : Type.t;
+      type_ : Phase.frozen Type.at;
     }
   end
 end =
@@ -236,7 +239,7 @@ and Inductive : sig
       logical : bool;
       signature : Signature.t;
       mutable type_variables : Id.t list;
-      constructor_argument_types : Type.t list array;
+      constructor_argument_types : Phase.frozen Type.at list array;
       constructor_argument_names : Id.t option list array;
     }
   end
@@ -262,7 +265,7 @@ and Expr : sig
       optimisations remain type-safe.  [Tuple] and the extension of [Match]
       to general patterns come from P.N. Tollitte's Relation Extraction
       plugin; [Tuple] and deep patterns are unused by the main extraction. *)
-  type t =
+  type 'p at =
     | Bound_variable of {
         index : int;
         occurrence : Occurrence.t;
@@ -272,56 +275,56 @@ and Expr : sig
             read under other binders keeps it, so what is decided of a read in
             Core is found again where the read is generated. *)
     | Apply of {
-        callee : t;
-        arguments : t list;
+        callee : 'p at;
+        arguments : 'p at list;
       }
     | Lambda of {
         parameter : Binder_name.t;
-        parameter_type : Type.t;
-        body : t;
+        parameter_type : 'p Type.at;
+        body : 'p at;
       }
     | Let of {
         binder : Binder_name.t;
-        binder_type : Type.t;
-        value : t;
-        body : t;
+        binder_type : 'p Type.at;
+        value : 'p at;
+        body : 'p at;
         occurrence : Occurrence.t;
       }
         (** [occurrence] tells this let apart from every other one in the
             program, kept by a pass rebuilding it as a fixpoint's is: two lets
             bound to one name in one definition are still two. *)
-    | Global of Global_use.t
+    | Global of 'p Global_use.at
         (** a use of a global, with what the use instantiates the global's
             type scheme at *)
     | Construct of {
-        result_type : Type.t;
+        result_type : 'p Type.at;
         constructor : GlobRef.t;
-        arguments : t list;
+        arguments : 'p at list;
         occurrence : Occurrence.t;
       }
         (** [occurrence] tells this construction apart from every other one
             in the program, kept by a pass rebuilding it as a match's is: two
             constructions of one value in one definition are still two. *)
-    | Tuple of t list
+    | Tuple of 'p at list
     | Match of {
-        scrutinee_type : Type.t;
-        scrutinee : t;
-        branches : Match.Branch.t array;
+        scrutinee_type : 'p Type.at;
+        scrutinee : 'p at;
+        branches : 'p Match.Branch.at array;
         occurrence : Occurrence.t;
       }
         (** [occurrence] tells this match apart from every other one in the
             program, kept by a pass rebuilding it as a let's is: the binders
             of one branch at one level in two matches are still two. *)
-    | Fixpoint of Recursion.Group.t  (** a block of mutually recursive functions *)
-    | Cofixpoint of Recursion.Group.t
+    | Fixpoint of 'p Recursion.Group.at  (** a block of mutually recursive functions *)
+    | Cofixpoint of 'p Recursion.Group.at
         (** a block of mutually corecursive functions *)
     | Runtime_error of string  (** raised for an unrealisable term *)
     | Erased_value of Erasure_reason.t  (** the value of an erased slot *)
     | Axiom_value of string  (** a value left abstract by an axiom *)
     | Coerce of {
-        source_type : Type.t;
-        target_type : Type.t;
-        value : t;
+        source_type : 'p Type.at;
+        target_type : 'p Type.at;
+        value : 'p at;
         occurrence : Occurrence.t;
       }
         (** An unsafe coercion at a type gap opened by erasure: [value] has
@@ -332,7 +335,7 @@ and Expr : sig
             every other one, so that what is planned of the position it fills
             is found again where it is lowered. *)
     | Boxed_value of {
-        value : t;
+        value : 'p at;
         occurrence : Occurrence.t;
       }
         (** Not a coercion: an assertion by the backend that, whatever
@@ -341,7 +344,7 @@ and Expr : sig
             behind extraction's back (see [crane_erase_fn]'s fallback), so a
             read of it must go through an [any_cast]. *)
     | Lambda_group_barrier of {
-        value : t;
+        value : 'p at;
         occurrence : Occurrence.t;
       }
         (** Not a coercion but a separator, placed between two groups of
@@ -352,8 +355,8 @@ and Expr : sig
     | Float64 of Float64.t
     | String of Pstring.t
     | Persistent_array of {
-        elements : t array;
-        default : t;
+        elements : 'p at array;
+        default : 'p at;
       }
     | Numeral of {
         inductive : GlobRef.t;
@@ -375,29 +378,29 @@ and Global_use : sig
       reached it.  There is no list of type arguments: which of them C++
       writes, and where, is a question about the callee's declaration, not
       about this use. *)
-  type instance =
+  type 'p instance =
     | Monomorphic
-    | Polymorphic of Type.t Scheme.Instantiation.t
+    | Polymorphic of 'p Type.at Scheme.Instantiation.t
 
   (** A global named at a use: the callee, and what the use means for the
       callee's type scheme.  Built only through {!Core.Global_use}; a reader
       that needs only the callee matches [Global {callee; _}] and never sees
       the rest. *)
-  type t = private {
+  type 'p at = private {
     callee : GlobRef.t;
-    instance : instance;
+    instance : 'p instance;
     occurrence : Occurrence.t;
   }
 
-  val make : GlobRef.t -> instance -> Occurrence.t -> t
+  val make : GlobRef.t -> 'p instance -> Occurrence.t -> 'p at
 end = struct
-  type instance =
+  type 'p instance =
     | Monomorphic
-    | Polymorphic of Type.t Scheme.Instantiation.t
+    | Polymorphic of 'p Type.at Scheme.Instantiation.t
 
-  type t = {
+  type 'p at = {
     callee : GlobRef.t;
-    instance : instance;
+    instance : 'p instance;
     occurrence : Occurrence.t;
   }
 
@@ -409,11 +412,11 @@ and Match : sig
     (** A single {!Core.Expr.Match} branch.  [binders] are the variables bound by
         [pattern] paired with their types, [result_type] is the branch's
         result type, and [body] the term run when [pattern] matches. *)
-    type t = {
-      binders : (Binder_name.t * Type.t) list;
-      result_type : Type.t;
+    type 'p at = {
+      binders : (Binder_name.t * 'p Type.at) list;
+      result_type : 'p Type.at;
       pattern : Pattern.t;
-      body : Expr.t;
+      body : 'p Expr.at;
     }
   end
 end =
@@ -453,7 +456,7 @@ and Signature : sig
         [Inductive] specifies an inductive; [Type] a type name (with an
         optional definition, [None] when abstract); [Value] a value with its
         body and type. *)
-    type t =
+    type 'p at =
       | Inductive of {
           entity : MutInd.t;
           definition : Inductive.t;
@@ -461,12 +464,12 @@ and Signature : sig
       | Type of {
           entity : GlobRef.t;
           parameters : Id.t list;
-          body : Type.t option;
+          body : 'p Type.at option;
         }
       | Value of {
           entity : GlobRef.t;
-          body : Expr.t;
-          type_ : Type.t;
+          body : 'p Expr.at;
+          type_ : 'p Type.at;
         }
   end
 end =
@@ -475,20 +478,20 @@ end =
 and Recursion : sig
   module Definition : sig
     (** One definition of a group of mutually recursive definitions. *)
-    type t = {
+    type 'p at = {
       entity : GlobRef.t;
-      body : Expr.t;
-      type_ : Type.t;
+      body : 'p Expr.at;
+      type_ : 'p Type.at;
     }
   end
 
   module Member : sig
     (** One function of a local recursive group: the name it is bound to,
         its type and its body. *)
-    type t = {
+    type 'p at = {
       name : Id.t;
-      type_ : Type.t;
-      body : Expr.t;
+      type_ : 'p Type.at;
+      body : 'p Expr.at;
     }
   end
 
@@ -502,37 +505,37 @@ and Recursion : sig
         program: a pass rebuilding it keeps it, so the plan made of the
         block and the code made of it name one block.  Built only through
         {!make}, so a group has a member and selects one it has. *)
-    type t = private {
+    type 'p at = private {
       selected : int;
-      members : Member.t array;
+      members : 'p Member.at array;
       occurrence : Occurrence.t;
     }
 
     (** [make ~selected members occurrence]; raises [Invalid_argument] when
         [members] is empty or has no member [selected]. *)
-    val make : selected:int -> Member.t array -> Occurrence.t -> t
+    val make : selected:int -> 'p Member.at array -> Occurrence.t -> 'p at
   end
 end = struct
   module Definition = struct
-    type t = {
+    type 'p at = {
       entity : GlobRef.t;
-      body : Expr.t;
-      type_ : Type.t;
+      body : 'p Expr.at;
+      type_ : 'p Type.at;
     }
   end
 
   module Member = struct
-    type t = {
+    type 'p at = {
       name : Id.t;
-      type_ : Type.t;
-      body : Expr.t;
+      type_ : 'p Type.at;
+      body : 'p Expr.at;
     }
   end
 
   module Group = struct
-    type t = {
+    type 'p at = {
       selected : int;
-      members : Member.t array;
+      members : 'p Member.at array;
       occurrence : Occurrence.t;
     }
 
@@ -545,7 +548,7 @@ end
 
 and Decl : sig
   (** A concrete, defined top-level entity. *)
-  type t =
+  type 'p at =
     | Inductive of {
         entity : MutInd.t;
         definition : Inductive.t;
@@ -553,34 +556,34 @@ and Decl : sig
     | Type_alias of {
         entity : GlobRef.t;
         parameters : Id.t list;
-        body : Type.t;
+        body : 'p Type.at;
       }  (** a type abbreviation: its type-variable names and body *)
     | Value of {
         entity : GlobRef.t;
-        body : Expr.t;
-        type_ : Type.t;
+        body : 'p Expr.at;
+        type_ : 'p Type.at;
       }  (** a single term definition *)
-    | Recursive_group of Recursion.Definition.t Nonempty.t
+    | Recursive_group of 'p Recursion.Definition.at Nonempty.t
         (** mutually recursive definitions, in definition order *)
 end =
   Decl
 
 and Module_type : sig
   (** A module type. *)
-  type t =
+  type 'p at =
     | Path of ModPath.t
     | Functor of {
         parameter : MBId.t;
-        parameter_type : t;
-        result : t;
+        parameter_type : 'p at;
+        result : 'p at;
       }  (** a functor signature *)
     | Signature of {
         path : ModPath.t;
-        items : Module_signature.t;
+        items : 'p Module_signature.at;
       }  (** an explicit signature *)
     | Refined of {
-        base : t;
-        refinement : Refinement.t;
+        base : 'p at;
+        refinement : 'p Refinement.at;
       }  (** a module type refined by a [with] constraint *)
 end =
   Module_type
@@ -588,11 +591,11 @@ end =
 and Refinement : sig
   (** A [with] refinement on a module type, fixing a type component or a
       sub-module component, by path. *)
-  type t =
+  type 'p at =
     | Type_equation of {
         path : Id.t list;
         parameters : Id.t list;
-        definition : Type.t;
+        definition : 'p Type.at;
       }
     | Module_equation of {
         path : Id.t list;
@@ -604,46 +607,46 @@ end =
 and Signature_item : sig
   (** A single component of a module signature: a declaration, a nested
       module, or a nested module type. *)
-  type t =
-    | Declaration of Signature.Declaration.t
-    | Module of Module_type.t
-    | Module_type of Module_type.t
+  type 'p at =
+    | Declaration of 'p Signature.Declaration.at
+    | Module of 'p Module_type.at
+    | Module_type of 'p Module_type.at
 end =
   Signature_item
 
 and Module_signature : sig
   (** The body of a module signature: its components paired with their
       labels. *)
-  type t = (Label.t * Signature_item.t) list
+  type 'p at = (Label.t * 'p Signature_item.at) list
 end =
   Module_signature
 
 and Structure_item : sig
   (** A single component of a module implementation: a definition, a nested
       module, or a nested module-type binding. *)
-  type t =
-    | Declaration of Decl.t
-    | Module of Module_binding.t
-    | Module_type of Module_type.t
+  type 'p at =
+    | Declaration of 'p Decl.at
+    | Module of 'p Module_binding.at
+    | Module_type of 'p Module_type.at
 end =
   Structure_item
 
 and Module_expr : sig
   (** A module expression (implementation). *)
-  type t =
+  type 'p at =
     | Path of ModPath.t
     | Functor of {
         parameter : MBId.t;
-        parameter_type : Module_type.t;
-        body : t;
+        parameter_type : 'p Module_type.at;
+        body : 'p at;
       }
     | Structure of {
         path : ModPath.t;
-        items : Module_structure.t;
+        items : 'p Module_structure.at;
       }
     | Apply of {
-        functor_ : t;
-        argument : t;
+        functor_ : 'p at;
+        argument : 'p at;
       }
 end =
   Module_expr
@@ -651,7 +654,7 @@ end =
 and Module_structure : sig
   (** The body of a module structure: its elements paired with their
       labels. *)
-  type t = (Label.t * Structure_item.t) list
+  type 'p at = (Label.t * 'p Structure_item.at) list
 end =
   Module_structure
 
@@ -659,9 +662,9 @@ and Module_binding : sig
   (** A module binding: its implementation and its type.  The kernel's
       [mod_equiv] field is not translated, since [mod_equiv = mp] would imply
       [mod_expr = MEBident mp] (likewise [msb_equiv]). *)
-  type t = {
-    expr : Module_expr.t;
-    type_ : Module_type.t;
+  type 'p at = {
+    expr : 'p Module_expr.at;
+    type_ : 'p Module_type.at;
   }
 end =
   Module_binding

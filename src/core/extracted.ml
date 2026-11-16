@@ -2,10 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 module Meta = struct
-  type t = Grammar.Meta.t = private {
+  type 'p cell = 'p Grammar.Meta.t = private {
     id : int;
-    mutable contents : Type.t option;
+    mutable contents : 'p Type.at option;
   }
+
+  type t = Phase.frozen cell
 
   let fresh id = Grammar.Meta.make id None
   let solved id t = Grammar.Meta.make id (Some t)

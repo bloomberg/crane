@@ -3,4 +3,12 @@
 
 (** [Core.Match]: the branches of a [Core.Expr.Match] ([Core.Match.Branch]). *)
 
-include Grammar.Match
+module Branch = struct
+  include Grammar.Match.Branch
+
+  (** A branch of the frozen program ({!Phase.frozen}). *)
+  type t = Phase.frozen at
+
+  (** A branch of the extracted program, which may hold metavariables. *)
+  type extracted = Phase.extracted at
+end

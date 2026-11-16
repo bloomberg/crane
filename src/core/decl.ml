@@ -5,3 +5,9 @@
     a value, or a group of mutually recursive definitions. *)
 
 include Grammar.Decl
+
+(** A definition of the frozen program ({!Phase.frozen}). *)
+type t = Phase.frozen at
+
+(** A definition of the extracted program, which may hold metavariables. *)
+type extracted = Phase.extracted at

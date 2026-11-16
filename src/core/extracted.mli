@@ -20,20 +20,22 @@ module Meta : sig
 
   (** A metavariable cell ({!Core.Type.Meta}): read anywhere, made and solved
       only here. *)
-  type t = Grammar.Meta.t = private {
+  type 'p cell = 'p Grammar.Meta.t = private {
     id : int;
-    mutable contents : Type.t option;
+    mutable contents : 'p Type.at option;
   }
 
+  type t = Phase.frozen cell
+
   (** An unsolved cell numbered [id]. *)
-  val fresh : int -> t
+  val fresh : int -> 'p cell
 
   (** A cell numbered [id], already solved to [t]. *)
-  val solved : int -> Type.t -> t
+  val solved : int -> 'p Type.at -> 'p cell
 
   (** [solve m t] fills [m] with [t]; an anomaly under [CRANE_CHECK_IR]
       after {!freeze}. *)
-  val solve : t -> Type.t -> unit
+  val solve : 'p cell -> 'p Type.at -> unit
 
   (** From here nothing solves a metavariable. *)
   val freeze : unit -> unit
