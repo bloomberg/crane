@@ -61,7 +61,7 @@ Once you clone the repo, if you have [opam](https://opam.ocaml.org/) and [dune](
 opam install . --deps-only
 ```
 
-To install OCaml (5.4.1 or a later 5.4 release) and Rocq (9.1.0). You can then build and install the project by running
+To install OCaml (5.4.1 or a later 5.4 release) and Rocq (9.1.0). A flambda compiler (`ocaml-variants.5.4.1+options,ocaml-option-flambda`) is recommended; see [Getting Started](docs/Getting-Started.md). You can then build and install the project by running
 
 ```bash
 make build && make install

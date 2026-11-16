@@ -14,6 +14,15 @@ To install OCaml (5.4.1 or a later 5.4 release) and Rocq (9.1.0, or a later 9.1 
 make build && make install
 ```
 
+A flambda compiler is recommended, and CI uses one. The plugin needs no extra flags for it (`-O3` measured no faster). To create such a switch:
+
+```bash
+opam switch create crane-flambda --packages ocaml-variants.5.4.1+options,ocaml-option-flambda \
+  --repos rocq-released=https://rocq-prover.org/opam/released,coq-released=https://coq.inria.fr/opam/released,default
+opam install rocq-runtime.9.1.0 rocq-core.9.1.0 coq.9.1.0
+opam install . --deps-only
+```
+
 You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated code is C++26, `-std=c++2c`) to run the tests.
 
 To run the tests, use:
