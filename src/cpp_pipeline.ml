@@ -301,6 +301,23 @@ let resolved (d : Cpp_erasure.settled) =
         | Some r -> str " in " ++ Table.safe_pr_global r
         | None -> mt () )
 
+(* [resolve_with what resolve x] is [x] at the resolved phase; a form that
+   only a lowered value may hold is an anomaly naming [what]. *)
+let resolve_with what resolve x =
+  match resolve x with
+  | x -> x
+  | exception Cpp_ir.Resolve.Owed form ->
+    CErrors.anomaly
+      Pp.(str "Crane: " ++ str what ++ str ": " ++ str form
+          ++ str ", which only a lowered declaration may hold, survived resolution")
+
+let resolve_type ~what t = resolve_with what Cpp_ir.Resolve.type_ t
+let resolve_expr ~what e = resolve_with what Cpp_ir.Resolve.expr e
+
+let spell_type t =
+  resolve_type ~what:"a type written outside every finished declaration"
+    (Cpp_ir.Types.rewrite (function Cpp_ir.Type.Obligation Opaque_type -> Some Any | _ -> None) t)
+
 (* Under [CRANE_CHECK_IR] the obligations are checked in two halves around
    the instantiation passes ({!checked_before_instantiation}), and the
    instantiated declaration is checked for what it borrows and moves

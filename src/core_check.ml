@@ -57,7 +57,7 @@ let check_instantiation owners r inst =
              h (show inst) (show inst') ) )
     (List.fold_left holes [] tys)
 
-let check_global_use owners (use : Core.Global_use.t) =
+let check_global_use owners (use : _ Core.Global_use.at) =
   Option.iter (check_instantiation owners use.callee) (Core.Global_use.instantiation use)
 
 let structure struc =

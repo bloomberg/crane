@@ -32,26 +32,26 @@
     [Core.Expr.Apply (f, args)] ({!Core_util.canonical_app}), a literal where it is a
     numeral converter's application to a digit chain.  Every application
     built after {!structure} has run is built with this. *)
-val apply : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t
+val apply : 'p Core.Expr.at -> 'p Core.Expr.at list -> 'p Core.Expr.at
 
 (** [spine e] is [e] with every application canonical and every numeral
     literal written as one. *)
-val spine : Core.Expr.t -> Core.Expr.t
+val spine : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Whether [f] may stand at the head of an application of a canonical
     term. *)
-val canonical_head : Core.Expr.t -> bool
+val canonical_head : 'p Core.Expr.at -> bool
 
 (** Whether the node [e] is canonical: not an application with a head
     {!canonical_head} rejects, nor a term {!spine} writes as a literal. *)
-val canonical_application : Core.Expr.t -> bool
+val canonical_application : 'p Core.Expr.at -> bool
 
 (** Whether every application in a term is canonical. *)
-val is_canonical : Core.Expr.t -> bool
+val is_canonical : 'p Core.Expr.at -> bool
 
 (** [check s]: under [CRANE_CHECK_IR], a violation for each definition of
     [s] whose body is not canonical. *)
-val check : Core.Program.t -> unit
+val check : 'p Core.Program.at -> unit
 
 (** [structure s]: {!spine} on the body of every definition of [s]. *)
-val structure : Core.Program.t -> Core.Program.t
+val structure : 'p Core.Program.at -> 'p Core.Program.at

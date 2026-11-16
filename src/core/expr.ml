@@ -5,6 +5,12 @@
 
 include Grammar.Expr
 
+(** A term of the frozen program ({!Phase.frozen}). *)
+type t = Phase.frozen at
+
+(** A term of the extracted program, which may hold metavariables. *)
+type extracted = Phase.extracted at
+
 (** A read of the [i]th enclosing binder, for a term built rather than
     copied. *)
 let fresh_rel i = Bound_variable {index = i; occurrence = Occurrence.fresh ()}

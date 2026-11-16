@@ -4,7 +4,8 @@
 (** CppIR: the structured C++ program.  Lowering builds it from Core and
     ControlIR (the [Translation_*] modules, {!Control_to_cpp_ir}) at the
     [lowered] phase; CppIR finishing ({!Cpp_pipeline}) rewrites it until it
-    owes nothing, and {!Resolve} restates it at the [resolved] phase.  Names
+    owes nothing, and restates it at the [resolved] phase ({!Resolve}, which
+    no module but {!Cpp_pipeline} calls).  Names
     are resolved and declarations scheduled only after that, when
     {!Cpp_leaf_plan} and {!Cpp_resolution} turn it into {!Cpp_ast}.
 

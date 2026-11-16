@@ -44,7 +44,7 @@ open Evd
     @param kn The constant name to extract
     @param cb The constant body (declaration) from the environment *)
 val extract_constant :
-  Global.indirect_accessor -> env -> Constant.t -> constant_body -> Core.Decl.t
+  Global.indirect_accessor -> env -> Constant.t -> constant_body -> Core.Decl.extracted
 
 (** Extract the type signature of a constant (for module signatures).
     @param env Rocq global environment
@@ -55,7 +55,7 @@ val extract_constant :
     taking a value argument whose body does not extract is recorded with
     {!Table.add_value_dep_type_scheme}. *)
 val extract_constant_spec :
-  env -> Constant.t -> ('a, 'b) pconstant_body -> Core.Signature.Declaration.t
+  env -> Constant.t -> ('a, 'b) pconstant_body -> Core.Signature.Declaration.extracted
 
 (** Extract a [module ... with Definition ... := ...] constraint.
     @param env Rocq global environment
@@ -63,7 +63,7 @@ val extract_constant_spec :
     @param c The constrained term (right-hand side of the [with] clause)
     @return [Some (vars, ty)] if [c] is an informative type scheme, [None] if logical *)
 val extract_with_type :
-  env -> evar_map -> EConstr.t -> (Id.t list * Core.Type.t) option
+  env -> evar_map -> EConstr.t -> (Id.t list * Core.Type.extracted) option
 
 (** Extract a mutual fixpoint definition into one [Core.Decl.Recursive_group], each member's body
     with the group's recursive [Rel]s replaced by its constants.  A cofixpoint
@@ -79,7 +79,7 @@ val extract_fixpoint :
   Constant.t array ->
   bool ->
   EConstr.rec_declaration ->
-  Core.Decl.t
+  Core.Decl.extracted
 
 (** Extract a (mutual) inductive type definition.  The result's constructor
     argument lists omit erased and implicit arguments; the cached
@@ -93,10 +93,10 @@ val extract_inductive : env -> MutInd.t -> Core.Inductive.t
     @param sg Evar map for universe and constraint tracking
     @param c The term to extract
     @return A pair [(ast, ty)] of the extracted Core expression and its Core type *)
-val extract_constr : env -> evar_map -> EConstr.t -> Core.Expr.t * Core.Type.t
+val extract_constr : env -> evar_map -> EConstr.t -> Core.Expr.extracted * Core.Type.extracted
 
 (** Is the declaration purely logical (erased during extraction)? *)
-val logical_decl : Core.Decl.t -> bool
+val logical_decl : Core.Decl.extracted -> bool
 
 (** Is the specification purely logical? *)
-val logical_spec : Core.Signature.Declaration.t -> bool
+val logical_spec : Core.Signature.Declaration.extracted -> bool

@@ -19,13 +19,16 @@ let check name cond =
     exit 1 )
 
 let r s = GlobRef.VarRef (Id.of_string s)
-let nat = Core.Type.Global_app {head = r "nat"; type_arguments = []; index_arguments = []}
+
+(* A variable, so that the types built on it are of any phase. *)
+let nat_ref = r "nat"
+let nat = Core.Type.Global_app {head = nat_ref; type_arguments = []; index_arguments = []}
 let v i = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i}
 let occ = Core.Occurrence.fresh
 let id s = Core.Binder_name.Source (Id.of_string s)
 
 let declare s ty =
-  Table.add_type (r s) ty;
+  Table.add_frozen_type (r s) ty;
   Core.Expr.Global (Core.Global_use.monomorphic (r s))
 
 let mono s = Core.Global_use.monomorphic (r s)
@@ -67,7 +70,7 @@ let checking = Probe.checking ()
 let () =
   let a = declare "pa" nat in
   let f = r "pf" in
-  Table.add_type f (Core.Type.Arrow {parameter = v 1; result = Core.Type.Arrow {parameter = v 1; result = v 2}});
+  Table.add_frozen_type f (Core.Type.Arrow {parameter = v 1; result = Core.Type.Arrow {parameter = v 1; result = v 2}});
   let partial = instantiate (unwritten f ~arity:2) [a] in
   check "a partial application binds the variables it leaves open"
     (var_type partial 1 = Some (v 1) && var_type partial 2 = Some (v 2));
@@ -92,7 +95,7 @@ let () =
 let () =
   let g = declare "fg" (Core.Type.Arrow {parameter = nat; result = nat}) and b = declare "fb" nat in
   let f = r "ff" in
-  Table.add_type f (Core.Type.Arrow {parameter = Core.Type.Arrow {parameter = v 1; result = nat};
+  Table.add_frozen_type f (Core.Type.Arrow {parameter = Core.Type.Arrow {parameter = v 1; result = nat};
                                      result = Core.Type.Arrow {parameter = nat; result = v 1}});
   let partial = instantiate (unwritten f ~arity:1) [g] in
   check "an undeducible hole is filled from the argument's type" (var_type partial 1 = Some nat);
@@ -113,7 +116,7 @@ let () =
 let () =
   let a = declare "xa" nat in
   let k = r "xk" in
-  Table.add_type k (Core.Type.Arrow {parameter = nat; result = nat});
+  Table.add_frozen_type k (Core.Type.Arrow {parameter = nat; result = nat});
   let over = instantiate (Core.Global_use.monomorphic k) [a; a] in
   check "an over-application's excess is not a parameter"
     (over.call.excess = [a] && over.call.primary = [a] && Param_pos.to_list over.params = [nat]);
@@ -137,10 +140,12 @@ let () =
        [ {Core.Record.Field.projection = Some fld; type_ = Core.Type.Arrow {parameter = v 1; result = v 1}};
          {Core.Record.Field.projection = Some fld_mono; type_ = Core.Type.Arrow {parameter = nat; result = nat}} ]);
   let cls = Core.Type.Global_app {head = GlobRef.IndRef (kn, 0); type_arguments = []; index_arguments = []} in
-  Table.add_type fld (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = v 1; result = v 1}});
-  Table.add_type fld_mono (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
+  Table.add_frozen_type fld
+    (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = v 1; result = v 1}});
+  Table.add_frozen_type fld_mono
+    (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let g = r "cg" in
-  Table.add_type g (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
+  Table.add_frozen_type g (Core.Type.Arrow {parameter = cls; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let c = declare "cc" nat in
   (* [d inst y := (g inst c y, g inst y y, fld inst y, fld_mono inst y)],
      each a call the walk meets with [inst] the declaration's dictionary. *)
@@ -286,7 +291,8 @@ let () =
 (* Canonical spines: each call read whole, written once. *)
 let () =
   let f = mono "nf" and a = declare "na" nat and b = declare "nb" nat in
-  Table.add_type (r "nf") (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
+  Table.add_frozen_type (r "nf")
+    (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let staged = Core.Expr.Apply {callee = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a]};
                                 arguments = [b]} in
   check "a staged application is not canonical" (not (Core_normalize.is_canonical staged));

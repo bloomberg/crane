@@ -6,37 +6,42 @@
     normalization take it to the [normalized] program per-unit analysis,
     planning and lowering to CppIR read.
 
-    The phases share Core's grammar.  What tells them apart is which passes
-    have run, and the type says it: a backend entry point takes a
-    [normalized program], and a structure only becomes one through
-    {!optimize}, {!freeze} and then {!normalize}.  Selecting whole top-level
-    modules keeps the phase; nothing else builds a program.
+    Each phase names the grammar phase its program holds ({!Core.Phase}):
+    an [extracted] or [optimized] program is a {!Core.Program.extracted},
+    whose types may hold metavariables, and a [frozen] or [normalized] one a
+    {!Core.Program.t}, whose types cannot.  What tells phases of one grammar
+    apart is which passes have run, and the type says it: a backend entry
+    point takes a [normalized program], and a structure only becomes one
+    through {!optimize}, {!freeze} and then {!normalize}.  Selecting whole
+    top-level modules keeps the phase; nothing else builds a program.
 
-    {!freeze} checks the program's structural invariants.  It leaves no
-    metavariable in the program: each solved one is
-    replaced by its solution and each unsolved one by an immutable open
-    annotation ({!Core.Type.Open}), read as erased.  A local definition's open
-    types are minted before it ({!Local_types}), and a slot filling a hole
-    hands the answer to the terms that mention the hole.  [CRANE_CHECK_IR]
-    checks that, as it checks that rendering leaves the program it was
-    planned against unchanged; {!structure} is the read-only view consumers
-    not converted to the phase types take. *)
+    {!freeze} is the conversion between the two grammar phases: each solved
+    metavariable is replaced by its solution and each unsolved one by an
+    immutable open annotation ({!Core.Type.Open}), read as erased, in the
+    program and in the types its globals are registered at
+    ({!Table.freeze_types}).  That no metavariable survives it is the type's
+    guarantee, not a check.  A local definition's open types are minted
+    before it ({!Local_types}), and a slot filling a hole hands the answer to
+    the terms that mention the hole.  [CRANE_CHECK_IR] checks the program's
+    structural invariants, as it checks that rendering leaves the program it
+    was planned against unchanged. *)
 
 (** {2 Phases} Phantom indices for {!program}, in pipeline order. *)
 
 (** As extraction produced it. *)
-type extracted
+type extracted = Core.Phase.extracted * [`Extracted]
 
 (** After the Core passes ({!optimize}). *)
-type optimized
+type optimized = Core.Phase.extracted * [`Optimized]
 
 (** Checked, with no metavariable left ({!freeze}). *)
-type frozen
+type frozen = Core.Phase.frozen * [`Frozen]
 
 (** In the form control lowering reads ({!normalize}). *)
-type normalized
+type normalized = Core.Phase.frozen * [`Normalized]
 
-(** A program at the phase ['phase]. *)
+(** A program at the phase ['phase]: a pair of the grammar phase it holds
+    and a tag naming the phase. *)
 type 'phase program
 
 (** A program being normalized ({!normalize}): its structure, and what
@@ -45,10 +50,10 @@ type 'phase program
 type normalizing = { structure : Core.Program.t; splices : Splices.t }
 
 (** The immediate result of extraction. *)
-val extracted : Core.Program.t -> extracted program
+val extracted : Core.Program.extracted -> extracted program
 
 (** [optimize passes p] runs the Core passes over [p]. *)
-val optimize : (Core.Program.t -> Core.Program.t) -> extracted program -> optimized program
+val optimize : (Core.Program.extracted -> Core.Program.extracted) -> extracted program -> optimized program
 
 (** [freeze p] is [p], checked: no reference is declared twice, every
     polymorphic use is instantiated at its callee's own scheme with no
@@ -57,8 +62,9 @@ val optimize : (Core.Program.t -> Core.Program.t) -> extracted program -> optimi
     every consumer reads as one place in one definition.  Its annotations
     hold no metavariable either: each is replaced by its solution, or by an
     open annotation where extraction left it unsolved, and from here until
-    the extraction ends none is made or solved.  Under [CRANE_TRACE_PIPELINE] it reports how many open
-    annotations the program holds. *)
+    the extraction ends none is made or solved.  Under
+    [CRANE_TRACE_PIPELINE] it reports how many open annotations the program
+    holds. *)
 val freeze : optimized program -> frozen program
 
 (** [normalize pass p] is [p] in the form control lowering reads: [pass]
@@ -80,15 +86,15 @@ val normalize : (normalizing -> normalizing) -> frozen program -> normalized pro
     loopified functions. *)
 val splices : normalized program -> Splices.t
 
-(** The structure, for the consumers not converted to the phase types. *)
-val structure : 'phase program -> Core.Program.t
+(** The structure, at the grammar phase the program's phase holds. *)
+val structure : ('g * _) program -> 'g Core.Program.at
 
 (** [partition keep p] splits [p]'s top-level modules by [keep]. *)
-val partition : (Names.ModPath.t -> bool) -> 'phase program -> 'phase program * 'phase program
+val partition : (Names.ModPath.t -> bool) -> ('g * 't) program -> ('g * 't) program * ('g * 't) program
 
 (** Each top-level module of [p], as a program of its own. *)
-val modules : 'phase program -> (Names.ModPath.t * 'phase program) list
+val modules : ('g * 't) program -> (Names.ModPath.t * ('g * 't) program) list
 
 (** The open annotations reachable from [p]'s annotations
     ({!Core.Type.Open}), each counted once. *)
-val open_annotations : 'phase program -> int
+val open_annotations : frozen program -> int

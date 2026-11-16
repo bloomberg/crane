@@ -2,12 +2,23 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 module Meta = struct
-  type t = Grammar.Meta.t = private {
+  type 'p cell = 'p Grammar.Meta.t = private {
     id : int;
-    mutable contents : Type.t option;
+    mutable contents : 'p Type.at option;
+    phase : 'p Phase.is_extracted;
   }
 
+  type t = Phase.extracted cell
+
   let fresh id = Grammar.Meta.make id None
+
+  let fresh_like (type p) (m : p cell) id : p cell =
+    match m.phase with
+    | Phase.Extracted -> fresh id
+
+  let cast (type p) (m : p cell) (t : Type.extracted) : p Type.at =
+    match m.phase with
+    | Phase.Extracted -> t
   let solved id t = Grammar.Meta.make id (Some t)
   let frozen = ref false
 

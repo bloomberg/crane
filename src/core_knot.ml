@@ -57,7 +57,7 @@ let tie defs f ~kept k j body =
   try Some (self 0 body) with Read -> None
 
 (* The function [fd] with the knot it ties, if it ties one, tied. *)
-let fixpoint defs (fd : Core.Recursion.Definition.t) =
+let fixpoint defs (fd : Core.Recursion.Definition.extracted) =
   let f = fd.entity in
   if (not (Table.should_loopify f)) || Table.is_custom f || Core_util.type_maxvar fd.type_ > 0 then None
   else

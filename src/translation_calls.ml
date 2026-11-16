@@ -85,10 +85,13 @@ let check_installed_arity id live =
 
 (** {!instantiate_at_call} at the type arguments [use] wrote, read by the
     callee's scheme variables. *)
-let instantiate_use_at_call (use : Core.Global_use.t) value_args ty =
+let instantiate_use_at_call_with ~find (use : _ Core.Global_use.at) value_args ty =
   Core_util.instantiate_written ~reader:"instantiate_use_at_call" use
-    (with_dict_carrier ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref use.callee
+    (with_dict_carrier_with ~find ~lex:(current_lexenv ()) ~caller:!Table.current_decl_ref use.callee
        value_args ty )
+
+let instantiate_use_at_call (use : Core.Global_use.t) value_args ty =
+  instantiate_use_at_call_with ~find:find_type_opt use value_args ty
 
 (** What an application of a global yields, as a Core type.
 
@@ -101,17 +104,20 @@ let instantiate_use_at_call (use : Core.Global_use.t) value_args ty =
     [None] where the callee has no recorded type, or fewer value arrows than
     the call has value arguments -- a partial application returns a function,
     which is not what the callers of this want. *)
-let core_app_result_type (f : Core.Expr.t) (args : Core.Expr.t list) : Core.Type.t option =
+let core_app_result_type_with ~find (f : _ Core.Expr.at) (args : _ Core.Expr.at list) : _ Core.Type.at option =
   let ( let* ) = Option.bind in
   match f with
   | Core.Expr.Global ({callee = id; _} as use) ->
     let value_args =
       List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args
     in
-    let* ty = find_type_opt id in
+    let* ty = find id in
     Type_util.core_codomain_after (List.length value_args)
-      (instantiate_use_at_call use value_args ty)
+      (instantiate_use_at_call_with ~find use value_args ty)
   | _ -> None
+
+let core_app_result_type (f : Core.Expr.t) (args : Core.Expr.t list) : Core.Type.t option =
+  core_app_result_type_with ~find:find_type_opt f args
 
 (** The variable {!Plan_templates.relax_tt_applied_return} takes out of [id]'s
     template head, if any: the higher-kinded head of an applied codomain that
@@ -749,7 +755,7 @@ type lowered_call = {
   callee : GlobRef.t;
   plan : call_plan;
   callee_type : Cpp_ir.Lowered.Type.t;
-  written : Core_util.Var_types.t;
+  written : Core.Phase.frozen Core_util.Var_types.t;
   abi : Callable_abi.t;
   application : Template_application.t;
   written_by_var : (Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
@@ -1367,7 +1373,7 @@ let call_type_args ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
              when Cpp_ir.Types.prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
              [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
                  (Scheme.Var.ordinal v)
-                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] a)) ]
+                 (Pp.string_of_ppcmds (Cpp_print.pp_cpp_type false [] (Cpp_pipeline.spell_type a))) ]
            | _ -> [] )
          (Callable_abi.template_head abi) )
   in

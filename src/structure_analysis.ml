@@ -75,8 +75,8 @@ let rec module_expr_struct = function
 let fold_structure
     ~(root : ModPath.t -> 'ctx)
     ~(enter : 'ctx -> ModPath.t -> 'ctx)
-    (f : 'ctx -> ModPath.t -> Label.t -> Core.Module.Structure_item.t -> 'a -> 'a)
-    (s : Core.Program.t)
+    (f : 'ctx -> ModPath.t -> Label.t -> 'p Core.Module.Structure_item.at -> 'a -> 'a)
+    (s : 'p Core.Program.at)
     (acc : 'a) : 'a =
   let rec go ctx mp sel acc =
     List.fold_left
@@ -96,8 +96,8 @@ let fold_structure
 (** {!fold_structure} for the collectors that carry no context and accumulate
     by side effect. *)
 let iter_structure
-    (f : ModPath.t -> Label.t -> Core.Module.Structure_item.t -> unit)
-    (s : Core.Program.t) : unit =
+    (f : ModPath.t -> Label.t -> 'p Core.Module.Structure_item.at -> unit)
+    (s : 'p Core.Program.at) : unit =
   fold_structure ~root:ignore
     ~enter:(fun () _ -> ())
     (fun () mp l se () -> f mp l se)
@@ -238,7 +238,7 @@ let register_enum_inductives (s : Core.Program.t) : unit =
         (element_inductives se) )
     s
 
-let register_shared_variants (s : Core.Program.t) : unit =
+let register_shared_variants (s : _ Core.Program.at) : unit =
   if Table.shared_variant () then
     iter_structure
       (fun _mp _l se ->

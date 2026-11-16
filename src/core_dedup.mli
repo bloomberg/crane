@@ -19,4 +19,4 @@
 
 (** Every module of the structure with its coinciding definitions made
     forwarders. *)
-val structure : Core.Program.t -> Core.Program.t
+val structure : Core.Program.extracted -> Core.Program.extracted

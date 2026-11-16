@@ -50,7 +50,7 @@ let solutions use =
           | Scheme.Type t -> Some t
           | Scheme.Identity -> None )
     in
-    ((fun t -> (Core_util.Partial.instantiate inst t :> Core.Type.t)), rigid)
+    ((fun t -> (Core_util.Partial.instantiate inst t : Core.Phase.frozen Core_util.Partial.t :> Core.Type.t)), rigid)
 
 let instance use body =
   let types, rigid = solutions use in

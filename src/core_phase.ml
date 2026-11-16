@@ -2,29 +2,33 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 
-type extracted
-type optimized
-type frozen
-type normalized
+type extracted = Core.Phase.extracted * [`Extracted]
+type optimized = Core.Phase.extracted * [`Optimized]
+type frozen = Core.Phase.frozen * [`Frozen]
+type normalized = Core.Phase.frozen * [`Normalized]
 
 type normalizing = { structure : Core.Program.t; splices : Splices.t }
-type 'phase program = normalizing
 
-let extracted structure = { structure; splices = Splices.empty }
-let optimize passes p = { p with structure = passes p.structure }
-let structure p = p.structure
-let splices p = p.splices
+(* The splices are decided by normalizing; before it there are none. *)
+type 'phase program =
+  | Program : { structure : 'g Core.Program.at; splices : Splices.t } -> ('g * _) program
 
-let partition keep p =
+let extracted structure = Program { structure; splices = Splices.empty }
+let optimize passes (Program p) = Program { p with structure = passes p.structure }
+let structure (type g t) (Program p : (g * t) program) : g Core.Program.at = p.structure
+let splices (Program p) = p.splices
+
+let partition (type g t) keep (Program p : (g * t) program) : (g * t) program * (g * t) program =
   let kept, rest = List.partition (fun (mp, _) -> keep mp) p.structure in
-  ({ p with structure = kept }, { p with structure = rest })
+  (Program { p with structure = kept }, Program { p with structure = rest })
 
-let modules p = List.map (fun ((mp, _) as m) -> (mp, { p with structure = [m] })) p.structure
+let modules (type g t) (Program p : (g * t) program) : (Names.ModPath.t * (g * t) program) list =
+  List.map (fun ((mp, _) as m) -> (mp, Program { p with structure = [m] })) p.structure
 
 (** [iter_types f p] calls [f] on every type annotation of the structure:
     declared types, the types bodies annotate, constructor argument types and
     type definitions. *)
-let iter_types f p =
+let iter_types f (Program p : frozen program) =
   let visit_body b = ignore (Core_util.ast_map_types (fun t -> f t; t) b) in
   let visit_ind (ind : Core.Inductive.t) =
     Array.iter
@@ -43,14 +47,6 @@ let iter_types f p =
       | Core.Signature.Declaration.Value {body = b; type_ = t; _} -> f t; visit_body b )
     (fun _ -> ())
     p.structure
-
-(* A metavariable is its cell: extraction numbers each declaration's afresh. *)
-module Cells = Hashtbl.Make (struct
-  type t = Core.Extracted.Meta.t
-
-  let equal = ( == )
-  let hash (m : Core.Extracted.Meta.t) = Hashtbl.hash m.id
-end)
 
 module Opens = Hashtbl.Make (Core.Open)
 
@@ -78,86 +74,40 @@ let failure phase what =
 
 let fail = failure "frozen"
 
-(** [zonk p]: [p] with every metavariable gone from its annotations -- a
-    solved one replaced by its solution, an unsolved one by an open
-    annotation, the same one for every annotation that shared the cell -- and
-    from the types its globals are registered at, which share cells with
-    them.  A packet's constructor types are rewritten in place: the inductive
-    is shared with the tables extraction registered it in. *)
-let zonk p =
-  let opens = Cells.create 64 in
-  let rec ty t =
-    match t with
-    | Core.Type.Meta {contents = Some u} -> ty u
-    | Core.Type.Meta ({contents = None} as m) -> (
-      match Cells.find_opt opens m with
-      | Some o -> Core.Type.Open o
-      | None ->
-        let o = Core.Open.fresh m.id in
-        Cells.add opens m o;
-        Core.Type.Open o )
-    | Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = ty a; result = ty b}
-    | Core.Type.Global_app {head = r; type_arguments = ts; index_arguments = args} ->
-      Core.Type.Global_app {head = r; type_arguments = List.map ty ts; index_arguments = List.map body args}
-    | Core.Type.Variable_app {head = i; arguments = ts} -> Core.Type.Variable_app {head = i; arguments = List.map ty ts}
-    | Core.Type.Variable _
-    | Core.Type.Hole _
-    | Core.Type.Open _
-    | Core.Type.Erased _
-    | Core.Type.Unknown
-    | Core.Type.Axiom
-    | Core.Type.String -> t
-  and body e = Core_util.ast_map_types ty e in
-  let inductive (ind : Core.Inductive.t) =
-    Array.iter
-      (fun (pk : Core.Inductive.Packet.t) ->
-        Array.iteri (fun i ts -> pk.constructor_argument_types.(i) <- List.map ty ts) pk.constructor_argument_types )
-      ind.packets
-  in
+(** [zonk p]: [p] frozen ({!Core.Freezer}) -- every solved metavariable
+    replaced by its solution, every unsolved one by an open annotation, the
+    same one for every annotation that shared the cell -- and with it the
+    types its globals are registered at, which share cells with them.  An
+    inductive needs nothing: its constructor types were frozen when they were
+    stored. *)
+let zonk (Program p : optimized program) : frozen program =
+  let freezer = Core.Freezer.create () in
+  let ty = Core.Freezer.type_ freezer and body = Core.Freezer.expr freezer in
   let decl = function
     | Core.Decl.Value {entity = r; body = b; type_ = t} -> Core.Decl.Value {entity = r; body = body b; type_ = ty t}
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
-           (fun (fd : Core.Recursion.Definition.t) ->
+           (fun (fd : Core.Recursion.Definition.extracted) ->
              {fd with Core.Recursion.Definition.body = body fd.body; type_ = ty fd.type_} )
            fds )
     | Core.Decl.Type_alias {entity = r; parameters = vars; body = t} ->
       Core.Decl.Type_alias {entity = r; parameters = vars; body = ty t}
-    | Core.Decl.Inductive {definition = ind; _} as d -> inductive ind; d
+    | Core.Decl.Inductive {entity; definition} -> Core.Decl.Inductive {entity; definition}
   in
   let spec = function
-    | Core.Signature.Declaration.Inductive {definition = ind; _} as s -> inductive ind; s
+    | Core.Signature.Declaration.Inductive {entity; definition} ->
+      Core.Signature.Declaration.Inductive {entity; definition}
     | Core.Signature.Declaration.Type {entity = r; parameters = vars; body = t} ->
       Core.Signature.Declaration.Type {entity = r; parameters = vars; body = Option.map ty t}
     | Core.Signature.Declaration.Value {entity = r; body = b; type_ = t} ->
       Core.Signature.Declaration.Value {entity = r; body = body b; type_ = ty t}
   in
-  Table.map_types ty;
-  { p with structure = Modutil.map_struct ~spec ~with_type:ty decl p.structure }
-
-(** No metavariable, solved or not, is reachable from an annotation, nor
-    from the type a global is registered at. *)
-let check_zonked p =
-  let rec walk = function
-    | Core.Type.Meta _ -> fail "holds a metavariable"
-    | Core.Type.Arrow {parameter = a; result = b} -> walk a; walk b
-    | Core.Type.Global_app {type_arguments = ts; index_arguments = args; _} ->
-      List.iter walk ts; List.iter (fun a -> ignore (Core_util.ast_map_types (fun t -> walk t; t) a)) args
-    | Core.Type.Variable_app {arguments = ts; _} -> List.iter walk ts
-    | Core.Type.Variable _
-    | Core.Type.Hole _
-    | Core.Type.Open _
-    | Core.Type.Erased _
-    | Core.Type.Unknown
-    | Core.Type.Axiom
-    | Core.Type.String -> ()
-  in
-  iter_types walk p;
-  Table.iter_types walk
+  Table.freeze_types ty;
+  Program { structure = Core.Retype.program ~spec ~with_type:ty decl p.structure; splices = p.splices }
 
 (** No reference is declared twice. *)
-let check_declared_once p =
+let check_declared_once (Program p : frozen program) =
   let declared = ref Ref.User.Set.empty in
   let declare r =
     if Ref.User.Set.mem r !declared then
@@ -179,7 +129,7 @@ let check_declared_once p =
     one {!Core_util.reference_scheme} names, so that two readings of one
     callee's variables meet the same variables; and no instantiation holds a
     metavariable: extraction froze each into an immutable hole. *)
-let check_instantiations p =
+let check_instantiations (Program p : frozen program) =
   (* Frozen, a metavariable an instantiation held is an open annotation. *)
   let rec open_meta = function
     | Core.Type.Meta {contents = None} | Core.Type.Open _ -> true
@@ -228,7 +178,7 @@ let check_instantiations p =
 (** [f r what o] for every occurrence [o] the body of the definition [r]
     holds, [what] saying whose: a read's, a let's, a match's, a
     construction's, a coercion's, a fixpoint's or a global use's. *)
-let iter_occurrences f p =
+let iter_occurrences f (Program p : _ program) =
   Modutil.struct_iter
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
@@ -278,7 +228,6 @@ let freeze p =
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_declared_once p;
     check_instantiations p;
-    check_zonked p;
     check_occurrences "frozen" p
   end;
   if Pipeline_trace.enabled () then
@@ -287,18 +236,19 @@ let freeze p =
 
 (** The top-level elements of [p] that normalizing [p] again would
     rewrite, and whether it would decide the partners it splices alike. *)
-let not_normal pass p =
+let not_normal pass (p : normalizing) =
   let again = Core_util.preserving_meta_supply (fun () -> pass p) in
   ( List.filter_map
       (fun ((l, fp), (_, fp')) -> if Core.Fingerprint.equal fp fp' then None else Some l)
       (List.combine (Core.Fingerprint.elements p.structure) (Core.Fingerprint.elements again.structure)),
     Splices.equal p.splices again.splices )
 
-let normalize pass p =
-  let p = pass p in
+let normalize pass (Program p : frozen program) : normalized program =
+  let n = pass { structure = p.structure; splices = p.splices } in
+  let p = Program { structure = n.structure; splices = n.splices } in
   if Sys.getenv_opt "CRANE_CHECK_IR" <> None then begin
     check_occurrences "normalized" p;
-    match not_normal pass p with
+    match not_normal pass n with
     | [], true -> ()
     | l :: _, _ ->
       failure "normalized"

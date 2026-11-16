@@ -38,4 +38,4 @@ let decl = function
       (Core.Nonempty.map (Core.Recursion.Definition.map_body term) fds)
   | d -> d
 
-let structure = Modutil.map_struct_decls decl
+let structure s = Modutil.map_struct_decls decl s

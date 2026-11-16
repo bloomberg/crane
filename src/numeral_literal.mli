@@ -19,7 +19,7 @@ val registered_constructor : string -> Names.GlobRef.t -> int option
     one.  The one place both Core, which writes the application as the
     literal ({!fold}), and dependency collection, which then leaves the
     converter and its digit inductives out, decide that it folds. *)
-val converter_literal : Names.GlobRef.t -> Core.Expr.t -> (Table.numeral_info * Z.t) option
+val converter_literal : Names.GlobRef.t -> 'p Core.Expr.at -> (Table.numeral_info * Z.t) option
 
 (** [constructor_literal e]: the numeral mapping and the value of the
     constructor term [e] of a numeral inductive, where it is a literal: a
@@ -27,19 +27,19 @@ val converter_literal : Names.GlobRef.t -> Core.Expr.t -> (Table.numeral_info * 
     [Npos] around one ([Zneg (xI xH)] is -3), or else a chain of the
     inductive's successor constructor down to its zero constructor
     ([S (S O)], [Z0]). *)
-val constructor_literal : Core.Expr.t -> (Table.numeral_info * Z.t) option
+val constructor_literal : 'p Core.Expr.at -> (Table.numeral_info * Z.t) option
 
 (** [fold e]: [e], where it is a numeral literal -- a numeral converter
     applied to a digit chain ({!converter_literal}) or a constructor term
     ({!constructor_literal}) -- as the literal, at its numeral inductive;
     otherwise [e] itself.  Reads [e]'s head node and the chain under it
     only. *)
-val fold : Core.Expr.t -> Core.Expr.t
+val fold : 'p Core.Expr.at -> 'p Core.Expr.at
 
 (** Whether {!fold} writes [e] as a literal. *)
-val folds : Core.Expr.t -> bool
+val folds : 'p Core.Expr.at -> bool
 
 (** Whether [e] is a numeral converter applied to a digit chain, which
     {!fold} writes as a literal: the converter and the chain's inductives
     are named nowhere once it has. *)
-val converter_folds : Core.Expr.t -> bool
+val converter_folds : 'p Core.Expr.at -> bool

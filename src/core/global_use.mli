@@ -9,56 +9,62 @@ open Names
 
 (** [Monomorphic] for a callee whose scheme has no variable; otherwise
     [Polymorphic] with one instantiation slot per scheme variable. *)
-type instance = Grammar.Global_use.instance =
+type 'p instance = 'p Grammar.Global_use.instance =
   | Monomorphic
-  | Polymorphic of Type.t Scheme.Instantiation.t
+  | Polymorphic of 'p Type.at Scheme.Instantiation.t
 
 (** A global named at a use: read anywhere, built only here. *)
-type t = Grammar.Global_use.t = private {
+type 'p at = 'p Grammar.Global_use.at = private {
   callee : GlobRef.t;
-  instance : instance;
+  instance : 'p instance;
   occurrence : Occurrence.t;
 }
 
+(** A use in the frozen program ({!Phase.frozen}). *)
+type t = Phase.frozen at
+
+(** A use in the extracted program, which may hold metavariables. *)
+type extracted = Phase.extracted at
+
 (** The global used. *)
-val callee : t -> GlobRef.t
+val callee : 'p at -> GlobRef.t
 
 (** A use of a declaration known to quantify nothing. *)
-val monomorphic : GlobRef.t -> t
+val monomorphic : GlobRef.t -> 'p at
 
 (** A use at an instantiation; [monomorphic] when the scheme has no
     variable. *)
-val polymorphic : GlobRef.t -> Type.t Scheme.Instantiation.t -> t
+val polymorphic : GlobRef.t -> 'p Type.at Scheme.Instantiation.t -> 'p at
 
 (** An open occurrence of a polymorphic declaration: every variable a
     fresh hole, nothing written. *)
-val infer_all : GlobRef.t -> Scheme.Id.t -> t
+val infer_all : GlobRef.t -> Scheme.Id.t -> 'p at
 
 (** A declaration's reference to itself within its own body: every
     variable stands for itself. *)
-val identity : GlobRef.t -> Scheme.Id.t -> t
+val identity : GlobRef.t -> Scheme.Id.t -> 'p at
 
 (** [None] for a monomorphic use. *)
-val instantiation : t -> Type.t Scheme.Instantiation.t option
+val instantiation : 'p at -> 'p Type.at Scheme.Instantiation.t option
 
 (** The arguments the source wrote, by the variable each was written for;
     one extraction could not read is [Core.Type.Erased Type_argument], the erased
     argument it stood as. *)
-val written_evidence : t -> (Scheme.Var.t * Type.t) list
+val written_evidence : 'p at -> (Scheme.Var.t * 'p Type.at) list
 
 (** The occurrence telling this use apart from every other. *)
-val occurrence : t -> Occurrence.t
+val occurrence : 'p at -> Occurrence.t
 
 (** The use, as a new occurrence: for a copy that is new terms. *)
-val refresh : t -> t
+val refresh : 'p at -> 'p at
 
 (** Maps every type of the instantiation, keeping the scheme, the slots'
     evidence, the holes and the occurrence. *)
-val map_types : (Type.t -> Type.t) -> t -> t
+val map_types : ('p Type.at -> 'p Type.at) -> 'p at -> 'p at
 
 (** Every type of the instantiation: solutions and written arguments. *)
-val iter_types : (Type.t -> unit) -> t -> unit
+val iter_types : ('p Type.at -> unit) -> 'p at -> unit
 
 (** Whether some type of the instantiation ({!iter_types}) satisfies the
     predicate. *)
-val exists_type : (Type.t -> bool) -> t -> bool
+val exists_type : ('p Type.at -> bool) -> 'p at -> bool

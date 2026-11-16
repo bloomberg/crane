@@ -47,16 +47,8 @@ type t =
 (* A type translation writes for a concept, in CppIR: a concept is generated
    after its module type is settled, so every type it writes has a C++
    spelling. *)
-let resolved what resolve x =
-  match resolve x with
-  | x -> x
-  | exception Cpp_ir.Resolve.Owed form ->
-    CErrors.anomaly
-      Pp.(str "Crane: " ++ str what ++ str ": " ++ str form
-          ++ str ", which only a lowered declaration may hold, survived resolution")
-
-let ir_type = resolved "a type written outside every finished declaration" Cpp_ir.Resolve.type_
-let ir_expr = resolved "a value in a module type's concept" Cpp_ir.Resolve.expr
+let ir_type t = Cpp_pipeline.resolve_type ~what:"a type written outside every finished declaration" t
+let ir_expr e = Cpp_pipeline.resolve_expr ~what:"a value in a module type's concept" e
 
 (* Whether [mp] is [base] or a module path inside it. *)
 let rec is_under base mp =

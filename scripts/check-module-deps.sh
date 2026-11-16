@@ -29,7 +29,7 @@ PRINTER_FINISHING=${FINISHING/ Cpp_erasure/}
 CORE_PLANNING="core_query core_elaborate match_kind core_normalize numeral_literal elaborated_call instance_methods core/positional"
 CORE_FORBIDDEN="${TRANSLATION/ Method_registry/} $PRINTER $FINISHING Cpp_ir"
 
-CORE_FILES="core/occurrence core/open core/nonempty core/grammar core/erasure_reason core/binder_name core/type core/extracted core/expr core/global_use core/match core/pattern core/record core/recursion core/inductive core/signature core/decl core/module core/program core/interface core/positional core/fingerprint core/schema core/core"
+CORE_FILES="core/occurrence core/open core/nonempty core/grammar core/erasure_reason core/binder_name core/type core/extracted core/expr core/global_use core/match core/pattern core/record core/recursion core/inductive core/signature core/decl core/module core/program core/interface core/positional core/fingerprint core/schema core/phase core/retype core/widen core/freezer core/core"
 
 # layer modules : forbidden dependencies
 rules=(
@@ -146,6 +146,24 @@ for v in mp_renaming_fun ref_renaming_fun note_decided_while_emitting; do
   if [[ -n "$deciding" ]]; then
     echo "the printer reaches Common.$v, which decides a name, by:"
     printf '%s\n' "$deciding" | sed 's/^/  /'
+    status=1
+  fi
+done
+
+# CppIR reaches the resolved phase one way: Cpp_pipeline, which finishes a
+# declaration and resolves the few types and values written outside every
+# declaration.  No other module converts (Cpp_ir.Resolve), and the printer
+# and the CppAST it reads name no lowered value.
+for f in src/*.ml src/*.mli; do
+  case "$f" in src/cpp_pipeline.ml) continue ;; esac
+  if grep -q 'Cpp_ir\.Resolve\b' "$f"; then
+    echo "$f converts CppIR to the resolved phase (Cpp_ir.Resolve), which only Cpp_pipeline may"
+    status=1
+  fi
+done
+for f in src/cpp_print.ml src/cpp_print.mli src/cpp_ast.ml src/cpp_ast.mli; do
+  if grep -q 'Cpp_ir\.Lowered\b\|Grammar\.lowered\b' "$f"; then
+    echo "$f names a lowered CppIR value, which the printer may not read"
     status=1
   fi
 done

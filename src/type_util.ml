@@ -33,7 +33,7 @@ let ctor_struct_name_of_ref ?(fallback_idx = 0) (c : GlobRef.t) : string =
     generated concept checks, so the parameter keeps its slot at the erased
     type -- which is how the concept spells it for that instance too
     ([C<ic, std::any>]). *)
-let instance_type_args (args : Core.Type.t list) : Core.Type.t list =
+let instance_type_args (args : _ Core.Type.at list) : _ Core.Type.at list =
   List.map (fun t -> if Core_util.is_erased_type t then Core.Type.Unknown else t) args
 
 (** Like {!ctor_struct_name_of_ref} but returns an [Core.Binder_name.Source.t]. *)
@@ -59,6 +59,7 @@ let rec expand_core_fun_alias ty =
   | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = args; _} as t ->
     ( match Table.lookup_typedef_unchecked kn with
     | Some body ->
+      let body = Core.Widen.type_ body in
       let body =
         if args = [] then body else Core_util.type_subst_list args body
       in
@@ -164,13 +165,15 @@ let rec monad_heading view ty =
   | Core.Type.Global_app {head = m; _} when Table.is_monad m -> Some m
   | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = args; _} -> (
     match Table.lookup_typedef_unchecked kn with
-    | Some body -> monad_heading view (if args = [] then body else Core_util.type_subst_list args body)
+    | Some body ->
+      let body = Core.Widen.type_ body in
+      monad_heading view (if args = [] then body else Core_util.type_subst_list args body)
     | None -> None )
   | _ -> None
 
-let codomain_monad = monad_heading core_codomain
+let codomain_monad t = monad_heading core_codomain t
 
-let type_monad = monad_heading resolve_meta
+let type_monad t = monad_heading resolve_meta t
 
 (** Why a binder -- a lambda's, a fixpoint's, a declaration's domain -- is
     not a parameter at run time.  Extraction erases a binder whose type is a
@@ -192,7 +195,7 @@ type binder_role =
 
 (** The erasure extraction recorded in a binder's type, if it did: its
     [Core.Type.Erased], whose kill reason says why. *)
-let extraction_erasure (ty : Core.Type.t) : erasure option =
+let extraction_erasure (ty : _ Core.Type.at) : erasure option =
   match resolve_meta ty with
   | Core.Type.Erased Core.Erasure_reason.Type_argument -> Some Type_binder
   | Core.Type.Erased Core.Erasure_reason.Proof -> Some Proof
@@ -302,7 +305,7 @@ let projection_class_arity proj =
     | Core.Type.Meta {contents = Some t} -> count t
     | _ -> 0
   in
-  match Table.find_type proj with exception Not_found -> 0 | ty -> count ty
+  match Table.inspect_type proj {read = count} with exception Not_found -> 0 | n -> n
 
 (** [method_tvar_count class_ref ty] is the arity of the member template an
     instance method of type [ty] emits: the type variables the method
@@ -361,9 +364,12 @@ let method_is_member_template class_ref field_ref =
   Table.get_ind_hkt_params class_ref <> []
   || Table.is_typeclass class_ref
      &&
-     match Table.find_type field_ref with
+     match
+       Table.inspect_type field_ref
+         {read = (fun projection -> method_tvar_count class_ref (strip_erased_method_prefix projection) > 0)}
+     with
      | exception Not_found -> false
-     | projection -> method_tvar_count class_ref (strip_erased_method_prefix projection) > 0
+     | b -> b
 
 (** [core_drop_arrows n t] is what is left of [t] after [n] of its arrows have
     been applied. Erased ([Core.Type.Erased]) domains do not count, matching the value
@@ -405,31 +411,31 @@ let is_monadic_core_type ty =
   | _ -> false
 
 (** Check if a Core type is void (unit type mapped to C++ void). *)
-let core_type_is_void (ty : Core.Type.t) : bool =
+let core_type_is_void (ty : _ Core.Type.at) : bool =
   match resolve_meta ty with
   | Core.Type.Global_app {head = r; _} -> is_void r
   | _ -> false
 
 (** The role of a binder of type [ty]: the one classification every site
     asking whether a binder is a run-time parameter reads. *)
-let binder_role (ty : Core.Type.t) : binder_role =
+let binder_role (ty : _ Core.Type.at) : binder_role =
   match extraction_erasure ty with
   | Some e -> Erased e
   | None -> if core_type_is_void ty then Erased Void else Runtime
 
 (** Whether a binder of type [ty] is a parameter at run time
     ({!binder_role}). *)
-let is_runtime_binder_type (ty : Core.Type.t) : bool =
+let is_runtime_binder_type (ty : _ Core.Type.at) : bool =
   match binder_role ty with Runtime -> true | Erased _ -> false
 
 (** Whether a binder of type [ty] is erased for being [void]: it survives
     extraction, and an argument list keeps it, but a C++ signature does
     not. *)
-let void_binder (ty : Core.Type.t) : bool =
+let void_binder (ty : _ Core.Type.at) : bool =
   match binder_role ty with Erased Void -> true | Runtime | Erased _ -> false
 
 (** Check if a Core type is Rocq's [unit] type. *)
-let core_type_is_unit (ty : Core.Type.t) : bool =
+let core_type_is_unit (ty : _ Core.Type.at) : bool =
   match resolve_meta ty with
   | Core.Type.Global_app {head = r; _} -> Table.is_unit_type r
   | _ -> false
@@ -446,7 +452,7 @@ let is_cpp_unit_type : Cpp_ir.Lowered.Type.t -> bool = function
 let core_type_is_unit_or_void ty = core_type_is_void ty || core_type_is_unit ty
 
 (** Filter out erased ([Core.Type.Erased]) types from a type list. *)
-let filter_value_types = List.filter (fun t -> not (is_erased_type t))
+let filter_value_types l = List.filter (fun t -> not (is_erased_type t)) l
 
 (** Test whether the codomain of a Core function type, after skipping [n]
     value-domain arrows, erases to [std::any] in the generated C++.
@@ -699,7 +705,7 @@ let rec has_tvar = function
   | _ -> false
 
 (** Apply a type-level transformation to every type annotation in a Core term. *)
-let rec map_types_in_ast (f : Core.Type.t -> Core.Type.t) = function
+let rec map_types_in_ast (f : _ Core.Type.at -> _ Core.Type.at) = function
   | Core.Expr.Lambda {parameter = id; parameter_type = ty; body} ->
     Core.Expr.Lambda {parameter = id; parameter_type = f ty; body = map_types_in_ast f body}
   | Core.Expr.Let {binder = id; binder_type = ty; value = a; body = b; occurrence = occ} ->

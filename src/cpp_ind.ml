@@ -1473,13 +1473,8 @@ let record_field_types ~module_ r vars (fields : Core.Record.Field.t list) =
     (fun () ->
       List.map
         (fun (f : Core.Record.Field.t) ->
-          match Cpp_ir.Resolve.type_
-            (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) with
-          | t -> t
-          | exception Cpp_ir.Resolve.Owed form ->
-            CErrors.anomaly
-              Pp.(str "Crane: a record field type " ++ str form
-                  ++ str ", which only a lowered declaration may hold, survived resolution") )
+          Cpp_pipeline.resolve_type ~what:"a record field type"
+            (Cpp_erasure.instantiate_type (Translation_types.cpp_ir_of_core_type (empty_env ()) vars f.type_)) )
         fields )
 
 (** Every module type's concept generated ahead of the files. *)

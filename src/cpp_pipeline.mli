@@ -30,6 +30,22 @@
 val finish : Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 
+(** [resolve_type ~what t] is the lowered type [t], written outside every
+    declaration {!finish} resolves -- a record field's type generated ahead
+    of its declaration, a module type's concept -- at the resolved phase.
+    With {!finish}, these are the one conversion from {!Cpp_ir.Lowered} to
+    {!Cpp_ir.Resolved}.  A form only a lowered value may hold is an anomaly
+    naming [what]. *)
+val resolve_type : what:string -> Cpp_ir.Lowered.Type.t -> Cpp_ir.Resolved.Type.t
+
+(** {!resolve_type} for an expression. *)
+val resolve_expr : what:string -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Resolved.Expr.t
+
+(** [spell_type t] is {!resolve_type} of [t] with every opaque type written
+    as the erased type it would be printed as: a type no declaration holds,
+    spelled for a diagnostic. *)
+val spell_type : Cpp_ir.Lowered.Type.t -> Cpp_ir.Resolved.Type.t
+
 (** The names of the passes {!finish} runs, in order, the {!Cpp_erasure} seam
     among them.  Read by [unit_tests/pipeline_manifest.ml]. *)
 val pass_names : string list

@@ -52,6 +52,10 @@ module Nonempty = Nonempty
 (** The identity of one node of a term. *)
 module Occurrence = Occurrence
 
+(** The phase index of the grammar: [extracted], whose types may hold
+    metavariables, and [frozen], whose cannot. *)
+module Phase = Phase
+
 (** Open annotations: metavariables freezing left unsolved. *)
 module Open = Open
 
@@ -78,3 +82,14 @@ module Signature = Signature
 
 (** Type expressions. *)
 module Type = Type
+
+(** Frozen types and terms as types and terms of any phase. *)
+module Widen = Widen
+
+(** Terms and programs taken from one phase to another, annotation by
+    annotation. *)
+module Retype = Retype
+
+(** Freezing extracted types and terms, minting an open annotation for each
+    unsolved metavariable. *)
+module Freezer = Freezer

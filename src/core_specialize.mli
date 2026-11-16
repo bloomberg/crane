@@ -33,25 +33,25 @@
 
 (** Every top-level definition of the structure, those inside its modules
     included, specialized and simplified where that shrinks it. *)
-val structure : Core.Program.t -> Core.Program.t
+val structure : Core.Program.extracted -> Core.Program.extracted
 
 (** A definition of the structure: a term and its type, or a fixpoint of
     one function. *)
 type def =
-  | Term of Core.Expr.t * Core.Type.t
-  | Fix of Core.Recursion.Definition.t
+  | Term of Core.Expr.extracted * Core.Type.extracted
+  | Fix of Core.Recursion.Definition.extracted
 
 (** The structure's definitions, those inside its modules included. *)
-val definitions : Core.Program.t -> def Ref.User.Map.t
+val definitions : Core.Program.extracted -> def Ref.User.Map.t
 
 (** The body of the global a use names, where it may be unfolded, at the
     type arguments the use wrote: [None] for a mapped global, and where the
     use did not write an argument for every variable its type mentions. *)
-val body_of : def Ref.User.Map.t -> Core.Global_use.t -> Core.Expr.t option
+val body_of : def Ref.User.Map.t -> Core.Global_use.extracted -> Core.Expr.extracted option
 
 (** [instantiate b args]: [b] applied to [args], its leading lambdas
     instantiated: a value argument substituted, any other bound once by a
     [let] where its parameter is read more than once.  Arguments past [b]'s
     lambdas stay applied; [None] where there are fewer arguments than
     lambdas. *)
-val instantiate : Core.Expr.t -> Core.Expr.t list -> Core.Expr.t option
+val instantiate : Core.Expr.extracted -> Core.Expr.extracted list -> Core.Expr.extracted option

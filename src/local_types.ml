@@ -73,7 +73,7 @@ let rec mint ~minted ~next = function
    where it replaces the cell solved to it ({!Core_phase.freeze}): numbers say
    nothing, every lambda's starting past a head of its own. *)
 module Minted = Hashtbl.Make (struct
-  type t = Core.Type.t
+  type t = Core.Type.extracted
 
   let equal = ( == )
   let hash = Hashtbl.hash
@@ -91,19 +91,22 @@ let () = State.on_reset State.Extraction (fun () -> Minted.reset let_lambda_base
     ({!Translation_calls.core_app_result_type}).  A recursive call, its head a
     local, answers nothing: it says nothing the fixpoint's own type does not
     already.  A match answers with its first branch that does. *)
-let rec tail_result_type = function
+let rec tail_result_type ~find = function
   | Core.Expr.Lambda {body = b; _}
   | Core.Expr.Let {body = b; _}
   | Core.Expr.Coerce {value = b; _}
   | Core.Expr.Boxed_value {value = b; _}
-  | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type b
+  | Core.Expr.Lambda_group_barrier {value = b; _} -> tail_result_type ~find b
   | Core.Expr.Construct {result_type = ty; _} -> Some ty
-  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_calls.core_app_result_type f args
+  | Core.Expr.Apply {callee = f; arguments = args} -> Translation_calls.core_app_result_type_with ~find f args
   | Core.Expr.Match {branches = brs; _} ->
     Array.fold_left
-      (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type b)
+      (fun acc {Core.Match.Branch.body = b; _} -> match acc with Some _ -> acc | None -> tail_result_type ~find b)
       None brs
   | _ -> None
+
+(* The registered type of a global, as the extracted program reads it. *)
+let find_extracted r = try Some (Table.find_extracted_type r) with Not_found -> None
 
 (** Recover a fixpoint's return type from its body.
 
@@ -122,21 +125,23 @@ let rec tail_result_type = function
     alone.  So is one whose body builds nothing:
     [tests/regression/anon_lift_name_collision]'s [_count_F] returns [T1] from
     integer literals, and its call site supplies the argument. *)
-let recover_fix_codomain ((id, ty) : Names.Id.t * Core.Type.t) (body : Core.Expr.t) =
+let recover_fix_codomain ~find ((id, ty) : Names.Id.t * _ Core.Type.at) (body : _ Core.Expr.at) =
   let dom, cod = Core_util.type_decomp ty in
   match cod with
   | Core.Type.Variable {variable = i; _}
     when not (List.exists (fun t -> Core_util.IntSet.mem i (Core_util.core_tvars t)) dom) -> (
-    match tail_result_type body with
+    match tail_result_type ~find body with
     | Some t ->
       let subst = Type_util.subst_tvars_type [(i, t)] in
       ((id, subst ty), Type_util.map_types_in_ast subst body)
     | None -> ((id, ty), body) )
   | _ -> ((id, ty), body)
 
-let recover_fix_codomains ids funs =
-  let settled = Array.map2 recover_fix_codomain ids funs in
+let recover_fix_codomains_with ~find ids funs =
+  let settled = Array.map2 (recover_fix_codomain ~find) ids funs in
   (Array.map fst settled, Array.map snd settled)
+
+let recover_fix_codomains ids funs = recover_fix_codomains_with ~find:Core_query.find_type_opt ids funs
 
 (* A codomain extraction left a hole is filled from the body the same way,
    by solving the hole: the cell is shared with every annotation the body
@@ -145,7 +150,8 @@ let recover_fix_codomains ids funs =
    no longer asking what the body builds. *)
 let fill_codomain_hole (_, ty) body =
   match snd (Core_util.type_decomp ty) with
-  | Core.Type.Meta ({contents = None} as cell) -> Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type body)
+  | Core.Type.Meta ({contents = None} as cell) ->
+    Option.iter (Core.Extracted.Meta.solve cell) (tail_result_type ~find:find_extracted body)
   | _ -> ()
 
 (* Settles one group as translation reads it: codomains filled and recovered,
@@ -153,7 +159,7 @@ let fill_codomain_hole (_, ty) body =
    goes on for an applied group, into its bodies and arguments. *)
 let settle ids funs =
   Array.iter2 fill_codomain_hole ids funs;
-  let ids, funs = recover_fix_codomains ids funs in
+  let ids, funs = recover_fix_codomains_with ~find:find_extracted ids funs in
   let mint = mint ~minted:ignore ~next:(ref 1) in
   Array.iter (fun (_, ty) -> mint ty) ids;
   (funs, mint)
@@ -181,7 +187,7 @@ let check_let_lambda ~outer t a =
       | Core.Type.Meta {contents = None} | Core.Type.Open _ -> unsolved := true
       | Core.Type.Meta {contents = Some t} -> visit t
       | Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; _} as v ->
-        if !base = None then base := Minted.find_opt let_lambda_bases v
+        if !base = None then base := Minted.find_opt let_lambda_bases (Core.Widen.type_ v)
       | Core.Type.Arrow {parameter = x; result = y} ->
         visit x;
         visit y
@@ -230,13 +236,13 @@ let rec expr ~outer = function
     expr ~outer b
   | e -> Core_util.ast_iter (expr ~outer) e
 
-let structure =
+let structure (s : Core.Program.extracted) =
   Modutil.struct_iter
     (function
       | (Core.Decl.Value _ | Core.Decl.Recursive_group _) as d ->
         List.iter
-          (fun (fd : Core.Recursion.Definition.t) ->
+          (fun (fd : Core.Recursion.Definition.extracted) ->
             expr ~outer:(Core_util.IntSet.fold max (Core_util.core_tvars fd.type_) 0) fd.body)
           (Core_util.term_defs d)
       | Core.Decl.Inductive _ | Core.Decl.Type_alias _ -> () )
-    ignore ignore
+    ignore ignore s

@@ -4,5 +4,12 @@
 (** [Core.Program]: a whole extracted program's implementation, what
     extraction hands to the Core passes ({!Core_phase}). *)
 
-(** The module structure of each module path, in dependency order. *)
-type t = (Names.ModPath.t * Module.Structure.t) list
+(** The module structure of each module path, in dependency order, at the
+    phase ['p]. *)
+type 'p at = (Names.ModPath.t * 'p Module.Structure.at) list
+
+(** A frozen program ({!Phase.frozen}). *)
+type t = Phase.frozen at
+
+(** An extracted program, which may hold metavariables. *)
+type extracted = Phase.extracted at

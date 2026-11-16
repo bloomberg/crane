@@ -58,27 +58,29 @@
     out of a pair recovered from a box is bound at a dummy type, as lowering
     binds it ({!Translation_erasure.stmts_yield_boxed}). *)
 
-(** [region ~outer body] -- every pattern binder of [body], a region generated
-    in the scope [outer] binds, planned: keyed by its site
+(** [region ctx body] -- every pattern binder of [body], a region generated
+    in the translation context [ctx], planned: keyed by its site
     ({!Core_binder.site}, the match and branch) and its field's index there.
-    Reads types in the type-variable scope current when it is called, which
-    is the region's; its outer binders at the types the head of the
-    declaration being generated declares them at, where it declares them
-    directly in [outer] ([declared_outer] in {!Translation_state}), the rest
-    at the Core types [outer] gives them, converted.  Each read is planned at
-    the C++ type of its binder too.  A binder's recorded C++ type is never
-    read. *)
+    What it reads of the context it reads off [ctx], not the global one: the
+    scope [outer] its lexical environment binds, the type variables in scope
+    and the return type, which are the region's; its outer binders at the
+    types the head of the declaration being generated declares them at,
+    where it declares them directly in [outer] ([declared_outer] in
+    {!Translation_state}), the rest at the Core types [outer] gives them,
+    converted.  Each read is planned at the C++ type of its binder too.  A
+    binder's recorded C++ type is never read. *)
 val region :
-  outer:Lexenv.t ->
+  Translation_state.translation_ctx ->
   Core.Expr.t ->
   (Core_binder.site * int * Translation_state.planned_repr) list
   * (Core.Occurrence.t * Translation_state.Planned_read.t) list
 
-(** [check ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless the
-    region's plan ({!Translation_state.lexical.representation}) boxes
+(** [check ctx ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless
+    the region's plan in [ctx] ({!Translation_state.lexical.representation}) boxes
     the pattern binder of field [field] bound at [site] exactly when lowering
     does ([live]).  A binder the plan has no answer for is a violation too.
     [as_bound]: the binder is declared at the type it is bound at, nothing
     pinned down -- the reuse arm's second declaration of a branch's fields, a
     record projection in an expression -- and checked against that answer. *)
-val check : ?as_bound:bool -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit
+val check :
+  ?as_bound:bool -> Translation_state.translation_ctx -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit

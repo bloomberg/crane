@@ -39,7 +39,7 @@ type raw_binder = {
 type t
 
 (** The largest schematic variable [ty] mentions, [0] if none. *)
-val max_tvar : Type.t -> int
+val max_tvar : 'p Type.at -> int
 
 (** [make owner body layout] finalizes a scheme: every binder [layout]
     numbers is a variable, whether or not [body] mentions it -- the scheme

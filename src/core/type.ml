@@ -5,3 +5,9 @@
     variables, metavariables, holes, open annotations and erased slots. *)
 
 include Grammar.Type
+
+(** A type of the frozen program ({!Phase.frozen}). *)
+type t = Phase.frozen at
+
+(** A type of the extracted program, which may hold metavariables. *)
+type extracted = Phase.extracted at

@@ -4,5 +4,11 @@
 (** [Core.Interface]: a whole extracted program's interface, the
     counterpart of [Core.Program] for module signatures. *)
 
-(** The module signature of each module path. *)
-type t = (Names.ModPath.t * Module.Signature.t) list
+(** The module signature of each module path, at the phase ['p]. *)
+type 'p at = (Names.ModPath.t * 'p Module.Signature.at) list
+
+(** A frozen interface ({!Phase.frozen}). *)
+type t = Phase.frozen at
+
+(** An extracted interface, which may hold metavariables. *)
+type extracted = Phase.extracted at
