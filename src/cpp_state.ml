@@ -603,14 +603,14 @@ let functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list 
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)
 type held_concept =
-  | HCmodtype of Names.ModPath.t  (** a module type's concept *)
-  | HCclass of Names.GlobRef.t  (** a type class's concept *)
+  | Modtype of Names.ModPath.t  (** a module type's concept *)
+  | Class of Names.GlobRef.t  (** a type class's concept *)
 
 (** Equality on {!held_concept}. *)
 let held_concept_equal a b =
   match (a, b) with
-  | HCmodtype x, HCmodtype y -> Names.ModPath.equal x y
-  | HCclass x, HCclass y -> globref_equal x y
+  | Modtype x, Modtype y -> Names.ModPath.equal x y
+  | Class x, Class y -> globref_equal x y
   | _ -> false
 
 (** Whether a concept is one the current frame is holding back. *)
@@ -655,7 +655,7 @@ let concept_held_back ctx c =
   ctx.rc_in_struct
   && match ctx.rc_module with Some mp -> is_held_back_in (planned_held_back ~file:ctx.rc_file mp) c | None -> false
 
-let class_concept_held_back ctx r = concept_held_back ctx (HCclass r)
+let class_concept_held_back ctx r = concept_held_back ctx (Class r)
 
 let element_position mp c =
   if c.rc_frame <> [] then
@@ -965,7 +965,7 @@ let in_unmerged_wrapper r = in_unmerged_wrapper_named (Common.pp_global_name Typ
     [GlobRef.t], so it is identified by its module path instead -- which also
     covers the types declared inside it, since an eponymous record merged into
     the module struct is emitted as that same nested struct. *)
-type nested_struct_owner = NSref of GlobRef.t | NSmodule of ModPath.t
+type nested_struct_owner = Global of GlobRef.t | Module of ModPath.t
 
 (** C++ names of the structs emitted as members of an enclosing struct, mapped
     to every owner they stand for, for the extent of a unit
@@ -988,16 +988,16 @@ let with_nested_struct_names m f = State.bind nested_struct_names m f
 
 let nested_struct_owner_equal a b =
   match (a, b) with
-  | NSref x, NSref y -> Common.globref_equal x y
-  | NSmodule x, NSmodule y -> ModPath.equal x y
+  | Global x, Global y -> Common.globref_equal x y
+  | Module x, Module y -> ModPath.equal x y
   | _ -> false
 
 (** Whether [owner] is the nested struct that [r] is itself emitted as, either
     because [r] is that struct or because [r] is a member of the module that
     is. *)
 let nested_struct_owner_covers r = function
-  | NSref r' -> Common.globref_equal r r'
-  | NSmodule mp -> ModPath.equal mp (modpath_of_r r)
+  | Global r' -> Common.globref_equal r r'
+  | Module mp -> ModPath.equal mp (modpath_of_r r)
 
 (** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]:
     the unit's planned ones must be exactly these. *)
@@ -1023,7 +1023,7 @@ let add_nested_struct_name m (name, owner) =
     struct, so the reference needs the enclosing struct's qualifier. *)
 let is_nested_struct_ref r =
   CString.Map.exists
-    (fun _name owners -> List.exists (function NSref r' -> Common.globref_equal r r' | _ -> false) owners)
+    (fun _name owners -> List.exists (function Global r' -> Common.globref_equal r r' | _ -> false) owners)
     !nested_struct_names
 
 (** Whether [r], rendered unqualified as [name], is shadowed by some nested
@@ -1034,8 +1034,8 @@ let is_nested_struct_ref r =
     file can shadow [r], though the table holds every unit's. *)
 let is_shadowed_global_name name r =
   let same_file = function
-    | NSref r' -> ModPath.equal (base_mp (modpath_of_r r')) (base_mp (modpath_of_r r))
-    | NSmodule mp -> ModPath.equal (base_mp mp) (base_mp (modpath_of_r r))
+    | Global r' -> ModPath.equal (base_mp (modpath_of_r r')) (base_mp (modpath_of_r r))
+    | Module mp -> ModPath.equal (base_mp mp) (base_mp (modpath_of_r r))
   in
   let may_shadow owner = (not (Common.get_force_cross_file_qualification ())) || same_file owner in
   match CString.Map.find_opt name !nested_struct_names with

@@ -2683,7 +2683,7 @@ and pp_leaf_decl ctx env (d : decl) =
     let struct_name = struct_definition_name ctx id in
     note_file_scope_name ctx id;
     if Probe.checking () then if ctx.rc_in_struct then
-      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref id);
+      printed_nested_struct (Pp.string_of_ppcmds struct_name) (Global id);
     let f_s =
       entering_from ctx
         (Cpp_resolution.Inductive_struct id :: (if tparams = [] then [] else [In_template]))
@@ -2861,7 +2861,7 @@ and pp_leaf_decl ctx env (d : decl) =
        a user type spelled [Comparison] inside the struct would otherwise
        capture every unqualified mention of it. *)
     if Probe.checking () then if ctx.rc_in_struct then
-      printed_nested_struct (Pp.string_of_ppcmds struct_name) (NSref name);
+      printed_nested_struct (Pp.string_of_ppcmds struct_name) (Global name);
     str "enum class "
     ++ struct_name
     ++ str " {"

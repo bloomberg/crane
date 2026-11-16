@@ -308,8 +308,8 @@ val file_scope_aliases_of : Common.file -> Names.Id.Set.t
 (** A concept a frame is holding back until after the struct it was written
     in, identified by whatever declares it. *)
 type held_concept =
-  | HCmodtype of Names.ModPath.t  (** a module type's concept *)
-  | HCclass of Names.GlobRef.t  (** a type class's concept *)
+  | Modtype of Names.ModPath.t  (** a module type's concept *)
+  | Class of Names.GlobRef.t  (** a type class's concept *)
 
 (** Equality on {!held_concept}. *)
 val held_concept_equal : held_concept -> held_concept -> bool
@@ -542,8 +542,8 @@ val in_unmerged_wrapper_named : string -> Names.GlobRef.t -> bool
 (** What a nested struct name was emitted for: a Rocq reference, or a module
     (which has no [GlobRef.t]). *)
 type nested_struct_owner =
-  | NSref of Names.GlobRef.t
-  | NSmodule of Names.ModPath.t
+  | Global of Names.GlobRef.t
+  | Module of Names.ModPath.t
 
 (** [with_nested_struct_names m f] is [f ()] with [m] the C++ names of the
     structs emitted as members of an enclosing struct, mapped to every owner

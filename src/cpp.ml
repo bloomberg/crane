@@ -80,7 +80,7 @@ let rec concept_of_mt = function
 (** The concept an enclosing struct holds back that makes it hold back
     [a]. *)
 let held_concept_of (a : Cpp_ast.assertion) =
-  match a.concept with Of_module_type c -> HCmodtype c.module_type | Of_class c -> HCclass c.global
+  match a.concept with Of_module_type c -> Modtype c.module_type | Of_class c -> Class c.global
 
 (** The assertion that the module [mp] satisfies the concept of its module
     type [mty], written at the position [ctx], and the assertions it holds
@@ -109,7 +109,7 @@ let template_param ctx (mbid, mt) : Cpp_ast.template_param =
   (* A concept the enclosing struct holds back is declared after it, so a
      functor inside it takes its parameter unconstrained, as a class concept
      held back does. *)
-  | Some mt_mp when concept_held_back ctx (HCmodtype mt_mp) -> Typename (Module_parameter param)
+  | Some mt_mp when concept_held_back ctx (Modtype mt_mp) -> Typename (Module_parameter param)
   | Some mt_mp ->
     Constrained
       {concept = Cpp_ast.concept_ref mt_mp; args = List.map Cpp_ast.module_ref (concept_extra_args mt_mp); param}
@@ -743,7 +743,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
        [Module Nat] hides the runtime [Nat] exactly as an [Inductive Nat]
        would.  Record it so the global one is spelled [::Nat]
        ({!Cpp_names.global_scopes_for}). *)
-    if ctx.rc_in_struct then printed_nested_struct name (NSmodule mp);
+    if ctx.rc_in_struct then printed_nested_struct name (Module mp);
     let mod_pp =
       match m.expr with
       | Core.Module.Expr.Functor _ ->
@@ -831,7 +831,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
               (fun (l, r, fields) ->
                 let d = generated_concept ~module_ r fields in
                 let concept = class_concept_element ctx ~module_ r d in
-                (HCclass r, Cpp_ast.(seq [text (pp_doc_comment l); concept]), concept_names_member mp d) )
+                (Class r, Cpp_ast.(seq [text (pp_doc_comment l); concept]), concept_names_member mp d) )
               (declared_classes sel)
           else []
         in
@@ -844,7 +844,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
                   let path = MPdot (mp, l) in
                   let concept = Cpp_ind.modtype_concept ~module_ path ~params:[] m in
                   let concept_pp = Cpp_ast.modtype_concept ~path ~params:[] concept in
-                  Some (HCmodtype path, concept_pp, Modtype_concept.names_member mp concept)
+                  Some (Modtype path, concept_pp, Modtype_concept.names_member mp concept)
                 | _ -> None )
               sel
           else
@@ -1542,7 +1542,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
     let outer = !header in
     let class_concepts =
       List.map
-        (fun (_, r, fields) -> (HCclass r, concept_names_member mp (Cpp_ind.concept ~module_ r fields)))
+        (fun (_, r, fields) -> (Class r, concept_names_member mp (Cpp_ind.concept ~module_ r fields)))
         (declared_classes sel)
     in
     let hoisted_here = (not outer.in_struct) && List.exists (fun (_, names) -> not names) class_concepts in
@@ -1556,7 +1556,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
     method_candidates := frame.method_candidates;
     let modtypes =
       List.map
-        (fun (path, c) -> (HCmodtype path, Modtype_concept.names_member mp c))
+        (fun (path, c) -> (Modtype path, Modtype_concept.names_member mp c))
         (modtypes ~module_ mp ~params:[] sel)
     in
     plan_module_concepts mp (Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes);
@@ -2831,11 +2831,11 @@ let plan_nested_structs s =
              | Core.Inductive.Kind.Type_class _ -> []
              | Core.Inductive.Kind.Record _ when Module_plan.is_eponymous_record r -> []
              | _ when Table.is_enum_inductive r ->
-               [(enum_declaration_name r, NSref r)]
+               [(enum_declaration_name r, Global r)]
              (* Moved out of the collision struct holding it to namespace
                 scope, where it is generated ({!plan_concept_prerequisites}). *)
              | _ when Module_plan.is_namespace_scope_ref r -> []
-             | _ -> [(struct_declaration_name ~merged ~promoted ~local r, NSref r)] )
+             | _ -> [(struct_declaration_name ~merged ~promoted ~local r, Global r)] )
          (Array.to_list ind.packets) )
   in
   let rec elems ~in_struct ~local ?(role = fun _ -> None) parent sel =
@@ -2849,7 +2849,7 @@ let plan_nested_structs s =
         | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = a; type_ = t})
           when in_struct && is_typeclass_instance t && instance_has_struct a t
                && not (Module_plan.is_namespace_scope_ref r) ->
-          [(Common.pp_global_name Type r, NSref r)]
+          [(Common.pp_global_name Type r, Global r)]
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> []
         | Core.Module.Structure_item.Module m -> (
           let mp = MPdot (parent, l) in
@@ -2858,7 +2858,7 @@ let plan_nested_structs s =
           | Some Module_plan.Flattened -> []
           | Some (Module_plan.Own | Module_plan.Bystander) | None ->
             ( if in_struct then
-                [(Table.escape_reserved_struct_name (Common.emitted_module_name mp), NSmodule mp)]
+                [(Table.escape_reserved_struct_name (Common.emitted_module_name mp), Module mp)]
               else [] )
             @ module_expr mp m.expr ) )
       sel

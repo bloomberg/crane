@@ -1649,8 +1649,8 @@ let check_against_plan (plan : Target_plan.t) =
     let describe (name, owner) =
       name ^ " ("
       ^ ( match owner with
-        | Cpp_state.NSref r -> Pp.string_of_ppcmds (GlobRef.print r)
-        | Cpp_state.NSmodule mp -> ModPath.to_string mp )
+        | Cpp_state.Global r -> Pp.string_of_ppcmds (GlobRef.print r)
+        | Cpp_state.Module mp -> ModPath.to_string mp )
       ^ ")"
     in
     let mem (n, o) l = List.exists (fun (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o') l in
