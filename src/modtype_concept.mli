@@ -6,9 +6,11 @@
     decided here: which types are [M]'s own members (spelled
     [typename M::x]), which belong to a functor parameter, which come from a
     custom mapping.  The printer only spells those answers
-    ({!Cpp_concepts}).  The concept is built from the Core module type: each
-    type is converted through translation's type conversion and lowered to
-    CppIR, which the concept holds. *)
+    ({!Cpp_concepts}).  The concept is built from the Core module type
+    ({!Modtype_concept_generation}): each type is converted through
+    translation's type conversion and lowered to CppIR, which the concept
+    holds.  This module is the value, which the printer reads without
+    reaching translation. *)
 
 open Names
 
@@ -77,18 +79,12 @@ type t =
           declared after the concept. *)
   | Constraint of constraint_
 
-(** [constraint_of ~params mt] is what the module type [mt] contributes
-    where a concept body is expected, [params] the functor parameters
-    visible in it. *)
-val constraint_of : Translation_state.t -> params:ModPath.t list -> Core.Module.Type.t -> constraint_
-
-(** [generate ~params mt] is the concept of the module type [mt], over the
-    functor parameters [params] as well as [M]. *)
-val generate : Translation_state.t -> params:ModPath.t list -> Core.Module.Type.t -> t
+(** [is_under base mp]: whether [mp] is [base] or a module path inside it. *)
+val is_under : ModPath.t -> ModPath.t -> bool
 
 (** [names_member mp c] is whether printing [c] names, from outside the
     module [mp], one of [mp]'s members: a concept that does cannot be
     declared ahead of [mp]'s struct.  Asked of the global references the
     printer resolves by name, which are neither [M]'s members nor names
     resolved inside a signature they belong to. *)
-val names_member : Translation_state.t -> ModPath.t -> t -> bool
+val names_member : ModPath.t -> t -> bool

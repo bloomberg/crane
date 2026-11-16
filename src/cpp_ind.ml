@@ -1434,7 +1434,7 @@ let modtype_concept cx ~module_ path ~params mt =
     ~recorded:(fun () -> Option.default [] (MPmap.find_opt path !modtype_concepts_generated))
     ~record:(fun l -> modtype_concepts_generated := MPmap.add path l !modtype_concepts_generated)
     ~same:(fun c c' -> compare c c' = 0)
-    (fun () -> Modtype_concept.generate cx ~params mt)
+    (fun () -> Modtype_concept_generation.generate cx ~params mt)
 
 (** The methods of each eponymous record, generated ahead of the files with
     the helpers lifted out of them, by the record. *)

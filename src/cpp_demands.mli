@@ -35,7 +35,7 @@ val of_type : Unit_context.t -> Cpp_ir.Resolved.Type.t -> Table.header list
 
 (** The headers the concept of a module type needs for what the unit given
     writes in it. *)
-val of_modtype_concept : Translation_state.t -> Unit_context.t -> Modtype_concept.t -> Table.header list
+val of_modtype_concept : Unit_context.t -> Modtype_concept.t -> Table.header list
 
 (** The globals the finished declaration [d] writes the names of, where the
     printer resolves them: a type's, a constant's or a constructor's, an

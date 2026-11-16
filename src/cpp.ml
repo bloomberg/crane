@@ -850,7 +850,7 @@ let rec pp_structure_elem cx ~is_header f ctx ~module_ = function
                   let path = MPdot (mp, l) in
                   let concept = Cpp_ind.modtype_concept cx ~module_ path ~params:[] m in
                   let concept_pp = Cpp_ast.modtype_concept ~path ~params:[] concept in
-                  Some (Modtype path, concept_pp, Modtype_concept.names_member cx mp concept)
+                  Some (Modtype path, concept_pp, Modtype_concept.names_member mp concept)
                 | _ -> None )
               sel
           else
@@ -1519,7 +1519,7 @@ let registered_methods cx ?(order = Fun.id) kn (ind : Core.Inductive.t) =
     planned for each module ({!Cpp_state.plans}). *)
 let walk_as_rendered cx ?(reversed = false) ?(after_wrapper = ignore) ?(classes = fun ~module_:_ _ -> ())
     ?(after_module = fun ~module_:_ _ _ -> ()) ?(in_body = fun ~wrapper:_ _ _ -> ())
-    ?(modtype = fun ~module_:_ _ ~params mt -> Modtype_concept.generate cx ~params mt)
+    ?(modtype = fun ~module_:_ _ ~params mt -> Modtype_concept_generation.generate cx ~params mt)
     ~decl s =
   let order l = if reversed then List.rev l else l in
   let analysis = get_structure_analysis cx in
@@ -1564,7 +1564,7 @@ let walk_as_rendered cx ?(reversed = false) ?(after_wrapper = ignore) ?(classes 
     method_candidates := frame.method_candidates;
     let modtypes =
       List.map
-        (fun (path, c) -> (Modtype path, Modtype_concept.names_member cx mp c))
+        (fun (path, c) -> (Modtype path, Modtype_concept.names_member mp c))
         (modtypes ~module_ mp ~params:[] sel)
     in
     let plan = Cpp_ind.plan_concepts ~nested:outer.in_struct ~classes:class_concepts ~modtypes in
@@ -1740,7 +1740,7 @@ let finish_ahead cx u (aheads : Cpp_ind.ahead list) =
   Unit_program.install program;
   List.iter Table.demand_header
     (Unit_program.demands program
-    @ List.concat_map (Cpp_demands.of_modtype_concept cx u) (Cpp_ind.generated_concepts ())
+    @ List.concat_map (Cpp_demands.of_modtype_concept u) (Cpp_ind.generated_concepts ())
     @ List.concat_map (Cpp_demands.of_type u) (Cpp_ind.generated_record_field_types ()))
 
 (** Generate and finish the one declaration [d], an element of [module_]. *)
