@@ -268,14 +268,14 @@ template <typename S> struct BankAccountCollection {
 };
 
 std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext();
-std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>,
-          int64_t> testtoST2_ext();
-std::pair<std::pair<std::pair<int64_t, int64_t>, bool>,
-          int64_t> acc_test1_ext();
-std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
-          int64_t> acc_test2_ext();
-std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
-          int64_t> bankacc_test1_ext();
+std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>, int64_t>
+testtoST2_ext();
+std::pair<std::pair<std::pair<int64_t, int64_t>, bool>, int64_t>
+acc_test1_ext();
+std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
+acc_test2_ext();
+std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
+bankacc_test1_ext();
 
 inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;

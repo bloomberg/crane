@@ -23,8 +23,9 @@ InstructionSequenceExec::state InstructionSequenceExec::exec_program(
           typename List<InstructionSequenceExec::instruction>::Nil>(prog.v())) {
     return s;
   } else {
-    const auto &[a0, a1] = std::get<
-        typename List<InstructionSequenceExec::instruction>::Cons>(prog.v());
+    const auto &[a0, a1] =
+        std::get<typename List<InstructionSequenceExec::instruction>::Cons>(
+            prog.v());
     return exec_program(*a1, execute(std::move(s), a0));
   }
 }

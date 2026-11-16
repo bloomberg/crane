@@ -39,11 +39,11 @@ struct ClassInstanceAtFunctionType {
   };
 
   static inline const uint64_t total =
-      ((WeighNat::weigh(UINT64_C(1)) + WeighFn::weigh([](uint64_t n) {
-        return (n * UINT64_C(2));
-      })) + WeighPair<WeighNat, WeighFn, uint64_t, crane::fn<uint64_t(uint64_t)>>::weigh(std::make_pair(UINT64_C(3), [](uint64_t n) {
-        return (n + UINT64_C(1));
-      })));
+      ((WeighNat::weigh(UINT64_C(1)) +
+        WeighFn::weigh([](uint64_t n) { return (n * UINT64_C(2)); })) +
+       WeighPair<WeighNat, WeighFn, uint64_t,
+                 crane::fn<uint64_t(uint64_t)>>::weigh(std::make_pair(
+           UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(1)); })));
 };
 
 #endif // INCLUDED_CLASS_INSTANCE_AT_FUNCTION_TYPE

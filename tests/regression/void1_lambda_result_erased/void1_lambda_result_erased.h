@@ -195,8 +195,9 @@ struct Void1LambdaResultErased {
         : v_([&]() -> variant_t {
             if (std::holds_alternative<
                     typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
-              const auto &[r] = std::get<
-                  typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
+              const auto &[r] =
+                  std::get<typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                      _other.v());
               return RetF{[&]() -> R {
                 if constexpr (crane_convertible<R, const CraneU1 &>) {
                   return crane_convert<R>(r);
@@ -281,30 +282,19 @@ struct Void1LambdaResultErased {
 
     template <typename CraneU0, typename CraneU1>
     tree(const tree<CraneU0, CraneU1> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                         [=]() -> variant_t {
-                                                           const auto &[observe] =
-                                                               std::get<
-                                                                   typename tree<
-                                                                       CraneU0,
-                                                                       CraneU1>::Go>(
-                                                                   _other.v());
-                                                           return Go{
-                                                               crane_convert<
-                                                                   treeF<
-                                                                       E, R,
-                                                                       tree<E,
-                                                                            R>>>(
-                                                                   observe)};
-                                                         })) {}
+        : lazy_v_(crane::lazy<variant_t>::converted_from(
+        _other.lazy_cell(), [=]() -> variant_t {
+          const auto &[observe] =
+              std::get<typename tree<CraneU0, CraneU1>::Go>(_other.v());
+          return Go{crane_convert<treeF<E, R, tree<E, R>>>(observe)};
+        })) {}
 
     explicit tree(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static tree<E, R> go(treeF<E, R, tree<E, R>> observe) {
-      return tree<E, R>(
-          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                                 std::move(observe)));
+      return tree<E, R>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(observe)));
     }
 
     explicit tree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}

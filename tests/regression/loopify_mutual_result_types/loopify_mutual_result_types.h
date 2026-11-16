@@ -366,11 +366,11 @@ struct LoopifyMutualResultTypes {
   static md dbl_md(const md &m);
   static uint64_t sum_e(const e &x);
   static uint64_t sum_md(const md &m);
-  [[gnu::used]] static inline const e sample = e::add(
-      e::leaf(UINT64_C(1)), e::meta(
-          md::mpair(
-              md::mconst(e::add(e::leaf(UINT64_C(2)), e::leaf(UINT64_C(3)))),
-              md::mpair(md::mnull(), md::mconst(e::leaf(UINT64_C(4)))))));
+  [[gnu::used]] static inline const e sample =
+      e::add(e::leaf(UINT64_C(1)),
+             e::meta(md::mpair(
+                 md::mconst(e::add(e::leaf(UINT64_C(2)), e::leaf(UINT64_C(3)))),
+                 md::mpair(md::mnull(), md::mconst(e::leaf(UINT64_C(4)))))));
   /// 2 * (1 + 2 + 3 + 4)
   static bool check(std::monostate _x);
 };

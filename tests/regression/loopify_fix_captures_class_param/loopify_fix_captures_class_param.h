@@ -361,9 +361,8 @@ struct LoopifyFixCapturesClassParam {
           if (k.ltb(_tcI0::size(Nat::s(Nat::s(Nat::o()))))) {
             _stack.emplace_back(CraneEnter{std::move(k), &a0});
           } else {
-            _stack.emplace_back(
-                CraneEnter_loop{k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))),
-                                crane_raw(a1)});
+            _stack.emplace_back(CraneEnter_loop{
+                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), crane_raw(a1)});
           }
         }
       }
@@ -376,16 +375,14 @@ struct LoopifyFixCapturesClassParam {
   };
 
   static_assert(Sized<id_size>);
-  static inline const std::optional<Nat> result = f<id_size>(
-      tree::node(
-          List<tree>::cons(
-              tree::leaf(Nat::s(Nat::o())), List<tree>::cons(
-                  tree::node(
-                      List<tree>::cons(
-                          tree::leaf(
-                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                          List<tree>::nil())), List<tree>::nil()))),
-      Nat::s(Nat::s(Nat::s(Nat::o()))));
+  static inline const std::optional<Nat> result =
+      f<id_size>(tree::node(List<tree>::cons(
+          tree::leaf(Nat::s(Nat::o())),
+          List<tree>::cons(tree::node(List<tree>::cons(
+              tree::leaf(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+              List<tree>::nil())),
+                           List<tree>::nil()))),
+                 Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
 
 #endif // INCLUDED_LOOPIFY_FIX_CAPTURES_CLASS_PARAM

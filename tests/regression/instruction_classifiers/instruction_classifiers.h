@@ -309,12 +309,12 @@ struct InstructionClassifiers {
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F5, typename F6>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F6 &, const uint64_t &>
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_acc_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                       T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
@@ -383,16 +383,19 @@ struct InstructionClassifiers {
   };
 
   static uint64_t count_writes_acc(const List<instr_acc> &prog);
-  static inline const uint64_t test_writes_acc =
-      count_writes_acc(
-          List<instr_acc>::cons(
-              instr_acc::nop_acc(), List<instr_acc>::cons(
-                  instr_acc::ldm(UINT64_C(9)), List<instr_acc>::cons(
-                      instr_acc::rar(), List<instr_acc>::cons(
-                          instr_acc::kbp(), List<instr_acc>::cons(
-                              instr_acc::nop_acc(), List<instr_acc>::cons(
-                                  instr_acc::add(UINT64_C(1)),
-                                  List<instr_acc>::nil())))))));
+  static inline const uint64_t test_writes_acc = count_writes_acc(List<
+      instr_acc>::cons(instr_acc::nop_acc(),
+                       List<instr_acc>::cons(
+                           instr_acc::ldm(UINT64_C(9)),
+                           List<instr_acc>::cons(
+                               instr_acc::rar(),
+                               List<instr_acc>::cons(instr_acc::kbp(),
+                                                     List<instr_acc>::cons(
+                                                         instr_acc::nop_acc(),
+                                                         List<instr_acc>::cons(
+                                                             instr_acc::add(
+                                                                 UINT64_C(1)),
+                                                             List<instr_acc>::nil())))))));
 
   struct instr_ram {
     // TYPES
@@ -507,16 +510,18 @@ struct InstructionClassifiers {
   };
 
   static uint64_t count_writes_ram(const List<instr_ram> &prog);
-  static inline const uint64_t test_writes_ram =
-      count_writes_ram(
-          List<instr_ram>::cons(
-              instr_ram::nop_ram(), List<instr_ram>::cons(
-                  instr_ram::wrm(), List<instr_ram>::cons(
-                      instr_ram::add_ram(UINT64_C(3)), List<instr_ram>::cons(
-                          instr_ram::wr3(), List<instr_ram>::cons(
-                              instr_ram::wmp(), List<instr_ram>::cons(
-                                  instr_ram::nop_ram(),
-                                  List<instr_ram>::nil())))))));
+  static inline const uint64_t test_writes_ram = count_writes_ram(List<
+      instr_ram>::cons(instr_ram::nop_ram(),
+                       List<instr_ram>::cons(instr_ram::wrm(),
+                                             List<instr_ram>::cons(
+                                                 instr_ram::add_ram(UINT64_C(3)),
+                                                 List<instr_ram>::cons(
+                                                     instr_ram::wr3(),
+                                                     List<instr_ram>::cons(
+                                                         instr_ram::wmp(),
+                                                         List<instr_ram>::cons(
+                                                             instr_ram::nop_ram(),
+                                                             List<instr_ram>::nil())))))));
 
   struct instr_regs {
     // TYPES
@@ -601,7 +606,7 @@ struct InstructionClassifiers {
       if (std::holds_alternative<typename instr_regs::NOP_regs>(this->v())) {
         return false;
       } else if (
-          std::holds_alternative<typename instr_regs::ADD_regs>(this->v())) {
+              std::holds_alternative<typename instr_regs::ADD_regs>(this->v())) {
         return false;
       } else {
         return true;
@@ -619,18 +624,20 @@ struct InstructionClassifiers {
     template <typename T1, typename F0, typename F1, typename F2, typename F3,
               typename F4, typename F6>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F2 &, const uint64_t &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F4 &, const uint64_t &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F6 &, const uint64_t &>
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_regs_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, T1 f4,
                        F6 &&f5) const {
       if (std::holds_alternative<typename instr_regs::XCH_regs>(this->v())) {
         const auto &[a0] = std::get<typename instr_regs::XCH_regs>(this->v());
         return f(a0);
       } else if (
-          std::holds_alternative<typename instr_regs::INC_regs>(this->v())) {
+              std::holds_alternative<typename instr_regs::INC_regs>(this->v())) {
         const auto &[a0] = std::get<typename instr_regs::INC_regs>(this->v());
         return f0(a0);
       } else if (std::holds_alternative<typename instr_regs::FIM>(this->v())) {
@@ -642,8 +649,8 @@ struct InstructionClassifiers {
       } else if (std::holds_alternative<typename instr_regs::ISZ>(this->v())) {
         const auto &[a0, a1] = std::get<typename instr_regs::ISZ>(this->v());
         return f3(a0, a1);
-      } else if (
-          std::holds_alternative<typename instr_regs::NOP_regs>(this->v())) {
+      } else if (std::holds_alternative<typename instr_regs::NOP_regs>(
+                     this->v())) {
         return f4;
       } else {
         const auto &[a0] = std::get<typename instr_regs::ADD_regs>(this->v());
@@ -655,16 +662,17 @@ struct InstructionClassifiers {
   static uint64_t count_writes_regs(const List<instr_regs> &prog);
   static inline const uint64_t test_writes_regs =
       count_writes_regs(List<instr_regs>::cons(
-                            instr_regs::nop_regs(), List<instr_regs>::cons(
-                                instr_regs::fim(UINT64_C(0), UINT64_C(12)),
-                                List<instr_regs>::cons(
-                                    instr_regs::add_regs(UINT64_C(1)), List<
-                                        instr_regs>::cons(
-                                        instr_regs::inc_regs(UINT64_C(7)), List<
-                                            instr_regs>::cons(
-                                            instr_regs::isz(UINT64_C(1),
-                                                            UINT64_C(2)),
-                                            List<instr_regs>::nil()))))));
+          instr_regs::nop_regs(), List<instr_regs>::cons(
+                                      instr_regs::fim(UINT64_C(0),
+                                                      UINT64_C(12)),
+                                      List<instr_regs>::cons(
+                                          instr_regs::add_regs(UINT64_C(1)),
+                                          List<instr_regs>::cons(
+                                              instr_regs::inc_regs(UINT64_C(7)),
+                                              List<instr_regs>::cons(
+                                                  instr_regs::isz(UINT64_C(1),
+                                                                  UINT64_C(2)),
+                                                  List<instr_regs>::nil()))))));
 
   struct instr_jump {
     // TYPES
@@ -757,7 +765,7 @@ struct InstructionClassifiers {
       if (std::holds_alternative<typename instr_jump::ADD_jump>(this->v())) {
         return false;
       } else if (
-          std::holds_alternative<typename instr_jump::NOP_jump>(this->v())) {
+              std::holds_alternative<typename instr_jump::NOP_jump>(this->v())) {
         return false;
       } else {
         return true;
@@ -776,12 +784,13 @@ struct InstructionClassifiers {
               typename F4, typename F5, typename F6>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
                                      const uint64_t &> &&
-      std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F5 &, const uint64_t &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F6 &, const uint64_t &>
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F6 &, const uint64_t &>
     T1 instr_jump_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, T1 f6) const {
       if (std::holds_alternative<typename instr_jump::JCN>(this->v())) {
@@ -796,17 +805,17 @@ struct InstructionClassifiers {
       } else if (std::holds_alternative<typename instr_jump::JIN>(this->v())) {
         const auto &[a0] = std::get<typename instr_jump::JIN>(this->v());
         return f2(a0);
-      } else if (
-          std::holds_alternative<typename instr_jump::BBL_jump>(this->v())) {
+      } else if (std::holds_alternative<typename instr_jump::BBL_jump>(
+                     this->v())) {
         const auto &[a0] = std::get<typename instr_jump::BBL_jump>(this->v());
         return f3(a0);
-      } else if (
-          std::holds_alternative<typename instr_jump::ISZ_jump>(this->v())) {
+      } else if (std::holds_alternative<typename instr_jump::ISZ_jump>(
+                     this->v())) {
         const auto &[a0, a1] =
             std::get<typename instr_jump::ISZ_jump>(this->v());
         return f4(a0, a1);
-      } else if (
-          std::holds_alternative<typename instr_jump::ADD_jump>(this->v())) {
+      } else if (std::holds_alternative<typename instr_jump::ADD_jump>(
+                     this->v())) {
         const auto &[a0] = std::get<typename instr_jump::ADD_jump>(this->v());
         return f5(a0);
       } else {
@@ -818,20 +827,24 @@ struct InstructionClassifiers {
   static uint64_t count_jumps(const List<instr_jump> &prog);
   static inline const uint64_t test_jump_classifier =
       count_jumps(List<instr_jump>::cons(
-                      instr_jump::add_jump(UINT64_C(0)), List<instr_jump>::cons(
-                          instr_jump::jcn(UINT64_C(4), UINT64_C(8)), List<
-                              instr_jump>::cons(
-                              instr_jump::nop_jump(), List<instr_jump>::cons(
-                                  instr_jump::jms(UINT64_C(33)), List<
-                                      instr_jump>::cons(
-                                      instr_jump::isz_jump(UINT64_C(1),
-                                                           UINT64_C(2)),
-                                      List<instr_jump>::nil()))))));
+          instr_jump::add_jump(UINT64_C(0)), List<instr_jump>::cons(
+                                                 instr_jump::jcn(UINT64_C(4),
+                                                                 UINT64_C(8)),
+                                                 List<instr_jump>::cons(
+                                                     instr_jump::nop_jump(),
+                                                     List<instr_jump>::cons(
+                                                         instr_jump::jms(
+                                                             UINT64_C(33)),
+                                                         List<instr_jump>::cons(
+                                                             instr_jump::isz_jump(
+                                                                 UINT64_C(1),
+                                                                 UINT64_C(2)),
+                                                             List<instr_jump>::nil()))))));
   static inline const std::pair<
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t> t =
-      std::make_pair(
-          std::make_pair(std::make_pair(test_writes_acc, test_writes_ram),
-                         test_writes_regs), test_jump_classifier);
+      std::make_pair(std::make_pair(
+          std::make_pair(test_writes_acc, test_writes_ram), test_writes_regs),
+                     test_jump_classifier);
 };
 
 #endif // INCLUDED_INSTRUCTION_CLASSIFIERS

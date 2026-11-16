@@ -83,8 +83,8 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(), std::declval<
-            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+        std::declval<typename I::template M<crane::obj>>(),
+        std::declval<crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
@@ -123,13 +123,14 @@ struct HktLambdaParamCarrier {
   static_assert(Monad<OptM>);
 
   template <Monad _tcI0, typename T2>
-  static typename _tcI0::template M<T2> twice(
-      typename _tcI0::template M<T2> m, const std::type_identity_t<
-          crane::fn<typename _tcI0::template M<T2>(T2)>> &f) {
+  static typename _tcI0::template M<T2> twice(typename _tcI0::template M<T2> m,
+                                              const std::type_identity_t<
+                                                  crane::fn<
+                                                      typename _tcI0::template M<
+                                                          T2>(T2)>> &f) {
     return _tcI0::template bind<T2, T2>(std::move(m), [=](const T2 &x) {
-      return _tcI0::template bind<T2, T2>(f(x), [](const T2 &y) {
-        return _tcI0::template ret<T2>(y);
-      });
+      return _tcI0::template bind<T2, T2>(
+          f(x), [](const T2 &y) { return _tcI0::template ret<T2>(y); });
     });
   }
 

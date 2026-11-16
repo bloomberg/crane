@@ -30,8 +30,9 @@ struct DoubleOptionNest {
     explicit t(Node _v) : v_(std::move(_v)) {}
 
     static t node(uint64_t a0, std::optional<std::optional<t>> a1) {
-      return t(Node{a0, std::make_shared<std::optional<std::optional<t>>>(
-                        std::move(a1))});
+      return t(Node{
+          a0,
+          std::make_shared<std::optional<std::optional<t>>>(std::move(a1))});
     }
 
     // MANIPULATORS

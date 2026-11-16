@@ -151,9 +151,8 @@ fused(const MemM<T1> &m) {
   return run<void, T1>(
       []() {
         return []<typename T2>(MemM<T2> _x0) -> Monads::template stateT<
-            st, itree_tc_609e8855cd7ad294, T2> {
-              return base<_tcI0, void>(_x0);
-            };
+            st, itree_tc_609e8855cd7ad294,
+            T2> { return base<_tcI0, void>(_x0); };
       }(),
       m);
 }

@@ -79,7 +79,8 @@ LiftedHelperFramePointer::spine(uint64_t n) {
       uint64_t k = _loop_n - 1;
       auto _cell = typename LiftedHelperFramePointer::tree<uint64_t>::Node(
           std::make_shared<LiftedHelperFramePointer::tree<uint64_t>>(
-              tree<uint64_t>::leaf()), k, nullptr);
+              tree<uint64_t>::leaf()),
+          k, nullptr);
       LiftedHelperFramePointer::tree<uint64_t> &_node =
           (_write ? *(*_write = std::make_shared<
                           LiftedHelperFramePointer::tree<uint64_t>>(

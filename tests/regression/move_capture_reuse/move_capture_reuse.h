@@ -187,13 +187,13 @@ public:
 struct MoveCaptureReuse {
   static List<List<uint64_t>> prefix_each(const List<uint64_t> &prefix,
                                           const List<List<uint64_t>> &xss);
-  static inline const List<List<uint64_t>> sample = prefix_each(
-      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()), List<
-          List<uint64_t>>::cons(
-          List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::nil()), List<
-              List<uint64_t>>::cons(
-              List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil()),
-              List<List<uint64_t>>::nil())));
+  static inline const List<List<uint64_t>> sample =
+      prefix_each(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
+                  List<List<uint64_t>>::cons(
+                      List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::nil()),
+                      List<List<uint64_t>>::cons(List<uint64_t>::cons(
+                          UINT64_C(20), List<uint64_t>::nil()),
+                                                 List<List<uint64_t>>::nil())));
   static inline const uint64_t len_sum = []() {
     auto &&_sv = sample;
     if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {

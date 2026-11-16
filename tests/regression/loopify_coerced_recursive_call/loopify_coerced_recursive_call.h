@@ -187,7 +187,7 @@ struct LoopifyCoercedRecursiveCall {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3, typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const bool &>
+             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       const expr &e) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
@@ -249,10 +249,9 @@ struct LoopifyCoercedRecursiveCall {
       std::shared_ptr<expr> a0;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_FstE, CraneCont_Ite, CraneCont_Ite_1,
-                     CraneCont_Ite_2, CraneCont_PairE, CraneCont_PairE_1,
-                     CraneCont_SuccE>;
+    using CraneFrame = std::variant<
+        CraneEnter, CraneCont_FstE, CraneCont_Ite, CraneCont_Ite_1,
+        CraneCont_Ite_2, CraneCont_PairE, CraneCont_PairE_1, CraneCont_SuccE>;
     T1 _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&e});
@@ -305,9 +304,8 @@ struct LoopifyCoercedRecursiveCall {
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Ite_2{std::move(a), &a1, &a2, std::move(_f._tmp4),
-                            std::move(_result)});
+        _stack.emplace_back(CraneCont_Ite_2{
+            std::move(a), &a1, &a2, std::move(_f._tmp4), std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else if (std::holds_alternative<CraneCont_Ite_2>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
@@ -342,7 +340,7 @@ struct LoopifyCoercedRecursiveCall {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3, typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const bool &>
+             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                      const expr &e) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
@@ -404,10 +402,9 @@ struct LoopifyCoercedRecursiveCall {
       std::shared_ptr<expr> a0;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_FstE, CraneCont_Ite, CraneCont_Ite_1,
-                     CraneCont_Ite_2, CraneCont_PairE, CraneCont_PairE_1,
-                     CraneCont_SuccE>;
+    using CraneFrame = std::variant<
+        CraneEnter, CraneCont_FstE, CraneCont_Ite, CraneCont_Ite_1,
+        CraneCont_Ite_2, CraneCont_PairE, CraneCont_PairE_1, CraneCont_SuccE>;
     T1 _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&e});
@@ -460,9 +457,8 @@ struct LoopifyCoercedRecursiveCall {
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Ite_2{std::move(a), &a1, &a2, std::move(_f._tmp4),
-                            std::move(_result)});
+        _stack.emplace_back(CraneCont_Ite_2{
+            std::move(a), &a1, &a2, std::move(_f._tmp4), std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else if (std::holds_alternative<CraneCont_Ite_2>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));

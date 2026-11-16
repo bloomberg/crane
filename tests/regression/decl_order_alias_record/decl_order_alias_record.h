@@ -210,12 +210,13 @@ struct prog {
   uint64_t nregs;
 };
 
-const prog sample = prog{
+const prog sample = prog{List<Instr<uint64_t>>::cons(
+    Instr<uint64_t>::igo(UINT64_C(3)),
     List<Instr<uint64_t>>::cons(
-        Instr<uint64_t>::igo(UINT64_C(3)), List<Instr<uint64_t>>::cons(
-            Instr<uint64_t>::icmp(Cop::CEQ), List<Instr<uint64_t>>::cons(
-                Instr<uint64_t>::istop(), List<Instr<uint64_t>>::nil()))),
-    UINT64_C(2)};
+        Instr<uint64_t>::icmp(Cop::CEQ),
+        List<Instr<uint64_t>>::cons(Instr<uint64_t>::istop(),
+                                    List<Instr<uint64_t>>::nil()))),
+                         UINT64_C(2)};
 const uint64_t sample_size = sample.code.length();
 const uint64_t sample_regs = sample.nregs;
 

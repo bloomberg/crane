@@ -22,9 +22,8 @@ struct DictCtorField {
     }
   };
 
-  static inline const Sz<uint64_t> SzNat = Sz<uint64_t>{[](uint64_t n) {
-    return n;
-  }};
+  static inline const Sz<uint64_t> SzNat =
+      Sz<uint64_t>{[](uint64_t n) { return n; }};
 
   struct box {
     // DATA

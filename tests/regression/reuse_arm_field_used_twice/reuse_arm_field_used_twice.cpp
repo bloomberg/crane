@@ -20,10 +20,10 @@ ReuseArmFieldUsedTwice::app2(ReuseArmFieldUsedTwice::lst a,
           std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(a.v_mut()).a0);
       ReuseArmFieldUsedTwice::lst xs = std::move(
           *std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(a.v_mut()).a1);
-      return lst::cons_crane_reuse(
-          std::move(std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(
-                        a.v_mut())
-                        .a1), std::move(x), app2(std::move(xs), std::move(b)));
+      return lst::cons_crane_reuse(std::move(
+          std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(a.v_mut()).a1),
+                                   std::move(x),
+                                   app2(std::move(xs), std::move(b)));
     } else {
       if (std::holds_alternative<typename ReuseArmFieldUsedTwice::lst::Nil>(
               a.v_mut())) {
@@ -55,10 +55,9 @@ ReuseArmFieldUsedTwice::dbl(ReuseArmFieldUsedTwice::lst l) {
           std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a0);
       ReuseArmFieldUsedTwice::lst xs = std::move(
           *std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1);
-      return lst::cons_crane_reuse(
-          std::move(std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(
-                        l.v_mut())
-                        .a1), std::move(x), app2(xs, xs));
+      return lst::cons_crane_reuse(std::move(
+          std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1),
+                                   std::move(x), app2(xs, xs));
     } else {
       if (std::holds_alternative<typename ReuseArmFieldUsedTwice::lst::Nil>(
               l.v_mut())) {
@@ -90,10 +89,9 @@ ReuseArmFieldUsedTwice::pairs(ReuseArmFieldUsedTwice::lst l) {
           std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a0);
       ReuseArmFieldUsedTwice::lst xs = std::move(
           *std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1);
-      return lst::cons_crane_reuse(
-          std::move(std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(
-                        l.v_mut())
-                        .a1), (std::move(x) + len(xs)), pairs(xs));
+      return lst::cons_crane_reuse(std::move(
+          std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1),
+                                   (std::move(x) + len(xs)), pairs(xs));
     } else {
       if (std::holds_alternative<typename ReuseArmFieldUsedTwice::lst::Nil>(
               l.v_mut())) {

@@ -5,13 +5,13 @@ UseAfterMove::pattern1(const UseAfterMove::State &s) {
   return std::make_pair(s, s.value);
 }
 
-std::pair<std::pair<UseAfterMove::State, uint64_t>,
-          uint64_t> UseAfterMove::pattern2(const UseAfterMove::State &s) {
+std::pair<std::pair<UseAfterMove::State, uint64_t>, uint64_t>
+UseAfterMove::pattern2(const UseAfterMove::State &s) {
   return std::make_pair(std::make_pair(s, s.value), s.data);
 }
 
-std::pair<std::pair<UseAfterMove::State, uint64_t>,
-          uint64_t> UseAfterMove::pattern3(const UseAfterMove::State &s) {
+std::pair<std::pair<UseAfterMove::State, uint64_t>, uint64_t>
+UseAfterMove::pattern3(const UseAfterMove::State &s) {
   return pattern2(s);
 }
 

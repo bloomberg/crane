@@ -155,7 +155,7 @@ public:
               const auto &[a0] =
                   std::get<typename Exp0<CraneU>::ENEG>(_other.v());
               return ENEG{(a0 ? std::make_shared<std::pair<T, Exp0<T>>>(
-                                  crane_convert<std::pair<T, Exp0<T>>>(*a0))
+                                    crane_convert<std::pair<T, Exp0<T>>>(*a0))
                               : nullptr)};
             }
           }

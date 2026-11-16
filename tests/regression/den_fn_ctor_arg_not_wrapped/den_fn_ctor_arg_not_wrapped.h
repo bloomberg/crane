@@ -178,9 +178,8 @@ struct DenFnCtorArgNotWrapped {
   }
 
   static den unbox(const ty &_x, const box &b);
-  static inline const box fb = box::box0(crane_erase_fn([](uint64_t x) {
-    return (x + 1);
-  }));
+  static inline const box fb =
+      box::box0(crane_erase_fn([](uint64_t x) { return (x + 1); }));
   static inline const uint64_t result =
       crane::any_cast<uint64_t>(
           crane::any_cast<crane::fn<crane::obj(crane::obj)>>(

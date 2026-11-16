@@ -20,9 +20,9 @@ uint64_t DeepPatterns::deep_option(
   }
 }
 
-uint64_t DeepPatterns::deep_pair(
-    const std::pair<std::pair<uint64_t, uint64_t>,
-                    std::pair<uint64_t, uint64_t>> &p) {
+uint64_t
+DeepPatterns::deep_pair(const std::pair<std::pair<uint64_t, uint64_t>,
+                                        std::pair<uint64_t, uint64_t>> &p) {
   const auto &[p0, p1] = p;
   const auto &[a, b] = p0;
   const auto &[c, d] = p1;
@@ -117,13 +117,11 @@ uint64_t DeepPatterns::guarded_match(const std::pair<uint64_t, uint64_t> &p) {
 uint64_t DeepPatterns::match_pair_list(
     const DeepPatterns::mylist<DeepPatterns::pair<uint64_t, uint64_t>> &l) {
   if (std::holds_alternative<typename DeepPatterns::mylist<
-                                 DeepPatterns::pair<uint64_t, uint64_t>>::Nil>(
-          l.v())) {
+          DeepPatterns::pair<uint64_t, uint64_t>>::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
-        std::get<typename DeepPatterns::mylist<
-                     DeepPatterns::pair<uint64_t, uint64_t>>::Cons>(l.v());
+    const auto &[a0, a1] = std::get<typename DeepPatterns::mylist<
+        DeepPatterns::pair<uint64_t, uint64_t>>::Cons>(l.v());
     const auto &[a00, a10] = a0;
     return a00;
   }
@@ -140,20 +138,14 @@ uint64_t DeepPatterns::match_two(const DeepPatterns::mylist<uint64_t> &l) {
   }
 }
 
-uint64_t
-DeepPatterns::match_triple(
-    const DeepPatterns::mylist<
-        DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>> &l) {
-  if (std::holds_alternative<
-          typename DeepPatterns::mylist<
-              DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>>::Nil>(l.v())) {
+uint64_t DeepPatterns::match_triple(const DeepPatterns::mylist<
+    DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>> &l) {
+  if (std::holds_alternative<typename DeepPatterns::mylist<
+          DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>>::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
-        std::get<
-            typename DeepPatterns::mylist<
-                DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>>::Cons>(
-            l.v());
+    const auto &[a0, a1] = std::get<typename DeepPatterns::mylist<
+        DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>>::Cons>(l.v());
     if (std::holds_alternative<
             typename DeepPatterns::mylist<DeepPatterns::mylist<uint64_t>>::Nil>(
             a0.v())) {

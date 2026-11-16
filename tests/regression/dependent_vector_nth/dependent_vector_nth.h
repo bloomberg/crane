@@ -148,21 +148,16 @@ struct Vector {
 /// the type and once in the term.
 struct DependentVectorNth {
   static inline const T0<uint64_t> v = T0<uint64_t>::cons(
-      UINT64_C(1), UINT64_C(2), T0<uint64_t>::cons(
+      UINT64_C(1), UINT64_C(2),
+      T0<uint64_t>::cons(
           UINT64_C(2), UINT64_C(1),
           T0<uint64_t>::cons(UINT64_C(3), UINT64_C(0), T0<uint64_t>::nil())));
-  static inline const uint64_t run = (Vector::template nth<uint64_t>(
-                                          UINT64_C(3), v, T::fs(
-                                              UINT64_C(2),
-                                              T::f1(UINT64_C(1)))) +
-                                      Vector::template fold_left<uint64_t,
-                                                                 uint64_t>(
-                                          [](uint64_t _x0,
-                                             uint64_t _x1)
-                                               -> uint64_t {
-                                                return (_x0 + _x1);
-                                              },
-                                          UINT64_C(0), UINT64_C(3), v));
+  static inline const uint64_t run =
+      (Vector::template nth<uint64_t>(UINT64_C(3), v,
+                                      T::fs(UINT64_C(2), T::f1(UINT64_C(1)))) +
+       Vector::template fold_left<uint64_t, uint64_t>(
+           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+           UINT64_C(0), UINT64_C(3), v));
 };
 
 template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {

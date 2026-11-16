@@ -111,12 +111,13 @@ struct TypeOnlyGlobalAsRank2Argument {
 
   template <typename T1> static uint64_t len(const List<T1> &l) {
     return grect<uint64_t, T1>(
-        base,
-        [](const auto &a0, const auto &a1, const uint64_t &a2) -> uint64_t {
-          return step<crane::obj>(crane_convert<crane::obj>(a0),
-                                  crane_convert<List<crane::obj>>(a1),
-                                  std::forward<decltype(a2)>(a2));
-        },
+        base, [](const auto &a0, const auto &a1,
+                 const uint64_t &a2)
+                   -> uint64_t {
+                return step<crane::obj>(crane_convert<crane::obj>(a0),
+                                        crane_convert<List<crane::obj>>(a1),
+                                        std::forward<decltype(a2)>(a2));
+              },
         l);
   }
 

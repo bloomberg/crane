@@ -79,9 +79,8 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel,
                 std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
             List<uint64_t> y = snoc(a0);
             _stack.emplace_back(CraneCont_Cons{std::move(a0), std::move(y)});
-            _stack.emplace_back(
-                CraneEnter{List<List<uint64_t>>::cons(a00, crane::child(a10)),
-                           k});
+            _stack.emplace_back(CraneEnter{
+                List<List<uint64_t>>::cons(a00, crane::child(a10)), k});
           }
         }
       }
@@ -151,8 +150,8 @@ FrameKeptConsumedBeforeCall::again(uint64_t fuel,
             List<uint64_t> y = snoc(a0);
             _stack.emplace_back(CraneCont_Cons{a0, std::move(y)});
             _stack.emplace_back(CraneEnter{
-                                    List<List<uint64_t>>::cons(
-                                        std::move(a0), crane::child(a10)), k});
+                List<List<uint64_t>>::cons(std::move(a0), crane::child(a10)),
+                k});
           }
         }
       }

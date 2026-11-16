@@ -15,8 +15,9 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
               typename DeepPattern::list<DeepPattern::tree>::Nil>(_sv1.v())) {
         return a00;
       } else {
-        const auto &[a01, a11] = std::get<
-            typename DeepPattern::list<DeepPattern::tree>::Cons>(_sv1.v());
+        const auto &[a01, a11] =
+            std::get<typename DeepPattern::list<DeepPattern::tree>::Cons>(
+                _sv1.v());
         if (std::holds_alternative<typename DeepPattern::tree::Leaf>(a01.v())) {
           const auto &[a02] =
               std::get<typename DeepPattern::tree::Leaf>(a01.v());
@@ -47,8 +48,9 @@ DeepPattern::list_deep_match(const DeepPattern::list<DeepPattern::tree> &l) {
                   typename DeepPattern::list<DeepPattern::tree>::Nil>(_sv3.v())) {
             return UINT64_C(0);
           } else {
-            const auto &[a03, a13] = std::get<
-                typename DeepPattern::list<DeepPattern::tree>::Cons>(_sv3.v());
+            const auto &[a03, a13] =
+                std::get<typename DeepPattern::list<DeepPattern::tree>::Cons>(
+                    _sv3.v());
             if (std::holds_alternative<typename DeepPattern::tree::Leaf>(
                     a03.v())) {
               const auto &[a04] =

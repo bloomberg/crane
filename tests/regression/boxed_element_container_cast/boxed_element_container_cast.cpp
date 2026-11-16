@@ -20,25 +20,21 @@ BoxedElementContainerCast::sample_nt(BoxedElementContainerCast::Nonterminal x) {
   }
   case Nonterminal::OBJ: {
     return crane::cons(
-        std::make_pair(
-            crane::obj(
-                std::string(
-                    1, (static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
-                                          (false ? 4 : 0) | (true ? 8 : 0) |
-                                          (false ? 16 : 0) | (true ? 32 : 0) |
-                                          (true ? 64 : 0) |
-                                          (false ? 128 : 0)))) + std::string()),
-            crane::obj(val::vnull())), crane::cons(
-            std::make_pair(
-                crane::obj(
-                    std::string(
-                        1, (static_cast<char>(
-                                (false ? 1 : 0) | (false ? 2 : 0) |
-                                (true ? 4 : 0) | (true ? 8 : 0) |
-                                (false ? 16 : 0) | (true ? 32 : 0) |
-                                (true ? 64 : 0) | (false ? 128 : 0)))) +
-                    std::string()), crane::obj(val::vnull())),
-            crane::list<crane::obj>{}));
+        std::make_pair(crane::obj(std::string(
+            1, (static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
+                                  (false ? 4 : 0) | (true ? 8 : 0) |
+                                  (false ? 16 : 0) | (true ? 32 : 0) |
+                                  (true ? 64 : 0) | (false ? 128 : 0)))) +
+                                  std::string()),
+                       crane::obj(val::vnull())),
+        crane::cons(std::make_pair(crane::obj(std::string(
+            1, (static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
+                                  (true ? 4 : 0) | (true ? 8 : 0) |
+                                  (false ? 16 : 0) | (true ? 32 : 0) |
+                                  (true ? 64 : 0) | (false ? 128 : 0)))) +
+                                              std::string()),
+                                   crane::obj(val::vnull())),
+                    crane::list<crane::obj>{}));
   }
   default:
     std::unreachable();
@@ -71,8 +67,7 @@ BoxedElementContainerCast::sample_symbols(
   }
 }
 
-bool
-BoxedElementContainerCast::run_entry(
+bool BoxedElementContainerCast::run_entry(
     const SigT<std::pair<BoxedElementContainerCast::Nonterminal,
                          crane::list<BoxedElementContainerCast::symbol>>,
                std::pair<crane::obj, crane::obj>> &e) {
@@ -80,8 +75,7 @@ BoxedElementContainerCast::run_entry(
   const auto &[_x, ys] = x0;
   const auto &[pr, _x0] = a1;
   return crane::any_cast<bool>(crane::any_cast<
-                                   crane::fn<crane::obj(crane::obj)>>(pr)(
-                                   sample_symbols(ys)));
+      crane::fn<crane::obj(crane::obj)>>(pr)(sample_symbols(ys)));
 }
 
 uint64_t
@@ -96,8 +90,9 @@ BoxedElementContainerCast::size_of(BoxedElementContainerCast::Nonterminal x,
           _sv.v_mut());
       return Datatypes::template length<
           std::pair<std::string, BoxedElementContainerCast::val>>(std::move(a0));
-    } else if (std::holds_alternative<
-                   typename BoxedElementContainerCast::val::VStr>(_sv.v_mut())) {
+    } else if (
+        std::holds_alternative<typename BoxedElementContainerCast::val::VStr>(
+            _sv.v_mut())) {
       return UINT64_C(100);
     } else {
       return UINT64_C(0);
@@ -117,8 +112,7 @@ BoxedElementContainerCast::size_of(BoxedElementContainerCast::Nonterminal x,
   }
 }
 
-uint64_t
-BoxedElementContainerCast::action_size(
+uint64_t BoxedElementContainerCast::action_size(
     const SigT<std::pair<BoxedElementContainerCast::Nonterminal,
                          crane::list<BoxedElementContainerCast::symbol>>,
                std::pair<crane::obj, crane::obj>> &e) {
@@ -126,5 +120,5 @@ BoxedElementContainerCast::action_size(
   const auto &[x1, ys] = x;
   const auto &[_x, act] = a1;
   return size_of(x1, crane::any_cast<crane::fn<crane::obj(crane::obj)>>(act)(
-                     sample_symbols(ys)));
+                         sample_symbols(ys)));
 }

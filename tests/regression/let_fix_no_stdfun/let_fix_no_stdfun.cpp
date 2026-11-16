@@ -60,9 +60,10 @@ List<uint64_t> LetFixNoStdfun::flatten(const List<List<uint64_t>> &xss) {
             return List<uint64_t>::cons(a00, _self_inner(_self_inner, *a10));
           }
         };
-    auto inner = [&](const List<uint64_t> &ys) -> List<uint64_t> {
-      return inner_impl(inner_impl, ys);
-    };
+    auto inner =
+        [&](const List<uint64_t> &ys) -> List<uint64_t> {
+          return inner_impl(inner_impl, ys);
+        };
     return inner(a0);
   }
 }

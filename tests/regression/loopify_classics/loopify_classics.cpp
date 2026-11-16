@@ -133,15 +133,13 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
           _result = (n + UINT64_C(1));
         } else {
           if (n == UINT64_C(0)) {
-            _stack.emplace_back(
-                CraneEnter{UINT64_C(1),
-                           (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
-                           fuel_});
+            _stack.emplace_back(CraneEnter{
+                UINT64_C(1), (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
+                fuel_});
           } else {
             _stack.emplace_back(CraneCont1{m, fuel_});
-            _stack.emplace_back(
-                CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m,
-                           fuel_});
+            _stack.emplace_back(CraneEnter{
+                (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m, fuel_});
           }
         }
       }
@@ -150,9 +148,8 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
       uint64_t m = _f.m;
       uint64_t fuel_ = _f.fuel_;
       uint64_t inner = std::move(_result);
-      _stack.emplace_back(
-          CraneEnter{inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
-                     fuel_});
+      _stack.emplace_back(CraneEnter{
+          inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
     }
   }
   return _result;
@@ -209,10 +206,9 @@ LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n,
           _result = UINT64_C(1);
         } else {
           _stack.emplace_back(CraneCont1{n, k, fuel_});
-          _stack.emplace_back(
-              CraneEnter{(((k - UINT64_C(1)) > k ? 0 : (k - UINT64_C(1)))),
-                         (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
-                         fuel_});
+          _stack.emplace_back(CraneEnter{
+              (((k - UINT64_C(1)) > k ? 0 : (k - UINT64_C(1)))),
+              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
@@ -221,9 +217,8 @@ LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n,
       uint64_t k = _f.k;
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(CraneCont2{std::move(_result)});
-      _stack.emplace_back(
-          CraneEnter{k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
-                     fuel_});
+      _stack.emplace_back(CraneEnter{
+          k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
     } else {
       auto _f = std::move(std::get<CraneCont2>(_frame));
       _result = (_f._tmp2 + std::move(_result));

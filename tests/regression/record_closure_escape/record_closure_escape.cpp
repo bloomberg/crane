@@ -35,7 +35,8 @@ RecordClosureEscape::fn_record
 RecordClosureEscape::record_escape(RecordClosureEscape::tree t) {
   return fn_record{[=, t = std::move(t)](uint64_t _x0) -> uint64_t {
     return sum_values(std::move(t), _x0);
-  }, UINT64_C(42)};
+  },
+                   UINT64_C(42)};
 }
 
 uint64_t

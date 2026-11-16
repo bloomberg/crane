@@ -27,19 +27,22 @@ struct ParserAnyCast {
 
   static const entry &entry_b() {
     static const entry v = Specif::template SigT<Tag, crane::obj>::existt(
-        Tag::B, String::String::string0(
+        Tag::B,
+        String::String::string0(
             Ascii::Ascii::ascii0(false, false, false, true, false, true, true,
-                                 false), String::String::string0(
+                                 false),
+            String::String::string0(
                 Ascii::Ascii::ascii0(true, false, true, false, false, true,
-                                     true, false), String::String::string0(
+                                     true, false),
+                String::String::string0(
                     Ascii::Ascii::ascii0(false, false, true, true, false, true,
-                                         true, false), String::String::string0(
+                                         true, false),
+                    String::String::string0(
                         Ascii::Ascii::ascii0(false, false, true, true, false,
                                              true, true, false),
-                        String::String::string0(
-                            Ascii::Ascii::ascii0(true, true, true, true, false,
-                                                 true, true, false),
-                            String::String::emptystring()))))));
+                        String::String::string0(Ascii::Ascii::ascii0(
+                            true, true, true, true, false, true, true, false),
+                                                String::String::emptystring()))))));
     return v;
   }
 
@@ -51,7 +54,7 @@ struct ParserAnyCast {
     static const Datatypes::List<entry> v =
         Datatypes::template List<entry>::cons(
             entry_a(), Datatypes::template List<entry>::cons(
-                entry_b(), Datatypes::template List<entry>::nil()));
+                           entry_b(), Datatypes::template List<entry>::nil()));
     return v;
   }
 

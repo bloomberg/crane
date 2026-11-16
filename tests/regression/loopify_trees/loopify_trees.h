@@ -1821,10 +1821,9 @@ struct LoopifyTrees {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(
-              CraneCont_Quad_3{std::move(a0), &a1, &a2, &a3,
-                               std::move(_f._tmp4), std::move(_f._tmp3),
-                               std::move(_result)});
+          _stack.emplace_back(CraneCont_Quad_3{
+              std::move(a0), &a1, &a2, &a3, std::move(_f._tmp4),
+              std::move(_f._tmp3), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else {
           auto _f = std::move(std::get<CraneCont_Quad_3>(_frame));
@@ -1980,9 +1979,8 @@ struct LoopifyTrees {
           uint64_t n = _f.n;
           const simple_tree &a1 = *_f.a1;
           _stack.emplace_back(CraneCont2{std::move(_result)});
-          _stack.emplace_back(
-              CraneEnter{_f.a1,
-                         (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+          _stack.emplace_back(CraneEnter{
+              _f.a1, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
         } else {
           auto _f = std::move(std::get<CraneCont2>(_frame));
           _result = (_f._tmp2 + std::move(_result));

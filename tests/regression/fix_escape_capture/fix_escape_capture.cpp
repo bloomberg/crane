@@ -13,9 +13,10 @@ FixEscapeCapture::make_pair_fn(uint64_t base) {
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=, add_impl = std::move(add_impl)](uint64_t x) -> uint64_t {
-    return add_impl(add_impl, x);
-  };
+  auto add =
+      [=, add_impl = std::move(add_impl)](uint64_t x) -> uint64_t {
+        return add_impl(add_impl, x);
+      };
   return std::make_pair(base, std::move(add));
 }
 

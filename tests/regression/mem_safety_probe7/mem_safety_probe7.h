@@ -61,7 +61,7 @@ struct MemSafetyProbe7 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -196,12 +196,13 @@ struct MemSafetyProbe7 {
   build_len_closures(const mylist<uint64_t> &l);
   static uint64_t sum_fns(const mylist<crane::fn<uint64_t(std::monostate)>> &l);
   static inline const uint64_t test_len_closures = []() {
-    mylist<uint64_t> l =
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(1),
         mylist<uint64_t>::mycons(
-            UINT64_C(1), mylist<uint64_t>::mycons(
-                UINT64_C(2), mylist<uint64_t>::mycons(
-                    UINT64_C(3), mylist<uint64_t>::mycons(
-                        UINT64_C(4), mylist<uint64_t>::mynil()))));
+            UINT64_C(2), mylist<uint64_t>::mycons(
+                             UINT64_C(3), mylist<uint64_t>::mycons(
+                                              UINT64_C(4),
+                                              mylist<uint64_t>::mynil()))));
     mylist<crane::fn<uint64_t(std::monostate)>> fns =
         build_len_closures(std::move(l));
     return sum_fns(std::move(fns));
@@ -212,7 +213,8 @@ struct MemSafetyProbe7 {
   build_sum_closures(const mylist<uint64_t> &l);
   static inline const uint64_t test_sum_closures = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10), mylist<uint64_t>::mycons(
+        UINT64_C(10),
+        mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
     mylist<crane::fn<uint64_t(std::monostate)>> fns =
@@ -301,16 +303,15 @@ struct MemSafetyProbe7 {
               crane::fn<uint64_t(std::monostate)>>
     make_subtree_getters() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return std::make_pair([](std::monostate) {
-          return UINT64_C(0);
-        }, [](std::monostate) { return UINT64_C(0); });
+        return std::make_pair([](std::monostate) { return UINT64_C(0); },
+                              [](std::monostate) { return UINT64_C(0); });
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        return std::make_pair([=](std::monostate) {
-          return a0_value.tree_sum();
-        }, [=](std::monostate) { return a2_value.tree_sum(); });
+        return std::make_pair(
+            [=](std::monostate) { return a0_value.tree_sum(); },
+            [=](std::monostate) { return a2_value.tree_sum(); });
       }
     }
 
@@ -324,8 +325,8 @@ struct MemSafetyProbe7 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return mylist<crane::fn<uint64_t(std::monostate)>>::mycons(
-            [=](std::monostate) { return a0_value.tree_sum(); }, mylist<
-                crane::fn<uint64_t(std::monostate)>>::mycons(
+            [=](std::monostate) { return a0_value.tree_sum(); },
+            mylist<crane::fn<uint64_t(std::monostate)>>::mycons(
                 [=](std::monostate) { return a2_value.tree_sum(); },
                 mylist<crane::fn<uint64_t(std::monostate)>>::mynil()));
       }
@@ -473,7 +474,8 @@ struct MemSafetyProbe7 {
                             uint64_t x);
   static inline const uint64_t test_accum_closures = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(1), mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(
             UINT64_C(2),
             mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
     mylist<crane::fn<uint64_t(uint64_t)>> fns =

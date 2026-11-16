@@ -45,11 +45,11 @@ public:
             const auto &[t, t0, t1] =
                 std::get<typename Trie<CraneU>::Branch>(_other.v());
             return Branch{
-                std::optional<A>(t), (
-                    t0 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t0))
-                       : nullptr), (
-                    t1 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t1))
-                       : nullptr)};
+                std::optional<A>(t),
+                (t0 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t0))
+                    : nullptr),
+                (t1 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t1))
+                    : nullptr)};
           }
         }()) {}
 

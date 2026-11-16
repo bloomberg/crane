@@ -116,8 +116,8 @@ struct UnitVoidStress {
   static std::pair<uint64_t, std::monostate> pair_via_let(uint64_t n);
   static void cond_void(bool b, uint64_t n);
   static void match_nat_void(uint64_t n);
-  static std::pair<std::pair<uint64_t, std::monostate>,
-                   uint64_t> nested_pair_void(uint64_t n);
+  static std::pair<std::pair<uint64_t, std::monostate>, uint64_t>
+  nested_pair_void(uint64_t n);
   static std::optional<std::pair<uint64_t, std::monostate>>
   option_pair_void(uint64_t n);
   static std::pair<uint64_t, uint64_t> let_void_then_pair(uint64_t n);
@@ -142,8 +142,8 @@ struct UnitVoidStress {
 
   static inline const List<std::monostate> test_map_void = map_void<uint64_t>(
       discard, List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
+                   UINT64_C(1),
+                   List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
 
   template <typename F0>
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
@@ -162,7 +162,7 @@ struct UnitVoidStress {
   static inline const List<std::monostate> make_unit_list =
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
-              std::monostate{}, List<std::monostate>::nil()));
+                                std::monostate{}, List<std::monostate>::nil()));
   static inline const std::pair<std::monostate, std::monostate> make_unit_pair =
       std::make_pair(std::monostate{}, std::monostate{});
 

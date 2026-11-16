@@ -107,8 +107,9 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
-            const auto &[r] = std::get<
-                typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
+            const auto &[r] =
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                    _other.v());
             return RetF{[&]() -> R {
               if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
@@ -121,8 +122,9 @@ public:
             if (std::holds_alternative<
                     typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
-              const auto &[t] = std::get<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v());
+              const auto &[t] =
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                      _other.v());
               return TauF{[&]() -> itree {
                 if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
@@ -132,8 +134,9 @@ public:
                 }
               }()};
             } else {
-              const auto &[x, e] = std::get<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(_other.v());
+              const auto &[x, e] =
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                      _other.v());
               return VisF{
                   [&]() -> E {
                     if constexpr (crane_convertible<E, const CraneU0 &>) {
@@ -191,30 +194,19 @@ public:
 
   template <typename CraneU0, typename CraneU1>
   Itree(const Itree<CraneU0, CraneU1> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                       [=]() -> variant_t {
-                                                         const auto &[_observe] =
-                                                             std::get<
-                                                                 typename Itree<
-                                                                     CraneU0,
-                                                                     CraneU1>::Go>(
-                                                                 _other.v());
-                                                         return Go{
-                                                             crane_convert<
-                                                                 ItreeF<
-                                                                     E, R,
-                                                                     Itree<E,
-                                                                           R>>>(
-                                                                 _observe)};
-                                                       })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(
+      _other.lazy_cell(), [=]() -> variant_t {
+        const auto &[_observe] =
+            std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
+        return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
+      })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                               std::move(_observe)));
+    return Itree<E, R>(crane::lazy<variant_t>(
+        std::in_place, std::in_place_index<0>, std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -275,8 +267,8 @@ struct AliasHomeConstructorField {
         return box(Mine{std::move(a0)});
       }
 
-      static box theirs(stateT<Nat, crane_carrier_tc_0f16be79d78259e6,
-                               Nat> a0) {
+      static box
+      theirs(stateT<Nat, crane_carrier_tc_0f16be79d78259e6, Nat> a0) {
         return box(Theirs{std::move(a0)});
       }
 
@@ -289,9 +281,10 @@ struct AliasHomeConstructorField {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<
-          T1, F0 &, const crane::fn<Itree<noE, std::pair<Nat, Nat>>(Nat)> &> &&
-      std::is_invocable_r_v<
-          T1, F1 &, const crane::fn<Itree<outerE, std::pair<Nat, Nat>>(Nat)> &>
+        T1, F0 &, const crane::fn<Itree<noE, std::pair<Nat, Nat>>(Nat)> &> &&
+               std::is_invocable_r_v<
+                   T1, F1 &,
+                   const crane::fn<Itree<outerE, std::pair<Nat, Nat>>(Nat)> &>
     static T1 box_rect(F0 &&f, F1 &&f0, const box &b) {
       if (std::holds_alternative<typename box::Mine>(b.v())) {
         const auto &[a0] = std::get<typename box::Mine>(b.v());

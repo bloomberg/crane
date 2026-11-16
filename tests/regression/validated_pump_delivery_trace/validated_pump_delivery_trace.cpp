@@ -166,7 +166,8 @@ uint64_t ValidatedPumpDeliveryTraceCase::bilinear_iob_fraction(
           } else {
             auto &&_once2 = (((dia - pt) > dia ? 0 : (dia - pt)));
             return (_once2 ? ((((dia - elapsed) > dia ? 0 : (dia - elapsed))) *
-                              UINT64_C(75)) / _once2
+                              UINT64_C(75)) /
+                             _once2
                            : 0);
           }
         }
@@ -182,11 +183,13 @@ ValidatedPumpDeliveryTraceCase::bilinear_iob_from_bolus(
   if (now < event.be_time_minutes) {
     return UINT64_C(0);
   } else {
-    return div_ceil((event.be_dose_twentieths * bilinear_iob_fraction(
-                         (((now - event.be_time_minutes) > now
-                               ? 0
-                               : (now - event.be_time_minutes))), dia, itype)),
-                    UINT64_C(100));
+    return div_ceil(
+        (event.be_dose_twentieths *
+         bilinear_iob_fraction((((now - event.be_time_minutes) > now
+                                     ? 0
+                                     : (now - event.be_time_minutes))),
+                               dia, itype)),
+        UINT64_C(100));
   }
 }
 
@@ -215,9 +218,9 @@ ValidatedPumpDeliveryTraceCase::apply_sensor_margin(
   if (target.mg_dL_val <= bg.mg_dL_val) {
     auto &&_once1 =
         (UINT64_C(100) ? (bg.mg_dL_val * UINT64_C(15)) / UINT64_C(100) : 0);
-    return Mg_dL{
-        (((bg.mg_dL_val - _once1) > bg.mg_dL_val ? 0
-                                                 : (bg.mg_dL_val - _once1)))};
+    return Mg_dL{(
+        ((bg.mg_dL_val - _once1) > bg.mg_dL_val ? 0
+                                                : (bg.mg_dL_val - _once1)))};
   } else {
     return bg;
   }
@@ -255,7 +258,8 @@ ValidatedPumpDeliveryTraceCase::correction_twentieths_full(
                        current_bg.mg_dL_val
                            ? 0
                            : (current_bg.mg_dL_val - target_bg.mg_dL_val))) *
-                     UINT64_C(200)) / eff_isf
+                     UINT64_C(200)) /
+                    eff_isf
                   : 0);
     }
   }
@@ -302,7 +306,8 @@ uint64_t ValidatedPumpDeliveryTraceCase::conservative_cob_rise(
     const ValidatedPumpDeliveryTraceCase::Config &cfg, uint64_t cob_grams) {
   return (UINT64_C(100) ? ((cob_grams *
                             cfg.cfg_conservative_cob_absorption_percent) *
-                           cfg.cfg_bg_rise_per_gram) / UINT64_C(100)
+                           cfg.cfg_bg_rise_per_gram) /
+                          UINT64_C(100)
                         : 0);
 }
 
@@ -388,10 +393,9 @@ ValidatedPumpDeliveryTraceCase::apply_suspend(
       std::holds_alternative<
           typename ValidatedPumpDeliveryTraceCase::SuspendDecision::Suspend_Reduce>(
           decision.v())) {
-    const auto &[a0] =
-        std::get<
-            typename ValidatedPumpDeliveryTraceCase::SuspendDecision::Suspend_Reduce>(
-            decision.v());
+    const auto &[a0] = std::get<
+        typename ValidatedPumpDeliveryTraceCase::SuspendDecision::Suspend_Reduce>(
+        decision.v());
     if (proposed <= a0) {
       return proposed;
     } else {
@@ -425,7 +429,8 @@ bool ValidatedPumpDeliveryTraceCase::prec_params_valid(
               p.prec_isf_tenths <= UINT64_C(4000)) &&
              BG_HYPO <= p.prec_target_bg.mg_dL_val) &&
             p.prec_target_bg.mg_dL_val <= BG_HYPER) &&
-           UINT64_C(120) <= p.prec_dia) && p.prec_dia <= UINT64_C(360));
+           UINT64_C(120) <= p.prec_dia) &&
+          p.prec_dia <= UINT64_C(360));
 }
 
 ValidatedPumpDeliveryTraceCase::Insulin_twentieth
@@ -483,10 +488,11 @@ bool ValidatedPumpDeliveryTraceCase::time_reasonable(uint64_t now) {
 
 bool ValidatedPumpDeliveryTraceCase::history_extraction_safe(
     const List<ValidatedPumpDeliveryTraceCase::BolusEvent> &events) {
-  return (events.length() <= UINT64_C(100) && events.forallb(
-              [](const ValidatedPumpDeliveryTraceCase::BolusEvent &e) {
-                return e.be_dose_twentieths <= UINT64_C(500);
-              }));
+  return (
+      events.length() <= UINT64_C(100) &&
+      events.forallb([](const ValidatedPumpDeliveryTraceCase::BolusEvent &e) {
+        return e.be_dose_twentieths <= UINT64_C(500);
+      }));
 }
 
 uint64_t ValidatedPumpDeliveryTraceCase::iob_high_threshold(
@@ -512,8 +518,8 @@ bool ValidatedPumpDeliveryTraceCase::bolus_too_soon(
     if (now < a0.be_time_minutes) {
       return false;
     } else {
-      return (((now - a0.be_time_minutes) > now ? 0
-                                                : (now - a0.be_time_minutes))) <
+      return (
+          ((now - a0.be_time_minutes) > now ? 0 : (now - a0.be_time_minutes))) <
              UINT64_C(15);
     }
   }
@@ -570,18 +576,17 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                             [=](uint64_t acc,
                                 const ValidatedPumpDeliveryTraceCase::BolusEvent &e)
                                  -> uint64_t {
-                                  if (((((input.pi_now - UINT64_C(1440)) >
-                                         input.pi_now
-                                             ? 0
-                                             : (input.pi_now -
-                                                UINT64_C(1440)))) <=
-                                       e.be_time_minutes &&
-                                       e.be_time_minutes <= input.pi_now)) {
-                                    return (acc + e.be_dose_twentieths);
-                                  } else {
-                                    return acc;
-                                  }
-                                },
+                              if (((((input.pi_now - UINT64_C(1440)) >
+                                     input.pi_now
+                                         ? 0
+                                         : (input.pi_now - UINT64_C(1440)))) <=
+                                   e.be_time_minutes &&
+                                   e.be_time_minutes <= input.pi_now)) {
+                                return (acc + e.be_dose_twentieths);
+                              } else {
+                                return acc;
+                              }
+                            },
                             UINT64_C(0));
                     uint64_t tdd_limit;
                     if (input.pi_weight_kg.has_value()) {
@@ -736,7 +741,8 @@ ValidatedPumpDeliveryTraceCase::final_delivery(
 bool ValidatedPumpDeliveryTraceCase::pump_can_deliver(
     const ValidatedPumpDeliveryTraceCase::PumpState &state, uint64_t dose) {
   return (((!(state.ps_occlusion_detected) &&
-            dose <= state.ps_reservoir_twentieths) && dose <= UINT64_C(500)) &&
+            dose <= state.ps_reservoir_twentieths) &&
+           dose <= UINT64_C(500)) &&
           UINT64_C(5) <= state.ps_battery_percent);
 }
 

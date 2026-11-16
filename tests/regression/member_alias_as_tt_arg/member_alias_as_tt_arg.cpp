@@ -4,5 +4,6 @@ std::optional<std::pair<Nat, Nat>> MemberAliasAsTtArg::use(const Nat &o) {
   return run<Monad_option, Nat>([](const Nat &s) {
     return std::make_optional<std::pair<Nat, Nat>>(std::make_pair(Nat::s(s),
                                                                   s));
-  }, o);
+  },
+                                o);
 }

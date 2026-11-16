@@ -702,8 +702,9 @@ List<uint64_t> LoopifyTrees::extract_tree_values(
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename List<LoopifyTrees::tree<uint64_t>>::Cons>(_loop_ts->v());
+      const auto &[a0, a1] =
+          std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
+              _loop_ts->v());
       if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
               a0.v())) {
         _loop_ts = crane_raw(a1);
@@ -736,13 +737,15 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
             _loop_ts->v())) {
       auto _value = List<LoopifyTrees::tree<uint64_t>>::nil();
       (
-          _write ? *(*_write = std::make_shared<
-                         List<LoopifyTrees::tree<uint64_t>>>(std::move(_value)))
+          _write ? *(*_write =
+                         std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
+                             std::move(_value)))
                  : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename List<LoopifyTrees::tree<uint64_t>>::Cons>(_loop_ts->v());
+      const auto &[a0, a1] =
+          std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
+              _loop_ts->v());
       if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
               a0.v())) {
         _loop_ts = crane_raw(a1);
@@ -817,9 +820,9 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
 
 List<List<uint64_t>>
 LoopifyTrees::tree_levels(const LoopifyTrees::tree<uint64_t> &t) {
-  return tree_levels_fuel(
-      UINT64_C(100), List<LoopifyTrees::tree<uint64_t>>::cons(
-          t, List<LoopifyTrees::tree<uint64_t>>::nil()));
+  return tree_levels_fuel(UINT64_C(100),
+                          List<LoopifyTrees::tree<uint64_t>>::cons(
+                              t, List<LoopifyTrees::tree<uint64_t>>::nil()));
 }
 
 /// count_nodes t returns tuple (node_count, sum_of_values).
@@ -1315,8 +1318,9 @@ uint64_t LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<uint64_t> &t) {
                 _lc1_tree0.v())) {
           _lc1_result = std::move(_lc1_acc);
         } else {
-          const auto &[a0, a1, a2] = std::get<
-              typename LoopifyTrees::tree<uint64_t>::Node>(_lc1_tree0.v());
+          const auto &[a0, a1, a2] =
+              std::get<typename LoopifyTrees::tree<uint64_t>::Node>(
+                  _lc1_tree0.v());
           uint64_t new_acc = (_lc1_acc + a1);
           _lc1_stack.emplace_back(CraneCont_Node{crane_raw(a2), new_acc});
           _lc1_stack.emplace_back(CraneEnter{crane_raw(a0), new_acc});

@@ -12,14 +12,16 @@ RamAccessor::ram_reg
 RamAccessor::upd_main_in_reg(const RamAccessor::ram_reg &rg, uint64_t i,
                              uint64_t v) {
   return ram_reg{update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
-                                      rg.reg_main), rg.reg_status};
+                                      rg.reg_main),
+                 rg.reg_status};
 }
 
 RamAccessor::ram_reg
 RamAccessor::upd_stat_in_reg(const RamAccessor::ram_reg &rg, uint64_t i,
                              uint64_t v) {
-  return ram_reg{rg.reg_main, update_nth<uint64_t>(
-                     i, (UINT64_C(16) ? v % UINT64_C(16) : v), rg.reg_status)};
+  return ram_reg{rg.reg_main,
+                 update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
+                                      rg.reg_status)};
 }
 
 RamAccessor::ram_reg RamAccessor::get_regRAM(const RamAccessor::ram_chip &ch,

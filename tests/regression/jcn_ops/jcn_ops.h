@@ -33,9 +33,9 @@ struct JcnOps {
   static inline const bool check_zero_gate =
       jcn_condition(state{UINT64_C(0), false, true, UINT64_C(0)}, UINT64_C(4));
   static inline const bool test_condition =
-      (check_carry_clear_gate && (
-           check_nonzero_gate &&
-           (check_test_high && (check_test_low && check_zero_gate))));
+      (check_carry_clear_gate &&
+       (check_nonzero_gate &&
+        (check_test_high && (check_test_low && check_zero_gate))));
   static constexpr uint64_t JCN_JNT = UINT64_C(1);
   static constexpr uint64_t JCN_JC = UINT64_C(2);
   static constexpr uint64_t JCN_JZ = UINT64_C(4);

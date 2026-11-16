@@ -276,9 +276,8 @@ struct InstanceUsesEarlierMember {
 };
 
 template <Params _tcI0> St<typename _tcI0::ptr> IuMemImpl::empty_st() {
-  return St<typename _tcI0::ptr>{
-      List<typename _tcI0::ptr>::cons(_tcI0::zero(),
-                                      List<typename _tcI0::ptr>::nil())};
+  return St<typename _tcI0::ptr>{List<typename _tcI0::ptr>::cons(
+      _tcI0::zero(), List<typename _tcI0::ptr>::nil())};
 }
 
 template <Params _tcI0>

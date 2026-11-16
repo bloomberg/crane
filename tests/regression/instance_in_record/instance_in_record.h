@@ -26,10 +26,9 @@ struct InstanceInRecord {
     }
   };
 
-  static inline const Monoid<uint64_t> MNat =
-      Monoid<uint64_t>{UINT64_C(0), [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-        return (_x0 + _x1);
-      }};
+  static inline const Monoid<uint64_t> MNat = Monoid<uint64_t>{
+      UINT64_C(0),
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }};
 
   struct bundle {
     Monoid<uint64_t> carrierDict;

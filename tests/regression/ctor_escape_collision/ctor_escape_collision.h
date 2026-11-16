@@ -40,9 +40,10 @@ struct CtorEscapeCollision {
   }
 
   static uint64_t tag(Item x);
-  static inline const uint64_t t =
-      (((((tag(Item::D_) + tag(Item::D_0)) + tag(Item::D_P)) +
-         tag(Item::D_P0)) + tag(Item::D_P1)) + tag(Item::D_P2));
+  static inline const uint64_t t = (
+      ((((tag(Item::D_) + tag(Item::D_0)) + tag(Item::D_P)) + tag(Item::D_P0)) +
+       tag(Item::D_P1)) +
+      tag(Item::D_P2));
 };
 
 #endif // INCLUDED_CTOR_ESCAPE_COLLISION

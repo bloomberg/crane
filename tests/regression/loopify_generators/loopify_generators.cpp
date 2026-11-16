@@ -53,8 +53,9 @@ LoopifyGenerators::zip_longest_aux(const List<uint64_t> &l1,
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write ? *(*_write = std::make_shared<
-                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+      (_write ? *(*_write =
+                      std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                          std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
@@ -287,9 +288,10 @@ List<uint64_t> LoopifyGenerators::repeat(uint64_t x, uint64_t n) {
     } else {
       uint64_t m = _loop_n - 1;
       auto _cell = typename List<uint64_t>::Cons(x, nullptr);
-      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
-                                              List<uint64_t>>(std::move(_cell)))
-                                      : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node =
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_n = m;
       continue;

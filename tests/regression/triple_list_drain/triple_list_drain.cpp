@@ -3,9 +3,9 @@
 TripleListDrain::t TripleListDrain::wrap(uint64_t k,
                                          const TripleListDrain::t &acc) {
   return t::node(k, List<List<List<TripleListDrain::t>>>::cons(
-                     List<List<TripleListDrain::t>>::cons(
-                         List<TripleListDrain::t>::cons(
-                             acc, List<TripleListDrain::t>::nil()),
-                         List<List<TripleListDrain::t>>::nil()),
-                     List<List<List<TripleListDrain::t>>>::nil()));
+                        List<List<TripleListDrain::t>>::cons(
+                            List<TripleListDrain::t>::cons(
+                                acc, List<TripleListDrain::t>::nil()),
+                            List<List<TripleListDrain::t>>::nil()),
+                        List<List<List<TripleListDrain::t>>>::nil()));
 }

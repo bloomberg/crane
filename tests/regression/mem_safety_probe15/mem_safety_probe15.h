@@ -407,7 +407,7 @@ struct MemSafetyProbe15 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -617,9 +617,10 @@ struct MemSafetyProbe15 {
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                    UINT64_C(2),
                    tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-        UINT64_C(4), tree::node(
-            tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(6),
-            tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
+        UINT64_C(4),
+        tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                   UINT64_C(6),
+                   tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
     return sum_list(flatten(std::move(t)));
   }();
   /// TEST 2: Tree to list where each element is the sum of
@@ -653,12 +654,13 @@ struct MemSafetyProbe15 {
   static inline const uint64_t test_deep_spine =
       left_spine(UINT64_C(100)).tree_sum();
   static inline const uint64_t test_rev = []() {
-    mylist<uint64_t> l =
+    mylist<uint64_t> l = mylist<uint64_t>::mycons(
+        UINT64_C(1),
         mylist<uint64_t>::mycons(
-            UINT64_C(1), mylist<uint64_t>::mycons(
-                UINT64_C(2), mylist<uint64_t>::mycons(
-                    UINT64_C(3), mylist<uint64_t>::mycons(
-                        UINT64_C(4), mylist<uint64_t>::mynil()))));
+            UINT64_C(2), mylist<uint64_t>::mycons(
+                             UINT64_C(3), mylist<uint64_t>::mycons(
+                                              UINT64_C(4),
+                                              mylist<uint64_t>::mynil()))));
     mylist<uint64_t> r = l.rev_aux(mylist<uint64_t>::mynil());
     return sum_list(std::move(r));
   }();
@@ -670,12 +672,12 @@ struct MemSafetyProbe15 {
           .two_pass();
   static inline const uint64_t test_map = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10), mylist<uint64_t>::mycons(
+        UINT64_C(10),
+        mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    mylist<uint64_t> l2 = l.template map_list<uint64_t>([](uint64_t x) {
-      return (x + UINT64_C(1));
-    });
+    mylist<uint64_t> l2 = l.template map_list<uint64_t>(
+        [](uint64_t x) { return (x + UINT64_C(1)); });
     return sum_list(std::move(l2));
   }();
   /// TEST 9: Build a large tree and verify all values are preserved.

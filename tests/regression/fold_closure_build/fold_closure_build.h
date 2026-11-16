@@ -71,7 +71,7 @@ struct FoldClosureBuild {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -151,12 +151,12 @@ struct FoldClosureBuild {
   /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
   static uint64_t compose_adders(const mylist<uint64_t> &l, uint64_t x0_);
   /// test1: compose_adders 10,20,30 7 = 67
-  static inline const uint64_t test1 =
-      compose_adders(mylist<uint64_t>::mycons(
-                         UINT64_C(10), mylist<uint64_t>::mycons(
-                             UINT64_C(20), mylist<uint64_t>::mycons(
-                                 UINT64_C(30), mylist<uint64_t>::mynil()))),
-                     UINT64_C(7));
+  static inline const uint64_t test1 = compose_adders(mylist<uint64_t>::mycons(
+      UINT64_C(10),
+      mylist<uint64_t>::mycons(
+          UINT64_C(20),
+          mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil()))),
+                                                      UINT64_C(7));
   /// Pattern 2: Store the composed function and call it TWICE.
   /// If the closure chain has dangling references, the second call
   /// might read clobbered stack memory.
@@ -182,12 +182,14 @@ struct FoldClosureBuild {
   /// test3: collect_adders 10,20,30
   /// = (30+_), (20+_), (10+_)  (reversed by fold_left)
   /// apply_all with x=5: (30+5) + (20+5) + (10+5) = 75
-  static inline const uint64_t test3 = apply_all(
-      collect_adders(mylist<uint64_t>::mycons(
-                         UINT64_C(10), mylist<uint64_t>::mycons(
-                             UINT64_C(20), mylist<uint64_t>::mycons(
-                                 UINT64_C(30), mylist<uint64_t>::mynil())))),
-      UINT64_C(5));
+  static inline const uint64_t test3 =
+      apply_all(
+          collect_adders(mylist<uint64_t>::mycons(
+              UINT64_C(10),
+              mylist<uint64_t>::mycons(
+                  UINT64_C(20), mylist<uint64_t>::mycons(
+                                    UINT64_C(30), mylist<uint64_t>::mynil())))),
+          UINT64_C(5));
   /// Pattern 4: Fold with a FIXPOINT as accumulator.
   /// The fixpoint captures both acc and h from the fold callback.
   ///
@@ -209,10 +211,11 @@ struct FoldClosureBuild {
   /// first: acc=id, h=10, go1(x) = x + id(10) = x + 10
   /// second: acc=go1, h=20, go2(x) = x + go1(20) = x + 30
   /// test5 = go2(7) = 7 + 30 = 37
-  static inline const uint64_t test5 = compose_with_fix(
-      mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mycons(
-                                   UINT64_C(20), mylist<uint64_t>::mynil())),
-      UINT64_C(7));
+  static inline const uint64_t test5 =
+      compose_with_fix(mylist<uint64_t>::mycons(
+          UINT64_C(10),
+          mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mynil())),
+                       UINT64_C(7));
 };
 
 #endif // INCLUDED_FOLD_CLOSURE_BUILD

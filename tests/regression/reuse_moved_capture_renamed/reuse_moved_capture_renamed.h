@@ -228,8 +228,9 @@ struct ReuseMovedCaptureRenamed {
 
     static mylist<A> mycons_crane_reuse(crane::rc<mylist<A>> _tok, A a0,
                                         mylist<A> a1) {
-      return mylist<A>(Mycons{std::move(a0), crane::make_rc_reusing<mylist<A>>(
-                                  std::move(_tok), std::move(a1))});
+      return mylist<A>(Mycons{
+          std::move(a0),
+          crane::make_rc_reusing<mylist<A>>(std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS

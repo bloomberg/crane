@@ -77,8 +77,9 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
                 typename LoopifyComputedScrutineeTemp::lst::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<
-              typename LoopifyComputedScrutineeTemp::lst::Cons>(_sv.v());
+          const auto &[a0, a1] =
+              std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(
+                  _sv.v());
           _stack.emplace_back(CraneCont_Cons{l, a0});
           _stack.emplace_back(CraneEnter{*a1, m});
         }

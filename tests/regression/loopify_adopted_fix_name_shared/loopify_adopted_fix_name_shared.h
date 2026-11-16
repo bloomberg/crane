@@ -355,24 +355,17 @@ struct LoopifyAdoptedFixNameShared {
   static std::optional<Nat> f(const tree &t, Nat i);
   /// The struct loop skips Leaf 1 (4 >= 3), enters the array at 1, and
   /// the array loop reaches Leaf 7 at 1.
-  static inline const std::optional<Nat> r1 = f(
-      tree::node(
-          List<tree>::cons(
-              tree::leaf(Nat::s(Nat::o())), List<tree>::cons(
-                  tree::arr(
-                      List<tree>::cons(
-                          tree::leaf(
-                              Nat::s(
-                                  Nat::s(
-                                      Nat::s(
-                                          Nat::s(
-                                              Nat::s(Nat::s(Nat::s(Nat::o())))))))),
-                          List<tree>::cons(
-                              tree::leaf(
-                                  Nat::s(
-                                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                              List<tree>::nil()))), List<tree>::nil()))),
-      Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
+  static inline const std::optional<Nat> r1 =
+      f(tree::node(List<tree>::cons(
+          tree::leaf(Nat::s(Nat::o())),
+          List<tree>::cons(tree::arr(List<tree>::cons(
+              tree::leaf(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+              List<tree>::cons(
+                  tree::leaf(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                  List<tree>::nil()))),
+                           List<tree>::nil()))),
+        Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
 
 #endif // INCLUDED_LOOPIFY_ADOPTED_FIX_NAME_SHARED

@@ -211,7 +211,7 @@ struct FunctionVernac {
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t _x, uint64_t _x0) const {
       const R_div2 *_self = this;
 
@@ -272,9 +272,8 @@ struct FunctionVernac {
 
   template <typename T1, typename F0, typename F1, typename F2>
   static T1 div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t n) {
-    crane::fn<T1(uint64_t, T1)> f2 = [=](uint64_t _pa0, T1 _pa1) {
-      return f1(n, _pa0, _pa1);
-    };
+    crane::fn<T1(uint64_t, T1)> f2 =
+        [=](uint64_t _pa0, T1 _pa1) { return f1(n, _pa0, _pa1); };
     T1 f3 = f0(n);
     T1 f4 = f(n);
     if (n <= 0) {
@@ -285,9 +284,8 @@ struct FunctionVernac {
         return f3;
       } else {
         uint64_t n1 = n0 - 1;
-        crane::fn<T1(T1)> f5 = [=, f2 = std::move(f2)](T1 _pa0) {
-          return f2(n1, _pa0);
-        };
+        crane::fn<T1(T1)> f5 =
+            [=, f2 = std::move(f2)](T1 _pa0) { return f2(n1, _pa0); };
         T1 hrec = div2_rect<T1>(f, f0, f1, n1);
         return f5(std::move(hrec));
       }
@@ -450,22 +448,20 @@ struct FunctionVernac {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &> &&
-    std::is_invocable_r_v<T1, const F1 &, const List<uint64_t> &, uint64_t &,
-                          List<uint64_t> &, T1 &>
+             std::is_invocable_r_v<T1, const F1 &, const List<uint64_t> &,
+                                   uint64_t &, List<uint64_t> &, T1 &>
   static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &l) {
     crane::fn<T1(uint64_t, List<uint64_t>, T1)> f1 =
-        [=](uint64_t _pa0, List<uint64_t> _pa1, T1 _pa2) {
-          return f0(l, _pa0, _pa1, _pa2);
-        };
+        [=](uint64_t _pa0, List<uint64_t> _pa1,
+            T1 _pa2) { return f0(l, _pa0, _pa1, _pa2); };
     T1 f2 = f(l);
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return f2;
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       const List<uint64_t> &a1_value = *a1;
-      crane::fn<T1(T1)> f3 = [=, f1 = std::move(f1)](T1 _pa0) {
-        return f1(a0, a1_value, _pa0);
-      };
+      crane::fn<T1(T1)> f3 =
+          [=, f1 = std::move(f1)](T1 _pa0) { return f1(a0, a1_value, _pa0); };
       T1 hrec = list_sum_rect<T1>(f, f0, a1_value);
       return f3(std::move(hrec));
     }
@@ -478,13 +474,15 @@ struct FunctionVernac {
 
   static R_list_sum R_list_sum_correct(const List<uint64_t> &l, uint64_t res_);
   static inline const uint64_t test_div2 = div2(UINT64_C(10));
-  static inline const uint64_t test_sum =
-      list_sum(List<uint64_t>::cons(
-                   UINT64_C(1), List<uint64_t>::cons(
-                       UINT64_C(2), List<uint64_t>::cons(
-                           UINT64_C(3), List<uint64_t>::cons(
-                               UINT64_C(4), List<uint64_t>::cons(
-                                   UINT64_C(5), List<uint64_t>::nil()))))));
+  static inline const uint64_t test_sum = list_sum(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
 };
 
 #endif // INCLUDED_FUNCTION_VERNAC

@@ -62,10 +62,10 @@ uint64_t LoopifyNestedConstructs::nested_if_fuel(uint64_t fuel, uint64_t n) {
               _loop_n = (UINT64_C(2) ? _loop_n / UINT64_C(2) : 0);
               _loop_fuel = fuel_;
             } else {
-              _loop_n = (
-                  ((_loop_n - UINT64_C(1)) > _loop_n ? 0
-                                                     : (_loop_n -
-                                                        UINT64_C(1))));
+              _loop_n =
+                  (((_loop_n - UINT64_C(1)) > _loop_n ? 0
+                                                      : (_loop_n -
+                                                         UINT64_C(1))));
               _loop_fuel = fuel_;
             }
           } else {
@@ -201,9 +201,8 @@ LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel,
           _result = UINT64_C(1);
         } else {
           _stack.emplace_back(CraneCont1{n});
-          _stack.emplace_back(
-              CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
-                         fuel_});
+          _stack.emplace_back(CraneEnter{
+              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else {
@@ -366,9 +365,8 @@ LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel,
           _result = true;
         } else {
           _stack.emplace_back(CraneCont1{n, fuel_});
-          _stack.emplace_back(
-              CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
-                         fuel_});
+          _stack.emplace_back(CraneEnter{
+              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {

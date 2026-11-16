@@ -154,9 +154,9 @@ struct TfunctorOptionInstance {
 
   static_assert(TFunctor<TFunctor_box>);
   static inline const std::optional<box<Nat>> o =
-      TFunctor_option<TFunctor_box>::template tfmap<Nat, Nat>([](const Nat &x) {
-        return Nat::s(x);
-      }, std::make_optional<box<Nat>>(box<Nat>{Nat::s(Nat::s(Nat::o()))}));
+      TFunctor_option<TFunctor_box>::template tfmap<Nat, Nat>(
+          [](const Nat &x) { return Nat::s(x); },
+          std::make_optional<box<Nat>>(box<Nat>{Nat::s(Nat::s(Nat::o()))}));
   static inline const bool is_three = []() -> bool {
     if (o.has_value()) {
       const box<Nat> &b = *o;

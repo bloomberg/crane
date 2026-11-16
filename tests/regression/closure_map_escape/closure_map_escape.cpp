@@ -30,9 +30,10 @@ ClosureMapEscape::map_to_adders(const ClosureMapEscape::mylist<uint64_t> &l) {
         return (_self_add(_self_add, x_) + 1);
       }
     };
-    auto add = [=, add_impl = std::move(add_impl)](uint64_t x) -> uint64_t {
-      return add_impl(add_impl, x);
-    };
+    auto add =
+        [=, add_impl = std::move(add_impl)](uint64_t x) -> uint64_t {
+          return add_impl(add_impl, x);
+        };
     return mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
         std::move(add), map_to_adders(a1_value));
   }
@@ -42,12 +43,11 @@ uint64_t ClosureMapEscape::apply_first(
     const ClosureMapEscape::mylist<crane::fn<uint64_t(uint64_t)>> &fns,
     uint64_t arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
-                                 crane::fn<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+          crane::fn<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
-        std::get<typename ClosureMapEscape::mylist<
-                     crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
+    const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
+        crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
     return a0(arg);
   }
 }
@@ -56,12 +56,11 @@ uint64_t ClosureMapEscape::sum_apply(
     const ClosureMapEscape::mylist<crane::fn<uint64_t(uint64_t)>> &fns,
     uint64_t arg) {
   if (std::holds_alternative<typename ClosureMapEscape::mylist<
-                                 crane::fn<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
+          crane::fn<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
-        std::get<typename ClosureMapEscape::mylist<
-                     crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
+    const auto &[a0, a1] = std::get<typename ClosureMapEscape::mylist<
+        crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
     return (a0(arg) + sum_apply(*a1, arg));
   }
 }

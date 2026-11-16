@@ -144,18 +144,20 @@ struct RamOps {
                                       uint64_t v);
   static ram_chip_main upd_reg_in_chip_main(const ram_chip_main &ch, uint64_t r,
                                             const ram_reg_main &rg);
-  static ram_bank_main upd_chip_in_bank_main(
-      const ram_bank_main &bk, uint64_t c, const ram_chip_main &ch);
-  static List<ram_bank_main> upd_bank_in_sys_main(
-      const state_main &s, uint64_t b, const ram_bank_main &bk);
+  static ram_bank_main
+  upd_chip_in_bank_main(const ram_bank_main &bk, uint64_t c,
+                        const ram_chip_main &ch);
+  static List<ram_bank_main>
+  upd_bank_in_sys_main(const state_main &s, uint64_t b,
+                       const ram_bank_main &bk);
   static List<ram_bank_main> ram_write_main_sys(const state_main &s,
                                                 uint64_t v);
   static inline const uint64_t test_main_write_chain = []() {
-    ram_reg_main rg0 =
-        ram_reg_main{List<uint64_t>::cons(
+    ram_reg_main rg0 = ram_reg_main{List<uint64_t>::cons(
+        UINT64_C(0), List<uint64_t>::cons(
                          UINT64_C(0), List<uint64_t>::cons(
-                             UINT64_C(0), List<uint64_t>::cons(
-                                 UINT64_C(0), List<uint64_t>::nil())))};
+                                          UINT64_C(0),
+                                          List<uint64_t>::nil())))};
     ram_chip_main ch0 = ram_chip_main{
         List<ram_reg_main>::cons(std::move(rg0), List<ram_reg_main>::nil())};
     ram_bank_main bk0 = ram_bank_main{
@@ -249,10 +251,12 @@ struct RamOps {
   static ram_reg_status get_reg_status(const ram_chip_status &ch, uint64_t r);
   static ram_reg_status upd_status_in_reg(const ram_reg_status &rg, uint64_t i,
                                           uint64_t v);
-  static ram_chip_status upd_reg_in_chip_status(
-      const ram_chip_status &ch, uint64_t r, const ram_reg_status &rg);
-  static ram_bank_status upd_chip_in_bank_status(
-      const ram_bank_status &bk, uint64_t c, const ram_chip_status &ch);
+  static ram_chip_status
+  upd_reg_in_chip_status(const ram_chip_status &ch, uint64_t r,
+                         const ram_reg_status &rg);
+  static ram_bank_status
+  upd_chip_in_bank_status(const ram_bank_status &bk, uint64_t c,
+                          const ram_chip_status &ch);
   static List<ram_bank_status>
   upd_bank_in_sys_status(const state_status &s, uint64_t b,
                          const ram_bank_status &bk);
@@ -261,20 +265,21 @@ struct RamOps {
   static inline const uint64_t test_status_write_chain = []() {
     ram_reg_status rg0 =
         ram_reg_status{List<uint64_t>::cons(
-                           UINT64_C(0), List<uint64_t>::cons(
-                               UINT64_C(0), List<uint64_t>::cons(
-                                   UINT64_C(0), List<uint64_t>::cons(
-                                       UINT64_C(0), List<uint64_t>::nil()))))};
+            UINT64_C(0),
+            List<uint64_t>::cons(
+                UINT64_C(0),
+                List<uint64_t>::cons(
+                    UINT64_C(0),
+                    List<uint64_t>::cons(UINT64_C(0),
+                                         List<uint64_t>::nil()))))};
     ram_chip_status ch0 = ram_chip_status{
         List<ram_reg_status>::cons(std::move(rg0),
                                    List<ram_reg_status>::nil())};
-    ram_bank_status bk0 =
-        ram_bank_status{List<ram_chip_status>::cons(
-                            std::move(ch0), List<ram_chip_status>::nil())};
-    state_status s = state_status{
-        List<ram_bank_status>::cons(std::move(bk0),
-                                    List<ram_bank_status>::nil()), UINT64_C(0),
-        UINT64_C(0), UINT64_C(0)};
+    ram_bank_status bk0 = ram_bank_status{List<ram_chip_status>::cons(
+        std::move(ch0), List<ram_chip_status>::nil())};
+    state_status s = state_status{List<ram_bank_status>::cons(
+        std::move(bk0), List<ram_bank_status>::nil()),
+                                  UINT64_C(0), UINT64_C(0), UINT64_C(0)};
     List<ram_bank_status> sys_ =
         ram_write_status_sys(std::move(s), UINT64_C(2), UINT64_C(25));
     ram_bank_status bk_ = ListDef::template nth<ram_bank_status>(
@@ -328,14 +333,20 @@ struct RamOps {
   static uint64_t get_main_sel(const ram_reg_sel &rg, uint64_t i);
   static uint64_t ram_read_main(const state_sel &s);
   static inline const ram_reg_sel sample_reg_sel = ram_reg_sel{
-      List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::cons(
-                               UINT64_C(6), List<uint64_t>::cons(
-                                   UINT64_C(7), List<uint64_t>::cons(
-                                       UINT64_C(8), List<uint64_t>::nil())))),
-      List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::cons(
-                               UINT64_C(0), List<uint64_t>::cons(
-                                   UINT64_C(0), List<uint64_t>::cons(
-                                       UINT64_C(0), List<uint64_t>::nil()))))};
+      List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(6),
+              List<uint64_t>::cons(
+                  UINT64_C(7),
+                  List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())))),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(0),
+                  List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil()))))};
   static inline const ram_chip_sel sample_chip_sel = ram_chip_sel{
       List<ram_reg_sel>::cons(sample_reg_sel, List<ram_reg_sel>::nil()),
       UINT64_C(3)};
@@ -388,26 +399,33 @@ struct RamOps {
   static uint64_t get_main_nested(const ram_reg_nested &rg, uint64_t i);
   static uint64_t ram_read_main_nested(const state_nested &s);
   static inline const ram_reg_nested sample_reg_nested = ram_reg_nested{
-      List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::cons(
-                               UINT64_C(6), List<uint64_t>::cons(
-                                   UINT64_C(7), List<uint64_t>::cons(
-                                       UINT64_C(8), List<uint64_t>::nil())))),
-      List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::cons(
-                               UINT64_C(0), List<uint64_t>::cons(
-                                   UINT64_C(0), List<uint64_t>::cons(
-                                       UINT64_C(0), List<uint64_t>::nil()))))};
-  static inline const ram_chip_nested sample_chip_nested = ram_chip_nested{
-      List<ram_reg_nested>::cons(sample_reg_nested,
-                                 List<ram_reg_nested>::nil()), UINT64_C(3)};
-  static inline const ram_bank_nested sample_bank_nested =
-      ram_bank_nested{List<ram_chip_nested>::cons(sample_chip_nested,
-                                                  List<ram_chip_nested>::nil())};
+      List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(6),
+              List<uint64_t>::cons(
+                  UINT64_C(7),
+                  List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())))),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(0),
+                  List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil()))))};
+  static inline const ram_chip_nested sample_chip_nested =
+      ram_chip_nested{List<ram_reg_nested>::cons(sample_reg_nested,
+                                                 List<ram_reg_nested>::nil()),
+                      UINT64_C(3)};
+  static inline const ram_bank_nested sample_bank_nested = ram_bank_nested{
+      List<ram_chip_nested>::cons(sample_chip_nested,
+                                  List<ram_chip_nested>::nil())};
   static inline const ram_sel_nested sample_sel_nested =
       ram_sel_nested{UINT64_C(0), UINT64_C(0), UINT64_C(2)};
-  static inline const state_nested sample_state_nested = state_nested{
-      List<ram_bank_nested>::cons(sample_bank_nested,
-                                  List<ram_bank_nested>::nil()), UINT64_C(0),
-      sample_sel_nested};
+  static inline const state_nested sample_state_nested =
+      state_nested{List<ram_bank_nested>::cons(sample_bank_nested,
+                                               List<ram_bank_nested>::nil()),
+                   UINT64_C(0), sample_sel_nested};
   static inline const uint64_t test_read_nested =
       ram_read_main_nested(sample_state_nested);
 
@@ -429,32 +447,38 @@ struct RamOps {
   static inline const bank_frame sample_bank_frame =
       List<List<List<uint64_t>>>::cons(
           List<List<uint64_t>>::cons(
-              List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                       UINT64_C(2), List<uint64_t>::cons(
-                                           UINT64_C(3),
-                                           List<uint64_t>::nil()))), List<
-                  List<uint64_t>>::cons(
+              List<uint64_t>::cons(
+                  UINT64_C(1),
                   List<uint64_t>::cons(
-                      UINT64_C(4), List<uint64_t>::cons(
-                          UINT64_C(5), List<uint64_t>::cons(
-                              UINT64_C(6), List<uint64_t>::nil()))),
-                  List<List<uint64_t>>::nil())), List<List<List<uint64_t>>>::cons(
+                      UINT64_C(2),
+                      List<uint64_t>::cons(UINT64_C(3),
+                                           List<uint64_t>::nil()))),
+              List<List<uint64_t>>::cons(List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(
+                      UINT64_C(5),
+                      List<uint64_t>::cons(UINT64_C(6),
+                                           List<uint64_t>::nil()))),
+                                         List<List<uint64_t>>::nil())),
+          List<List<List<uint64_t>>>::cons(
               List<List<uint64_t>>::cons(
                   List<uint64_t>::cons(
-                      UINT64_C(7), List<uint64_t>::cons(
-                          UINT64_C(8), List<uint64_t>::cons(
-                              UINT64_C(9), List<uint64_t>::nil()))), List<
-                      List<uint64_t>>::cons(
+                      UINT64_C(7),
                       List<uint64_t>::cons(
-                          UINT64_C(10), List<uint64_t>::cons(
-                              UINT64_C(11), List<uint64_t>::cons(
-                                  UINT64_C(12), List<uint64_t>::nil()))),
-                      List<List<uint64_t>>::nil())),
+                          UINT64_C(8), List<uint64_t>::cons(
+                                           UINT64_C(9),
+                                           List<uint64_t>::nil()))),
+                  List<List<uint64_t>>::cons(List<uint64_t>::cons(
+                      UINT64_C(10),
+                      List<uint64_t>::cons(
+                          UINT64_C(11),
+                          List<uint64_t>::cons(UINT64_C(12),
+                                               List<uint64_t>::nil()))),
+                                             List<List<uint64_t>>::nil())),
               List<List<List<uint64_t>>>::nil()));
   static inline const bank_frame updated_bank_frame = []() {
-    chip_frame ch =
-        ListDef::template nth<chip_frame>(UINT64_C(0), sample_bank_frame,
-                                          List<crane::obj>::nil());
+    chip_frame ch = ListDef::template nth<chip_frame>(
+        UINT64_C(0), sample_bank_frame, List<crane::obj>::nil());
     reg_frame rg = ListDef::template nth<reg_frame>(UINT64_C(1), ch,
                                                     List<crane::obj>::nil());
     reg_frame rg_ =
@@ -467,9 +491,12 @@ struct RamOps {
   static inline const bool test_write_frame_different_chip =
       ListDef::template nth<uint64_t>(
           UINT64_C(2), ListDef::template nth<reg_frame>(
-              UINT64_C(0), ListDef::template nth<chip_frame>(
-                  UINT64_C(1), updated_bank_frame, List<List<uint64_t>>::nil()),
-              List<uint64_t>::nil()), UINT64_C(0)) == UINT64_C(7);
+                           UINT64_C(0), ListDef::template nth<chip_frame>(
+                                            UINT64_C(1), updated_bank_frame,
+                                            List<List<uint64_t>>::nil()),
+                           List<uint64_t>::nil()),
+          UINT64_C(0)) ==
+      UINT64_C(7);
 
   template <typename T1>
   static List<T1> update_nth_preserve(uint64_t n, const T1 &x,
@@ -485,42 +512,31 @@ struct RamOps {
   static List<uint64_t> ram_write_main_sys_preserve(const state_preserve &s,
                                                     uint64_t v);
   static state_preserve execute_write(const state_preserve &s, uint64_t v);
-  static inline const state_preserve sample_preserve = state_preserve{
-      List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                               UINT64_C(20), List<uint64_t>::cons(
-                                   UINT64_C(30), List<uint64_t>::cons(
-                                       UINT64_C(40), List<uint64_t>::nil())))),
-      UINT64_C(1)};
+  static inline const state_preserve sample_preserve =
+      state_preserve{List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(
+                  UINT64_C(30),
+                  List<uint64_t>::cons(UINT64_C(40), List<uint64_t>::nil())))),
+                     UINT64_C(1)};
   static inline const bool test_write_main_preserves_other_bank =
       ListDef::template nth<uint64_t>(
           UINT64_C(3),
           execute_write(sample_preserve, UINT64_C(99)).ram_sys_preserve,
-          UINT64_C(0)) == UINT64_C(40);
+          UINT64_C(0)) ==
+      UINT64_C(40);
   static bool ram_addr_disjointb(uint64_t b1, uint64_t c1, uint64_t r1,
                                  uint64_t i1, uint64_t b2, uint64_t c2,
                                  uint64_t r2, uint64_t i2);
-  static inline const uint64_t test_addr_disjoint_bool = ((ram_addr_disjointb(
-                                                               UINT64_C(0),
-                                                               UINT64_C(1),
-                                                               UINT64_C(2),
-                                                               UINT64_C(3),
-                                                               UINT64_C(0),
-                                                               UINT64_C(1),
-                                                               UINT64_C(2),
-                                                               UINT64_C(3))
-                                                               ? UINT64_C(1)
-                                                               : UINT64_C(0)) +
-                                                          (ram_addr_disjointb(
-                                                               UINT64_C(0),
-                                                               UINT64_C(1),
-                                                               UINT64_C(2),
-                                                               UINT64_C(3),
-                                                               UINT64_C(0),
-                                                               UINT64_C(1),
-                                                               UINT64_C(2),
-                                                               UINT64_C(4))
-                                                               ? UINT64_C(1)
-                                                               : UINT64_C(0)));
+  static inline const uint64_t test_addr_disjoint_bool =
+      ((ram_addr_disjointb(UINT64_C(0), UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                           UINT64_C(0), UINT64_C(1), UINT64_C(2),
+                           UINT64_C(3)) ? UINT64_C(1) : UINT64_C(0)) +
+       (ram_addr_disjointb(UINT64_C(0), UINT64_C(1), UINT64_C(2), UINT64_C(3),
+                           UINT64_C(0), UINT64_C(1), UINT64_C(2),
+                           UINT64_C(4)) ? UINT64_C(1) : UINT64_C(0)));
 
   struct reg_nested_bank {
     List<uint64_t> status_;
@@ -551,19 +567,16 @@ struct RamOps {
                                          uint64_t v);
   static uint64_t read_status0(const state_nested_bank &s);
   static inline const state_nested_bank sample_nested_bank =
-      state_nested_bank{
-          List<bank_nested_bank>::cons(
-              bank_nested_bank{
-                  List<chip_nested_bank>::cons(
-                      chip_nested_bank{
-                          List<reg_nested_bank>::cons(
-                              reg_nested_bank{
-                                  List<uint64_t>::cons(
-                                      UINT64_C(3), List<uint64_t>::cons(
-                                          UINT64_C(4), List<uint64_t>::nil()))},
-                              List<reg_nested_bank>::nil())},
-                      List<chip_nested_bank>::nil())},
-              List<bank_nested_bank>::nil())};
+      state_nested_bank{List<bank_nested_bank>::cons(
+          bank_nested_bank{List<chip_nested_bank>::cons(
+              chip_nested_bank{List<reg_nested_bank>::cons(
+                  reg_nested_bank{List<uint64_t>::cons(
+                      UINT64_C(3),
+                      List<uint64_t>::cons(UINT64_C(4),
+                                           List<uint64_t>::nil()))},
+                  List<reg_nested_bank>::nil())},
+              List<chip_nested_bank>::nil())},
+          List<bank_nested_bank>::nil())};
   static inline const uint64_t test_nested_bank_status_write =
       read_status0(write_status0(sample_nested_bank, UINT64_C(7)));
   enum class Item { S_, S_0 };
@@ -589,30 +602,25 @@ struct RamOps {
   static inline const uint64_t test_accessor_namespace =
       (score(Item::S_) + score(Item::S_0));
   static inline const std::pair<
-      std::pair<std::pair<
-                    std::pair<
-                        std::pair<
-                            std::pair<
-                                std::pair<
-                                    std::pair<std::pair<uint64_t, uint64_t>,
-                                              uint64_t>, uint64_t>, uint64_t>,
-                            uint64_t>, bool>, bool>, uint64_t>, uint64_t> t =
-      std::make_pair(
-          std::make_pair(
-              std::make_pair(
-                  std::make_pair(
-                      std::make_pair(
-                          std::make_pair(
-                              std::make_pair(
-                                  std::make_pair(
-                                      std::make_pair(test_main_write_chain,
-                                                     test_port_write_chain),
-                                      test_status_write_chain),
-                                  test_read_main_selector), test_read_nested),
-                          test_addr_disjoint_bool),
-                      test_write_frame_different_chip),
-                  test_write_main_preserves_other_bank),
-              test_nested_bank_status_write), test_accessor_namespace);
+      std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<
+          std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>,
+                                                        uint64_t>,
+                                              uint64_t>,
+                                    bool>,
+                          bool>,
+                uint64_t>,
+      uint64_t> t = std::make_pair(
+      std::make_pair(std::make_pair(std::make_pair(
+          std::make_pair(std::make_pair(std::make_pair(std::make_pair(
+              std::make_pair(test_main_write_chain, test_port_write_chain),
+              test_status_write_chain),
+                                                       test_read_main_selector),
+                                        test_read_nested),
+                         test_addr_disjoint_bool),
+          test_write_frame_different_chip),
+                                    test_write_main_preserves_other_bank),
+                     test_nested_bank_status_write),
+      test_accessor_namespace);
 };
 
 template <typename T1>

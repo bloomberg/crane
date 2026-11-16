@@ -134,9 +134,8 @@ struct RocqBug11114 {
   static inline const pkg test_pkg =
       pkg{List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
           t::t0(UINT64_C(2))};
-  static inline const pkg test_map = map([](uint64_t x) {
-    return (x + UINT64_C(1));
-  }, test_pkg);
+  static inline const pkg test_map =
+      map([](uint64_t x) { return (x + UINT64_C(1)); }, test_pkg);
 };
 
 #endif // INCLUDED_ROCQ_BUG_11114

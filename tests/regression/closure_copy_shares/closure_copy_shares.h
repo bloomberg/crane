@@ -104,7 +104,7 @@ struct ClosureCopyShares {
   /// Captures two closures.
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
-    std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+             std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t compose(F0 &&f, F1 &&g, uint64_t x) {
     return f(g(x));
   }
@@ -113,31 +113,38 @@ struct ClosureCopyShares {
   static inline const List<crane::fn<uint64_t(uint64_t)>> closures = []() {
     return []() {
       crane::fn<uint64_t(uint64_t)> a = []() {
-        auto _pa0 = List<uint64_t>::cons(
-            UINT64_C(1), List<uint64_t>::cons(
-                UINT64_C(2), List<uint64_t>::cons(
-                    UINT64_C(3), List<uint64_t>::cons(
-                        UINT64_C(4), List<uint64_t>::cons(
-                            UINT64_C(5), List<uint64_t>::cons(
-                                UINT64_C(6), List<uint64_t>::cons(
-                                    UINT64_C(7), List<uint64_t>::cons(
-                                        UINT64_C(8),
-                                        List<uint64_t>::nil()))))))));
+        auto _pa0 =
+            List<uint64_t>::cons(
+                UINT64_C(1),
+                List<uint64_t>::cons(
+                    UINT64_C(2),
+                    List<uint64_t>::cons(
+                        UINT64_C(3),
+                        List<uint64_t>::cons(
+                            UINT64_C(4),
+                            List<uint64_t>::cons(
+                                UINT64_C(5),
+                                List<uint64_t>::cons(
+                                    UINT64_C(6),
+                                    List<uint64_t>::cons(
+                                        UINT64_C(7),
+                                        List<uint64_t>::cons(
+                                            UINT64_C(8),
+                                            List<uint64_t>::nil()))))))));
         return [=](uint64_t _x0) -> uint64_t { return adder(_pa0, _x0); };
       }();
       return List<crane::fn<uint64_t(uint64_t)>>::cons(
           a, List<crane::fn<uint64_t(uint64_t)>>::cons(
-              [=](uint64_t _x0) -> uint64_t {
-                return compose(
-                    a,
-                    [=](uint64_t _x0) -> uint64_t {
-                      return compose([](uint64_t x) {
-                        return (x + 1);
-                      }, a, _x0);
-                    },
-                    _x0);
-              },
-              List<crane::fn<uint64_t(uint64_t)>>::nil()));
+                 [=](uint64_t _x0) -> uint64_t {
+                   return compose(
+                       a,
+                       [=](uint64_t _x0) -> uint64_t {
+                         return compose([](uint64_t x) { return (x + 1); }, a,
+                                        _x0);
+                       },
+                       _x0);
+                 },
+                 List<crane::fn<uint64_t(uint64_t)>>::nil()));
     }();
   }();
 };

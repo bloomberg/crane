@@ -135,10 +135,11 @@ struct Vector {
 };
 
 struct VectorCasesDeduction {
-  static inline const T<Nat> v3 = T<Nat>::cons(
-      Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())), T<Nat>::cons(
-          Nat::s(Nat::s(Nat::o())), Nat::s(Nat::o()), T<Nat>::cons(
-              Nat::s(Nat::s(Nat::s(Nat::o()))), Nat::o(), T<Nat>::nil())));
+  static inline const T<Nat> v3 =
+      T<Nat>::cons(Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())),
+                   T<Nat>::cons(Nat::s(Nat::s(Nat::o())), Nat::s(Nat::o()),
+                                T<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                             Nat::o(), T<Nat>::nil())));
   static Nat hd3(const T<Nat> &v);
   static inline const Nat test = hd3(v3);
 };
@@ -146,9 +147,8 @@ struct VectorCasesDeduction {
 template <typename T1, typename T2, typename F0>
 T2 Vector::caseS(F0 &&h, const Nat &, const T<T1> &v) {
   if (std::holds_alternative<typename T<T1>::Nil>(v.v())) {
-    return crane_any_cast<T2>(([]() -> crane::obj {
-      throw std::logic_error("unreachable");
-    })());
+    return crane_any_cast<T2>(
+        ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
   } else {
     const auto &[h1, n, a2] = std::get<typename T<T1>::Cons>(v.v());
     return h(h1, n, *a2);
@@ -156,9 +156,8 @@ T2 Vector::caseS(F0 &&h, const Nat &, const T<T1> &v) {
 }
 
 template <typename T1> T1 Vector::hd(const Nat &n, const T<T1> &x0_) {
-  return Vector::template caseS<T1, T1>([](T1 h, Nat, T<T1>) {
-    return h;
-  }, n, x0_);
+  return Vector::template caseS<T1, T1>([](T1 h, Nat, T<T1>) { return h; }, n,
+                                        x0_);
 }
 
 #endif // INCLUDED_VECTOR_CASES_DEDUCTION

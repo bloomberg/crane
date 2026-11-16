@@ -104,9 +104,10 @@ struct ParFutureReadTwice {
   static inline const uint64_t listed = []() {
     List<std::shared_future<uint64_t>> _bind_result =
         spawn_all(List<uint64_t>::cons(
-                      UINT64_C(1), List<uint64_t>::cons(
-                          UINT64_C(2), List<uint64_t>::cons(
-                              UINT64_C(3), List<uint64_t>::nil()))));
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
     return join_all(std::move(_bind_result));
   }();
 };

@@ -139,11 +139,9 @@ struct ReuseScrutinee {
   }();
   /// Expected: subtree_sum on Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf))
   /// = left_val + right_val = 10 + 30 = 40
-  static inline const uint64_t expected_sum =
-      subtree_sum(
-          tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                     UINT64_C(20),
-                     tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+  static inline const uint64_t expected_sum = subtree_sum(tree::node(
+      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
 };
 
 #endif // INCLUDED_REUSE_SCRUTINEE

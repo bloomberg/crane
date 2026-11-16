@@ -132,8 +132,9 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
-            const auto &[r] = std::get<
-                typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
+            const auto &[r] =
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                    _other.v());
             return RetF{[&]() -> R {
               if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
@@ -146,8 +147,9 @@ public:
             if (std::holds_alternative<
                     typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
-              const auto &[t] = std::get<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v());
+              const auto &[t] =
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                      _other.v());
               return TauF{[&]() -> itree {
                 if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
@@ -157,8 +159,9 @@ public:
                 }
               }()};
             } else {
-              const auto &[x, e] = std::get<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(_other.v());
+              const auto &[x, e] =
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                      _other.v());
               return VisF{
                   [&]() -> E {
                     if constexpr (crane_convertible<E, const CraneU0 &>) {
@@ -216,30 +219,19 @@ public:
 
   template <typename CraneU0, typename CraneU1>
   Itree(const Itree<CraneU0, CraneU1> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                       [=]() -> variant_t {
-                                                         const auto &[_observe] =
-                                                             std::get<
-                                                                 typename Itree<
-                                                                     CraneU0,
-                                                                     CraneU1>::Go>(
-                                                                 _other.v());
-                                                         return Go{
-                                                             crane_convert<
-                                                                 ItreeF<
-                                                                     E, R,
-                                                                     Itree<E,
-                                                                           R>>>(
-                                                                 _observe)};
-                                                       })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(
+      _other.lazy_cell(), [=]() -> variant_t {
+        const auto &[_observe] =
+            std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
+        return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
+      })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                               std::move(_observe)));
+    return Itree<E, R>(crane::lazy<variant_t>(
+        std::in_place, std::in_place_index<0>, std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -279,38 +271,25 @@ struct NestedStatetRetType {
       stateT<bool, crane_carrier_tc_73ef07e9f18b86f9, CraneTcArg>;
   static inline const stateT<Nat, crane_carrier_tc_f7ac3d5701e8f328,
                              Nat> stacked = []() {
-                               return [](Nat n) {
-                                 return [=, n = std::move(n)](bool b) {
-                                   return Itree<noE, std::pair<
-                                                    bool,
-                                                    std::pair<Nat, Nat>>>::go(
-                                       ItreeF<
-                                           noE,
-                                           std::pair<bool, std::pair<Nat, Nat>>,
-                                           Itree<noE, std::pair<
-                                                     bool,
-                                                     std::pair<Nat,
-                                                               Nat>>>>::retf(
-                                           std::make_pair(
-                                               !(b), std::make_pair(
-                                                   n.add(Nat::s(Nat::o())),
-                                                   n))));
-                                 };
-                               };
-                             }();
+    return [](Nat n) {
+      return [=, n = std::move(n)](bool b) {
+        return Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>::go(
+            ItreeF<noE, std::pair<bool, std::pair<Nat, Nat>>,
+                   Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::retf(
+                std::make_pair(!(b),
+                               std::make_pair(n.add(Nat::s(Nat::o())), n))));
+      };
+    };
+  }();
   static inline const Nat unstacked = []() {
     auto &&_sv =
         stacked(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))(true).observe();
-    if (std::holds_alternative<
-            typename ItreeF<noE, std::pair<bool, std::pair<Nat, Nat>>,
-                            Itree<noE,
-                                  std::pair<bool, std::pair<Nat, Nat>>>>::RetF>(
-            _sv.v())) {
-      const auto &[r0] =
-          std::get<typename ItreeF<
-                       noE, std::pair<bool, std::pair<Nat, Nat>>,
-                       Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::RetF>(
-              _sv.v());
+    if (std::holds_alternative<typename ItreeF<
+            noE, std::pair<bool, std::pair<Nat, Nat>>,
+            Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::RetF>(_sv.v())) {
+      const auto &[r0] = std::get<typename ItreeF<
+          noE, std::pair<bool, std::pair<Nat, Nat>>,
+          Itree<noE, std::pair<bool, std::pair<Nat, Nat>>>>::RetF>(_sv.v());
       const auto &[_x, p] = r0;
       const auto &[a, _x0] = p;
       return a;

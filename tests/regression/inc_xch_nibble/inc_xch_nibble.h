@@ -127,85 +127,56 @@ struct IncXchNibble {
   static uint64_t get_reg_pair(const state &s, uint64_t r);
   static state execute_inc(const state &s, uint64_t r);
   static state execute_xch(const state &s, uint64_t r);
-  static inline const state sample = state{
+  static inline const state sample = state{List<uint64_t>::cons(
+      UINT64_C(2),
       List<uint64_t>::cons(
-          UINT64_C(2), List<uint64_t>::cons(
-              UINT64_C(9), List<uint64_t>::cons(
-                  UINT64_C(4), List<uint64_t>::cons(
-                      UINT64_C(7), List<uint64_t>::cons(
-                          UINT64_C(8), List<uint64_t>::cons(
-                              UINT64_C(1), List<uint64_t>::nil())))))),
-      UINT64_C(13)};
-  static inline const bool inc_modifies_single_nibble_even = get_reg_pair(
-                                                                 execute_inc(
-                                                                     sample,
-                                                                     UINT64_C(2)),
-                                                                 UINT64_C(2)) ==
-                                                             ((nibble_of_nat(
-                                                                   (get_reg(
-                                                                        sample,
-                                                                        UINT64_C(
-                                                                            2)) +
-                                                                    UINT64_C(1))) *
-                                                               UINT64_C(16)) +
-                                                              get_reg(
-                                                                  sample,
-                                                                  UINT64_C(3)));
-  static inline const bool inc_modifies_single_nibble_odd = get_reg_pair(
-                                                                execute_inc(
-                                                                    sample,
-                                                                    UINT64_C(3)),
-                                                                UINT64_C(3)) ==
-                                                            ((get_reg(
-                                                                  sample,
-                                                                  UINT64_C(2)) *
-                                                              UINT64_C(16)) +
-                                                             nibble_of_nat(
-                                                                 (get_reg(
-                                                                      sample,
-                                                                      UINT64_C(
-                                                                          3)) +
-                                                                  UINT64_C(1))));
+          UINT64_C(9),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(
+                  UINT64_C(7),
+                  List<uint64_t>::cons(
+                      UINT64_C(8),
+                      List<uint64_t>::cons(UINT64_C(1),
+                                           List<uint64_t>::nil())))))),
+                                           UINT64_C(13)};
+  static inline const bool inc_modifies_single_nibble_even =
+      get_reg_pair(execute_inc(sample, UINT64_C(2)), UINT64_C(2)) ==
+      ((nibble_of_nat((get_reg(sample, UINT64_C(2)) + UINT64_C(1))) *
+        UINT64_C(16)) +
+       get_reg(sample, UINT64_C(3)));
+  static inline const bool inc_modifies_single_nibble_odd =
+      get_reg_pair(execute_inc(sample, UINT64_C(3)), UINT64_C(3)) ==
+      ((get_reg(sample, UINT64_C(2)) * UINT64_C(16)) +
+       nibble_of_nat((get_reg(sample, UINT64_C(3)) + UINT64_C(1))));
   static inline const bool inc_preserves_pair_partner =
       get_reg(execute_inc(sample, UINT64_C(2)), UINT64_C(3)) ==
       get_reg(sample, UINT64_C(3));
   static inline const bool inc_preserves_pair_partner_odd =
       get_reg(execute_inc(sample, UINT64_C(3)), UINT64_C(2)) ==
       get_reg(sample, UINT64_C(2));
-  static inline const bool xch_modifies_single_nibble_even = get_reg_pair(
-                                                                 execute_xch(
-                                                                     sample,
-                                                                     UINT64_C(2)),
-                                                                 UINT64_C(2)) ==
-                                                             ((nibble_of_nat(
-                                                                   sample.acc) *
-                                                               UINT64_C(16)) +
-                                                              get_reg(
-                                                                  sample,
-                                                                  UINT64_C(3)));
-  static inline const bool xch_modifies_single_nibble_odd = get_reg_pair(
-                                                                execute_xch(
-                                                                    sample,
-                                                                    UINT64_C(3)),
-                                                                UINT64_C(3)) ==
-                                                            ((get_reg(
-                                                                  sample,
-                                                                  UINT64_C(2)) *
-                                                              UINT64_C(16)) +
-                                                             nibble_of_nat(
-                                                                 sample.acc));
+  static inline const bool xch_modifies_single_nibble_even =
+      get_reg_pair(execute_xch(sample, UINT64_C(2)), UINT64_C(2)) ==
+      ((nibble_of_nat(sample.acc) * UINT64_C(16)) +
+       get_reg(sample, UINT64_C(3)));
+  static inline const bool xch_modifies_single_nibble_odd =
+      get_reg_pair(execute_xch(sample, UINT64_C(3)), UINT64_C(3)) ==
+      ((get_reg(sample, UINT64_C(2)) * UINT64_C(16)) +
+       nibble_of_nat(sample.acc));
   static inline const bool xch_preserves_pair_partner =
       get_reg(execute_xch(sample, UINT64_C(2)), UINT64_C(3)) ==
       get_reg(sample, UINT64_C(3));
   static inline const bool xch_preserves_pair_partner_odd =
       get_reg(execute_xch(sample, UINT64_C(3)), UINT64_C(2)) ==
       get_reg(sample, UINT64_C(2));
-  static inline const bool t =
-      (((((((inc_modifies_single_nibble_even &&
-             inc_modifies_single_nibble_odd) && inc_preserves_pair_partner) &&
-           inc_preserves_pair_partner_odd) &&
-          xch_modifies_single_nibble_even) && xch_modifies_single_nibble_odd) &&
-        xch_preserves_pair_partner) && xch_preserves_pair_partner_odd);
+  static inline const bool t = (((((((inc_modifies_single_nibble_even &&
+                                      inc_modifies_single_nibble_odd) &&
+                                     inc_preserves_pair_partner) &&
+                                    inc_preserves_pair_partner_odd) &&
+                                   xch_modifies_single_nibble_even) &&
+                                  xch_modifies_single_nibble_odd) &&
+                                 xch_preserves_pair_partner) &&
+                                xch_preserves_pair_partner_odd);
 };
 
 template <typename T1>

@@ -286,7 +286,8 @@ struct MemSafetyProbe20 {
   static inline const uint64_t test_wrap_match = []() {
     wrapped w = wrap_match(
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                   UINT64_C(7), tree::leaf()), Choice::CLEFT);
+                   UINT64_C(7), tree::leaf()),
+        Choice::CLEFT);
     return w.unwrap(UINT64_C(0));
   }();
   /// TEST 3: Pair of closure and value, returned from if.
@@ -364,7 +365,7 @@ struct MemSafetyProbe20 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}

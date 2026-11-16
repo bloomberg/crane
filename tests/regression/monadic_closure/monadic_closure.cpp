@@ -57,7 +57,11 @@ int64_t MonadicClosure::nested_capture() {
 uint64_t MonadicClosure::test_count() {
   return count_matching([](std::string s) {
     return static_cast<int64_t>(std::move(s).length()) == INT64_C(0);
-  }, List<std::string>::cons("a", List<std::string>::cons("", List<std::string>::cons("bc", List<std::string>::nil()))));
+  },
+                        List<std::string>::cons(
+                            "a", List<std::string>::cons(
+                                     "", List<std::string>::cons(
+                                             "bc", List<std::string>::nil()))));
 }
 
 /// 7. Effect inside a let, result used later

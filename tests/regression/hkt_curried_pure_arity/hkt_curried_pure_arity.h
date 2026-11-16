@@ -82,9 +82,10 @@ concept Apply = requires {
     I::template pure<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template F<crane::obj>>;
   {
-    I::template ap<crane::obj, crane::obj>(
-        std::declval<typename I::template F<crane::fn<crane::obj(crane::obj)>>>(),
-        std::declval<typename I::template F<crane::obj>>())
+    I::template ap<crane::obj, crane::obj>(std::declval<
+        typename I::template F<crane::fn<crane::obj(crane::obj)>>>(),
+                                           std::declval<typename I::template F<
+                                               crane::obj>>())
   } -> std::convertible_to<typename I::template F<crane::obj>>;
 };
 

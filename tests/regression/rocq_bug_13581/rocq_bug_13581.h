@@ -106,9 +106,8 @@ struct RocqBug13581 {
     }
   };
 
-  static inline const mixin_of<Nat> d = mixin_of<Nat>{[](Nat x0) {
-    return x0;
-  }};
+  static inline const mixin_of<Nat> d =
+      mixin_of<Nat>{[](Nat x0) { return x0; }};
 
   template <typename T0> struct R {
     crane::fn<T0(T0)> g;

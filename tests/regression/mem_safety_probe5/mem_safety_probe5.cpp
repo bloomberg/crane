@@ -76,18 +76,16 @@ MemSafetyProbe5::build_getters(
           _loop_l->v());
       const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe5::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons([=](uint64_t _x0) -> uint64_t {
-            return a0.get_left_val(_x0);
-          }, nullptr);
+          crane::fn<uint64_t(uint64_t)>>::Mycons(
+          [=](uint64_t _x0) -> uint64_t { return a0.get_left_val(_x0); },
+          nullptr);
       MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<MemSafetyProbe5::mylist<
-                                               crane::fn<uint64_t(uint64_t)>>>(
-                              std::move(_cell)))
+          (_write ? *(*_write = std::make_shared<MemSafetyProbe5::mylist<
+                          crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe5::mylist<
-                        crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
+              crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
       _loop_l = &a1_value;
       continue;
     }
@@ -121,13 +119,11 @@ uint64_t MemSafetyProbe5::apply_all(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
-                                     crane::fn<uint64_t(uint64_t)>>::Mynil>(
-              l.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
         _result = x;
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe5::mylist<
-                         crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe5::mylist<
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -183,13 +179,11 @@ MemSafetyProbe5::collect_left_vals(
         const MemSafetyProbe5::tree &a0_value = *a0;
         const MemSafetyProbe5::tree &a2_value = *a2;
         _stack.emplace_back(CraneCont_Node{a0});
-        _stack.emplace_back(CraneEnter{
-                                mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                                    [=](uint64_t _x0) -> uint64_t {
-                                      return t.get_left_val(_x0);
-                                    },
-                                    std::move(acc)),
-                                a2_value});
+        _stack.emplace_back(
+            CraneEnter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+                [=](uint64_t _x0) -> uint64_t { return t.get_left_val(_x0); },
+                std::move(acc)),
+                       a2_value});
       }
     } else {
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
@@ -221,7 +215,8 @@ MemSafetyProbe5::make_tree_list(uint64_t n) {
       auto _cell =
           typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons(
               tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
-                         (_loop_n * UINT64_C(2)), tree::leaf()), nullptr);
+                         (_loop_n * UINT64_C(2)), tree::leaf()),
+              nullptr);
       MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &_node =
           (_write ? *(*_write = std::make_shared<
                           MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
@@ -265,13 +260,11 @@ uint64_t MemSafetyProbe5::sum_getters(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
-                                     crane::fn<uint64_t(uint64_t)>>::Mynil>(
-              l.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe5::mylist<
-                         crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe5::mylist<
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }

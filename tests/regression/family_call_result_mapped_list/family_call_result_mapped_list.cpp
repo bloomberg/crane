@@ -13,12 +13,11 @@ FamilyCallResultMappedList::size(const FamilyCallResultMappedList::ty &t,
     return [](auto _f, const auto &_l, auto _a) {
       for (const auto &_x : _l) _a = _f(_a, _x);
       return _a;
-    }(
-        crane_erase_fn<uint64_t>(
-            [=](uint64_t acc, FamilyCallResultMappedList::den x) {
-              return (acc + size(a0_value, std::move(x)));
-            }),
-        crane::any_cast<std::deque<crane::obj>>(std::move(n)), UINT64_C(0));
+    }(crane_erase_fn<uint64_t>([=](uint64_t acc,
+                                   FamilyCallResultMappedList::den x) {
+        return (acc + size(a0_value, std::move(x)));
+      }),
+      crane::any_cast<std::deque<crane::obj>>(std::move(n)), UINT64_C(0));
   }
 }
 

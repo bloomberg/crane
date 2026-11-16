@@ -27,11 +27,9 @@ struct MappingLambdaCaptureDefault {
     return _r;
   }(INT64_C(-7), INT64_C(2));
   static inline const int64_t run =
-      static_cast<int64_t>(
-          static_cast<uint64_t>(static_cast<int64_t>(
-                                    static_cast<uint64_t>(d) *
-                                    static_cast<uint64_t>(INT64_C(10)))) +
-          static_cast<uint64_t>(m));
+      static_cast<int64_t>(static_cast<uint64_t>(static_cast<int64_t>(
+          static_cast<uint64_t>(d) * static_cast<uint64_t>(INT64_C(10)))) +
+                           static_cast<uint64_t>(m));
 };
 
 #endif // INCLUDED_MAPPING_LAMBDA_CAPTURE_DEFAULT

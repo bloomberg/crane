@@ -51,18 +51,18 @@ struct DequeElementCast {
   using grammar_entry = Specif::SigT<Nonterm, sem_ty>;
 
   static const grammar_entry &items_value() {
-    static const grammar_entry v = Specif::template SigT<Nonterm,
-                                                         crane::obj>::existt(
-        Nonterm::NT_ITEMS, [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(crane::obj(Val::vnum(UINT64_C(42))), [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(crane::obj(Val::vstr(UINT64_C(7))), [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(crane::obj(Val::vnum(UINT64_C(3))), std::deque<crane::obj>{}))));
+    static const grammar_entry v =
+        Specif::template SigT<Nonterm, crane::obj>::existt(
+            Nonterm::NT_ITEMS, [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(crane::obj(Val::vnum(UINT64_C(42))), [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(crane::obj(Val::vstr(UINT64_C(7))), [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(crane::obj(Val::vnum(UINT64_C(3))), std::deque<crane::obj>{}))));
     return v;
   }
 

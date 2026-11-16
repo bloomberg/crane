@@ -273,12 +273,10 @@ struct MethodPartialApp {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f1 = [&](uint64_t _x0) -> uint64_t {
-        return t1.add_to_sum(_x0);
-      };
-      crane::fn<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
-        return t2.add_to_sum(_x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f1 =
+          [&](uint64_t _x0) -> uint64_t { return t1.add_to_sum(_x0); };
+      crane::fn<uint64_t(uint64_t)> f2 =
+          [&](uint64_t _x0) -> uint64_t { return t2.add_to_sum(_x0); };
       return (f1(UINT64_C(0)) + f2(UINT64_C(0)));
     }();
   }();

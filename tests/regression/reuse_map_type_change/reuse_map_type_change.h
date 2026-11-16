@@ -87,9 +87,8 @@ struct ReuseMapTypeChange {
     }
 
     static lst<A> cons_crane_reuse(crane::rc<lst<A>> _tok, A a0, lst<A> a1) {
-      return lst<A>(
-          Cons{std::move(a0),
-               crane::make_rc_reusing<lst<A>>(std::move(_tok), std::move(a1))});
+      return lst<A>(Cons{std::move(a0), crane::make_rc_reusing<lst<A>>(
+                                            std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS

@@ -11,31 +11,31 @@ uint64_t LocalMutualCallableParamCapture::run(uint64_t k, uint64_t n) {
       [&](auto &_self_f, auto &_self_g, const crane::fn<uint64_t(uint64_t)> &h,
           uint64_t n0)
            -> uint64_t {
-            if (n0 <= 0) {
-              return h(UINT64_C(0));
-            } else {
-              uint64_t m = n0 - 1;
-              return (_self_g(_self_f, _self_g, h, m) + k);
-            }
-          };
+        if (n0 <= 0) {
+          return h(UINT64_C(0));
+        } else {
+          uint64_t m = n0 - 1;
+          return (_self_g(_self_f, _self_g, h, m) + k);
+        }
+      };
   auto g_impl =
       [](auto &_self_f, auto &_self_g, const crane::fn<uint64_t(uint64_t)> &h,
          uint64_t n0)
            -> uint64_t {
-            if (n0 <= 0) {
-              return h(UINT64_C(1));
-            } else {
-              uint64_t m = n0 - 1;
-              return _self_f(_self_f, _self_g, h, m);
-            }
-          };
+        if (n0 <= 0) {
+          return h(UINT64_C(1));
+        } else {
+          uint64_t m = n0 - 1;
+          return _self_f(_self_f, _self_g, h, m);
+        }
+      };
   auto f =
-      [&](const crane::fn<uint64_t(uint64_t)> &h, uint64_t n0) -> uint64_t {
-        return f_impl(f_impl, g_impl, h, n0);
-      };
+      [&](const crane::fn<uint64_t(uint64_t)> &h,
+          uint64_t n0)
+           -> uint64_t { return f_impl(f_impl, g_impl, h, n0); };
   auto g =
-      [&](const crane::fn<uint64_t(uint64_t)> &h, uint64_t n0) -> uint64_t {
-        return g_impl(f_impl, g_impl, h, n0);
-      };
+      [&](const crane::fn<uint64_t(uint64_t)> &h,
+          uint64_t n0)
+           -> uint64_t { return g_impl(f_impl, g_impl, h, n0); };
   return f([](uint64_t x) { return (x + UINT64_C(3)); }, n);
 }

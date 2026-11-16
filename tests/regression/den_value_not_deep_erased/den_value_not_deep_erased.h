@@ -191,9 +191,10 @@ struct DenValueNotDeepErased {
   static inline const uint64_t from_call =
       size(ty::tlist(ty::tnat()), mk(UINT64_C(4)));
   static inline const den nested = List<crane::obj>::cons(
-      List<crane::obj>::cons(UINT64_C(1), List<crane::obj>::cons(
-                                 UINT64_C(2), List<crane::obj>::nil())), List<
-          crane::obj>::cons(
+      List<crane::obj>::cons(
+          UINT64_C(1),
+          List<crane::obj>::cons(UINT64_C(2), List<crane::obj>::nil())),
+      List<crane::obj>::cons(
           List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil()),
           List<crane::obj>::nil()));
   static inline const uint64_t from_nested =

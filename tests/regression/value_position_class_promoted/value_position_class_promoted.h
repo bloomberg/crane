@@ -217,11 +217,9 @@ template <typename T1, typename F1> VLike<T1> mk_vlike(const T1 &z, F1 &&f) {
   return VLike<T1>{z, f};
 }
 
-const List<VLike<Nat>> dicts = List<VLike<Nat>>::cons(
-    mk_vlike<Nat>(Nat::o(), [](const Nat &_x0, const Nat &_x1) {
-      return _x0.add(_x1);
-    }),
-    List<VLike<Nat>>::nil());
+const List<VLike<Nat>> dicts = List<VLike<Nat>>::cons(mk_vlike<Nat>(
+    Nat::o(), [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); }),
+                                                      List<VLike<Nat>>::nil());
 
 struct ValuePositionClassPromoted {
   template <Ptr _tcI0> static typename _tcI0::iptr twice() {

@@ -11,17 +11,18 @@ uint64_t BoxedElementDrain::total(const BoxedElementDrain::rose &r) {
         [](auto &_self_go,
            const crane::list<BoxedElementDrain::rose> &l)
              -> uint64_t {
-              if (l.empty()) {
-                return UINT64_C(0);
-              } else {
-                const BoxedElementDrain::rose &k = l.front();
-                auto t = l.tail();
-                return (total(k) + _self_go(_self_go, t));
-              }
-            };
-    auto go = [&](const crane::list<BoxedElementDrain::rose> &l) -> uint64_t {
-      return go_impl(go_impl, l);
-    };
+          if (l.empty()) {
+            return UINT64_C(0);
+          } else {
+            const BoxedElementDrain::rose &k = l.front();
+            auto t = l.tail();
+            return (total(k) + _self_go(_self_go, t));
+          }
+        };
+    auto go =
+        [&](const crane::list<BoxedElementDrain::rose> &l) -> uint64_t {
+          return go_impl(go_impl, l);
+        };
     return go(kids);
   }());
 }
@@ -31,7 +32,8 @@ BoxedElementDrain::rose BoxedElementDrain::spine(uint64_t d) {
     return rose::node(UINT64_C(1), crane::list<BoxedElementDrain::rose>{});
   } else {
     uint64_t d_ = d - 1;
-    return rose::node(UINT64_C(1), crane::cons(
-                          spine(d_), crane::list<BoxedElementDrain::rose>{}));
+    return rose::node(
+        UINT64_C(1),
+        crane::cons(spine(d_), crane::list<BoxedElementDrain::rose>{}));
   }
 }

@@ -160,17 +160,17 @@ struct CapturingInitialiserMeyers {
         return []() {
           uint64_t k = (B::base + UINT64_C(1));
           return List<uint64_t>::cons(
-              UINT64_C(1), List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3),
                                        List<uint64_t>::nil())))
-                     .template map<uint64_t>([=](uint64_t x) {
-                       return (x + k);
-                     })
+                     .template map<uint64_t>(
+              [=](uint64_t x) { return (x + k); })
                      .template fold_left<uint64_t>(
-              [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                return (_x0 + _x1);
-              },
+              [](uint64_t _x0,
+                 uint64_t _x1)
+                   -> uint64_t { return (_x0 + _x1); },
               UINT64_C(0));
         }();
       }();

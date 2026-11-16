@@ -210,9 +210,8 @@ struct BoxedFields {
         const auto &[a0] = std::get<typename shape::Poly>(this->v());
         const List<point> &a0_value = *a0;
         return a0_value.template fold_left<uint64_t>(
-            [](uint64_t acc, const point &p) {
-              return ((acc + p.px()) + p.py());
-            },
+            [](uint64_t acc,
+               const point &p) { return ((acc + p.px()) + p.py()); },
             UINT64_C(0));
       } else {
         const auto &[a0, a1] = std::get<typename shape::Tagged>(this->v());
@@ -325,12 +324,10 @@ struct BoxedFields {
             const auto &[a00, a10] = std::get<typename shape::Circle>(_sv0.v());
             const auto &_sv1 = *a00;
             const auto &[a01, a11] = _sv1;
-            auto _cell = typename scene::Layer(
-                std::make_shared<
-                    std::decay_t<
-                        decltype(shape::circle(point::pt((a01 + d), a11),
-                                               a10))>>(
-                    shape::circle(point::pt((a01 + d), a11), a10)), nullptr);
+            auto _cell = typename scene::Layer(std::make_shared<std::decay_t<
+                decltype(shape::circle(point::pt((a01 + d), a11), a10))>>(
+                shape::circle(point::pt((a01 + d), a11), a10)),
+                                               nullptr);
             scene &_node =
                 (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
@@ -339,10 +336,10 @@ struct BoxedFields {
             continue;
           } else if (std::holds_alternative<typename shape::Poly>(_sv0.v())) {
             const auto &[a00] = std::get<typename shape::Poly>(_sv0.v());
-            auto _cell = typename scene::Layer(
-                std::make_shared<
-                    std::decay_t<decltype(shape::poly(shift(d, *a00)))>>(
-                    shape::poly(shift(d, *a00))), nullptr);
+            auto _cell = typename scene::Layer(std::make_shared<
+                std::decay_t<decltype(shape::poly(shift(d, *a00)))>>(
+                shape::poly(shift(d, *a00))),
+                                               nullptr);
             scene &_node =
                 (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
@@ -455,24 +452,20 @@ struct BoxedFields {
     }
   };
 
-  static inline const scene sample =
-      scene::layer(shape::circle(point::pt(UINT64_C(1), UINT64_C(2)),
-                                 UINT64_C(3)), scene::layer(
-                       shape::poly(List<point>::cons(
-                                       point::pt(UINT64_C(1), UINT64_C(1)),
-                                       List<point>::cons(
-                                           point::pt(UINT64_C(2), UINT64_C(2)),
-                                           List<point>::cons(
-                                               point::pt(UINT64_C(3),
-                                                         UINT64_C(3)),
-                                               List<point>::nil())))),
-                       scene::layer(
-                           shape::Tagged_(
-                               std::make_optional<point>(
-                                   point::pt(UINT64_C(4), UINT64_C(5))),
-                               std::make_pair(UINT64_C(6), point::pt(
-                                                  UINT64_C(7), UINT64_C(8)))),
-                           scene::empty())));
+  static inline const scene sample = scene::layer(
+      shape::circle(point::pt(UINT64_C(1), UINT64_C(2)), UINT64_C(3)),
+      scene::layer(shape::poly(List<point>::cons(
+          point::pt(UINT64_C(1), UINT64_C(1)),
+          List<point>::cons(
+              point::pt(UINT64_C(2), UINT64_C(2)),
+              List<point>::cons(point::pt(UINT64_C(3), UINT64_C(3)),
+                                List<point>::nil())))),
+                   scene::layer(shape::Tagged_(
+                       std::make_optional<point>(
+                           point::pt(UINT64_C(4), UINT64_C(5))),
+                       std::make_pair(UINT64_C(6),
+                                      point::pt(UINT64_C(7), UINT64_C(8)))),
+                                scene::empty())));
   static inline const uint64_t sample_total = sample.total();
   static inline const uint64_t moved_total =
       sample.move_all(UINT64_C(10)).total();

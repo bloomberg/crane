@@ -532,10 +532,11 @@ struct BorrowedFieldMovedIntoMethod {
       if (std::holds_alternative<typename BfmTypes::ty::TA>(t.v())) {
         const auto &[vector0, sz0, t0] =
             std::get<typename BfmTypes::ty::TA>(t.v());
-        return walk<_tcI0>(*t0, BinInt::add(off, BinInt::mul(
-                                                std::move(k), BinInt::of_N(
-                                                    _tcI0::size_of(*t0)))),
-                           *a1);
+        return walk<_tcI0>(
+            *t0,
+            BinInt::add(off, BinInt::mul(std::move(k),
+                                         BinInt::of_N(_tcI0::size_of(*t0)))),
+            *a1);
       } else {
         return std::optional<Z>();
       }
@@ -559,11 +560,8 @@ struct BorrowedFieldMovedIntoMethod {
   static_assert(Size<SizeI>);
   [[gnu::used]] static inline const BfmTypes::ty arr = BfmTypes::ty::ta(
       false, N::npos(Positive::xo(Positive::xo(Positive::xh()))),
-      BfmTypes::ty::tb(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xo(
-                      Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))));
+      BfmTypes::ty::tb(Positive::xo(Positive::xo(Positive::xo(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))));
   static Z get(const std::optional<Z> &o);
   /// Each walk is 3 * 8 = 24.
   static bool check(std::monostate _x);

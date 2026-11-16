@@ -9,22 +9,21 @@ MemSafetyProbe2::mylist<uint64_t> MemSafetyProbe2::map_apply(
   const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> *_loop_fs = &fs;
   while (true) {
     if (std::holds_alternative<typename MemSafetyProbe2::mylist<
-                                   crane::fn<uint64_t(uint64_t)>>::Mynil>(
-            _loop_fs->v())) {
+            crane::fn<uint64_t(uint64_t)>>::Mynil>(_loop_fs->v())) {
       auto _value = mylist<uint64_t>::mynil();
       (_write ? *(*_write = std::make_shared<MemSafetyProbe2::mylist<uint64_t>>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe2::mylist<
-                       crane::fn<uint64_t(uint64_t)>>::Mycons>(_loop_fs->v());
+      const auto &[a0, a1] = std::get<typename MemSafetyProbe2::mylist<
+          crane::fn<uint64_t(uint64_t)>>::Mycons>(_loop_fs->v());
       auto _cell =
           typename MemSafetyProbe2::mylist<uint64_t>::Mycons(a0(x), nullptr);
       MemSafetyProbe2::mylist<uint64_t> &_node =
-          (_write ? *(*_write = std::make_shared<
-                          MemSafetyProbe2::mylist<uint64_t>>(std::move(_cell)))
+          (_write ? *(*_write =
+                          std::make_shared<MemSafetyProbe2::mylist<uint64_t>>(
+                              std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe2::mylist<uint64_t>::Mycons>(
@@ -95,17 +94,15 @@ MemSafetyProbe2::tree MemSafetyProbe2::fold_tree_build(
   const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> *_loop_fs = &fs;
   while (true) {
     if (std::holds_alternative<typename MemSafetyProbe2::mylist<
-                                   crane::fn<uint64_t(uint64_t)>>::Mynil>(
-            _loop_fs->v())) {
+            crane::fn<uint64_t(uint64_t)>>::Mynil>(_loop_fs->v())) {
       auto _value = tree::leaf();
       (_write ? *(*_write = std::make_shared<MemSafetyProbe2::tree>(
                       std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MemSafetyProbe2::mylist<
-                       crane::fn<uint64_t(uint64_t)>>::Mycons>(_loop_fs->v());
+      const auto &[a0, a1] = std::get<typename MemSafetyProbe2::mylist<
+          crane::fn<uint64_t(uint64_t)>>::Mycons>(_loop_fs->v());
       auto _cell = typename MemSafetyProbe2::tree::Node(
           nullptr, a0(_loop_acc),
           std::make_shared<MemSafetyProbe2::tree>(tree::leaf()));
@@ -149,13 +146,11 @@ uint64_t MemSafetyProbe2::apply_all(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> &fs = *_f.fs;
       if (std::holds_alternative<typename MemSafetyProbe2::mylist<
-                                     crane::fn<uint64_t(uint64_t)>>::Mynil>(
-              fs.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(fs.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe2::mylist<
-                         crane::fn<uint64_t(uint64_t)>>::Mycons>(fs.v());
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe2::mylist<
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(fs.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }

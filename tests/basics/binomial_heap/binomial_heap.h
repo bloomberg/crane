@@ -222,21 +222,16 @@ struct BinomialHeap {
   static priqueue insert_list(const List<uint64_t> &l, List<tree> q);
   static List<uint64_t> make_list(uint64_t n, const List<uint64_t> &l);
   static key help(const List<tree> &c);
-  static inline const key example1 =
-      help(
-          merge(
-              insert(
-                  UINT64_C(5),
-                  insert(UINT64_C(3), insert(UINT64_C(7), List<tree>::nil()))),
-              insert(
-                  UINT64_C(3),
-                  insert(UINT64_C(6),
-                         insert(UINT64_C(9), List<tree>::nil())))));
+  static inline const key example1 = help(merge(
+      insert(UINT64_C(5),
+             insert(UINT64_C(3), insert(UINT64_C(7), List<tree>::nil()))),
+      insert(UINT64_C(3),
+             insert(UINT64_C(6), insert(UINT64_C(9), List<tree>::nil())))));
   static inline const key example2 =
       help(merge(insert_list(make_list(UINT64_C(10), List<uint64_t>::nil()),
-                             List<tree>::nil()), insert_list(
-                     make_list(UINT64_C(11), List<uint64_t>::nil()),
-                     List<tree>::nil())));
+                             List<tree>::nil()),
+                 insert_list(make_list(UINT64_C(11), List<uint64_t>::nil()),
+                             List<tree>::nil())));
 };
 
 #endif // INCLUDED_BINOMIAL_HEAP

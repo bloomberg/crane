@@ -177,7 +177,10 @@ struct MemSafetyProbe16 {
             const auto &[a01, a11, a21] =
                 std::get<typename tree::Node>(_sv1.v());
             return (((((((a00->tree_sum() + a10) + a20->tree_sum()) + a1) +
-                       a01->tree_sum()) + a11) + a21->tree_sum()) + n);
+                       a01->tree_sum()) +
+                      a11) +
+                     a21->tree_sum()) +
+                    n);
           }
         }
       }
@@ -363,7 +366,7 @@ struct MemSafetyProbe16 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -523,13 +526,13 @@ struct MemSafetyProbe16 {
                             uint64_t x);
   static inline const uint64_t test_store_closures = []() {
     mylist<tree> trees =
-        mylist<tree>::mycons(tree::node(tree::leaf(), UINT64_C(10),
-                                        tree::leaf()), mylist<tree>::mycons(
-                                 tree::node(tree::leaf(), UINT64_C(20),
-                                            tree::leaf()), mylist<tree>::mycons(
-                                     tree::node(tree::leaf(), UINT64_C(30),
-                                                tree::leaf()),
-                                     mylist<tree>::mynil())));
+        mylist<tree>::mycons(
+            tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+            mylist<tree>::mycons(
+                tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+                mylist<tree>::mycons(
+                    tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                    mylist<tree>::mynil())));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_summers(std::move(trees));
     return apply_fns(std::move(fns), UINT64_C(0));
   }();
@@ -556,16 +559,15 @@ struct MemSafetyProbe16 {
 
   static inline const uint64_t test_compose = []() {
     mylist<tree> trees =
-        mylist<tree>::mycons(tree::node(tree::leaf(), UINT64_C(5),
-                                        tree::leaf()), mylist<tree>::mycons(
-                                 tree::node(tree::leaf(), UINT64_C(10),
-                                            tree::leaf()), mylist<tree>::mycons(
-                                     tree::node(tree::leaf(), UINT64_C(15),
-                                                tree::leaf()),
-                                     mylist<tree>::mynil())));
-    return compose_summers(std::move(trees), [](uint64_t n) {
-      return n;
-    }, UINT64_C(0));
+        mylist<tree>::mycons(
+            tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+            mylist<tree>::mycons(
+                tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                mylist<tree>::mycons(
+                    tree::node(tree::leaf(), UINT64_C(15), tree::leaf()),
+                    mylist<tree>::mynil())));
+    return compose_summers(std::move(trees), [](uint64_t n) { return n; },
+                           UINT64_C(0));
   }();
   /// TEST 3: Build a list of closures where each closure captures
   /// the SAME tree at different levels.
@@ -610,9 +612,10 @@ struct MemSafetyProbe16 {
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                    UINT64_C(2),
                    tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-        UINT64_C(10), tree::node(
-            tree::node(tree::leaf(), UINT64_C(4), tree::leaf()), UINT64_C(5),
-            tree::node(tree::leaf(), UINT64_C(6), tree::leaf())));
+        UINT64_C(10),
+        tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
+                   UINT64_C(5),
+                   tree::node(tree::leaf(), UINT64_C(6), tree::leaf())));
     return t.deep_nested_closure(UINT64_C(0));
   }();
   /// TEST 7: Map + apply pattern: build closures from tree children,
@@ -621,14 +624,12 @@ struct MemSafetyProbe16 {
   zip_apply(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
             const mylist<uint64_t> &vals);
   static inline const uint64_t test_zip_apply = []() {
-    mylist<tree> trees = mylist<tree>::mycons(tree::node(tree::leaf(),
-                                                         UINT64_C(10),
-                                                         tree::leaf()), mylist<
-                                                  tree>::mycons(
-                                                  tree::node(tree::leaf(),
-                                                             UINT64_C(20),
-                                                             tree::leaf()),
-                                                  mylist<tree>::mynil()));
+    mylist<tree> trees =
+        mylist<tree>::mycons(
+            tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+            mylist<tree>::mycons(
+                tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
+                mylist<tree>::mynil()));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_summers(std::move(trees));
     mylist<uint64_t> vals = mylist<uint64_t>::mycons(
         UINT64_C(1),

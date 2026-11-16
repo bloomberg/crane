@@ -426,9 +426,8 @@ N BinNat::div(const N &a, const N &b) { return BinNat::div_eucl(a, b).first; }
 N ConceptAfterUse::sz(const ConceptAfterUse::ty &t) {
   if (std::holds_alternative<typename ConceptAfterUse::ty::TB>(t.v())) {
     const auto &[n0] = std::get<typename ConceptAfterUse::ty::TB>(t.v());
-    return BinNat::div(
-        N::npos(n0),
-        N::npos(Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
+    return BinNat::div(N::npos(n0), N::npos(Positive::xo(Positive::xo(
+                                        Positive::xo(Positive::xh())))));
   } else {
     const auto &[sz0, t1] = std::get<typename ConceptAfterUse::ty::TA>(t.v());
     return BinNat::mul(sz0, sz(*t1));
@@ -437,17 +436,10 @@ N ConceptAfterUse::sz(const ConceptAfterUse::ty &t) {
 
 bool ConceptAfterUse::check(std::monostate) {
   return BinNat::eqb(
-      walk<ConceptAfterUse::SizeI>(ty::ta(
-                                       N::npos(
-                                           Positive::xo(
-                                               Positive::xo(Positive::xh()))),
-                                       ty::tb(
-                                           Positive::xo(
-                                               Positive::xo(
-                                                   Positive::xo(
-                                                       Positive::xo(
-                                                           Positive::xo(
-                                                               Positive::xo(
-                                                                   Positive::xh()))))))))),
+      walk<ConceptAfterUse::SizeI>(
+          ty::ta(
+              N::npos(Positive::xo(Positive::xo(Positive::xh()))),
+              ty::tb(Positive::xo(Positive::xo(Positive::xo(
+                  Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))))),
       N::npos(Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
 }

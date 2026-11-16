@@ -110,7 +110,8 @@ struct VoidCallback {
 
   static void print_nat(uint64_t _x);
   static inline const std::monostate test_for_each = []() {
-    for_each(print_nat, List<uint64_t>::cons(
+    for_each(print_nat,
+             List<uint64_t>::cons(
                  UINT64_C(1),
                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
     return std::monostate{};
@@ -148,9 +149,11 @@ struct VoidCallback {
 
   static inline const uint64_t test_ignore = ignore_and_count(
       print_nat, List<uint64_t>::cons(
-          UINT64_C(1), List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+                     UINT64_C(1),
+                     List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3),
+                                          List<uint64_t>::nil()))));
 
   /// 5. Nested void callbacks
   template <typename F0>

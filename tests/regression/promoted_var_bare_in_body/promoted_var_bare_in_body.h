@@ -182,13 +182,13 @@ template <typename ptr, typename iptr, typename I> struct ToDvalueBase {
 /// rather than an instance; its body builds a dvalue_base and binds an
 /// iptr.
 template <Params _tcI0>
-ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr,
-             typename _tcI0::iptr> to_iptr(const typename _tcI0::iptr &) {
+ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, typename _tcI0::iptr>
+to_iptr(const typename _tcI0::iptr &) {
   return ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr,
                       typename _tcI0::iptr>{[](const typename _tcI0::iptr &x) {
-                        return Dvalue_base<typename _tcI0::ptr,
-                                           typename _tcI0::iptr>::dvalue_iptr(x);
-                      }};
+    return Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr>::dvalue_iptr(
+        x);
+  }};
 }
 
 struct natParams {

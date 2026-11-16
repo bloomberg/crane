@@ -181,24 +181,22 @@ public:
 struct MapOverPartialApp {
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T2> &&
-    std::is_invocable_r_v<T2, F1 &, const T1 &>
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 comp(F0 &&f, F1 &&g, const T1 &x) {
     return f(g(x));
   }
 
   static inline const List<crane::fn<Nat(Nat)>> ex = []() {
-    return List<crane::fn<Nat(Nat)>>::cons([](const Nat &x) {
-      return Nat::s(x);
-    }, List<crane::fn<Nat(Nat)>>::cons([](const Nat &x) {
-      return Nat::s(x);
-    }, List<crane::fn<Nat(Nat)>>::nil()))
+    return List<crane::fn<Nat(Nat)>>::cons(
+        [](const Nat &x) { return Nat::s(x); },
+        List<crane::fn<Nat(Nat)>>::cons([](const Nat &x) { return Nat::s(x); },
+                                        List<crane::fn<Nat(Nat)>>::nil()))
                .template map<crane::fn<Nat(Nat)>>([](crane::fn<Nat(Nat)> _x0) {
-                 return [=](Nat _x1) -> Nat {
-                   return comp<Nat, Nat, Nat>([](const Nat &x) {
-                     return Nat::s(x);
-                   }, _x0, _x1);
-                 };
-               });
+      return [=](Nat _x1) -> Nat {
+        return comp<Nat, Nat, Nat>([](const Nat &x) { return Nat::s(x); }, _x0,
+                                   _x1);
+      };
+    });
   }();
   static inline const Nat run = []() {
     auto &&_sv = ex;

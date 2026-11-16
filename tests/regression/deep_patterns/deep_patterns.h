@@ -265,7 +265,7 @@ struct DeepPatterns {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const bool &>
+             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 inner_rect(F0 &&f, F1 &&f0, const inner &i) {
     if (std::holds_alternative<typename inner::ILeft>(i.v())) {
       const auto &[a0] = std::get<typename inner::ILeft>(i.v());
@@ -373,7 +373,7 @@ struct DeepPatterns {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -467,10 +467,9 @@ struct DeepPatterns {
   static uint64_t deep_wildcard(
       const pair<pair<uint64_t, uint64_t>, pair<uint64_t, uint64_t>> &p);
   static inline const uint64_t test_deep_some =
-      deep_option(
-          std::make_optional<std::optional<std::optional<uint64_t>>>(
-              std::make_optional<std::optional<uint64_t>>(
-                  std::make_optional<uint64_t>(UINT64_C(42)))));
+      deep_option(std::make_optional<std::optional<std::optional<uint64_t>>>(
+          std::make_optional<std::optional<uint64_t>>(
+              std::make_optional<uint64_t>(UINT64_C(42)))));
   static inline const uint64_t test_deep_none =
       deep_option(
           std::make_optional<std::optional<std::optional<uint64_t>>>(
@@ -479,60 +478,68 @@ struct DeepPatterns {
   static inline const uint64_t test_deep_pair =
       deep_pair(std::make_pair(std::make_pair(UINT64_C(1), UINT64_C(2)),
                                std::make_pair(UINT64_C(3), UINT64_C(4))));
-  static inline const uint64_t test_shape_3 =
-      list_shape(List<uint64_t>::cons(
-                     UINT64_C(10), List<uint64_t>::cons(
-                         UINT64_C(20), List<uint64_t>::cons(
-                             UINT64_C(30), List<uint64_t>::nil()))));
+  static inline const uint64_t test_shape_3 = list_shape(List<uint64_t>::cons(
+      UINT64_C(10), List<uint64_t>::cons(
+                        UINT64_C(20), List<uint64_t>::cons(
+                                          UINT64_C(30),
+                                          List<uint64_t>::nil()))));
   static inline const uint64_t test_shape_long =
-      list_shape(
+      list_shape(List<uint64_t>::cons(
+          UINT64_C(1),
           List<uint64_t>::cons(
-              UINT64_C(1), List<uint64_t>::cons(
-                  UINT64_C(2), List<uint64_t>::cons(
-                      UINT64_C(3), List<uint64_t>::cons(
-                          UINT64_C(4), List<uint64_t>::cons(
-                              UINT64_C(5), List<uint64_t>::cons(
-                                  UINT64_C(6), List<uint64_t>::nil())))))));
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(
+                          UINT64_C(5), List<uint64_t>::cons(
+                                           UINT64_C(6),
+                                           List<uint64_t>::nil())))))));
   static inline const uint64_t test_deep_sum =
       deep_sum(outer::oleft(inner::ileft(UINT64_C(77))));
-  static inline const uint64_t test_complex =
-      complex_match(
-          std::make_optional<std::pair<uint64_t, List<uint64_t>>>(
-              std::make_pair(UINT64_C(5), List<uint64_t>::cons(
-                                 UINT64_C(10), List<uint64_t>::cons(
-                                     UINT64_C(20), List<uint64_t>::cons(
-                                         UINT64_C(30),
-                                         List<uint64_t>::nil()))))));
+  static inline const uint64_t test_complex = complex_match(
+      std::make_optional<std::pair<uint64_t, List<uint64_t>>>(std::make_pair(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(10),
+              List<uint64_t>::cons(
+                  UINT64_C(20),
+                  List<uint64_t>::cons(UINT64_C(30),
+                                       List<uint64_t>::nil()))))));
   static inline const uint64_t test_guarded =
       guarded_match(std::make_pair(UINT64_C(3), UINT64_C(7)));
   static inline const uint64_t test_pair_list =
-      match_pair_list(
-          mylist<pair<uint64_t, uint64_t>>::cons(
-              pair<uint64_t, uint64_t>::pair0(UINT64_C(5), UINT64_C(3)),
-              mylist<pair<uint64_t, uint64_t>>::nil()));
+      match_pair_list(mylist<pair<uint64_t, uint64_t>>::cons(
+          pair<uint64_t, uint64_t>::pair0(UINT64_C(5), UINT64_C(3)),
+          mylist<pair<uint64_t, uint64_t>>::nil()));
   static inline const uint64_t test_two_one =
       match_two(mylist<uint64_t>::cons(UINT64_C(7), mylist<uint64_t>::nil()));
-  static inline const uint64_t test_two_many =
-      match_two(
-          mylist<uint64_t>::cons(UINT64_C(7), mylist<uint64_t>::cons(
-                                     UINT64_C(8), mylist<uint64_t>::nil())));
+  static inline const uint64_t test_two_many = match_two(mylist<uint64_t>::cons(
+      UINT64_C(7),
+      mylist<uint64_t>::cons(UINT64_C(8), mylist<uint64_t>::nil())));
   static inline const uint64_t test_triple =
-      match_triple(
-          mylist<mylist<mylist<uint64_t>>>::cons(
-              mylist<mylist<uint64_t>>::cons(
-                  mylist<uint64_t>::cons(UINT64_C(9), mylist<uint64_t>::nil()),
-                  mylist<mylist<uint64_t>>::nil()),
-              mylist<mylist<mylist<uint64_t>>>::nil()));
-  static inline const uint64_t test_wildcard =
-      deep_wildcard(
-          pair<pair<uint64_t, uint64_t>, pair<uint64_t, uint64_t>>::pair0(
-              pair<uint64_t, uint64_t>::pair0(UINT64_C(1), UINT64_C(2)),
-              pair<uint64_t, uint64_t>::pair0(UINT64_C(3), UINT64_C(4))));
+      match_triple(mylist<mylist<mylist<uint64_t>>>::cons(
+          mylist<mylist<uint64_t>>::cons(
+              mylist<uint64_t>::cons(UINT64_C(9), mylist<uint64_t>::nil()),
+              mylist<mylist<uint64_t>>::nil()),
+          mylist<mylist<mylist<uint64_t>>>::nil()));
+  static inline const uint64_t test_wildcard = deep_wildcard(
+      pair<pair<uint64_t, uint64_t>, pair<uint64_t, uint64_t>>::pair0(
+          pair<uint64_t, uint64_t>::pair0(UINT64_C(1), UINT64_C(2)),
+          pair<uint64_t, uint64_t>::pair0(UINT64_C(3), UINT64_C(4))));
   static inline const uint64_t t =
       ((((((((((((test_deep_some + test_deep_none) + test_deep_pair) +
-                test_shape_3) + test_shape_long) + test_deep_sum) +
-             test_complex) + test_guarded) + test_pair_list) + test_two_one) +
-         test_two_many) + test_triple) + test_wildcard);
+                test_shape_3) +
+               test_shape_long) +
+              test_deep_sum) +
+             test_complex) +
+            test_guarded) +
+           test_pair_list) +
+          test_two_one) +
+         test_two_many) +
+        test_triple) +
+       test_wildcard);
 };
 
 #endif // INCLUDED_DEEP_PATTERNS

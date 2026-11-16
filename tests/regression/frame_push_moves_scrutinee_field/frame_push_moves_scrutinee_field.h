@@ -141,14 +141,18 @@ struct FramePushMovesScrutineeField {
   /// weigh1 t is weigh1 ys + 3 + 2 * length t: 5, 12, 21.
   static inline const uint64_t result = weigh(
       List<List<uint64_t>>::cons(
-          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                   UINT64_C(2), List<uint64_t>::cons(
-                                       UINT64_C(3), List<uint64_t>::nil()))),
-          List<List<uint64_t>>::cons(
-              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::cons(
-                                       UINT64_C(5), List<uint64_t>::nil())),
-              List<List<uint64_t>>::nil())), List<uint64_t>::cons(
-          UINT64_C(7), List<uint64_t>::cons(
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+          List<List<uint64_t>>::cons(List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil())),
+                                     List<List<uint64_t>>::nil())),
+      List<uint64_t>::cons(
+          UINT64_C(7),
+          List<uint64_t>::cons(
               UINT64_C(8),
               List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()))));
 };

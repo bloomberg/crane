@@ -118,39 +118,30 @@ struct LoopifyCoindStream {
 
     template <typename CraneU>
     stream(const stream<CraneU> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                         [=]() -> variant_t {
-                                                           const auto &[a0,
-                                                                        a1] =
-                                                               std::get<
-                                                                   typename stream<
-                                                                       CraneU>::Scons>(
-                                                                   _other.v());
-                                                           return Scons{
-                                                               [&]() -> A {
-                                                                 if constexpr (
-                                                                     crane_convertible<
-                                                                         A,
-                                                                         const CraneU &>) {
-                                                                   return crane_convert<
-                                                                       A>(a0);
-                                                                 } else {
-                                                                   throw std::logic_error(
-                                                                       "unreachable: inactive constructor field at this instantiation");
-                                                                 }
-                                                               }(),
-                                                               crane_convert<
-                                                                   stream<A>>(
-                                                                   a1)};
-                                                         })) {}
+        : lazy_v_(
+        crane::lazy<variant_t>::converted_from(
+            _other.lazy_cell(), [=]() -> variant_t {
+              const auto &[a0, a1] =
+                  std::get<typename stream<CraneU>::Scons>(_other.v());
+              return Scons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  crane_convert<stream<A>>(a1)};
+            })) {}
 
     explicit stream(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream<A> scons(A a0, stream<A> a1) {
-      return stream<A>(
-          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                                 std::move(a0), std::move(a1)));
+      return stream<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(a0), std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -232,31 +223,27 @@ struct LoopifyCoindStream {
   unfold(const std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> &f,
          const T2 &seed) {
     auto [a, s_] = f(seed);
-    return stream<T1>::lazy_([=, a = std::move(a),
-                              s_ = std::move(s_)]() -> typename stream<T1>::Scons {
-                                return {std::move(a),
-                                        unfold<T1, T2>(f, std::move(s_))};
-                              });
+    return stream<T1>::lazy_(
+        [=, a = std::move(a), s_ = std::move(s_)]() -> typename stream<T1>::Scons {
+          return {std::move(a), unfold<T1, T2>(f, std::move(s_))};
+        });
   }
 
-  static inline const stream<uint64_t> nats = iterate<uint64_t>([](uint64_t x) {
-    return (x + 1);
-  }, UINT64_C(0));
-  static inline const stream<uint64_t> doubled =
-      smap<uint64_t, uint64_t>([](uint64_t n) {
-        return (n * UINT64_C(2));
-      }, nats);
-  static inline const stream<uint64_t> sum_stream = zipWith<uint64_t, uint64_t,
-                                                            uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, nats,
-      doubled);
-  static inline const stream<uint64_t> fibs = unfold<
-      uint64_t, std::pair<uint64_t, uint64_t>>(
-      [](std::pair<uint64_t, uint64_t> pat) {
-        const auto &[a, b] = pat;
-        return std::make_pair(a, std::make_pair(b, (a + b)));
-      },
-      std::make_pair(UINT64_C(0), UINT64_C(1)));
+  static inline const stream<uint64_t> nats =
+      iterate<uint64_t>([](uint64_t x) { return (x + 1); }, UINT64_C(0));
+  static inline const stream<uint64_t> doubled = smap<uint64_t, uint64_t>(
+      [](uint64_t n) { return (n * UINT64_C(2)); }, nats);
+  static inline const stream<uint64_t> sum_stream =
+      zipWith<uint64_t, uint64_t, uint64_t>(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          nats, doubled);
+  static inline const stream<uint64_t> fibs =
+      unfold<uint64_t, std::pair<uint64_t, uint64_t>>(
+          [](std::pair<uint64_t, uint64_t> pat) {
+            const auto &[a, b] = pat;
+            return std::make_pair(a, std::make_pair(b, (a + b)));
+          },
+          std::make_pair(UINT64_C(0), UINT64_C(1)));
   static inline const List<uint64_t> test_nats_5 =
       take<uint64_t>(UINT64_C(5), nats);
   static inline const List<uint64_t> test_doubled_5 =

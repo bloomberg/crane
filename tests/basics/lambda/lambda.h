@@ -20,9 +20,8 @@ struct Lambda {
     return f(x0_);
   }
 
-  static inline const uint64_t use_apply = apply_fn([](uint64_t x) {
-    return (x + UINT64_C(1));
-  }, UINT64_C(5));
+  static inline const uint64_t use_apply =
+      apply_fn([](uint64_t x) { return (x + UINT64_C(1)); }, UINT64_C(5));
   static inline const uint64_t test_simple = simple_lambda(UINT64_C(5));
   static inline const uint64_t test_multi = multi_arg(UINT64_C(3), UINT64_C(4));
   static inline const uint64_t test_nested =

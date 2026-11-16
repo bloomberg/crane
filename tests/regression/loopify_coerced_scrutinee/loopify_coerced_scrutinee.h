@@ -138,7 +138,7 @@ struct LoopifyCoercedScrutinee {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const bool &>
+             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2,
                       const expr &e) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
@@ -224,9 +224,8 @@ struct LoopifyCoercedScrutinee {
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Ite_2{std::move(a), &a1, &a2, std::move(_f._tmp3),
-                            std::move(_result)});
+        _stack.emplace_back(CraneCont_Ite_2{
+            std::move(a), &a1, &a2, std::move(_f._tmp3), std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
@@ -244,7 +243,7 @@ struct LoopifyCoercedScrutinee {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const bool &>
+             std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2,
                      const expr &e) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
@@ -330,9 +329,8 @@ struct LoopifyCoercedScrutinee {
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Ite_2{std::move(a), &a1, &a2, std::move(_f._tmp3),
-                            std::move(_result)});
+        _stack.emplace_back(CraneCont_Ite_2{
+            std::move(a), &a1, &a2, std::move(_f._tmp3), std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else {
         auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
@@ -414,11 +412,10 @@ struct LoopifyCoercedScrutinee {
   static inline const uint64_t deep =
       crane::any_cast<uint64_t>(eval<uint64_t>(nest(UINT64_C(50))));
   static inline const uint64_t chosen =
-      crane::any_cast<uint64_t>(
-          eval<uint64_t>(expr::ite(
-                             expr::ite(expr::bl(false), expr::bl(false),
-                                       expr::iszero(expr::lit(UINT64_C(0)))),
-                             expr::lit(UINT64_C(3)), expr::lit(UINT64_C(4)))));
+      crane::any_cast<uint64_t>(eval<uint64_t>(
+          expr::ite(expr::ite(expr::bl(false), expr::bl(false),
+                              expr::iszero(expr::lit(UINT64_C(0)))),
+                    expr::lit(UINT64_C(3)), expr::lit(UINT64_C(4)))));
 };
 
 #endif // INCLUDED_LOOPIFY_COERCED_SCRUTINEE

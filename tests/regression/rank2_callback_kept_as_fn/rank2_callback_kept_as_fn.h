@@ -108,27 +108,22 @@ struct Rank2CallbackKeptAsFn {
             crane_call_erased(g, a0, *a1, _self_f0(_self_f0, *a1)));
       }
     };
-    auto f0 = [&](const List<crane::obj> &m) -> T1 {
-      return f0_impl(f0_impl, m);
-    };
+    auto f0 =
+        [&](const List<crane::obj> &m) -> T1 { return f0_impl(f0_impl, m); };
     return std::make_pair(f0(l), f0(l));
   }
 
   template <typename T1> static uint64_t len(const List<T1> &l) {
-    static const auto erased_fn = crane::immortal(
-        crane_erase_fn<uint64_t>([](crane::obj, List<crane::obj>, uint64_t k) {
-          return (k + 1);
-        }));
-    return both<uint64_t, T1>([]() {
-      return UINT64_C(0);
-    }(), erased_fn, l)
+    static const auto erased_fn = crane::immortal(crane_erase_fn<uint64_t>(
+        [](crane::obj, List<crane::obj>, uint64_t k) { return (k + 1); }));
+    return both<uint64_t, T1>([]() { return UINT64_C(0); }(), erased_fn,
+                              l)
                .first;
   }
 
-  static inline const uint64_t result =
-      len<bool>(List<bool>::cons(
-                    true, List<bool>::cons(
-                        false, List<bool>::cons(true, List<bool>::nil()))));
+  static inline const uint64_t result = len<bool>(List<bool>::cons(
+      true,
+      List<bool>::cons(false, List<bool>::cons(true, List<bool>::nil()))));
 };
 
 #endif // INCLUDED_RANK2_CALLBACK_KEPT_AS_FN

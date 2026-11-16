@@ -177,9 +177,9 @@ struct LoopifyAdoptedFixAliasResult {
         auto _f = std::move(std::get<CraneCont_k>(_frame));
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
-        _result = option_cons<T3>(k, f(std::make_optional<T1>(e),
-                                       std::optional<T2>()),
-                                  std::move(_result));
+        _result = option_cons<T3>(
+            k, f(std::make_optional<T1>(e), std::optional<T2>()),
+            std::move(_result));
       }
     }
     return _result;
@@ -337,9 +337,9 @@ struct LoopifyAdoptedFixAliasResult {
         std::decay_t<F0> f = std::move(_f.f);
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
-        _result = option_cons<T3>(k, f(std::make_optional<T1>(e),
-                                       std::optional<T2>()),
-                                  std::move(_result));
+        _result = option_cons<T3>(
+            k, f(std::make_optional<T1>(e), std::optional<T2>()),
+            std::move(_result));
       } else if (std::holds_alternative<CraneCont2>(_frame)) {
         auto _f = std::move(std::get<CraneCont2>(_frame));
         std::decay_t<F0> f = std::move(_f.f);

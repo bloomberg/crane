@@ -182,7 +182,7 @@ struct ProgramTargetsRegionScan {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 instruction_rect(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[a0] = std::get<typename instruction::JUN>(i.v());
@@ -213,9 +213,11 @@ struct ProgramTargetsRegionScan {
   static inline const uint64_t t = []() {
     layout l = layout{UINT64_C(200), UINT64_C(20)};
     List<instruction> p = List<instruction>::cons(
-        instruction::nop(), List<instruction>::cons(
-            instruction::jun(UINT64_C(205)), List<instruction>::cons(
-                instruction::jms(UINT64_C(218)), List<instruction>::nil())));
+        instruction::nop(),
+        List<instruction>::cons(
+            instruction::jun(UINT64_C(205)),
+            List<instruction>::cons(instruction::jms(UINT64_C(218)),
+                                    List<instruction>::nil())));
     if (program_targets_okb(std::move(p), std::move(l))) {
       return UINT64_C(1);
     } else {

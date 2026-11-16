@@ -7,11 +7,14 @@ enum class Byte;
 
 struct Byte0 {
   static std::pair<
-      bool, std::pair<
-          bool, std::pair<
-              bool, std::pair<
-                  bool,
-                  std::pair<bool, std::pair<bool, std::pair<bool, bool>>>>>>>
+      bool,
+      std::pair<
+          bool,
+          std::pair<
+              bool,
+              std::pair<bool,
+                        std::pair<bool,
+                                  std::pair<bool, std::pair<bool, bool>>>>>>>
   to_bits(Byte b0);
 };
 

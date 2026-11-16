@@ -89,9 +89,8 @@ struct ClosureCaptureMatch {
     /// Closure that captures a shared_ptr and is called AFTER
     /// the original data structure is dropped.
     uint64_t capture_and_drop() const {
-      crane::fn<tree(uint64_t)> f = [&](uint64_t _x0) -> tree {
-        return this->make_inserter(_x0);
-      };
+      crane::fn<tree(uint64_t)> f =
+          [&](uint64_t _x0) -> tree { return this->make_inserter(_x0); };
       auto &&_sv = f(UINT64_C(42));
       if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
         return UINT64_C(0);
@@ -245,9 +244,8 @@ struct ClosureCaptureMatch {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return t.deep_capture(_x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) -> uint64_t { return t.deep_capture(_x0); };
       fn_box b = box_from_match(std::move(t));
       return (f(UINT64_C(5)) + b.unbox(UINT64_C(7)));
     }();

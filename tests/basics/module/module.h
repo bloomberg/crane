@@ -201,8 +201,8 @@ static_assert(OrderedType<NatOrdered>);
 using NatMap = MakeMap<NatOrdered, NatBase>;
 static_assert(Map<NatMap>);
 const NatMap::t mymap = NatMap::add(
-    UINT64_C(1), UINT64_C(10), NatMap::add(
-        UINT64_C(2), UINT64_C(20),
-        NatMap::add(UINT64_C(3), UINT64_C(30), NatMap::empty())));
+    UINT64_C(1), UINT64_C(10),
+    NatMap::add(UINT64_C(2), UINT64_C(20),
+                NatMap::add(UINT64_C(3), UINT64_C(30), NatMap::empty())));
 
 #endif // INCLUDED_MODULE

@@ -23,8 +23,8 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(), std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<typename I::template m<crane::obj>>(),
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -295,9 +295,8 @@ struct LoopifyFrameLambdaType {
                                List<T2>::nil()));
           } else {
             _result = Monad_res::template ret<
-                std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::make_pair(List<std::pair<crane::obj, crane::obj>>::nil(),
-                               l2));
+                std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
+                List<std::pair<crane::obj, crane::obj>>::nil(), l2));
           }
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l1.v());
@@ -318,15 +317,16 @@ struct LoopifyFrameLambdaType {
         _result = Monad_res::template bind<
             std::pair<List<std::pair<T1, T2>>, List<T2>>,
             std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-            std::move(_result), [=, a0 = std::move(a0), a00 = std::move(a00)](
+            std::move(_result),
+            [=, a0 = std::move(a0), a00 = std::move(a00)](
                 std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
-                  auto [l, rest] = std::move(x0);
-                  return Monad_res::template ret<
-                      std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                      std::make_pair(List<std::pair<T1, T2>>::cons(
-                                         std::make_pair(a0, a00), std::move(l)),
-                                     std::move(rest)));
-                });
+              auto [l, rest] = std::move(x0);
+              return Monad_res::template ret<
+                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+                  std::make_pair(List<std::pair<T1, T2>>::cons(
+                      std::make_pair(a0, a00), std::move(l)),
+                                 std::move(rest)));
+            });
       }
     }
     return _result;

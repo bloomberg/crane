@@ -27,8 +27,8 @@ struct NameClashScopeLeak {
                               const List<uint64_t> &l2,
                               const List<uint64_t> &l3);
   /// Matching on a pair where both components are lists.
-  static uint64_t pair_match(const std::pair<List<uint64_t>,
-                                             List<uint64_t>> &p);
+  static uint64_t
+  pair_match(const std::pair<List<uint64_t>, List<uint64_t>> &p);
 };
 
 template <typename A> struct List {

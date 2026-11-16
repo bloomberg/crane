@@ -309,29 +309,22 @@ struct GadtIndexErasure {
   /// The result is read out of the box at a pair type.
   static inline const uint64_t direct =
       crane_any_cast<std::pair<uint64_t, bool>>(
-          eval<std::pair<uint64_t, bool>>(
-              expr::pair(expr::ite(expr::bl(true), expr::lit(UINT64_C(3)),
-                                   expr::lit(UINT64_C(4))),
-                         expr::bl(false))))
+          eval<std::pair<uint64_t, bool>>(expr::pair(expr::ite(
+              expr::bl(true), expr::lit(UINT64_C(3)), expr::lit(UINT64_C(4))),
+                                                     expr::bl(false))))
           .first;
   /// The evaluator is passed as a function value to map, which instantiates
   /// it at nat while its signature still returns std::any.
   static List<uint64_t> evalAll(const List<expr> &l);
-  static inline const uint64_t run = (direct + evalAll(List<expr>::cons(
-                                                           expr::lit(
-                                                               UINT64_C(1)),
-                                                           List<expr>::cons(
-                                                               expr::lit(
-                                                                   UINT64_C(2)),
-                                                               List<expr>::nil())))
-                                                   .template fold_right<
-                                          uint64_t>(
-                                          [](uint64_t _x0,
-                                             uint64_t _x1)
-                                               -> uint64_t {
-                                                return (_x0 + _x1);
-                                              },
-                                          UINT64_C(0)));
+  static inline const uint64_t run =
+      (direct +
+       evalAll(List<expr>::cons(
+           expr::lit(UINT64_C(1)),
+           List<expr>::cons(expr::lit(UINT64_C(2)),
+                            List<expr>::nil())))
+           .template fold_right<uint64_t>(
+           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+           UINT64_C(0)));
 };
 
 #endif // INCLUDED_GADT_INDEX_ERASURE

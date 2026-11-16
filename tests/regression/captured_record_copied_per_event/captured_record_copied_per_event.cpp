@@ -18,17 +18,13 @@ CapturedRecordCopiedPerEvent::mk(const Nat &n) {
   return blk{md(n), md(n), md(n), md(n), n};
 }
 
-Itree<CapturedRecordCopiedPerEvent::TickE,
-      std::monostate> CapturedRecordCopiedPerEvent::ticks(const Nat &k) {
+Itree<CapturedRecordCopiedPerEvent::TickE, std::monostate>
+CapturedRecordCopiedPerEvent::ticks(const Nat &k) {
   static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
-                                                   crane::obj, crane::fn<
-                                                       crane::obj(crane::obj)>>(
-                                                   [](crane::obj) {
-                                                     return crane_erase_global<
-                                                         Function::Id_IFun,
-                                                         crane::obj>();
-                                                   },
-                                                   crane::obj()));
+      crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
+    return crane_erase_global<Function::Id_IFun, crane::obj>();
+  },
+                                                     crane::obj()));
   if (std::holds_alternative<typename Nat::O>(k.v())) {
     return Itree<CapturedRecordCopiedPerEvent::TickE, std::monostate>::go(
         ItreeF<CapturedRecordCopiedPerEvent::TickE, std::monostate,
@@ -52,18 +48,12 @@ Itree<CapturedRecordCopiedPerEvent::TickE, Nat>
 CapturedRecordCopiedPerEvent::step(const CapturedRecordCopiedPerEvent::blk &b,
                                    const Nat &k) {
   return ITree::template bind<CapturedRecordCopiedPerEvent::TickE,
-                              std::monostate, Nat>(ticks(k),
-                                                   [=](std::monostate) {
-                                                     return Itree<
-                                                         CapturedRecordCopiedPerEvent::TickE,
-                                                         Nat>::go(
-                                                         ItreeF<
-                                                             CapturedRecordCopiedPerEvent::TickE,
-                                                             Nat, Itree<
-                                                                 CapturedRecordCopiedPerEvent::TickE,
-                                                                 Nat>>::retf(
-                                                             b.tag));
-                                                   });
+                              std::monostate, Nat>(
+      ticks(k), [=](std::monostate) {
+        return Itree<CapturedRecordCopiedPerEvent::TickE, Nat>::go(ItreeF<
+            CapturedRecordCopiedPerEvent::TickE, Nat,
+            Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::retf(b.tag));
+      });
 }
 
 Itree<CapturedRecordCopiedPerEvent::TickE, Nat>
@@ -78,9 +68,8 @@ CapturedRecordCopiedPerEvent::steps(const Nat &n, const Nat &k,
     const auto &[a0] = std::get<typename Nat::S>(n.v());
     const Nat &a0_value = *a0;
     return ITree::template bind<CapturedRecordCopiedPerEvent::TickE, Nat, Nat>(
-        step(b, k), [=](Nat x) {
-          return steps(a0_value, k, b, acc.add(std::move(x)));
-        });
+        step(b, k),
+        [=](Nat x) { return steps(a0_value, k, b, acc.add(std::move(x))); });
   }
 }
 
@@ -91,31 +80,25 @@ std::optional<Nat> CapturedRecordCopiedPerEvent::run(
   } else {
     const auto &[a0] = std::get<typename Nat::S>(fuel.v());
     auto &&_sv0 = t.observe();
-    if (std::holds_alternative<
-            typename ItreeF<CapturedRecordCopiedPerEvent::TickE, Nat,
-                            Itree<CapturedRecordCopiedPerEvent::TickE,
-                                  Nat>>::RetF>(_sv0.v())) {
-      const auto &[r0] = std::get<
-          typename ItreeF<CapturedRecordCopiedPerEvent::TickE, Nat,
-                          Itree<CapturedRecordCopiedPerEvent::TickE,
-                                Nat>>::RetF>(_sv0.v());
+    if (std::holds_alternative<typename ItreeF<
+            CapturedRecordCopiedPerEvent::TickE, Nat,
+            Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::RetF>(_sv0.v())) {
+      const auto &[r0] = std::get<typename ItreeF<
+          CapturedRecordCopiedPerEvent::TickE, Nat,
+          Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::RetF>(_sv0.v());
       return std::make_optional<Nat>(r0);
     } else if (
-        std::holds_alternative<
-            typename ItreeF<CapturedRecordCopiedPerEvent::TickE, Nat,
-                            Itree<CapturedRecordCopiedPerEvent::TickE,
-                                  Nat>>::TauF>(_sv0.v())) {
-      const auto &[t0] = std::get<
-          typename ItreeF<CapturedRecordCopiedPerEvent::TickE, Nat,
-                          Itree<CapturedRecordCopiedPerEvent::TickE,
-                                Nat>>::TauF>(_sv0.v());
+        std::holds_alternative<typename ItreeF<
+            CapturedRecordCopiedPerEvent::TickE, Nat,
+            Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::TauF>(_sv0.v())) {
+      const auto &[t0] = std::get<typename ItreeF<
+          CapturedRecordCopiedPerEvent::TickE, Nat,
+          Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::TauF>(_sv0.v());
       return run(*a0, t0);
     } else {
-      const auto &[x0, e0] =
-          std::get<typename ItreeF<
-                       CapturedRecordCopiedPerEvent::TickE, Nat,
-                       Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::VisF>(
-              _sv0.v());
+      const auto &[x0, e0] = std::get<typename ItreeF<
+          CapturedRecordCopiedPerEvent::TickE, Nat,
+          Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::VisF>(_sv0.v());
       return run(*a0, e0(std::monostate{}));
     }
   }

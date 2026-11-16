@@ -6,8 +6,8 @@ std::optional<Nat> HktCurriedPureArity::run(const std::optional<Nat> &a,
       HktCurriedPureArity::ApOpt::template ap<Nat, crane::fn<Nat(Nat)>>(
           HktCurriedPureArity::ApOpt::template pure<
               crane::fn<crane::fn<Nat(Nat)>(Nat)>>([](Nat x) {
-                return [=, x = std::move(x)](Nat) { return x; };
-              }),
+            return [=, x = std::move(x)](Nat) { return x; };
+          }),
           a),
       b);
 }

@@ -139,7 +139,7 @@ struct ErasedValueShares {
   static inline const List<SigT<crane::obj, crane::obj>> boxes =
       List<SigT<crane::obj, crane::obj>>::cons(
           packed, List<SigT<crane::obj, crane::obj>>::cons(
-              packed, List<SigT<crane::obj, crane::obj>>::nil()));
+                      packed, List<SigT<crane::obj, crane::obj>>::nil()));
 };
 
 #endif // INCLUDED_ERASED_VALUE_SHARES

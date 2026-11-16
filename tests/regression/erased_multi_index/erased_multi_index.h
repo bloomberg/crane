@@ -207,8 +207,9 @@ struct ErasedMultiIndex {
   };
 
   static inline const uint64_t test_hlist = []() {
-    hlist l = hlist::hcons(UINT64_C(42), hlist::hcons(
-                               true, hlist::hcons(UINT64_C(7), hlist::hnil())));
+    hlist l = hlist::hcons(
+        UINT64_C(42),
+        hlist::hcons(true, hlist::hcons(UINT64_C(7), hlist::hnil())));
     return l.hlist_length();
   }();
 };

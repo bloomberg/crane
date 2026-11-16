@@ -63,18 +63,21 @@ struct BoxedElementRoseTree {
   static uint64_t size(const rose &r);
   static uint64_t total(const rose &r);
   static crane::list<uint64_t> labels(const rose &r);
-  static inline const rose sample = rose::node(
-      UINT64_C(1), crane::cons(
-          rose::node(UINT64_C(2), crane::list<crane::box<rose>>{}), crane::cons(
-              rose::node(
-                  UINT64_C(3), crane::cons(
+  static inline const rose sample =
+      rose::node(
+          UINT64_C(1),
+          crane::cons(
+              rose::node(UINT64_C(2), crane::list<crane::box<rose>>{}),
+              crane::cons(rose::node(
+                  UINT64_C(3),
+                  crane::cons(
                       rose::node(UINT64_C(4), crane::list<crane::box<rose>>{}),
                       crane::cons(rose::node(UINT64_C(5),
                                              crane::list<crane::box<rose>>{}),
                                   crane::list<crane::box<rose>>{}))),
-              crane::cons(
-                  rose::node(UINT64_C(6), crane::list<crane::box<rose>>{}),
-                  crane::list<crane::box<rose>>{}))));
+                          crane::cons(rose::node(
+                              UINT64_C(6), crane::list<crane::box<rose>>{}),
+                                      crane::list<crane::box<rose>>{}))));
   static inline const uint64_t sample_size = size(sample);
   static inline const uint64_t sample_total = total(sample);
   static inline const crane::list<uint64_t> sample_labels = labels(sample);

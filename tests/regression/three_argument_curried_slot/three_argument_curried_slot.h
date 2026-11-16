@@ -105,36 +105,27 @@ struct ThreeArgumentCurriedSlot {
 
   static inline const List<crane::fn<uint64_t(uint64_t, uint64_t,
                                               uint64_t)>> ws = []() {
-                                                return crane_convert<
-                                                    List<
-                                                        crane::fn<
-                                                            uint64_t(uint64_t,
-                                                                     uint64_t,
-                                                                     uint64_t)>>>(wrap<crane::fn<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>([](uint64_t _ec0) {
-                                                                       return [
-                                                                           =](
-                                                                           uint64_t _ec1) {
-                                                                             return [=](uint64_t _ec2) {
-                                                                               return add3(
-                                                                                   _ec0,
-                                                                                   _ec1,
-                                                                                   _ec2);
-                                                                             };
-                                                                           };
-                                                                     }));
-                                              }();
+    return crane_convert<
+        List<crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>>(
+        wrap<crane::fn<
+            crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>(
+            [](uint64_t _ec0) {
+              return [=](uint64_t _ec1) {
+                return [=](uint64_t _ec2) { return add3(_ec0, _ec1, _ec2); };
+              };
+            }));
+  }();
   static inline const uint64_t result =
       (f3(UINT64_C(1), UINT64_C(2), UINT64_C(3)) + []() {
         auto &&_sv = ws;
-        if (std::holds_alternative<
-                typename List<crane::fn<uint64_t(uint64_t, uint64_t,
-                                                 uint64_t)>>::Nil>(_sv.v())) {
+        if (std::holds_alternative<typename List<
+                crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Nil>(
+                _sv.v())) {
           return UINT64_C(0);
         } else {
           const auto &[a0, a1] =
-              std::get<
-                  typename List<
-                      crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Cons>(
+              std::get<typename List<
+                  crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)>>::Cons>(
                   _sv.v());
           return a0(UINT64_C(1), UINT64_C(1), UINT64_C(1));
         }

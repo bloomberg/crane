@@ -172,8 +172,8 @@ struct LoopifyEquationsWithClause {
     static zeros_graph zeros_graph_refinement_2(uint64_t x, List<uint64_t> xs,
                                                 zeros_clause_2_graph hind) {
       return zeros_graph(Zeros_graph_refinement_2{
-                             x, std::move(xs), std::make_shared<
-                                 zeros_clause_2_graph>(std::move(hind))});
+          x, std::move(xs),
+          std::make_shared<zeros_clause_2_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -200,18 +200,16 @@ struct LoopifyEquationsWithClause {
                   crane::any_cast<std::shared_ptr<zeros_clause_2_graph>>(&_cur)) {
             if (*_sp && (*_sp).use_count() == 1) {
               auto &_pv = (*_sp)->v_mut();
-              if (auto *_alt =
-                      std::get_if<
-                          typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
-                          &_pv)) {
+              if (auto *_alt = std::get_if<
+                      typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
+                      &_pv)) {
                 if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
               }
-              if (auto *_alt =
-                      std::get_if<
-                          typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_2>(
-                          &_pv)) {
+              if (auto *_alt = std::get_if<
+                      typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_2>(
+                      &_pv)) {
                 if (_alt->hind && _alt->hind.use_count() == 1) {
                   _stack.push_back(std::move(_alt->hind));
                 }
@@ -267,19 +265,15 @@ struct LoopifyEquationsWithClause {
     static zeros_clause_2_graph
     zeros_clause_2_graph_equation_1(uint64_t x, List<uint64_t> xs,
                                     zeros_graph hind) {
-      return zeros_clause_2_graph(
-          Zeros_clause_2_graph_equation_1{
-              x, std::move(xs),
-              std::make_shared<zeros_graph>(std::move(hind))});
+      return zeros_clause_2_graph(Zeros_clause_2_graph_equation_1{
+          x, std::move(xs), std::make_shared<zeros_graph>(std::move(hind))});
     }
 
     static zeros_clause_2_graph
     zeros_clause_2_graph_equation_2(uint64_t x, List<uint64_t> xs,
                                     zeros_graph hind) {
-      return zeros_clause_2_graph(
-          Zeros_clause_2_graph_equation_2{
-              x, std::move(xs),
-              std::make_shared<zeros_graph>(std::move(hind))});
+      return zeros_clause_2_graph(Zeros_clause_2_graph_equation_2{
+          x, std::move(xs), std::make_shared<zeros_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -337,8 +331,8 @@ struct LoopifyEquationsWithClause {
 
   template <typename T1, typename T2, typename F1>
   static T1 zeros_graph_mut(
-      T1 f, F1 &&f0, std::type_identity_t<
-          crane::fn<T2(uint64_t, List<uint64_t>, zeros_graph, T1)>> f1,
+      T1 f, F1 &&f0, std::type_identity_t<crane::fn<
+                         T2(uint64_t, List<uint64_t>, zeros_graph, T1)>> f1,
       std::type_identity_t<
           crane::fn<T2(uint64_t, List<uint64_t>, zeros_graph, T1)>> f2,
       const List<uint64_t> &x0_, uint64_t x1_, const zeros_graph &x2_) {
@@ -346,43 +340,40 @@ struct LoopifyEquationsWithClause {
         [&](auto &_self_f3, auto &_self_f4, const List<uint64_t> &, uint64_t,
             const zeros_graph &z)
              -> T1 {
-              if (std::holds_alternative<
-                      typename zeros_graph::Zeros_graph_equation_1>(z.v())) {
-                return f;
-              } else {
-                const auto &[x0, xs0, hind0] = std::get<
-                    typename zeros_graph::Zeros_graph_refinement_2>(z.v());
-                return f0(x0, xs0, *hind0, _self_f4(
-                              _self_f3, _self_f4, x0, x0 == UINT64_C(0), xs0,
-                              zeros_unfold_clause_2(x0, x0 == UINT64_C(0), xs0),
-                              *hind0));
-              }
-            };
+          if (std::holds_alternative<
+                  typename zeros_graph::Zeros_graph_equation_1>(z.v())) {
+            return f;
+          } else {
+            const auto &[x0, xs0, hind0] =
+                std::get<typename zeros_graph::Zeros_graph_refinement_2>(z.v());
+            return f0(
+                x0, xs0, *hind0,
+                _self_f4(_self_f3, _self_f4, x0, x0 == UINT64_C(0), xs0,
+                         zeros_unfold_clause_2(x0, x0 == UINT64_C(0), xs0),
+                         *hind0));
+          }
+        };
     auto f4_impl =
         [&](auto &_self_f3, auto &_self_f4, uint64_t, bool,
             const List<uint64_t> &, uint64_t,
             const zeros_clause_2_graph &z)
              -> T2 {
-              if (std::holds_alternative<
-                      typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
-                      z.v())) {
-                const auto &[x0, xs0, hind0] =
-                    std::get<
-                        typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
-                        z.v());
-                return f1(x0, xs0, *hind0,
-                          _self_f3(_self_f3, _self_f4, xs0, zeros(xs0),
-                                   *hind0));
-              } else {
-                const auto &[x0, xs0, hind0] =
-                    std::get<
-                        typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_2>(
-                        z.v());
-                return f2(x0, xs0, *hind0,
-                          _self_f3(_self_f3, _self_f4, xs0, zeros(xs0),
-                                   *hind0));
-              }
-            };
+          if (std::holds_alternative<
+                  typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
+                  z.v())) {
+            const auto &[x0, xs0, hind0] = std::get<
+                typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
+                z.v());
+            return f1(x0, xs0, *hind0,
+                      _self_f3(_self_f3, _self_f4, xs0, zeros(xs0), *hind0));
+          } else {
+            const auto &[x0, xs0, hind0] = std::get<
+                typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_2>(
+                z.v());
+            return f2(x0, xs0, *hind0,
+                      _self_f3(_self_f3, _self_f4, xs0, zeros(xs0), *hind0));
+          }
+        };
     auto f3 =
         [&](const List<uint64_t> &_x, uint64_t _x0,
             const zeros_graph &z)
@@ -395,51 +386,48 @@ struct LoopifyEquationsWithClause {
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
-  static T2 zeros_clause_2_graph_mut(
-      T1 f, F1 &&f0, F2 &&f1, F3 &&f2, uint64_t x0_, bool x1_,
-      const List<uint64_t> &x2_, uint64_t x3_,
-      const zeros_clause_2_graph &x4_) {
+  static T2
+  zeros_clause_2_graph_mut(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, uint64_t x0_,
+                           bool x1_, const List<uint64_t> &x2_, uint64_t x3_,
+                           const zeros_clause_2_graph &x4_) {
     auto f3_impl =
         [&](auto &_self_f3, auto &_self_f4, const List<uint64_t> &, uint64_t,
             const zeros_graph &z)
              -> T1 {
-              if (std::holds_alternative<
-                      typename zeros_graph::Zeros_graph_equation_1>(z.v())) {
-                return f;
-              } else {
-                const auto &[x0, xs0, hind0] = std::get<
-                    typename zeros_graph::Zeros_graph_refinement_2>(z.v());
-                return f0(x0, xs0, *hind0, _self_f4(
-                              _self_f3, _self_f4, x0, x0 == UINT64_C(0), xs0,
-                              zeros_unfold_clause_2(x0, x0 == UINT64_C(0), xs0),
-                              *hind0));
-              }
-            };
+          if (std::holds_alternative<
+                  typename zeros_graph::Zeros_graph_equation_1>(z.v())) {
+            return f;
+          } else {
+            const auto &[x0, xs0, hind0] =
+                std::get<typename zeros_graph::Zeros_graph_refinement_2>(z.v());
+            return f0(
+                x0, xs0, *hind0,
+                _self_f4(_self_f3, _self_f4, x0, x0 == UINT64_C(0), xs0,
+                         zeros_unfold_clause_2(x0, x0 == UINT64_C(0), xs0),
+                         *hind0));
+          }
+        };
     auto f4_impl =
         [&](auto &_self_f3, auto &_self_f4, uint64_t, bool,
             const List<uint64_t> &, uint64_t,
             const zeros_clause_2_graph &z)
              -> T2 {
-              if (std::holds_alternative<
-                      typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
-                      z.v())) {
-                const auto &[x0, xs0, hind0] =
-                    std::get<
-                        typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
-                        z.v());
-                return f1(x0, xs0, *hind0,
-                          _self_f3(_self_f3, _self_f4, xs0, zeros(xs0),
-                                   *hind0));
-              } else {
-                const auto &[x0, xs0, hind0] =
-                    std::get<
-                        typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_2>(
-                        z.v());
-                return f2(x0, xs0, *hind0,
-                          _self_f3(_self_f3, _self_f4, xs0, zeros(xs0),
-                                   *hind0));
-              }
-            };
+          if (std::holds_alternative<
+                  typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
+                  z.v())) {
+            const auto &[x0, xs0, hind0] = std::get<
+                typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_1>(
+                z.v());
+            return f1(x0, xs0, *hind0,
+                      _self_f3(_self_f3, _self_f4, xs0, zeros(xs0), *hind0));
+          } else {
+            const auto &[x0, xs0, hind0] = std::get<
+                typename zeros_clause_2_graph::Zeros_clause_2_graph_equation_2>(
+                z.v());
+            return f2(x0, xs0, *hind0,
+                      _self_f3(_self_f3, _self_f4, xs0, zeros(xs0), *hind0));
+          }
+        };
     auto f3 =
         [&](const List<uint64_t> &_x, uint64_t _x0,
             const zeros_graph &z)
@@ -473,29 +461,25 @@ struct LoopifyEquationsWithClause {
       const List<uint64_t> &l) {
     return zeros_graph_mut<T1, T1>(
         std::move(f),
-        [](uint64_t, List<uint64_t>, zeros_clause_2_graph, const T1 &x) {
-          return x;
-        },
+        [](uint64_t, List<uint64_t>, zeros_clause_2_graph,
+           const T1 &x) { return x; },
         [=, f1 = std::move(f1)](uint64_t x, const List<uint64_t> &xs,
                                 zeros_graph, const T1 &eta0_) {
-                                  return [=](T1 _pa0) {
-                                    return f1(x, xs, _pa0);
-                                  }(eta0_);
-                                },
+          return [=](T1 _pa0) { return f1(x, xs, _pa0); }(eta0_);
+        },
         [=, f2 = std::move(f2)](uint64_t x, const List<uint64_t> &xs,
                                 zeros_graph, const T1 &eta0_) {
-                                  return [=](T1 _pa0) {
-                                    return f2(x, xs, _pa0);
-                                  }(eta0_);
-                                },
+          return [=](T1 _pa0) { return f2(x, xs, _pa0); }(eta0_);
+        },
         l,
         zeros(l),
         zeros_graph_correct(l));
   }
 
   template <typename F1, typename F2>
-  static crane::obj FunctionalElimination_zeros(
-      crane::obj x0_, F1 &&x1_, F2 &&x2_, const List<uint64_t> &x3_) {
+  static crane::obj
+  FunctionalElimination_zeros(crane::obj x0_, F1 &&x1_, F2 &&x2_,
+                              const List<uint64_t> &x3_) {
     return zeros_elim(x0_, x1_, x2_, x3_);
   }
 
@@ -555,8 +539,7 @@ struct LoopifyEquationsWithClause {
     static plain_graph plain_graph_equation_2(uint64_t x, List<uint64_t> xs,
                                               plain_graph hind) {
       return plain_graph(Plain_graph_equation_2{
-                             x, std::move(xs),
-                             std::make_shared<plain_graph>(std::move(hind))});
+          x, std::move(xs), std::make_shared<plain_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -685,8 +668,9 @@ struct LoopifyEquationsWithClause {
                   typename plain_graph::Plain_graph_equation_1>(_lc1_p.v())) {
             _lc1_result = f;
           } else {
-            const auto &[x0, xs0, hind0] = std::get<
-                typename plain_graph::Plain_graph_equation_2>(_lc1_p.v());
+            const auto &[x0, xs0, hind0] =
+                std::get<typename plain_graph::Plain_graph_equation_2>(
+                    _lc1_p.v());
             _lc1_stack.emplace_back(CraneCont_Plain_graph_equation_2{x0, xs0});
             _lc1_stack.emplace_back(
                 CraneEnter{crane_raw(hind0), plain(xs0), &xs0});

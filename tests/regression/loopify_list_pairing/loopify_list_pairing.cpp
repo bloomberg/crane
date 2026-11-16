@@ -150,8 +150,9 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write ? *(*_write = std::make_shared<
-                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+      (_write ? *(*_write =
+                      std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                          std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {

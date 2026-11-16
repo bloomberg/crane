@@ -185,8 +185,8 @@ BinomialHeap::delete_max_aux(uint64_t m, const List<BinomialHeap::tree> &p) {
         if (a00 < m) {
           auto [j, k] = delete_max_aux(m, *a1);
           return std::make_pair(List<BinomialHeap::tree>::cons(
-                                    tree::node(a00, *a10, tree::leaf()),
-                                    std::move(j)), std::move(k));
+              tree::node(a00, *a10, tree::leaf()), std::move(j)),
+                                std::move(k));
         } else {
           return std::make_pair(
               List<BinomialHeap::tree>::cons(tree::leaf(), *a1),

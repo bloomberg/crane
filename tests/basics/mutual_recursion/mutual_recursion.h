@@ -60,7 +60,7 @@ struct MutualRecursion {
               const auto &[a0] =
                   std::get<typename tree<CraneU>::Node>(_other.v());
               return Node{(a0 ? std::make_shared<forest<A>>(
-                                  crane_convert<forest<A>>(*a0))
+                                    crane_convert<forest<A>>(*a0))
                               : nullptr)};
             }
           }()) {}
@@ -153,9 +153,10 @@ struct MutualRecursion {
                   std::get<typename forest<CraneU>::Trees>(_other.v());
               return Trees{
                   (a0 ? std::make_shared<tree<A>>(crane_convert<tree<A>>(*a0))
-                      : nullptr), (a1 ? std::make_shared<forest<A>>(
-                                          crane_convert<forest<A>>(*a1))
-                                      : nullptr)};
+                      : nullptr),
+                  (a1 ? std::make_shared<forest<A>>(
+                            crane_convert<forest<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -271,19 +272,16 @@ struct MutualRecursion {
   static inline const bool test_odd_3 = is_odd(UINT64_C(3));
   static inline const bool test_odd_4 = is_odd(UINT64_C(4));
   static inline const tree<uint64_t> simple_tree =
-      tree<uint64_t>::node(
-          forest<uint64_t>::trees(
-              tree<uint64_t>::leaf(UINT64_C(1)), forest<uint64_t>::trees(
-                  tree<uint64_t>::leaf(UINT64_C(2)),
-                  forest<uint64_t>::empty())));
+      tree<uint64_t>::node(forest<uint64_t>::trees(
+          tree<uint64_t>::leaf(UINT64_C(1)),
+          forest<uint64_t>::trees(tree<uint64_t>::leaf(UINT64_C(2)),
+                                  forest<uint64_t>::empty())));
   static inline const tree<uint64_t> nested_tree =
-      tree<uint64_t>::node(
-          forest<uint64_t>::trees(
-              tree<uint64_t>::node(
-                  forest<uint64_t>::trees(tree<uint64_t>::leaf(UINT64_C(3)),
-                                          forest<uint64_t>::empty())), forest<
-                  uint64_t>::trees(tree<uint64_t>::leaf(UINT64_C(4)),
-                                   forest<uint64_t>::empty())));
+      tree<uint64_t>::node(forest<uint64_t>::trees(
+          tree<uint64_t>::node(forest<uint64_t>::trees(
+              tree<uint64_t>::leaf(UINT64_C(3)), forest<uint64_t>::empty())),
+          forest<uint64_t>::trees(tree<uint64_t>::leaf(UINT64_C(4)),
+                                  forest<uint64_t>::empty())));
   static inline const uint64_t test_size_simple =
       tree_size<uint64_t>(simple_tree);
   static inline const uint64_t test_size_nested =

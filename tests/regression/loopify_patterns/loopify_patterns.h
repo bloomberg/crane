@@ -183,7 +183,7 @@ struct LoopifyPatterns {
   /// max_by f l recursive max with function application.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   max_by(F0 &&f,
          const list<uint64_t> &l) { /// CraneEnter: captures varying parameters
@@ -523,14 +523,13 @@ struct LoopifyPatterns {
         auto [p0, cs] = std::move(_result);
         auto [as_, bs] = std::move(p0);
         if (p(a0)) {
-          _result = std::make_pair(
-              std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
-                             std::move(bs)), std::move(cs));
+          _result = std::make_pair(std::make_pair(
+              list<uint64_t>::cons(a0, std::move(as_)), std::move(bs)),
+                                   std::move(cs));
         } else {
           if (q(a0)) {
             _result = std::make_pair(std::make_pair(
-                                         std::move(as_), list<uint64_t>::cons(
-                                             a0, std::move(bs))),
+                std::move(as_), list<uint64_t>::cons(a0, std::move(bs))),
                                      std::move(cs));
           } else {
             _result =
@@ -549,8 +548,9 @@ struct LoopifyPatterns {
 
   /// filter_map_indexed p f l filters and maps with index.
   template <typename F0, typename F1>
-  static list<uint64_t> filter_map_indexed_aux(
-      F0 &&p, F1 &&f, const list<uint64_t> &l, uint64_t idx) {
+  static list<uint64_t>
+  filter_map_indexed_aux(F0 &&p, F1 &&f, const list<uint64_t> &l,
+                         uint64_t idx) {
     std::optional<list<uint64_t>> _root{};
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
     uint64_t _loop_idx = idx;

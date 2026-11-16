@@ -195,9 +195,10 @@ struct MutualRecord {
   static inline const employee emp3 =
       employee::mk_employee(UINT64_C(3), UINT64_C(70));
   static inline const department test_dept = department::mk_department(
-      UINT64_C(100), List<employee>::cons(
+      UINT64_C(100),
+      List<employee>::cons(
           emp1, List<employee>::cons(
-              emp2, List<employee>::cons(emp3, List<employee>::nil()))));
+                    emp2, List<employee>::cons(emp3, List<employee>::nil()))));
   static inline const uint64_t test_total_salary = dept_total_salary(test_dept);
   static inline const uint64_t test_dept_count = dept_count(test_dept);
   static inline const uint64_t test_dept_id = dept_id(test_dept);

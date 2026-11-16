@@ -13,6 +13,6 @@ uint64_t sum_list(const Datatypes::List<uint64_t> &l) {
 Datatypes::List<uint64_t> make_pair_list(uint64_t n, uint64_t m) {
   return Datatypes::template List<uint64_t>::cons(
       n, Datatypes::template List<uint64_t>::cons(
-          m, Datatypes::template List<uint64_t>::nil()));
+             m, Datatypes::template List<uint64_t>::nil()));
 }
 } // namespace SepExtCrossModule

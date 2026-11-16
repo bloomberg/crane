@@ -108,16 +108,16 @@ struct CustomInlineBug {
   static std::optional<uint64_t> bug_some_of_call(uint64_t n);
   static std::pair<State, uint64_t> pair_simple(const State &s);
   static std::pair<State, uint64_t> pair_let(uint64_t n);
-  static std::pair<std::pair<State, uint64_t>,
-                   std::pair<uint64_t, uint64_t>> pair_nested(const State &s);
+  static std::pair<std::pair<State, uint64_t>, std::pair<uint64_t, uint64_t>>
+  pair_nested(const State &s);
   static std::pair<State, uint64_t> pair_if(bool b, const State &s);
   static std::optional<std::pair<State, uint64_t>>
   pair_match(const std::optional<State> &o);
   static std::pair<std::pair<State, uint64_t>, uint64_t>
   pair_multi_proj(const State &s);
   static std::pair<State, uint64_t> pair_chain(const State &s1);
-  static std::pair<std::pair<State, State>,
-                   std::pair<uint64_t, uint64_t>> pair_extreme(const State &s);
+  static std::pair<std::pair<State, State>, std::pair<uint64_t, uint64_t>>
+  pair_extreme(const State &s);
   static std::pair<State, uint64_t> make_pair(const State &s);
   static std::pair<State, uint64_t> outer_pair(uint64_t n);
   static List<std::pair<State, uint64_t>> count_pairs(uint64_t n,

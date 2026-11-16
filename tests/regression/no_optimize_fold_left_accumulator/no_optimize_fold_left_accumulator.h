@@ -131,10 +131,12 @@ public:
 struct NoOptimizeFoldLeftAccumulator {
   static List<uint64_t> rev_(const List<uint64_t> &l);
   static inline const uint64_t result =
-      rev_(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                    UINT64_C(2), List<uint64_t>::cons(
-                                        UINT64_C(3),
-                                        List<uint64_t>::nil()))))
+      rev_(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3),
+                                   List<uint64_t>::nil()))))
           .length();
 };
 

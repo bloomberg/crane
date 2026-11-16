@@ -61,7 +61,7 @@ public:
                   }
                 }(),
                 (l ? crane::shared_box<List<A>>::make(
-                       crane_convert<List<A>>(*l))
+                         crane_convert<List<A>>(*l))
                    : nullptr)};
           }
         }()) {}

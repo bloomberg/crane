@@ -515,9 +515,9 @@ struct LoopifyExprVariants {
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(
-              CraneCont_Cond_2{std::move(a0), &a1, &a2, std::move(_f._tmp5),
-                               std::move(_result)});
+          _stack.emplace_back(CraneCont_Cond_2{
+              std::move(a0), &a1, &a2, std::move(_f._tmp5),
+              std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
@@ -703,10 +703,9 @@ struct LoopifyExprVariants {
         uint64_t _tmp4;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_AAdd, CraneCont_AAdd_1,
-                       CraneCont_ADiv, CraneCont_ADiv_1, CraneCont_AMul,
-                       CraneCont_AMul_1>;
+      using CraneFrame = std::variant<
+          CraneEnter, CraneCont_AAdd, CraneCont_AAdd_1, CraneCont_ADiv,
+          CraneCont_ADiv_1, CraneCont_AMul, CraneCont_AMul_1>;
       uint64_t _result{};
       crane::small_vector<CraneFrame> _stack;
       _stack.emplace_back(CraneEnter{_self});
@@ -808,10 +807,9 @@ struct LoopifyExprVariants {
         uint64_t n;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_AAdd, CraneCont_AAdd_1,
-                       CraneCont_ADiv, CraneCont_AMul, CraneCont_AMul_1,
-                       CraneCont_n>;
+      using CraneFrame = std::variant<
+          CraneEnter, CraneCont_AAdd, CraneCont_AAdd_1, CraneCont_ADiv,
+          CraneCont_AMul, CraneCont_AMul_1, CraneCont_n>;
       uint64_t _result{};
       crane::small_vector<CraneFrame> _stack;
       _stack.emplace_back(CraneEnter{_self});
@@ -938,10 +936,9 @@ struct LoopifyExprVariants {
         T1 _tmp4;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_AAdd, CraneCont_AAdd_1,
-                       CraneCont_ADiv, CraneCont_ADiv_1, CraneCont_AMul,
-                       CraneCont_AMul_1>;
+      using CraneFrame = std::variant<
+          CraneEnter, CraneCont_AAdd, CraneCont_AAdd_1, CraneCont_ADiv,
+          CraneCont_ADiv_1, CraneCont_AMul, CraneCont_AMul_1>;
       T1 _result{};
       crane::small_vector<CraneFrame> _stack;
       _stack.emplace_back(CraneEnter{_self});
@@ -1206,11 +1203,10 @@ struct LoopifyExprVariants {
       /// CraneCont_BTrue: resumes after recursive call, then processes rest.
       struct CraneCont_BTrue {};
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_BAnd, CraneCont_BAnd_1,
-                       CraneCont_BAnd_2, CraneCont_BFalse, CraneCont_BNot,
-                       CraneCont_BNot_1, CraneCont_BNot_2, CraneCont_BOr,
-                       CraneCont_BOr_1, CraneCont_BOr_2, CraneCont_BTrue>;
+      using CraneFrame = std::variant<
+          CraneEnter, CraneCont_BAnd, CraneCont_BAnd_1, CraneCont_BAnd_2,
+          CraneCont_BFalse, CraneCont_BNot, CraneCont_BNot_1, CraneCont_BNot_2,
+          CraneCont_BOr, CraneCont_BOr_1, CraneCont_BOr_2, CraneCont_BTrue>;
       bool_expr _result{};
       crane::small_vector<CraneFrame> _stack;
       _stack.emplace_back(CraneEnter{_self});
@@ -1229,7 +1225,7 @@ struct LoopifyExprVariants {
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = bool_expr::btrue();
           } else if (
-              std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
+                  std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
             _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
@@ -1566,7 +1562,7 @@ struct LoopifyExprVariants {
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = true;
           } else if (
-              std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
+                  std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
             _result = false;
           } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
@@ -1675,7 +1671,7 @@ struct LoopifyExprVariants {
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = f;
           } else if (
-              std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
+                  std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
             _result = f0;
           } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
@@ -1874,7 +1870,7 @@ struct LoopifyExprVariants {
             _stack.emplace_back(CraneCont_LCons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           } else if (
-              std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
+                  std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
             _stack.emplace_back(CraneCont_LAppend{crane_raw(a1)});
@@ -1945,7 +1941,7 @@ struct LoopifyExprVariants {
             _stack.emplace_back(CraneCont_LCons{a0});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           } else if (
-              std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
+                  std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
             _stack.emplace_back(CraneCont_LAppend{crane_raw(a1)});
@@ -2031,7 +2027,7 @@ struct LoopifyExprVariants {
             _stack.emplace_back(CraneCont_LCons{a0, a1});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           } else if (
-              std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
+                  std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
             _stack.emplace_back(CraneCont_LAppend{a0, crane_raw(a1)});

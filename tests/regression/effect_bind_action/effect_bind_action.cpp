@@ -17,12 +17,11 @@ std::string EffectBindAction::conditional_read(bool use_stdin) {
 
 /// 2. Bool match where both branches are effects
 int64_t EffectBindAction::conditional_effect(bool flag) {
-  return (
-      flag ? static_cast<int64_t>(
-               std::chrono::duration_cast<std::chrono::milliseconds>(
-                   std::chrono::steady_clock::now().time_since_epoch())
-                   .count())
-           : INT64_C(0));
+  return (flag ? static_cast<int64_t>(
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
+               : INT64_C(0));
 }
 
 /// 3. Option match inside bind: conditional effect based on env
@@ -46,15 +45,15 @@ std::string EffectBindAction::maybe_override(std::string name,
 std::pair<int64_t, int64_t> EffectBindAction::timed_if_needed(bool measure) {
   int64_t t1 =
       (measure ? static_cast<int64_t>(
-                   std::chrono::duration_cast<std::chrono::milliseconds>(
-                       std::chrono::steady_clock::now().time_since_epoch())
-                       .count())
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
                : INT64_C(0));
   int64_t t2 =
       (measure ? static_cast<int64_t>(
-                   std::chrono::duration_cast<std::chrono::milliseconds>(
-                       std::chrono::steady_clock::now().time_since_epoch())
-                       .count())
+                     std::chrono::duration_cast<std::chrono::milliseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count())
                : INT64_C(0));
   return std::make_pair(t1, t2);
 }

@@ -126,10 +126,9 @@ struct NestedMatchClosure {
   /// inner_val = 10, combined = 30
   /// go(5) = 30 + 5 = 35
   static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs =
-        make_combiner(
-            tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                       UINT64_C(20), tree::leaf()));
+    auto _cs = make_combiner(
+        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                   UINT64_C(20), tree::leaf()));
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
@@ -144,12 +143,10 @@ struct NestedMatchClosure {
   /// v1=300, v2=200, v3=100, total=600
   /// go(0) = 600
   static inline const uint64_t test2 = []() -> uint64_t {
-    auto _cs =
-        make_deep_combiner(
-            tree::node(
-                tree::node(
-                    tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
-                    UINT64_C(200), tree::leaf()), UINT64_C(300), tree::leaf()));
+    auto _cs = make_deep_combiner(tree::node(
+        tree::node(tree::node(tree::leaf(), UINT64_C(100), tree::leaf()),
+                   UINT64_C(200), tree::leaf()),
+        UINT64_C(300), tree::leaf()));
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(0));
@@ -167,11 +164,10 @@ struct NestedMatchClosure {
   /// go(0) = 1000 + 10 + 5 + 15 = 1030
   /// go(3) = 1030 + 3 = 1033
   static inline const uint64_t test3 = []() -> uint64_t {
-    auto _cs = make_param_combiner(
-        tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                   UINT64_C(10),
-                   tree::node(tree::leaf(), UINT64_C(15), tree::leaf())),
-        UINT64_C(1000));
+    auto _cs = make_param_combiner(tree::node(
+        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
+        tree::node(tree::leaf(), UINT64_C(15), tree::leaf())),
+                                   UINT64_C(1000));
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(3));
@@ -183,7 +179,8 @@ struct NestedMatchClosure {
   static inline const uint64_t test4 = []() {
     std::optional<crane::fn<uint64_t(uint64_t)>> f = make_param_combiner(
         tree::node(tree::node(tree::leaf(), UINT64_C(42), tree::leaf()),
-                   UINT64_C(100), tree::leaf()), UINT64_C(500));
+                   UINT64_C(100), tree::leaf()),
+        UINT64_C(500));
     if (f.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &g = *f;
       return g(UINT64_C(0));

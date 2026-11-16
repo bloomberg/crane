@@ -110,20 +110,19 @@ struct ReuseLambdaCapture {
   /// // l.d_a1 is null -> crash
   /// return _rf;
   static mylist add_length_to_each(const mylist &l, bool b);
-  static inline const uint64_t test1 =
-      length(add_length_to_each(
-                 mylist::mycons(UINT64_C(10), mylist::mycons(
-                                    UINT64_C(20), mylist::mycons(
-                                        UINT64_C(30), mylist::mynil()))),
-                 true));
+  static inline const uint64_t test1 = length(add_length_to_each(mylist::mycons(
+      UINT64_C(10),
+      mylist::mycons(UINT64_C(20),
+                     mylist::mycons(UINT64_C(30), mylist::mynil()))),
+                                                                 true));
   /// Expected: map adds length(original list)=3 to each tail element.
   /// Original: 10, 20, 30
   /// Result:   11, 23, 33  (h+1=11, 20+3=23, 30+3=33)
   /// Length = 3
   static inline const uint64_t test2 = []() {
-    auto &&_sv = add_length_to_each(
-        mylist::mycons(UINT64_C(5),
-                       mylist::mycons(UINT64_C(6), mylist::mynil())), true);
+    auto &&_sv = add_length_to_each(mylist::mycons(
+        UINT64_C(5), mylist::mycons(UINT64_C(6), mylist::mynil())),
+                                    true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
       return a0;

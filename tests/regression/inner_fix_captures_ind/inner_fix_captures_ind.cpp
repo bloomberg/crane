@@ -91,8 +91,9 @@ InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
                         typename InnerFixCapturesInd::lst::Nil>(_loop_m->v())) {
                   return _loop_a;
                 } else {
-                  const auto &[a2, a3] = std::get<
-                      typename InnerFixCapturesInd::lst::Cons>(_loop_m->v());
+                  const auto &[a2, a3] =
+                      std::get<typename InnerFixCapturesInd::lst::Cons>(
+                          _loop_m->v());
                   _loop_a = (_loop_a + len(*a1));
                   _loop_m = crane_raw(a3);
                 }

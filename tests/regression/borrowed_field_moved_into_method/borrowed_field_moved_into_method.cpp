@@ -676,9 +676,8 @@ Z BinInt::of_N(const N &n) {
 N BorrowedFieldMovedIntoMethod::sz(const BfmTypes::ty &t) {
   if (std::holds_alternative<typename BfmTypes::ty::TB>(t.v())) {
     const auto &[n0] = std::get<typename BfmTypes::ty::TB>(t.v());
-    return BinNat::div(
-        N::npos(n0),
-        N::npos(Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
+    return BinNat::div(N::npos(n0), N::npos(Positive::xo(Positive::xo(
+                                        Positive::xo(Positive::xh())))));
   } else if (std::holds_alternative<typename BfmTypes::ty::TS>(t.v())) {
     return N::n0();
   } else {
@@ -701,13 +700,11 @@ bool BorrowedFieldMovedIntoMethod::check(std::monostate) {
   return BinInt::eqb(
       BinInt::add(
           get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
-                  arr, Z::z0(), List<Nat>::cons(
-                      Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil()))),
+              arr, Z::z0(), List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                            List<Nat>::nil()))),
           get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
-                  arr, Z::z0(), List<Nat>::cons(
-                      Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil())))),
-      Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))));
+              arr, Z::z0(), List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                            List<Nat>::nil())))),
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))));
 }

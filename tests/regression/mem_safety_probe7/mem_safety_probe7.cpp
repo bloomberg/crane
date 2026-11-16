@@ -60,32 +60,26 @@ MemSafetyProbe7::build_len_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       auto _value = mylist<crane::fn<uint64_t(std::monostate)>>::mynil();
-      (_write ? *(*_write =
-                      std::make_shared<MemSafetyProbe7::mylist<
-                                           crane::fn<uint64_t(std::monostate)>>>(
-                          std::move(_value)))
+      (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
+                      crane::fn<uint64_t(std::monostate)>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
+              _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe7::mylist<
-          crane::fn<uint64_t(std::monostate)>>::Mycons([=](std::monostate) {
-            return a1_value.length();
-          }, nullptr);
+          crane::fn<uint64_t(std::monostate)>>::Mycons(
+          [=](std::monostate) { return a1_value.length(); }, nullptr);
       MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<
-                              MemSafetyProbe7::mylist<
-                                  crane::fn<uint64_t(std::monostate)>>>(
-                              std::move(_cell)))
+          (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
+                          crane::fn<uint64_t(std::monostate)>>>(
+                          std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe7::mylist<
-                        crane::fn<uint64_t(std::monostate)>>::Mycons>(
-              _node.v_mut())
-              .a1;
+              crane::fn<uint64_t(std::monostate)>>::Mycons>(_node.v_mut()).a1;
       _loop_l = &a1_value;
       continue;
     }
@@ -124,14 +118,12 @@ uint64_t MemSafetyProbe7::sum_fns(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &l =
           *_f.l;
-      if (std::holds_alternative<
-              typename MemSafetyProbe7::mylist<
-                  crane::fn<uint64_t(std::monostate)>>::Mynil>(l.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe7::mylist<
+              crane::fn<uint64_t(std::monostate)>>::Mynil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe7::mylist<
-                         crane::fn<uint64_t(std::monostate)>>::Mycons>(l.v());
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe7::mylist<
+            crane::fn<uint64_t(std::monostate)>>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -156,32 +148,26 @@ MemSafetyProbe7::build_sum_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
     if (std::holds_alternative<
             typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       auto _value = mylist<crane::fn<uint64_t(std::monostate)>>::mynil();
-      (_write ? *(*_write =
-                      std::make_shared<MemSafetyProbe7::mylist<
-                                           crane::fn<uint64_t(std::monostate)>>>(
-                          std::move(_value)))
+      (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
+                      crane::fn<uint64_t(std::monostate)>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
+              _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe7::mylist<
-          crane::fn<uint64_t(std::monostate)>>::Mycons([=](std::monostate) {
-            return sum_list(a1_value);
-          }, nullptr);
+          crane::fn<uint64_t(std::monostate)>>::Mycons(
+          [=](std::monostate) { return sum_list(a1_value); }, nullptr);
       MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<
-                              MemSafetyProbe7::mylist<
-                                  crane::fn<uint64_t(std::monostate)>>>(
-                              std::move(_cell)))
+          (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
+                          crane::fn<uint64_t(std::monostate)>>>(
+                          std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe7::mylist<
-                        crane::fn<uint64_t(std::monostate)>>::Mycons>(
-              _node.v_mut())
-              .a1;
+              crane::fn<uint64_t(std::monostate)>>::Mycons>(_node.v_mut()).a1;
       _loop_l = &a1_value;
       continue;
     }
@@ -209,22 +195,20 @@ MemSafetyProbe7::build_accum_closures(
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
+              _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe7::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons([=](uint64_t n) {
-            return ((a0 + sum_list(a1_value)) + n);
-          }, nullptr);
+          crane::fn<uint64_t(uint64_t)>>::Mycons(
+          [=](uint64_t n) { return ((a0 + sum_list(a1_value)) + n); }, nullptr);
       MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<MemSafetyProbe7::mylist<
-                                               crane::fn<uint64_t(uint64_t)>>>(
-                              std::move(_cell)))
+          (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
+                          crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe7::mylist<
-                        crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
+              crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
       _loop_l = &a1_value;
       continue;
     }
@@ -258,13 +242,11 @@ uint64_t MemSafetyProbe7::apply_all(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe7::mylist<
-                                     crane::fn<uint64_t(uint64_t)>>::Mynil>(
-              l.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
         _result = x;
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe7::mylist<
-                         crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe7::mylist<
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -295,8 +277,9 @@ MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(uint64_t n) {
       auto _cell =
           typename MemSafetyProbe7::mylist<uint64_t>::Mycons(_loop_n, nullptr);
       MemSafetyProbe7::mylist<uint64_t> &_node =
-          (_write ? *(*_write = std::make_shared<
-                          MemSafetyProbe7::mylist<uint64_t>>(std::move(_cell)))
+          (_write ? *(*_write =
+                          std::make_shared<MemSafetyProbe7::mylist<uint64_t>>(
+                              std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(

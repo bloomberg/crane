@@ -626,10 +626,9 @@ struct LoopifyTreeVariants {
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
-          _stack.emplace_back(
-              CraneCont_Quad_3{std::move(a0), &a1, &a2, &a3,
-                               std::move(_f._tmp4), std::move(_f._tmp3),
-                               std::move(_result)});
+          _stack.emplace_back(CraneCont_Quad_3{
+              std::move(a0), &a1, &a2, &a3, std::move(_f._tmp4),
+              std::move(_f._tmp3), std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a3});
         } else {
           auto _f = std::move(std::get<CraneCont_Quad_3>(_frame));

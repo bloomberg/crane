@@ -258,9 +258,9 @@ struct MethodReturnsFunctionAlias {
   };
 
   static inline const bool t1 = always(true)(Nat::o());
-  static inline const bool t2 = Holder{[](const Nat &n) {
-    return n.eqb(Nat::o());
-  }, Nat::s(Nat::o())}.runner()(Nat::o());
+  static inline const bool t2 =
+      Holder{[](const Nat &n) { return n.eqb(Nat::o()); },
+             Nat::s(Nat::o())}.runner()(Nat::o());
   static inline const bool t3 = Tree::tree::leaf().is_leaf()(Nat::o());
   static inline const bool t4 =
       Tree::tree::node(Tree::tree::leaf(), Tree::tree::leaf()).is_leaf()(

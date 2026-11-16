@@ -2,8 +2,8 @@
 
 /// Mutual fixpoint using fix...with...for syntax, then return
 /// both functions through a pair.
-std::pair<crane::fn<bool(uint64_t)>,
-          crane::fn<bool(uint64_t)>> MutualFixEscape::make_even_odd(uint64_t) {
+std::pair<crane::fn<bool(uint64_t)>, crane::fn<bool(uint64_t)>>
+MutualFixEscape::make_even_odd(uint64_t) {
   auto even_impl = [](auto &_self_even, auto &_self_odd, uint64_t n) -> bool {
     if (n <= 0) {
       return true;
@@ -20,9 +20,8 @@ std::pair<crane::fn<bool(uint64_t)>,
       return _self_even(_self_even, _self_odd, n_);
     }
   };
-  auto even = [=](uint64_t n) -> bool {
-    return even_impl(even_impl, odd_impl, n);
-  };
+  auto even =
+      [=](uint64_t n) -> bool { return even_impl(even_impl, odd_impl, n); };
   auto odd =
       [=, even_impl = std::move(even_impl), odd_impl = std::move(odd_impl)](
           uint64_t n)
@@ -44,9 +43,8 @@ std::pair<crane::fn<bool(uint64_t)>,
       return _self_even0(_self_even0, _self_odd0, n_);
     }
   };
-  auto even0 = [=](uint64_t n) -> bool {
-    return even0_impl(even0_impl, odd0_impl, n);
-  };
+  auto even0 =
+      [=](uint64_t n) -> bool { return even0_impl(even0_impl, odd0_impl, n); };
   auto odd0 =
       [=, even0_impl = std::move(even0_impl), odd0_impl = std::move(odd0_impl)](
           uint64_t n)
@@ -61,66 +59,67 @@ MutualFixEscape::make_count_pair(uint64_t base) {
       [=](auto &_self_count_even, auto &_self_count_odd,
           uint64_t n)
            -> uint64_t {
-            if (n <= 0) {
-              return base;
-            } else {
-              uint64_t n_ = n - 1;
-              return (UINT64_C(1) +
-                      _self_count_odd(_self_count_even, _self_count_odd, n_));
-            }
-          };
+        if (n <= 0) {
+          return base;
+        } else {
+          uint64_t n_ = n - 1;
+          return (UINT64_C(1) +
+                  _self_count_odd(_self_count_even, _self_count_odd, n_));
+        }
+      };
   auto count_odd_impl =
       [=](auto &_self_count_even, auto &_self_count_odd,
           uint64_t n)
            -> uint64_t {
-            if (n <= 0) {
-              return (base * UINT64_C(2));
-            } else {
-              uint64_t n_ = n - 1;
-              return (UINT64_C(1) +
-                      _self_count_even(_self_count_even, _self_count_odd, n_));
-            }
-          };
-  auto count_even = [=](uint64_t n) -> uint64_t {
-    return count_even_impl(count_even_impl, count_odd_impl, n);
-  };
+        if (n <= 0) {
+          return (base * UINT64_C(2));
+        } else {
+          uint64_t n_ = n - 1;
+          return (UINT64_C(1) +
+                  _self_count_even(_self_count_even, _self_count_odd, n_));
+        }
+      };
+  auto count_even =
+      [=](uint64_t n) -> uint64_t {
+        return count_even_impl(count_even_impl, count_odd_impl, n);
+      };
   auto count_odd =
       [=, count_even_impl = std::move(count_even_impl),
        count_odd_impl = std::move(count_odd_impl)](uint64_t n) -> uint64_t {
-         return count_odd_impl(count_even_impl, count_odd_impl, n);
-       };
+        return count_odd_impl(count_even_impl, count_odd_impl, n);
+      };
   auto count_even0_impl =
       [=](auto &_self_count_even0, auto &_self_count_odd0,
           uint64_t n)
            -> uint64_t {
-            if (n <= 0) {
-              return base;
-            } else {
-              uint64_t n_ = n - 1;
-              return (UINT64_C(1) +
-                      _self_count_odd0(_self_count_even0, _self_count_odd0,
-                                       n_));
-            }
-          };
+        if (n <= 0) {
+          return base;
+        } else {
+          uint64_t n_ = n - 1;
+          return (UINT64_C(1) +
+                  _self_count_odd0(_self_count_even0, _self_count_odd0, n_));
+        }
+      };
   auto count_odd0_impl =
       [=](auto &_self_count_even0, auto &_self_count_odd0,
           uint64_t n)
            -> uint64_t {
-            if (n <= 0) {
-              return (base * UINT64_C(2));
-            } else {
-              uint64_t n_ = n - 1;
-              return (UINT64_C(1) + _self_count_even0(_self_count_even0,
-                                                      _self_count_odd0, n_));
-            }
-          };
-  auto count_even0 = [=](uint64_t n) -> uint64_t {
-    return count_even0_impl(count_even0_impl, count_odd0_impl, n);
-  };
+        if (n <= 0) {
+          return (base * UINT64_C(2));
+        } else {
+          uint64_t n_ = n - 1;
+          return (UINT64_C(1) +
+                  _self_count_even0(_self_count_even0, _self_count_odd0, n_));
+        }
+      };
+  auto count_even0 =
+      [=](uint64_t n) -> uint64_t {
+        return count_even0_impl(count_even0_impl, count_odd0_impl, n);
+      };
   auto count_odd0 =
       [=, count_even0_impl = std::move(count_even0_impl),
        count_odd0_impl = std::move(count_odd0_impl)](uint64_t n) -> uint64_t {
-         return count_odd0_impl(count_even0_impl, count_odd0_impl, n);
-       };
+        return count_odd0_impl(count_even0_impl, count_odd0_impl, n);
+      };
   return std::make_pair(std::move(count_even), std::move(count_odd0));
 }

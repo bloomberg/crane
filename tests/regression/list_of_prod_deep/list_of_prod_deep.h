@@ -220,9 +220,8 @@ struct ListOfProdDeep {
     const variant_t &v() const { return v_; }
 
     t wrap(uint64_t k) const {
-      return t::node(
-          lst<std::pair<t, uint64_t>>::lcons(
-              std::make_pair(*this, k), lst<std::pair<t, uint64_t>>::lnil()));
+      return t::node(lst<std::pair<t, uint64_t>>::lcons(
+          std::make_pair(*this, k), lst<std::pair<t, uint64_t>>::lnil()));
     }
 
     template <typename T1, typename F0> T1 t_rec(F0 &&f) const {

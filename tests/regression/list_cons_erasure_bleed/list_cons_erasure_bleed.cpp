@@ -33,8 +33,8 @@ syms_semty rev_tuple(const std::deque<Sym> &xs, syms_semty vs) {
 }
 
 uint64_t check(uint64_t n) {
-  auto [v, _x] = crane::any_cast<std::pair<crane::obj, crane::obj>>(
-      rev_tuple(
+  auto [v, _x] =
+      crane::any_cast<std::pair<crane::obj, crane::obj>>(rev_tuple(
           [](auto _a0, auto _a1) {
             _a1.push_front(_a0);
             return _a1;
@@ -43,8 +43,8 @@ uint64_t check(uint64_t n) {
             return _a1;
           }(Sym::B, std::deque<Sym>{})),
           std::make_pair(
-              crane::obj(n), crane::obj(
-                  std::make_pair(crane::obj(n),
+              crane::obj(n), crane::obj(std::make_pair(
+                                 crane::obj(n),
                                  crane::obj(std::monostate{}))))));
   return crane::any_cast<uint64_t>(std::move(v));
 }

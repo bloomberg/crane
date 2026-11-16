@@ -108,15 +108,19 @@ struct PreservesAllPairs {
   static state execute_add(const state &s, uint64_t r);
   static state execute_ld(const state &s, uint64_t r);
   static state execute_sub(const state &s, uint64_t r);
-  static inline const state sample = state{
+  static inline const state sample = state{List<uint64_t>::cons(
+      UINT64_C(2),
       List<uint64_t>::cons(
-          UINT64_C(2), List<uint64_t>::cons(
-              UINT64_C(9), List<uint64_t>::cons(
-                  UINT64_C(4), List<uint64_t>::cons(
-                      UINT64_C(7), List<uint64_t>::cons(
-                          UINT64_C(8), List<uint64_t>::cons(
-                              UINT64_C(1), List<uint64_t>::nil())))))),
-      UINT64_C(13)};
+          UINT64_C(9),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(
+                  UINT64_C(7),
+                  List<uint64_t>::cons(
+                      UINT64_C(8),
+                      List<uint64_t>::cons(UINT64_C(1),
+                                           List<uint64_t>::nil())))))),
+                                           UINT64_C(13)};
   static inline const bool add_preserves_pairs =
       get_reg_pair(execute_add(sample, UINT64_C(4)), UINT64_C(2)) ==
       get_reg_pair(sample, UINT64_C(2));

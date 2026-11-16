@@ -93,11 +93,13 @@ public:
 
 struct LocalFixParameterNames {
   static uint64_t walk2(uint64_t f, const List<uint64_t> &x0_);
-  static inline const uint64_t result = walk2(
-      UINT64_C(5), List<uint64_t>::cons(
-          UINT64_C(1), List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const uint64_t result =
+      walk2(UINT64_C(5),
+            List<uint64_t>::cons(
+                UINT64_C(1),
+                List<uint64_t>::cons(
+                    UINT64_C(2),
+                    List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_LOCAL_FIX_PARAMETER_NAMES

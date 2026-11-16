@@ -110,10 +110,9 @@ struct Dim10TowerProofChainCase {
   static GoodwillieProofChain make_goodwillie_proof_chain(uint64_t base_dim);
   static inline const GoodwillieProofChain dim10_chain =
       make_goodwillie_proof_chain(UINT64_C(10));
-  static inline const std::pair<
-      std::pair<std::pair<IsIntegerValued, EventuallyZero>,
-                SigT<uint64_t, crane::obj>>,
-      SigT<uint64_t, crane::obj>> dim10_pair_chain =
+  static inline const std::pair<std::pair<
+      std::pair<IsIntegerValued, EventuallyZero>, SigT<uint64_t, crane::obj>>,
+                                SigT<uint64_t, crane::obj>> dim10_pair_chain =
       graded_complete_proof_chain(UINT64_C(10));
 
   struct Dim10Bundle {
@@ -157,8 +156,12 @@ struct Dim10TowerProofChainCase {
       dim10_P_cutoff == UINT64_C(10);
   static inline const uint64_t dim10_dimension_checksum =
       (((((((((dim10_p0_dim + dim10_p4_dim) + dim10_p9_dim) + dim10_p10_dim) +
-            dim10_d0_dim) + dim10_d4_dim) + dim10_d9_dim) + dim10_d10_dim) +
-        dim10_layers_cutoff) + dim10_P_cutoff);
+            dim10_d0_dim) +
+           dim10_d4_dim) +
+          dim10_d9_dim) +
+         dim10_d10_dim) +
+        dim10_layers_cutoff) +
+       dim10_P_cutoff);
 };
 
 #endif // INCLUDED_DIM10_TOWER_PROOF_CHAIN

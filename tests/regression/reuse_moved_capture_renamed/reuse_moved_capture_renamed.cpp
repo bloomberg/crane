@@ -10,18 +10,15 @@ ReuseMovedCaptureRenamed::adders(
       &ts;
   while (true) {
     if (std::holds_alternative<typename ReuseMovedCaptureRenamed::mylist<
-                                   ReuseMovedCaptureRenamed::tree>::Mynil>(
-            _loop_ts->v())) {
+            ReuseMovedCaptureRenamed::tree>::Mynil>(_loop_ts->v())) {
       auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
       (_write ? *(*_write = crane::make_rc<ReuseMovedCaptureRenamed::mylist<
-                                               crane::fn<uint64_t(uint64_t)>>>(
-                      std::move(_value)))
+                      crane::fn<uint64_t(uint64_t)>>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename ReuseMovedCaptureRenamed::mylist<
-                       ReuseMovedCaptureRenamed::tree>::Mycons>(_loop_ts->v());
+      const auto &[a0, a1] = std::get<typename ReuseMovedCaptureRenamed::mylist<
+          ReuseMovedCaptureRenamed::tree>::Mycons>(_loop_ts->v());
       const ReuseMovedCaptureRenamed::mylist<ReuseMovedCaptureRenamed::tree> &a1_value =
           *a1;
       auto _cell = typename ReuseMovedCaptureRenamed::mylist<
@@ -31,14 +28,12 @@ ReuseMovedCaptureRenamed::adders(
           },
           nullptr);
       ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
-          (_write ? *(*_write =
-                          crane::make_rc<ReuseMovedCaptureRenamed::mylist<
-                                             crane::fn<uint64_t(uint64_t)>>>(
-                              std::move(_cell)))
+          (_write ? *(*_write = crane::make_rc<ReuseMovedCaptureRenamed::mylist<
+                          crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename ReuseMovedCaptureRenamed::mylist<
-                        crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
+              crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
       _loop_ts = &a1_value;
       continue;
     }
@@ -73,13 +68,12 @@ uint64_t ReuseMovedCaptureRenamed::apply_all(
       const ReuseMovedCaptureRenamed::mylist<crane::fn<uint64_t(uint64_t)>> &fs =
           *_f.fs;
       if (std::holds_alternative<typename ReuseMovedCaptureRenamed::mylist<
-                                     crane::fn<uint64_t(uint64_t)>>::Mynil>(
-              fs.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(fs.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
             std::get<typename ReuseMovedCaptureRenamed::mylist<
-                         crane::fn<uint64_t(uint64_t)>>::Mycons>(fs.v());
+                crane::fn<uint64_t(uint64_t)>>::Mycons>(fs.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }

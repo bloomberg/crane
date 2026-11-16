@@ -170,37 +170,29 @@ public:
 
   template <typename CraneU>
   Stream(const Stream<CraneU> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                       [=]() -> variant_t {
-                                                         const auto &[x, xs] =
-                                                             std::get<
-                                                                 typename Stream<
-                                                                     CraneU>::Scons>(
-                                                                 _other.v());
-                                                         return Scons{
-                                                             [&]() -> A {
-                                                               if constexpr (
-                                                                   crane_convertible<
-                                                                       A,
-                                                                       const CraneU &>) {
-                                                                 return crane_convert<
-                                                                     A>(x);
-                                                               } else {
-                                                                 throw std::logic_error(
-                                                                     "unreachable: inactive constructor field at this instantiation");
-                                                               }
-                                                             }(),
-                                                             crane_convert<
-                                                                 Stream<A>>(xs)};
-                                                       })) {}
+      : lazy_v_(
+      crane::lazy<variant_t>::converted_from(
+          _other.lazy_cell(), [=]() -> variant_t {
+            const auto &[x, xs] =
+                std::get<typename Stream<CraneU>::Scons>(_other.v());
+            return Scons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(x);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                crane_convert<Stream<A>>(xs)};
+          })) {}
 
   explicit Stream(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Stream<A> scons(A x, Stream<A> xs) {
-    return Stream<A>(
-        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                               std::move(x), std::move(xs)));
+    return Stream<A>(crane::lazy<variant_t>(
+        std::in_place, std::in_place_index<0>, std::move(x), std::move(xs)));
   }
 
   explicit Stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -216,9 +208,8 @@ public:
 
   Stream<A> interleave(const Stream<A> &sb) const {
     const auto &[a0, a1] = std::get<typename Stream<A>::Scons>(this->v());
-    return Stream<A>::lazy_([=]() -> typename Stream<A>::Scons {
-      return {a0, sb.interleave(a1)};
-    });
+    return Stream<A>::lazy_(
+        [=]() -> typename Stream<A>::Scons { return {a0, sb.interleave(a1)}; });
   }
 
   template <typename T1>
@@ -233,9 +224,8 @@ public:
   }
 
   template <typename T1> static Stream<T1> repeat(const T1 &x) {
-    return Stream<T1>::lazy_([=]() -> typename Stream<T1>::Scons {
-      return {x, repeat<T1>(x)};
-    });
+    return Stream<T1>::lazy_(
+        [=]() -> typename Stream<T1>::Scons { return {x, repeat<T1>(x)}; });
   }
 
   static Stream<Nat> nats_from(const Nat &n) {
@@ -262,11 +252,12 @@ public:
   }
 
   static const List<Nat> &interleaved() {
-    static const List<Nat> v = take<Nat>(
-        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
-        nats_from(Nat::o()).interleave(
-            repeat<Nat>(
-                Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))));
+    static const List<Nat> v =
+        take<Nat>(
+            Nat::s(Nat::s(
+                Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+            nats_from(Nat::o()).interleave(repeat<Nat>(Nat::s(
+                Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))));
     return v;
   }
 };

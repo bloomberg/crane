@@ -1,7 +1,8 @@
 #include "region_patch_write.h"
 
-List<uint64_t> RegionPatchWrite::update_region(
-    const List<uint64_t> &rom, uint64_t base, const List<uint64_t> &bytes) {
+List<uint64_t>
+RegionPatchWrite::update_region(const List<uint64_t> &rom, uint64_t base,
+                                const List<uint64_t> &bytes) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(rom.v())) {
     return List<uint64_t>::nil();
   } else {

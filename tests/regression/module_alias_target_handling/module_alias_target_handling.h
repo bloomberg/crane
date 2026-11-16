@@ -1262,9 +1262,11 @@ struct Coq_Pos {
                        unsigned int p) {
     auto _lc1_pa0 = f0(1u, a);
     crane::fn<T1(unsigned int)> f2 = [=](unsigned int _x0) -> T1 {
-      return peano_rect<T1>(_lc1_pa0, [=](unsigned int p0, const T1 &x) {
-        return f0(((2u * p0) + 1u), f0((2u * p0), x));
-      }, _x0);
+      return peano_rect<T1>(
+          _lc1_pa0,
+          [=](unsigned int p0,
+              const T1 &x) { return f0(((2u * p0) + 1u), f0((2u * p0), x)); },
+          _x0);
     };
     if (p == 1u) {
       return a;
@@ -1346,12 +1348,10 @@ struct N {
               std::type_identity_t<crane::fn<T1(unsigned int, T1)>> fS2,
               unsigned int n) {
     crane::fn<T1(unsigned int, T1)> f2_ =
-        [=, f2 = std::move(f2)](unsigned int p, const T1 &x) {
-          return f2(p, x);
-        };
-    crane::fn<T1(unsigned int, T1)> fS2_ = [=](unsigned int p, const T1 &x) {
-      return fS2(p, x);
-    };
+        [=, f2 = std::move(f2)](unsigned int p,
+                                const T1 &x) { return f2(p, x); };
+    crane::fn<T1(unsigned int, T1)> fS2_ =
+        [=](unsigned int p, const T1 &x) { return fS2(p, x); };
     if (n == 0u) {
       return f0;
     } else {
@@ -1381,9 +1381,8 @@ struct N {
   static T1 peano_rect(T1 f0,
                        std::type_identity_t<crane::fn<T1(unsigned int, T1)>> f1,
                        unsigned int n) {
-    crane::fn<T1(unsigned int, T1)> f_ = [=](unsigned int p, const T1 &x) {
-      return f1(p, x);
-    };
+    crane::fn<T1(unsigned int, T1)> f_ =
+        [=](unsigned int p, const T1 &x) { return f1(p, x); };
     if (n == 0u) {
       return f0;
     } else {
@@ -1446,9 +1445,10 @@ struct N {
         f0,
         0u,
         [=, iH = std::move(iH)](const T1 &y, crane::fn<T2(T1)> iH_) {
-          return iH(y, [=, iH_ = std::move(iH_)](const T1 &y0) {
-            return iH_(y0);
-          });
+          return iH(y,
+                    [=, iH_ = std::move(iH_)](const T1 &y0) {
+                      return iH_(y0);
+                    });
         },
         x);
   }
@@ -1476,9 +1476,8 @@ struct N {
     template <typename T1, typename F2>
     static T1 max_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(n, m, x, [=]() { return x0; }(), [=]() {
-        return x1;
-      }());
+      return max_case_strong<T1>(n, m, x, [=]() { return x0; }(),
+                                 [=]() { return x1; }());
     }
 
     static bool max_dec(unsigned int n, unsigned int m);
@@ -1503,9 +1502,8 @@ struct N {
     template <typename T1, typename F2>
     static T1 min_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return min_case_strong<T1>(n, m, x, [=]() { return x0; }(), [=]() {
-        return x1;
-      }());
+      return min_case_strong<T1>(n, m, x, [=]() { return x0; }(),
+                                 [=]() { return x1; }());
     }
 
     static bool min_dec(unsigned int n, unsigned int m);
@@ -1521,9 +1519,8 @@ struct N {
   template <typename T1>
   static T1 max_case(unsigned int n, unsigned int m, const T1 &x,
                      const T1 &x0) {
-    return max_case_strong<T1>(n, m, [=]() { return x; }(), [=]() {
-      return x0;
-    }());
+    return max_case_strong<T1>(n, m, [=]() { return x; }(),
+                               [=]() { return x0; }());
   }
 
   static bool max_dec(unsigned int x0_, unsigned int x1_);
@@ -1538,9 +1535,8 @@ struct N {
   template <typename T1>
   static T1 min_case(unsigned int n, unsigned int m, const T1 &x,
                      const T1 &x0) {
-    return min_case_strong<T1>(n, m, [=]() { return x; }(), [=]() {
-      return x0;
-    }());
+    return min_case_strong<T1>(n, m, [=]() { return x; }(),
+                               [=]() { return x0; }());
   }
 
   static bool min_dec(unsigned int x0_, unsigned int x1_);

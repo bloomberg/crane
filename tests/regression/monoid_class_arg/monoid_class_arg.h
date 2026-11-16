@@ -246,29 +246,29 @@ struct MonoidClassArg {
   }
 
   static inline const uint64_t run =
-      ((mconcat<MNat, uint64_t>(
-            List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                     UINT64_C(2), List<uint64_t>::cons(
-                                         UINT64_C(3),
-                                         List<uint64_t>::nil())))) + mconcat<
-            MList<uint64_t>, List<uint64_t>>(
+      ((mconcat<MNat, uint64_t>(List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(2),
+                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))) +
+        mconcat<MList<uint64_t>, List<uint64_t>>(List<List<uint64_t>>::cons(
+            List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
             List<List<uint64_t>>::cons(List<uint64_t>::cons(
-                                           UINT64_C(1), List<uint64_t>::nil()),
-                                       List<List<uint64_t>>::cons(
-                                           List<uint64_t>::cons(
-                                               UINT64_C(2), List<uint64_t>::cons(
-                                                   UINT64_C(3),
-                                                   List<uint64_t>::nil())),
-                                           List<List<uint64_t>>::nil())))
-                                                                         .length()) +
+                UINT64_C(2),
+                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
+                                       List<List<uint64_t>>::nil())))
+            .length()) +
        mconcat<MPair<MNat, MList<uint64_t>, uint64_t, List<uint64_t>>,
                std::pair<uint64_t, List<uint64_t>>>(
            List<std::pair<uint64_t, List<uint64_t>>>::cons(
-               std::make_pair(UINT64_C(1), List<uint64_t>::cons(
-                                  UINT64_C(1), List<uint64_t>::nil())), List<
-                   std::pair<uint64_t, List<uint64_t>>>::cons(
-                   std::make_pair(UINT64_C(2), List<uint64_t>::cons(
-                                      UINT64_C(2), List<uint64_t>::nil())),
+               std::make_pair(
+                   UINT64_C(1),
+                   List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil())),
+               List<std::pair<uint64_t, List<uint64_t>>>::cons(
+                   std::make_pair(
+                       UINT64_C(2),
+                       List<uint64_t>::cons(UINT64_C(2),
+                                            List<uint64_t>::nil())),
                    List<std::pair<uint64_t, List<uint64_t>>>::nil())))
            .first);
 };

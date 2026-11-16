@@ -68,9 +68,8 @@ public:
   }
 
   static List<A> cons_crane_reuse(crane::rc<List<A>> _tok, A a, List<A> l) {
-    return List<A>(
-        Cons{std::move(a),
-             crane::make_rc_reusing<List<A>>(std::move(_tok), std::move(l))});
+    return List<A>(Cons{std::move(a), crane::make_rc_reusing<List<A>>(
+                                          std::move(_tok), std::move(l))});
   }
 
   // MANIPULATORS
@@ -279,9 +278,8 @@ struct ReuseForcedViews {
 
   static tree smash(tree t, tree u);
   static List<tree> carry(List<tree> q, tree t);
-  static List<
-      std::pair<uint64_t,
-                std::pair<std::optional<uint64_t>, std::optional<uint64_t>>>>
+  static List<std::pair<
+      uint64_t, std::pair<std::optional<uint64_t>, std::optional<uint64_t>>>>
   combine(List<std::pair<uint64_t, uint64_t>> m,
           const List<std::pair<uint64_t, uint64_t>> &x0_);
 };

@@ -164,7 +164,7 @@ struct NestedInd {
                     }
                   }(),
                   (a1 ? std::make_shared<custom_list<A>>(
-                          crane_convert<custom_list<A>>(*a1))
+                            crane_convert<custom_list<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -329,7 +329,7 @@ struct NestedInd {
                   }
                 }(),
                 (a1 ? std::make_shared<custom_list<rose<A>>>(
-                        crane_convert<custom_list<rose<A>>>(*a1))
+                          crane_convert<custom_list<rose<A>>>(*a1))
                     : nullptr)};
           }()) {}
 
@@ -406,13 +406,16 @@ struct NestedInd {
 
   static rose<uint64_t> leaf(uint64_t n);
   static inline const rose<uint64_t> small_tree = rose<uint64_t>::node(
-      UINT64_C(1), custom_list<rose<uint64_t>>::ccons(
-          leaf(UINT64_C(2)), custom_list<rose<uint64_t>>::ccons(
+      UINT64_C(1),
+      custom_list<rose<uint64_t>>::ccons(
+          leaf(UINT64_C(2)),
+          custom_list<rose<uint64_t>>::ccons(
               leaf(UINT64_C(3)), custom_list<rose<uint64_t>>::cnil())));
   static inline const rose<uint64_t> bigger_tree = rose<uint64_t>::node(
       UINT64_C(1), custom_list<rose<uint64_t>>::ccons(
-          small_tree, custom_list<rose<uint64_t>>::ccons(
-              leaf(UINT64_C(4)), custom_list<rose<uint64_t>>::cnil())));
+                       small_tree, custom_list<rose<uint64_t>>::ccons(
+                                       leaf(UINT64_C(4)),
+                                       custom_list<rose<uint64_t>>::cnil())));
   static inline const uint64_t test_root_leaf = leaf(UINT64_C(5)).root();
   static inline const uint64_t test_root_small = small_tree.root();
   static inline const uint64_t test_children_leaf =
@@ -545,9 +548,10 @@ struct NestedInd {
                                         _self_aux(_self_aux, *a10));
               }
             };
-        auto aux = [&](const List<expr> &l) -> List<expr> {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> List<expr> {
+              return aux_impl(aux_impl, l);
+            };
         _tmp3 = aux(*a0);
         return expr::add(std::move(_tmp3));
       } else {
@@ -564,9 +568,10 @@ struct NestedInd {
                                         _self_aux(_self_aux, *a10));
               }
             };
-        auto aux = [&](const List<expr> &l) -> List<expr> {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> List<expr> {
+              return aux_impl(aux_impl, l);
+            };
         _tmp6 = aux(*a0);
         return expr::mul(std::move(_tmp6));
       }
@@ -588,9 +593,10 @@ struct NestedInd {
                 return a00.literals().app(_self_aux(_self_aux, *a10));
               }
             };
-        auto aux = [&](const List<expr> &l) -> List<uint64_t> {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> List<uint64_t> {
+              return aux_impl(aux_impl, l);
+            };
         return aux(*a0);
       } else {
         const auto &[a0] = std::get<typename expr::Mul>(this->v());
@@ -604,9 +610,10 @@ struct NestedInd {
                 return a00.literals().app(_self_aux(_self_aux, *a10));
               }
             };
-        auto aux = [&](const List<expr> &l) -> List<uint64_t> {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> List<uint64_t> {
+              return aux_impl(aux_impl, l);
+            };
         return aux(*a0);
       }
     }
@@ -625,9 +632,10 @@ struct NestedInd {
             return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
           }
         };
-        auto aux = [&](const List<expr> &l) -> uint64_t {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
         _tmp3 = aux(*a0);
         return (_tmp3 + 1);
       } else {
@@ -641,9 +649,10 @@ struct NestedInd {
             return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
           }
         };
-        auto aux = [&](const List<expr> &l) -> uint64_t {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
         _tmp6 = aux(*a0);
         return (_tmp6 + 1);
       }
@@ -663,9 +672,10 @@ struct NestedInd {
             return (a00.expr_size() + _self_aux(_self_aux, *a10));
           }
         };
-        auto aux = [&](const List<expr> &l) -> uint64_t {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
         _tmp3 = aux(*a0);
         return (_tmp3 + 1);
       } else {
@@ -679,9 +689,10 @@ struct NestedInd {
             return (a00.expr_size() + _self_aux(_self_aux, *a10));
           }
         };
-        auto aux = [&](const List<expr> &l) -> uint64_t {
-          return aux_impl(aux_impl, l);
-        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
         _tmp6 = aux(*a0);
         return (_tmp6 + 1);
       }
@@ -703,9 +714,10 @@ struct NestedInd {
                 return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
               }
             };
-        auto sum_all = [&](const List<expr> &l) -> uint64_t {
-          return sum_all_impl(sum_all_impl, l);
-        };
+        auto sum_all =
+            [&](const List<expr> &l) -> uint64_t {
+              return sum_all_impl(sum_all_impl, l);
+            };
         return sum_all(*a0);
       } else {
         const auto &[a0] = std::get<typename expr::Mul>(this->v());
@@ -719,9 +731,10 @@ struct NestedInd {
                 return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
               }
             };
-        auto prod_all = [&](const List<expr> &l) -> uint64_t {
-          return prod_all_impl(prod_all_impl, l);
-        };
+        auto prod_all =
+            [&](const List<expr> &l) -> uint64_t {
+              return prod_all_impl(prod_all_impl, l);
+            };
         return prod_all(*a0);
       }
     }
@@ -747,27 +760,24 @@ struct NestedInd {
     }
   };
 
-  static inline const expr test_add =
+  static inline const expr test_add = expr::add(List<expr>::cons(
+      expr::lit(UINT64_C(1)),
+      List<expr>::cons(
+          expr::lit(UINT64_C(2)),
+          List<expr>::cons(expr::lit(UINT64_C(3)), List<expr>::nil()))));
+  static inline const expr test_mul = expr::mul(List<expr>::cons(
+      expr::lit(UINT64_C(2)),
+      List<expr>::cons(
+          expr::lit(UINT64_C(3)),
+          List<expr>::cons(expr::lit(UINT64_C(4)), List<expr>::nil()))));
+  static inline const expr test_nested = expr::mul(List<expr>::cons(
       expr::add(List<expr>::cons(
-                    expr::lit(UINT64_C(1)), List<expr>::cons(
-                        expr::lit(UINT64_C(2)), List<expr>::cons(
-                            expr::lit(UINT64_C(3)), List<expr>::nil()))));
-  static inline const expr test_mul =
-      expr::mul(List<expr>::cons(
-                    expr::lit(UINT64_C(2)), List<expr>::cons(
-                        expr::lit(UINT64_C(3)), List<expr>::cons(
-                            expr::lit(UINT64_C(4)), List<expr>::nil()))));
-  static inline const expr test_nested =
-      expr::mul(
-          List<expr>::cons(
-              expr::add(List<expr>::cons(
-                            expr::lit(UINT64_C(1)), List<expr>::cons(
-                                expr::lit(UINT64_C(2)), List<expr>::nil()))),
-              List<expr>::cons(
-                  expr::add(List<expr>::cons(
-                                expr::lit(UINT64_C(3)), List<expr>::cons(
-                                    expr::lit(UINT64_C(4)),
-                                    List<expr>::nil()))), List<expr>::nil())));
+          expr::lit(UINT64_C(1)),
+          List<expr>::cons(expr::lit(UINT64_C(2)), List<expr>::nil()))),
+      List<expr>::cons(expr::add(List<expr>::cons(
+          expr::lit(UINT64_C(3)),
+          List<expr>::cons(expr::lit(UINT64_C(4)), List<expr>::nil()))),
+                       List<expr>::nil())));
   static inline const uint64_t test_eval_add = test_add.eval();
   static inline const uint64_t test_eval_mul = test_mul.eval();
   static inline const uint64_t test_eval_nested = test_nested.eval();
@@ -776,35 +786,30 @@ struct NestedInd {
   static inline const List<uint64_t> test_literals = test_nested.literals();
   static inline const uint64_t test_doubled =
       test_nested.lit_map([](uint64_t n) { return (n * UINT64_C(2)); }).eval();
-  static inline const std::pair<
-      std::pair<
-          std::pair<
-              std::pair<
-                  std::pair<
-                      std::pair<
-                          std::pair<
-                              std::pair<
-                                  std::pair<
-                                      std::pair<std::pair<uint64_t, uint64_t>,
-                                                uint64_t>, uint64_t>, uint64_t>,
-                              uint64_t>, uint64_t>, uint64_t>, uint64_t>,
-              uint64_t>, List<uint64_t>>, uint64_t> t = std::make_pair(
-      std::make_pair(
-          std::make_pair(
-              std::make_pair(
-                  std::make_pair(
-                      std::make_pair(
-                          std::make_pair(
-                              std::make_pair(
-                                  std::make_pair(
-                                      std::make_pair(
-                                          std::make_pair(test_root_leaf,
-                                                         test_root_small),
-                                          test_children_leaf),
-                                      test_children_small),
-                                  test_children_bigger), test_eval_add),
-                          test_eval_mul), test_eval_nested), test_size_nested),
-              test_depth_nested), test_literals), test_doubled);
+  static inline const std::pair<std::pair<
+      std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<
+          std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>,
+                                                                  uint64_t>,
+                                                        uint64_t>,
+                                              uint64_t>,
+                                    uint64_t>,
+                          uint64_t>,
+                uint64_t>,
+      List<uint64_t>>,
+                                uint64_t> t = std::make_pair(
+      std::make_pair(std::make_pair(std::make_pair(std::make_pair(
+          std::make_pair(std::make_pair(std::make_pair(std::make_pair(
+              std::make_pair(std::make_pair(test_root_leaf, test_root_small),
+                             test_children_leaf),
+              test_children_small),
+                                                       test_children_bigger),
+                                        test_eval_add),
+                         test_eval_mul),
+          test_eval_nested),
+                                                   test_size_nested),
+                                    test_depth_nested),
+                     test_literals),
+      test_doubled);
 };
 
 #endif // INCLUDED_NESTED_IND

@@ -68,8 +68,8 @@ CtorArgMoveAlias::pack CtorArgMoveAlias::grab(
 /// isum h = 2n+1; the result is 4n+2, i.e. 6 for n = 1.
 uint64_t CtorArgMoveAlias::run(uint64_t n) {
   auto &&_sv = grab(mylist<CtorArgMoveAlias::inner>::mycons(
-                        inner::icons(n, inner::icons((n + 1), inner::inil())),
-                        mylist<CtorArgMoveAlias::inner>::mynil()));
+      inner::icons(n, inner::icons((n + 1), inner::inil())),
+      mylist<CtorArgMoveAlias::inner>::mynil()));
   if (std::holds_alternative<typename CtorArgMoveAlias::pack::Pack0>(_sv.v())) {
     const auto &[a0, a1] =
         std::get<typename CtorArgMoveAlias::pack::Pack0>(_sv.v());

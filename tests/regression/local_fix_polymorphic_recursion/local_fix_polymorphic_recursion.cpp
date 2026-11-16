@@ -10,14 +10,12 @@
 /// is self_call_other_instance.
 uint64_t LocalFixPolymorphicRecursion::run(uint64_t k, uint64_t n) {
   {
-    const crane::fn<uint64_t(crane::obj)> &_lc1_h =
-        crane_erase_fn<uint64_t>([](const List<uint64_t> &_x) {
-          return _x.length();
-        });
+    const crane::fn<uint64_t(crane::obj)> &_lc1_h = crane_erase_fn<uint64_t>(
+        [](const List<uint64_t> &_x) { return _x.length(); });
     crane::obj _lc1_y = List<uint64_t>::cons(
         UINT64_C(1), List<uint64_t>::cons(
-            UINT64_C(2),
-            List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3), List<uint64_t>::nil())));
     uint64_t _lc1_n0 = n;
     uint64_t _lc1_loop_n0 = _lc1_n0;
     crane::obj _lc1_loop_y = _lc1_y;

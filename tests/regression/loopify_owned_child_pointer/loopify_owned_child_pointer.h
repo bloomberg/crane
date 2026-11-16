@@ -58,7 +58,7 @@ public:
                   }
                 }(),
                 (l ? crane::shared_box<List<A>>::make(
-                       crane_convert<List<A>>(*l))
+                         crane_convert<List<A>>(*l))
                    : nullptr)};
           }
         }()) {}
@@ -360,9 +360,9 @@ struct LoopifyOwnedChildPointer {
           auto _f = std::move(crane::get<CraneCont_Node_1>(_frame));
           crane::shared_box<tree> a0 = std::move(_f.a0);
           const tree &a0_value = *a0;
-          _result = List<crane::fn<uint64_t(uint64_t)>>::cons([=](uint64_t y) {
-            return (y + a0_value.sum());
-          }, _f._tmp2.app(std::move(_result)));
+          _result = List<crane::fn<uint64_t(uint64_t)>>::cons(
+              [=](uint64_t y) { return (y + a0_value.sum()); },
+              _f._tmp2.app(std::move(_result)));
         }
       }
       return _result;
@@ -498,10 +498,13 @@ struct LoopifyOwnedChildPointer {
       tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
       tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                  UINT64_C(4), tree::leaf()));
-  static inline const uint64_t left_sums = t0.subs().template fold_left<
-      uint64_t>([](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) {
-        return (a + f(UINT64_C(0)));
-      }, UINT64_C(0));
+  static inline const uint64_t left_sums =
+      t0.subs().template fold_left<uint64_t>(
+          [](uint64_t a,
+             const crane::fn<uint64_t(uint64_t)> &f) {
+            return (a + f(UINT64_C(0)));
+          },
+          UINT64_C(0));
 };
 
 #endif // INCLUDED_LOOPIFY_OWNED_CHILD_POINTER

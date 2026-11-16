@@ -10,7 +10,12 @@
 /// would take no lambda over bool once f is called at a list.  The same
 /// pair across two functions is mutual_lambda_ground_instance.
 uint64_t SelfCallOtherInstance::run(uint64_t n) {
-  return f<List<uint64_t>>([](const List<uint64_t> &_x) {
-    return _x.length();
-  }, List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))), n);
+  return f<List<uint64_t>>(
+      [](const List<uint64_t> &_x) { return _x.length(); },
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+      n);
 }

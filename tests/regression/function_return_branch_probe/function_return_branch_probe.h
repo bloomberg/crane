@@ -70,25 +70,8 @@ struct FunctionReturnBranchProbe {
   /// closure types.
   static Nat make_adder(const Nat &n, Nat x0_);
   static inline const Nat sample = make_adder(
-      Nat::s(Nat::s(Nat::o())), Nat::s(
-          Nat::s(
-              Nat::s(
-                  Nat::s(
-                      Nat::s(
-                          Nat::s(
-                              Nat::s(
-                                  Nat::s(
-                                      Nat::s(
-                                          Nat::s(
-                                              Nat::s(
-                                                  Nat::s(
-                                                      Nat::s(
-                                                          Nat::s(
-                                                              Nat::s(
-                                                                  Nat::s(
-                                                                      Nat::s(
-                                                                          Nat::s(
-                                                                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))));
+      Nat::s(Nat::s(Nat::o())),
+      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))));
 };
 
 #endif // INCLUDED_FUNCTION_RETURN_BRANCH_PROBE

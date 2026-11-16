@@ -187,7 +187,7 @@ LoopifyMoreTrees::tree_to_list(const LoopifyMoreTrees::tree &t) { /// CraneEnter
       uint64_t a1 = _f.a1;
       _result =
           _f._tmp2.app(List<uint64_t>::cons(a1, List<uint64_t>::nil()).app(
-                           std::move(_result)));
+              std::move(_result)));
     }
   }
   return _result;
@@ -506,9 +506,10 @@ List<uint64_t> LoopifyMoreTrees::append_lists(const List<uint64_t> &l1,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
-      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
-                                              List<uint64_t>>(std::move(_cell)))
-                                      : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node =
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l1 = crane_raw(a1);
       continue;
@@ -600,7 +601,7 @@ LoopifyMoreTrees::tree_children(const LoopifyMoreTrees::tree &t) {
         std::get<typename LoopifyMoreTrees::tree::Node>(t.v());
     return List<LoopifyMoreTrees::tree>::cons(
         *a0, List<LoopifyMoreTrees::tree>::cons(
-            *a2, List<LoopifyMoreTrees::tree>::nil()));
+                 *a2, List<LoopifyMoreTrees::tree>::nil()));
   }
 }
 
@@ -723,6 +724,7 @@ LoopifyMoreTrees::tree_levels_fuel(uint64_t fuel,
 
 List<List<uint64_t>>
 LoopifyMoreTrees::tree_levels(const LoopifyMoreTrees::tree &t) {
-  return tree_levels_fuel(UINT64_C(100), List<LoopifyMoreTrees::tree>::cons(
+  return tree_levels_fuel(UINT64_C(100),
+                          List<LoopifyMoreTrees::tree>::cons(
                               t, List<LoopifyMoreTrees::tree>::nil()));
 }

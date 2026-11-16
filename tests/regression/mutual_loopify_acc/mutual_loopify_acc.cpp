@@ -132,10 +132,10 @@ MutualLoopifyAcc::tree MutualLoopifyAcc::chain(uint64_t n,
       return _loop_acc;
     } else {
       uint64_t m = _loop_n - 1;
-      _loop_acc = tree::node(
-          forest::fcons(std::move(_loop_acc),
-                        forest::fcons(tree::leaf(UINT64_C(1)),
-                                      forest::fnil())));
+      _loop_acc =
+          tree::node(forest::fcons(
+              std::move(_loop_acc),
+              forest::fcons(tree::leaf(UINT64_C(1)), forest::fnil())));
       _loop_n = m;
     }
   }

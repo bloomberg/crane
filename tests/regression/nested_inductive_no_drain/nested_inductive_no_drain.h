@@ -218,9 +218,8 @@ struct NestedInductiveNoDrain {
           return (a00.tsum() + _self_go0(_self_go0, *a10));
         }
       };
-      auto go0 = [&](const lst<tree> &m) -> uint64_t {
-        return go0_impl(go0_impl, m);
-      };
+      auto go0 =
+          [&](const lst<tree> &m) -> uint64_t { return go0_impl(go0_impl, m); };
       _tmp3 = go0(*a1);
       return (a0 + _tmp3);
     }

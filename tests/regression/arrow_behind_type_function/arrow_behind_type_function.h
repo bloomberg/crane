@@ -110,9 +110,8 @@ struct ArrowBehindTypeFunction {
   }
 
   template <typename T1, typename T2, typename T3>
-  static cont<T1, T2>
-  callcc(std::type_identity_t<
-             crane::fn<cont<T1, T2>(crane::fn<cont<T1, T3>(T2)>)>> f) {
+  static cont<T1, T2> callcc(std::type_identity_t<
+      crane::fn<cont<T1, T2>(crane::fn<cont<T1, T3>(T2)>)>> f) {
     return [=, f = std::move(f)](crane::fn<T1(T2)> k) {
       return crane::apply2(
           f,
@@ -123,17 +122,19 @@ struct ArrowBehindTypeFunction {
     };
   }
 
-  static inline const uint64_t escaped = callcc<uint64_t, uint64_t, uint64_t>([](const crane::fn<crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)>(uint64_t)> &esc) {
-    return cbind<uint64_t, uint64_t, uint64_t>(esc(UINT64_C(5)), [](uint64_t) {
-      return cret<uint64_t, uint64_t>(UINT64_C(100));
-    });
-  })([](uint64_t x) { return (x * UINT64_C(2)); });
+  static inline const uint64_t escaped =
+      callcc<uint64_t, uint64_t, uint64_t>([](const crane::fn<
+          crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)>(uint64_t)> &esc) {
+        return cbind<uint64_t, uint64_t, uint64_t>(
+            esc(UINT64_C(5)),
+            [](uint64_t) { return cret<uint64_t, uint64_t>(UINT64_C(100)); });
+      })([](uint64_t x) { return (x * UINT64_C(2)); });
   using nfun = crane::obj;
   static uint64_t applyl(uint64_t n, nfun v, const List<uint64_t> &x);
   static inline const uint64_t product = applyl(
-      UINT64_C(2), crane_erase_fn([](uint64_t _x0, uint64_t _x1) -> uint64_t {
-        return (_x0 * _x1);
-      }),
+      UINT64_C(2),
+      crane_erase_fn(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 * _x1); }),
       List<uint64_t>::cons(
           UINT64_C(3),
           List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())));

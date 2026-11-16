@@ -59,7 +59,7 @@ public:
                   }
                 }(),
                 (l ? crane::shared_box<List<A>>::make(
-                       crane_convert<List<A>>(*l))
+                         crane_convert<List<A>>(*l))
                    : nullptr)};
           }
         }()) {}
@@ -294,42 +294,41 @@ struct AliasSlot {
 
   static line line_of(const expr &e);
   static uint64_t count(const expr &e);
-  static inline const uint64_t sample = count(
+  static inline const uint64_t sample = count(expr::eadd(
       expr::eadd(
-          expr::eadd(
-              expr::elit(
-                  String::string0(Ascii::ascii0(true, false, false, false,
-                                                false, true, true, false),
-                                  String::emptystring())), expr::elit(
+          expr::elit(String::string0(Ascii::ascii0(true, false, false, false,
+                                                   false, true, true, false),
+                                     String::emptystring())),
+          expr::elit(String::string0(Ascii::ascii0(false, true, false, false,
+                                                   false, true, true, false),
+                                     String::emptystring()))),
+      expr::elit(String::string0(
+          Ascii::ascii0(true, true, false, false, false, true, true, false),
+          String::emptystring()))));
+  static inline const uint64_t commas =
+      comma_parts(
+          List<String>::cons(
+              String::string0(Ascii::ascii0(true, false, false, false, false,
+                                            true, true, false),
+                              String::emptystring()),
+              List<String>::cons(
                   String::string0(Ascii::ascii0(false, true, false, false,
                                                 false, true, true, false),
-                                  String::emptystring()))), expr::elit(
-              String::string0(Ascii::ascii0(true, true, false, false, false,
-                                            true, true, false),
-                              String::emptystring()))));
-  static inline const uint64_t commas =
-      comma_parts(List<String>::cons(
-                      String::string0(Ascii::ascii0(true, false, false, false,
-                                                    false, true, true, false),
-                                      String::emptystring()), List<String>::cons(
-                          String::string0(
-                              Ascii::ascii0(false, true, false, false, false,
-                                            true, true, false),
-                              String::emptystring()), List<String>::cons(
-                              String::string0(
-                                  Ascii::ascii0(true, true, false, false, false,
-                                                true, true, false),
                                   String::emptystring()),
-                              List<String>::nil()))), List<String>::cons(
-                      String::string0(
-                          Ascii::ascii0(true, false, true, false, false, true,
-                                        true, false), String::string0(
-                              Ascii::ascii0(false, true, true, true, false,
-                                            true, true, false), String::string0(
-                                  Ascii::ascii0(false, false, true, false,
+                  List<String>::cons(
+                      String::string0(Ascii::ascii0(true, true, false, false,
+                                                    false, true, true, false),
+                                      String::emptystring()),
+                      List<String>::nil()))),
+          List<String>::cons(String::string0(
+              Ascii::ascii0(true, false, true, false, false, true, true, false),
+              String::string0(
+                  Ascii::ascii0(false, true, true, true, false, true, true,
+                                false),
+                  String::string0(Ascii::ascii0(false, false, true, false,
                                                 false, true, true, false),
                                   String::emptystring()))),
-                      List<String>::nil()))
+                             List<String>::nil()))
           .length();
 };
 

@@ -423,19 +423,21 @@ public:
   }
 
   static const Tree<Nat> &tree1() {
-    static const Tree<Nat> v = Tree<Nat>::node(
+    static const Tree<Nat> v =
         Tree<Nat>::node(
-            Tree<Nat>::leaf(), Nat::s(Nat::s(Nat::s(Nat::o()))), Tree<Nat>::node(
-                Tree<Nat>::leaf(), Nat::s(
-                    Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
-                Tree<Nat>::leaf())), Nat::s(Nat::o()), Tree<Nat>::node(
-            Tree<Nat>::leaf(), Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))), Tree<
-                Nat>::node(
-                Tree<Nat>::node(
+            Tree<Nat>::node(Tree<Nat>::leaf(), Nat::s(Nat::s(Nat::s(Nat::o()))),
+                            Tree<Nat>::node(Tree<Nat>::leaf(),
+                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                                                Nat::s(Nat::s(Nat::o()))))))),
+                                            Tree<Nat>::leaf())),
+            Nat::s(Nat::o()),
+            Tree<Nat>::node(
+                Tree<Nat>::leaf(), Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
+                Tree<Nat>::node(Tree<Nat>::node(
                     Tree<Nat>::leaf(),
                     Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                    Tree<Nat>::leaf()), Nat::s(Nat::s(Nat::o())),
-                Tree<Nat>::leaf())));
+                    Tree<Nat>::leaf()),
+                                Nat::s(Nat::s(Nat::o())), Tree<Nat>::leaf())));
     return v;
   }
 };

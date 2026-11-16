@@ -246,10 +246,9 @@ struct BareSelfMethodValue {
 
     static bareSelfMethodValue node(bareSelfMethodValue a0, Nat a1,
                                     bareSelfMethodValue a2) {
-      return bareSelfMethodValue(
-          Node{std::make_shared<bareSelfMethodValue>(std::move(a0)),
-               std::move(a1),
-               std::make_shared<bareSelfMethodValue>(std::move(a2))});
+      return bareSelfMethodValue(Node{
+          std::make_shared<bareSelfMethodValue>(std::move(a0)), std::move(a1),
+          std::make_shared<bareSelfMethodValue>(std::move(a2))});
     }
 
     // MANIPULATORS
@@ -445,21 +444,18 @@ struct BareSelfMethodValue {
 
   static List<Nat> sizes(const List<bareSelfMethodValue> &ts);
   static Nat total(const List<bareSelfMethodValue> &ts);
-  static inline const Nat example =
-      total(List<bareSelfMethodValue>::cons(
-                bareSelfMethodValue::leaf(), List<bareSelfMethodValue>::cons(
-                    bareSelfMethodValue::node(bareSelfMethodValue::leaf(),
-                                              Nat::s(Nat::o()),
-                                              bareSelfMethodValue::leaf()),
-                    List<bareSelfMethodValue>::cons(
-                        bareSelfMethodValue::node(
-                            bareSelfMethodValue::node(
-                                bareSelfMethodValue::leaf(),
-                                Nat::s(Nat::s(Nat::o())),
-                                bareSelfMethodValue::leaf()),
-                            Nat::s(Nat::s(Nat::s(Nat::o()))),
-                            bareSelfMethodValue::leaf()),
-                        List<bareSelfMethodValue>::nil()))));
+  static inline const Nat example = total(List<bareSelfMethodValue>::cons(
+      bareSelfMethodValue::leaf(),
+      List<bareSelfMethodValue>::cons(
+          bareSelfMethodValue::node(bareSelfMethodValue::leaf(),
+                                    Nat::s(Nat::o()),
+                                    bareSelfMethodValue::leaf()),
+          List<bareSelfMethodValue>::cons(bareSelfMethodValue::node(
+              bareSelfMethodValue::node(bareSelfMethodValue::leaf(),
+                                        Nat::s(Nat::s(Nat::o())),
+                                        bareSelfMethodValue::leaf()),
+              Nat::s(Nat::s(Nat::s(Nat::o()))), bareSelfMethodValue::leaf()),
+                                          List<bareSelfMethodValue>::nil()))));
 };
 
 #endif // INCLUDED_BARE_SELF_METHOD_VALUE

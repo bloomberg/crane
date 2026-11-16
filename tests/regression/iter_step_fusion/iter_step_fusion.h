@@ -132,8 +132,9 @@ struct IterStepFusion {
             } else {
               if (std::holds_alternative<
                       typename itreeF<CraneU0, CraneU1>::TauF>(_other.v())) {
-                const auto &[t] = std::get<
-                    typename itreeF<CraneU0, CraneU1>::TauF>(_other.v());
+                const auto &[t] =
+                    std::get<typename itreeF<CraneU0, CraneU1>::TauF>(
+                        _other.v());
                 return TauF{[&]() -> itree {
                   if constexpr (crane_convertible<itree, const CraneU1 &>) {
                     return crane_convert<itree>(t);
@@ -143,8 +144,9 @@ struct IterStepFusion {
                   }
                 }()};
               } else {
-                const auto &[e, k] = std::get<
-                    typename itreeF<CraneU0, CraneU1>::VisF>(_other.v());
+                const auto &[e, k] =
+                    std::get<typename itreeF<CraneU0, CraneU1>::VisF>(
+                        _other.v());
                 return VisF{e, crane_convert<crane::fn<itree(uint64_t)>>(k)};
               }
             }
@@ -191,29 +193,19 @@ struct IterStepFusion {
 
     template <typename CraneU>
     itree(const itree<CraneU> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                         [=]() -> variant_t {
-                                                           const auto &[
-                                                               _observe] =
-                                                               std::get<
-                                                                   typename itree<
-                                                                       CraneU>::Go>(
-                                                                   _other.v());
-                                                           return Go{
-                                                               crane_convert<
-                                                                   itreeF<
-                                                                       R,
-                                                                       itree<R>>>(
-                                                                   _observe)};
-                                                         })) {}
+        : lazy_v_(crane::lazy<variant_t>::converted_from(
+        _other.lazy_cell(), [=]() -> variant_t {
+          const auto &[_observe] =
+              std::get<typename itree<CraneU>::Go>(_other.v());
+          return Go{crane_convert<itreeF<R, itree<R>>>(_observe)};
+        })) {}
 
     explicit itree(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static itree<R> go(itreeF<R, itree<R>> _observe) {
-      return itree<R>(
-          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                                 std::move(_observe)));
+      return itree<R>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(_observe)));
     }
 
     explicit itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -263,13 +255,12 @@ struct IterStepFusion {
       const auto &[r0] =
           std::get<typename itreeF<T1, itree<T1>>::RetF>(_sv.v());
       return itree<T2>::lazy_([=]() -> itree<T2> { return k(r0); });
-    } else if (
-        std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(_sv.v())) {
+    } else if (std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(
+                   _sv.v())) {
       const auto &[t0] =
           std::get<typename itreeF<T1, itree<T1>>::TauF>(_sv.v());
-      return itree<T2>::lazy_([=]() -> itree<T2> {
-        return Tau<T2>(subst<T1, T2>(k, t0));
-      });
+      return itree<T2>::lazy_(
+          [=]() -> itree<T2> { return Tau<T2>(subst<T1, T2>(k, t0)); });
     } else {
       const auto &[e0, k0] =
           std::get<typename itreeF<T1, itree<T1>>::VisF>(_sv.v());
@@ -290,19 +281,16 @@ struct IterStepFusion {
   static itree<T2>
   iter(const std::type_identity_t<crane::fn<itree<Sum<T1, T2>>(T1)>> &step0,
        const T1 &i) {
-    return bind<Sum<T1, T2>, T2>(step0(i),
-                                 [=](const Sum<T1, T2> &lr) -> itree<T2> {
-                                   if (std::holds_alternative<
-                                           typename Sum<T1, T2>::Inl>(lr.v())) {
-                                     const auto &[a0] = std::get<
-                                         typename Sum<T1, T2>::Inl>(lr.v());
-                                     return Tau<T2>(iter<T1, T2>(step0, a0));
-                                   } else {
-                                     const auto &[a0] = std::get<
-                                         typename Sum<T1, T2>::Inr>(lr.v());
-                                     return Ret<T2>(a0);
-                                   }
-                                 });
+    return bind<Sum<T1, T2>, T2>(
+        step0(i), [=](const Sum<T1, T2> &lr) -> itree<T2> {
+          if (std::holds_alternative<typename Sum<T1, T2>::Inl>(lr.v())) {
+            const auto &[a0] = std::get<typename Sum<T1, T2>::Inl>(lr.v());
+            return Tau<T2>(iter<T1, T2>(step0, a0));
+          } else {
+            const auto &[a0] = std::get<typename Sum<T1, T2>::Inr>(lr.v());
+            return Ret<T2>(a0);
+          }
+        });
   }
 
   template <typename T1, typename T2>
@@ -320,20 +308,17 @@ struct IterStepFusion {
       const auto &[r0] =
           std::get<typename itreeF<T1, itree<T1>>::RetF>(_sv.v());
       return itree<T1>::lazy_([=]() -> itree<T1> { return Ret<T1>(r0); });
-    } else if (
-        std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(_sv.v())) {
+    } else if (std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(
+                   _sv.v())) {
       const auto &[t0] =
           std::get<typename itreeF<T1, itree<T1>>::TauF>(_sv.v());
-      return itree<T1>::lazy_([=]() -> itree<T1> {
-        return Tau<T1>(interp<T1>(h, t0));
-      });
+      return itree<T1>::lazy_(
+          [=]() -> itree<T1> { return Tau<T1>(interp<T1>(h, t0)); });
     } else {
       const auto &[e0, k0] =
           std::get<typename itreeF<T1, itree<T1>>::VisF>(_sv.v());
-      itree<Sum<itree<T1>, T1>> step0 =
-          fmap<uint64_t, Sum<itree<T1>, T1>>([=](uint64_t x) {
-            return Sum<itree<T1>, T1>::inl(k0(x));
-          }, h(e0));
+      itree<Sum<itree<T1>, T1>> step0 = fmap<uint64_t, Sum<itree<T1>, T1>>(
+          [=](uint64_t x) { return Sum<itree<T1>, T1>::inl(k0(x)); }, h(e0));
       return itree<T1>::lazy_([=]() -> itree<T1> {
         return bind<Sum<itree<T1>, T1>, T1>(
             step0, [=](const Sum<itree<T1>, T1> &lr) -> itree<T1> {
@@ -361,26 +346,26 @@ struct IterStepFusion {
       const auto &[r0] =
           std::get<typename itreeF<T1, itree<T1>>::RetF>(_sv.v());
       return Ret<Sum<itree<T1>, T1>>(Sum<itree<T1>, T1>::inr(r0));
-    } else if (
-        std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(_sv.v())) {
+    } else if (std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(
+                   _sv.v())) {
       const auto &[t1] =
           std::get<typename itreeF<T1, itree<T1>>::TauF>(_sv.v());
       return Ret<Sum<itree<T1>, T1>>(Sum<itree<T1>, T1>::inl(t1));
     } else {
       const auto &[e0, k0] =
           std::get<typename itreeF<T1, itree<T1>>::VisF>(_sv.v());
-      return fmap<uint64_t, Sum<itree<T1>, T1>>([=](uint64_t x) {
-        return Sum<itree<T1>, T1>::inl(k0(x));
-      }, h(e0));
+      return fmap<uint64_t, Sum<itree<T1>, T1>>(
+          [=](uint64_t x) { return Sum<itree<T1>, T1>::inl(k0(x)); }, h(e0));
     }
   }
 
   template <typename T1>
   static itree<T1> interp_by_name(const crane::fn<itree<uint64_t>(uint64_t)> &h,
                                   const itree<T1> &x0_) {
-    return iter<itree<T1>, T1>([=](itree<T1> _x0) -> itree<Sum<itree<T1>, T1>> {
-      return step<T1>(h, _x0);
-    }, x0_);
+    return iter<itree<T1>, T1>(
+        [=](itree<T1> _x0) -> itree<Sum<itree<T1>,
+                                        T1>> { return step<T1>(h, _x0); },
+        x0_);
   }
 };
 

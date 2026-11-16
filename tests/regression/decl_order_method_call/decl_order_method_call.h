@@ -135,11 +135,10 @@ struct Regs {
 };
 
 const uint64_t written_second = []() -> uint64_t {
-  auto _cs = Regs::write_r(
-      List<Rv>::cons(
-          Rv::ru(), List<Rv>::cons(Rv::rs(UINT64_C(1)),
-                                   List<Rv>::cons(Rv::ru(), List<Rv>::nil()))),
-      UINT64_C(1), Rv::rs(UINT64_C(7)));
+  auto _cs = Regs::write_r(List<Rv>::cons(
+      Rv::ru(), List<Rv>::cons(Rv::rs(UINT64_C(1)),
+                               List<Rv>::cons(Rv::ru(), List<Rv>::nil()))),
+                           UINT64_C(1), Rv::rs(UINT64_C(7)));
   if (_cs.has_value()) {
     const List<Rv> &l = *_cs;
     if (std::holds_alternative<typename List<Rv>::Nil>(l.v())) {

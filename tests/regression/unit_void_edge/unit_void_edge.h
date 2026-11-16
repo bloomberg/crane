@@ -146,7 +146,7 @@ struct UnitVoidEdge {
   static inline const List<std::monostate> unit_list =
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
-              std::monostate{}, List<std::monostate>::nil()));
+                                std::monostate{}, List<std::monostate>::nil()));
   static uint64_t double_match_unit(std::monostate u1, std::monostate u2);
 
   template <typename F0> static void apply_and_discard(F0 &&f, uint64_t x0_) {

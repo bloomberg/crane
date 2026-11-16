@@ -20,11 +20,13 @@ uint64_t LocalFixParameterNames::walk2(uint64_t f, const List<uint64_t> &x0_) {
           return _self_f0(_self_f0, _self_g, *a10);
         }
       };
-  auto f0 = [&](const List<uint64_t> &l) -> uint64_t {
-    return f0_impl(f0_impl, g_impl, l);
-  };
-  auto g = [&](const List<uint64_t> &f1) -> uint64_t {
-    return g_impl(f0_impl, g_impl, f1);
-  };
+  auto f0 =
+      [&](const List<uint64_t> &l) -> uint64_t {
+        return f0_impl(f0_impl, g_impl, l);
+      };
+  auto g =
+      [&](const List<uint64_t> &f1) -> uint64_t {
+        return g_impl(f0_impl, g_impl, f1);
+      };
   return f0(x0_);
 }

@@ -178,9 +178,9 @@ template <Params _tcI0, typename T1 = void>
 intrinsic_definitions<crane::obj> defined_intrinsics() {
   return List<std::pair<Nat,
                         crane::fn<std::shared_ptr<ITree<Nat>>(List<Nat>)>>>::cons(
-      std::make_pair(Nat::o(), one<_tcI0, crane::obj>()), List<
-          std::pair<Nat,
-                    crane::fn<std::shared_ptr<ITree<Nat>>(List<Nat>)>>>::nil());
+      std::make_pair(Nat::o(), one<_tcI0, crane::obj>()),
+      List<std::pair<Nat,
+                     crane::fn<std::shared_ptr<ITree<Nat>>(List<Nat>)>>>::nil());
 }
 
 struct Qs {

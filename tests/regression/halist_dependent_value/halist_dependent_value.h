@@ -313,11 +313,12 @@ struct HalistDependentValue {
   static inline const halist<Key, vty> m1 =
       HAList0::halist_add(keyEq, Key::KNAT, crane::obj(UINT64_C(7)), m0);
   static inline const halist<Key, vty> m2 = HAList0::halist_add(
-      keyEq, Key::KLIST, crane::obj(List<crane::obj>::cons(
-                                        UINT64_C(1), List<crane::obj>::cons(
-                                            UINT64_C(2), List<crane::obj>::cons(
-                                                UINT64_C(3),
-                                                List<crane::obj>::nil())))),
+      keyEq, Key::KLIST,
+      crane::obj(List<crane::obj>::cons(
+          UINT64_C(1),
+          List<crane::obj>::cons(
+              UINT64_C(2),
+              List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil())))),
       m1);
   static inline const uint64_t run = ([]() -> uint64_t {
     auto _cs = HAList0::halist_lookup(keyEq, Key::KNAT, m2);

@@ -273,8 +273,8 @@ struct EncodeOps {
     template <typename T1, typename F3, typename F4, typename F5>
       requires std::is_invocable_r_v<T1, F3 &, const uint64_t &,
                                      const uint64_t &> &&
-      std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F5 &, const uint64_t &>
+               std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F5 &, const uint64_t &>
     T1 instruction1_rect(T1 f, T1 f0, T1 f1, F3 &&f2, F4 &&f3, F5 &&f4, T1 f5,
                          T1 f6, T1 f7, T1 f8, T1 f9) const {
       if (std::holds_alternative<typename instruction1::CLB>(this->v())) {
@@ -310,7 +310,8 @@ struct EncodeOps {
   static inline const bool test_encode_bytes_in_range =
       ((((((((((pair_in_range(instruction1::clb().encode1()) &&
                 pair_in_range(instruction1::cmc().encode1())) &&
-               pair_in_range(instruction1::daa().encode1())) && pair_in_range(
+               pair_in_range(instruction1::daa().encode1())) &&
+              pair_in_range(
                   instruction1::fim(UINT64_C(14), UINT64_C(255)).encode1())) &&
              pair_in_range(instruction1::jun(UINT64_C(4095)).encode1())) &&
             pair_in_range(instruction1::ldm1(UINT64_C(15)).encode1())) &&
@@ -381,12 +382,12 @@ struct EncodeOps {
 
   static List<uint64_t> encode_list2(const List<instruction2> &prog);
   static inline const uint64_t test_encode_list_byte_count =
-      encode_list2(
+      encode_list2(List<instruction2>::cons(
+          instruction2::nop2(),
           List<instruction2>::cons(
-              instruction2::nop2(), List<instruction2>::cons(
-                  instruction2::ldm2(UINT64_C(5)), List<instruction2>::cons(
-                      instruction2::nop2(),
-                      List<instruction2>::nil()))))
+              instruction2::ldm2(UINT64_C(5)),
+              List<instruction2>::cons(instruction2::nop2(),
+                                       List<instruction2>::nil()))))
           .length();
 
   struct instruction3 {
@@ -451,12 +452,12 @@ struct EncodeOps {
 
   static List<uint64_t> encode_list3(const List<instruction3> &prog);
   static inline const uint64_t test_instruction_byte_stream_encode =
-      encode_list3(
+      encode_list3(List<instruction3>::cons(
+          instruction3::nop3(),
           List<instruction3>::cons(
-              instruction3::nop3(), List<instruction3>::cons(
-                  instruction3::ldm3(UINT64_C(3)), List<instruction3>::cons(
-                      instruction3::ldm3(UINT64_C(12)),
-                      List<instruction3>::nil()))))
+              instruction3::ldm3(UINT64_C(3)),
+              List<instruction3>::cons(instruction3::ldm3(UINT64_C(12)),
+                                       List<instruction3>::nil()))))
           .length();
   static inline const std::pair<std::pair<bool, uint64_t>, uint64_t> t =
       std::make_pair(std::make_pair(test_encode_bytes_in_range,

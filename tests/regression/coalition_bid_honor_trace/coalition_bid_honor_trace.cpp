@@ -435,8 +435,8 @@ CoalitionBidHonorTraceCase::force_metrics(
   return f.template fold_right<CoalitionBidHonorTraceCase::ForceMetrics>(
       [](const CoalitionBidHonorTraceCase::Unit &u,
          const CoalitionBidHonorTraceCase::ForceMetrics &acc) {
-           return metrics_add(unit_to_metrics(u), acc);
-         },
+        return metrics_add(unit_to_metrics(u), acc);
+      },
       empty_metrics);
 }
 
@@ -544,16 +544,17 @@ CoalitionBidHonorTraceCase::apply_coalition_member_bid(
 bool CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
     const List<CoalitionBidHonorTraceCase::CoalitionMember> &c,
     const CoalitionBidHonorTraceCase::CoalitionMemberBid &cbid) {
-  return (cbid.cmb_member_index < c.length() && metrics_total_lt(
-              force_metrics(cbid.cmb_new_force), force_metrics(ListDef::template nth<
-                                                                   CoalitionBidHonorTraceCase::Force>(
-                                                                   cbid.cmb_member_index,
-                                                                   c.template map<
-                                                                       CoalitionBidHonorTraceCase::Force>([](const CoalitionBidHonorTraceCase::CoalitionMember &c0) {
-                                                                         return c0.cm_force;
-                                                                       }),
-                                                                   List<
-                                                                       CoalitionBidHonorTraceCase::Unit>::nil()))));
+  return (cbid.cmb_member_index < c.length() &&
+          metrics_total_lt(
+              force_metrics(cbid.cmb_new_force),
+              force_metrics(ListDef::template nth<
+                  CoalitionBidHonorTraceCase::Force>(
+                  cbid.cmb_member_index,
+                  c.template map<CoalitionBidHonorTraceCase::Force>([](
+                      const CoalitionBidHonorTraceCase::CoalitionMember &c0) {
+                    return c0.cm_force;
+                  }),
+                  List<CoalitionBidHonorTraceCase::Unit>::nil()))));
 }
 
 bool

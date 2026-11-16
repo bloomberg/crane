@@ -50,16 +50,16 @@ template <typename A, typename P> struct SigT {
 };
 
 struct ExistentialFnProjection {
-  static inline const SigT<crane::obj, crane::obj> measurer = SigT<crane::obj,
-                                                                   crane::obj>::existt(
-      crane::obj(), crane_erase_fn([](const crane::obj &_any_x) -> uint64_t {
-        uint64_t x = crane::any_cast<uint64_t>(_any_x);
-        return (crane::any_cast<uint64_t>(x) + UINT64_C(1));
-      }));
-  static inline const uint64_t measured =
-      crane::any_cast<uint64_t>(
-          crane::any_cast<crane::fn<crane::obj(crane::obj)>>(measurer.projT2())(
-              crane::obj(UINT64_C(4))));
+  static inline const SigT<crane::obj, crane::obj> measurer =
+      SigT<crane::obj, crane::obj>::existt(
+          crane::obj(),
+          crane_erase_fn([](const crane::obj &_any_x) -> uint64_t {
+            uint64_t x = crane::any_cast<uint64_t>(_any_x);
+            return (crane::any_cast<uint64_t>(x) + UINT64_C(1));
+          }));
+  static inline const uint64_t measured = crane::any_cast<uint64_t>(
+      crane::any_cast<crane::fn<crane::obj(crane::obj)>>(measurer.projT2())(
+          crane::obj(UINT64_C(4))));
   static inline const SigT<crane::obj,
                            std::pair<crane::obj, crane::obj>> tagged =
       SigT<crane::obj, std::pair<crane::obj, crane::obj>>::existt(
@@ -67,9 +67,7 @@ struct ExistentialFnProjection {
           std::make_pair(crane::obj(UINT64_C(7)), crane::obj(UINT64_C(8))));
   static inline const uint64_t tag =
       crane::any_cast<uint64_t>(crane_any_cast<
-                                    std::pair<crane::obj, crane::obj>>(
-                                    tagged.projT2())
-                                    .second);
+          std::pair<crane::obj, crane::obj>>(tagged.projT2()).second);
 };
 
 #endif // INCLUDED_EXISTENTIAL_FN_PROJECTION

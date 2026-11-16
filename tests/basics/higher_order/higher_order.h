@@ -150,7 +150,7 @@ struct HigherOrder {
   /// compose g f returns the composition of g after f.
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T2> &&
-    std::is_invocable_r_v<T2, F1 &, const T1 &>
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
@@ -172,7 +172,7 @@ struct HigherOrder {
   /// twice f returns a function that applies f two times.
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1> &&
-    std::is_invocable_r_v<T1, F0 &, const T1 &>
+             std::is_invocable_r_v<T1, F0 &, const T1 &>
   static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }
@@ -185,44 +185,41 @@ struct HigherOrder {
   }
 
   static inline const list<uint64_t> test_list = list<uint64_t>::cons(
-      UINT64_C(1), list<uint64_t>::cons(
-          UINT64_C(2), list<uint64_t>::cons(
-              UINT64_C(3), list<uint64_t>::cons(
+      UINT64_C(1),
+      list<uint64_t>::cons(
+          UINT64_C(2),
+          list<uint64_t>::cons(
+              UINT64_C(3),
+              list<uint64_t>::cons(
                   UINT64_C(4),
                   list<uint64_t>::cons(UINT64_C(5), list<uint64_t>::nil())))));
-  static inline const uint64_t test_map =
-      foldr<uint64_t, uint64_t>([](uint64_t _x0, uint64_t _x1) -> uint64_t {
-        return (_x0 + _x1);
-      }, UINT64_C(0), map<uint64_t, uint64_t>([](uint64_t _x0) -> uint64_t {
-        return (UINT64_C(1) + _x0);
-      }, test_list));
-  static inline const uint64_t test_foldr =
-      foldr<uint64_t, uint64_t>([](uint64_t _x0, uint64_t _x1) -> uint64_t {
-        return (_x0 + _x1);
-      }, UINT64_C(0), test_list);
-  static inline const uint64_t test_foldl =
-      foldl<uint64_t, uint64_t>([](uint64_t _x0, uint64_t _x1) -> uint64_t {
-        return (_x0 + _x1);
-      }, UINT64_C(0), test_list);
+  static inline const uint64_t test_map = foldr<uint64_t, uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0),
+      map<uint64_t, uint64_t>(
+          [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+          test_list));
+  static inline const uint64_t test_foldr = foldr<uint64_t, uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0), test_list);
+  static inline const uint64_t test_foldl = foldl<uint64_t, uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0), test_list);
   static inline const uint64_t test_compose =
-      compose<uint64_t, uint64_t, uint64_t>([](uint64_t _x0) -> uint64_t {
-        return (UINT64_C(2) * _x0);
-      }, [](uint64_t _x0) -> uint64_t {
-        return (UINT64_C(1) + _x0);
-      }, UINT64_C(3));
-  static inline const uint64_t test_iterate =
-      iterate<uint64_t>(UINT64_C(3), [](uint64_t _x0) -> uint64_t {
-        return (UINT64_C(2) + _x0);
-      }, UINT64_C(0));
+      compose<uint64_t, uint64_t, uint64_t>(
+          [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) * _x0); },
+          [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+          UINT64_C(3));
+  static inline const uint64_t test_iterate = iterate<uint64_t>(
+      UINT64_C(3), [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) + _x0); },
+      UINT64_C(0));
   static inline const uint64_t test_adder = adder(UINT64_C(5), UINT64_C(3));
-  static inline const uint64_t test_twice =
-      twice<uint64_t>([](uint64_t _x0) -> uint64_t {
-        return (UINT64_C(1) + _x0);
-      }, UINT64_C(5));
-  static inline const uint64_t test_pipe =
-      pipe<uint64_t, uint64_t>(UINT64_C(5), [](uint64_t _x0) -> uint64_t {
-        return adder(UINT64_C(3), _x0);
-      });
+  static inline const uint64_t test_twice = twice<uint64_t>(
+      [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+      UINT64_C(5));
+  static inline const uint64_t test_pipe = pipe<uint64_t, uint64_t>(
+      UINT64_C(5),
+      [](uint64_t _x0) -> uint64_t { return adder(UINT64_C(3), _x0); });
 };
 
 #endif // INCLUDED_HIGHER_ORDER

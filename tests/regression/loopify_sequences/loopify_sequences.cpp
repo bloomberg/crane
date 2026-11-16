@@ -118,9 +118,10 @@ List<uint64_t> LoopifySequences::run_sum_aux(uint64_t acc,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       uint64_t new_acc = (_loop_acc + a0);
       auto _cell = typename List<uint64_t>::Cons(new_acc, nullptr);
-      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
-                                              List<uint64_t>>(std::move(_cell)))
-                                      : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node =
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       _loop_acc = new_acc;
@@ -225,11 +226,10 @@ LoopifySequences::repeat_string(const List<uint64_t> &s,
 }
 
 /// repeat_with_sep s sep n repeats with separator.
-List<uint64_t>
-LoopifySequences::repeat_with_sep(List<uint64_t> s, const List<uint64_t> &sep,
-                                  uint64_t n) { /// CraneEnter: captures varying
-                                                /// parameters for each
-                                                /// recursive call.
+List<uint64_t> LoopifySequences::repeat_with_sep(
+    List<uint64_t> s, const List<uint64_t> &sep,
+    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
+                  /// call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -269,16 +269,11 @@ LoopifySequences::repeat_with_sep(List<uint64_t> s, const List<uint64_t> &sep,
 }
 
 /// string_chain s n recursive string chain: s-chain(s, n-1)-end.
-List<uint64_t>
-LoopifySequences::string_chain_fuel(uint64_t fuel, const List<uint64_t> &s,
-                                    uint64_t n, const List<uint64_t> &sep,
-                                    List<uint64_t> end_marker) { /// CraneEnter:
-                                                                 /// captures
-                                                                 /// varying
-                                                                 /// parameters
-                                                                 /// for each
-                                                                 /// recursive
-                                                                 /// call.
+List<uint64_t> LoopifySequences::string_chain_fuel(
+    uint64_t fuel, const List<uint64_t> &s, uint64_t n,
+    const List<uint64_t> &sep,
+    List<uint64_t> end_marker) { /// CraneEnter: captures varying parameters for
+                                 /// each recursive call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -319,9 +314,10 @@ LoopifySequences::string_chain_fuel(uint64_t fuel, const List<uint64_t> &s,
   return _result;
 }
 
-List<uint64_t> LoopifySequences::string_chain(
-    const List<uint64_t> &s, uint64_t n, const List<uint64_t> &sep,
-    List<uint64_t> end_marker) {
+List<uint64_t>
+LoopifySequences::string_chain(const List<uint64_t> &s, uint64_t n,
+                               const List<uint64_t> &sep,
+                               List<uint64_t> end_marker) {
   return string_chain_fuel(UINT64_C(1000), s, n, sep, std::move(end_marker));
 }
 
@@ -419,10 +415,10 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
-        _loop_idx = (
-            ((_loop_idx - UINT64_C(1)) > _loop_idx ? 0
-                                                   : (_loop_idx -
-                                                      UINT64_C(1))));
+        _loop_idx =
+            (((_loop_idx - UINT64_C(1)) > _loop_idx ? 0
+                                                    : (_loop_idx -
+                                                       UINT64_C(1))));
         continue;
       }
     }
@@ -1113,17 +1109,18 @@ List<std::pair<uint64_t, uint64_t>> LoopifySequences::run_length_encode_fuel(
             std::make_pair(a0, UINT64_C(1)),
             List<std::pair<uint64_t, uint64_t>>::nil());
       } else {
-        auto &[a01, a11] = std::get<
-            typename List<std::pair<uint64_t, uint64_t>>::Cons>(_tmp1.v_mut());
+        auto &[a01, a11] =
+            std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+                _tmp1.v_mut());
         auto [y, n] = std::move(a01);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(y, (n + 1)), *a11);
         } else {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(a0, UINT64_C(1)), List<
-                  std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
-                                                       *a11));
+              std::make_pair(a0, UINT64_C(1)),
+              List<std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
+                                                        *a11));
         }
       }
     }

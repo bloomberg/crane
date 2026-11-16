@@ -143,9 +143,8 @@ struct PartialAppCarrier {
                       Nat> &get_st() {
     static const stateT<Nat, crane_carrier_tch_6096434c9c343c6d<T1>::template c,
                         Nat> v = [](const Nat &s) {
-                          return box<T1, std::pair<Nat, Nat>>::box0(
-                              std::make_pair(s, s));
-                        };
+      return box<T1, std::pair<Nat, Nat>>::box0(std::make_pair(s, s));
+    };
     return v;
   }
 

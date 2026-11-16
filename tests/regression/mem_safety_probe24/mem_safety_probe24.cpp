@@ -115,8 +115,9 @@ MemSafetyProbe24::list_to_tree(const MemSafetyProbe24::mylist<uint64_t> &l,
             typename MemSafetyProbe24::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       return _loop_acc;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename MemSafetyProbe24::mylist<uint64_t>::Mycons>(
+              _loop_l->v());
       _loop_acc = tree::node(std::move(_loop_acc), a0, tree::leaf());
       _loop_l = crane_raw(a1);
     }
@@ -193,7 +194,7 @@ MemSafetyProbe24::mylist<std::pair<uint64_t,
       uint64_t a1 = _f.a1;
       uint64_t a10 = _f.a10;
       _result = _f._tmp2.app(mylist<std::pair<uint64_t, uint64_t>>::mycons(
-                                 std::make_pair(a1, a10), std::move(_result)));
+          std::make_pair(a1, a10), std::move(_result)));
     }
   }
   return _result;

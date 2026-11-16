@@ -73,10 +73,10 @@ Sig<List<uint64_t>> Sort::msort(const List<uint64_t> &x0_) {
       },
       [](const List<uint64_t> &ls, const Sig<List<uint64_t>> &x,
          const Sig<List<uint64_t>> &x0) {
-           const auto &[x2] = x;
-           const auto &[x4] = x0;
-           return merge_prog(ls, x2, x4);
-         },
+        const auto &[x2] = x;
+        const auto &[x4] = x0;
+        return merge_prog(ls, x2, x4);
+      },
       x0_);
 }
 
@@ -96,21 +96,19 @@ Sig<List<uint64_t>> Sort::psort(const List<uint64_t> &x0_) {
       [](uint64_t a1, uint64_t a2) -> Sig<List<uint64_t>> {
         bool s = a1 <= a2;
         if (s) {
-          return Sig<List<uint64_t>>::exist(
-              List<uint64_t>::cons(
-                  a1, List<uint64_t>::cons(a2, List<uint64_t>::nil())));
+          return Sig<List<uint64_t>>::exist(List<uint64_t>::cons(
+              a1, List<uint64_t>::cons(a2, List<uint64_t>::nil())));
         } else {
-          return Sig<List<uint64_t>>::exist(
-              List<uint64_t>::cons(
-                  a2, List<uint64_t>::cons(a1, List<uint64_t>::nil())));
+          return Sig<List<uint64_t>>::exist(List<uint64_t>::cons(
+              a2, List<uint64_t>::cons(a1, List<uint64_t>::nil())));
         }
       },
       [](uint64_t a1, uint64_t a2, const List<uint64_t> &l,
          const Sig<List<uint64_t>> &x, const Sig<List<uint64_t>> &x0) {
-           const auto &[x2] = x;
-           const auto &[x4] = x0;
-           return pair_merge_prog(a1, a2, l, x4, x2);
-         },
+        const auto &[x2] = x;
+        const auto &[x4] = x0;
+        return pair_merge_prog(a1, a2, l, x4, x2);
+      },
       x0_);
 }
 
@@ -120,11 +118,11 @@ Sig<List<uint64_t>> Sort::qsort(const List<uint64_t> &x0_) {
       Sig<List<uint64_t>>::exist(List<uint64_t>::nil()),
       [](uint64_t a, List<uint64_t>, const Sig<List<uint64_t>> &x,
          const Sig<List<uint64_t>> &x0) {
-           const auto &[x2] = x;
-           const auto &[x4] = x0;
-           return Sig<List<uint64_t>>::exist(
-               merge(x2, List<uint64_t>::cons(a, x4)));
-         },
+        const auto &[x2] = x;
+        const auto &[x4] = x0;
+        return Sig<List<uint64_t>>::exist(
+            merge(x2, List<uint64_t>::cons(a, x4)));
+      },
       x0_);
 }
 

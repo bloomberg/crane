@@ -26,18 +26,17 @@ MemSafetyProbe::build_adders(
           _loop_trees->v());
       const MemSafetyProbe::mylist<MemSafetyProbe::tree> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons([=](uint64_t _x0) -> uint64_t {
-            return a0.sum_values(_x0);
-          }, nullptr);
+          crane::fn<uint64_t(uint64_t)>>::Mycons(
+          [=](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); },
+          nullptr);
       MemSafetyProbe::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
-          (_write ? *(*_write =
-                          std::make_shared<MemSafetyProbe::mylist<
-                                               crane::fn<uint64_t(uint64_t)>>>(
-                              std::move(_cell)))
-                  : _root.emplace(std::move(_cell)));
+          (
+              _write ? *(*_write = std::make_shared<MemSafetyProbe::mylist<
+                             crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename MemSafetyProbe::mylist<
-                        crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
+              crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
       _loop_trees = &a1_value;
       continue;
     }
@@ -72,13 +71,11 @@ uint64_t MemSafetyProbe::apply_all(
       const MemSafetyProbe::mylist<crane::fn<uint64_t(uint64_t)>> &fns =
           *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe::mylist<
-                                     crane::fn<uint64_t(uint64_t)>>::Mynil>(
-              fns.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe::mylist<
-                         crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe::mylist<
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -95,9 +92,8 @@ uint64_t MemSafetyProbe::apply_all(
 /// f captures t by partial application, then t is used as a match
 /// scrutinee. The escape analysis must handle this correctly.
 uint64_t MemSafetyProbe::match_partial(MemSafetyProbe::tree t) {
-  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-    return t.sum_values(_x0);
-  };
+  crane::fn<uint64_t(uint64_t)> f =
+      [=](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
   if (std::holds_alternative<typename MemSafetyProbe::tree::Leaf>(t.v_mut())) {
     return f(UINT64_C(0));
   } else {
@@ -133,8 +129,7 @@ MemSafetyProbe::box_from_match(const MemSafetyProbe::tree &t) {
     const auto &[a0, a1, a2] =
         std::get<typename MemSafetyProbe::tree::Node>(t.v());
     const MemSafetyProbe::tree &a0_value = *a0;
-    return fn_box::box([=](uint64_t _x0) -> uint64_t {
-      return a0_value.sum_values(_x0);
-    });
+    return fn_box::box(
+        [=](uint64_t _x0) -> uint64_t { return a0_value.sum_values(_x0); });
   }
 }

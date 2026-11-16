@@ -90,9 +90,8 @@ struct ProdSndProjection {
   }
 
   static uint64_t depth(const t &x);
-  static inline const uint64_t go =
-      depth(t::n(std::make_pair(UINT64_C(1),
-                                t::n(std::make_pair(UINT64_C(2), t::l())))));
+  static inline const uint64_t go = depth(t::n(
+      std::make_pair(UINT64_C(1), t::n(std::make_pair(UINT64_C(2), t::l())))));
 };
 
 #endif // INCLUDED_PROD_SND_PROJECTION

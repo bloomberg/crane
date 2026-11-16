@@ -173,7 +173,7 @@ struct Coq_Pos {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
-    std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -247,7 +247,7 @@ struct Pos {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
-    std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -303,7 +303,7 @@ struct BinaryNums {
   static inline const N n_add_result = BinNat::add(
       N::npos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))),
       N::npos(Positive::xo(
-                  Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))));
+          Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))));
   static inline const N n_mul_result =
       BinNat::mul(N::npos(Positive::xo(Positive::xi(Positive::xh()))),
                   N::npos(Positive::xi(Positive::xi(Positive::xh()))));
@@ -316,11 +316,8 @@ struct BinaryNums {
       BinNat::compare(N::npos(Positive::xi(Positive::xh())),
                       N::npos(Positive::xi(Positive::xo(Positive::xh()))));
   static inline const Z z_zero = Z::z0();
-  static inline const Z z_pos =
-      Z::zpos(
-          Positive::xo(
-              Positive::xi(
-                  Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))));
+  static inline const Z z_pos = Z::zpos(Positive::xo(
+      Positive::xi(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))));
   static inline const Z z_neg =
       Z::zneg(Positive::xi(Positive::xi(Positive::xh())));
   static inline const Z z_add_result = BinInt::add(
@@ -332,12 +329,8 @@ struct BinaryNums {
   static inline const Z z_sub_result = BinInt::sub(
       Z::zpos(Positive::xi(Positive::xh())),
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))));
-  static inline const Z z_abs_result =
-      BinInt::abs(
-          Z::zneg(
-              Positive::xo(
-                  Positive::xi(
-                      Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))));
+  static inline const Z z_abs_result = BinInt::abs(Z::zneg(Positive::xo(
+      Positive::xi(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))));
   static inline const Comparison z_compare_result =
       BinInt::compare(Z::zneg(Positive::xi(Positive::xh())),
                       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))));

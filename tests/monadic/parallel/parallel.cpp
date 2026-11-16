@@ -15,9 +15,8 @@ uint64_t ParallelTest::ack(const std::pair<uint64_t, uint64_t> &p) {
         }
       }
     };
-    auto ack_m = [&](uint64_t n0) -> uint64_t {
-      return ack_m_impl(ack_m_impl, n0);
-    };
+    auto ack_m =
+        [&](uint64_t n0) -> uint64_t { return ack_m_impl(ack_m_impl, n0); };
     return ack_m(n);
   };
   {

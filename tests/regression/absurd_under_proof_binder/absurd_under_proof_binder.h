@@ -97,9 +97,8 @@ struct AbsurdUnderProofBinder {
   }
 
   static uint64_t hd(const List<uint64_t> &l);
-  static inline const uint64_t result =
-      hd(List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::cons(
-                                  UINT64_C(5), List<uint64_t>::nil())));
+  static inline const uint64_t result = hd(List<uint64_t>::cons(
+      UINT64_C(4), List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil())));
 };
 
 #endif // INCLUDED_ABSURD_UNDER_PROOF_BINDER

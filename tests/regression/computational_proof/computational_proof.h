@@ -109,13 +109,15 @@ struct ComputationalProof {
       nat_leb_dec(UINT64_C(8), UINT64_C(2));
   static inline const uint64_t test_min = min_dec(UINT64_C(4), UINT64_C(9));
   static inline const uint64_t test_max = max_dec(UINT64_C(4), UINT64_C(9));
-  static inline const List<uint64_t> test_sort =
-      isort_dec(List<uint64_t>::cons(
-                    UINT64_C(5), List<uint64_t>::cons(
-                        UINT64_C(1), List<uint64_t>::cons(
-                            UINT64_C(4), List<uint64_t>::cons(
-                                UINT64_C(2), List<uint64_t>::cons(
-                                    UINT64_C(3), List<uint64_t>::nil()))))));
+  static inline const List<uint64_t> test_sort = isort_dec(List<uint64_t>::cons(
+      UINT64_C(5),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))));
 };
 
 #endif // INCLUDED_COMPUTATIONAL_PROOF

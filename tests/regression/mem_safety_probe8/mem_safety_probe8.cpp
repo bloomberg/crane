@@ -68,11 +68,10 @@ MemSafetyProbe8::tree_sum_ext(uint64_t _x,
 
 /// TEST 2: Same but with a more complex computation to prevent
 /// the optimizer from simplifying.
-uint64_t
-MemSafetyProbe8::tree_weighted(uint64_t _x, const MemSafetyProbe8::tree &t,
-                               uint64_t depth) { /// CraneEnter: captures
-                                                 /// varying parameters for each
-                                                 /// recursive call.
+uint64_t MemSafetyProbe8::tree_weighted(
+    uint64_t _x, const MemSafetyProbe8::tree &t,
+    uint64_t depth) { /// CraneEnter: captures varying parameters for each
+                      /// recursive call.
   struct CraneEnter {
     uint64_t depth;
     const MemSafetyProbe8::tree *t;

@@ -92,25 +92,7 @@ struct RocqBug7228 {
   using t_of = crane::obj;
   static t_of v_of(const data &d);
   static inline const data test_data =
-      data::data0(
-          Nat::s(
-              Nat::s(
-                  Nat::s(
-                      Nat::s(
-                          Nat::s(
-                              Nat::s(
-                                  Nat::s(
-                                      Nat::s(
-                                          Nat::s(
-                                              Nat::s(
-                                                  Nat::s(
-                                                      Nat::s(
-                                                          Nat::s(
-                                                              Nat::s(
-                                                                  Nat::s(
-                                                                      Nat::s(
-                                                                          Nat::s(
-                                                                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))))));
+      data::data0(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))))));
 };
 
 #endif // INCLUDED_ROCQ_BUG_7228

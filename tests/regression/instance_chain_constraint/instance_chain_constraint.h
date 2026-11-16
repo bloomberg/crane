@@ -213,24 +213,15 @@ struct InstanceChainConstraint {
   static_assert(PI<piNat, typename ptrNat::ptr>);
   static bool no_overlap(const Nat &a1, const Nat &sz1, const Nat &a2,
                          const Nat &sz2);
-  static inline const bool is_ok = (no_overlap(
-                                        Nat::o(), Nat::s(
-                                            Nat::s(Nat::s(Nat::s(Nat::o())))),
-                                        Nat::s(
-                                            Nat::s(
-                                                Nat::s(
-                                                    Nat::s(
-                                                        Nat::s(
-                                                            Nat::s(
-                                                                Nat::s(
-                                                                    Nat::s(
-                                                                        Nat::o())))))))),
-                                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))) &&
-                                    !(no_overlap(
-                                          Nat::o(), Nat::s(
-                                              Nat::s(Nat::s(Nat::s(Nat::o())))),
-                                          Nat::s(Nat::s(Nat::o())), Nat::s(
-                                              Nat::s(Nat::s(Nat::s(Nat::o())))))));
+  static inline const bool is_ok =
+      (
+          no_overlap(Nat::o(), Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
+                     Nat::s(Nat::s(Nat::s(
+                         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+                     Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))) &&
+          !(no_overlap(Nat::o(), Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
+                       Nat::s(Nat::s(Nat::o())),
+                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
 };
 
 #endif // INCLUDED_INSTANCE_CHAIN_CONSTRAINT

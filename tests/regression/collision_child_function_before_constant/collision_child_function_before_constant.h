@@ -148,9 +148,8 @@ public:
 struct CollisionChildFunctionBeforeConstant {
   static Nat first(const List<Nat> &l);
   static inline const Nat c =
-      CollisionChildFunctionBeforeConstant::first(
-          List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
-                          List<Nat>::nil()));
+      CollisionChildFunctionBeforeConstant::first(List<Nat>::cons(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))), List<Nat>::nil()));
 };
 
 #endif // INCLUDED_COLLISION_CHILD_FUNCTION_BEFORE_CONSTANT

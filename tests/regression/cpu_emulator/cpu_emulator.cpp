@@ -122,9 +122,10 @@ CpuEmulator::state CpuEmulator::execute(const CpuEmulator::state &s,
                  s.ex_stack, s.ex_pair_bus, s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::CMA>(i.v())) {
     auto &&_once17 = (s.ex_pc + UINT64_C(1));
-    return state{(((UINT64_C(15) - s.ex_acc) > UINT64_C(15)
-                       ? 0
-                       : (UINT64_C(15) - s.ex_acc))), s.ex_regs, s.ex_carry,
+    return state{(
+        ((UINT64_C(15) - s.ex_acc) > UINT64_C(15) ? 0
+                                                  : (UINT64_C(15) - s.ex_acc))),
+                 s.ex_regs, s.ex_carry,
                  (UINT64_C(4096) ? _once17 % UINT64_C(4096) : _once17),
                  s.ex_stack, s.ex_pair_bus, s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::CLB>(i.v())) {

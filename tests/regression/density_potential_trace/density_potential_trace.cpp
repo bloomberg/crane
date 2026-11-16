@@ -20,13 +20,15 @@ Real DensityPotentialTraceCase::sample_N(Real x) {
 
 Real DensityPotentialTraceCase::density_radicand_at(uint64_t n) {
   Real t = Real::from_nat(n);
-  return (r_pow(lapse(sample_activation, sample_mu, sample_gamma(t)),
-                UINT64_C(2)) - r_pow(sample_v(t), UINT64_C(2)));
+  return (
+      r_pow(lapse(sample_activation, sample_mu, sample_gamma(t)), UINT64_C(2)) -
+      r_pow(sample_v(t), UINT64_C(2)));
 }
 
 bool DensityPotentialTraceCase::static_time_nonnegative_at(uint64_t n) {
-  if ((Real::from_z(INT64_C(0)) <= proper_time_static(
-           sample_activation, sample_mu, Real::from_nat(n), sample_time))) {
+  if ((Real::from_z(INT64_C(0)) <=
+       proper_time_static(sample_activation, sample_mu, Real::from_nat(n),
+                          sample_time))) {
     return true;
   } else {
     return false;

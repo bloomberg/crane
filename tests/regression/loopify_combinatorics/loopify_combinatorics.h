@@ -25,8 +25,9 @@ struct LoopifyCombinatorics {
   /// iteration and the recursive subproblem, enabling full loopification.
   /// The match on remaining is hoisted out of the let-binding so that all
   /// recursive calls appear at the top level of each branch.
-  static List<List<uint64_t>> perms_choices_fuel(
-      uint64_t fuel, const List<uint64_t> &choices, const List<uint64_t> &orig);
+  static List<List<uint64_t>>
+  perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
+                     const List<uint64_t> &orig);
   /// permutations_fuel fuel l generates all permutations of a list.
   static List<List<uint64_t>> permutations_fuel(uint64_t fuel,
                                                 const List<uint64_t> &l);

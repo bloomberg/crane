@@ -42,9 +42,8 @@ struct Nat {
     template <typename T1, typename F2>
     static T1 max_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(n, m, x, [=]() { return x0; }(), [=]() {
-        return x1;
-      }());
+      return max_case_strong<T1>(n, m, x, [=]() { return x0; }(),
+                                 [=]() { return x1; }());
     }
 
     static bool max_dec(uint64_t n, uint64_t m);

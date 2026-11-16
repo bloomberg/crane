@@ -55,11 +55,13 @@ public:
                                            "field at this instantiation");
                   }
                 }(),
-                (a1 ? std::make_shared<
-                        typename Datatypes::template List<Forest<A>>>(
-                        crane_convert<
-                            typename Datatypes::template List<Forest<A>>>(*a1))
-                    : nullptr)};
+                (
+                    a1 ? std::make_shared<
+                             typename Datatypes::template List<Forest<A>>>(
+                             crane_convert<
+                                 typename Datatypes::template List<Forest<A>>>(
+                                 *a1))
+                       : nullptr)};
           }
         }()) {}
 
@@ -67,8 +69,9 @@ public:
 
   static Forest<A> node(A a0, typename Datatypes::template List<Forest<A>> a1) {
     return Forest<A>(
-        Node{std::move(a0), std::make_shared<
-                 typename Datatypes::template List<Forest<A>>>(std::move(a1))});
+        Node{std::move(a0),
+             std::make_shared<typename Datatypes::template List<Forest<A>>>(
+                 std::move(a1))});
   }
 
   // MANIPULATORS

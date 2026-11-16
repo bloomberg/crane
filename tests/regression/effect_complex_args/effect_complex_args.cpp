@@ -32,8 +32,9 @@ void EffectComplexArgs::print_concat(std::string a, std::string b) {
 }
 
 /// 5. Chained: build key, set env, then get env
-std::optional<std::string> EffectComplexArgs::round_trip(
-    std::string prefix, std::string suffix, std::string value) {
+std::optional<std::string>
+EffectComplexArgs::round_trip(std::string prefix, std::string suffix,
+                              std::string value) {
   std::string key = std::move(prefix) + std::move(suffix);
   setenv(key.c_str(), std::move(value).c_str(), 1);
   return [&]() -> std::optional<std::string> {

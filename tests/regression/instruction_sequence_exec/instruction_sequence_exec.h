@@ -159,11 +159,13 @@ struct InstructionSequenceExec {
   static state exec_program(const List<instruction> &prog, state s);
   static inline const state sample = state{UINT64_C(0), UINT64_C(1)};
   static inline const uint64_t t = []() {
-    state s_ = exec_program(
+    state s_ = exec_program(List<instruction>::cons(
+        instruction::inc_pc(),
         List<instruction>::cons(
-            instruction::inc_pc(), List<instruction>::cons(
-                instruction::add_acc(UINT64_C(2)), List<instruction>::cons(
-                    instruction::inc_pc(), List<instruction>::nil()))), sample);
+            instruction::add_acc(UINT64_C(2)),
+            List<instruction>::cons(instruction::inc_pc(),
+                                    List<instruction>::nil()))),
+                            sample);
     return (s_.pc_ + s_.acc_);
   }();
 };

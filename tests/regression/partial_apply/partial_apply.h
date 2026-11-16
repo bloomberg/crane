@@ -184,28 +184,33 @@ struct PartialApply {
   static List<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>
   double_tag(const List<uint64_t> &l);
   static uint64_t sum_with_init(uint64_t init, const List<uint64_t> &l);
-  static inline const List<uint64_t> test_inc =
-      inc_all(
-          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                   UINT64_C(2), List<uint64_t>::cons(
-                                       UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const List<uint64_t> test_inc = inc_all(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
   static inline const List<std::pair<uint64_t, uint64_t>> test_tag =
-      tag_all(
-          List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                                   UINT64_C(20), List<uint64_t>::cons(
-                                       UINT64_C(30), List<uint64_t>::nil()))));
+      tag_all(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
   static inline const List<std::optional<uint64_t>> test_wrap =
-      wrap_all(
-          List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::cons(
-                                   UINT64_C(6), List<uint64_t>::cons(
-                                       UINT64_C(7), List<uint64_t>::nil()))));
+      wrap_all(List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(6),
+              List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))));
   static inline const List<tagged<bool>> test_tag_with = tag_with(
-      UINT64_C(99), List<bool>::cons(
+      UINT64_C(99),
+      List<bool>::cons(
           true,
           List<bool>::cons(false, List<bool>::cons(true, List<bool>::nil()))));
   static inline const uint64_t test_sum = sum_with_init(
-      UINT64_C(100), List<uint64_t>::cons(
-          UINT64_C(1), List<uint64_t>::cons(
+      UINT64_C(100),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };

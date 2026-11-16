@@ -8,8 +8,8 @@
 struct MutualFixEscape {
   /// Mutual fixpoint using fix...with...for syntax, then return
   /// both functions through a pair.
-  static std::pair<crane::fn<bool(uint64_t)>,
-                   crane::fn<bool(uint64_t)>> make_even_odd(uint64_t _x);
+  static std::pair<crane::fn<bool(uint64_t)>, crane::fn<bool(uint64_t)>>
+  make_even_odd(uint64_t _x);
   /// test1: even(4) = true, odd(3) = true. 1+1=2.
   static inline const uint64_t test1 = []() -> uint64_t {
     auto [ev, od] = make_even_odd(UINT64_C(0));

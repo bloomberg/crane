@@ -29,24 +29,21 @@ uint64_t Nat::div2(uint64_t n) {
 }
 
 uint64_t Equations::gcd(std::pair<uint64_t, uint64_t> x) {
-  return gcd_functional(x, [](std::pair<uint64_t, uint64_t> y) {
-    return gcd(y);
-  });
+  return gcd_functional(x,
+                        [](std::pair<uint64_t, uint64_t> y) { return gcd(y); });
 }
 
 uint64_t Equations::gcd_unfold_clause_3(uint64_t n, uint64_t n0, bool refine) {
   if (refine) {
     auto &&_once1 = (n0 + 1);
     auto &&_once2 = (n + 1);
-    return gcd(
-        std::make_pair((n + 1),
-                       (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2)))));
+    return gcd(std::make_pair(
+        (n + 1), (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2)))));
   } else {
     auto &&_once3 = (n + 1);
     auto &&_once4 = (n0 + 1);
-    return gcd(
-        std::make_pair((((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))),
-                       (n0 + 1)));
+    return gcd(std::make_pair(
+        (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))), (n0 + 1)));
   }
 }
 
@@ -79,52 +76,25 @@ Equations::gcd_graph_correct(std::pair<uint64_t, uint64_t> x) {
       return gcd_graph::gcd_graph_refinement_3(n1, n2, [&]() {
         bool refine = (n1 + 1) < (n2 + 1);
         if (refine) {
-          return gcd_clause_3_graph::gcd_clause_3_graph_equation_1(n1, n2,
-                                                                   [&]() {
-                                                                     auto &&_once1 =
-                                                                         (n2 +
-                                                                          1);
-                                                                     auto &&_once2 =
-                                                                         (n1 +
-                                                                          1);
-                                                                     std::pair<
-                                                                         uint64_t,
-                                                                         uint64_t> y =
-                                                                         std::make_pair(
-                                                                             (n1 +
-                                                                              1),
-                                                                             (((_once1 -
-                                                                                _once2) >
-                                                                               _once1
-                                                                                   ? 0
-                                                                                   : (_once1 -
-                                                                                      _once2))));
-                                                                     return gcd_graph_correct(
-                                                                         y);
-                                                                   }());
+          return gcd_clause_3_graph::gcd_clause_3_graph_equation_1(
+              n1, n2, [&]() {
+                auto &&_once1 = (n2 + 1);
+                auto &&_once2 = (n1 + 1);
+                std::pair<uint64_t, uint64_t> y = std::make_pair(
+                    (n1 + 1),
+                    (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2))));
+                return gcd_graph_correct(y);
+              }());
         } else {
-          return gcd_clause_3_graph::gcd_clause_3_graph_equation_2(n1, n2,
-                                                                   [&]() {
-                                                                     auto &&_once3 =
-                                                                         (n1 +
-                                                                          1);
-                                                                     auto &&_once4 =
-                                                                         (n2 +
-                                                                          1);
-                                                                     std::pair<
-                                                                         uint64_t,
-                                                                         uint64_t> y = std::make_pair(
-                                                                         (((_once3 -
-                                                                            _once4) >
-                                                                           _once3
-                                                                               ? 0
-                                                                               : (_once3 -
-                                                                                  _once4))),
-                                                                         (n2 +
-                                                                          1));
-                                                                     return gcd_graph_correct(
-                                                                         y);
-                                                                   }());
+          return gcd_clause_3_graph::gcd_clause_3_graph_equation_2(
+              n1, n2, [&]() {
+                auto &&_once3 = (n1 + 1);
+                auto &&_once4 = (n2 + 1);
+                std::pair<uint64_t, uint64_t> y = std::make_pair(
+                    (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))),
+                    (n2 + 1));
+                return gcd_graph_correct(y);
+              }());
         }
       }());
     }
@@ -132,9 +102,8 @@ Equations::gcd_graph_correct(std::pair<uint64_t, uint64_t> x) {
 }
 
 uint64_t Equations::collatz_steps(uint64_t x) {
-  return collatz_steps_functional(x, [](uint64_t y) {
-    return collatz_steps(y);
-  });
+  return collatz_steps_functional(x,
+                                  [](uint64_t y) { return collatz_steps(y); });
 }
 
 uint64_t Equations::collatz_steps_unfold_clause_3(uint64_t n, bool refine) {

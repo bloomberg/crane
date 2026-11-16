@@ -9,14 +9,16 @@ crane::obj DepReturnAnyCast::dep(bool b) {
     return UINT64_C(7);
   } else {
     return List<crane::obj>::cons(
-        UINT64_C(1), List<crane::obj>::cons(
+        UINT64_C(1),
+        List<crane::obj>::cons(
             UINT64_C(2),
             List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil())));
   }
 }
 
 uint64_t DepReturnAnyCast::run(uint64_t k) {
-  return ((crane::any_cast<uint64_t>(dep(true)) + List<uint64_t>(
-               crane::any_cast<List<crane::obj>>(dep(false)))
-                                                      .length()) + k);
+  return (
+      (crane::any_cast<uint64_t>(dep(true)) +
+       List<uint64_t>(crane::any_cast<List<crane::obj>>(dep(false))).length()) +
+      k);
 }

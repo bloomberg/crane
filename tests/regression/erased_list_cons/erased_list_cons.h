@@ -191,7 +191,7 @@ template <SYM Ty> struct DefsFn {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const typename Ty::terminal &> &&
-    std::is_invocable_r_v<T1, F1 &, const typename Ty::nonterminal &>
+             std::is_invocable_r_v<T1, F1 &, const typename Ty::nonterminal &>
   static T1 symbol_rect(F0 &&f, F1 &&f0, const symbol &s) {
     if (std::holds_alternative<typename symbol::T>(s.v())) {
       const auto &[a0] = std::get<typename symbol::T>(s.v());
@@ -275,9 +275,10 @@ template <SYM Ty> struct DefsFn {
     }
   }
 
-  static crane::obj action_of(
-      const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
-                 std::pair<crane::obj, crane::obj>> &e, symbols_semty x0_) {
+  static crane::obj
+  action_of(const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
+                       std::pair<crane::obj, crane::obj>> &e,
+            symbols_semty x0_) {
     const auto &[x0, a1] = e;
     production x1 = x0;
     auto [_x, _x0] = std::move(x1);
@@ -287,10 +288,10 @@ template <SYM Ty> struct DefsFn {
         std::move(x0_));
   }
 
-  static std::optional<crane::obj> run_entry(
-      const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
-                 std::pair<crane::obj, crane::obj>> &e,
-      const List<SigT<symbol, crane::obj>> &stk) {
+  static std::optional<crane::obj>
+  run_entry(const SigT<std::pair<typename Ty::nonterminal, List<symbol>>,
+                       std::pair<crane::obj, crane::obj>> &e,
+            const List<SigT<symbol, crane::obj>> &stk) {
     auto _cs = assemble(e.projT1().second, stk);
     if (_cs.has_value()) {
       const auto &vs = *_cs;
@@ -349,35 +350,37 @@ struct MySym {
 };
 
 using MyDefs = DefsFn<MySym>;
-const MyDefs::grammar entries = List<
-    SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-         std::pair<crane::obj, crane::obj>>>::cons(
-    SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-         std::pair<crane::obj, crane::obj>>::existt(
-        std::make_pair(MySym::Nt::LST, List<MyDefs::symbol>::cons(
-                           MyDefs::symbol::t(MySym::Term::LBRACE), List<
-                               MyDefs::symbol>::cons(
-                               MyDefs::symbol::nt(MySym::Nt::ELEM), List<
-                                   MyDefs::symbol>::cons(
-                                   MyDefs::symbol::nt(MySym::Nt::LST), List<
-                                       MyDefs::symbol>::cons(
-                                       MyDefs::symbol::t(MySym::Term::RBRACE),
-                                       List<MyDefs::symbol>::nil()))))),
-        std::make_pair(crane::obj(crane_erase_fn([](const auto &) {
-          return true;
-        })), crane::obj(crane_erase_fn([](const auto &tup) {
-          const auto &[_x, y0] =
-              crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-          const auto &[pr, y1] =
-              crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
-          const auto &[prs, y2] =
-              crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
-          const auto &[_x0, _x1] =
-              crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
-          return List<crane::obj>::cons(pr,
-                                        crane::any_cast<List<crane::obj>>(prs));
-        })))),
+const MyDefs::grammar entries =
     List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-              std::pair<crane::obj, crane::obj>>>::nil());
+              std::pair<crane::obj, crane::obj>>>::cons(
+        SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+             std::pair<crane::obj, crane::obj>>::existt(
+            std::make_pair(
+                MySym::Nt::LST, List<MyDefs::symbol>::cons(
+                                    MyDefs::symbol::t(MySym::Term::LBRACE),
+                                    List<MyDefs::symbol>::cons(
+                                        MyDefs::symbol::nt(MySym::Nt::ELEM),
+                                        List<MyDefs::symbol>::cons(
+                                            MyDefs::symbol::nt(MySym::Nt::LST),
+                                            List<MyDefs::symbol>::cons(
+                                                MyDefs::symbol::t(
+                                                    MySym::Term::RBRACE),
+                                                List<MyDefs::symbol>::nil()))))),
+            std::make_pair(
+                crane::obj(crane_erase_fn([](const auto &) { return true; })),
+                crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[_x, y0] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  const auto &[pr, y1] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
+                  const auto &[prs, y2] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
+                  const auto &[_x0, _x1] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
+                  return List<crane::obj>::cons(
+                      pr, crane::any_cast<List<crane::obj>>(prs));
+                })))),
+        List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+                  std::pair<crane::obj, crane::obj>>>::nil());
 
 #endif // INCLUDED_ERASED_LIST_CONS

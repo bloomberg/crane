@@ -31,13 +31,11 @@ uint64_t MemSafetyProbe14::sum_fns(
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe14::mylist<
-                                     crane::fn<uint64_t(uint64_t)>>::Mynil>(
-              l.v())) {
+              crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe14::mylist<
-                         crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
+        const auto &[a0, a1] = std::get<typename MemSafetyProbe14::mylist<
+            crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -54,9 +52,8 @@ uint64_t MemSafetyProbe14::sum_fns(
 /// AFTER closure creation. The match destructures the tree.
 /// The closure must still hold the original tree.
 uint64_t MemSafetyProbe14::capture_then_match(MemSafetyProbe14::tree t) {
-  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
-    return (t.tree_sum() + n);
-  };
+  crane::fn<uint64_t(uint64_t)> f =
+      [=](uint64_t n) { return (t.tree_sum() + n); };
   if (std::holds_alternative<typename MemSafetyProbe14::tree::Leaf>(t.v_mut())) {
     return f(UINT64_C(0));
   } else {
@@ -136,11 +133,13 @@ MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::tree_l
       const MemSafetyProbe14::tree &a2 = *_f.a2;
       const MemSafetyProbe14::tree &a0_value = *a0;
       const MemSafetyProbe14::tree &a2_value = a2;
-      _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons([=](uint64_t n) {
-        return (((depth * UINT64_C(100)) + a1) + n);
-      }, mylist<crane::fn<uint64_t(uint64_t)>>::mycons([=](uint64_t n) {
-        return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
-      }, _f._tmp2.mylist_append(std::move(_result))));
+      _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+          [=](uint64_t n) { return (((depth * UINT64_C(100)) + a1) + n); },
+          mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+              [=](uint64_t n) {
+                return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
+              },
+              _f._tmp2.mylist_append(std::move(_result))));
     }
   }
   return _result;
@@ -229,9 +228,9 @@ MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::collec
     } else {
       auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
       uint64_t a1 = _f.a1;
-      _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons([=](uint64_t n) {
-        return (a1 + n);
-      }, _f._tmp2.mylist_append(std::move(_result)));
+      _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+          [=](uint64_t n) { return (a1 + n); },
+          _f._tmp2.mylist_append(std::move(_result)));
     }
   }
   return _result;

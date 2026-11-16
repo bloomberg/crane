@@ -186,11 +186,14 @@ struct LoopifyTopLevelCallBinding {
   /// A chain n cells deep, each holding k.
   static cell chain(uint64_t n, uint64_t k);
   static inline const cell wide = cell::mkcell(
-      UINT64_C(1), List<cell>::cons(
-          cell::mkcell(UINT64_C(2), List<cell>::nil()), List<cell>::cons(
-              cell::mkcell(UINT64_C(3), List<cell>::cons(
-                               cell::mkcell(UINT64_C(4), List<cell>::nil()),
-                               List<cell>::nil())), List<cell>::nil())));
+      UINT64_C(1),
+      List<cell>::cons(
+          cell::mkcell(UINT64_C(2), List<cell>::nil()),
+          List<cell>::cons(cell::mkcell(
+              UINT64_C(3),
+              List<cell>::cons(cell::mkcell(UINT64_C(4), List<cell>::nil()),
+                               List<cell>::nil())),
+                           List<cell>::nil())));
 };
 
 #endif // INCLUDED_LOOPIFY_TOP_LEVEL_CALL_BINDING

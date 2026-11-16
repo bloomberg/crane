@@ -105,24 +105,30 @@ struct FixStateThreading {
                                                     uint64_t acc);
   static inline const std::pair<List<uint64_t>, uint64_t> test_rev =
       reverse_count(List<uint64_t>::cons(
-                        UINT64_C(1), List<uint64_t>::cons(
-                            UINT64_C(2), List<uint64_t>::cons(
-                                UINT64_C(3), List<uint64_t>::nil()))),
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
                     List<uint64_t>::nil());
   static inline const std::pair<List<uint64_t>, List<uint64_t>> test_ce =
-      collect_odds_evens(
+      collect_odds_evens(List<uint64_t>::cons(
+          UINT64_C(1),
           List<uint64_t>::cons(
-              UINT64_C(1), List<uint64_t>::cons(
-                  UINT64_C(2), List<uint64_t>::cons(
-                      UINT64_C(3), List<uint64_t>::cons(
-                          UINT64_C(4), List<uint64_t>::cons(
-                              UINT64_C(5), List<uint64_t>::nil()))))),
-          List<uint64_t>::nil(), List<uint64_t>::nil());
-  static inline const std::pair<uint64_t, uint64_t> test_sum = sum_with_acc(
-      List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                               UINT64_C(20), List<uint64_t>::cons(
-                                   UINT64_C(30), List<uint64_t>::nil()))),
-      UINT64_C(0));
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(UINT64_C(5),
+                                           List<uint64_t>::nil()))))),
+                         List<uint64_t>::nil(), List<uint64_t>::nil());
+  static inline const std::pair<uint64_t, uint64_t> test_sum =
+      sum_with_acc(List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
+                   UINT64_C(0));
 };
 
 #endif // INCLUDED_FIX_STATE_THREADING

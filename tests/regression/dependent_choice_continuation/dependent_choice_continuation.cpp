@@ -8,8 +8,9 @@ bool DependentChoiceContinuation::run(
         std::get<typename DependentChoiceContinuation::MemS<bool>::MRet>(m.v());
     return a0;
   } else {
-    const auto &[c0, k0] = std::get<
-        typename DependentChoiceContinuation::MemS<bool>::Mchoose>(m.v());
+    const auto &[c0, k0] =
+        std::get<typename DependentChoiceContinuation::MemS<bool>::Mchoose>(
+            m.v());
     switch (c0) {
     case MemC::CNEXT_KEY: {
       return false;
@@ -18,8 +19,9 @@ bool DependentChoiceContinuation::run(
       auto &&_sv0 = k0(true);
       if (std::holds_alternative<
               typename DependentChoiceContinuation::MemS<bool>::MRet>(_sv0.v())) {
-        const auto &[a0] = std::get<
-            typename DependentChoiceContinuation::MemS<bool>::MRet>(_sv0.v());
+        const auto &[a0] =
+            std::get<typename DependentChoiceContinuation::MemS<bool>::MRet>(
+                _sv0.v());
         return a0;
       } else {
         return false;

@@ -147,10 +147,8 @@ template <SEM S> struct Make {
   /// grammar produces — and now wraps each with crane_erase_fn before storing
   /// it into the pair<std::any,std::any> payload.
   static entry mk_entry(typename S::idx a) {
-    static const auto erased_fn =
-        crane::immortal(crane_erase_fn([](const auto &) {
-          return UINT64_C(0);
-        }));
+    static const auto erased_fn = crane::immortal(
+        crane_erase_fn([](const auto &) { return UINT64_C(0); }));
     static const auto erased_fn_1 =
         crane::immortal(crane_erase_fn([](const auto &) { return true; }));
     return SigT<prod2, psem>::existt(
@@ -161,7 +159,8 @@ template <SEM S> struct Make {
   /// Apply the predicate, exactly like Parser.v:113 if p vs' ....
   template <typename F1>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
-                             std::pair<crane::obj, crane::obj>> &e, F1 &&arg) {
+                             std::pair<crane::obj, crane::obj>> &e,
+                  F1 &&arg) {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
     const auto &[f, _x0] = a1;

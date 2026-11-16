@@ -90,12 +90,11 @@ struct DependentChoiceContinuation {
   };
 
   template <typename T1, typename T2>
-  static T2 MemS_rect(
-      const std::type_identity_t<crane::fn<T2(T1)>> &f,
-      const std::type_identity_t<
-          crane::fn<
-              T2(MemC, crane::fn<MemS<T1>(memCType)>,
-                 crane::fn<T2(memCType)>)>> &f0, const MemS<T1> &m) {
+  static T2 MemS_rect(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+                      const std::type_identity_t<
+                          crane::fn<T2(MemC, crane::fn<MemS<T1>(memCType)>,
+                                       crane::fn<T2(memCType)>)>> &f0,
+                      const MemS<T1> &m) {
     if (std::holds_alternative<typename MemS<T1>::MRet>(m.v())) {
       const auto &[a0] = std::get<typename MemS<T1>::MRet>(m.v());
       return f(a0);
@@ -117,9 +116,8 @@ struct DependentChoiceContinuation {
     return MemS<T1>::mchoose(MemC::CFRESH_PROV, crane_erase_fn<MemS<T1>>(k));
   }
 
-  static inline const MemS<bool> fresh_prov = Mfresh_prov<bool>([](bool p) {
-    return MemS<bool>::mret(p);
-  });
+  static inline const MemS<bool> fresh_prov =
+      Mfresh_prov<bool>([](bool p) { return MemS<bool>::mret(p); });
   static bool run(const MemS<bool> &m);
   static inline const bool is_true = run(fresh_prov);
 };

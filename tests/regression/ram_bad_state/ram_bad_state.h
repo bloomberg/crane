@@ -171,9 +171,12 @@ struct RamBadState {
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_stack_overflow = state{
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-      UINT64_C(0), false, UINT64_C(0), List<uint64_t>::cons(
-          UINT64_C(0), List<uint64_t>::cons(
-              UINT64_C(1), List<uint64_t>::cons(
+      UINT64_C(0), false, UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(1),
+              List<uint64_t>::cons(
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
       empty_ram, default_sel,

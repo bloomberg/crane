@@ -137,12 +137,12 @@ struct SigtRecordField {
   static inline const boxed b1 =
       boxed{SigT<crane::obj, crane::obj>::existt(crane::obj(), UINT64_C(5)),
             UINT64_C(1)};
-  static inline const boxed b2 = boxed{
-      SigT<crane::obj, crane::obj>::existt(
-          crane::obj(), List<crane::obj>::cons(
-              UINT64_C(1),
-              List<crane::obj>::cons(UINT64_C(2), List<crane::obj>::nil()))),
-      UINT64_C(2)};
+  static inline const boxed b2 = boxed{SigT<crane::obj, crane::obj>::existt(
+      crane::obj(), List<crane::obj>::cons(
+                        UINT64_C(1), List<crane::obj>::cons(
+                                         UINT64_C(2),
+                                         List<crane::obj>::nil()))),
+                                       UINT64_C(2)};
   static uint64_t peek(const boxed &b);
   static inline const uint64_t run = (peek(b1) + peek(b2));
 };

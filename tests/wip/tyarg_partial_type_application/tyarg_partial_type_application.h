@@ -130,8 +130,8 @@ concept Mon = requires {
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
     I::template bnd<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(), std::declval<
-            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+        std::declval<typename I::template M<crane::obj>>(),
+        std::declval<crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
@@ -152,10 +152,9 @@ struct TyargPartialTypeApplication {
     return bindo<uint64_t, T1>(x0_, x1_);
   }
 
-  static inline const std::optional<bool> bound =
-      bind_nat<bool>(std::make_optional<uint64_t>(UINT64_C(3)), [](uint64_t n) {
-        return std::make_optional<bool>(n == UINT64_C(3));
-      });
+  static inline const std::optional<bool> bound = bind_nat<bool>(
+      std::make_optional<uint64_t>(UINT64_C(3)),
+      [](uint64_t n) { return std::make_optional<bool>(n == UINT64_C(3)); });
 
   template <Mon _tcI0, typename T2>
   static typename _tcI0::template M<T2> ret(const T2 &x) {
@@ -205,9 +204,8 @@ struct TyargPartialTypeApplication {
   }
 
   static inline const std::optional<uint64_t> lifted =
-      lift_opt<uint64_t, uint64_t>([](uint64_t x) {
-        return (x + 1);
-      }, std::make_optional<uint64_t>(UINT64_C(4)));
+      lift_opt<uint64_t, uint64_t>([](uint64_t x) { return (x + 1); },
+                                   std::make_optional<uint64_t>(UINT64_C(4)));
 
   template <typename T1> static std::pair<T1, T1> twice(const T1 &x) {
     return std::make_pair(x, x);

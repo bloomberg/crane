@@ -124,10 +124,11 @@ struct LoopBodyIteration {
   static uint64_t get_reg0(const state &s);
   static state count_loop_body(const state &s);
   static state iterate_body(uint64_t n, state s);
-  static inline const state sample =
-      state{List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::cons(
-                                     UINT64_C(1), List<uint64_t>::cons(
-                                         UINT64_C(2), List<uint64_t>::nil())))};
+  static inline const state sample = state{List<uint64_t>::cons(
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))};
   static inline const uint64_t t = get_reg0(iterate_body(UINT64_C(5), sample));
 };
 

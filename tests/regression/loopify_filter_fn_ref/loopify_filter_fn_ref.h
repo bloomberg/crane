@@ -255,11 +255,12 @@ struct LoopifyFilterFnRef {
   static bool is_positive(uint64_t n);
   /// Entry point that calls filter with a named function.
   static inline const tree<uint64_t> test_filter = filter<uint64_t>(
-      is_positive, tree<uint64_t>::node(
+      is_positive,
+      tree<uint64_t>::node(
           tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(0),
-                               tree<uint64_t>::leaf()), UINT64_C(1), tree<
-              uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(2),
-                              tree<uint64_t>::leaf())));
+                               tree<uint64_t>::leaf()),
+          UINT64_C(1), tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(2),
+                                            tree<uint64_t>::leaf())));
 };
 
 #endif // INCLUDED_LOOPIFY_FILTER_FN_REF

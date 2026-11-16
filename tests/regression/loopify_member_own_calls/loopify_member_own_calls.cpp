@@ -20,9 +20,10 @@ uint64_t LoopifyMemberOwnCalls::ja(uint64_t n) {
     return List<uint64_t>::cons(m,
                                 List<uint64_t>::cons(m,
                                                      List<uint64_t>::nil()))
-               .template map<uint64_t>([=](uint64_t _x0) -> uint64_t {
-                 return jb(m, _x0);
-               })
+               .template map<uint64_t>(
+        [=](uint64_t _x0) -> uint64_t {
+          return jb(m, _x0);
+        })
                .template fold_left<uint64_t>(
         [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
         UINT64_C(0));

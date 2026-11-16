@@ -182,24 +182,22 @@ struct MoveReadOutsideRegion {
   static uint64_t helper_twice(uint64_t n, bool b);
   static inline const uint64_t r_if_in_argument =
       if_in_argument(List<uint64_t>::cons(
-                         UINT64_C(1), List<uint64_t>::cons(
-                             UINT64_C(2), List<uint64_t>::nil())));
-  static inline const uint64_t r_if_in_let = if_in_let(
-      List<uint64_t>::cons(
           UINT64_C(1),
-          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())), true);
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
+  static inline const uint64_t r_if_in_let = if_in_let(List<uint64_t>::cons(
+      UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+                                                       true);
   static inline const uint64_t r_match_in_let =
-      match_in_let(
-          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                   UINT64_C(2), List<uint64_t>::nil())));
-  static inline const uint64_t r_if_beside = if_beside(
-      List<uint64_t>::cons(
+      match_in_let(List<uint64_t>::cons(
           UINT64_C(1),
-          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())), true);
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
+  static inline const uint64_t r_if_beside = if_beside(List<uint64_t>::cons(
+      UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+                                                       true);
   static inline const uint64_t r_match_beside =
-      match_beside(
-          List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                   UINT64_C(2), List<uint64_t>::nil())));
+      match_beside(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
   static inline const uint64_t r_helper_twice = helper_twice(UINT64_C(2), true);
 };
 

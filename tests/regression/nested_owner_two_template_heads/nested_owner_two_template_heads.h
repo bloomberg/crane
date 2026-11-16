@@ -110,7 +110,7 @@ struct Bag {
                     }
                   }(),
                   (a1 ? std::make_shared<typename Bag::template bag<A>>(
-                          crane_convert<typename Bag::template bag<A>>(*a1))
+                            crane_convert<typename Bag::template bag<A>>(*a1))
                       : nullptr)};
             }
           }()) {}

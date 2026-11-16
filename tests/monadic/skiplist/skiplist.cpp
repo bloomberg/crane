@@ -5,8 +5,9 @@ bool skiplist_test::nat_lt(uint64_t x0_, uint64_t x1_) { return x0_ < x1_; }
 bool skiplist_test::nat_eq(uint64_t x0_, uint64_t x1_) { return x0_ == x1_; }
 
 bool skiplist_test::stm_test_insert_lookup() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(2));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(1));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
@@ -55,8 +56,9 @@ bool skiplist_test::stm_test_insert_lookup() {
 }
 
 bool skiplist_test::stm_test_delete() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(2));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(1));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
@@ -89,8 +91,9 @@ bool skiplist_test::stm_test_delete() {
 }
 
 bool skiplist_test::stm_test_update() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
   std::optional<uint64_t> v = sl.lookup(nat_lt, nat_eq, UINT64_C(5));
@@ -105,8 +108,9 @@ bool skiplist_test::stm_test_update() {
 }
 
 bool skiplist_test::stm_test_minimum() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
@@ -123,8 +127,9 @@ bool skiplist_test::stm_test_minimum() {
 }
 
 bool skiplist_test::stm_test_length_isEmpty() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   bool empty1 = sl.isEmpty();
   uint64_t len1 = sl.length();
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
@@ -138,8 +143,9 @@ bool skiplist_test::stm_test_length_isEmpty() {
 }
 
 bool skiplist_test::stm_test_front_back() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
@@ -165,8 +171,9 @@ bool skiplist_test::stm_test_front_back() {
 }
 
 bool skiplist_test::stm_test_popFront() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
@@ -194,8 +201,9 @@ bool skiplist_test::stm_test_popFront() {
 }
 
 bool skiplist_test::stm_test_addUnique() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   bool r1 =
       sl.addUnique(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   bool r2 = sl.addUnique(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
@@ -216,8 +224,9 @@ bool skiplist_test::stm_test_addUnique() {
 }
 
 bool skiplist_test::stm_test_find() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>> pairOpt =
@@ -243,8 +252,9 @@ bool skiplist_test::stm_test_find() {
 }
 
 bool skiplist_test::stm_test_navigation() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(1), UINT64_C(10), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
@@ -280,8 +290,9 @@ bool skiplist_test::stm_test_navigation() {
 }
 
 bool skiplist_test::stm_test_bounds() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(2), UINT64_C(20), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(4), UINT64_C(40), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(6), UINT64_C(60), UINT64_C(0));
@@ -316,8 +327,9 @@ bool skiplist_test::stm_test_bounds() {
 }
 
 bool skiplist_test::stm_test_removeAll() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(3), UINT64_C(30), UINT64_C(0));
   sl.insert(nat_lt, nat_eq, UINT64_C(7), UINT64_C(70), UINT64_C(0));
@@ -330,8 +342,9 @@ bool skiplist_test::stm_test_removeAll() {
 }
 
 bool skiplist_test::stm_test_bde_api() {
-  SkipList<uint64_t, uint64_t> sl = SkipList<int, int>::template create<
-      uint64_t, uint64_t>(UINT64_C(0), UINT64_C(0));
+  SkipList<uint64_t, uint64_t> sl =
+      SkipList<int, int>::template create<uint64_t, uint64_t>(UINT64_C(0),
+                                                              UINT64_C(0));
   std::pair<std::shared_ptr<SkipNode<uint64_t, uint64_t>>, bool> result1 =
       sl.bde_add(nat_lt, nat_eq, UINT64_C(5), UINT64_C(50), UINT64_C(0));
   auto [_x, front1] = std::move(result1);
@@ -354,10 +367,9 @@ bool skiplist_test::stm_test_bde_api() {
       sl.bde_find(nat_lt, nat_eq, UINT64_C(9));
   auto [status2, _x3] = std::move(findResult2);
   bool c5 = status2 == SkipList<int, int>::e_NOT_FOUND;
-  std::pair<
-      std::pair<uint64_t,
-                std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>,
-      bool> uniqueResult =
+  std::pair<std::pair<
+      uint64_t, std::optional<std::shared_ptr<SkipNode<uint64_t, uint64_t>>>>,
+            bool> uniqueResult =
       sl.bde_addUnique(nat_lt, nat_eq, UINT64_C(5), 500u, UINT64_C(0));
   auto [p, _x4] = std::move(uniqueResult);
   auto [status3, _x5] = std::move(p);
@@ -461,18 +473,18 @@ uint64_t skiplist_test::run_tests() {
   bool r11 = test_bounds();
   bool r12 = test_removeAll();
   bool r13 = test_bde_api();
-  uint64_t passed =
-      (((((((((((((r1 ? UINT64_C(1) : UINT64_C(0)) +
-                  (r2 ? UINT64_C(1) : UINT64_C(0))) +
-                 (r3 ? UINT64_C(1) : UINT64_C(0))) +
-                (r4 ? UINT64_C(1) : UINT64_C(0))) +
-               (r5 ? UINT64_C(1) : UINT64_C(0))) +
-              (r6 ? UINT64_C(1) : UINT64_C(0))) +
-             (r7 ? UINT64_C(1) : UINT64_C(0))) +
-            (r8 ? UINT64_C(1) : UINT64_C(0))) +
-           (r9 ? UINT64_C(1) : UINT64_C(0))) +
-          (r10 ? UINT64_C(1) : UINT64_C(0))) +
-         (r11 ? UINT64_C(1) : UINT64_C(0))) +
-        (r12 ? UINT64_C(1) : UINT64_C(0))) + (r13 ? UINT64_C(1) : UINT64_C(0)));
+  uint64_t passed = (((((((((((((r1 ? UINT64_C(1) : UINT64_C(0)) +
+                                (r2 ? UINT64_C(1) : UINT64_C(0))) +
+                               (r3 ? UINT64_C(1) : UINT64_C(0))) +
+                              (r4 ? UINT64_C(1) : UINT64_C(0))) +
+                             (r5 ? UINT64_C(1) : UINT64_C(0))) +
+                            (r6 ? UINT64_C(1) : UINT64_C(0))) +
+                           (r7 ? UINT64_C(1) : UINT64_C(0))) +
+                          (r8 ? UINT64_C(1) : UINT64_C(0))) +
+                         (r9 ? UINT64_C(1) : UINT64_C(0))) +
+                        (r10 ? UINT64_C(1) : UINT64_C(0))) +
+                       (r11 ? UINT64_C(1) : UINT64_C(0))) +
+                      (r12 ? UINT64_C(1) : UINT64_C(0))) +
+                     (r13 ? UINT64_C(1) : UINT64_C(0)));
   return passed;
 }

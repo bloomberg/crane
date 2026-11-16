@@ -172,9 +172,9 @@ bool Pos::eqb(const Positive &p, const Positive &q) {
 }
 
 uint64_t Pos::to_nat(const Positive &x) {
-  return iter_op<uint64_t>([](uint64_t _x0, uint64_t _x1) -> uint64_t {
-    return (_x0 + _x1);
-  }, x, UINT64_C(1));
+  return iter_op<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, x,
+      UINT64_C(1));
 }
 
 Z BinInt::double_(const Z &x) {
@@ -408,29 +408,32 @@ std::pair<Z, Z> BinInt::pos_div_eucl(const Positive &a, const Z &b) {
   if (std::holds_alternative<typename Positive::XI>(a.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(a.v());
     auto [q, r] = BinInt::pos_div_eucl(*a0, b);
-    Z r_ = BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                                   std::move(r)), Z::zpos(Positive::xh()));
+    Z r_ = BinInt::add(
+        BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(r)),
+        Z::zpos(Positive::xh()));
     if (BinInt::ltb(r_, b)) {
-      return std::make_pair(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                                        std::move(q)), std::move(r_));
-    } else {
       return std::make_pair(
-          BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                                  std::move(q)), Z::zpos(Positive::xh())),
-          BinInt::sub(std::move(r_), b));
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+          std::move(r_));
+    } else {
+      return std::make_pair(BinInt::add(
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+          Z::zpos(Positive::xh())),
+                            BinInt::sub(std::move(r_), b));
     }
   } else if (std::holds_alternative<typename Positive::XO>(a.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(a.v());
     auto [q, r] = BinInt::pos_div_eucl(*a0, b);
     Z r_ = BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(r));
     if (BinInt::ltb(r_, b)) {
-      return std::make_pair(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                                        std::move(q)), std::move(r_));
-    } else {
       return std::make_pair(
-          BinInt::add(BinInt::mul(Z::zpos(Positive::xo(Positive::xh())),
-                                  std::move(q)), Z::zpos(Positive::xh())),
-          BinInt::sub(std::move(r_), b));
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+          std::move(r_));
+    } else {
+      return std::make_pair(BinInt::add(
+          BinInt::mul(Z::zpos(Positive::xo(Positive::xh())), std::move(q)),
+          Z::zpos(Positive::xh())),
+                            BinInt::sub(std::move(r_), b));
     }
   } else {
     if (BinInt::leb(Z::zpos(Positive::xo(Positive::xh())), b)) {
@@ -527,51 +530,30 @@ EpochCellGlyphTraceCase::phase_code(EpochCellGlyphTraceCase::LunarPhase p) {
 EpochCellGlyphTraceCase::LunarPhase
 EpochCellGlyphTraceCase::phase_from_angle(const Z &angle_deg) {
   Z wrapped = BinInt::modulo(
-      angle_deg, Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xi(
-                                  Positive::xi(Positive::xo(Positive::xh()))))))))));
-  if (BinInt::ltb(
-          wrapped, Z::zpos(
-              Positive::xi(
-                  Positive::xo(
-                      Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))) {
+      angle_deg,
+      Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))))))));
+  if (BinInt::ltb(wrapped, Z::zpos(Positive::xi(Positive::xo(Positive::xi(
+                               Positive::xi(Positive::xo(Positive::xh())))))))) {
     return LunarPhase::NEWMOON;
   } else {
     if (BinInt::ltb(
-            wrapped, Z::zpos(
-                Positive::xi(
-                    Positive::xi(
-                        Positive::xi(
-                            Positive::xo(
-                                Positive::xo(
-                                    Positive::xo(Positive::xo(Positive::xh())))))))))) {
+            wrapped,
+            Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xo(
+                Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))))) {
       return LunarPhase::FIRSTQUARTER;
     } else {
       if (BinInt::ltb(
-              wrapped, Z::zpos(
-                  Positive::xi(
-                      Positive::xo(
-                          Positive::xo(
-                              Positive::xo(
-                                  Positive::xo(
-                                      Positive::xi(Positive::xi(Positive::xh())))))))))) {
+              wrapped,
+              Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
+                  Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))))))) {
         return LunarPhase::FULLMOON;
       } else {
         if (BinInt::ltb(
-                std::move(wrapped), Z::zpos(
-                    Positive::xi(
-                        Positive::xi(
-                            Positive::xo(
-                                Positive::xi(
-                                    Positive::xi(
-                                        Positive::xi(
-                                            Positive::xo(
-                                                Positive::xo(Positive::xh()))))))))))) {
+                std::move(wrapped),
+                Z::zpos(Positive::xi(Positive::xi(
+                    Positive::xo(Positive::xi(Positive::xi(Positive::xi(
+                        Positive::xo(Positive::xo(Positive::xh()))))))))))) {
           return LunarPhase::LASTQUARTER;
         } else {
           return LunarPhase::NEWMOON;
@@ -638,10 +620,9 @@ bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
               Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))) {
         return true;
       } else {
-        if (BinInt::eqb(
-                dial_pos, Z::zpos(
-                    Positive::xi(
-                        Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))) {
+        if (BinInt::eqb(dial_pos,
+                        Z::zpos(Positive::xi(Positive::xo(
+                            Positive::xo(Positive::xo(Positive::xh()))))))) {
           return true;
         } else {
           return false;
@@ -653,36 +634,54 @@ bool EpochCellGlyphTraceCase::eclipse_possible_at_dial(const Z &dial_pos) {
 
 EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step(
     const EpochCellGlyphTraceCase::MechanismState &s) {
-  return MechanismState{
-      BinInt::add(s.crank_position, Z::zpos(Positive::xh())), BinInt::modulo(
-          BinInt::add(s.metonic_dial, Z::zpos(Positive::xh())),
-          metonic_modulus), BinInt::modulo(
-          BinInt::add(s.saros_dial, Z::zpos(Positive::xh())), saros_modulus),
-      BinInt::modulo(BinInt::add(s.callippic_dial, Z::zpos(Positive::xh())),
-                     callippic_modulus), BinInt::modulo(
-          BinInt::add(s.exeligmos_dial, Z::zpos(Positive::xh())),
-          exeligmos_modulus), BinInt::modulo(
-          BinInt::add(s.games_dial, Z::zpos(Positive::xh())), games_modulus),
-      BinInt::modulo(BinInt::add(s.zodiac_position, Z::zpos(Positive::xh())),
-                     zodiac_modulus)};
+  return MechanismState{BinInt::add(s.crank_position, Z::zpos(Positive::xh())),
+                        BinInt::modulo(BinInt::add(s.metonic_dial,
+                                                   Z::zpos(Positive::xh())),
+                                       metonic_modulus),
+                        BinInt::modulo(
+                            BinInt::add(s.saros_dial, Z::zpos(Positive::xh())),
+                            saros_modulus),
+                        BinInt::modulo(BinInt::add(s.callippic_dial,
+                                                   Z::zpos(Positive::xh())),
+                                       callippic_modulus),
+                        BinInt::modulo(BinInt::add(s.exeligmos_dial,
+                                                   Z::zpos(Positive::xh())),
+                                       exeligmos_modulus),
+                        BinInt::modulo(
+                            BinInt::add(s.games_dial, Z::zpos(Positive::xh())),
+                            games_modulus),
+                        BinInt::modulo(BinInt::add(s.zodiac_position,
+                                                   Z::zpos(Positive::xh())),
+                                       zodiac_modulus)};
 }
 
 EpochCellGlyphTraceCase::MechanismState EpochCellGlyphTraceCase::step_reverse(
     const EpochCellGlyphTraceCase::MechanismState &s) {
-  return MechanismState{
-      BinInt::sub(s.crank_position, Z::zpos(Positive::xh())), BinInt::modulo(
-          BinInt::add(BinInt::sub(s.metonic_dial, Z::zpos(Positive::xh())),
-                      metonic_modulus), metonic_modulus), BinInt::modulo(
-          BinInt::add(BinInt::sub(s.saros_dial, Z::zpos(Positive::xh())),
-                      saros_modulus), saros_modulus), BinInt::modulo(
-          BinInt::add(BinInt::sub(s.callippic_dial, Z::zpos(Positive::xh())),
-                      callippic_modulus), callippic_modulus), BinInt::modulo(
-          BinInt::add(BinInt::sub(s.exeligmos_dial, Z::zpos(Positive::xh())),
-                      exeligmos_modulus), exeligmos_modulus), BinInt::modulo(
-          BinInt::add(BinInt::sub(s.games_dial, Z::zpos(Positive::xh())),
-                      games_modulus), games_modulus), BinInt::modulo(
-          BinInt::add(BinInt::sub(s.zodiac_position, Z::zpos(Positive::xh())),
-                      zodiac_modulus), zodiac_modulus)};
+  return MechanismState{BinInt::sub(s.crank_position, Z::zpos(Positive::xh())),
+                        BinInt::modulo(BinInt::add(BinInt::sub(
+                            s.metonic_dial, Z::zpos(Positive::xh())),
+                                                   metonic_modulus),
+                                       metonic_modulus),
+                        BinInt::modulo(BinInt::add(
+                            BinInt::sub(s.saros_dial, Z::zpos(Positive::xh())),
+                            saros_modulus),
+                                       saros_modulus),
+                        BinInt::modulo(BinInt::add(BinInt::sub(
+                            s.callippic_dial, Z::zpos(Positive::xh())),
+                                                   callippic_modulus),
+                                       callippic_modulus),
+                        BinInt::modulo(BinInt::add(BinInt::sub(
+                            s.exeligmos_dial, Z::zpos(Positive::xh())),
+                                                   exeligmos_modulus),
+                                       exeligmos_modulus),
+                        BinInt::modulo(BinInt::add(
+                            BinInt::sub(s.games_dial, Z::zpos(Positive::xh())),
+                            games_modulus),
+                                       games_modulus),
+                        BinInt::modulo(BinInt::add(BinInt::sub(
+                            s.zodiac_position, Z::zpos(Positive::xh())),
+                                                   zodiac_modulus),
+                                       zodiac_modulus)};
 }
 
 EpochCellGlyphTraceCase::MechanismState
@@ -705,157 +704,104 @@ EpochCellGlyphTraceCase::LunarPhase
 EpochCellGlyphTraceCase::predict_moon_phase_from_state(
     const EpochCellGlyphTraceCase::MechanismState &s) {
   Z phase_angle = BinInt::div(
-      BinInt::mul(
-          s.metonic_dial, Z::zpos(
-              Positive::xo(
-                  Positive::xo(
-                      Positive::xo(
-                          Positive::xi(
-                              Positive::xo(
-                                  Positive::xi(
-                                      Positive::xi(Positive::xo(Positive::xh())))))))))),
-      Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xi(Positive::xi(Positive::xh())))))))));
+      BinInt::mul(s.metonic_dial,
+                  Z::zpos(Positive::xo(Positive::xo(
+                      Positive::xo(Positive::xi(Positive::xo(Positive::xi(
+                          Positive::xi(Positive::xo(Positive::xh())))))))))),
+      Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))))));
   return phase_from_angle(std::move(phase_angle));
 }
 
 Z EpochCellGlyphTraceCase::predict_olympiad_year(
     const EpochCellGlyphTraceCase::MechanismState &s) {
-  return BinInt::add(
-      BinInt::modulo(s.games_dial,
-                     Z::zpos(Positive::xo(Positive::xo(Positive::xh())))),
-      Z::zpos(Positive::xh()));
+  return BinInt::add(BinInt::modulo(
+      s.games_dial, Z::zpos(Positive::xo(Positive::xo(Positive::xh())))),
+                     Z::zpos(Positive::xh()));
 }
 
 EpochCellGlyphTraceCase::ZodiacSign
 EpochCellGlyphTraceCase::predict_zodiac_sign(
     const EpochCellGlyphTraceCase::MechanismState &s) {
   Z deg = BinInt::modulo(
-      s.zodiac_position, Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xi(
-                                  Positive::xi(Positive::xo(Positive::xh()))))))))));
-  if (BinInt::ltb(
-          deg, Z::zpos(
-              Positive::xo(
-                  Positive::xi(Positive::xi(Positive::xi(Positive::xh()))))))) {
+      s.zodiac_position,
+      Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))))))));
+  if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xi(
+                           Positive::xi(Positive::xi(Positive::xh()))))))) {
     return ZodiacSign::ARIES;
   } else {
-    if (BinInt::ltb(
-            deg, Z::zpos(
-                Positive::xo(
-                    Positive::xo(
-                        Positive::xi(Positive::xi(Positive::xi(Positive::xh())))))))) {
+    if (BinInt::ltb(deg, Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+                             Positive::xi(Positive::xi(Positive::xh())))))))) {
       return ZodiacSign::TAURUS;
     } else {
       if (BinInt::ltb(
-              deg, Z::zpos(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xi(
-                                  Positive::xi(Positive::xo(Positive::xh()))))))))) {
+              deg,
+              Z::zpos(Positive::xo(Positive::xi(Positive::xo(
+                  Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))))))) {
         return ZodiacSign::GEMINI;
       } else {
-        if (BinInt::ltb(
-                deg, Z::zpos(
-                    Positive::xo(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xi(
-                                    Positive::xi(Positive::xi(Positive::xh()))))))))) {
+        if (BinInt::ltb(deg,
+                        Z::zpos(
+                            Positive::xo(Positive::xo(Positive::xo(Positive::xi(
+                                Positive::xi(Positive::xi(Positive::xh()))))))))) {
           return ZodiacSign::CANCER;
         } else {
           if (BinInt::ltb(
-                  deg, Z::zpos(
-                      Positive::xo(
-                          Positive::xi(
-                              Positive::xi(
-                                  Positive::xo(
-                                      Positive::xi(
-                                          Positive::xo(
-                                              Positive::xo(Positive::xh())))))))))) {
+                  deg,
+                  Z::zpos(Positive::xo(
+                      Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+                          Positive::xo(Positive::xo(Positive::xh())))))))))) {
             return ZodiacSign::LEO;
           } else {
-            if (BinInt::ltb(
-                    deg, Z::zpos(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xi(
-                                    Positive::xo(
-                                        Positive::xi(
-                                            Positive::xi(
-                                                Positive::xo(Positive::xh())))))))))) {
+            if (BinInt::ltb(deg,
+                            Z::zpos(Positive::xo(
+                                Positive::xo(Positive::xi(
+                                    Positive::xo(Positive::xi(Positive::xi(
+                                        Positive::xo(Positive::xh())))))))))) {
               return ZodiacSign::VIRGO;
             } else {
               if (BinInt::ltb(
-                      deg, Z::zpos(
-                          Positive::xo(
-                              Positive::xi(
-                                  Positive::xo(
-                                      Positive::xo(
-                                          Positive::xi(
-                                              Positive::xo(
-                                                  Positive::xi(Positive::xh())))))))))) {
+                      deg, Z::zpos(Positive::xo(
+                               Positive::xi(Positive::xo(
+                                   Positive::xo(Positive::xi(Positive::xo(
+                                       Positive::xi(Positive::xh())))))))))) {
                 return ZodiacSign::LIBRA;
               } else {
                 if (BinInt::ltb(
-                        deg, Z::zpos(
-                            Positive::xo(
-                                Positive::xo(
-                                    Positive::xo(
-                                        Positive::xo(
-                                            Positive::xi(
-                                                Positive::xi(
-                                                    Positive::xi(Positive::xh())))))))))) {
+                        deg, Z::zpos(Positive::xo(
+                                 Positive::xo(Positive::xo(
+                                     Positive::xo(Positive::xi(Positive::xi(
+                                         Positive::xi(Positive::xh())))))))))) {
                   return ZodiacSign::SCORPIO;
                 } else {
                   if (BinInt::ltb(
-                          deg, Z::zpos(
-                              Positive::xo(
-                                  Positive::xi(
-                                      Positive::xi(
-                                          Positive::xi(
-                                              Positive::xo(
-                                                  Positive::xo(
-                                                      Positive::xo(
-                                                          Positive::xo(
-                                                              Positive::xh()))))))))))) {
+                          deg, Z::zpos(Positive::xo(
+                                   Positive::xi(
+                                       Positive::xi(
+                                           Positive::xi(
+                                               Positive::xo(Positive::xo(
+                                                   Positive::xo(Positive::xo(
+                                                       Positive::xh()))))))))))) {
                     return ZodiacSign::SAGITTARIUS;
                   } else {
                     if (BinInt::ltb(
-                            deg, Z::zpos(
-                                Positive::xo(
-                                    Positive::xo(
-                                        Positive::xi(
-                                            Positive::xi(
-                                                Positive::xo(
-                                                    Positive::xi(
-                                                        Positive::xo(
-                                                            Positive::xo(
-                                                                Positive::xh()))))))))))) {
+                            deg,
+                            Z::zpos(Positive::xo(Positive::xo(
+                                Positive::xi(Positive::xi(
+                                    Positive::xo(Positive::xi(Positive::xo(
+                                        Positive::xo(Positive::xh()))))))))))) {
                       return ZodiacSign::CAPRICORN;
                     } else {
                       if (BinInt::ltb(
-                              std::move(deg), Z::zpos(
-                                  Positive::xo(
-                                      Positive::xi(
-                                          Positive::xo(
-                                              Positive::xi(
-                                                  Positive::xo(
-                                                      Positive::xo(
-                                                          Positive::xi(
-                                                              Positive::xo(
-                                                                  Positive::xh()))))))))))) {
+                              std::move(deg),
+                              Z::zpos(Positive::xo(
+                                  Positive::xi(
+                                      Positive::xo(
+                                          Positive::xi(
+                                              Positive::xo(Positive::xo(
+                                                  Positive::xi(Positive::xo(
+                                                      Positive::xh()))))))))))) {
                         return ZodiacSign::AQUARIUS;
                       } else {
                         return ZodiacSign::PISCES;
@@ -983,15 +929,12 @@ EpochCellGlyphTraceCase::glyph_at_cell(const Z &cell) {
                     Z::zpos(Positive::xo(Positive::xi(Positive::xh()))))) {
       return DialGlyph::GLYPH_SIGMA;
     } else {
-      if (BinInt::eqb(
-              cell,
-              Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))) {
+      if (BinInt::eqb(cell, Z::zpos(Positive::xo(
+                                Positive::xo(Positive::xi(Positive::xh())))))) {
         return DialGlyph::GLYPH_ETA;
       } else {
-        if (BinInt::eqb(
-                cell, Z::zpos(
-                    Positive::xi(
-                        Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))) {
+        if (BinInt::eqb(cell, Z::zpos(Positive::xi(Positive::xo(
+                                  Positive::xo(Positive::xo(Positive::xh()))))))) {
           return DialGlyph::GLYPH_SIGMA;
         } else {
           return DialGlyph::GLYPH_EMPTY;
@@ -1082,10 +1025,10 @@ Z EpochCellGlyphTraceCase::months_from_epoch(
     const Z &eclipse_month) {
   Z year_diff = BinInt::sub(epoch_year, eclipse_year);
   Z month_diff = BinInt::sub(eclipse_month, epoch_month);
-  return BinInt::add(
-      BinInt::mul(std::move(year_diff), Z::zpos(
-                      Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))),
-      std::move(month_diff));
+  return BinInt::add(BinInt::mul(
+      std::move(year_diff),
+      Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))),
+                     std::move(month_diff));
 }
 
 Z EpochCellGlyphTraceCase::saros_cell(
@@ -1093,25 +1036,17 @@ Z EpochCellGlyphTraceCase::saros_cell(
     const EpochCellGlyphTraceCase::HistoricalEclipse &e) {
   Z months = months_from_epoch(epoch_year, e.he_year, epoch_month, e.he_month);
   return BinInt::modulo(
-      std::move(months), Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xi(
-                      Positive::xi(
-                          Positive::xi(
-                              Positive::xo(Positive::xi(Positive::xh())))))))));
+      std::move(months),
+      Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
 Z EpochCellGlyphTraceCase::saros_dial_at_month(const Z &start_cell,
                                                const Z &months) {
   return BinInt::modulo(
-      BinInt::add(start_cell, months), Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xi(
-                      Positive::xi(
-                          Positive::xi(
-                              Positive::xo(Positive::xi(Positive::xh())))))))));
+      BinInt::add(start_cell, months),
+      Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh())))))))));
 }
 
 EpochCellGlyphTraceCase::EpochReading

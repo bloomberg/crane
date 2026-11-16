@@ -33,12 +33,14 @@ uint64_t RecordErasedProofFieldsCase::tag_code(
     const RecordErasedProofFieldsCase::StoredTag &t) {
   if (std::holds_alternative<
           typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(t.v())) {
-    const auto &[a0] = std::get<
-        typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(t.v());
+    const auto &[a0] =
+        std::get<typename RecordErasedProofFieldsCase::StoredTag::TagPrimary>(
+            t.v());
     return (UINT64_C(10) + kind_code(a0));
   } else {
-    const auto &[a0] = std::get<
-        typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(t.v());
+    const auto &[a0] =
+        std::get<typename RecordErasedProofFieldsCase::StoredTag::TagSecondary>(
+            t.v());
     return (UINT64_C(20) + kind_code(a0));
   }
 }
@@ -102,12 +104,15 @@ List<uint64_t> RecordErasedProofFieldsCase::trace_codes_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &primary,
     const RecordErasedProofFieldsCase::ErasedProofRecord &erased) {
   return List<uint64_t>::cons(
-      left_kind_code_of(primary), List<uint64_t>::cons(
-          right_kind_code_of(primary), List<uint64_t>::cons(
-              tag_code_of(primary), List<uint64_t>::cons(
-                  bucket_code_of(erased), List<uint64_t>::cons(
-                      tag_code(bucket_to_tag(erased.erased_bucket)),
-                      List<uint64_t>::nil())))));
+      left_kind_code_of(primary),
+      List<uint64_t>::cons(
+          right_kind_code_of(primary),
+          List<uint64_t>::cons(
+              tag_code_of(primary),
+              List<uint64_t>::cons(bucket_code_of(erased),
+                                   List<uint64_t>::cons(tag_code(
+                                       bucket_to_tag(erased.erased_bucket)),
+                                                        List<uint64_t>::nil())))));
 }
 
 uint64_t RecordErasedProofFieldsCase::trace_checksum_of(

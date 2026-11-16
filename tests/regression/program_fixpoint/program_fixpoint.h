@@ -164,12 +164,16 @@ struct ProgFix {
   static List<uint64_t> interleave(const List<uint64_t> &l1,
                                    const List<uint64_t> &l2);
   static inline const List<uint64_t> test_interleave = interleave(
-      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                               UINT64_C(3), List<uint64_t>::cons(
-                                   UINT64_C(5), List<uint64_t>::nil()))), List<
-          uint64_t>::cons(UINT64_C(2), List<uint64_t>::cons(
-                              UINT64_C(4), List<uint64_t>::cons(
-                                  UINT64_C(6), List<uint64_t>::nil()))));
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(3),
+              List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(
+              UINT64_C(4),
+              List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_PROGRAM_FIXPOINT

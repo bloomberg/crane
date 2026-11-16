@@ -123,11 +123,10 @@ struct MethodLiftedHelperSameName {
     }
   };
 
-  static inline const Bag sample = Bag{
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-      List<bool>::cons(true, List<bool>::nil())};
+  static inline const Bag sample = Bag{List<uint64_t>::cons(
+      UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+                                       List<bool>::cons(true,
+                                                        List<bool>::nil())};
   static inline const uint64_t t1 = sample.total();
   static inline const uint64_t t2 = sample.doubled();
 };

@@ -774,9 +774,11 @@ public:
             return std::make_pair(d_rev, UINT64_C(0));
           }
         };
-    auto aux = [&](const Uint &d_rev) -> std::pair<Uint, uint64_t> {
-      return aux_impl(aux_impl, d_rev);
-    };
+    auto aux =
+        [&](const Uint &d_rev) -> std::pair<Uint,
+                                            uint64_t> {
+          return aux_impl(aux_impl, d_rev);
+        };
     auto [r, n] = aux(this->rev());
     return std::make_pair(r.rev(), n);
   }

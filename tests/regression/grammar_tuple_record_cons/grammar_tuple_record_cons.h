@@ -64,66 +64,64 @@ using grammar_entry = SigT<production, production_semty>;
       _a1.push_front(_a0);
       return _a1;
     }(
-    SigT<std::pair<crane::obj, std::deque<Symbol>>,
-         std::pair<crane::obj, crane::obj>>::existt(
-        std::make_pair(crane::obj(crane::obj()), [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(Symbol::T, [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(Symbol::T, [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(Symbol::T, [](auto _a0, auto _a1) {
-          _a1.push_front(_a0);
-          return _a1;
-        }(Symbol::NT, std::deque<Symbol>{}))))),
-        std::make_pair(
-            crane::obj(crane_erase_fn([](const auto &tup) {
-              const auto &[x, y0] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-              const auto &[_x, y1] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
-              const auto &[_x0, y2] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
-              const auto &[tpls, _x1] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
-              return triples_le_max(
-                  crane_container_cast<std::deque<rgb>>(
-                      crane::any_cast<std::deque<crane::obj>>(tpls)),
-                  crane::any_cast<uint64_t>(x));
-            })),
-            crane::obj(crane_erase_fn([](const auto &tup) {
-              const auto &[x, y0] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-              const auto &[y, y1] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
-              const auto &[z, y2] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
-              const auto &[tpls, _x] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
-              return [](auto _a0, auto _a1) {
-                _a1.push_front(_a0);
-                return _a1;
-              }(rgb{crane::any_cast<uint64_t>(x), crane::any_cast<uint64_t>(y),
-                    crane::any_cast<uint64_t>(z)},
-                crane::any_cast<std::deque<crane::obj>>(tpls));
-            })))),
-    [](auto _a0, auto _a1) {
-      _a1.push_front(_a0);
-      return _a1;
-    }(
         SigT<std::pair<crane::obj, std::deque<Symbol>>,
              std::pair<crane::obj, crane::obj>>::existt(
+            std::make_pair(crane::obj(crane::obj()), [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(Symbol::T, [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(Symbol::T, [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(Symbol::T, [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(Symbol::NT, std::deque<Symbol>{}))))),
+            std::make_pair(
+                crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[x, y0] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  const auto &[_x, y1] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
+                  const auto &[_x0, y2] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
+                  const auto &[tpls, _x1] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
+                  return triples_le_max(crane_container_cast<std::deque<rgb>>(
+                      crane::any_cast<std::deque<crane::obj>>(tpls)),
+                                        crane::any_cast<uint64_t>(x));
+                })),
+                crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[x, y0] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  const auto &[y, y1] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
+                  const auto &[z, y2] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
+                  const auto &[tpls, _x] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
+                  return [](auto _a0, auto _a1) {
+                    _a1.push_front(_a0);
+                    return _a1;
+                  }(rgb{crane::any_cast<uint64_t>(x),
+                        crane::any_cast<uint64_t>(y),
+                        crane::any_cast<uint64_t>(z)},
+                    crane::any_cast<std::deque<crane::obj>>(tpls));
+                })))),
+        [](auto _a0, auto _a1) {
+          _a1.push_front(_a0);
+          return _a1;
+        }(SigT<std::pair<crane::obj, std::deque<Symbol>>,
+               std::pair<crane::obj, crane::obj>>::existt(
             std::make_pair(crane::obj(crane::obj()), std::deque<Symbol>{}),
-            std::make_pair(crane::obj(crane_erase_fn([](const auto &) {
-              return true;
-            })), crane::obj(crane_erase_fn([](const auto &) {
-              return std::deque<crane::obj>{};
-            })))),
-        std::deque<SigT<std::pair<crane::obj, std::deque<Symbol>>,
-                        std::pair<crane::obj, crane::obj>>>{}));
+            std::make_pair(
+                crane::obj(crane_erase_fn([](const auto &) { return true; })),
+                crane::obj(crane_erase_fn(
+                    [](const auto &) { return std::deque<crane::obj>{}; })))),
+          std::deque<SigT<std::pair<crane::obj, std::deque<Symbol>>,
+                          std::pair<crane::obj, crane::obj>>>{}));
 uint64_t num_entries(std::monostate _x);
 
 #endif // INCLUDED_GRAMMAR_TUPLE_RECORD_CONS

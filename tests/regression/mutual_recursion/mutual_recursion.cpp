@@ -59,7 +59,7 @@ uint64_t MutualRecursion::eval_expr(const MutualRecursion::expr &e) {
     const auto &[a0] = std::get<typename MutualRecursion::expr::Val>(e.v());
     return a0;
   } else if (
-      std::holds_alternative<typename MutualRecursion::expr::BinOp>(e.v())) {
+          std::holds_alternative<typename MutualRecursion::expr::BinOp>(e.v())) {
     const auto &[a0, a1, a2] =
         std::get<typename MutualRecursion::expr::BinOp>(e.v());
     if (a0 <= 0) {

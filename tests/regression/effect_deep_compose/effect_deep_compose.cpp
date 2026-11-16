@@ -65,11 +65,10 @@ void EffectDeepCompose::repeat_n(uint64_t n) {
     return;
   } else {
     uint64_t n_ = n - 1;
-    int64_t _x =
-        static_cast<int64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
+    int64_t _x = static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count());
     std::cout << std::string("tick") << '\n';
     repeat_n(n_);
     return;

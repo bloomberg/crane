@@ -7,10 +7,9 @@ ReuseArmFieldOrder::zero_heads(ReuseArmFieldOrder::lst l) {
         1) {
       ReuseArmFieldOrder::lst xs = std::move(
           *std::get<typename ReuseArmFieldOrder::lst::Cons>(l.v_mut()).a1);
-      return lst::cons_crane_reuse(
-          std::move(
-              std::get<typename ReuseArmFieldOrder::lst::Cons>(l.v_mut()).a1),
-          UINT64_C(0), zero_heads(std::move(xs)));
+      return lst::cons_crane_reuse(std::move(
+          std::get<typename ReuseArmFieldOrder::lst::Cons>(l.v_mut()).a1),
+                                   UINT64_C(0), zero_heads(std::move(xs)));
     } else {
       if (std::holds_alternative<typename ReuseArmFieldOrder::lst::Nil>(
               l.v_mut())) {

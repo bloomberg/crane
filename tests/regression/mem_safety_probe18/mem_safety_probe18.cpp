@@ -59,8 +59,9 @@ MemSafetyProbe18::fold_left_tree(const MemSafetyProbe18::mylist<uint64_t> &l,
             typename MemSafetyProbe18::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       return _loop_acc;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename MemSafetyProbe18::mylist<uint64_t>::Mycons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename MemSafetyProbe18::mylist<uint64_t>::Mycons>(
+              _loop_l->v());
       _loop_acc = tree::node(std::move(_loop_acc), a0, tree::leaf());
       _loop_l = crane_raw(a1);
     }

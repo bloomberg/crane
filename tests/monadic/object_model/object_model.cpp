@@ -15,8 +15,8 @@ std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext() {
   return std::make_pair(std::make_pair(a, b), c);
 }
 
-std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>,
-          int64_t> testtoST2_ext() {
+std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>, int64_t>
+testtoST2_ext() {
   std::shared_ptr<int64_t> _lc1_ref;
   _lc1_ref = std::make_shared<decltype(INT64_C(1))>(INT64_C(1));
   std::shared_ptr<int64_t> _lc2_ref;
@@ -33,8 +33,8 @@ std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>,
   return std::make_pair(std::make_pair(std::make_pair(a, b), c), d);
 }
 
-std::pair<std::pair<std::pair<int64_t, int64_t>, bool>,
-          int64_t> acc_test1_ext() {
+std::pair<std::pair<std::pair<int64_t, int64_t>, bool>, int64_t>
+acc_test1_ext() {
   std::shared_ptr<int64_t> _lc1_bal_ref;
   _lc1_bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
   Account<std::monostate> acc = Account<std::monostate>{
@@ -44,20 +44,21 @@ std::pair<std::pair<std::pair<int64_t, int64_t>, bool>,
         *_lc1_bal_ref = static_cast<int64_t>(
             static_cast<uint64_t>(bal) +
             static_cast<uint64_t>(static_cast<int64_t>(amt)));
-        return static_cast<int64_t>(static_cast<uint64_t>(bal) + static_cast<
-                                        uint64_t>(static_cast<int64_t>(amt)));
+        return static_cast<int64_t>(
+            static_cast<uint64_t>(bal) +
+            static_cast<uint64_t>(static_cast<int64_t>(amt)));
       },
       [=](int64_t amt) {
         int64_t bal = *_lc1_bal_ref;
         if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                 static_cast<uint64_t>(amt)) < INT64_C(0)) {
+                                 static_cast<uint64_t>(amt)) <
+            INT64_C(0)) {
           return std::optional<int64_t>();
         } else {
           *_lc1_bal_ref = static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                                static_cast<uint64_t>(amt));
-          return std::make_optional<int64_t>(
-              static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                   static_cast<uint64_t>(amt)));
+          return std::make_optional<int64_t>(static_cast<int64_t>(
+              static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
         }
       }};
   int64_t a = acc.getBalance(std::monostate{});
@@ -76,8 +77,8 @@ std::pair<std::pair<std::pair<int64_t, int64_t>, bool>,
       d);
 }
 
-std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
-          int64_t> acc_test2_ext() {
+std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
+acc_test2_ext() {
   std::shared_ptr<int64_t> _lc1_bal_ref;
   _lc1_bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
   Account<std::monostate> acc1 = Account<std::monostate>{
@@ -87,20 +88,21 @@ std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
         *_lc1_bal_ref = static_cast<int64_t>(
             static_cast<uint64_t>(bal) +
             static_cast<uint64_t>(static_cast<int64_t>(amt)));
-        return static_cast<int64_t>(static_cast<uint64_t>(bal) + static_cast<
-                                        uint64_t>(static_cast<int64_t>(amt)));
+        return static_cast<int64_t>(
+            static_cast<uint64_t>(bal) +
+            static_cast<uint64_t>(static_cast<int64_t>(amt)));
       },
       [=](int64_t amt) {
         int64_t bal = *_lc1_bal_ref;
         if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                 static_cast<uint64_t>(amt)) < INT64_C(0)) {
+                                 static_cast<uint64_t>(amt)) <
+            INT64_C(0)) {
           return std::optional<int64_t>();
         } else {
           *_lc1_bal_ref = static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                                static_cast<uint64_t>(amt));
-          return std::make_optional<int64_t>(
-              static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                   static_cast<uint64_t>(amt)));
+          return std::make_optional<int64_t>(static_cast<int64_t>(
+              static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
         }
       }};
   std::shared_ptr<int64_t> _lc2_bal_ref;
@@ -112,20 +114,21 @@ std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
         *_lc2_bal_ref = static_cast<int64_t>(
             static_cast<uint64_t>(bal) +
             static_cast<uint64_t>(static_cast<int64_t>(amt)));
-        return static_cast<int64_t>(static_cast<uint64_t>(bal) + static_cast<
-                                        uint64_t>(static_cast<int64_t>(amt)));
+        return static_cast<int64_t>(
+            static_cast<uint64_t>(bal) +
+            static_cast<uint64_t>(static_cast<int64_t>(amt)));
       },
       [=](int64_t amt) {
         int64_t bal = *_lc2_bal_ref;
         if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                 static_cast<uint64_t>(amt)) < INT64_C(0)) {
+                                 static_cast<uint64_t>(amt)) <
+            INT64_C(0)) {
           return std::optional<int64_t>();
         } else {
           *_lc2_bal_ref = static_cast<int64_t>(static_cast<uint64_t>(bal) -
                                                static_cast<uint64_t>(amt));
-          return std::make_optional<int64_t>(
-              static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                   static_cast<uint64_t>(amt)));
+          return std::make_optional<int64_t>(static_cast<int64_t>(
+              static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
         }
       }};
   int64_t a = acc1.getBalance(std::monostate{});
@@ -154,64 +157,63 @@ std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
   }
 }
 
-std::pair<std::pair<std::pair<int64_t, bool>, int64_t>,
-          int64_t> bankacc_test1_ext() {
+std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
+bankacc_test1_ext() {
   std::shared_ptr<int64_t> _lc2_bal_ref;
   _lc2_bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
-  Account<std::monostate> _lc1_checking_ =
-      Account<std::monostate>{
-          [=](std::monostate) { return *_lc2_bal_ref; },
-          [=](uint64_t amt) {
-            int64_t bal = *_lc2_bal_ref;
-            *_lc2_bal_ref =
-                static_cast<int64_t>(static_cast<uint64_t>(bal) + static_cast<
-                                         uint64_t>(static_cast<int64_t>(amt)));
-            return static_cast<int64_t>(
-                static_cast<uint64_t>(bal) +
-                static_cast<uint64_t>(static_cast<int64_t>(amt)));
-          },
-          [=](int64_t amt) {
-            int64_t bal = *_lc2_bal_ref;
-            if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                     static_cast<uint64_t>(amt)) < INT64_C(0)) {
-              return std::optional<int64_t>();
-            } else {
-              *_lc2_bal_ref = static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                                   static_cast<uint64_t>(amt));
-              return std::make_optional<int64_t>(
-                  static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                       static_cast<uint64_t>(amt)));
-            }
-          }};
+  Account<std::monostate> _lc1_checking_ = Account<std::monostate>{
+      [=](std::monostate) { return *_lc2_bal_ref; },
+      [=](uint64_t amt) {
+        int64_t bal = *_lc2_bal_ref;
+        *_lc2_bal_ref = static_cast<int64_t>(
+            static_cast<uint64_t>(bal) +
+            static_cast<uint64_t>(static_cast<int64_t>(amt)));
+        return static_cast<int64_t>(
+            static_cast<uint64_t>(bal) +
+            static_cast<uint64_t>(static_cast<int64_t>(amt)));
+      },
+      [=](int64_t amt) {
+        int64_t bal = *_lc2_bal_ref;
+        if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
+                                 static_cast<uint64_t>(amt)) <
+            INT64_C(0)) {
+          return std::optional<int64_t>();
+        } else {
+          *_lc2_bal_ref = static_cast<int64_t>(static_cast<uint64_t>(bal) -
+                                               static_cast<uint64_t>(amt));
+          return std::make_optional<int64_t>(static_cast<int64_t>(
+              static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
+        }
+      }};
   std::shared_ptr<int64_t> _lc3_bal_ref;
   _lc3_bal_ref = std::make_shared<decltype(INT64_C(150))>(INT64_C(150));
-  Account<std::monostate> _lc1_saving_ =
-      Account<std::monostate>{
-          [=](std::monostate) { return *_lc3_bal_ref; },
-          [=](uint64_t amt) {
-            int64_t bal = *_lc3_bal_ref;
-            *_lc3_bal_ref =
-                static_cast<int64_t>(static_cast<uint64_t>(bal) + static_cast<
-                                         uint64_t>(static_cast<int64_t>(amt)));
-            return static_cast<int64_t>(
-                static_cast<uint64_t>(bal) +
-                static_cast<uint64_t>(static_cast<int64_t>(amt)));
-          },
-          [=](int64_t amt) {
-            int64_t bal = *_lc3_bal_ref;
-            if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                     static_cast<uint64_t>(amt)) < INT64_C(0)) {
-              return std::optional<int64_t>();
-            } else {
-              *_lc3_bal_ref = static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                                   static_cast<uint64_t>(amt));
-              return std::make_optional<int64_t>(
-                  static_cast<int64_t>(static_cast<uint64_t>(bal) -
-                                       static_cast<uint64_t>(amt)));
-            }
-          }};
-  BankAccountCollection<std::monostate> acc = BankAccountCollection<
-      std::monostate>{std::move(_lc1_checking_), std::move(_lc1_saving_)};
+  Account<std::monostate> _lc1_saving_ = Account<std::monostate>{
+      [=](std::monostate) { return *_lc3_bal_ref; },
+      [=](uint64_t amt) {
+        int64_t bal = *_lc3_bal_ref;
+        *_lc3_bal_ref = static_cast<int64_t>(
+            static_cast<uint64_t>(bal) +
+            static_cast<uint64_t>(static_cast<int64_t>(amt)));
+        return static_cast<int64_t>(
+            static_cast<uint64_t>(bal) +
+            static_cast<uint64_t>(static_cast<int64_t>(amt)));
+      },
+      [=](int64_t amt) {
+        int64_t bal = *_lc3_bal_ref;
+        if (static_cast<int64_t>(static_cast<uint64_t>(bal) -
+                                 static_cast<uint64_t>(amt)) <
+            INT64_C(0)) {
+          return std::optional<int64_t>();
+        } else {
+          *_lc3_bal_ref = static_cast<int64_t>(static_cast<uint64_t>(bal) -
+                                               static_cast<uint64_t>(amt));
+          return std::make_optional<int64_t>(static_cast<int64_t>(
+              static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
+        }
+      }};
+  BankAccountCollection<std::monostate> acc =
+      BankAccountCollection<std::monostate>{std::move(_lc1_checking_),
+                                            std::move(_lc1_saving_)};
   int64_t a = acc.checking.getBalance(std::monostate{});
   std::optional<int64_t> result = acc.checking.withdraw(a);
   if (result.has_value()) {

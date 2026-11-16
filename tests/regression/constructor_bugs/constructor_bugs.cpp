@@ -62,13 +62,14 @@ ConstructorBugs::bad_branch_list(ConstructorBugs::source_state_list s1) {
 
 ConstructorBugs::state ConstructorBugs::get_state(uint64_t n) {
   return state{n, List<uint64_t>::cons(
-                   n, List<uint64_t>::cons(
-                       (n + UINT64_C(1)), List<uint64_t>::cons(
-                           (n + UINT64_C(2)), List<uint64_t>::nil())))};
+                      n, List<uint64_t>::cons(
+                             (n + UINT64_C(1)),
+                             List<uint64_t>::cons((n + UINT64_C(2)),
+                                                  List<uint64_t>::nil())))};
 }
 
-std::pair<std::pair<ConstructorBugs::state, ConstructorBugs::state>,
-          uint64_t> ConstructorBugs::tuple_from_call(uint64_t n) {
+std::pair<std::pair<ConstructorBugs::state, ConstructorBugs::state>, uint64_t>
+ConstructorBugs::tuple_from_call(uint64_t n) {
   ConstructorBugs::state s = get_state(n);
   return std::make_pair(std::make_pair(s, s), s.value);
 }
@@ -98,8 +99,8 @@ List<uint64_t> ConstructorBugs::extract_data(const ConstructorBugs::state &s) {
   return s.data;
 }
 
-std::pair<std::pair<ConstructorBugs::state, uint64_t>,
-          List<uint64_t>> ConstructorBugs::multi_call_tuple(uint64_t n) {
+std::pair<std::pair<ConstructorBugs::state, uint64_t>, List<uint64_t>>
+ConstructorBugs::multi_call_tuple(uint64_t n) {
   ConstructorBugs::state s = get_state(n);
   return std::make_pair(std::make_pair(s, extract_value(s)), extract_data(s));
 }
@@ -125,12 +126,13 @@ List<ConstructorBugs::state>
 ConstructorBugs::list_test(const ConstructorBugs::state &s) {
   return List<ConstructorBugs::state>::cons(
       s, List<ConstructorBugs::state>::cons(
-          s, List<ConstructorBugs::state>::cons(
-              s, List<ConstructorBugs::state>::nil())));
+             s, List<ConstructorBugs::state>::cons(
+                    s, List<ConstructorBugs::state>::nil())));
 }
 
 std::pair<std::pair<std::pair<ConstructorBugs::state, uint64_t>,
-                    std::pair<uint64_t, List<uint64_t>>>, List<uint64_t>>
+                    std::pair<uint64_t, List<uint64_t>>>,
+          List<uint64_t>>
 ConstructorBugs::triple_proj(const ConstructorBugs::state &s) {
   return std::make_pair(std::make_pair(std::make_pair(s, s.value),
                                        std::make_pair(s.value, s.data)),
@@ -147,10 +149,10 @@ ConstructorBugs::outer_call(uint64_t n) {
   return inner_pair(get_state(n));
 }
 
-std::pair<
-    std::pair<
-        std::pair<std::pair<ConstructorBugs::state, ConstructorBugs::state>,
-                  uint64_t>, uint64_t>, List<uint64_t>>
+std::pair<std::pair<std::pair<
+    std::pair<ConstructorBugs::state, ConstructorBugs::state>, uint64_t>,
+                    uint64_t>,
+          List<uint64_t>>
 ConstructorBugs::extreme_reuse(const ConstructorBugs::state &s) {
   return std::make_pair(
       std::make_pair(std::make_pair(std::make_pair(s, s), s.value), s.value),
@@ -194,8 +196,8 @@ ConstructorBugs::pair_from_func(uint64_t n) {
   return std::make_pair(i, i.inner_val);
 }
 
-std::optional<std::pair<ConstructorBugs::Inner,
-                        uint64_t>> ConstructorBugs::match_option_record(
+std::optional<std::pair<ConstructorBugs::Inner, uint64_t>>
+ConstructorBugs::match_option_record(
     const std::optional<ConstructorBugs::Inner> &o) {
   if (o.has_value()) {
     const ConstructorBugs::Inner &i = *o;
@@ -241,9 +243,9 @@ ConstructorBugs::deep_proj(const ConstructorBugs::Container &c) {
 std::pair<List<ConstructorBugs::Inner>, uint64_t>
 ConstructorBugs::list_with_proj(const ConstructorBugs::Inner &i) {
   return std::make_pair(List<ConstructorBugs::Inner>::cons(
-                            i, List<ConstructorBugs::Inner>::cons(
-                                i, List<ConstructorBugs::Inner>::cons(
-                                    i, List<ConstructorBugs::Inner>::nil()))),
+      i, List<ConstructorBugs::Inner>::cons(
+             i, List<ConstructorBugs::Inner>::cons(
+                    i, List<ConstructorBugs::Inner>::nil()))),
                         i.inner_val);
 }
 
@@ -263,8 +265,8 @@ ConstructorBugs::quad_tuple(const ConstructorBugs::Inner &i) {
                         std::make_pair(i.inner_val, i.inner_val));
 }
 
-std::pair<std::optional<ConstructorBugs::Inner>,
-          uint64_t> ConstructorBugs::match_both_branches(
+std::pair<std::optional<ConstructorBugs::Inner>, uint64_t>
+ConstructorBugs::match_both_branches(
     const std::optional<ConstructorBugs::Inner> &o) {
   if (o.has_value()) {
     const ConstructorBugs::Inner &i = *o;
@@ -319,8 +321,8 @@ ConstructorBugs::inline_from_call(uint64_t n) {
   return std::make_pair(get_state_inline(n), get_state_inline(n).value_inline);
 }
 
-std::pair<std::pair<ConstructorBugs::State0, uint64_t>,
-          uint64_t> ConstructorBugs::same_call_multi_proj(uint64_t n) {
+std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>
+ConstructorBugs::same_call_multi_proj(uint64_t n) {
   return std::make_pair(
       std::make_pair(get_state_inline(n), get_state_inline(n).value_inline),
       get_state_inline(n).data_inline);
@@ -412,9 +414,8 @@ ConstructorBugs::inline_both_branches(bool b,
 
 std::pair<std::pair<ConstructorBugs::State0, uint64_t>, uint64_t>
 ConstructorBugs::test_apply(const ConstructorBugs::State0 &s) {
-  return apply_twice([](const ConstructorBugs::State0 &s0) {
-    return s0.value_inline;
-  }, s);
+  return apply_twice(
+      [](const ConstructorBugs::State0 &s0) { return s0.value_inline; }, s);
 }
 
 uint64_t ConstructorBugs::get_value_inline(const ConstructorBugs::State0 &s) {

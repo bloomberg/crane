@@ -611,19 +611,17 @@ MemSafetyProbe28::zip_collect(const MemSafetyProbe28::tree &t1,
       auto _f = std::move(std::get<CraneCont_Leaf>(_frame));
       const MemSafetyProbe28::tree &a0 = *_f.a0;
       uint64_t a1 = _f.a1;
-      _stack.emplace_back(
-          CraneEnter{List<uint64_t>::cons(a1, std::move(_result)), tree::leaf(),
-                     &a0});
+      _stack.emplace_back(CraneEnter{
+          List<uint64_t>::cons(a1, std::move(_result)), tree::leaf(), &a0});
     } else {
       auto _f = std::move(std::get<CraneCont_Node>(_frame));
       const MemSafetyProbe28::tree &a0 = *_f.a0;
       uint64_t a1 = _f.a1;
       std::shared_ptr<MemSafetyProbe28::tree> a00 = std::move(_f.a00);
       uint64_t a10 = _f.a10;
-      _stack.emplace_back(
-          CraneEnter{List<uint64_t>::cons(
-                         a1, List<uint64_t>::cons(a10, std::move(_result))),
-                     *a00, &a0});
+      _stack.emplace_back(CraneEnter{List<uint64_t>::cons(
+          a1, List<uint64_t>::cons(a10, std::move(_result))),
+                                     *a00, &a0});
     }
   }
   return _result;

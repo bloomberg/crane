@@ -121,8 +121,9 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
-            const auto &[a0] = std::get<
-                typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v());
+            const auto &[a0] =
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
+                    _other.v());
             return Inl1{[&]() -> E1 {
               if constexpr (crane_convertible<E1, const CraneU0 &>) {
                 return crane_convert<E1>(a0);
@@ -132,8 +133,9 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] = std::get<
-                typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(_other.v());
+            const auto &[a0] =
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
+                    _other.v());
             return Inr1{[&]() -> E2 {
               if constexpr (crane_convertible<E2, const CraneU1 &>) {
                 return crane_convert<E2>(a0);
@@ -200,11 +202,10 @@ struct NestedSumIndexMismatch {
   }
 
   static inline const bool is_three = []() -> bool {
-    auto _cs =
-        c_of<std::monostate>(Sum1<AE, Sum1<BE, cE, crane::obj>,
-                                  std::monostate>::inr1(
-                                 Sum1<BE, cE, std::monostate>::inr1(
-                                     cE::c(Nat::s(Nat::s(Nat::s(Nat::o())))))));
+    auto _cs = c_of<std::monostate>(
+        Sum1<AE, Sum1<BE, cE, crane::obj>, std::monostate>::inr1(
+            Sum1<BE, cE, std::monostate>::inr1(
+                cE::c(Nat::s(Nat::s(Nat::s(Nat::o())))))));
     if (_cs.has_value()) {
       const Nat &n = *_cs;
       return n.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
