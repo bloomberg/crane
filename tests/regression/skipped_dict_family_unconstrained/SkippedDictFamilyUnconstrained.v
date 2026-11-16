@@ -56,7 +56,7 @@
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Monads.ITreeReified.
 From ITree Require Import ITree.
-Require Import List.
+From Stdlib Require Import List.
 
 Inductive void : Set := .
 

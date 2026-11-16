@@ -6,7 +6,7 @@
    `using relation_on_X = Relation_Definitions::...;` referencing a
    namespace that does not exist in the extracted output. *)
 
-Require Import Coq.Relations.Relation_Definitions.
+From Stdlib Require Import Relations.Relation_Definitions.
 
 Module Type OrderedType.
   Parameter t : Type.

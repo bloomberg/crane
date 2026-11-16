@@ -6,7 +6,7 @@
     instantiation in expression position, which is not an expression. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import NatIntStd.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module MonoidClassArg.

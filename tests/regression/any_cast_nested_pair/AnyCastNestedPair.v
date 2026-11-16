@@ -11,7 +11,7 @@
    directly since the value IS already std::any. *)
 
 From Crane Require Import Mapping.NatIntStd.
-Require Import Coq.Lists.List.
+From Stdlib Require Import Lists.List.
 Import ListNotations.
 Require Crane.Extraction.
 

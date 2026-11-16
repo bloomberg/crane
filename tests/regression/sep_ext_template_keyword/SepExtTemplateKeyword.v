@@ -4,7 +4,7 @@
    for dependent template member access in qualified names.
    E.g. typename Raw::Tree<t_elt> -> typename Raw::template Tree<t_elt> *)
 
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module Type RawSig.

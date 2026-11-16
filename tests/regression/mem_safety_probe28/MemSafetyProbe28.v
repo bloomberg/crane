@@ -2,7 +2,7 @@ From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
 
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Set Crane Loopify.

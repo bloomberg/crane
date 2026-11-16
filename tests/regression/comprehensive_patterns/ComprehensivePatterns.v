@@ -5,7 +5,7 @@
 
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Set Crane Loopify.  (* For LoopifyBug patterns *)

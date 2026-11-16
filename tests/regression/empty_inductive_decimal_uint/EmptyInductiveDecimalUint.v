@@ -8,7 +8,7 @@
     v} *)
 
 Require Crane.Extraction.
-Require Import String DecimalString Decimal.
+From Stdlib Require Import String DecimalString Decimal.
 
 Module EmptyInductiveDecimalUint.
 

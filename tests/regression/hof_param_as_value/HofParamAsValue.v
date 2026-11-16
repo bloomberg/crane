@@ -6,7 +6,7 @@
     to a higher-order method then has no type to deduce. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import NatIntStd.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module HofParamAsValue.

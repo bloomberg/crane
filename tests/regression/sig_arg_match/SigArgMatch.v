@@ -6,7 +6,7 @@
     with a structured binding, neither of which compiles. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module SigArgMatch.

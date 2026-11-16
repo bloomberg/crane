@@ -7,7 +7,7 @@
     the extracted code fails to recover the function from the box. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module SigtHeteroPayload.

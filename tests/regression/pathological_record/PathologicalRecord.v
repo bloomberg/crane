@@ -8,7 +8,7 @@
    that might not simplify to MLrel during optimization.
 *)
 Require Import Crane.Mapping.NatIntStd.
-Require Import Lia.
+From Stdlib Require Import Lia.
 Require Crane.Extraction.
 
 Module PathologicalRecord.

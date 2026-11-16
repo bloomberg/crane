@@ -5,7 +5,7 @@
     as a C++ concept, and a concept cannot be the type of a struct member. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import NatIntStd.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module InstanceInRecord.
