@@ -3024,15 +3024,6 @@ let cut2 = Cpp_ast.cut2
 
 let pp_cpp_type_at ctx par vl t = pp_cpp_type ctx par vl t
 
-(* The type printer's entry for a lowered type written outside every
-   declaration of the tree, where the printer is: a type no declaration
-   holds yet, one it could not pin down written as the erased type it would
-   be printed as. *)
-let pp_cpp_type ?lead par vl (t : Cpp_ir.Lowered.Type.t) =
-  let t = Cpp_ir.Types.rewrite (function Obligation Opaque_type -> Some Any | _ -> None) t in
-  match Cpp_ir.Resolve.type_ t with
-  | t -> pp_cpp_type ?lead (file_start Common.Intf) par vl t
-  | exception Cpp_ir.Resolve.Owed form ->
-    CErrors.anomaly
-      Pp.(str "Crane: a type written outside every finished declaration: " ++ str form
-          ++ str ", which only a lowered declaration may hold, survived resolution")
+(* The type printer's entry for a type written outside every declaration of
+   the tree, at the start of the header. *)
+let pp_cpp_type ?lead par vl t = pp_cpp_type ?lead (file_start Common.Intf) par vl t

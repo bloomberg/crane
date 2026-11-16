@@ -150,6 +150,24 @@ for v in mp_renaming_fun ref_renaming_fun note_decided_while_emitting; do
   fi
 done
 
+# CppIR reaches the resolved phase one way: Cpp_pipeline, which finishes a
+# declaration and resolves the few types and values written outside every
+# declaration.  No other module converts (Cpp_ir.Resolve), and the printer
+# and the CppAST it reads name no lowered value.
+for f in src/*.ml src/*.mli; do
+  case "$f" in src/cpp_pipeline.ml) continue ;; esac
+  if grep -q 'Cpp_ir\.Resolve\b' "$f"; then
+    echo "$f converts CppIR to the resolved phase (Cpp_ir.Resolve), which only Cpp_pipeline may"
+    status=1
+  fi
+done
+for f in src/cpp_print.ml src/cpp_print.mli src/cpp_ast.ml src/cpp_ast.mli; do
+  if grep -q 'Cpp_ir\.Lowered\b\|Grammar\.lowered\b' "$f"; then
+    echo "$f names a lowered CppIR value, which the printer may not read"
+    status=1
+  fi
+done
+
 for rule in "${rules[@]}"; do
   modules=${rule%% : *}
   forbidden=" ${rule##* : } "

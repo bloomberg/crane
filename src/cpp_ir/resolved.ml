@@ -5,8 +5,9 @@
     spelling, no unsettled callable constraint, no undecided capture or
     [constexpr], no uninstantiated mapping block.  The forms that would say
     otherwise exist only at {!Grammar.lowered}, so they cannot occur here.
-    {!Resolve} produces it at the end of CppIR finishing; the printer and
-    {!Cpp_ast}'s leaves read it. *)
+    {!Cpp_pipeline} produces it, at the end of CppIR finishing and for the
+    few types and values written outside every declaration; the printer and
+    {!Cpp_ast}'s leaves read it, and name no lowered value. *)
 
 (** The phase index of a resolved value. *)
 type phase = Grammar.resolved
