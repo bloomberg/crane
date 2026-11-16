@@ -59,7 +59,7 @@ type t = {
       (** The constants written as accessor functions. *)
   nested_structs : Struct_plan.nested_structs;
       (** The structs written inside another struct, by name. *)
-  promoted_inductives : Ref.User.Set.t;
+  promoted_inductives : Core.Ref.User.Set.t;
       (** The inductives promoted into their own namespace struct (e.g.
           String.string -> [namespace String { struct String }]): the
           unit's, planned ([Cpp.plan_promoted_inductives]), and every

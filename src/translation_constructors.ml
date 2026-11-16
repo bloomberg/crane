@@ -606,7 +606,7 @@ let record_declared_field_cpp_ty cx env (ty : Core.Type.t) ft =
   match ty with
   | Core.Type.Global_app {head = (GlobRef.IndRef (kn, _) as n); _} ->
     let t =
-      Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton n) tvars ft
+      Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton n) tvars ft
     in
     if Table.get_ind_num_param_vars_opt kn = Some 0 then
       Type_util.tvar_erase_type t

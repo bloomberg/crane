@@ -93,3 +93,15 @@ module Retype = Retype
 (** Freezing extracted types and terms, minting an open annotation for each
     unsolved metavariable. *)
 module Freezer = Freezer
+
+(** The type-variable numberings of a scheme. *)
+module Scheme = Scheme
+
+(** Global references compared as one entity, and their sets and maps. *)
+module Ref = Ref
+
+(** The identity of a Core binder. *)
+module Binder = Binder
+
+(** The lexical environment of a Core body. *)
+module Lexenv = Lexenv

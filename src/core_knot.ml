@@ -48,7 +48,7 @@ let tie defs f ~kept k j body =
       Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic f); arguments = args}
     | Core.Expr.Bound_variable {index = i; _} when i = k - j + d -> raise_notrace Read
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when List.exists (knot d) args -> (
-      match (Ref.User.Map.find_opt use.callee defs, Core_specialize.body_of defs use) with
+      match (Core.Ref.User.Map.find_opt use.callee defs, Core_specialize.body_of defs use) with
       | Some (Core_specialize.Term _), Some helper -> (
         match Core_specialize.instantiate helper args with Some e -> self d e | None -> raise_notrace Read )
       | _ -> raise_notrace Read )
@@ -66,7 +66,7 @@ let fixpoint defs (fd : Core.Recursion.Definition.extracted) =
     | Core.Expr.Apply {callee = Core.Expr.Global ({callee = g; _} as use); arguments = args} when not (same g f) -> (
       let indexed = List.mapi (fun i a -> (i, a)) args in
       let knots = List.filter_map (fun (i, a) -> Option.map (fun kept -> (i, kept)) (eta_of f a)) indexed in
-      match (knots, Ref.User.Map.find_opt g defs) with
+      match (knots, Core.Ref.User.Map.find_opt g defs) with
       | [(j, kept)], Some (Core_specialize.Term _)
         when not (List.exists (fun (i, a) -> i <> j && mentions f a) indexed) -> (
         match Core_specialize.body_of defs use with

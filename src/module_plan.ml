@@ -52,32 +52,32 @@ let equal a b =
   && List.equal Label.equal a.concept_prerequisites b.concept_prerequisites
 
 type layout = {
-  enums : Ref.User.Set.t;
-  concepts : string Ref.User.Map.t;
+  enums : Core.Ref.User.Set.t;
+  concepts : string Core.Ref.User.Map.t;
   modtype_concepts : string MPmap.t;
   app_sources : ModPath.t MPmap.t;
-  eponymous : Ref.User.Set.t;
+  eponymous : Core.Ref.User.Set.t;
   eponymous_by_modpath : eponymous_record MPmap.t;
-  namespace_scope : Ref.User.Set.t;
+  namespace_scope : Core.Ref.User.Set.t;
   wrapper_table : (string * wrapper_role) MPmap.t;
-  global_types : Ref.User.Set.t;
+  global_types : Core.Ref.User.Set.t;
   prerequisites : Label.Set.t;
 }
 
 let no_layout =
-  { enums = Ref.User.Set.empty;
-    concepts = Ref.User.Map.empty;
+  { enums = Core.Ref.User.Set.empty;
+    concepts = Core.Ref.User.Map.empty;
     modtype_concepts = MPmap.empty;
     app_sources = MPmap.empty;
-    eponymous = Ref.User.Set.empty;
+    eponymous = Core.Ref.User.Set.empty;
     eponymous_by_modpath = MPmap.empty;
-    namespace_scope = Ref.User.Set.empty;
+    namespace_scope = Core.Ref.User.Set.empty;
     wrapper_table = MPmap.empty;
-    global_types = Ref.User.Set.empty;
+    global_types = Core.Ref.User.Set.empty;
     prerequisites = Label.Set.empty }
 
 let extend l f =
-  let refs s rs = List.fold_left (fun s r -> Ref.User.Set.add r s) s rs in
+  let refs s rs = List.fold_left (fun s r -> Core.Ref.User.Set.add r s) s rs in
   let pairs add m kvs = List.fold_left (fun m (k, v) -> add k v m) m kvs in
   let eponymous_by_modpath =
     List.fold_left
@@ -98,8 +98,8 @@ let extend l f =
         MPmap.add mp (name, role) m )
       l.wrapper_table f.wrappers
   in
-  { enums = refs Ref.User.Set.empty f.global_scope_enums;
-    concepts = pairs Ref.User.Map.add l.concepts f.concept_names;
+  { enums = refs Core.Ref.User.Set.empty f.global_scope_enums;
+    concepts = pairs Core.Ref.User.Map.add l.concepts f.concept_names;
     modtype_concepts = pairs MPmap.add l.modtype_concepts f.modtype_concept_names;
     app_sources = pairs MPmap.add l.app_sources f.functor_app_sources;
     eponymous = refs l.eponymous (List.map (fun e -> e.record) f.eponymous_records);
@@ -109,19 +109,19 @@ let extend l f =
     global_types = refs l.global_types f.global_scope_types;
     prerequisites = List.fold_left (fun s l -> Label.Set.add l s) l.prerequisites f.concept_prerequisites }
 
-let for_next_unit l = {l with namespace_scope = Ref.User.Set.empty; prerequisites = Label.Set.empty}
+let for_next_unit l = {l with namespace_scope = Core.Ref.User.Set.empty; prerequisites = Label.Set.empty}
 
-let is_global_scope_enum l r = Ref.User.Set.mem r l.enums
-let concept_name l r = Ref.User.Map.find_opt r l.concepts
+let is_global_scope_enum l r = Core.Ref.User.Set.mem r l.enums
+let concept_name l r = Core.Ref.User.Map.find_opt r l.concepts
 let modtype_concept_name l mp = MPmap.find_opt mp l.modtype_concepts
 let functor_app_source l mp = MPmap.find_opt mp l.app_sources
-let is_eponymous_record l r = Ref.User.Set.mem r l.eponymous
+let is_eponymous_record l r = Core.Ref.User.Set.mem r l.eponymous
 let eponymous_record_containing l = function
   | GlobRef.ConstRef kn -> MPmap.find_opt (Constant.modpath kn) l.eponymous_by_modpath
   | _ -> None
-let is_namespace_scope_ref l r = Ref.User.Set.mem r l.namespace_scope
+let is_namespace_scope_ref l r = Core.Ref.User.Set.mem r l.namespace_scope
 let wrapper l mp = MPmap.find_opt mp l.wrapper_table
 let wrapper_struct l mp = Option.map fst (wrapper l mp)
 let wrapper_role l mp = Option.map snd (wrapper l mp)
-let is_global_scope_type l r = Ref.User.Set.mem r l.global_types
+let is_global_scope_type l r = Core.Ref.User.Set.mem r l.global_types
 let is_concept_prerequisite layout l = Label.Set.mem l layout.prerequisites

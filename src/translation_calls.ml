@@ -731,7 +731,7 @@ let projection_abi x =
   let n_class = Type_util.projection_class_arity x in
   let of_method v =
     match Option.bind (Core_util.recorded_schema x) (fun s -> Core.Schema.origin s v) with
-    | Some b -> Scheme.Binder.position b.Core.Schema.binder >= n_class
+    | Some b -> Core.Scheme.Binder.position b.Core.Schema.binder >= n_class
     | None -> true
   in
   Callable_abi.foreign ~callee:x ~scheme:(Core_util.reference_scheme x) ~kept:of_method ()
@@ -747,8 +747,8 @@ let callee_abi cx ~instances id =
   let relaxed_tt = relaxed_tt_return_var id in
   let omitted = Translation_tvars.type_arg_omission id in
   Callable_abi.plan (Translation_state.callables cx) id ~scheme:(Core_util.reference_scheme id) ~instances ~omitted
-    ~higher_kinded:(fun v -> IntSet.mem (Scheme.Var.ordinal v) hk)
-    ~kept:(fun v -> omitted v = None && relaxed_tt <> Some (Scheme.Var.ordinal v))
+    ~higher_kinded:(fun v -> IntSet.mem (Core.Scheme.Var.ordinal v) hk)
+    ~kept:(fun v -> omitted v = None && relaxed_tt <> Some (Core.Scheme.Var.ordinal v))
     ?reachable:(writable_tvar_count id)
     ~relaxed:(fun i ->
       IntSet.mem i (Option.cata Type_util.relaxed_higher_kinded_tvars IntSet.empty core_ty) )
@@ -761,7 +761,7 @@ let written_at_variables cx id (by_var : (int * Cpp_ir.Lowered.Type.t) list) =
   Template_application.to_list
     (Template_application.plan (callee_abi cx ~instances:0 id)
        ~instance:(fun _ -> None)
-       ~scheme:(fun v -> List.assoc_opt (Scheme.Var.ordinal v) by_var) )
+       ~scheme:(fun v -> List.assoc_opt (Core.Scheme.Var.ordinal v) by_var) )
 
 (** A call lowered against its callee's plan: the plan its arguments are
     lowered by, the callee's C++ type at the call, the written type arguments by
@@ -775,7 +775,7 @@ type lowered_call = {
   written : Core.Phase.frozen Core_util.Var_types.t;
   abi : Callable_abi.t;
   application : Template_application.t;
-  written_by_var : (Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
+  written_by_var : (Core.Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
 }
 
 (** [call_type_args ~caller ?expected_ty env id plan args] -- the type
@@ -810,7 +810,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
   let dictionary_filled = Elaborated_call.dictionary_filled call in
   (* The callee's variable its type spells [Core.Type.Variable (_, i)]. *)
   let scheme_var i =
-    Option.bind (Core_util.reference_scheme id) (fun s -> Scheme.Var.of_tvar s i)
+    Option.bind (Core_util.reference_scheme id) (fun s -> Core.Scheme.Var.of_tvar s i)
   in
   (* Whether [v] comes from a type binder of the callee's that erasure
      removed, as its schema records: what the call would pass there is a
@@ -1071,7 +1071,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         | _ -> None )
       (Callable_abi.template_head (callee_abi cx ~instances:0 id))
   in
-  let mem v vs = List.exists (Scheme.Var.equal v) vs in
+  let mem v vs = List.exists (Core.Scheme.Var.equal v) vs in
   let regular_of ?(keep = fun v -> mem v in_head) tys =
     Core_util.Var_types.bindings tys
     |> List.filter (fun (v, _) -> keep v)
@@ -1079,7 +1079,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
          (fun (v, ty) ->
            (* How the callee's type spells the variable, which the sets read
               off that type are keyed by. *)
-           let i = Scheme.Var.ordinal v in
+           let i = Core.Scheme.Var.ordinal v in
            (* A constant type function written at a higher-kinded variable is
               the constant carrier, not the head of the type it returns. *)
            let t =
@@ -1193,7 +1193,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         let hk = declared_higher_kinded_tvars core_ty in
         not
           (List.exists
-             (fun (v, t) -> IntSet.mem (Scheme.Var.ordinal v) hk && Cpp_ir.Types.prints_as_any t)
+             (fun (v, t) -> IntSet.mem (Core.Scheme.Var.ordinal v) hk && Cpp_ir.Types.prints_as_any t)
              (regular_of ~keep:(Callable_abi.keeps (callee_abi cx ~instances:0 id)) tys) )
     in
     (* Writing the list out is what this call is left with once the
@@ -1210,7 +1210,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
          ({!Translation_tvars.under_applied_ind}) is filled the same way. *)
       List.map
         (fun (v, t) ->
-          let i = Scheme.Var.ordinal v in
+          let i = Core.Scheme.Var.ordinal v in
           let bound () =
             match
               Option.bind
@@ -1263,7 +1263,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         (* The erased variable is the concrete return type; any other erased
            entry is dropped. *)
         List.map
-          (fun (w, t) -> (w, if Scheme.Var.equal w v then ret_ty else t))
+          (fun (w, t) -> (w, if Core.Scheme.Var.equal w v then ret_ty else t))
           regular_type_args
         |> List.filter (fun (_, t) -> not (Cpp_ir.Types.prints_as_any t))
       | None -> written_out ()
@@ -1309,7 +1309,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     List.map
       (fun (v, t) ->
         ( v,
-          if (not (IntSet.mem (Scheme.Var.ordinal v) hk)) && Translation_tvars.under_applied_ind t then
+          if (not (IntSet.mem (Core.Scheme.Var.ordinal v) hk)) && Translation_tvars.under_applied_ind t then
             Translation_tvars.saturate_at_any t
           else t ) )
       regular
@@ -1318,7 +1318,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     let regular = at_plain_positions regular in
     Template_application.plan abi
       ~instance:(fun k -> List.nth_opt instance_args k)
-      ~scheme:(fun v -> Scheme.Var.assoc_opt v regular)
+      ~scheme:(fun v -> Core.Scheme.Var.assoc_opt v regular)
   in
   let regular = build_type_args tyargs in
   (* A class parameter is quantified first, so the carrier is the callee's
@@ -1369,7 +1369,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         resolve_from_argument_heads ~accept:(fun _ f -> not (no_struct f)) ~lex tyargs
           primary_core_args
       in
-      if List.equal Scheme.Var.equal (Call_tyargs.holes refined) (Call_tyargs.holes tyargs)
+      if List.equal Core.Scheme.Var.equal (Call_tyargs.holes refined) (Call_tyargs.holes tyargs)
       then regular
       else
         match build_type_args refined with
@@ -1390,7 +1390,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
            | Callable_abi.From_scheme v, Some a
              when Cpp_ir.Types.prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
              [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
-                 (Scheme.Var.ordinal v)
+                 (Core.Scheme.Var.ordinal v)
                  (Pp.string_of_ppcmds
                     (cx.Translation_state.pp_cpp_type (Translation_state.unit_context cx) (Translation_state.plans cx) false []
                        (Cpp_pipeline.spell_type a))) ]
@@ -1576,7 +1576,7 @@ let rec core_arg_to_template_type cx ?expected env core_arg : Cpp_ir.Lowered.Typ
       let filled =
         List.map
           (fun (v, t) ->
-            let j = Scheme.Var.ordinal v in
+            let j = Core.Scheme.Var.ordinal v in
             ( j,
               if not (Core_util.is_erased_type (resolve_meta t)) then
                 Some (List.hd (Translation_types.build_template_params cx ~site:Cpp_ir.Types.Through_tvar env [] [t]))

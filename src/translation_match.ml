@@ -176,7 +176,7 @@ let gen_match_branch cx env (typ : Core.Type.t) rty cname ids dummies body sname
       && (match List.nth_opt non_erased_def_site_field_tys i with
           | Some def_ty when num_pv = 0 ->
             let cpp_ty =
-              Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Ref.User.Set.singleton ind_ref) [] def_ty
+              Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton ind_ref) [] def_ty
             in
             has_unnamed_tvar cpp_ty
           | Some (Core.Type.Variable {variable = k; _}) ->
@@ -214,7 +214,7 @@ let gen_match_branch cx env (typ : Core.Type.t) rty cname ids dummies body sname
           Translation_types.cpp_of_core cx env core_ty
         in
         let storage_field_cpp_ty =
-          Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton ind_ref)
+          Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton ind_ref)
             tvars
             core_ty
         in
@@ -1000,9 +1000,9 @@ let gen_cpp_custom_body cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
               | Core.Type.Global_app {head = g; type_arguments = []; _} -> GlobRef.CanOrd.equal g g_scrut
               | _ -> false
             in
-            if is_direct_self_ref then Ref.User.Set.empty
-            else Ref.User.Set.singleton g_scrut
-          | _ -> Ref.User.Set.empty
+            if is_direct_self_ref then Core.Ref.User.Set.empty
+            else Core.Ref.User.Set.singleton g_scrut
+          | _ -> Core.Ref.User.Set.empty
         in
         ( { name = x;
             type_ = Translation_types.cpp_ir_of_core_type cx env ~ns tvars ty;
@@ -1396,7 +1396,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
                        (fun p ->
                          match p.Callable_abi.origin with
                          | Callable_abi.From_scheme v ->
-                           not (IntSet.mem (Scheme.Var.ordinal v) deducible)
+                           not (IntSet.mem (Core.Scheme.Var.ordinal v) deducible)
                          | _ -> true )
                        params )
               | None -> None
@@ -1563,7 +1563,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
     | Some record_ref, Some core_ty ->
       let tvars = get_current_type_vars cx in
       let storage_ty =
-        Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton record_ref) tvars core_ty
+        Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) tvars core_ty
       in
       let api_ty = Translation_types.cpp_of_core cx env core_ty in
       Translation_conversion.wrap_api_expr ~storage_ty ~api_ty access
@@ -1923,7 +1923,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
             match typ with
             | Core.Type.Global_app {head = record_ref; _} ->
               let storage_ty =
-                Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton record_ref) [] ty
+                Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) [] ty
               in
               let api_ty = Translation_types.cpp_ir_of_core_type cx env [] ty in
               Translation_conversion.wrap_api_expr ~storage_ty ~api_ty e
@@ -2027,7 +2027,7 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
             match typ with
             | Core.Type.Global_app {head = record_ref; _} ->
               let storage_ty =
-                Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton record_ref) tvars ty
+                Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton record_ref) tvars ty
               in
               let api_ty = Translation_types.cpp_of_core cx env ty in
               Translation_conversion.wrap_api_expr ~storage_ty ~api_ty e

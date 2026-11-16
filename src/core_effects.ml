@@ -27,9 +27,9 @@ let operation_of r =
 
 type entry = {occurrence : Core.Occurrence.t; effect_ : effect_}
 
-type t = entry list Ref.User.Map.t
+type t = entry list Core.Ref.User.Map.t
 
-let empty = Ref.User.Map.empty
+let empty = Core.Ref.User.Map.empty
 
 let analyze struc =
   let found = ref empty in
@@ -39,7 +39,7 @@ let analyze struc =
     | Some operation ->
       let e = {occurrence = Core.Global_use.occurrence use; effect_ = {operation; mode}} in
       found :=
-        Ref.User.Map.update use.callee
+        Core.Ref.User.Map.update use.callee
           (fun l -> Some (e :: Option.default [] l))
           !found
   in
@@ -57,7 +57,7 @@ let analyze struc =
   !found
 
 let equal =
-  Ref.User.Map.equal
+  Core.Ref.User.Map.equal
     (List.equal (fun a b -> Core.Occurrence.equal a.occurrence b.occurrence && a.effect_ = b.effect_))
 
 let found_count = State.cell State.Unit 0
@@ -65,7 +65,7 @@ let found_count = State.cell State.Unit 0
 (* A body's annotations may be rewritten before it is translated, which
    rebuilds every node, so the use's occurrence is what identifies it. *)
 let lookup t (use : Core.Global_use.t) =
-  match Ref.User.Map.find_opt use.callee t with
+  match Core.Ref.User.Map.find_opt use.callee t with
   | None -> None
   | Some entries -> (
     let occurrence = Core.Global_use.occurrence use in
@@ -77,5 +77,5 @@ let lookup t (use : Core.Global_use.t) =
 let tally () = incr found_count
 
 let report t =
-  let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) t 0 in
+  let n = Core.Ref.User.Map.fold (fun _ l acc -> acc + List.length l) t 0 in
   Printf.sprintf "effect operations: %d analysed; translation found %d" n !found_count

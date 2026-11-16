@@ -58,7 +58,7 @@ let gen_record_cpp cx name fields (ind : Core.Inductive.Packet.t) =
         all_vars
     in
     let ct =
-      Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Ref.User.Set.singleton name)
+      Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton name)
         spelling t
     in
         let ct = Cpp_ir.Types.map replace_promoted ct in

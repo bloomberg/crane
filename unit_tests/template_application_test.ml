@@ -18,8 +18,8 @@ let () =
   Random.init 20261013;
   for _ = 1 to 500 do
     let arity = Random.int 5 in
-    let scheme = Scheme.Id.fresh callee ~arity in
-    let vars = Scheme.Var.all scheme in
+    let scheme = Core.Scheme.Id.fresh callee ~arity in
+    let vars = Core.Scheme.Var.all scheme in
     (* A head: dictionaries, the variables in a shuffled order with random
        kinds, some deduced callables, some defaults. *)
     let shuffled =
@@ -31,7 +31,7 @@ let () =
           ((Typename : Callable_abi.kind), Common.tc_instance_id k, Instance_param k) )
       @ List.concat_map
           (fun v ->
-            let i = Scheme.Var.ordinal v in
+            let i = Core.Scheme.Var.ordinal v in
             let kind =
               match Random.int 4 with
               | 0 -> (Template 1 : Callable_abi.kind)
@@ -49,7 +49,7 @@ let () =
         ~minted:(List.map (fun (_, name, m) -> (name, m)) entries)
         (List.map (fun (kind, name, _) -> (kind, name)) entries)
     in
-    let value_of v = if Random.bool () then Some (ty ("V" ^ string_of_int (Scheme.Var.ordinal v))) else None in
+    let value_of v = if Random.bool () then Some (ty ("V" ^ string_of_int (Core.Scheme.Var.ordinal v))) else None in
     let values = List.map (fun v -> (v, value_of v)) vars in
     let app =
       Template_application.plan abi

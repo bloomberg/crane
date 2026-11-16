@@ -393,13 +393,13 @@ let fixpoint_of_group fds i =
     if n < 0 then
       s
     else
-      make_subst (n - 1) (Ref.User.Map.add rv.(n) (n + 1) s)
+      make_subst (n - 1) (Core.Ref.User.Map.add rv.(n) (n + 1) s)
   in
-  let s = make_subst (Array.length rv - 1) Ref.User.Map.empty in
+  let s = make_subst (Array.length rv - 1) Core.Ref.User.Map.empty in
   let rec subst n t =
     match t with
     | Core.Expr.Global {callee = (GlobRef.ConstRef kn as refe); _} ->
-      (try Core.Expr.fresh_rel (n + Ref.User.Map.find refe s) with Not_found -> t)
+      (try Core.Expr.fresh_rel (n + Core.Ref.User.Map.find refe s) with Not_found -> t)
     | _ -> ast_map_lift subst n t
   in
   let ids =
@@ -455,7 +455,7 @@ let rec optim_se top to_appear s = function
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = a; type_ = t})) :: lse ->
     let a = normalize (ast_glob_subst !s a) in
     let i = inline r a in
-    if i then s := Ref.User.Map.add r a !s;
+    if i then s := Core.Ref.User.Map.add r a !s;
     let d = decl_of_term r a t in
     (l, Core.Module.Structure_item.Declaration d) :: optim_se top to_appear s lse
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: lse ->
@@ -474,7 +474,7 @@ let rec optim_se top to_appear s = function
     List.iteri
       (fun i (fd : _ Core.Recursion.Definition.at) ->
         if inline fd.entity fake_body then
-          s := Ref.User.Map.add fd.entity (fixpoint_of_group fds i) !s )
+          s := Core.Ref.User.Map.add fd.entity (fixpoint_of_group fds i) !s )
       (Core.Nonempty.to_list fds);
     let fds = Core.Nonempty.map (Core.Recursion.Definition.map_body dump_unused_vars) fds in
     (l, Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group fds)) :: optim_se top to_appear s lse
@@ -507,17 +507,17 @@ let base_r =
 
 (** Dependency tracking: manage the set of needed references. *)
 let reset_needed, add_needed, add_needed_mp, found_needed, is_needed =
-  let needed = ref Ref.User.Set.empty
+  let needed = ref Core.Ref.User.Set.empty
   and needed_mps = ref MPset.empty in
   ( (fun () ->
-      needed := Ref.User.Set.empty;
+      needed := Core.Ref.User.Set.empty;
       needed_mps := MPset.empty ),
-    (fun r -> needed := Ref.User.Set.add (base_r r) !needed),
+    (fun r -> needed := Core.Ref.User.Set.add (base_r r) !needed),
     (fun mp -> needed_mps := MPset.add mp !needed_mps),
-    (fun r -> needed := Ref.User.Set.remove (base_r r) !needed),
+    (fun r -> needed := Core.Ref.User.Set.remove (base_r r) !needed),
     fun r ->
       let r = base_r r in
-      Ref.User.Set.mem r !needed || MPset.mem (modpath_of_r r) !needed_mps )
+      Core.Ref.User.Set.mem r !needed || MPset.mem (modpath_of_r r) !needed_mps )
 
 (** List all GlobRef.t declared by a declaration. *)
 let declared_refs = function
@@ -598,7 +598,7 @@ let check_for_remaining_implicits struc =
 
 (** Full optimization pipeline: normalize, inline, eliminate dead code. *)
 let optimize_struct to_appear struc =
-  let subst = ref (Ref.User.Map.empty : _ Core.Expr.at Ref.User.Map.t) in
+  let subst = ref (Core.Ref.User.Map.empty : _ Core.Expr.at Core.Ref.User.Map.t) in
   let opt_struc =
     List.map
       (fun (mp, lse) -> (mp, optim_se true (fst to_appear) subst lse))

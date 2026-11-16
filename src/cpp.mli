@@ -89,7 +89,7 @@ val files_named_ahead : Translation_state.t -> Unit_context.t -> Core.Program.t 
 
 (** The customs the unit's files write, read off what {!generate_ahead}
     generated in the unit given: whose imports its files include. *)
-val customs_written_ahead : Translation_state.t -> Unit_context.t -> Ref.User.Set.t
+val customs_written_ahead : Translation_state.t -> Unit_context.t -> Core.Ref.User.Set.t
 
 (** Plan, from what {!generate_ahead} finished, which globals the unit's
     function bodies read ({!Cpp_state.read_by_a_function}): every installed

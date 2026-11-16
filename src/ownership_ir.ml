@@ -30,9 +30,9 @@ type arm =
 
 type resume = {
   calls : Core.Occurrence.t list;
-  kept : Core_binder.t list;
-  held : Core_binder.t list;
-  passed : Core_binder.t list;
+  kept : Core.Binder.t list;
+  held : Core.Binder.t list;
+  passed : Core.Binder.t list;
 }
 
 (* A local fixpoint applied where it is written, [at] its occurrence, and
@@ -46,7 +46,7 @@ type entered = {at : Core.Occurrence.t; arguments : argument list; overlaps : in
 type resumes = {
   origin : Names.GlobRef.t;
   depth : int;
-  resume_at : Core_binder.t -> resume option;
+  resume_at : Core.Binder.t -> resume option;
   entry_captures : int option;
   parameter_type : int -> Core.Type.t option;
 }
@@ -57,7 +57,7 @@ type resumes = {
    arguments, nor anything a closure reads at its uses, nor what follows the
    let, reads it or a part of it, nor is another binder the frame keeps a
    part of it or it one of that one; and it is no variable closures copy. *)
-type save = {save_at : Core.Occurrence.t; saved : (Core_binder.t * int * bool) list}
+type save = {save_at : Core.Occurrence.t; saved : (Core.Binder.t * int * bool) list}
 
 (* A call that may enter a frame of the machine the region is lowered as
    ({!machine_call}), by its occurrence: what it enters an adopted entry
@@ -505,14 +505,14 @@ let resume_of resumes d a occurrence =
   match (resumes, ending_calls a) with
   | Some _, [] | None, _ -> None
   | Some {origin; depth; resume_at; _}, ending -> (
-    match resume_at (Core_binder.make ~origin ~level:(depth + d) ~site:(Binding occurrence) ()) with
+    match resume_at (Core.Binder.make ~origin ~level:(depth + d) ~site:(Binding occurrence) ()) with
     | Some ({calls; _} as r) when List.exists (fun c -> List.exists (Core.Occurrence.equal c) calls) ending ->
       Some (depth, r)
     | Some _ | None -> None )
 
 let kept_binders resumes d a occurrence =
   match resume_of resumes d a occurrence with
-  | Some (depth, {kept; _}) -> List.map (fun (b : Core_binder.t) -> (b, b.level - depth)) kept
+  | Some (depth, {kept; _}) -> List.map (fun (b : Core.Binder.t) -> (b, b.level - depth)) kept
   | None -> []
 
 let kept_across resumes d a occurrence = Levels.of_list (List.map snd (kept_binders resumes d a occurrence))
@@ -521,14 +521,14 @@ let kept_across resumes d a occurrence = Levels.of_list (List.map snd (kept_bind
    it holds itself ({!resume.held}). *)
 let held_across resumes d a occurrence =
   match resume_of resumes d a occurrence with
-  | Some (depth, {held; _}) -> Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) held)
+  | Some (depth, {held; _}) -> Levels.of_list (List.map (fun (b : Core.Binder.t) -> b.level - depth) held)
   | None -> Levels.empty
 
 (* Of those, the levels of the ones the frame may keep as pointers
    ({!resume.passed}). *)
 let passed_across resumes d a occurrence =
   match resume_of resumes d a occurrence with
-  | Some (depth, {passed; _}) -> Levels.of_list (List.map (fun (b : Core_binder.t) -> b.level - depth) passed)
+  | Some (depth, {passed; _}) -> Levels.of_list (List.map (fun (b : Core.Binder.t) -> b.level - depth) passed)
   | None -> Levels.empty
 
 (* A call [f] applied [d] deep makes that may enter a frame of the machine
@@ -557,7 +557,7 @@ let machine_call resumes d f =
 type tail_save = {
   let_at : Core.Occurrence.t;
   calls : Core.Occurrence.t list;
-  kept_at : (Core_binder.t * int) list;
+  kept_at : (Core.Binder.t * int) list;
   kept : Levels.t;
   outside : Levels.t;
 }
@@ -1505,7 +1505,7 @@ end
 
 let kept_by_frame p b =
   List.exists
-    (fun s -> List.exists (fun (b', _, _) -> Core_binder.equal b b' && Core_binder.same_site b b') s.saved)
+    (fun s -> List.exists (fun (b', _, _) -> Core.Binder.equal b b' && Core.Binder.same_site b b') s.saved)
     p.saves
 
 module Local_captures = struct
@@ -1531,27 +1531,27 @@ let save_moves p let_ =
     let moved (b, l, _) =
       Levels.mem l owned
       && List.for_all
-           (fun s -> List.exists (fun (b', l', last) -> l' = l && Core_binder.equal b b' && last) s.saved)
+           (fun s -> List.exists (fun (b', l', last) -> l' = l && Core.Binder.equal b b' && last) s.saved)
            saves
     in
     Some (List.filter_map (fun ((b, _, _) as s) -> if moved s then Some b else None) (List.hd saves).saved)
 
 module Frame_save = struct
-  type t = Core_binder.t list
+  type t = Core.Binder.t list
 
-  let recorded : (Core_binder.t * t) list ref = State.cell State.Extraction []
+  let recorded : (Core.Binder.t * t) list ref = State.cell State.Extraction []
 
-  let same b b' = Core_binder.equal b b' && Core_binder.same_site b b'
+  let same b b' = Core.Binder.equal b b' && Core.Binder.same_site b b'
 
   let lookup binder = List.find_map (fun (b, t) -> if same b binder then Some t else None) !recorded
 
   let record binder t =
     match lookup binder with
-    | Some t' when List.equal Core_binder.equal t t' -> ()
+    | Some t' when List.equal Core.Binder.equal t t' -> ()
     | Some t' ->
       Probe.violation "frame save"
         (Pp.str "a let a frame machine resumes at is generated saving its frame otherwise than it was before");
-      let both = List.filter (fun b -> List.exists (Core_binder.equal b) t') t in
+      let both = List.filter (fun b -> List.exists (Core.Binder.equal b) t') t in
       recorded := (binder, both) :: List.filter (fun (b, _) -> not (same b binder)) !recorded
     | None -> recorded := (binder, t) :: !recorded
 end
@@ -1585,14 +1585,14 @@ let entry_moves p =
           | [] -> Levels.empty
           | l :: ls -> List.fold_left Levels.inter l ls
         in
-        (call, List.map (fun l -> Core_binder.make ~origin ~level:(depth + l) ()) (Levels.elements levels)) )
+        (call, List.map (fun l -> Core.Binder.make ~origin ~level:(depth + l) ()) (Levels.elements levels)) )
       calls
   | Some _ | None -> []
 
 type region_plan = t
 
 module Entry_moves = struct
-  type t = Core_binder.t list
+  type t = Core.Binder.t list
 
   let recorded : (Core.Occurrence.t * t) list ref = State.cell State.Extraction []
 
@@ -1600,11 +1600,11 @@ module Entry_moves = struct
 
   let record call t =
     match lookup call with
-    | Some t' when List.equal Core_binder.equal t t' -> ()
+    | Some t' when List.equal Core.Binder.equal t t' -> ()
     | Some t' ->
       Probe.violation "entry moves"
         (Pp.str "a call entering an adopted entry is planned moving otherwise than it was before");
-      let both = List.filter (fun b -> List.exists (Core_binder.equal b) t') t in
+      let both = List.filter (fun b -> List.exists (Core.Binder.equal b) t') t in
       recorded := (call, both) :: List.filter (fun (c, _) -> not (Core.Occurrence.equal c call)) !recorded
     | None -> recorded := (call, t) :: !recorded
 

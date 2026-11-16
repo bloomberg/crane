@@ -122,7 +122,7 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
       (Template_application.plan
          (Callable_abi.projection (Translation_state.callables cx) Translation_calls.projection_abi x)
          ~instance:(fun _ -> None)
-         ~scheme:(fun v -> Scheme.Var.assoc_opt v by_var) )
+         ~scheme:(fun v -> Core.Scheme.Var.assoc_opt v by_var) )
   in
   (* What each operand is written into.  [tys] leads with the carrier, which
      is how the field's own type numbers the class parameter, so the single
@@ -710,7 +710,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
        for a function type is spelled curried ([Through_tvar]), where the
        value passed was spelled where it was declared. *)
     let written_fn_ty =
-      let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
+      let subst i = Core.Scheme.Var.assoc_tvar i written_tvar_args in
       (* An inline custom has no signature its type arguments instantiate:
          its text reads the values as they are ({!Translation_calls.call_result_site}). *)
       if written_tvar_args = [] || is_inline_custom id then None
@@ -911,7 +911,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
            [T2] written [std::function<std::any(std::any)>] where the Core
            instantiation erased the morphism type. *)
         let written_cod =
-          let subst i = Scheme.Var.assoc_tvar i written_tvar_args in
+          let subst i = Core.Scheme.Var.assoc_tvar i written_tvar_args in
           match
             Option.map
               (fun t -> Cpp_ir.Types.substitute subst (Translation_types.cpp_of_core cx env t))
@@ -1252,7 +1252,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
                relaxed to a deduced parameter -- so in a domain it is erased,
                and applied it is the erased type ([void<std::any>] is none). *)
             let subst i =
-              match Scheme.Var.assoc_tvar i written_tvar_args with
+              match Core.Scheme.Var.assoc_tvar i written_tvar_args with
               | Some Cpp_ir.Type.Void -> Some Cpp_ir.Type.Any
               | t -> t
             in

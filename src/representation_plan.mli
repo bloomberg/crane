@@ -60,7 +60,7 @@
 
 (** [region ctx body] -- every pattern binder of [body], a region generated
     in the translation context [ctx], planned: keyed by its site
-    ({!Core_binder.site}, the match and branch) and its field's index there.
+    ({!Core.Binder.site}, the match and branch) and its field's index there.
     What it reads of the context it reads off [ctx], not the global one: the
     scope [outer] its lexical environment binds, the type variables in scope
     and the return type, which are the region's; its outer binders at the
@@ -72,7 +72,7 @@
 val region :
   Translation_state.t ->
   Core.Expr.t ->
-  (Core_binder.site * int * Translation_state.planned_repr) list
+  (Core.Binder.site * int * Translation_state.planned_repr) list
   * (Core.Occurrence.t * Translation_state.Planned_read.t) list
 
 (** [check ctx ~site ~field ~live ()] -- a [CRANE_CHECK_IR] violation unless
@@ -83,4 +83,4 @@ val region :
     pinned down -- the reuse arm's second declaration of a branch's fields, a
     record projection in an expression -- and checked against that answer. *)
 val check :
-  ?as_bound:bool -> Translation_state.translation_ctx -> site:Core_binder.site -> field:int -> live:bool -> unit -> unit
+  ?as_bound:bool -> Translation_state.translation_ctx -> site:Core.Binder.site -> field:int -> live:bool -> unit -> unit

@@ -432,14 +432,14 @@ val element_position : Names.ModPath.t -> render_ctx -> render_ctx
     unit names, from the unit's installed declarations
     ({!Unit_program.installed_finished}), before either file is rendered.
     The program-wide set from {!note_program_reads} is added to it. *)
-val plan_function_reads : Ref.Can.Set.t -> unit
+val plan_function_reads : Core.Ref.Can.Set.t -> unit
 
 (** [note_program_reads s], before any unit of a separate extraction is
     generated: [s] is every global another declaration of the program names.
     A function of a later unit, not yet generated when an earlier one is
     planned, may read a value of the earlier one; each unit's
     {!plan_function_reads} counts all of [s]. *)
-val note_program_reads : Ref.Can.Set.t -> unit
+val note_program_reads : Core.Ref.Can.Set.t -> unit
 
 (** Whether a function body of the unit names [r] (as planned by
     {!plan_function_reads}; nothing does before it is planned).  A header's

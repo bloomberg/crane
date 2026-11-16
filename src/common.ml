@@ -495,17 +495,17 @@ let inductive_generated_members =
    to rather than asking.  Each is mapped to the inductive whose struct it
    lands in, so the naming layer can also keep it clear of that struct's
    factory methods. *)
-let methodified_refs = ref Ref.User.Map.empty
+let methodified_refs = ref Core.Ref.User.Map.empty
 
-let () = register_cleanup (fun () -> methodified_refs := Ref.User.Map.empty)
+let () = register_cleanup (fun () -> methodified_refs := Core.Ref.User.Map.empty)
 
 let reserve_methodified ~ind r =
-  methodified_refs := Ref.User.Map.add r ind !methodified_refs
+  methodified_refs := Core.Ref.User.Map.add r ind !methodified_refs
 
-let is_methodified_ref r = Ref.User.Map.mem r !methodified_refs
+let is_methodified_ref r = Core.Ref.User.Map.mem r !methodified_refs
 
 (** The inductive whose struct [r] is emitted into, if [r] is methodified. *)
-let methodified_owner r = Ref.User.Map.find_opt r !methodified_refs
+let methodified_owner r = Core.Ref.User.Map.find_opt r !methodified_refs
 
 (** The global names as planning left them, once it has ({!end_planning}).
 
@@ -547,18 +547,18 @@ let mktable_id ?census autoclean =
     census;
   ((fun r v -> m := Id.Map.add r v !m), (fun r -> Id.Map.find r !m), clear)
 
-(** Create a mutable [Ref.User.Map]-backed table with optional auto-cleanup.
+(** Create a mutable [Core.Ref.User.Map]-backed table with optional auto-cleanup.
     @param census Enrol the table under this name; see {!Table.census}
     @param autoclean Whether to register a cleanup hook
     @return [(add, get, clear)] triple — same contract as {!mktable_id} *)
 let mktable_ref ?census autoclean =
-  let m = ref Ref.User.Map.empty in
-  let clear () = m := Ref.User.Map.empty in
+  let m = ref Core.Ref.User.Map.empty in
+  let clear () = m := Core.Ref.User.Map.empty in
   if autoclean then register_cleanup clear;
   Option.iter
-    (fun name -> Table.register_census name (fun () -> Ref.User.Map.cardinal !m))
+    (fun name -> Table.register_census name (fun () -> Core.Ref.User.Map.cardinal !m))
     census;
-  ((fun r v -> m := Ref.User.Map.add r v !m), (fun r -> Ref.User.Map.find r !m), clear)
+  ((fun r v -> m := Core.Ref.User.Map.add r v !m), (fun r -> Core.Ref.User.Map.find r !m), clear)
 
 (** Create a mutable [MPmap]-backed table with optional auto-cleanup.
     @param census Enrol the table under this name; see {!Table.census}

@@ -308,7 +308,7 @@ let pattern_field_pins cx ~scrut_pinned ~cname ~typ ~env ~n_fields
       match List.nth_opt non_erased_def_site_field_tys field_i with
       | Some def_ty ->
         let cpp_ty =
-          Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:Ref.User.Set.empty [] def_ty
+          Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:Core.Ref.User.Set.empty [] def_ty
         in
         has_unnamed_tvar cpp_ty
       | None -> false
@@ -480,7 +480,7 @@ let record_field_cpp_ty cx env typ fld : Cpp_ir.Lowered.Type.t option =
     | Some core_ty -> (
       try
         Some
-          (Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton r)
+          (Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton r)
              (get_current_type_vars cx)
              (Core_util.type_subst_list args core_ty))
       with e when CErrors.noncritical e -> None )

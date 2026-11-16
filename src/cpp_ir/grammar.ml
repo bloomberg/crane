@@ -265,7 +265,7 @@ and Local_fixpoint : sig
     member : Core.Occurrence.t * int;
         (** the Core fixpoint it lowers, by the fixpoint's occurrence, and
             the index of its function among the fixpoint's *)
-    captured : (Id.t * Core_binder.t) list;
+    captured : (Id.t * Core.Binder.t) list;
         (** the Core binder each local of the enclosing scope its Core
             fixpoint reads stands for, by the local's name *)
     encoding : encoding;
@@ -284,7 +284,7 @@ and Lambda : sig
     body : 'p Stmt.t list;
     capture : 'p Capture.t;
     moved : Id.t list;  (** what a stored lambda takes by move *)
-    binders : (Id.t * Core_binder.t) list;
+    binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where the lambda is the body of a Core function *)
     fixpoint : Local_fixpoint.t option;
@@ -522,7 +522,7 @@ end =
 and Binding : sig
   (** Whether an assignment to a variable also declares it. *)
   type 'p t =
-    | Declare of 'p Type.t * Core_binder.t option
+    | Declare of 'p Type.t * Core.Binder.t option
         (** [T x = e;], with the Core binder [x] stands for, if any *)
     | Existing  (** [x = e;] *)
     | Declare_static of 'p Type.t  (** [static T x = e;] *)
@@ -550,7 +550,7 @@ and Match : sig
     used : bool;
         (** whether the branch body reads the binding; one it does not is
             written as the placeholder [_] *)
-    binder : Core_binder.t option;
+    binder : Core.Binder.t option;
   }
 
   (** A branch of a {!Stmt.Match}. *)
@@ -590,7 +590,7 @@ and Custom_match : sig
   type 'p param = {
     name : Id.t;
     type_ : 'p Type.t;
-    binder : Core_binder.t option;
+    binder : Core.Binder.t option;
   }
 
   (** A branch: the variables it binds, the constructor's type, its body. *)
@@ -625,7 +625,7 @@ and Foreign_block : sig
     result_type : 'p Type.t;
     values : 'p Expr.t list;
     type_args : 'p Type.t list;
-    binder : Core_binder.t option;  (** the Core binder [result] stands for *)
+    binder : Core.Binder.t option;  (** the Core binder [result] stands for *)
   }
 end =
   Foreign_block
@@ -634,7 +634,7 @@ and Stmt : sig
   (** A C++ statement. *)
   type _ t =
     | Return : 'p Expr.t option -> 'p t
-    | Declare : Id.t * 'p Type.t * Core_binder.t option -> 'p t
+    | Declare : Id.t * 'p Type.t * Core.Binder.t option -> 'p t
         (** [T x;], uninitialised, with the Core binder [x] stands for *)
     | Bind_variable : Id.t * 'p Binding.t * 'p Expr.t -> 'p t
     | Expression : 'p Expr.t -> 'p t
@@ -867,10 +867,10 @@ and Method : sig
     is_conversion : bool;
         (** a conversion function, written [operator R()] with no return
             type of its own *)
-    binders : (Id.t * Core_binder.t) list;
+    binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where translation bound it for one *)
-    receiver_binder : Core_binder.t option;
+    receiver_binder : Core.Binder.t option;
         (** the Core binder the receiver stands for, where there is one *)
     loop : Control_ir.Loop.t option;
         (** the ControlIR loop the body already is, where it was lowered
@@ -1011,7 +1011,7 @@ and Function : sig
         (** never [constexpr]: monadic functions and axiom stubs are not *)
     constexpr : 'p Constexpr.t;
     shape : 'p shape;
-    binders : (Id.t * Core_binder.t) list;
+    binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where translation bound it for one *)
     loop : Control_ir.Loop.t option;

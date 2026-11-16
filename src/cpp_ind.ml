@@ -1405,9 +1405,9 @@ let render_section ctx (groups : section) =
 
 (** The concept of each class, generated ahead of the files in the module
     declaring it, by the class. *)
-let concepts_generated : (ModPath.t * Cpp_ir.Lowered.Decl.t) list Ref.User.Tbl.t = Ref.User.Tbl.create 16
+let concepts_generated : (ModPath.t * Cpp_ir.Lowered.Decl.t) list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16
 
-let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset concepts_generated)
+let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset concepts_generated)
 
 (** [concept r fields] is the concept of the class [r], of fields [fields]:
     generated ahead of the files ({!generating_ahead}) and taken from there
@@ -1416,8 +1416,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset concepts_genera
 let concept cx ~module_ r fields =
   ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the concept of " ++ GlobRef.print r))
-    ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt concepts_generated r))
-    ~record:(Ref.User.Tbl.replace concepts_generated r)
+    ~recorded:(fun () -> Option.default [] (Core.Ref.User.Tbl.find_opt concepts_generated r))
+    ~record:(Core.Ref.User.Tbl.replace concepts_generated r)
     ~same:(fun d d' -> compare d d' = 0)
     (fun () -> Gen_decls.gen_typeclass_cpp cx r fields)
 
@@ -1441,10 +1441,10 @@ let modtype_concept cx ~module_ path ~params mt =
     the helpers lifted out of them, by the record. *)
 let record_methods_generated :
     (ModPath.t * (Cpp_ir.Lowered.phase Cpp_ir.Field.member list * Cpp_ir.Lowered.Decl.t list)) list
-    Ref.User.Tbl.t =
-  Ref.User.Tbl.create 8
+    Core.Ref.User.Tbl.t =
+  Core.Ref.User.Tbl.create 8
 
-let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_methods_generated)
+let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset record_methods_generated)
 
 (** [record_methods r vars candidates] is the methods the eponymous record
     [r], of variables [vars], is given, made of [candidates], with the
@@ -1453,8 +1453,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_methods_
 let record_methods cx ~module_ r vars candidates =
   ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the methods of the record " ++ GlobRef.print r))
-    ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_methods_generated r))
-    ~record:(Ref.User.Tbl.replace record_methods_generated r)
+    ~recorded:(fun () -> Option.default [] (Core.Ref.User.Tbl.find_opt record_methods_generated r))
+    ~record:(Core.Ref.User.Tbl.replace record_methods_generated r)
     ~same:(fun (fields, _) (fields', _) -> compare fields fields' = 0)
     ~planned:(fun ((_, lifted) as v) -> plan_header_claim v lifted)
     ~take:(fun ((fields, lifted) as v) -> (fields, header_claim v lifted))
@@ -1463,10 +1463,10 @@ let record_methods cx ~module_ r vars candidates =
 
 (** The C++ types of each eponymous record's fields, converted ahead of the
     files, by the record. *)
-let record_field_types_generated : (ModPath.t * Cpp_ir.Resolved.Type.t list) list Ref.User.Tbl.t =
-  Ref.User.Tbl.create 8
+let record_field_types_generated : (ModPath.t * Cpp_ir.Resolved.Type.t list) list Core.Ref.User.Tbl.t =
+  Core.Ref.User.Tbl.create 8
 
-let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_types_generated)
+let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset record_field_types_generated)
 
 (** [record_field_types r vars fields] is the C++ type of each of the fields
     [fields] of the eponymous record [r], of variables [vars], as the header
@@ -1478,8 +1478,8 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset record_field_ty
 let record_field_types cx ~module_ r vars (fields : Core.Record.Field.t list) =
   ahead_once cx ~module_
     ~what:(fun () -> Pp.(str "the field types of the record " ++ GlobRef.print r))
-    ~recorded:(fun () -> Option.default [] (Ref.User.Tbl.find_opt record_field_types_generated r))
-    ~record:(Ref.User.Tbl.replace record_field_types_generated r)
+    ~recorded:(fun () -> Option.default [] (Core.Ref.User.Tbl.find_opt record_field_types_generated r))
+    ~record:(Core.Ref.User.Tbl.replace record_field_types_generated r)
     ~same:(fun tys tys' -> compare tys tys' = 0)
     (fun () ->
       List.map
@@ -1496,7 +1496,7 @@ let generated_concepts () =
 (** The types of every eponymous record's fields converted ahead of the
     files. *)
 let generated_record_field_types () =
-  Ref.User.Tbl.fold
+  Core.Ref.User.Tbl.fold
     (fun _ generated acc -> List.concat_map snd generated @ acc)
     record_field_types_generated []
 

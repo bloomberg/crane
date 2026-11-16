@@ -107,9 +107,9 @@ let other_instance_self_calls n b =
     match Core.Global_use.instantiation use with
     | None -> false
     | Some inst ->
-      Scheme.Instantiation.exists
-        (fun _ (s : Core.Type.t Scheme.slot) ->
-          match s.solution with Scheme.Type t -> ground t | Scheme.Identity -> false )
+      Core.Scheme.Instantiation.exists
+        (fun _ (s : Core.Type.t Core.Scheme.slot) ->
+          match s.solution with Core.Scheme.Type t -> ground t | Core.Scheme.Identity -> false )
         inst
   in
   let found = ref [] in

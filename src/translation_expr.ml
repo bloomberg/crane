@@ -318,7 +318,7 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
       List.map
         (fun (v, ty) ->
           let t = Translation_types.cpp_of_core cx env (type_simpl ty) in
-          ( Scheme.Var.ordinal v,
+          ( Core.Scheme.Var.ordinal v,
             match t with
             | Variable (Index (_, None)) when tvars <> [] -> Cpp_ir.Type.Erased Type
             | _ -> t ) )

@@ -355,7 +355,7 @@ let schema_view r schema =
   let implicits = implicits_of_global r in
   Core.Schema.with_roles
     (fun {Core.Schema.binder; role; _} ->
-      let i = Scheme.Binder.position binder + 1 in
+      let i = Core.Scheme.Binder.position binder + 1 in
       match role with
       | Core.Schema.Erased _ when conservative_types () -> Core.Schema.Value
       | Core.Schema.Value when Int.Set.mem i implicits ->
@@ -2007,18 +2007,18 @@ and observe_type_arg env sg db a =
     be read as a type. *)
 and freeze_instantiation schema ~rigid metas written_at =
   let frozen = Array.of_list (freeze_types (Array.to_list metas)) in
-  Scheme.Instantiation.make (Core.Schema.id schema) (fun v ->
+  Core.Scheme.Instantiation.make (Core.Schema.id schema) (fun v ->
       let source =
         match (Core.Schema.origin schema v, written_at v) with
         | Some b, Some observed ->
-          Scheme.Written {binder = b.Core.Schema.binder; observed = Option.map type_simpl observed}
-        | _ -> Scheme.Not_written
+          Core.Scheme.Written {binder = b.Core.Schema.binder; observed = Option.map type_simpl observed}
+        | _ -> Core.Scheme.Not_written
       in
       let solution =
-        if rigid v then Scheme.Identity
-        else Scheme.Type frozen.(Scheme.Var.ordinal v - 1)
+        if rigid v then Core.Scheme.Identity
+        else Core.Scheme.Type frozen.(Core.Scheme.Var.ordinal v - 1)
       in
-      {Scheme.solution; source} )
+      {Core.Scheme.solution; source} )
 
 (** Extracts a constant application (function call), handling type instantiation
     and partial application.
@@ -2047,11 +2047,11 @@ and extract_cst_app env sg type_env extracted_ty kn args =
         ( v,
           Option.bind (Core.Schema.origin schema v) (fun b ->
               Option.map (observe_type_arg env sg db)
-                (List.nth_opt args (Scheme.Binder.position b.Core.Schema.binder)) ) ) )
+                (List.nth_opt args (Core.Scheme.Binder.position b.Core.Schema.binder)) ) ) )
       (Core.Schema.vars schema)
   in
   let written_at v =
-    Option.flatten (List.find_map (fun (v', o) -> if Scheme.Var.equal v v' then Some o else None) observations)
+    Option.flatten (List.find_map (fun (v', o) -> if Core.Scheme.Var.equal v v' then Some o else None) observations)
   in
   (* The type arguments the Rocq term passes are a statement about the
      scheme's type variables, and the value arguments need not repeat it: a
@@ -2087,7 +2087,7 @@ and extract_cst_app env sg type_env extracted_ty kn args =
            | _ -> None )
          (Core.Schema.vars schema) )
   in
-  let given v = given.(Scheme.Var.ordinal v - 1) in
+  let given v = given.(Core.Scheme.Var.ordinal v - 1) in
   (* Can we instantiate the type variables of this constant?  Not inside the
      definition of its own recursive group, which is extracted at the group's
      rigid variables: a member's variable there is the caller's own, unless
@@ -2105,7 +2105,7 @@ and extract_cst_app env sg type_env extracted_ty kn args =
       rigidify
         (type_subst_fun
            (fun j ->
-             match Scheme.Var.of_tvar (Core.Schema.id schema) j with
+             match Core.Scheme.Var.of_tvar (Core.Schema.id schema) j with
              | Some v when not (rigid v) -> Some tvar_metas.(j - 1)
              | _ -> None )
            (Core.Widen.type_ (Core.Schema.body schema)) )
@@ -2128,7 +2128,7 @@ and extract_cst_app env sg type_env extracted_ty kn args =
   List.iter
     (fun v ->
       match given v with
-      | Some t -> try_mgu tvar_metas.(Scheme.Var.ordinal v - 1) (expand env t)
+      | Some t -> try_mgu tvar_metas.(Core.Scheme.Var.ordinal v - 1) (expand env t)
       | None -> () )
     (Core.Schema.vars schema);
   let arg_terms = make_args env sg type_env s args metas in

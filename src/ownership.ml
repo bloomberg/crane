@@ -41,8 +41,8 @@ let summarize ?(receiver = fun _ -> None) struc =
   in
   (* Each round reads its callees' flags as the rounds before it left
      them. *)
-  let flags = ref Ref.User.Map.empty in
-  let settled r = Ref.User.Map.find_opt r !flags in
+  let flags = ref Core.Ref.User.Map.empty in
+  let settled r = Core.Ref.User.Map.find_opt r !flags in
   (* Each round can only turn borrowed parameters owned, so it stops. *)
   let rec round () =
     let changed = ref false in
@@ -50,12 +50,12 @@ let summarize ?(receiver = fun _ -> None) struc =
       (fun (r, b, ty) ->
         let params, body = Type_util.declared_parameters ty b in
         let f = unless_receiver r (Table.with_decl_ref r (fun () -> read_off ~settled params body)) in
-        if Ref.User.Map.find_opt r !flags <> Some f then (
+        if Core.Ref.User.Map.find_opt r !flags <> Some f then (
           changed := true;
-          flags := Ref.User.Map.add r f !flags ))
+          flags := Core.Ref.User.Map.add r f !flags ))
       fns;
     if !changed then round ()
   in
   round ();
-  Ref.User.Map.bindings !flags
+  Core.Ref.User.Map.bindings !flags
 

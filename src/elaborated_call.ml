@@ -79,7 +79,7 @@ let instantiate call ~reading ~at_call ~expand ~erased =
   }
 
 let same_reading a b =
-  let ordinals vs = List.map Scheme.Var.ordinal vs in
+  let ordinals vs = List.map Core.Scheme.Var.ordinal vs in
   let evidences =
     Call_tyargs.[Written; Argument_types; Argument_heads; Expected_result; Eta_parameter]
   in

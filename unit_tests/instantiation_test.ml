@@ -55,15 +55,15 @@ let () =
     | [Core.Type.Hole a; Core.Type.Global_app {type_arguments = [Core.Type.Hole b]; _}] ->
       check "a shared meta is one hole" (a = b)
     | _ -> check "a lone open meta freezes to a hole" false );
-    let id = Scheme.Id.fresh owner ~arity in
+    let id = Core.Scheme.Id.fresh owner ~arity in
     let inst =
-      Scheme.Instantiation.make id (fun v ->
-          { Scheme.solution = Scheme.Type (List.nth frozen (Scheme.Var.ordinal v - 1));
-            source = Scheme.Not_written } )
+      Core.Scheme.Instantiation.make id (fun v ->
+          { Core.Scheme.solution = Core.Scheme.Type (List.nth frozen (Core.Scheme.Var.ordinal v - 1));
+            source = Core.Scheme.Not_written } )
     in
     check "slots stay owned"
-      (Scheme.Instantiation.for_all
-         (fun v _ -> Scheme.Id.equal (Scheme.Var.owner v) id) inst);
+      (Core.Scheme.Instantiation.for_all
+         (fun v _ -> Core.Scheme.Id.equal (Core.Scheme.Var.owner v) id) inst);
     let body = Core.Type.Arrow {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1};
                                 result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                              variable = arity}} in

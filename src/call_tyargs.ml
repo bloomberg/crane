@@ -22,7 +22,7 @@ type slot =
 
 type t = {
   callee : Names.GlobRef.t;
-  slots : (Scheme.Var.t * slot) list;
+  slots : (Core.Scheme.Var.t * slot) list;
 }
 
 let erased = function
@@ -30,9 +30,9 @@ let erased = function
   | _ -> false
 
 let of_source = function
-  | Scheme.Written {observed = Some ty; _} when not (erased ty) -> Known (ty, Written)
-  | Scheme.Written _ -> Unreadable
-  | Scheme.Not_written -> Unwritten
+  | Core.Scheme.Written {observed = Some ty; _} when not (erased ty) -> Known (ty, Written)
+  | Core.Scheme.Written _ -> Unreadable
+  | Core.Scheme.Not_written -> Unwritten
 
 let of_use use =
   let slots =
@@ -40,9 +40,9 @@ let of_use use =
     | None -> []
     | Some inst ->
       List.sort
-        (fun (v, _) (w, _) -> Scheme.Var.compare v w)
-        (Scheme.Instantiation.fold
-           (fun v s acc -> (v, of_source s.Scheme.source) :: acc)
+        (fun (v, _) (w, _) -> Core.Scheme.Var.compare v w)
+        (Core.Scheme.Instantiation.fold
+           (fun v s acc -> (v, of_source s.Core.Scheme.source) :: acc)
            inst [] )
   in
   {callee = Core.Global_use.callee use; slots}
@@ -51,7 +51,7 @@ let callee t = t.callee
 let vars t = List.map fst t.slots
 
 let slot t v =
-  match List.find_opt (fun (w, _) -> Scheme.Var.equal v w) t.slots with
+  match List.find_opt (fun (w, _) -> Core.Scheme.Var.equal v w) t.slots with
   | Some (_, s) -> s
   | None -> Unwritten
 
@@ -79,7 +79,7 @@ let last_spoken t =
 
 let within t v =
   match last_spoken t with
-  | Some last -> Scheme.Var.compare v last <= 0
+  | Some last -> Core.Scheme.Var.compare v last <= 0
   | None -> false
 
 let interior_holes t = List.filter (fun v -> within t v && is_hole t v) (vars t)
@@ -113,13 +113,13 @@ let with_answers e t found =
         ("RESOLVE_" ^ evidence_name e)
         (fun () ->
           Pp.string_of_ppcmds (Names.GlobRef.print t.callee)
-          ^ " " ^ string_of_int (Scheme.Var.ordinal v) ) )
+          ^ " " ^ string_of_int (Core.Scheme.Var.ordinal v) ) )
     found;
   { t with
     slots =
       List.map
         (fun (v, s) ->
-          match List.find_opt (fun (w, _) -> Scheme.Var.equal v w) found with
+          match List.find_opt (fun (w, _) -> Core.Scheme.Var.equal v w) found with
           | Some (_, s') -> (v, s')
           | None -> (v, s) )
         t.slots }

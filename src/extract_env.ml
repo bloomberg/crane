@@ -1116,7 +1116,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   let acc =
     { acc with
       promoted_inductives =
-        List.fold_left (fun s r -> Ref.User.Set.add r s) acc.promoted_inductives promoted_inductives }
+        List.fold_left (fun s r -> Core.Ref.User.Set.add r s) acc.promoted_inductives promoted_inductives }
   in
   with_plan cx u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_accessors;
@@ -1518,7 +1518,7 @@ let unit_passes ~namespace ~config : Core.Program.t Pipeline_trace.pass list =
         if namespace <> None then Common.set_force_cross_file_qualification () ) ]
 
 let unit_pass_names =
-  Pipeline_trace.names (unit_passes ~namespace:None ~config:(Table.unit_config ~names:Ref.User.Set.empty))
+  Pipeline_trace.names (unit_passes ~namespace:None ~config:(Table.unit_config ~names:Core.Ref.User.Set.empty))
 
 (** The steps of {!plan_representation}, in order. *)
 let template_kinds = "template_kinds"
@@ -1628,8 +1628,8 @@ let check_against_plan (plan : Target_plan.t) =
     constructor, a record field, a constant, a module type's specification;
     a functor's body included. *)
 let declares struc =
-  let declared = ref Ref.User.Set.empty in
-  let add r = declared := Ref.User.Set.add r !declared in
+  let declared = ref Core.Ref.User.Set.empty in
+  let add r = declared := Core.Ref.User.Set.add r !declared in
   let inductive kn (ind : Core.Inductive.t) =
     ( match ind.kind with
     | Core.Inductive.Kind.Record fields | Core.Inductive.Kind.Type_class fields ->
@@ -1651,7 +1651,7 @@ let declares struc =
       | Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> inductive kn ind
       | Core.Signature.Declaration.Type {entity = r; _} | Core.Signature.Declaration.Value {entity = r; _} -> add r )
     ignore struc;
-  fun r -> Ref.User.Set.mem r !declared
+  fun r -> Core.Ref.User.Set.mem r !declared
 
 (** Renders an entire Core structure to C++ header and implementation files:
     plans the unit over what the units before it decided ([earlier], bound
@@ -2277,12 +2277,12 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
      later unit may read a value of an earlier one, which then has to be
      initialised wherever its header is included
      ({!Cpp_state.read_by_a_function}). *)
-  let program_reads = ref Ref.Can.Set.empty in
+  let program_reads = ref Core.Ref.Can.Set.empty in
   Modutil.struct_iter
     (fun d ->
       let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Core_util.term_defs d) in
       Modutil.decl_iter_references
-        (fun r -> if not (List.exists (Ref.Can.equal r) own) then program_reads := Ref.Can.Set.add r !program_reads)
+        (fun r -> if not (List.exists (Core.Ref.Can.equal r) own) then program_reads := Core.Ref.Can.Set.add r !program_reads)
         ignore ignore d)
     ignore ignore struc;
   Cpp_state.note_program_reads !program_reads;

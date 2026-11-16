@@ -108,11 +108,11 @@ let zonk (Program p : optimized program) : frozen program =
 
 (** No reference is declared twice. *)
 let check_declared_once (Program p : frozen program) =
-  let declared = ref Ref.User.Set.empty in
+  let declared = ref Core.Ref.User.Set.empty in
   let declare r =
-    if Ref.User.Set.mem r !declared then
+    if Core.Ref.User.Set.mem r !declared then
       fail ("declares " ^ Pp.string_of_ppcmds (Printer.pr_global r) ^ " twice");
-    declared := Ref.User.Set.add r !declared
+    declared := Core.Ref.User.Set.add r !declared
   in
   Modutil.struct_iter
     (function
@@ -149,12 +149,12 @@ let check_instantiations (Program p : frozen program) =
     let name () = Pp.string_of_ppcmds (Printer.pr_global r) in
     Option.iter
       (fun inst ->
-        let scheme = Scheme.Instantiation.scheme inst in
-        if not (Names.GlobRef.UserOrd.equal (Scheme.Id.owner scheme) r) then
+        let scheme = Core.Scheme.Instantiation.scheme inst in
+        if not (Names.GlobRef.UserOrd.equal (Core.Scheme.Id.owner scheme) r) then
           fail ("instantiates a use of " ^ name () ^ " at another declaration's scheme");
         match Core_util.reference_scheme r with
-        | Some own when Scheme.Id.equal own scheme -> ()
-        | Some own when Scheme.Id.arity own <> Scheme.Id.arity scheme ->
+        | Some own when Core.Scheme.Id.equal own scheme -> ()
+        | Some own when Core.Scheme.Id.arity own <> Core.Scheme.Id.arity scheme ->
           fail ("instantiates a use of " ^ name () ^ " at a scheme of another arity")
         | Some _ -> fail ("instantiates a use of " ^ name () ^ " at a scheme other than its own")
         | None -> () )

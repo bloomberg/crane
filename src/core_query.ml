@@ -22,7 +22,7 @@ let find_type_opt (r : GlobRef.t) : Core.Type.t option =
 (** A declaration's parameter of type [ty] is its dictionary exactly when
     [ty] is a class: the one criterion the head generators promote a
     parameter to an instance by. *)
-let parameter_role ty = if Table.is_typeclass_type ty then Lexenv.Dictionary else Lexenv.Value
+let parameter_role ty = if Table.is_typeclass_type ty then Core.Lexenv.Dictionary else Core.Lexenv.Value
 
 (** Like [List.firstn] but returns [min(n, length lst)] elements instead of
     raising when [n > length lst]. Needed because extraction sometimes produces
@@ -247,7 +247,7 @@ and tvar_instantiation_found
     | Some _ as t -> t
     | None -> (
       match (a, lex) with
-      | Core.Expr.Bound_variable {index = i; _}, Some lex -> Lexenv.type_opt lex i
+      | Core.Expr.Bound_variable {index = i; _}, Some lex -> Core.Lexenv.type_opt lex i
       | _ -> None )
   in
   let found = Hashtbl.create 7 in
@@ -381,13 +381,13 @@ and tvar_instantiation r callee_ty args =
   | None -> Core_util.Var_types.empty
   | Some scheme ->
     let found = tvar_instantiation_found callee_ty args in
-    let at v = List.assoc_opt (Scheme.Var.ordinal v) found in
+    let at v = List.assoc_opt (Core.Scheme.Var.ordinal v) found in
     Core_util.Var_types.through
-      (Core_util.last_var (List.filter (fun v -> Option.has_some (at v)) (Scheme.Var.all scheme)))
+      (Core_util.last_var (List.filter (fun v -> Option.has_some (at v)) (Core.Scheme.Var.all scheme)))
       (fun v ->
         match at v with
         | Some t -> t
-        | None -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = Scheme.Var.ordinal v} )
+        | None -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = Core.Scheme.Var.ordinal v} )
 
 (** [resolve_from_argument_types tyargs args] resolves the variables after
     the last one the call wrote or resolved ({!Call_tyargs.beyond_extent})
@@ -406,14 +406,14 @@ and resolve_from_argument_types ~lex tyargs args =
   | Some callee_ty ->
     let n = IntSet.fold max (collect_tvars_set IntSet.empty callee_ty) 0 in
     let missing =
-      List.filter (fun v -> Scheme.Var.ordinal v <= n) (Call_tyargs.beyond_extent tyargs)
+      List.filter (fun v -> Core.Scheme.Var.ordinal v <= n) (Call_tyargs.beyond_extent tyargs)
     in
     let deducible = Option.default IntSet.empty (deducible_tvars_of_glob id) in
-    if List.for_all (fun v -> IntSet.mem (Scheme.Var.ordinal v) deducible) missing then tyargs
+    if List.for_all (fun v -> IntSet.mem (Core.Scheme.Var.ordinal v) deducible) missing then tyargs
     else
       let found = tvar_instantiation_found ~lex callee_ty args in
       Call_tyargs.resolve_all Call_tyargs.Argument_types
-        (fun v -> List.assoc_opt (Scheme.Var.ordinal v) found)
+        (fun v -> List.assoc_opt (Core.Scheme.Var.ordinal v) found)
         missing tyargs
 
 (** [resolve_from_argument_heads tyargs args] resolves a hole before the last
@@ -471,7 +471,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
     let eligible =
       List.filter
         (fun v ->
-          let k = Scheme.Var.ordinal v in
+          let k = Core.Scheme.Var.ordinal v in
           ((not only_alias_args) && Hashtbl.mem applied k) || in_dictionary k )
         holes
     in
@@ -480,7 +480,7 @@ and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ ->
     in
     Call_tyargs.resolve Call_tyargs.Argument_heads
       (fun v ->
-        match List.assoc_opt (Scheme.Var.ordinal v) found with
+        match List.assoc_opt (Core.Scheme.Var.ordinal v) found with
         | Some t when accept v t -> Some t
         | _ -> None )
       eligible tyargs
@@ -807,7 +807,7 @@ let dict_carrier_core_type_with ~find ~lex ~caller id args =
         | Some (Core.Type.Global_app {type_arguments = [_]; _} as t) -> Some (strip_class t)
         | _ -> None
       in
-      let recorded = constraint_arg (Option.map Core.Widen.type_ (Lexenv.type_opt lex i)) in
+      let recorded = constraint_arg (Option.map Core.Widen.type_ (Core.Lexenv.type_opt lex i)) in
       ( match recorded with
       | Some _ -> recorded
       | None ->
@@ -821,7 +821,7 @@ let dict_carrier_core_type_with ~find ~lex ~caller id args =
         let* r = caller in
         let* decl_ty = find r in
         let doms = core_domains decl_ty in
-        let n = Lexenv.depth lex in
+        let n = Core.Lexenv.depth lex in
         (* [List.nth_opt] raises rather than answering [None] on a negative
            index, and [i] can exceed [n]: a dictionary reached through an
            argument of the call need not be a binder of this body at all. *)
@@ -871,7 +871,7 @@ let binder_is_instance lex i =
      reading it as an instance would take the argument away from the call.
      The declaration drops both kinds; without the second the call sites went
      on passing the one the declaration had dropped. *)
-  match Lexenv.binder lex i with
+  match Core.Lexenv.binder lex i with
   | Some {role = Dictionary; _} -> true
   | Some {type_; role = Value; _} -> core_ret_is_skipped type_
   | None -> false
@@ -947,7 +947,7 @@ let instance_arg_is_erased ~lex core_arg =
        their mappings and not by a dictionary. *)
     ref_returns_skipped r || ref_is_skipped r
   | Core.Expr.Bound_variable {index = i; _} -> (
-    match Lexenv.type_opt lex i with
+    match Core.Lexenv.type_opt lex i with
     | Some ty -> core_ret_is_skipped ty
     | None -> false )
   | _ -> false
@@ -964,7 +964,7 @@ let instance_class_ty ~lex core_arg =
   match strip_dictionary core_arg with
   | Core.Expr.Global {callee = r; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} -> of_ref r
   | Core.Expr.Bound_variable {index = i; _} -> (
-    match Lexenv.type_opt lex i with
+    match Core.Lexenv.type_opt lex i with
     | Some ty -> core_return_type ty
     | None -> Core.Type.Unknown )
   | _ -> Core.Type.Unknown

@@ -3,7 +3,7 @@
 
 (** A call's reading of its callee's scheme variables, variable by variable,
     as call planning resolves it.  Each variable is addressed by its
-    {!Scheme.Var.t}, the callee scheme's own numbering, never by its position
+    {!Core.Scheme.Var.t}, the callee scheme's own numbering, never by its position
     in a C++ template argument list.
 
     It starts from what the use wrote: each variable is known -- the argument
@@ -45,36 +45,36 @@ val of_use : Core.Global_use.t -> t
 val callee : t -> Names.GlobRef.t
 
 (** The callee's variables, in ordinal order. *)
-val vars : t -> Scheme.Var.t list
+val vars : t -> Core.Scheme.Var.t list
 
 (** Whether nothing is known of the variable. *)
-val is_hole : t -> Scheme.Var.t -> bool
+val is_hole : t -> Core.Scheme.Var.t -> bool
 
 (** Whether the use wrote nothing at the variable's binder and nothing has
     resolved it since: a hole with no evidence at all, which C++ may only
     deduce. *)
-val is_unwritten : t -> Scheme.Var.t -> bool
+val is_unwritten : t -> Core.Scheme.Var.t -> bool
 
 (** Every variable nothing is known of. *)
-val holes : t -> Scheme.Var.t list
+val holes : t -> Core.Scheme.Var.t list
 
 (** The holes before the last variable known or written unreadably: the
     ones {!by_variable} spells as erased placeholders. *)
-val interior_holes : t -> Scheme.Var.t list
+val interior_holes : t -> Core.Scheme.Var.t list
 
 (** The variables after the last one known or written unreadably: the ones
     {!by_variable} leaves out. *)
-val beyond_extent : t -> Scheme.Var.t list
+val beyond_extent : t -> Core.Scheme.Var.t list
 
 (** [resolve e answer vs t] resolves each hole among [vs] for which [answer]
     gives a type that is no erased placeholder, as read from [e]. *)
 val resolve :
-  evidence -> (Scheme.Var.t -> Core.Type.t option) -> Scheme.Var.t list -> t -> t
+  evidence -> (Core.Scheme.Var.t -> Core.Type.t option) -> Core.Scheme.Var.t list -> t -> t
 
 (** {!resolve}, all or nothing: [t] itself unless every hole among [vs] is
     answered. *)
 val resolve_all :
-  evidence -> (Scheme.Var.t -> Core.Type.t option) -> Scheme.Var.t list -> t -> t
+  evidence -> (Core.Scheme.Var.t -> Core.Type.t option) -> Core.Scheme.Var.t list -> t -> t
 
 (** Whether some variable was resolved from [e]. *)
 val resolved_from : evidence -> t -> bool

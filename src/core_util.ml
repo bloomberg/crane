@@ -700,7 +700,7 @@ end
 
 (* From the one supply {!Global_use.infer_all} mints from too: two holes in
    one instantiation are filled by number. *)
-let fresh_hole () = Core.Type.Hole (Scheme.Hole.fresh ())
+let fresh_hole () = Core.Type.Hole (Core.Scheme.Hole.fresh ())
 
 let freeze_types tys =
   let holes = Hashtbl.create 4 in
@@ -752,13 +752,13 @@ module Partial = struct
   type 'p t = 'p Core.Type.at
 
   let instantiate inst ty =
-    let scheme = Scheme.Instantiation.scheme inst in
+    let scheme = Core.Scheme.Instantiation.scheme inst in
     type_subst_fun
       (fun j ->
-        Option.bind (Scheme.Var.of_tvar scheme j) (fun v ->
-            match (Scheme.Instantiation.slot inst v).solution with
-            | Scheme.Type u -> Some u
-            | Scheme.Identity -> None ) )
+        Option.bind (Core.Scheme.Var.of_tvar scheme j) (fun v ->
+            match (Core.Scheme.Instantiation.slot inst v).solution with
+            | Core.Scheme.Type u -> Some u
+            | Core.Scheme.Identity -> None ) )
       ty
 
   let holes t = List.rev (type_holes [] t)
@@ -808,9 +808,9 @@ let reference_scheme r =
     | arity -> (
       match GlobRef.Map.find_opt r !minted_schemes with
       | _ when arity = 0 -> None
-      | Some id when Int.equal (Scheme.Id.arity id) arity -> Some id
+      | Some id when Int.equal (Core.Scheme.Id.arity id) arity -> Some id
       | _ ->
-        let id = Scheme.Id.fresh r ~arity in
+        let id = Core.Scheme.Id.fresh r ~arity in
         minted_schemes := GlobRef.Map.add r id !minted_schemes;
         Some id ) )
 
@@ -830,19 +830,19 @@ let forwarding_use target =
   | Some scheme ->
     let schema = recorded_schema target in
     Core.Global_use.polymorphic target
-      (Scheme.Instantiation.make scheme (fun v ->
-           let own = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = Scheme.Var.ordinal v} in
+      (Core.Scheme.Instantiation.make scheme (fun v ->
+           let own = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = Core.Scheme.Var.ordinal v} in
            let source =
              match Option.bind schema (fun s -> Core.Schema.origin s v) with
-             | Some b -> Scheme.Written {binder = b.Core.Schema.binder; observed = Some own}
-             | None -> Scheme.Not_written
+             | Some b -> Core.Scheme.Written {binder = b.Core.Schema.binder; observed = Some own}
+             | None -> Core.Scheme.Not_written
            in
-           {Scheme.solution = Scheme.Type own; source} ) )
+           {Core.Scheme.solution = Core.Scheme.Type own; source} ) )
 
 module Var_types = struct
   (* One scheme's variables from its first to the last spoken for, in
      order. *)
-  type 'p t = (Scheme.Var.t * 'p Core.Type.at) list
+  type 'p t = (Core.Scheme.Var.t * 'p Core.Type.at) list
 
   let empty = []
   let is_empty t = t = []
@@ -852,38 +852,38 @@ module Var_types = struct
     | None -> []
     | Some last ->
       List.filter_map
-        (fun v -> if Scheme.Var.compare v last <= 0 then Some (v, f v) else None)
-        (Scheme.Var.all (Scheme.Var.owner last))
+        (fun v -> if Core.Scheme.Var.compare v last <= 0 then Some (v, f v) else None)
+        (Core.Scheme.Var.all (Core.Scheme.Var.owner last))
 
   let find t v =
     match t with
     | [] -> None
     | (w, _) :: _ ->
-      if not (Scheme.Id.equal (Scheme.Var.owner v) (Scheme.Var.owner w)) then
+      if not (Core.Scheme.Id.equal (Core.Scheme.Var.owner v) (Core.Scheme.Var.owner w)) then
         invalid_arg "Core_util.Var_types.find: a variable of another scheme";
-      List.find_map (fun (w, ty) -> if Scheme.Var.equal v w then Some ty else None) t
+      List.find_map (fun (w, ty) -> if Core.Scheme.Var.equal v w then Some ty else None) t
 
-  let find_tvar t i = Scheme.Var.assoc_tvar i t
+  let find_tvar t i = Core.Scheme.Var.assoc_tvar i t
 
   let bindings t = t
   let apply t ty = type_subst_fun (find_tvar t) ty
 
   let equal x y =
-    List.equal (fun (v, a) (w, b) -> Scheme.Var.equal v w && eq_core_type a b) x y
+    List.equal (fun (v, a) (w, b) -> Core.Scheme.Var.equal v w && eq_core_type a b) x y
 end
 
 let last_var vars =
   List.fold_left
     (fun last v ->
       match last with
-      | Some w when Scheme.Var.compare w v >= 0 -> last
+      | Some w when Core.Scheme.Var.compare w v >= 0 -> last
       | _ -> Some v )
     None vars
 
 let written_type_args use =
   let evidence = Core.Global_use.written_evidence use in
   Var_types.through (last_var (List.map fst evidence)) (fun v ->
-      match List.find_opt (fun (w, _) -> Scheme.Var.equal v w) evidence with
+      match List.find_opt (fun (w, _) -> Core.Scheme.Var.equal v w) evidence with
       | Some (_, t) -> t
       | None -> Core.Type.Erased Core.Erasure_reason.Type_argument )
 
@@ -892,12 +892,12 @@ let subst_written_evidence use t =
   type_subst_fun
     (fun j ->
       List.find_map
-        (fun (v, ty) -> if Int.equal (Scheme.Var.ordinal v) j then Some ty else None)
+        (fun (v, ty) -> if Int.equal (Core.Scheme.Var.ordinal v) j then Some ty else None)
         evidence )
     t
 
 let written_covers use n =
-  let written = List.map (fun (v, _) -> Scheme.Var.ordinal v) (Core.Global_use.written_evidence use) in
+  let written = List.map (fun (v, _) -> Core.Scheme.Var.ordinal v) (Core.Global_use.written_evidence use) in
   List.for_all (fun j -> List.mem j written) (List.init n succ)
 
 let instantiate_written ~reader (use : _ Core.Global_use.at) t =
@@ -2155,7 +2155,7 @@ let rec ast_glob_subst s t =
      caller's own reconstruction may fill.  None of the body's variables
      survives to be read in the caller's numbering. *)
   let body (use : _ Core.Global_use.at) =
-    let b = freshen_metas (Ref.User.Map.find use.callee s) in
+    let b = freshen_metas (Core.Ref.User.Map.find use.callee s) in
     let informative = function Core.Type.Erased _ | Core.Type.Unknown -> false | _ -> true in
     let use =
       Core.Global_use.map_types (fun t -> if informative t then t else new_meta ()) use

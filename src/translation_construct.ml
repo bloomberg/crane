@@ -803,7 +803,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
             let inner_g = match inner with
               | Entity_application (g, _, _) -> Some g | _ -> None in
             ( match inner_g with
-            | Some g when Ref.User.Set.mem g cx.ctx.input.method_self_ns ->
+            | Some g when Core.Ref.User.Set.mem g cx.ctx.input.method_self_ns ->
               Cpp_ir.Build.call (Allocate (Heap, inner)) [expr]
             | _ -> expr )
           | ct when Cpp_ir.Types.prints_as_any ct
@@ -1425,7 +1425,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                 | Some e -> container_cast_erased_field ft e expr
                 | None -> expr
               in
-              let storage_ty = Translation_types.cpp_ir_of_core_type cx env ~ns:(Ref.User.Set.singleton n) tvars ft in
+              let storage_ty = Translation_types.cpp_ir_of_core_type cx env ~ns:(Core.Ref.User.Set.singleton n) tvars ft in
               let api_ty = Translation_types.cpp_of_core cx env ft in
               (* A closure written at the concrete domain does not convert
                  to the erased signature the field is declared at, nor is it

@@ -860,7 +860,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
           let by_var =
             List.map
               (fun (v, ty) ->
-                (Scheme.Var.ordinal v, Translation_types.cpp_ir_of_core_type cx env inner_tvars ty) )
+                (Core.Scheme.Var.ordinal v, Translation_types.cpp_ir_of_core_type cx env inner_tvars ty) )
               (Core_util.Var_types.bindings tys_inner)
           in
           (* An erased argument is left to deduction -- unless nothing can

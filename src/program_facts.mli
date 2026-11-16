@@ -8,11 +8,11 @@
     anything is rendered. *)
 
 type t = {
-  used_customs : Ref.User.Set.t;
+  used_customs : Core.Ref.User.Set.t;
       (** The custom-extracted references the structure names -- a
           constructor's inductive with it -- whose imports its header
           includes, with those of any further custom emitting them names. *)
-  higher_order_projections : Ref.User.Set.t;
+  higher_order_projections : Core.Ref.User.Set.t;
       (** The projections used as function values rather than as field
           accessors, which need a standalone definition. *)
   effects : Core_effects.t;

@@ -93,7 +93,7 @@ val recorded_schema : GlobRef.t -> Core.Schema.t option
     else one minted at the arity of the type [r] is registered with, the
     same one at every reference.  [None] for a declaration quantifying
     nothing, or with no type. *)
-val reference_scheme : GlobRef.t -> Scheme.Id.t option
+val reference_scheme : GlobRef.t -> Core.Scheme.Id.t option
 
 (** A reference to the declaration [r] that a pass synthesises: open
     ({!Global_use.infer_all}) at [r]'s scheme -- the recorded one, or one
@@ -109,7 +109,7 @@ val self_reference : GlobRef.t -> 'p Core.Global_use.at
     a forwarder with [target]'s type writes. *)
 val forwarding_use : GlobRef.t -> 'p Core.Global_use.at
 
-(** Types for a callee's scheme variables, keyed by {!Scheme.Var.t}: what a
+(** Types for a callee's scheme variables, keyed by {!Core.Scheme.Var.t}: what a
     use wrote, a call's reading of them, or what its arguments imply.  Every
     variable up to the last one a reading speaks for has a type -- whatever
     the reading fills an open one with -- and past it there is none.  The
@@ -128,19 +128,19 @@ module Var_types : sig
 
   (** [through last f]: every variable of [last]'s scheme up to [last],
       variable [v] at [f v]; {!empty} for [None]. *)
-  val through : Scheme.Var.t option -> (Scheme.Var.t -> 'p Core.Type.at) -> 'p t
+  val through : Core.Scheme.Var.t option -> (Core.Scheme.Var.t -> 'p Core.Type.at) -> 'p t
 
   (** Variable [v]'s type, if it is spoken for; [Invalid_argument] for a
       variable of another scheme, which is a caller confusing two schemes. *)
-  val find : 'p t -> Scheme.Var.t -> 'p Core.Type.at option
+  val find : 'p t -> Core.Scheme.Var.t -> 'p Core.Type.at option
 
   (** {!find} at the variable the callee's own type spells [Core.Type.Variable (_, i)]
-      ({!Scheme.Var.of_tvar}): for a reader holding a variable it met in
+      ({!Core.Scheme.Var.of_tvar}): for a reader holding a variable it met in
       that type. *)
   val find_tvar : 'p t -> int -> 'p Core.Type.at option
 
   (** Each variable spoken for, in ascending order, with its type. *)
-  val bindings : 'p t -> (Scheme.Var.t * 'p Core.Type.at) list
+  val bindings : 'p t -> (Core.Scheme.Var.t * 'p Core.Type.at) list
 
   (** [apply t ty] instantiates [ty], a type in the callee's scheme
       variables: each variable spoken for is replaced, any other stays. *)
@@ -151,7 +151,7 @@ module Var_types : sig
 end
 
 (** The greatest of [vars], all of one scheme; [None] for none. *)
-val last_var : Scheme.Var.t list -> Scheme.Var.t option
+val last_var : Core.Scheme.Var.t list -> Core.Scheme.Var.t option
 
 (** The arguments [use] wrote, for the scheme variables they are for, up to
     the last variable written. *)
@@ -200,8 +200,8 @@ module Partial : sig
   (** [instantiate inst ty] is [ty], in the callee's scheme variables, with
       each variable [inst] solves to a type replaced by that type, which may
       hold holes; a variable it leaves standing for itself
-      ({!Scheme.Identity}) stays. *)
-  val instantiate : 'p Core.Type.at Scheme.Instantiation.t -> 'p Core.Type.at -> 'p t
+      ({!Core.Scheme.Identity}) stays. *)
+  val instantiate : 'p Core.Type.at Core.Scheme.Instantiation.t -> 'p Core.Type.at -> 'p t
 
   (** The holes, in order of first occurrence. *)
   val holes : 'p t -> int list
@@ -630,7 +630,7 @@ val ast_subst_each : (unit -> 'p Core.Expr.at) -> 'p Core.Expr.at -> 'p Core.Exp
 (** Substitute global references in a term using the given map.
     @param s a map from [GlobRef.t] to replacement [Core.Expr.t] bodies
     @param t the term in which to perform the substitution *)
-val ast_glob_subst : Core.Expr.extracted Ref.User.Map.t -> Core.Expr.extracted -> Core.Expr.extracted
+val ast_glob_subst : Core.Expr.extracted Core.Ref.User.Map.t -> Core.Expr.extracted -> Core.Expr.extracted
 
 (** Remove unused variable bindings from a term. *)
 val dump_unused_vars : 'p Core.Expr.at -> 'p Core.Expr.at

@@ -25,7 +25,7 @@
     regular, or past the callee's arity and so applied to its result.  A
     variable argument is read off the binder it names in [lex].  The holes
     the call's context states are not resolved here. *)
-val elaborate_arguments : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
+val elaborate_arguments : lex:Core.Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
 (** [instantiate ~lex ~expected_core ~stated_core ~caller ~scope call] -- the
     semantic half of planning [call], an {!Elaborated_call.instantiated}: the
@@ -45,7 +45,7 @@ val elaborate_arguments : lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list 
     position's Core types; no C++ type is decided or read, and nothing of the
     traversal that asks. *)
 val instantiate :
-  lex:Lexenv.t ->
+  lex:Core.Lexenv.t ->
   expected_core:Core.Type.t option ->
   stated_core:Core.Type.t option ->
   caller:Names.GlobRef.t option ->
@@ -84,7 +84,7 @@ val structure :
     normalized program ({!Core_phase.normalize}) that body is the one generated:
     eta-expanded, its let-bound lambdas as {!generated_definition} puts
     them. *)
-val declaration_scope : Core.Type.t -> Core.Expr.t -> Lexenv.t * Core.Expr.t
+val declaration_scope : Core.Type.t -> Core.Expr.t -> Core.Lexenv.t * Core.Expr.t
 
 (** [generated_definition ty body] is the definition [body] of type [ty],
     eta-expanded ({!Normalize.eta_expand}), with every let-bound lambda in
@@ -114,7 +114,7 @@ val roles : t -> Core.Global_use.t -> int -> Elaborated_call.role list option
     violation: every call emission translates was elaborated from Core.
     Planning takes the roles alike, and elaborates a call they have none for
     itself, which is no violation there. *)
-val elaboration : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
+val elaboration : walk:t option -> lex:Core.Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.t
 
 (** [instantiation ~walk ~lex ~expected_core ~stated_core ~caller ~scope use args]
     -- the semantic half of the call [use args] while emitting: the
@@ -130,7 +130,7 @@ val elaboration : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Exp
     violation there. *)
 val instantiation :
   walk:t option ->
-  lex:Lexenv.t ->
+  lex:Core.Lexenv.t ->
   expected_core:Core.Type.t option ->
   stated_core:Core.Type.t option ->
   caller:Names.GlobRef.t option ->
@@ -155,7 +155,7 @@ val planned_instantiation : walk:t option -> Core.Global_use.t -> Core.Expr.t li
     made no single decision there, or the unit is not walked yet, it is decided
     from the call and [lex]; under [CRANE_CHECK_IR] a planned decision is
     checked against that one. *)
-val closed_instance_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
+val closed_instance_call : walk:t option -> lex:Core.Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
 (** [static_projection_call ~walk ~lex use args] -- where the call [use args]
     calls a class field as a static member of the instance it projects
@@ -167,7 +167,7 @@ val closed_instance_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t ->
     is not walked yet, it is decided from the call and [lex]; under
     [CRANE_CHECK_IR] a planned decision is checked against that one. *)
 val static_projection_call :
-  walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.static_projection option
+  walk:t option -> lex:Core.Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> Elaborated_call.static_projection option
 
 (** [closed_head_call ~walk ~lex use args] -- whether the call [use args] applies
     arguments past its callee's arity to a head, the callee applied to the
@@ -178,7 +178,7 @@ val static_projection_call :
     decision there, or the unit is not walked yet, decided from the call and
     [lex]; under [CRANE_CHECK_IR] a planned decision is checked against that
     one. *)
-val closed_head_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
+val closed_head_call : walk:t option -> lex:Core.Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
 (** [member_template_call ~walk ~lex use args] -- whether the call [use args]
     projects a class field through its one dictionary argument, an instance
@@ -186,7 +186,7 @@ val closed_head_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Cor
     declares the field as a member template, so the instance's own method can
     stand for the field's dispatcher.  Decided, and checked, as
     {!closed_head_call} is. *)
-val member_template_call : walk:t option -> lex:Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
+val member_template_call : walk:t option -> lex:Core.Lexenv.t -> Core.Global_use.t -> Core.Expr.t list -> bool
 
 (** [singleton_dictionary_call ~walk ~live occ] -- the class and its one method
     where the variable read at the occurrence [occ], at the head of an

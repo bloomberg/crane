@@ -16,11 +16,11 @@ module Kind = Cpp_ir.Inductive.Kind
 
 (** Name resolution cache: the inductive kind of each scanned inductive,
     indexed by GlobRef. *)
-type t = {ind_kinds : Kind.t Ref.User.Tbl.t}
+type t = {ind_kinds : Kind.t Core.Ref.User.Tbl.t}
 
 (** Retrieves the inductive kind classification for a type reference. Returns
     None if the reference is not an inductive type. *)
-let get_ind_kind t r = Ref.User.Tbl.find_opt t.ind_kinds r
+let get_ind_kind t r = Core.Ref.User.Tbl.find_opt t.ind_kinds r
 
 (** Classifies packet [i] of an inductive using side-effect-free queries. *)
 let classify_inductive layout (kn : MutInd.t) (i : int) (ind : Core.Inductive.t) : Kind.t =
@@ -39,7 +39,7 @@ let classify_inductive layout (kn : MutInd.t) (i : int) (ind : Core.Inductive.t)
     classifications for every inductive at top level or in a module structure,
     without side effects. *)
 let create layout s =
-  let ind_kinds = Ref.User.Tbl.create 64 in
+  let ind_kinds = Core.Ref.User.Tbl.create 64 in
   (* Pre-classify all inductive types using side-effect-free queries only. We do
      NOT call pp_global_name or pp_global here: those have side effects on
      Common.ml's renaming tables that would change the output. *)
@@ -50,7 +50,7 @@ let create layout s =
         | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           Array.iteri
             (fun i _p ->
-              Ref.User.Tbl.replace ind_kinds (GlobRef.IndRef (kn, i)) (classify_inductive layout kn i ind) )
+              Core.Ref.User.Tbl.replace ind_kinds (GlobRef.IndRef (kn, i)) (classify_inductive layout kn i ind) )
             ind.Core.Inductive.packets
         | Core.Module.Structure_item.Module m ->
           ( match m.Core.Module.expr with

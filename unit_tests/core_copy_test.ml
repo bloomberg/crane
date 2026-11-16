@@ -37,8 +37,8 @@ let rec occurrences e =
 let shares e e' =
   Core.Occurrence.shared (fun visit -> List.iter visit (occurrences e); List.iter visit (occurrences e')) <> []
 
-let slot solution = {Scheme.solution; source = Scheme.Not_written}
-let use_at scheme f = Core.Global_use.polymorphic (r "g") (Scheme.Instantiation.make scheme f)
+let slot solution = {Core.Scheme.solution; source = Core.Scheme.Not_written}
+let use_at scheme f = Core.Global_use.polymorphic (r "g") (Core.Scheme.Instantiation.make scheme f)
 
 let rec holes = function
   | Core.Type.Hole h -> [h]
@@ -55,7 +55,7 @@ let use_holes = function
   | _ -> []
 
 let () =
-  let scheme = Scheme.Id.fresh (r "g") ~arity:1 in
+  let scheme = Core.Scheme.Id.fresh (r "g") ~arity:1 in
   let self = Core.Expr.Global (Core.Global_use.identity (r "g") scheme) in
   let fix =
     Core.Expr.Fixpoint
@@ -94,9 +94,9 @@ let () =
   check "a copied match is a match of its own" (not (shares matching (Core_copy.copy matching)));
   (* Holes: renamed apart from the original's, the same new one wherever
      the original shares one. *)
-  let h = Core.Type.Hole (Scheme.Hole.fresh ()) in
-  let two = Core.Expr.Apply {callee = Core.Expr.Global (use_at scheme (fun _ -> slot (Scheme.Type h)));
-                             arguments = [Core.Expr.Global (use_at scheme (fun _ -> slot (Scheme.Type h)))]} in
+  let h = Core.Type.Hole (Core.Scheme.Hole.fresh ()) in
+  let two = Core.Expr.Apply {callee = Core.Expr.Global (use_at scheme (fun _ -> slot (Core.Scheme.Type h)));
+                             arguments = [Core.Expr.Global (use_at scheme (fun _ -> slot (Core.Scheme.Type h)))]} in
   ( match Core_copy.copy two with
   | Core.Expr.Apply {callee = f; arguments = [g]} ->
     let hf = use_holes f and hg = use_holes g in
@@ -121,7 +121,7 @@ let () =
   | _ -> check "a copy keeps the lambdas" false );
   (* Instantiation: the use's solutions replace the callee's variables, in
      annotations and in a rigid self-reference's slots. *)
-  let at_nat = use_at scheme (fun _ -> slot (Scheme.Type nat)) in
+  let at_nat = use_at scheme (fun _ -> slot (Core.Scheme.Type nat)) in
   let inst = Core_copy.instance at_nat body in
   ( match inst with
   | Core.Expr.Lambda {parameter_type = t;
@@ -138,8 +138,8 @@ let () =
     | Some i ->
       check "a rigid self-reference is solved where the use solves its variable"
         (List.for_all
-           (fun v -> (Scheme.Instantiation.slot i v).solution = Scheme.Type nat)
-           (Scheme.Var.all scheme) )
+           (fun v -> (Core.Scheme.Instantiation.slot i v).solution = Core.Scheme.Type nat)
+           (Core.Scheme.Var.all scheme) )
     | None -> check "the self-reference stays polymorphic" false )
   | _ -> check "an instance keeps the shape" false );
   check "an instance shares no occurrence with its original" (not (shares body inst));
@@ -150,7 +150,7 @@ let () =
       {body = Core.Expr.Apply {arguments = [Core.Expr.Apply {callee = Core.Expr.Global u; _}]; _}; _}; _} ->
     check "a rigid use leaves the self-reference rigid"
       (match Core.Global_use.instantiation u with
-       | Some i -> Scheme.Instantiation.for_all (fun _ s -> s.Scheme.solution = Scheme.Identity) i
+       | Some i -> Core.Scheme.Instantiation.for_all (fun _ s -> s.Core.Scheme.solution = Core.Scheme.Identity) i
        | None -> false )
   | _ -> check "a rigid instance keeps the shape" false );
   check "a rigid instance is the body itself" (rigid = body)

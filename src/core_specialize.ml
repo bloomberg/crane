@@ -13,8 +13,8 @@ let same = GlobRef.CanOrd.equal
 type def = Term of Core.Expr.extracted * Core.Type.extracted | Fix of Core.Recursion.Definition.extracted
 
 let definitions struc =
-  let defs = ref Ref.User.Map.empty in
-  let add r d = defs := Ref.User.Map.add r d !defs in
+  let defs = ref Core.Ref.User.Map.empty in
+  let add r d = defs := Core.Ref.User.Map.add r d !defs in
   let rec elems l =
     List.iter
       (fun (_, se) ->
@@ -47,7 +47,7 @@ let body_of defs (use : Core.Global_use.extracted) =
         Some (Core_util.instantiate_body ~reader:"core_specialize.body_of" use body)
       else None
     in
-    match Ref.User.Map.find_opt g defs with
+    match Core.Ref.User.Map.find_opt g defs with
     | Some (Term (b, ty)) -> at b ty
     | Some (Fix fd) -> at fd.body fd.type_
     | None -> None
@@ -321,7 +321,7 @@ let decl defs r body ty =
   match inner with
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use);
                      arguments = args} when not (Table.is_custom r) -> (
-    match Ref.User.Map.find_opt f defs with
+    match Core.Ref.User.Map.find_opt f defs with
     | Some (Fix fd) when not (Table.is_custom f) -> (
       match specialize f fd use args with
       | None -> None

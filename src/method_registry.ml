@@ -44,7 +44,7 @@ type method_candidate = GlobRef.t * Core.Expr.t * Core.Type.t * int
 (** Tables keyed by a global's canonical name.  Being a method is a property
     of the definition, so it holds under every name the definition is reached
     by: [U.f] for [Module U := T] is [T]'s method [f]. *)
-module RefTbl = Ref.Can.Tbl
+module RefTbl = Core.Ref.Can.Tbl
 
 (** The method registry: maps function refs to method info and stores
     candidates. *)
@@ -52,7 +52,7 @@ type t = {
   methods : method_info RefTbl.t;
   (* Reverse index: inductive GlobRef -> list of method candidates. Populated
      during pre-scan so cpp.ml doesn't need to re-collect. *)
-  candidates : method_candidate list Ref.User.Tbl.t;
+  candidates : method_candidate list Core.Ref.User.Tbl.t;
 }
 
 (** {2 Return type helpers} *)
@@ -503,12 +503,12 @@ let register_into
     custom extraction is left out: it is spelled at the call site ([andb] as
     [&&]) and never names the file's struct. *)
 let file_calls modpath decls =
-  let terms : unit Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
+  let terms : unit Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
   let add r =
     if
       ModPath.equal (modpath_of_r r) modpath
       && not (Table.is_any_inline_custom r)
-    then Ref.User.Tbl.replace terms r ()
+    then Core.Ref.User.Tbl.replace terms r ()
   in
   List.iter
     (fun (_l, se) ->
@@ -520,7 +520,7 @@ let file_calls modpath decls =
   fun body ->
     let acc = ref [] in
     Modutil.ast_iter_references
-      (fun r -> if Ref.User.Tbl.mem terms r then acc := r :: !acc)
+      (fun r -> if Core.Ref.User.Tbl.mem terms r then acc := r :: !acc)
       (fun _ -> ())
       (fun _ -> ())
       body;
@@ -714,7 +714,7 @@ let register_methods_for_epon
       register_into ~arity:(core_value_arity ty) tbl r epon_ref
         (cpp_arg_pos ty pos) ~ind_tvar_positions;
       let existing =
-        match Ref.User.Tbl.find_opt cands epon_ref with
+        match Core.Ref.User.Tbl.find_opt cands epon_ref with
         | Some l -> l
         | None -> []
       in
@@ -723,7 +723,7 @@ let register_methods_for_epon
          candidate list must not emit it twice. *)
       if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing)
       then
-        Ref.User.Tbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
+        Core.Ref.User.Tbl.replace cands epon_ref (existing @ [(r, body, ty, pos)])
     in
     let pending = ref [] in
     let consider r body ty pos ind_tvar_positions =
@@ -822,12 +822,12 @@ let register_methods_for_all_inductives tbl cands ind_refs decls =
   let add_candidate ind_ref r body ty pos ind_tvar_positions =
     register_into ~arity:(core_value_arity ty) tbl r ind_ref
       (cpp_arg_pos ty pos) ~ind_tvar_positions;
-    let existing = match Ref.User.Tbl.find_opt cands ind_ref with
+    let existing = match Core.Ref.User.Tbl.find_opt cands ind_ref with
       | Some l -> l | None -> []
     in
     (* Dedup by function reference (see the note in [register_methods_for_epon]). *)
     if not (List.exists (fun (r', _, _, _) -> globref_equal r' r) existing) then
-      Ref.User.Tbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
+      Core.Ref.User.Tbl.replace cands ind_ref (existing @ [(r, body, ty, pos)])
   in
   (* Check if the receiver argument of type [best_ref] in [ty] has concrete
      type arguments. A function specialized to e.g. [tree nat] instead of
@@ -1059,8 +1059,8 @@ let compute_returns_any
      for all inductives and (b) a term-ref -> Core type index so step 2 can look
      up each method's type in O(1) instead of re-walking the whole structure
      per method. *)
-  let ind_param_vars : Id.t list Ref.User.Tbl.t = Ref.User.Tbl.create 32 in
-  let method_types : Core.Type.t Ref.User.Tbl.t = Ref.User.Tbl.create 256 in
+  let ind_param_vars : Id.t list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 32 in
+  let method_types : Core.Type.t Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 256 in
   let rec collect_from_sel sel =
     List.iter
       (fun (_l, se) ->
@@ -1073,12 +1073,12 @@ let compute_returns_any
               (* Including the promoted variables the payloads name: those are
                  parameters of the generated struct too, so they are in scope
                  in a method's return type.  See {!Table.ind_promoted_params}. *)
-              Ref.User.Tbl.replace ind_param_vars ind_ref
+              Core.Ref.User.Tbl.replace ind_param_vars ind_ref
                 (Table.ind_promoted_params kn @ param_vars) )
             ind.packets
         | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
           List.iter
-            (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace method_types fd.entity fd.type_)
+            (fun (fd : Core.Recursion.Definition.t) -> Core.Ref.User.Tbl.replace method_types fd.entity fd.type_)
             (Core_util.term_defs d)
         | Core.Module.Structure_item.Module m ->
           ( match m.expr with
@@ -1092,7 +1092,7 @@ let compute_returns_any
      return type is erased. *)
   RefTbl.iter
     (fun func_ref info ->
-      match Ref.User.Tbl.find_opt ind_param_vars info.epon_ref with
+      match Core.Ref.User.Tbl.find_opt ind_param_vars info.epon_ref with
       | None -> ()
       | Some param_vars ->
         (* Extract the return type from a curried arrow type. *)
@@ -1102,7 +1102,7 @@ let compute_returns_any
         in
         (* Step 3: Look up this method's Core type (indexed in step 1) and check
            whether its return type is erased. *)
-        ( match Ref.User.Tbl.find_opt method_types func_ref with
+        ( match Core.Ref.User.Tbl.find_opt method_types func_ref with
         | None -> ()
         | Some ty ->
           let ret_core = get_return_type ty in
@@ -1130,7 +1130,7 @@ let reserve_names (reg : t) =
     methods and all inductives' parameter information to work correctly. *)
 let create ~ret_is_erased (s : Core.Program.t) : t =
   let tbl = RefTbl.create 100 in
-  let cands = Ref.User.Tbl.create 32 in
+  let cands = Core.Ref.User.Tbl.create 32 in
   (* Gather all top-level declarations across all modules. These serve as
      [parent_decls] for the recursive scan, enabling cross-module method
      detection (e.g. a function at file scope that takes a type from a
@@ -1199,7 +1199,7 @@ let method_returns_any (reg : t) (func_ref : GlobRef.t) : bool =
     list of (func_ref, body, type, this_position) tuples for methods belonging
     to this type. *)
 let get_candidates (reg : t) (ind_ref : GlobRef.t) : method_candidate list =
-  match Ref.User.Tbl.find_opt reg.candidates ind_ref with
+  match Core.Ref.User.Tbl.find_opt reg.candidates ind_ref with
   | Some l -> l
   | None -> []
 

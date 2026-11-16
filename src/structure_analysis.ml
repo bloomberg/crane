@@ -569,12 +569,12 @@ let topological_sort
     its body needs is part of what the inductive needs -- even though the
     declaration itself may live in another module. *)
 let methods_by_owner (reg : Method_registry.t) (s : Core.Program.t) =
-  let tbl : Core.Decl.t list Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
+  let tbl : Core.Decl.t list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
   let add r d =
     match Method_registry.is_registered_method reg r with
     | Some (owner, _pos) ->
-      let prev = Option.default [] (Ref.User.Tbl.find_opt tbl owner) in
-      Ref.User.Tbl.replace tbl owner (d :: prev)
+      let prev = Option.default [] (Core.Ref.User.Tbl.find_opt tbl owner) in
+      Core.Ref.User.Tbl.replace tbl owner (d :: prev)
     | None -> ()
   in
   List.iter
@@ -592,14 +592,14 @@ let methods_by_owner (reg : Method_registry.t) (s : Core.Program.t) =
 (** Index every term declaration in the structure by the reference it defines,
     so a method body's dependencies can be followed one call further. *)
 let decls_by_ref (s : Core.Program.t) =
-  let tbl : Core.Decl.t Ref.User.Tbl.t = Ref.User.Tbl.create 64 in
+  let tbl : Core.Decl.t Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 64 in
   List.iter
     (fun (_mp, sel) ->
       List.iter
         (fun (_l, se) ->
           match se with
           | Core.Module.Structure_item.Declaration d ->
-            List.iter (fun (fd : Core.Recursion.Definition.t) -> Ref.User.Tbl.replace tbl fd.entity d)
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> Core.Ref.User.Tbl.replace tbl fd.entity d)
               (Core_util.term_defs d)
           | _ -> () )
         sel )
@@ -628,14 +628,14 @@ let sort_inductives_within_module reg (s : Core.Program.t) sel =
     let methods = methods_by_owner reg s in
     let term_decls = decls_by_ref s in
     (* Which slot defines a given inductive reference. *)
-    let slot_of_ref : int Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
+    let slot_of_ref : int Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
     List.iter
       (fun i ->
         match arr.(i) with
         | _l, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
           Array.iteri
             (fun j _p ->
-              Ref.User.Tbl.replace slot_of_ref (GlobRef.IndRef (kn, j)) i )
+              Core.Ref.User.Tbl.replace slot_of_ref (GlobRef.IndRef (kn, j)) i )
             ind.packets
         | _ -> () )
       ind_slots;
@@ -643,12 +643,12 @@ let sort_inductives_within_module reg (s : Core.Program.t) sel =
        holding [list final_instruction], where [final_instruction] is
        [instruction pc] -- needs the inductive the alias names just as much as
        a field that names it directly. *)
-    let alias_body : Core.Type.t Ref.User.Tbl.t = Ref.User.Tbl.create 8 in
+    let alias_body : Core.Type.t Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 8 in
     List.iter
       (fun (_l, se) ->
         match se with
         | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; body = ty; _}) ->
-          Ref.User.Tbl.replace alias_body r ty
+          Core.Ref.User.Tbl.replace alias_body r ty
         | _ -> () )
       sel;
     let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
@@ -656,16 +656,16 @@ let sort_inductives_within_module reg (s : Core.Program.t) sel =
       (fun i ->
         let acc = ref [] in
         let add_dep r =
-          match Ref.User.Tbl.find_opt slot_of_ref r with
+          match Core.Ref.User.Tbl.find_opt slot_of_ref r with
           | Some j when j <> i && not (List.mem j !acc) -> acc := j :: !acc
           | _ -> ()
         in
-        let seen_alias : unit Ref.User.Tbl.t = Ref.User.Tbl.create 8 in
+        let seen_alias : unit Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 8 in
         let rec add_type_dep r =
           add_dep r;
-          match Ref.User.Tbl.find_opt alias_body r with
-          | Some ty when not (Ref.User.Tbl.mem seen_alias r) ->
-            Ref.User.Tbl.replace seen_alias r ();
+          match Core.Ref.User.Tbl.find_opt alias_body r with
+          | Some ty when not (Core.Ref.User.Tbl.mem seen_alias r) ->
+            Core.Ref.User.Tbl.replace seen_alias r ();
             Modutil.type_iter_references add_type_dep ty
           | _ -> ()
         in
@@ -673,14 +673,14 @@ let sort_inductives_within_module reg (s : Core.Program.t) sel =
            calls -- [nat::div] calls [Nat::divmod], and it is [divmod] that
            returns a [Prod] -- so follow the call graph, not just the immediate
            references. *)
-        let seen : unit Ref.User.Tbl.t = Ref.User.Tbl.create 16 in
+        let seen : unit Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
         let rec scan d =
           Modutil.decl_iter_references (follow add_dep) add_dep add_type_dep d
         and follow k r =
           k r;
-          if not (Ref.User.Tbl.mem seen r) then begin
-            Ref.User.Tbl.replace seen r ();
-            Option.iter scan (Ref.User.Tbl.find_opt term_decls r)
+          if not (Core.Ref.User.Tbl.mem seen r) then begin
+            Core.Ref.User.Tbl.replace seen r ();
+            Option.iter scan (Core.Ref.User.Tbl.find_opt term_decls r)
           end
         in
         ( match arr.(i) with
@@ -692,7 +692,7 @@ let sort_inductives_within_module reg (s : Core.Program.t) sel =
                 scan
                 (Option.default
                    []
-                   (Ref.User.Tbl.find_opt methods (GlobRef.IndRef (kn, j)))) )
+                   (Core.Ref.User.Tbl.find_opt methods (GlobRef.IndRef (kn, j)))) )
             ind.packets
         | _ -> () );
         Hashtbl.replace deps i !acc )

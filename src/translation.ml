@@ -34,7 +34,7 @@ let with_method_ns_for_locals cx ?base (f : unit -> 'a) : 'a =
     List.fold_left
       (fun acc g ->
         if Table.has_recursive_fields g && not (Table.is_enum_inductive g)
-        then Ref.User.Set.add g acc
+        then Core.Ref.User.Set.add g acc
         else acc)
       (Option.default cx.Translation_state.ctx.input.method_self_ns base)
       (Translation_state.local_inductives_in_scope cx)

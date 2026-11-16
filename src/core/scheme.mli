@@ -8,7 +8,7 @@
     {- A {!Binder.t} is a binder of the callee's Rocq product spine, the
        place an argument of the application stands at.}
     {- A {!Var.t} is a variable of the callee's Core type scheme, owned by
-       the scheme ({!Core.Binder_name.Source.t}) it belongs to.}
+       the scheme ({!Binder_name.Source.t}) it belongs to.}
     {- A template parameter of the C++ declaration is the third, and lives
        with the callable's ABI plan ({!Callable_abi}).}}
 
@@ -47,10 +47,10 @@ module Var : sig
   val owner : t -> Id.t
 
   (** The variable's place in its scheme, from [1]: the body spells it
-      [Core.Type.Variable (_, ordinal v)]. *)
+      [Type.Variable (_, ordinal v)]. *)
   val ordinal : t -> int
 
-  (** The scheme's variable the body spells [Core.Type.Variable (_, i)]; [None] out of
+  (** The scheme's variable the body spells [Type.Variable (_, i)]; [None] out of
       range.  The one crossing from the body's numbering. *)
   val of_tvar : Id.t -> int -> t option
 
@@ -63,7 +63,7 @@ module Var : sig
   (** What [l] pairs with the variable, if anything. *)
   val assoc_opt : t -> (t * 'a) list -> 'a option
 
-  (** {!assoc_opt} at the variable that [l]'s scheme spells [Core.Type.Variable (_, i)]
+  (** {!assoc_opt} at the variable that [l]'s scheme spells [Type.Variable (_, i)]
       ({!of_tvar}): for a reader holding a variable it met in that scheme's
       body.  [l] pairs variables of one scheme; [None] when [l] is empty. *)
   val assoc_tvar : int -> (t * 'a) list -> 'a option
@@ -84,7 +84,7 @@ module Binder : sig
   val pp : t -> Pp.t
 end
 
-(** Identities of inference holes ({!Core.Type.Hole}). *)
+(** Identities of inference holes ({!Type.Hole}). *)
 module Hole : sig
   (** A hole distinct from every other minted in this process. *)
   val fresh : unit -> int

@@ -24,28 +24,28 @@ let equal a b =
   && List.equal Int.equal a.phantoms b.phantoms
 
 (* Positions declared [template <typename> class], each with its arity. *)
-let template_template : (int * int) list Ref.User.Tbl.t = Ref.User.Tbl.create 16
+let template_template : (int * int) list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16
 
 (* Positions applied in the definition but still declared a plain [typename]:
    event families, applied only at indices, whose argument is the family's
    own struct. *)
-let family : int list Ref.User.Tbl.t = Ref.User.Tbl.create 16
+let family : int list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16
 
 (* Positions the definition never spells -- an erased event family -- so no
    instantiation may be written in them at a use. *)
-let phantom : int list Ref.User.Tbl.t = Ref.User.Tbl.create 16
+let phantom : int list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16
 
 let reset () =
-  Ref.User.Tbl.reset template_template;
-  Ref.User.Tbl.reset family;
-  Ref.User.Tbl.reset phantom
+  Core.Ref.User.Tbl.reset template_template;
+  Core.Ref.User.Tbl.reset family;
+  Core.Ref.User.Tbl.reset phantom
 
 let sizes () =
-  [ ("hkt_ind_params", Ref.User.Tbl.length template_template);
-    ("phantom_type_params", Ref.User.Tbl.length phantom) ]
+  [ ("hkt_ind_params", Core.Ref.User.Tbl.length template_template);
+    ("phantom_type_params", Core.Ref.User.Tbl.length phantom) ]
 
 (* An empty list is not recorded, so [has_family] tests membership. *)
-let record_in tbl r positions = if positions <> [] then Ref.User.Tbl.replace tbl r positions
+let record_in tbl r positions = if positions <> [] then Core.Ref.User.Tbl.replace tbl r positions
 
 let record r k =
   record_in template_template r k.template_templates;
@@ -53,18 +53,18 @@ let record r k =
   record_in phantom r k.phantoms
 
 let recorded r =
-  let find tbl = Option.default [] (Ref.User.Tbl.find_opt tbl r) in
+  let find tbl = Option.default [] (Core.Ref.User.Tbl.find_opt tbl r) in
   {template_templates = find template_template; families = find family; phantoms = find phantom}
 
 let template_template_arity r i =
-  match Ref.User.Tbl.find_opt template_template r with
+  match Core.Ref.User.Tbl.find_opt template_template r with
   | Some s -> List.assoc_opt i s
   | None -> None
 
 let is_family r i =
-  match Ref.User.Tbl.find_opt family r with Some l -> List.mem i l | None -> false
+  match Core.Ref.User.Tbl.find_opt family r with Some l -> List.mem i l | None -> false
 
-let has_family r = Ref.User.Tbl.mem family r
+let has_family r = Core.Ref.User.Tbl.mem family r
 
 let is_phantom r i =
-  match Ref.User.Tbl.find_opt phantom r with Some l -> List.mem i l | None -> false
+  match Core.Ref.User.Tbl.find_opt phantom r with Some l -> List.mem i l | None -> false

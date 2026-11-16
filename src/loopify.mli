@@ -69,7 +69,7 @@ val frame_machine :
   unit:Unit_context.t ->
   loop:Control_ir.Loop.t ->
   ?entry:Control_ir.Loop.t ->
-  ?entered_pointers:(Core_binder.t -> bool) ->
+  ?entered_pointers:(Core.Binder.t -> bool) ->
   varying:bool list ->
   parts:bool list ->
   tparams:(param_kind * Id.t) list ->
@@ -192,7 +192,7 @@ val local_frame_machine :
   unit:Unit_context.t ->
   member:Core.Occurrence.t * int ->
   name:Id.t ->
-  binders:(Id.t * Core_binder.t) list ->
+  binders:(Id.t * Core.Binder.t) list ->
   varying:bool list ->
   parts:bool list ->
   tparams:(param_kind * Id.t) list ->

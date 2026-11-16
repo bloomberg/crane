@@ -18,24 +18,24 @@ let nat =
 let bool =
   Core.Type.Global_app
     {head = Names.GlobRef.VarRef (Names.Id.of_string "bool"); type_arguments = []; index_arguments = []}
-let binder = Scheme.Binder.of_position 0
+let binder = Core.Scheme.Binder.of_position 0
 
 let source () =
   match Random.int 3 with
-  | 0 -> Scheme.Written {binder; observed = Some nat}
-  | 1 -> Scheme.Written {binder; observed = None}
-  | _ -> Scheme.Not_written
+  | 0 -> Core.Scheme.Written {binder; observed = Some nat}
+  | 1 -> Core.Scheme.Written {binder; observed = None}
+  | _ -> Core.Scheme.Not_written
 
 let () =
   Random.init 20261013;
   for _ = 1 to 500 do
     let arity = 1 + Random.int 5 in
-    let scheme = Scheme.Id.fresh callee ~arity in
-    let sources = List.map (fun v -> (v, source ())) (Scheme.Var.all scheme) in
+    let scheme = Core.Scheme.Id.fresh callee ~arity in
+    let sources = List.map (fun v -> (v, source ())) (Core.Scheme.Var.all scheme) in
     let use =
       Core.Global_use.polymorphic callee
-        (Scheme.Instantiation.make scheme (fun v ->
-             { Scheme.solution = Scheme.Type (Core.Type.Hole (Scheme.Hole.fresh ()));
+        (Core.Scheme.Instantiation.make scheme (fun v ->
+             { Core.Scheme.solution = Core.Scheme.Type (Core.Type.Hole (Core.Scheme.Hole.fresh ()));
                source = List.assoc v sources } ) )
     in
     let t = Call_tyargs.of_use use in
@@ -45,26 +45,26 @@ let () =
       (List.for_all
          (fun (v, s) ->
            Call_tyargs.is_hole t v
-           = match s with Scheme.Written {observed = Some _; _} -> false | _ -> true )
+           = match s with Core.Scheme.Written {observed = Some _; _} -> false | _ -> true )
          sources );
     check "a variable is unwritten exactly where the use wrote nothing"
       (List.for_all
-         (fun (v, s) -> Call_tyargs.is_unwritten t v = (s = Scheme.Not_written))
+         (fun (v, s) -> Call_tyargs.is_unwritten t v = (s = Core.Scheme.Not_written))
          sources );
     let spoken = List.map fst (Core_util.Var_types.bindings (Call_tyargs.by_variable t)) in
-    let within v = List.exists (Scheme.Var.equal v) spoken in
+    let within v = List.exists (Core.Scheme.Var.equal v) spoken in
     check "interior holes and the variables beyond partition by the extent"
       (List.for_all within (Call_tyargs.interior_holes t)
        && List.for_all (fun v -> not (within v)) (Call_tyargs.beyond_extent t)
        && List.for_all
-            (fun v -> within v || List.exists (Scheme.Var.equal v) (Call_tyargs.beyond_extent t))
+            (fun v -> within v || List.exists (Core.Scheme.Var.equal v) (Call_tyargs.beyond_extent t))
             (Call_tyargs.vars t));
     let asked = List.filter (fun _ -> Random.bool ()) (Call_tyargs.vars t) in
     let answer v =
       match Random.int 3 with
       | 0 -> None
       | 1 -> Some (Core.Type.Erased Core.Erasure_reason.Type_argument)
-      | _ -> Some (if Scheme.Var.ordinal v mod 2 = 0 then bool else nat)
+      | _ -> Some (if Core.Scheme.Var.ordinal v mod 2 = 0 then bool else nat)
     in
     let answers = List.map (fun v -> (v, answer v)) (Call_tyargs.vars t) in
     let answer v = List.assoc v answers in
@@ -92,7 +92,7 @@ let () =
            Call_tyargs.is_hole r v
            = ( Call_tyargs.is_hole t v
                && not
-                    ( List.exists (Scheme.Var.equal v) asked
+                    ( List.exists (Core.Scheme.Var.equal v) asked
                     && match answer v with Some (Core.Type.Erased _) | None -> false | Some _ -> true ) ) )
          (Call_tyargs.vars t) );
     check "a resolved variable is no longer unwritten"
@@ -112,9 +112,9 @@ let () =
     check "a variable is found where the callee's type spells it"
       (List.for_all
          (fun v ->
-           Core_util.Var_types.find tys v = Core_util.Var_types.find_tvar tys (Scheme.Var.ordinal v) )
+           Core_util.Var_types.find tys v = Core_util.Var_types.find_tvar tys (Core.Scheme.Var.ordinal v) )
          (Call_tyargs.vars r) );
-    let other = List.hd (Scheme.Var.all (Scheme.Id.fresh callee ~arity)) in
+    let other = List.hd (Core.Scheme.Var.all (Core.Scheme.Id.fresh callee ~arity)) in
     check "another scheme's variable is never read as this one's"
       ( Core_util.Var_types.is_empty tys
       || match Core_util.Var_types.find tys other with

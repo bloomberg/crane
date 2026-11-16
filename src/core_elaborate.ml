@@ -16,7 +16,7 @@ open Table
     callee's arity and so applied to its result, or one at no value position.
     A variable argument is read off the binder it names in [lex], the
     environment the call is typed in, by its Core type and its role
-    ({!Lexenv.binder}); no C++ name is consulted, and nothing of the
+    ({!Core.Lexenv.binder}); no C++ name is consulted, and nothing of the
     traversal that asks. *)
 let classify ~lex id written =
   (* Each argument with its position, so that the partition below says
@@ -40,7 +40,7 @@ let classify ~lex id written =
          under [Conservative Types] a definition keeps its type binders and
          passes them on ([length A l']). *)
       | Core.Expr.Bound_variable {index = i; _} -> (
-        match Lexenv.type_opt lex i with
+        match Core.Lexenv.type_opt lex i with
         | Some t -> not (erased_by_extraction t)
         | None -> true )
       | _ -> true
@@ -221,7 +221,7 @@ let resolve_from_context ~lex ~expected_core ~stated_core (call : Elaborated_cal
       in
       Call_tyargs.resolve Call_tyargs.Expected_result
         (fun v ->
-          let k = Scheme.Var.ordinal v in
+          let k = Core.Scheme.Var.ordinal v in
           match List.assoc_opt k found with
           | Some b
             when IntSet.mem k families && (not (IntSet.mem k deducible))
@@ -280,7 +280,7 @@ let instantiate ~lex ~expected_core ~stated_core ~caller ~scope call =
       match
         List.fold_left
           (fun m v ->
-            let i = Scheme.Var.ordinal v in
+            let i = Core.Scheme.Var.ordinal v in
             if IntSet.mem i in_cod then max m i else m )
           0 open_vars
       with
@@ -297,11 +297,11 @@ let instantiate ~lex ~expected_core ~stated_core ~caller ~scope call =
         in
         Call_tyargs.resolve Call_tyargs.Eta_parameter
           (fun v ->
-            let i = Scheme.Var.ordinal v in
+            let i = Core.Scheme.Var.ordinal v in
             Some
               ( if IntSet.mem i in_cod && collides i then Core.Type.Unknown
                 else Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = i} ) )
-          (List.filter (fun v -> Scheme.Var.ordinal v <= n) open_vars)
+          (List.filter (fun v -> Core.Scheme.Var.ordinal v <= n) open_vars)
           tyargs
   in
   (* The one substitution that takes the callee's declared types to this
@@ -344,7 +344,7 @@ type entry = {
 }
 
 type t = {
-  calls : entry list Ref.User.Map.t;  (** By callee, each newest first. *)
+  calls : entry list Core.Ref.User.Map.t;  (** By callee, each newest first. *)
   named : GlobRef.Set_env.t;  (** Every global the bodies name, applied or not. *)
   dictionary_calls : (Core.Occurrence.t * (GlobRef.t * GlobRef.t)) list;
       (** Each application of a singleton class's dictionary, by the
@@ -360,7 +360,7 @@ type t = {
 }
 
 let empty =
-  { calls = Ref.User.Map.empty;
+  { calls = Core.Ref.User.Map.empty;
     named = GlobRef.Set_env.empty;
     dictionary_calls = [];
     constructions = GlobRef.Map_env.empty;
@@ -439,8 +439,8 @@ let member_template_projection ~lex (call : Elaborated_call.t) =
    dictionary of a singleton class: an instance parameter -- a declaration's
    dictionary, or a binder named as an instance -- at the class's type. *)
 let singleton_dictionary_head lex i =
-  match Lexenv.binder lex i with
-  | Some {id; type_; role} when role = Lexenv.Dictionary || Common.is_tc_instance_id id -> (
+  match Core.Lexenv.binder lex i with
+  | Some {id; type_; role} when role = Core.Lexenv.Dictionary || Common.is_tc_instance_id id -> (
     match resolve_meta type_ with
     | Core.Type.Global_app {head = c; _} -> Option.map (fun m -> (c, m)) (Table.singleton_class_method c)
     | _ -> None )
@@ -490,7 +490,7 @@ let record w ~position lex (use : Core.Global_use.t) args =
       | inst -> Some inst
       | exception e when CErrors.noncritical e -> None
     in
-    let others = Option.default [] (Ref.User.Map.find_opt use.callee !(w.b).calls) in
+    let others = Option.default [] (Core.Ref.User.Map.find_opt use.callee !(w.b).calls) in
     let entry =
       { occurrence = Core.Global_use.occurrence use;
         roles;
@@ -501,7 +501,7 @@ let record w ~position lex (use : Core.Global_use.t) args =
         closed_head = closed_head ~lex use call;
         member_template = member_template_projection ~lex call }
     in
-    w.b := {!(w.b) with calls = Ref.User.Map.add use.callee (entry :: others) !(w.b).calls};
+    w.b := {!(w.b) with calls = Core.Ref.User.Map.add use.callee (entry :: others) !(w.b).calls};
     planned
   (* A callee with no type is never translated as a call: the traversal
      reaches it by another route or not at all. *)
@@ -576,10 +576,10 @@ let lambda_body_position ~n position =
   in
   {position with expected}
 
-let binder role (x, ty) = {Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = role}
+let binder role (x, ty) = {Core.Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = role}
 
 (* The binders [ids], innermost first, as [collect_lams] returns them. *)
-let push role ids lex = Lexenv.push (List.map (binder role) ids) lex
+let push role ids lex = Core.Lexenv.push (List.map (binder role) ids) lex
 
 (* [walk w ~position lex e] elaborates the calls of [e], generated in [lex]
    at [position], each at the position translation generates it at: a
@@ -604,7 +604,7 @@ let rec walk w ?(position = no_position) lex e =
   | Core.Expr.Lambda _ as e ->
     let ids, body = Core_util.collect_lams e in
     List.iter (fun (_, ty) -> walk_type w lex ty) ids;
-    go ~position:(lambda_body_position ~n:(List.length ids) position) (push Lexenv.Value ids lex) body
+    go ~position:(lambda_body_position ~n:(List.length ids) position) (push Core.Lexenv.Value ids lex) body
   (* An alias of a polymorphic function is not bound but put in place of its
      uses ({!Core_query.let_lambda}), and its calls are those of
      what it abbreviates, at the arguments each use gives it.  A lambda that
@@ -615,11 +615,11 @@ let rec walk w ?(position = no_position) lex e =
     | Inlined body -> go ~position lex body
     | Bound | At_instance _ | Lifted ->
       go lex a;
-      go ~position (push Lexenv.Value [(x, ty)] lex) body )
+      go ~position (push Core.Lexenv.Value [(x, ty)] lex) body )
   | Core.Expr.Let {binder = x; binder_type = ty; value = a; body; _} ->
     walk_type w lex ty;
     go ~position:{position with expected = Some ty} lex a;
-    go ~position (push Lexenv.Value [(x, ty)] lex) body
+    go ~position (push Core.Lexenv.Value [(x, ty)] lex) body
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = args; occurrence = occ} ->
     w.b := {!(w.b) with constructions = add_keyed r occ (is_shared_constant_term e) !(w.b).constructions};
     walk_type w lex ty;
@@ -640,7 +640,7 @@ let rec walk w ?(position = no_position) lex e =
     Array.iter
       (fun {Core.Match.Branch.binders = ids; result_type = rty; body = body; _} ->
         List.iter (fun (_, ty) -> walk_type w lex ty) ids;
-        let lex = push Lexenv.Value (List.rev ids) lex in
+        let lex = push Core.Lexenv.Value (List.rev ids) lex in
         walk_type w lex rty;
         go ~position lex body )
       branches
@@ -649,7 +649,7 @@ let rec walk w ?(position = no_position) lex e =
     Array.iter (fun (_, ty) -> walk_type w lex ty) fs;
     (* The last function of the group is the innermost binder. *)
     let fs = List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs) in
-    Array.iter (go (push Lexenv.Value fs lex)) defs
+    Array.iter (go (push Core.Lexenv.Value fs lex)) defs
   | Core.Expr.Coerce {value = e; _}
   | Core.Expr.Boxed_value {value = e; _}
   | Core.Expr.Lambda_group_barrier {value = e; _} ->
@@ -715,7 +715,7 @@ let declaration_scope ty body =
     let ty = reconcile_parameter_type body_ty sig_ty in
     binder (parameter_role ty) (x, ty)
   in
-  (Lexenv.push (List.map2 parameter params (List.rev (Type_util.core_domains ty))) Lexenv.empty, body)
+  (Core.Lexenv.push (List.map2 parameter params (List.rev (Type_util.core_domains ty))) Core.Lexenv.empty, body)
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
    every let-bound lambda as translation generates it
@@ -725,7 +725,7 @@ let declaration_scope ty body =
    ({!Core_query.eta_bound_lambda}). *)
 let rec inline_aliases ~n_outer lex e =
   let go = inline_aliases ~n_outer in
-  let under ids body = go (push Lexenv.Value ids lex) body in
+  let under ids body = go (push Core.Lexenv.Value ids lex) body in
   let fix_binders fs = List.rev_map (fun (f, ty) -> (Core.Binder_name.Source f, ty)) (Array.to_list fs) in
   match e with
   | Core.Expr.Let {binder = x; binder_type = ty; value = (Core.Expr.Lambda _ as a); body; occurrence = occ} -> (
@@ -782,7 +782,7 @@ let declaration ?caller ?scope b ty body =
   let lex, body = declaration_scope ty body in
   let ty = Core_util.type_simpl ty in
   let w = walker ?caller ?scope b ~n_outer:(head_variables ty) in
-  walk_type w Lexenv.empty ty;
+  walk_type w Core.Lexenv.empty ty;
   walk w lex body
 
 (* A constant typed by a name that stands for arrows -- an instance of a
@@ -796,7 +796,7 @@ let constant_at_alias ~caller b ty body =
       | Core.Expr.Lambda_group_barrier {value = b; _} -> b | b -> b in
   if Type_util.core_domains ty = [] then
     match Type_util.eta_expand_to (Type_util.expand_core_fun_alias ty) body with
-    | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Lexenv.empty expanded
+    | expanded when expanded != body -> walk (walker ~caller b ~n_outer:(head_variables ty)) Core.Lexenv.empty expanded
     | _ -> ()
 
 (* An instance's methods are generated from its record's fields not as
@@ -814,9 +814,9 @@ let instance_methods b name body ty =
   Option.iter
     (fun (lam_params, methods) ->
       let lex =
-        Lexenv.push
+        Core.Lexenv.push
           (List.rev_map (fun (x, ty) -> binder (parameter_role ty) (Core.Binder_name.Source x, ty)) lam_params)
-            Lexenv.empty
+            Core.Lexenv.empty
       in
       let w = walker ~caller:name b ~n_outer:(head_variables ty) in
       List.iter
@@ -828,7 +828,7 @@ let instance_methods b name body ty =
           in
           match eta with
           | Some (eta, call) ->
-            walk w (push Lexenv.Value (List.rev_map (fun (x, ty) -> (Core.Binder_name.Source x, ty)) eta) lex) call
+            walk w (push Core.Lexenv.Value (List.rev_map (fun (x, ty) -> (Core.Binder_name.Source x, ty)) eta) lex) call
           | None -> walk w lex m.body )
         methods )
     (Instance_methods.methods name body ty)
@@ -842,7 +842,7 @@ let rec foreign_types b ~walked =
   let pending = GlobRef.Set_env.diff !b.named walked in
   if not (GlobRef.Set_env.is_empty pending) then begin
     let w = {(walker b ~n_outer:0) with site = Type_term} in
-    GlobRef.Set_env.iter (fun r -> Option.iter (walk_type w Lexenv.empty) (find_type_opt r)) pending;
+    GlobRef.Set_env.iter (fun r -> Option.iter (walk_type w Core.Lexenv.empty) (find_type_opt r)) pending;
     foreign_types b ~walked:(GlobRef.Set_env.union walked pending)
   end
 
@@ -868,7 +868,7 @@ let structure ~methods struc =
   let b = ref empty in
   let defined = ref GlobRef.Set_env.empty in
   let define r = defined := GlobRef.Set_env.add r !defined in
-  let closed_type = walk_type {(walker b ~n_outer:0) with site = Type_term} Lexenv.empty in
+  let closed_type = walk_type {(walker b ~n_outer:0) with site = Type_term} Core.Lexenv.empty in
   let inductive (ind : Core.Inductive.t) =
     Array.iter
       (fun (p : Core.Inductive.Packet.t) -> Array.iter (List.iter closed_type) p.constructor_argument_types)
@@ -928,7 +928,7 @@ let walk_of walk = Option.default empty walk
    application; one a rewrite duplicated is found only where every copy has
    the same roles. *)
 let roles t (use : Core.Global_use.t) n =
-  match Ref.User.Map.find_opt use.callee t.calls with
+  match Core.Ref.User.Map.find_opt use.callee t.calls with
   | None -> None
   | Some entries -> (
     let occurrence = Core.Global_use.occurrence use in
@@ -948,7 +948,7 @@ let roles t (use : Core.Global_use.t) n =
    => length], gets its [no] back -- and a call translation built is
    elaborated where it is translated. *)
 let extended t (use : Core.Global_use.t) n =
-  match Ref.User.Map.find_opt use.callee t.calls with
+  match Core.Ref.User.Map.find_opt use.callee t.calls with
   | None -> false
   | Some entries ->
     let occurrence = Core.Global_use.occurrence use in
@@ -990,7 +990,7 @@ let elaboration ~walk ~lex (use : Core.Global_use.t) args =
    there planned one and all agree, [`Ambiguous] with the sites of the
    entries where they do not or one failed, [`Unwalked] where the walk made none. *)
 let planned t (use : Core.Global_use.t) n =
-  match Ref.User.Map.find_opt use.callee t.calls with
+  match Core.Ref.User.Map.find_opt use.callee t.calls with
   | None -> `Unwalked
   | Some entries -> (
     let occurrence = Core.Global_use.occurrence use in
@@ -1092,7 +1092,7 @@ let same_head (c, m) (c', m') = GlobRef.CanOrd.equal c c' && GlobRef.CanOrd.equa
    naming its callee by [use] says of it ([fact]), if they all say one
    thing. *)
 let entry_fact ~walk ~equal fact (use : Core.Global_use.t) n =
-  match Ref.User.Map.find_opt use.callee (walk_of walk).calls with
+  match Core.Ref.User.Map.find_opt use.callee (walk_of walk).calls with
   | None -> None
   | Some entries ->
     let occurrence = Core.Global_use.occurrence use in
@@ -1153,7 +1153,7 @@ let match_kind ~walk ty branches occ =
   lookup "match kinds" ~walk ~equal:( = ) ~live:(fun () -> Match_kind.classify ty branches) planned
 
 let report t =
-  let n = Ref.User.Map.fold (fun _ l acc -> acc + List.length l) t.calls 0 in
+  let n = Core.Ref.User.Map.fold (fun _ l acc -> acc + List.length l) t.calls 0 in
   Printf.sprintf
     "elaborated calls: %d planned; emission found %d, elaborated %d itself; took %d instantiations planned, \
      %d instantiated itself"

@@ -1,7 +1,7 @@
 (* The scheme identities and the instantiation indexed by them. *)
 
 open Crane_plugin
-open Scheme
+open Core.Scheme
 
 let check name cond =
   if not cond then (

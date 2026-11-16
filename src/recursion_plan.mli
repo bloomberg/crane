@@ -311,11 +311,11 @@ type call = private {
     binders in scope, outermost first, whose value makes no call: a frame
     may bind one again from what it reads rather than keep it. *)
 type resume = private {
-  binder : Core_binder.t;
-  live : Core_binder.t list;
+  binder : Core.Binder.t;
+  live : Core.Binder.t list;
   after : call list;
   passes : passing list;
-  read_by_call : Core_binder.t list;
+  read_by_call : Core.Binder.t list;
   recomputable : recomputable list;
 }
 
@@ -329,8 +329,8 @@ type resume = private {
     into some other term, or under a lambda, or in a local fixpoint's bodies,
     passes nothing here. *)
 and passing = private {
-  passed : Core_binder.t;
-  into : Core_binder.t;
+  passed : Core.Binder.t;
+  into : Core.Binder.t;
   call : call;
 }
 
@@ -341,8 +341,8 @@ and passing = private {
     dictionaries left out: a declaration takes those as template arguments,
     in scope everywhere. *)
 and recomputable = private {
-  recomputed : Core_binder.t;
-  from : Core_binder.t list;
+  recomputed : Core.Binder.t;
+  from : Core.Binder.t list;
 }
 
 (** Whether a coercion from [from] into [into] keeps the value's
@@ -356,7 +356,7 @@ val in_place : Core.Type.t -> Core.Type.t -> bool
     let whose right-hand side is the call, or ends in one in some branch,
     and a sequential bind's continuation, in the definition's body or a
     local fixpoint's.  A call under a lambda is not one.  A point's binder
-    records its let or bind ({!Core_binder.site}): two lets of one
+    records its let or bind ({!Core.Binder.site}): two lets of one
     definition at one level, in two branches, both bind [b] only where [b]
     records neither. *)
-val resumes_binding : t -> Core_binder.t -> resume list
+val resumes_binding : t -> Core.Binder.t -> resume list

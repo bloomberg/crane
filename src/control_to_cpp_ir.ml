@@ -106,7 +106,7 @@ let resumes_of ~unit ?entry_captures ~origin ~depth ~available ~parameters:(firs
   let rebuilt (p : Recursion_plan.resume) =
     List.fold_left
       (fun rebuilt (c : Recursion_plan.recomputable) ->
-        if List.for_all (fun b -> available b || List.exists (Core_binder.equal b) rebuilt) c.from then
+        if List.for_all (fun b -> available b || List.exists (Core.Binder.equal b) rebuilt) c.from then
           c.recomputed :: rebuilt
         else rebuilt )
       [] p.recomputable
@@ -122,14 +122,14 @@ let resumes_of ~unit ?entry_captures ~origin ~depth ~available ~parameters:(firs
         | [p] ->
           let kept = List.filter (fun b -> not (available b)) p.live in
           let rebuilt = rebuilt p in
-          let held = List.filter (fun b -> not (List.exists (Core_binder.equal b) rebuilt)) kept in
+          let held = List.filter (fun b -> not (List.exists (Core.Binder.equal b) rebuilt)) kept in
           Some
             { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
               kept;
               held;
               passed =
                 List.filter
-                  (fun b -> List.exists (fun (q : Recursion_plan.passing) -> Core_binder.equal q.passed b) p.passes)
+                  (fun b -> List.exists (fun (q : Recursion_plan.passing) -> Core.Binder.equal q.passed b) p.passes)
                   held }
         | _ -> None ) }
 
@@ -137,7 +137,7 @@ let resumes_of ~unit ?entry_captures ~origin ~depth ~available ~parameters:(firs
    parameter is at the level [first], that every turn passes on unchanged. *)
 let invariant_at (l : Control_ir.Term.loop) ~first =
   let invariant = Control_ir.Term.invariant_parameters l in
-  fun (b : Core_binder.t) -> b.level >= first && Option.default false (List.nth_opt invariant (b.level - first))
+  fun (b : Core.Binder.t) -> b.level >= first && Option.default false (List.nth_opt invariant (b.level - first))
 
 (* The loop of the function [r] where its body is lowered as a machine with
    a stack of frames as it is generated ({!lower_group}): one the
@@ -218,7 +218,7 @@ let planned_at ~unit (l : Control_ir.Term.loop) lowering positions =
 
 (* The position among the parameters of the loop [l] of the parameter of
    the function [r] the Core binder [b] is, where it is one. *)
-let position r (l : Control_ir.Term.loop) (b : Core_binder.t option) =
+let position r (l : Control_ir.Term.loop) (b : Core.Binder.t option) =
   match b with
   | Some b when GlobRef.UserOrd.equal b.origin r && b.level < List.length l.parameters -> Some b.level
   | Some _ | None -> None
@@ -348,7 +348,7 @@ let lifted_positions (l : Control_ir.Term.loop) params =
    flags, in order, and those of the entered loops' by the Core binder. *)
 let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~held body =
   let lambda_params = lazy (if Option.has_some entering then fixpoint_parameters body else []) in
-  let of_entering (b : Core_binder.t) = Option.cata (fun r -> GlobRef.UserOrd.equal b.origin r) false entering in
+  let of_entering (b : Core.Binder.t) = Option.cata (fun r -> GlobRef.UserOrd.equal b.origin r) false entering in
   let holdable : Frame_storage.parameter -> bool = function
     | Own i ->
       List.exists2 (fun p (k, (_, ty)) -> p = Some i && held k ty) positions (List.mapi (fun k p -> (k, p)) params)
@@ -356,7 +356,7 @@ let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~held
       let planned = Option.has_some entering && Frame_storage.local_holdable unit loop index = Some true in
       Frame_storage.check_local index ~planned ~declared:(fun () ->
           List.exists
-            (fun ((b : Core_binder.t), ty) -> of_entering b && b.level = level && holdable_type ~unit ty)
+            (fun ((b : Core.Binder.t), ty) -> of_entering b && b.level = level && holdable_type ~unit ty)
             (Lazy.force lambda_params) );
       planned
   in
@@ -365,7 +365,7 @@ let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~held
   let own_pointers =
     List.map (function Some i -> List.nth storage.own i = Ownership_ir.Storage.Local | None -> false) positions
   in
-  let entered (b : Core_binder.t) =
+  let entered (b : Core.Binder.t) =
     of_entering b && List.assoc_opt b.level storage.entered = Some Ownership_ir.Storage.Local
   in
   (own_pointers, entered)

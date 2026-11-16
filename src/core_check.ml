@@ -10,15 +10,15 @@ let violation r what =
 (* The types an instantiation holds: each slot's solution, and the type
    observed at each written argument. *)
 let solution_types inst =
-  Scheme.Instantiation.fold
-    (fun _ {Scheme.solution; source} acc ->
+  Core.Scheme.Instantiation.fold
+    (fun _ {Core.Scheme.solution; source} acc ->
       let acc =
         match solution with
-        | Scheme.Type t -> t :: acc
-        | Scheme.Identity -> acc
+        | Core.Scheme.Type t -> t :: acc
+        | Core.Scheme.Identity -> acc
       in
       match source with
-      | Scheme.Written {observed = Some t; _} -> t :: acc
+      | Core.Scheme.Written {observed = Some t; _} -> t :: acc
       | _ -> acc )
     inst []
 
@@ -36,7 +36,7 @@ let rec holes acc = function
    hole belongs to one use, and only a copy of that whole use may hold it
    again. *)
 let check_instantiation owners r inst =
-  let owner = Scheme.Id.owner (Scheme.Instantiation.scheme inst) in
+  let owner = Core.Scheme.Id.owner (Core.Scheme.Instantiation.scheme inst) in
   if not (GlobRef.UserOrd.equal owner r) then
     violation r
       ( "is instantiated at the scheme of "

@@ -214,7 +214,7 @@ type method_scope = {
       (** The C++ names of {!method_scope.extra_tvars_orig}, in the same order. *)
   subst_extra_tvars : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t;
       (** Spells the function's own variables in a C++ type by their names. *)
-  method_ns : Ref.User.Set.t;
+  method_ns : Core.Ref.User.Set.t;
       (** The inductive alone: the scope its types are converted in, so a
           recursive occurrence inside a container is spelled as the struct's
           fields spell it. *)
@@ -289,7 +289,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
      (matching how struct fields are defined).  Then strip the top-level
      shared_ptr for the method's own type (value-type inductives are
      passed/returned by value, not by shared_ptr). *)
-  let method_ns = Ref.User.Set.singleton name in
+  let method_ns = Core.Ref.User.Set.singleton name in
   let rec strip_self_ptr (ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
     match ty with
     | Shared_pointer (Entity_application (g, _, _) as inner) when not (is_enum_inductive g) -> inner
@@ -627,7 +627,7 @@ let method_plan func_ref s h =
     ~deduced_callables:s.deduced_callables ~passing:s.passing
     ~receiver:
       { dropped =
-          List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Scheme.Var.of_tvar sc i)) h.dropped;
+          List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Core.Scheme.Var.of_tvar sc i)) h.dropped;
         dropped_names = List.map snd h.dropped;
         params = List.map snd s.params;
         ret = h.ret;
@@ -691,7 +691,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
   let method_k x : Cpp_ir.Lowered.Stmt.t =
     if is_cofix_method then
       suspend_whole
-        ~cpp_of:(Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Ref.User.Set.singleton name) vars)
+        ~cpp_of:(Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton name) vars)
         ~cod:ret_cpp ret_ty x
     else
       Return (Some x)
@@ -935,10 +935,10 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
     lifted out of its body. *)
 let methods_ahead :
     ((GlobRef.t * Id.t list) * (Cpp_ir.Lowered.phase Cpp_ir.Field.member * Cpp_ir.Lowered.Decl.t list)) list
-    Ref.User.Tbl.t =
-  Ref.User.Tbl.create 16
+    Core.Ref.User.Tbl.t =
+  Core.Ref.User.Tbl.create 16
 
-let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset methods_ahead)
+let () = State.on_reset State.Unit (fun () -> Core.Ref.User.Tbl.reset methods_ahead)
 
 (** [generate_method_ahead name vars candidate] generates the method made of
     [candidate] in the inductive [name], whose variables are [vars], before
@@ -946,9 +946,9 @@ let () = State.on_reset State.Unit (fun () -> Ref.User.Tbl.reset methods_ahead)
     lifted out of its body, and returns those helpers. *)
 let generate_method_ahead cx name vars ((func_ref, _, _, _) as candidate) =
   let generation = collecting_lifted cx (fun () -> generate_method cx name vars candidate) in
-  Ref.User.Tbl.replace methods_ahead func_ref
+  Core.Ref.User.Tbl.replace methods_ahead func_ref
     (((name, vars), generation)
-     :: Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref) );
+     :: Option.default [] (Core.Ref.User.Tbl.find_opt methods_ahead func_ref) );
   snd generation
 
 (** [check_method_ahead name vars candidate] generates the method again and
@@ -960,7 +960,7 @@ let check_method_ahead cx name vars ((func_ref, _, _, _) as candidate) =
     List.find_map
       (fun ((name', vars'), (field, _)) ->
         if globref_equal name name' && List.equal Id.equal vars vars' then Some field else None )
-      (Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref))
+      (Option.default [] (Core.Ref.User.Tbl.find_opt methods_ahead func_ref))
   in
   let again = fst (collecting_lifted cx (fun () -> generate_method cx name vars candidate)) in
   if not (Option.equal (fun a b -> compare a b = 0) recorded (Some again)) then
@@ -978,7 +978,7 @@ let gen_single_method cx name vars ((func_ref, _, _, _) as candidate) =
     List.find_map
       (fun ((name', vars'), g) ->
         if globref_equal name name' && List.equal Id.equal vars vars' then Some g else None )
-      (Option.default [] (Ref.User.Tbl.find_opt methods_ahead func_ref))
+      (Option.default [] (Core.Ref.User.Tbl.find_opt methods_ahead func_ref))
   with
   | Some (field, lifted) ->
     relift cx lifted;
@@ -1085,7 +1085,7 @@ let maybe_record_boxed_recursive_ind ~ind_ref core_ty =
     call site, not baked into the field type. *)
 let constructor_field_storage cx ~name ~is_coinductive var_names ty =
   let cpp_ty =
-    Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Ref.User.Set.singleton name) var_names ty
+    Translation_types.cpp_ir_of_core_type cx (empty_env ()) ~ns:(Core.Ref.User.Set.singleton name) var_names ty
   in
   (* Wrap fields that contain a nested self-reference in
      their type arguments (e.g. list(tree(A)) inside tree).

@@ -548,7 +548,7 @@ module Adopted = struct
             frame carries these alongside {!Adopted.params}: they are in scope for a
             lambda but not for a dispatch loop re-entering it from a popped
             frame. *)
-    binders : (Id.t * Core_binder.t) list;
+    binders : (Id.t * Core.Binder.t) list;
         (** The Core binder each parameter and capture stands for, by name *)
     body : stmt list;
         (** The entry's handler, already installed: its own recursive calls go
@@ -742,9 +742,9 @@ type enter_rewrite_ctx = {
   result_ty : ty;
       (** The type the machine's [_result] is declared at: a call's value as
           the machine resumes with it *)
-  binders : (Id.t * Core_binder.t option) list;
+  binders : (Id.t * Core.Binder.t option) list;
       (** The Core binder each local in scope stands for, innermost first,
-          where translation declared it for one ({!Core_binder}) *)
+          where translation declared it for one ({!Core.Binder}) *)
   call_counter : int ref;
       (** Mutable counter for generating unique frame names *)
   frames_ref : Call_frame_info.t list ref;
@@ -767,7 +767,7 @@ type enter_rewrite_ctx = {
   entered : resumes:bool -> expr -> unit;
       (** Told each call that enters the machine, and whether the machine
           resumes after it. *)
-  points_into : Core_binder.t -> bool;
+  points_into : Core.Binder.t -> bool;
       (** Whether an entry of the machine takes a value passed for the
           parameter standing for this Core binder as a pointer to it *)
   entering : Core.Occurrence.t list option;
@@ -859,7 +859,7 @@ let make_enter_for ctx ~called cs =
     match arg with
     | Local x
       when worthwhile_move_type (strip_ref_and_const_type ty)
-           && Option.cata (fun b -> List.exists (Core_binder.equal b) moved) false (binder_of ctx x) ->
+           && Option.cata (fun b -> List.exists (Core.Binder.equal b) moved) false (binder_of ctx x) ->
       Move arg
     | _ -> arg
   in
@@ -870,7 +870,7 @@ let make_enter_for ctx ~called cs =
   make_enter_at ctx cs.entry args
 
 (** Whether the local [x] stands for the Core binder [b]. *)
-let stands_for ctx b x = match binder_of ctx x with Some b' -> Core_binder.equal b b' | None -> false
+let stands_for ctx b x = match binder_of ctx x with Some b' -> Core.Binder.equal b b' | None -> false
 
 (** Whether the Core binder [b] is in scope wherever the machine runs: a
     parameter no re-entry changes. *)
@@ -882,7 +882,7 @@ let available ctx b = Id.Set.exists (stands_for ctx b) ctx.invariant_params
 let rebuilt_binders ctx (p : Recursion_plan.resume) =
   List.fold_left
     (fun rebuilt (c : Recursion_plan.recomputable) ->
-      if List.for_all (fun b -> available ctx b || List.exists (Core_binder.equal b) rebuilt) c.from then
+      if List.for_all (fun b -> available ctx b || List.exists (Core.Binder.equal b) rebuilt) c.from then
         c.recomputed :: rebuilt
       else rebuilt )
     [] p.recomputable
@@ -953,7 +953,7 @@ let no_entering_calls = "no ControlIR loop says which calls enter the machine a 
 
 (** The one point the plan resumes at once the call whose result [tgt] binds
     to [id] returns, which its binder's site picks out from its siblings
-    ({!Core_binder.site}).  Where the result stands for no Core binder or
+    ({!Core.Binder.site}).  Where the result stands for no Core binder or
     the plan has no one point for it, a violation, the machine is not made:
     nothing else says what its frame keeps. *)
 let planned_point ctx id (tgt : binding) =
@@ -1173,7 +1173,7 @@ and rewrite_enter_stmts ctx stmts =
       let p = planned_point ctx id tgt in
       let cont_vars =
         let rebuilt = rebuilt_binders ctx p in
-        let dropped b = available ctx b || List.exists (Core_binder.equal b) rebuilt in
+        let dropped b = available ctx b || List.exists (Core.Binder.equal b) rebuilt in
         planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p
       in
       (* What the rest reads of what the frame does not keep is bound again
@@ -1189,7 +1189,7 @@ and rewrite_enter_stmts ctx stmts =
             let recomputed = rebuilt_binders ctx p in
             let rebindable (v, st) =
               ( match binder_of ctx v with
-              | Some b -> List.exists (Core_binder.equal b) recomputed || respells ctx v
+              | Some b -> List.exists (Core.Binder.equal b) recomputed || respells ctx v
               | None -> true )
               && match st with Bind_variable (_, _, e) -> calls_nothing e | _ -> false
             in
@@ -1209,7 +1209,7 @@ and rewrite_enter_stmts ctx stmts =
         let passed b =
           List.exists
             (fun (q : Recursion_plan.passing) ->
-              Core_binder.equal q.passed b && ctx.points_into q.into
+              Core.Binder.equal q.passed b && ctx.points_into q.into
               && List.exists (Core.Occurrence.equal q.call.occurrence) entering )
             p.passes
         in
@@ -1309,7 +1309,7 @@ and rewrite_enter_stmts ctx stmts =
       let saved_conv =
         let read_by_call cid =
           match binder_of ctx cid with
-          | Some b -> Some (List.exists (Core_binder.equal b) p.read_by_call)
+          | Some b -> Some (List.exists (Core.Binder.equal b) p.read_by_call)
           | None -> None
         in
         if Probe.checking () then begin
@@ -1319,12 +1319,12 @@ and rewrite_enter_stmts ctx stmts =
             b
             ::
               ( match List.find_opt
-                (fun (c : Recursion_plan.recomputable) -> Core_binder.equal c.recomputed b) p.recomputable with
+                (fun (c : Recursion_plan.recomputable) -> Core.Binder.equal c.recomputed b) p.recomputable with
                | Some c -> List.concat_map through c.from
                | None -> [] )
           in
           let read = List.concat_map (fun v -> Option.cata through [] (binder_of ctx v)) (free_vars_expr enter) in
-          let reads cid = Option.cata (fun b -> List.exists (Core_binder.equal b) read) false (binder_of ctx cid) in
+          let reads cid = Option.cata (fun b -> List.exists (Core.Binder.equal b) read) false (binder_of ctx cid) in
           if List.exists (fun cid -> read_by_call cid = Some false && reads cid) cont_vars then
             Probe.violation "frame plan"
               (Pp.str "the call a frame is saved for reads a local the frame keeps the recursion plan says it does not")
@@ -1339,7 +1339,7 @@ and rewrite_enter_stmts ctx stmts =
             let planned =
               (not pointer)
               && (match List.assoc_opt cid env with Some ty -> movable ty | None -> false)
-              && Option.cata (fun b -> List.exists (Core_binder.equal b) plan_moves) false (binder_of ctx cid)
+              && Option.cata (fun b -> List.exists (Core.Binder.equal b) plan_moves) false (binder_of ctx cid)
             in
             (* Under [CRANE_CHECK_IR], the plan moves at least what the
                C++ reading -- a local declared by value, not aliased, that
@@ -1983,7 +1983,7 @@ let fix_handler_bindings field_names cf_ps handler =
     @param varying  Which of [params] the machine's own entry varies, as its
                     ControlIR says
     @param binders  The Core binder each parameter, or capture, stands for, by
-                    name ({!Core_binder})
+                    name ({!Core.Binder})
     @param entered  Told each call entering the machine, and whether it
                     resumes after it
     @param ret_ty   Return type of the function
@@ -2129,14 +2129,14 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
     List.exists2
       (fun (id, _) (varies, pointer) ->
         varies && pointer
-        && match List.assoc_opt id binders with Some b' -> Core_binder.equal b b' | None -> false )
+        && match List.assoc_opt id binders with Some b' -> Core.Binder.equal b b' | None -> false )
       params (List.combine varying entry_pointers)
     ||
     match adopted with
     | Some (ad, _) ->
       List.exists2
         (fun (id, _) pointer ->
-          pointer && match List.assoc_opt id ad.binders with Some b' -> Core_binder.equal b b' | None -> false )
+          pointer && match List.assoc_opt id ad.binders with Some b' -> Core.Binder.equal b b' | None -> false )
         ad.params
         (List.filteri (fun i _ -> i < List.length ad.params) adopted_pointers)
     | None -> false

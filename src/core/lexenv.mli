@@ -4,7 +4,7 @@
 (** The lexical environment of a Core body: every binder in scope, innermost
     first, so that de Bruijn index [i] names the [i]th entry.
 
-    A binder's type is not on the [Core.Expr.Bound_variable] that names it; it is written down
+    A binder's type is not on the [Expr.Bound_variable] that names it; it is written down
     where the binder is bound.  A pass that reads an argument's type through
     a variable therefore needs the environment the argument is typed in, and
     takes it as this value rather than reading whichever scope a traversal
@@ -21,7 +21,7 @@ type role =
 (** One binder in scope. *)
 type binder = {
   id : Names.Id.t;  (** The name it is bound under. *)
-  type_ : Core.Type.t;  (** Its type, as written where it is bound. *)
+  type_ : Type.t;  (** Its type, as written where it is bound. *)
   role : role;
 }
 
@@ -39,7 +39,7 @@ val push : binder list -> t -> t
 val binder : t -> int -> binder option
 
 (** The Core type of the binder at index [i], as {!binder}. *)
-val type_opt : t -> int -> Core.Type.t option
+val type_opt : t -> int -> Type.t option
 
 (** The number of binders in scope. *)
 val depth : t -> int

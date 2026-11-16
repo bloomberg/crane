@@ -72,54 +72,54 @@ type call = {
    those of the live binders the calls' arguments read, and the binders in
    scope whose value makes no call, with those it reads. *)
 type resume = {
-  binder : Core_binder.t;
-  live : Core_binder.t list;
+  binder : Core.Binder.t;
+  live : Core.Binder.t list;
   after : call list;
   passes : passing list;
-  read_by_call : Core_binder.t list;
+  read_by_call : Core.Binder.t list;
   recomputable : recomputable list;
 }
 
 (* A live binder passed on, as it is, for a parameter of a recursive call. *)
 and passing = {
-  passed : Core_binder.t;
-  into : Core_binder.t;
+  passed : Core.Binder.t;
+  into : Core.Binder.t;
   call : call;
 }
 
 (* A binder whose value makes no call, and the binders it reads. *)
 and recomputable = {
-  recomputed : Core_binder.t;
-  from : Core_binder.t list;
+  recomputed : Core.Binder.t;
+  from : Core.Binder.t list;
 }
 
 type t = {
   groups : group list;  (* one per recursive group *)
-  by_member : group Ref.User.Map.t;  (* each member's group *)
-  defined : Ref.User.Set.t;  (* every function the program defines *)
+  by_member : group Core.Ref.User.Map.t;  (* each member's group *)
+  defined : Core.Ref.User.Set.t;  (* every function the program defines *)
   locals : local_group list;  (* one per local fixpoint, copies included *)
-  modulo_cons : chain list Ref.User.Map.t;
+  modulo_cons : chain list Core.Ref.User.Map.t;
       (* per definition that recurses by some call that is not a tail call,
          its chains, if every such call is the one call of a chain *)
-  suspended : Ref.User.Set.t;  (* the definitions whose body suspends *)
-  resumes : resume list Ref.User.Map.t;  (* per definition, its resume points *)
-  adoptable : Core.Occurrence.t list Ref.User.Map.t;  (* per definition, {!flow_fixpoints} calling its group *)
-  kinds : kind Ref.User.Map.t;  (* per definition, its own calls *)
-  calls : Core.Occurrence.t list Ref.User.Map.t;  (* per member, the uses heading its calls in its group's bodies *)
+  suspended : Core.Ref.User.Set.t;  (* the definitions whose body suspends *)
+  resumes : resume list Core.Ref.User.Map.t;  (* per definition, its resume points *)
+  adoptable : Core.Occurrence.t list Core.Ref.User.Map.t;  (* per definition, {!flow_fixpoints} calling its group *)
+  kinds : kind Core.Ref.User.Map.t;  (* per definition, its own calls *)
+  calls : Core.Occurrence.t list Core.Ref.User.Map.t;  (* per member, the uses heading its calls in its group's bodies *)
   let_lambdas : Core.Occurrence.t list;  (* the lets binding a lambda *)
 }
 
 let empty =
   { groups = [];
-    by_member = Ref.User.Map.empty;
-    defined = Ref.User.Set.empty;
+    by_member = Core.Ref.User.Map.empty;
+    defined = Core.Ref.User.Set.empty;
     locals = [];
-    modulo_cons = Ref.User.Map.empty;
-    suspended = Ref.User.Set.empty;
-    resumes = Ref.User.Map.empty;
-    adoptable = Ref.User.Map.empty;
-    kinds = Ref.User.Map.empty;
-    calls = Ref.User.Map.empty;
+    modulo_cons = Core.Ref.User.Map.empty;
+    suspended = Core.Ref.User.Set.empty;
+    resumes = Core.Ref.User.Map.empty;
+    adoptable = Core.Ref.User.Map.empty;
+    kinds = Core.Ref.User.Map.empty;
+    calls = Core.Ref.User.Map.empty;
     let_lambdas = [] }
 
 (* The number of lambdas heading a term, plus [n], and the body under them. *)
@@ -378,9 +378,9 @@ let modulo_cons_chains ~effects ~member ~bodies self =
 let rec iter_scoped f lex e =
   f lex e;
   let bind ids lex =
-    Lexenv.push
+    Core.Lexenv.push
       (List.map
-         (fun (x, ty) -> {Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = Lexenv.Value})
+         (fun (x, ty) -> {Core.Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = Core.Lexenv.Value})
          ids )
       lex
   in
@@ -418,7 +418,7 @@ let suspends_within ~suspension ~self lex e =
       (fun lex -> function
         | Core.Expr.Construct {result_type = Core.Type.Global_app {head = n; _}; constructor = c; arguments = args; _}
           when (not (Table.is_custom c))
-               && suspension.at_constructor ~self:(Some self) ~binder_type:(Lexenv.type_opt lex) n args ->
+               && suspension.at_constructor ~self:(Some self) ~binder_type:(Core.Lexenv.type_opt lex) n args ->
           raise Found
         | _ -> () )
       lex e;
@@ -511,15 +511,15 @@ let match_bound_in_place ty branches = Match_kind.bound_in_place (Match_kind.cla
 let resumes_of ~effects ~entered ~origin ~targets lex body =
   let effect_ = sequential effects in
   let found = ref [] in
-  let binder level = Core_binder.make ~origin ~level () in
+  let binder level = Core.Binder.make ~origin ~level () in
   let dictionary level =
-    match Lexenv.binder lex (Lexenv.depth lex - level) with
+    match Core.Lexenv.binder lex (Core.Lexenv.depth lex - level) with
     | Some {role = Dictionary; _} -> true
     | Some {role = Value; _} | None -> false
   in
   let dedup_passings ps =
     let same p p' =
-      Core_binder.equal p.passed p'.passed && Core_binder.equal p.into p'.into
+      Core.Binder.equal p.passed p'.passed && Core.Binder.equal p.into p'.into
       && Core.Occurrence.equal p.call.occurrence p'.call.occurrence
     in
     List.fold_left (fun acc p -> if List.exists (same p) acc then acc else acc @ [p]) [] ps
@@ -529,7 +529,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
      members bound from level [first] of [fixpoints] on. *)
   let into ~fixpoints (c : call) i =
     match c.target with
-    | Function g -> Some (Core_binder.make ~origin:g ~level:i ())
+    | Function g -> Some (Core.Binder.make ~origin:g ~level:i ())
     | Member (o, _) ->
       Option.map
         (fun (first, n) -> binder (first + n + i))
@@ -590,11 +590,11 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     let live_binders = List.map binder live in
     let inherited =
       List.concat_map
-        (fun r -> List.filter (fun q -> List.exists (Core_binder.equal q.passed) live_binders) r.passes)
+        (fun r -> List.filter (fun q -> List.exists (Core.Binder.equal q.passed) live_binders) r.passes)
         enclosing
     in
     let r =
-      { binder = Core_binder.make ~origin ~level:depth ~site:(Binding site) ();
+      { binder = Core.Binder.make ~origin ~level:depth ~site:(Binding site) ();
         live = live_binders;
         after;
         passes = dedup_passings (inherited @ passings ~fixpoints ~targets ~live (depth + 1) rest);
@@ -812,7 +812,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     | e -> Core_util.ast_iter (go depth) e
   in
   walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] ~fixpoints:[] ~enclosing:[] ~closures:[] ~fields:[] ~captures:[]
-    (Lexenv.depth lex) body;
+    (Core.Lexenv.depth lex) body;
   List.rev !found
 
 (* The local fixpoints in the flow of [body], standing under [depth]
@@ -922,9 +922,9 @@ let local_groups ~suspension ~effects defs =
     in
     let suspends =
       let lex =
-        Lexenv.push
+        Core.Lexenv.push
           (List.rev_map
-             (fun (g, ty) -> {Lexenv.id = g; type_ = ty; role = Lexenv.Value})
+             (fun (g, ty) -> {Core.Lexenv.id = g; type_ = ty; role = Core.Lexenv.Value})
              (Array.to_list ids) )
           lex
       in
@@ -974,7 +974,7 @@ let local_groups ~suspension ~effects defs =
         entered = List.concat_map (fun (o, calls) -> if Core.Occurrence.equal o occurrence then calls else []) bound }
       :: !plans
   in
-  Ref.User.Map.iter
+  Core.Ref.User.Map.iter
     (fun r (fd : Core.Recursion.Definition.t) ->
       let lex, body = Core_elaborate.declaration_scope fd.type_ fd.body in
       let bound = bound_calls body in
@@ -1118,7 +1118,7 @@ let definition_parameter_count (fd : Core.Recursion.Definition.t) =
 
 (* The number of parameters of [g], among the definitions [defs]. *)
 let parameters defs g =
-  match Ref.User.Map.find_opt g defs with
+  match Core.Ref.User.Map.find_opt g defs with
   | Some fd -> definition_parameter_count fd
   | None -> 0
 
@@ -1154,12 +1154,12 @@ let unspliced why r =
 let solves_variables use =
   let solved =
     Option.cata
-      (Scheme.Instantiation.exists (fun _ (s : Core.Type.t Scheme.slot) ->
-           match s.solution with Scheme.Type _ -> true | Scheme.Identity -> false ) )
+      (Core.Scheme.Instantiation.exists (fun _ (s : Core.Type.t Core.Scheme.slot) ->
+           match s.solution with Core.Scheme.Type _ -> true | Core.Scheme.Identity -> false ) )
       false (Core.Global_use.instantiation use)
   in
   let written_elsewhere (v, t) =
-    match Core_util.type_simpl t with Core.Type.Variable {variable = i; _} -> i <> Scheme.Var.ordinal v | _ -> true
+    match Core_util.type_simpl t with Core.Type.Variable {variable = i; _} -> i <> Core.Scheme.Var.ordinal v | _ -> true
   in
   solved || List.exists written_elsewhere (Core.Global_use.written_evidence use)
 
@@ -1352,7 +1352,7 @@ let splice_member ~suspension ~inlines ~defs ~members (fd : Core.Recursion.Defin
     | None -> (
       match next spliced with
       | Some {partner; continued = []; invoked = _ :: _ as invoked} when entered = None -> (
-        let def = Ref.User.Map.find partner defs in
+        let def = Core.Ref.User.Map.find partner defs in
         if not (enterable def) then finished
         else
           match adopt_calls def invoked body with
@@ -1360,11 +1360,11 @@ let splice_member ~suspension ~inlines ~defs ~members (fd : Core.Recursion.Defin
           | Error _ -> finished )
       | Some _ | None -> finished )
     | Some {partner; continued; invoked} -> (
-      let def = Ref.User.Map.find partner defs in
+      let def = Core.Ref.User.Map.find partner defs in
       if Core_util.type_maxvar def.type_ <> own_vars then unspliced "variables" self
       else if not (Option.equal Names.GlobRef.UserOrd.equal (Type_util.codomain_monad def.type_) own_monad) then
         unspliced "monad" self
-      else if Option.is_empty (flow_of ~suspension partner (Ref.User.Map.find partner defs)) then
+      else if Option.is_empty (flow_of ~suspension partner (Core.Ref.User.Map.find partner defs)) then
         unspliced "suspended" self
       else if invoked <> [] && not (inlines self) then unspliced "invoked" self
       else
@@ -1387,17 +1387,17 @@ let splice_member ~suspension ~inlines ~defs ~members (fd : Core.Recursion.Defin
 let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
                                           splices} : Core_phase.normalizing) : Core_phase.normalizing =
   let groups = Recursive_groups.analyze struc in
-  let originals = ref Ref.User.Map.empty in
+  let originals = ref Core.Ref.User.Map.empty in
   Modutil.struct_iter
     (fun d ->
-      List.iter (fun (fd : Core.Recursion.Definition.t) -> originals := Ref.User.Map.add fd.entity fd !originals)
+      List.iter (fun (fd : Core.Recursion.Definition.t) -> originals := Core.Ref.User.Map.add fd.entity fd !originals)
         (Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
     struc;
   let defs = !originals in
   let splicings =
-    Ref.User.Map.filter_map
+    Core.Ref.User.Map.filter_map
       (fun r fd ->
         match Recursive_groups.group groups r with
         | Some members when loopified r && (not (Table.is_custom r)) && not (Splices.decided splices r) ->
@@ -1412,7 +1412,7 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
      partner can take. *)
   let declined r =
     List.exists
-      (fun m -> match Ref.User.Map.find_opt m splicings with Some None -> true | Some (Some _) | None -> false)
+      (fun m -> match Core.Ref.User.Map.find_opt m splicings with Some None -> true | Some (Some _) | None -> false)
       (Option.default [] (Recursive_groups.group groups r))
   in
   (* Each member decided: the copy its machine enters, if any, and its
@@ -1425,9 +1425,9 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
     | Some ([], _, _) -> Some (None, None)
     | None -> None
   in
-  let decisions = Ref.User.Map.filter_map decision splicings in
+  let decisions = Core.Ref.User.Map.filter_map decision splicings in
   let splice (fd : Core.Recursion.Definition.t) =
-    match Ref.User.Map.find_opt fd.entity decisions with
+    match Core.Ref.User.Map.find_opt fd.entity decisions with
     | Some (_, Some body) -> {fd with Core.Recursion.Definition.body = body}
     | Some (_, None) | None -> fd
   in
@@ -1440,7 +1440,7 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
             Core.Decl.Value {entity = r; body = fd.body; type_ = ty}
           | d -> d )
         struc;
-    splices = Ref.User.Map.fold (fun r (entered, _) s -> Splices.decide ?entered r s) decisions splices }
+    splices = Core.Ref.User.Map.fold (fun r (entered, _) s -> Splices.decide ?entered r s) decisions splices }
 
 (* A member of a group recurses by the calls of itself it makes, those in
    the copies of its partners spliced into its body included
@@ -1450,8 +1450,8 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
 let analyze ~suspension groups program =
   let struc = Core_phase.structure program in
   let effects = Core_effects.analyze struc in
-  let defs = ref Ref.User.Map.empty in
-  let add (fd : Core.Recursion.Definition.t) = defs := Ref.User.Map.add fd.entity fd !defs in
+  let defs = ref Core.Ref.User.Map.empty in
+  let add (fd : Core.Recursion.Definition.t) = defs := Core.Ref.User.Map.add fd.entity fd !defs in
   Modutil.struct_iter
     (fun d -> List.iter add (Core_util.term_defs d))
     (fun _ -> ())
@@ -1471,28 +1471,28 @@ let analyze ~suspension groups program =
     in
     classify ~effects ~callee (snd (Core_elaborate.declaration_scope fd.type_ fd.body))
   in
-  let kinds = Ref.User.Map.mapi member_kind defs in
+  let kinds = Core.Ref.User.Map.mapi member_kind defs in
   let plans =
     List.map
       (fun members ->
-        let kind m = Option.default No_recursion (Ref.User.Map.find_opt m kinds) in
+        let kind m = Option.default No_recursion (Core.Ref.User.Map.find_opt m kinds) in
         {members; kind = List.fold_left (fun k m -> combine k (kind m)) No_recursion members} )
       (Recursive_groups.groups groups)
   in
   let by_member =
     List.fold_left
-      (fun m g -> List.fold_left (fun m r -> Ref.User.Map.add r g m) m g.members)
-      Ref.User.Map.empty plans
+      (fun m g -> List.fold_left (fun m r -> Core.Ref.User.Map.add r g m) m g.members)
+      Core.Ref.User.Map.empty plans
   in
-  let defined = Ref.User.Map.fold (fun r _ s -> Ref.User.Set.add r s) defs Ref.User.Set.empty in
+  let defined = Core.Ref.User.Map.fold (fun r _ s -> Core.Ref.User.Set.add r s) defs Core.Ref.User.Set.empty in
   (* Every recursive group has exactly one plan, and a function on no cycle
      reads as not recursing. *)
   if Probe.checking () then
-    Ref.User.Map.iter
+    Core.Ref.User.Map.iter
       (fun r _ ->
-        let planned = Option.map (fun g -> g.members) (Ref.User.Map.find_opt r by_member) in
+        let planned = Option.map (fun g -> g.members) (Core.Ref.User.Map.find_opt r by_member) in
         let grouped = Recursive_groups.group groups r in
-        let off_cycle_recurses () = Ref.User.Map.find r kinds <> No_recursion in
+        let off_cycle_recurses () = Core.Ref.User.Map.find r kinds <> No_recursion in
         if (not (Option.equal (List.equal Common.globref_equal) planned grouped))
            || (grouped = None && off_cycle_recurses ())
         then
@@ -1500,33 +1500,33 @@ let analyze ~suspension groups program =
             Pp.(str "no single plan for the group of " ++ str (Table.kername_of_global r)) )
       defs;
   let modulo_cons =
-    Ref.User.Map.fold
+    Core.Ref.User.Map.fold
       (fun r (fd : Core.Recursion.Definition.t) m ->
         let member ~within:_ ~depth:_ = function
           | Core.Expr.Global (use : Core.Global_use.t) when Names.GlobRef.UserOrd.equal use.callee r -> Some 0
           | _ -> None
         in
-        match Ref.User.Map.find_opt r kinds with
+        match Core.Ref.User.Map.find_opt r kinds with
         | Some Nontail -> (
           match modulo_cons_chains ~effects ~member ~bodies:[|fd.body|] 0 with
-          | Some chains -> Ref.User.Map.add r chains m
+          | Some chains -> Core.Ref.User.Map.add r chains m
           | None -> m )
         | Some (Tail | No_recursion) | None -> m )
-      defs Ref.User.Map.empty
+      defs Core.Ref.User.Map.empty
   in
   let suspended =
-    Ref.User.Map.fold
+    Core.Ref.User.Map.fold
       (fun r (fd : Core.Recursion.Definition.t) s ->
-        if definition_suspends ~suspension r fd.type_ fd.body then Ref.User.Set.add r s else s )
-      defs Ref.User.Set.empty
+        if definition_suspends ~suspension r fd.type_ fd.body then Core.Ref.User.Set.add r s else s )
+      defs Core.Ref.User.Set.empty
   in
   (* A definition off every group that does not recurse only by tail calls
      resumes nowhere but in its local fixpoints. *)
   let resumes =
-    Ref.User.Map.mapi
+    Core.Ref.User.Map.mapi
       (fun r (fd : Core.Recursion.Definition.t) ->
         let members =
-          match Ref.User.Map.find_opt r by_member with
+          match Core.Ref.User.Map.find_opt r by_member with
           | Some g when g.kind = Nontail -> g.members
           | Some _ | None -> []
         in
@@ -1548,15 +1548,15 @@ let analyze ~suspension groups program =
       defs
   in
   let adoptable =
-    Ref.User.Map.mapi
+    Core.Ref.User.Map.mapi
       (fun r (fd : Core.Recursion.Definition.t) ->
-        let members = match Ref.User.Map.find_opt r by_member with Some g -> g.members | None -> [] in
+        let members = match Core.Ref.User.Map.find_opt r by_member with Some g -> g.members | None -> [] in
         let names ~depth:_ = function
           | Core.Expr.Global (use : Core.Global_use.t) -> List.exists (Common.globref_equal use.callee) members
           | _ -> false
         in
         let lex, body = Core_elaborate.declaration_scope fd.type_ fd.body in
-        flow_fixpoints ~names (Lexenv.depth lex) body )
+        flow_fixpoints ~names (Core.Lexenv.depth lex) body )
       defs
   in
   let calls =
@@ -1569,15 +1569,15 @@ let analyze ~suspension groups program =
           | e -> Core_util.ast_iter walk e
         in
         List.iter
-          (fun r -> Option.iter (fun (fd : Core.Recursion.Definition.t) -> walk fd.body) (Ref.User.Map.find_opt r defs))
+          (fun r -> Option.iter (fun (fd : Core.Recursion.Definition.t) -> walk fd.body) (Core.Ref.User.Map.find_opt r defs))
             g.members;
         List.fold_left
           (fun m r ->
-            Ref.User.Map.add r
+            Core.Ref.User.Map.add r
               (List.rev (List.filter_map (fun (c, o) -> if Common.globref_equal c r then Some o else None) !uses))
               m )
           m g.members )
-      Ref.User.Map.empty plans
+      Core.Ref.User.Map.empty plans
   in
   { groups = plans;
     by_member;
@@ -1590,7 +1590,7 @@ let analyze ~suspension groups program =
     kinds;
     calls;
     let_lambdas =
-      Ref.User.Map.fold
+      Core.Ref.User.Map.fold
         (fun _ (fd : Core.Recursion.Definition.t) found ->
           let found = ref found in
           let rec walk e =
@@ -1621,7 +1621,7 @@ let equal a b =
   List.equal
     (fun g g' -> List.equal Common.globref_equal g.members g'.members && g.kind = g'.kind)
     a.groups b.groups
-  && Ref.User.Set.equal a.defined b.defined
+  && Core.Ref.User.Set.equal a.defined b.defined
   && List.equal
        (fun (l : local_group) (l' : local_group) ->
          Core.Occurrence.equal l.occurrence l'.occurrence
@@ -1633,38 +1633,38 @@ let equal a b =
          && List.equal Bool.equal l.named l'.named
          && List.equal Core.Occurrence.equal l.entered l'.entered )
        a.locals b.locals
-  && Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
-  && Ref.User.Set.equal a.suspended b.suspended
-  && Ref.User.Map.equal
+  && Core.Ref.User.Map.equal same_chains a.modulo_cons b.modulo_cons
+  && Core.Ref.User.Set.equal a.suspended b.suspended
+  && Core.Ref.User.Map.equal
        (List.equal (fun r r' ->
-            Core_binder.equal r.binder r'.binder
-            && Core_binder.same_site r.binder r'.binder
-            && List.equal Core_binder.equal r.live r'.live
+            Core.Binder.equal r.binder r'.binder
+            && Core.Binder.same_site r.binder r'.binder
+            && List.equal Core.Binder.equal r.live r'.live
             && List.equal same_call r.after r'.after
             && List.equal
                  (fun p p' ->
-                   Core_binder.equal p.passed p'.passed && Core_binder.equal p.into p'.into
+                   Core.Binder.equal p.passed p'.passed && Core.Binder.equal p.into p'.into
                      && same_call p.call p'.call )
                  r.passes r'.passes
-            && List.equal Core_binder.equal r.read_by_call r'.read_by_call
+            && List.equal Core.Binder.equal r.read_by_call r'.read_by_call
             && List.equal
-                 (fun c c' -> Core_binder.equal c.recomputed c'.recomputed
-                   && List.equal Core_binder.equal c.from c'.from)
+                 (fun c c' -> Core.Binder.equal c.recomputed c'.recomputed
+                   && List.equal Core.Binder.equal c.from c'.from)
                  r.recomputable r'.recomputable ) )
        a.resumes b.resumes
-  && Ref.User.Map.equal (List.equal Core.Occurrence.equal) a.adoptable b.adoptable
-  && Ref.User.Map.equal ( = ) a.kinds b.kinds
-  && Ref.User.Map.equal (List.equal Core.Occurrence.equal) a.calls b.calls
+  && Core.Ref.User.Map.equal (List.equal Core.Occurrence.equal) a.adoptable b.adoptable
+  && Core.Ref.User.Map.equal ( = ) a.kinds b.kinds
+  && Core.Ref.User.Map.equal (List.equal Core.Occurrence.equal) a.calls b.calls
   && List.equal Core.Occurrence.equal a.let_lambdas b.let_lambdas
 
 (* Whether some member of the group of [r] suspends. *)
 let suspends t r =
-  let members = match Ref.User.Map.find_opt r t.by_member with Some g -> g.members | None -> [r] in
-  List.exists (fun m -> Ref.User.Set.mem m t.suspended) members
+  let members = match Core.Ref.User.Map.find_opt r t.by_member with Some g -> g.members | None -> [r] in
+  List.exists (fun m -> Core.Ref.User.Set.mem m t.suspended) members
 
 let tail_loops t =
   let functions =
-    Ref.User.Map.fold (fun r kind acc -> if kind = Tail && not (suspends t r) then r :: acc else acc) t.kinds []
+    Core.Ref.User.Map.fold (fun r kind acc -> if kind = Tail && not (suspends t r) then r :: acc else acc) t.kinds []
   in
   let locals =
     List.filter_map
@@ -1676,9 +1676,9 @@ let tail_loops t =
 
 let frame_loops t =
   let functions =
-    Ref.User.Map.fold
+    Core.Ref.User.Map.fold
       (fun r kind acc ->
-        if kind = Nontail && (not (suspends t r)) && not (Ref.User.Map.mem r t.modulo_cons) then r :: acc else acc )
+        if kind = Nontail && (not (suspends t r)) && not (Core.Ref.User.Map.mem r t.modulo_cons) then r :: acc else acc )
       t.kinds []
   in
   let locals =
@@ -1692,7 +1692,7 @@ let frame_loops t =
   (List.rev functions, locals)
 
 let modulo_cons_loops t =
-  let functions = Ref.User.Map.fold (fun r _ acc -> if suspends t r then acc else r :: acc) t.modulo_cons [] in
+  let functions = Core.Ref.User.Map.fold (fun r _ acc -> if suspends t r then acc else r :: acc) t.modulo_cons [] in
   let locals =
     List.filter_map
       (fun (l : local_group) ->
@@ -1703,7 +1703,7 @@ let modulo_cons_loops t =
   in
   (List.rev functions, locals)
 
-let group_of t r = Ref.User.Map.find_opt r t.by_member
+let group_of t r = Core.Ref.User.Map.find_opt r t.by_member
 
 type strategy =
   | No_loop
@@ -1742,12 +1742,12 @@ let strategy_of ~pointer_fields ~suspends kind chains =
 (* A member's kind is its own calls'.  It suspends where some member of its
    group does, whose body may be spliced into its own. *)
 let strategy t ~pointer_fields r =
-  if Ref.User.Set.mem r t.defined then
-    let kind = Option.default No_recursion (Ref.User.Map.find_opt r t.kinds) in
+  if Core.Ref.User.Set.mem r t.defined then
+    let kind = Option.default No_recursion (Core.Ref.User.Map.find_opt r t.kinds) in
     let members = match group_of t r with Some g -> g.members | None -> [r] in
-    let suspends = List.exists (fun m -> Ref.User.Set.mem m t.suspended) members in
+    let suspends = List.exists (fun m -> Core.Ref.User.Set.mem m t.suspended) members in
     Some
-      (strategy_of ~pointer_fields ~suspends kind (Ref.User.Map.find_opt r t.modulo_cons))
+      (strategy_of ~pointer_fields ~suspends kind (Core.Ref.User.Map.find_opt r t.modulo_cons))
   else None
 
 (* One strategy for two plans of what is lowered as one function. *)
@@ -1775,7 +1775,7 @@ let strategy_at t ~pointer_fields (occurrence, member) =
       else found )
     None t.locals
 
-let adoptable_in t r = Option.default [] (Ref.User.Map.find_opt r t.adoptable)
+let adoptable_in t r = Option.default [] (Core.Ref.User.Map.find_opt r t.adoptable)
 
 (* Copies of a fixpoint share its occurrence, and plan alike. *)
 let adoptable_at t (occurrence, member) =
@@ -1793,10 +1793,10 @@ let adoptable_by_fixpoint t ~lifted occurrence =
     t.locals
 
 let adoptable_somewhere t ~lifted occurrence =
-  Ref.User.Map.exists (fun _ os -> List.exists (Core.Occurrence.equal occurrence) os) t.adoptable
+  Core.Ref.User.Map.exists (fun _ os -> List.exists (Core.Occurrence.equal occurrence) os) t.adoptable
   || adoptable_by_fixpoint t ~lifted occurrence
 
-let calls t r = Option.default [] (Ref.User.Map.find_opt r t.calls)
+let calls t r = Option.default [] (Core.Ref.User.Map.find_opt r t.calls)
 
 (* Copies of a fixpoint share its occurrence, and so do their calls. *)
 let member_calls t (occurrence, member) =
@@ -1817,9 +1817,9 @@ let entering t occurrence =
       (fun (l : local_group) -> if Core.Occurrence.equal l.occurrence occurrence then l.entered else [])
       t.locals
 
-let resumes_binding t (b : Core_binder.t) =
-  match Ref.User.Map.find_opt b.origin t.resumes with
-  | Some rs -> List.filter (fun r -> Core_binder.equal r.binder b && Core_binder.same_site r.binder b) rs
+let resumes_binding t (b : Core.Binder.t) =
+  match Core.Ref.User.Map.find_opt b.origin t.resumes with
+  | Some rs -> List.filter (fun r -> Core.Binder.equal r.binder b && Core.Binder.same_site r.binder b) rs
   | None -> []
 
 (* A lambda a let binds does not call itself. *)

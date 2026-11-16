@@ -5,7 +5,7 @@
     in final declaration order, each parameter with the origin it has and
     the way a call may supply it.
 
-    The head is the third numbering a call moves between ({!Scheme}).  A parameter that
+    The head is the third numbering a call moves between ({!Core.Scheme}).  A parameter that
     stands for a scheme variable keeps that variable's identity wherever the
     declaration put it -- after a phantom parameter was dropped, or a
     defaulted one moved last -- so a call maps an instantiation onto the head
@@ -47,7 +47,7 @@ end
 (** What a template parameter stands for, which decides whether a call's
     type argument may be written at it. *)
 type origin =
-  | From_scheme of Scheme.Var.t
+  | From_scheme of Core.Scheme.Var.t
       (** The callee's scheme variable this parameter declares. *)
   | From_instance of int
       (** The [k]th class dictionary the callable takes. *)
@@ -91,7 +91,7 @@ type template_parameter = {
     inductive and called on its receiver, which carries the inductive's own
     variables. *)
 type receiver = {
-  dropped : Scheme.Var.t list;
+  dropped : Core.Scheme.Var.t list;
       (** The function's variables the method declares no parameter for: no
           signature or annotation of it mentions them. *)
   dropped_names : Names.Id.t list;
@@ -168,7 +168,7 @@ val relaxations : t -> Head_relaxation.t list
 
 (** Whether the callee's convention keeps its scheme variable [v] -- does
     not omit it ({!omission}) -- as the plan was made. *)
-val keeps : t -> Scheme.Var.t -> bool
+val keeps : t -> Core.Scheme.Var.t -> bool
 
 (** {!keeps} for the variable the callee's type spells [Core.Type.Variable (_, i)]: the
     crossing from the body's numbering.  One the plan does not know is
@@ -177,7 +177,7 @@ val keeps_tvar : t -> int -> bool
 
 (** The variables a call's dictionaries stand at, in order: those the
     convention omits, up to the last one its type mentions. *)
-val dictionary_carriers : t -> Scheme.Var.t list
+val dictionary_carriers : t -> Core.Scheme.Var.t list
 
 (** The plan of a declaration of [callee] whose head is [temps], as
     {!Gen_functions} finalises it; [deduced_callables] are the declared
@@ -194,7 +194,7 @@ val dictionary_carriers : t -> Scheme.Var.t list
     at; [omitted] says why the convention omits a variable of [scheme], if
     it does. *)
 val of_head :
-  ?omitted:(Scheme.Var.t -> omission option) ->
+  ?omitted:(Core.Scheme.Var.t -> omission option) ->
   ?phantom_prefix:int ->
   ?relaxed:(int -> bool) ->
   ?deduced_callables:Param_pos.orig Param_pos.pos list ->
@@ -204,7 +204,7 @@ val of_head :
   ?relaxations:Head_relaxation.t list ->
   ?minted:(Names.Id.t * minted) list ->
   callee:Names.GlobRef.t ->
-  scheme:Scheme.Id.t option ->
+  scheme:Core.Scheme.Id.t option ->
   Cpp_ir.Lowered.phase Cpp_ir.Template.parameters ->
   t
 
@@ -224,7 +224,7 @@ val of_instance_method :
 val deduces_callable_at : t -> Param_pos.orig Param_pos.pos -> bool
 
 (** The parameter declaring scheme variable [v], if the head has one. *)
-val parameter_of_var : t -> Scheme.Var.t -> template_parameter option
+val parameter_of_var : t -> Core.Scheme.Var.t -> template_parameter option
 
 (** The same callee, with the same head; where a plan was recorded is not
     part of it. *)
@@ -293,15 +293,15 @@ val deduces_callable : decided -> Names.GlobRef.t -> Param_pos.orig Param_pos.po
     defaulted to [void], the first [phantom_prefix] of them phantoms, each
     variable omitted as [omitted] says. *)
 val foreign :
-  ?omitted:(Scheme.Var.t -> omission option) ->
+  ?omitted:(Core.Scheme.Var.t -> omission option) ->
   ?instances:int ->
-  ?higher_kinded:(Scheme.Var.t -> bool) ->
-  ?kept:(Scheme.Var.t -> bool) ->
+  ?higher_kinded:(Core.Scheme.Var.t -> bool) ->
+  ?kept:(Core.Scheme.Var.t -> bool) ->
   ?reachable:int ->
   ?relaxed:(int -> bool) ->
   ?phantom_prefix:int ->
   callee:Names.GlobRef.t ->
-  scheme:Scheme.Id.t option ->
+  scheme:Core.Scheme.Id.t option ->
   unit ->
   t
 
@@ -323,15 +323,15 @@ val with_foreign : decided -> (Names.GlobRef.t -> t) -> Names.GlobRef.t list -> 
     {!dropped_positions}. *)
 val plan :
   decided ->
-  ?omitted:(Scheme.Var.t -> omission option) ->
+  ?omitted:(Core.Scheme.Var.t -> omission option) ->
   ?instances:int ->
-  ?higher_kinded:(Scheme.Var.t -> bool) ->
-  ?kept:(Scheme.Var.t -> bool) ->
+  ?higher_kinded:(Core.Scheme.Var.t -> bool) ->
+  ?kept:(Core.Scheme.Var.t -> bool) ->
   ?reachable:int ->
   ?relaxed:(int -> bool) ->
   ?phantom_prefix:int ->
   Names.GlobRef.t ->
-  scheme:Scheme.Id.t option ->
+  scheme:Core.Scheme.Id.t option ->
   t
 
 (** [with_projections d derive fields] is [d] with [derive x] as the unit's

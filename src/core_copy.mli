@@ -12,7 +12,7 @@
     two places with one name, so a copy mints every occurrence afresh.  It
     also renames apart what its annotations leave open, open annotations and
     holes, which a reader of the copy may fill and a reader of the original
-    must not see filled.  Binders need nothing: a {!Core_binder.t} is
+    must not see filled.  Binders need nothing: a {!Core.Binder.t} is
     positional in the definition the copy lands in. *)
 
 (** [copy e]: [e], every occurrence in it fresh and its open annotations
@@ -23,7 +23,7 @@ val copy : Core.Expr.t -> Core.Expr.t
     ({!copy}) at the use: each variable of the callee's scheme the use
     solves is replaced by its solution, in the annotations and in the
     instantiations of the uses inside the body -- a rigid self-reference
-    there ({!Scheme.Identity}) included, whose variable is the callee's.
+    there ({!Core.Scheme.Identity}) included, whose variable is the callee's.
     Substitution reaches every variable of the callee's range, as
     {!Core_util.instantiate_body}'s does: a local definition's own variable
     numbered within it ({!Local_types}) is replaced too. *)

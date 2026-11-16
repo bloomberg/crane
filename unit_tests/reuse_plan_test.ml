@@ -135,7 +135,7 @@ let () =
   let read = match arg with Core.Expr.Bound_variable {occurrence = o; _} -> o | _ -> assert false in
   let call_site =
     match value with Core.Expr.Apply {callee = Core.Expr.Global g; _} -> g.occurrence | _ -> assert false in
-  let s = Core_binder.make ~origin ~level:0 () in
+  let s = Core.Binder.make ~origin ~level:0 () in
   let resumes calls : Ownership_ir.resumes =
     { origin;
       depth = 1;
@@ -143,8 +143,8 @@ let () =
       parameter_type = (fun _ -> None);
       resume_at =
         (fun b ->
-          if Core_binder.equal b (Core_binder.make ~origin ~level:1 ())
-            && Core_binder.same_site b (Core_binder.make ~origin ~level:1 ~site:(Binding site) ())
+          if Core.Binder.equal b (Core.Binder.make ~origin ~level:1 ())
+            && Core.Binder.same_site b (Core.Binder.make ~origin ~level:1 ~site:(Binding site) ())
           then Some {calls; kept = [s]; held = [s]; passed = []}
           else None ) }
   in
@@ -172,7 +172,7 @@ let () =
   let read = match arg with Core.Expr.Bound_variable {occurrence = o; _} -> o | _ -> assert false in
   let call_site =
     match value with Core.Expr.Apply {callee = Core.Expr.Global g; _} -> g.occurrence | _ -> assert false in
-  let at_let = Core_binder.make ~origin ~level:2 ~site:(Binding site) () in
+  let at_let = Core.Binder.make ~origin ~level:2 ~site:(Binding site) () in
   let resumes : Ownership_ir.resumes =
     { origin;
       depth = 1;
@@ -180,9 +180,9 @@ let () =
       parameter_type = (fun _ -> None);
       resume_at =
         (fun b ->
-          if Core_binder.equal b at_let && Core_binder.same_site b at_let
+          if Core.Binder.equal b at_let && Core.Binder.same_site b at_let
           then
-            let s = Core_binder.make ~origin ~level:0 () in
+            let s = Core.Binder.make ~origin ~level:0 () in
             Some {calls = [call_site]; kept = [s]; held = [s]; passed = []}
           else None ) }
   in
@@ -195,7 +195,7 @@ let () =
    call's argument [a] does not read it. *)
 let () =
   let origin = GlobRef.VarRef (Id.of_string "weigh") in
-  let s = Core_binder.make ~origin ~level:1 () in
+  let s = Core.Binder.make ~origin ~level:1 () in
   let moves ~owned arg =
     let value = call "weigh" [arg] in
     let site = Core.Occurrence.fresh () in
@@ -205,7 +205,7 @@ let () =
           body = call "g" [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]; occurrence = site} in
     let call_site =
       match value with Core.Expr.Apply {callee = Core.Expr.Global g; _} -> g.occurrence | _ -> assert false in
-    let at_let = Core_binder.make ~origin ~level:2 ~site:(Binding site) () in
+    let at_let = Core.Binder.make ~origin ~level:2 ~site:(Binding site) () in
     let resumes : Ownership_ir.resumes =
       { origin;
         depth = 2;
@@ -213,13 +213,13 @@ let () =
         parameter_type = (fun _ -> None);
         resume_at =
           (fun b ->
-            if Core_binder.equal b at_let && Core_binder.same_site b at_let then
+            if Core.Binder.equal b at_let && Core.Binder.same_site b at_let then
               Some {calls = [call_site]; kept = [s]; held = [s]; passed = []}
             else None ) }
     in
     Ownership_ir.save_moves (Ownership_ir.region ~owned ~resumes ~effects:Core_effects.empty ~n_outer:0 root) site
   in
-  let moved = function Some [b] -> Core_binder.equal b s | _ -> false in
+  let moved = function Some [b] -> Core.Binder.equal b s | _ -> false in
   check "a save moves what the region owns and the call does not read"
     (moved (moves ~owned:[1] (Core.Expr.fresh_rel 2)));
   check "not what the call reads after it" (moves ~owned:[1] (Core.Expr.fresh_rel 1) = Some []);
@@ -234,7 +234,7 @@ let () =
    and the second save may move it; the first may not. *)
 let () =
   let origin = GlobRef.VarRef (Id.of_string "weigh") in
-  let s = Core_binder.make ~origin ~level:1 () in
+  let s = Core.Binder.make ~origin ~level:1 () in
   let outer_value = call "weigh" [Core.Expr.fresh_rel 2] and inner_value = call "weigh" [Core.Expr.fresh_rel 3] in
   let outer_site = Core.Occurrence.fresh () and inner_site = Core.Occurrence.fresh () in
   let inner =
@@ -250,7 +250,7 @@ let () =
     function Core.Expr.Apply {callee = Core.Expr.Global (g : Core.Global_use.t); _} -> g.occurrence
       | _ -> assert false in
   let point level site value =
-    (Core_binder.make ~origin ~level ~site:(Binding site) (),
+    (Core.Binder.make ~origin ~level ~site:(Binding site) (),
       {Ownership_ir.calls = [call_of value]; kept = [s]; held = [s]; passed = []})
   in
   let points = [point 2 outer_site outer_value; point 3 inner_site inner_value] in
@@ -262,12 +262,12 @@ let () =
       resume_at =
         (fun b ->
           List.find_map
-            (fun (at, r) -> if Core_binder.equal b at && Core_binder.same_site b at then Some r else None) points) }
+            (fun (at, r) -> if Core.Binder.equal b at && Core.Binder.same_site b at then Some r else None) points) }
   in
   let p = Ownership_ir.region ~resumes ~effects:Core_effects.empty ~n_outer:0 root in
   check "the first save keeps what the region lends" (Ownership_ir.save_moves p outer_site = Some []);
   check "the second moves what the first frame holds"
-    (match Ownership_ir.save_moves p inner_site with Some [b] -> Core_binder.equal b s | _ -> false)
+    (match Ownership_ir.save_moves p inner_site with Some [b] -> Core.Binder.equal b s | _ -> false)
 
 (* The body of a fixpoint [f a] a machine adopts as an entry, capturing [c]:
    [let r := f a in g r c].  The entry's frame holds [c], which the region
@@ -276,7 +276,7 @@ let () =
    function does not. *)
 let () =
   let origin = GlobRef.VarRef (Id.of_string "outer") in
-  let c = Core_binder.make ~origin ~level:0 () in
+  let c = Core.Binder.make ~origin ~level:0 () in
   let moves value =
     let site = Core.Occurrence.fresh () in
     let root =
@@ -287,7 +287,7 @@ let () =
       match value with Core.Expr.Apply
         {callee = (Core.Expr.Bound_variable {occurrence = o; _} | Core.Expr.Global {occurrence = o; _}); _} -> o
           | _ -> assert false in
-    let at_let = Core_binder.make ~origin ~level:3 ~site:(Binding site) () in
+    let at_let = Core.Binder.make ~origin ~level:3 ~site:(Binding site) () in
     let resumes : Ownership_ir.resumes =
       { origin;
         depth = 3;
@@ -295,7 +295,7 @@ let () =
         parameter_type = (fun _ -> None);
         resume_at =
           (fun b ->
-            if Core_binder.equal b at_let && Core_binder.same_site b at_let then
+            if Core.Binder.equal b at_let && Core.Binder.same_site b at_let then
               Some {calls = [call_site]; kept = [c]; held = [c]; passed = []}
             else None ) }
     in
@@ -304,7 +304,7 @@ let () =
   check "a save keeps a capture the call re-entering the entry passes"
     (moves (Core.Expr.Apply {callee = Core.Expr.fresh_rel 2; arguments = [Core.Expr.fresh_rel 1]}) = Some []);
   check "another call's save moves a capture the entry holds"
-    (match moves (call "h" [Core.Expr.fresh_rel 1]) with Some [b] -> Core_binder.equal b c | _ -> false)
+    (match moves (call "h" [Core.Expr.fresh_rel 1]) with Some [b] -> Core.Binder.equal b c | _ -> false)
 
 (* The body of a fixpoint [f a] a machine adopts as an entry, capturing [c],
    [a] owned: [let u := h c in f a] -- a call of [f] enters the entry with
@@ -313,7 +313,7 @@ let () =
    then copies. *)
 let () =
   let origin = GlobRef.VarRef (Id.of_string "outer") in
-  let c = Core_binder.make ~origin ~level:0 () and a = Core_binder.make ~origin ~level:2 () in
+  let c = Core.Binder.make ~origin ~level:0 () and a = Core.Binder.make ~origin ~level:2 () in
   let resumes : Ownership_ir.resumes =
     {origin; depth = 3; entry_captures = Some 2; parameter_type = (fun _ -> None); resume_at = (fun _ -> None)} in
   let moves body =
@@ -331,7 +331,7 @@ let () =
     | Some bs -> bs
     | None -> []
   in
-  let same xs ys = List.length xs = List.length ys && List.for_all (fun x -> List.exists (Core_binder.equal x) ys) xs in
+  let same xs ys = List.length xs = List.length ys && List.for_all (fun x -> List.exists (Core.Binder.equal x) ys) xs in
   check "a call re-entering the entry takes its argument and the capture" (same (moves Fun.id) [c; a]);
   check "not a capture read beside it" (same (moves (fun app -> call "g" [app; Core.Expr.fresh_rel 4])) [a])
 
@@ -375,12 +375,12 @@ let () =
    nothing a copy would not. *)
 let () =
   let origin = GlobRef.VarRef (Id.of_string "weigh") in
-  let s = Core_binder.make ~origin ~level:2 () in
+  let s = Core.Binder.make ~origin ~level:2 () in
   let value = call "weigh" [Core.Expr.fresh_rel 2] in
   let site = Core.Occurrence.fresh () in
   let call_site =
     match value with Core.Expr.Apply {callee = Core.Expr.Global g; _} -> g.occurrence | _ -> assert false in
-  let at_let = Core_binder.make ~origin ~level:3 ~site:(Binding site) () in
+  let at_let = Core.Binder.make ~origin ~level:3 ~site:(Binding site) () in
   let use ?(passed = []) ?(handed = false)
     ?(ty = Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = 1}) certain =
     let read = Core.Expr.fresh_rel 2 in
@@ -398,7 +398,7 @@ let () =
         parameter_type = (fun level -> if level = 2 then Some ty else None);
         resume_at =
           (fun b ->
-            if Core_binder.equal b at_let && Core_binder.same_site b at_let then
+            if Core.Binder.equal b at_let && Core.Binder.same_site b at_let then
               Some {calls = [call_site]; kept = [s]; held = [s]; passed}
             else None ) }
     in

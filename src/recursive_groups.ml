@@ -3,9 +3,9 @@
 
 (** The recursive groups of a frozen program.  See [recursive_groups.mli]. *)
 
-module Map = Ref.User.Map
-module Set = Ref.User.Set
-module Tbl = Ref.User.Tbl
+module Map = Core.Ref.User.Map
+module Set = Core.Ref.User.Set
+module Tbl = Core.Ref.User.Tbl
 
 (* Each member of a group, mapped to the group's members in definition
    order. *)
@@ -57,7 +57,7 @@ let analyze struc =
         | w :: rest ->
           stack := rest;
           Tbl.remove on_stack w;
-          if Ref.User.equal w v then w :: acc else pop (w :: acc)
+          if Core.Ref.User.equal w v then w :: acc else pop (w :: acc)
         | [] -> acc
       in
       let component = pop [] in
@@ -78,12 +78,12 @@ let groups t =
   Map.fold
     (fun r members acc ->
       match members with
-      | first :: _ when Ref.User.equal first r -> members :: acc
+      | first :: _ when Core.Ref.User.equal first r -> members :: acc
       | _ -> acc )
     t []
 
 let in_group t r r' =
-  match Map.find_opt r t with Some ms -> List.exists (Ref.User.equal r') ms | None -> false
+  match Map.find_opt r t with Some ms -> List.exists (Core.Ref.User.equal r') ms | None -> false
 
-let equal = Map.equal (List.equal Ref.User.equal)
+let equal = Map.equal (List.equal Core.Ref.User.equal)
 

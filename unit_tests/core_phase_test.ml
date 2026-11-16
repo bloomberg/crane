@@ -64,13 +64,13 @@ let () =
   let use_at scheme ty =
     Core.Expr.Global
       (Core.Global_use.polymorphic (r "g")
-         (Scheme.Instantiation.make scheme (fun _ ->
-              {Scheme.solution = Scheme.Type ty; source = Scheme.Not_written} ) ) )
+         (Core.Scheme.Instantiation.make scheme (fun _ ->
+              {Core.Scheme.solution = Core.Scheme.Type ty; source = Core.Scheme.Not_written} ) ) )
   in
   check "a use at its callee's scheme freezes"
-    (not (refused [term "u" (use_at (Scheme.Id.fresh (r "g") ~arity:1) nat) nat]));
+    (not (refused [term "u" (use_at (Core.Scheme.Id.fresh (r "g") ~arity:1) nat) nat]));
   check "a use instantiated at another declaration's scheme is refused"
-    (refused [term "v" (use_at (Scheme.Id.fresh (r "h") ~arity:1) nat) nat]);
+    (refused [term "v" (use_at (Core.Scheme.Id.fresh (r "h") ~arity:1) nat) nat]);
   Table.add_type (r "p")
     (Core.Type.Arrow
       {parameter = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = 1};
@@ -78,15 +78,15 @@ let () =
   let use_of_p scheme =
     Core.Expr.Global
       (Core.Global_use.polymorphic (r "p")
-         (Scheme.Instantiation.make scheme (fun _ ->
-              {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) ) )
+         (Core.Scheme.Instantiation.make scheme (fun _ ->
+              {Core.Scheme.solution = Core.Scheme.Type nat; source = Core.Scheme.Not_written} ) ) )
   in
   check "a use at the scheme its callee is referenced at freezes"
     (not (refused [term "x" (use_of_p (Option.get (Core_util.reference_scheme (r "p")))) nat]));
   check "a use at a look-alike of its callee's scheme is refused"
-    (refused [term "y" (use_of_p (Scheme.Id.fresh (r "p") ~arity:1)) nat]);
+    (refused [term "y" (use_of_p (Core.Scheme.Id.fresh (r "p") ~arity:1)) nat]);
   check "a use holding a metavariable in its instantiation is refused"
-    (refused [term "w" (use_at (Scheme.Id.fresh (r "g") ~arity:1) (Core.Type.Meta (Core.Extracted.Meta.fresh 3))) nat]);
+    (refused [term "w" (use_at (Core.Scheme.Id.fresh (r "g") ~arity:1) (Core.Type.Meta (Core.Extracted.Meta.fresh 3))) nat]);
   let shared = Core.Type.Meta (Core.Extracted.Meta.fresh 1) in
   let solved = Core.Type.Meta (Core.Extracted.Meta.solved 2 nat) in
   let open_term =

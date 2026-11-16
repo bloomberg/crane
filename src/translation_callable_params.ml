@@ -402,7 +402,7 @@ let partner_closure_params groups struc =
   let refs = Array.map fst members in
   let index g =
     let rec go i =
-      if i >= Array.length refs then None else if Ref.User.equal refs.(i) g then Some i else go (i + 1)
+      if i >= Array.length refs then None else if Core.Ref.User.equal refs.(i) g then Some i else go (i + 1)
     in
     go 0
   in
@@ -460,7 +460,7 @@ let ungeneralised_callable_params cx ~self_ref ~suspended n_params body =
   let partners =
     List.filter
       (fun i -> i < n_params)
-      (Option.default [] (Ref.User.Map.find_opt self_ref cx.ctx.input.program.partner_closure_params))
+      (Option.default [] (Core.Ref.User.Map.find_opt self_ref cx.ctx.input.program.partner_closure_params))
   in
   Escape.IntSet.of_list
     (detect_non_forwarded_params self_ref n_params body

@@ -28,13 +28,13 @@ open Names
     type mentions one is never [constexpr], since it may call a throwing
     axiom stub ({!decide_constexpr}). *)
 
-let axiom_type_refs : unit Ref.User.Tbl.t = Ref.User.Tbl.create 16
+let axiom_type_refs : unit Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16
 
 (** Register a GlobRef as an axiom type. *)
-let register_axiom_type (r : GlobRef.t) = Ref.User.Tbl.replace axiom_type_refs r ()
+let register_axiom_type (r : GlobRef.t) = Core.Ref.User.Tbl.replace axiom_type_refs r ()
 
 (** Whether a GlobRef has been registered as an axiom type. *)
-let is_axiom_type_ref (r : GlobRef.t) = Ref.User.Tbl.mem axiom_type_refs r
+let is_axiom_type_ref (r : GlobRef.t) = Core.Ref.User.Tbl.mem axiom_type_refs r
 
 (** {2 The boxedness oracle} *)
 

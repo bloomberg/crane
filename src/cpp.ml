@@ -1823,8 +1823,8 @@ let customs_written_ahead cx u =
       @ List.concat_map (Cpp_concepts.concept_body_names cx u) (Cpp_ind.generated_concepts ())
   in
   List.fold_left
-    (fun customs -> function _, Cpp_resolution.Custom_text r -> Ref.User.Set.add r customs | _ -> customs)
-    Ref.User.Set.empty keys
+    (fun customs -> function _, Cpp_resolution.Custom_text r -> Core.Ref.User.Set.add r customs | _ -> customs)
+    Core.Ref.User.Set.empty keys
 
 (** Plan what the unit's function bodies read ({!Cpp_state.plan_function_reads}):
     the globals every installed declaration but a variable's names.  A
@@ -1844,8 +1844,8 @@ let plan_function_reads () =
   in
   Cpp_state.plan_function_reads
     (List.fold_left
-       (fun reads d -> List.fold_right Ref.Can.Set.add (function_globals d) reads)
-       Ref.Can.Set.empty (Unit_program.installed_finished ()))
+       (fun reads d -> List.fold_right Core.Ref.Can.Set.add (function_globals d) reads)
+       Core.Ref.Can.Set.empty (Unit_program.installed_finished ()))
 
 let generate_ahead cx u s =
   generating_ahead @@ fun () ->
@@ -2290,10 +2290,10 @@ let plan_names s =
     (declarations s)
 
 let plan_referenced_names s =
-  let seen = ref Ref.User.Set.empty and named = ref [] in
+  let seen = ref Core.Ref.User.Set.empty and named = ref [] in
   let name k r =
-    if not (Ref.User.Set.mem r !seen) then begin
-      seen := Ref.User.Set.add r !seen;
+    if not (Core.Ref.User.Set.mem r !seen) then begin
+      seen := Core.Ref.User.Set.add r !seen;
       named := (r, Common.pp_global_name k r) :: !named
     end
   in
@@ -3083,7 +3083,7 @@ let concept_prereqs cx ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
   let add_type_refs acc ty =
     let rec go acc = function
       | Core.Type.Global_app {head = r; type_arguments = args; _} ->
-        List.fold_left go (Ref.User.Set.add r acc) args
+        List.fold_left go (Core.Ref.User.Set.add r acc) args
       | Core.Type.Arrow {parameter = a; result = b} -> go (go acc a) b
       | Core.Type.Meta {contents = Some t} -> go acc t
       | _ -> acc
@@ -3112,7 +3112,7 @@ let concept_prereqs cx ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
               acc ind.Core.Inductive.packets
           | _ -> acc )
         | _ -> acc )
-      Ref.User.Set.empty elements
+      Core.Ref.User.Set.empty elements
   in
   let packet_refs kn (ind : Core.Inductive.t) =
     List.init (Array.length ind.Core.Inductive.packets) (fun i ->
@@ -3127,7 +3127,7 @@ let concept_prereqs cx ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
           Array.fold_left
             (fun acc tys -> List.fold_left add_type_refs acc tys)
             acc p.Core.Inductive.Packet.constructor_argument_types )
-        Ref.User.Set.empty ind.Core.Inductive.packets
+        Core.Ref.User.Set.empty ind.Core.Inductive.packets
     in
     List.fold_left
       (fun acc r ->
@@ -3150,7 +3150,7 @@ let concept_prereqs cx ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
   let label_of (mp, l, se) (needed, complete) =
     match se with
     | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; _}) ->
-      if Ref.User.Set.mem r needed then Some l else None
+      if Core.Ref.User.Set.mem r needed then Some l else None
     | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) -> (
       match ind.Core.Inductive.kind with
       | Core.Inductive.Kind.Type_class _ -> None
@@ -3158,8 +3158,8 @@ let concept_prereqs cx ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
         if
           List.exists
             (fun r ->
-              Ref.User.Set.mem r complete
-              || Ref.User.Set.mem r needed
+              Core.Ref.User.Set.mem r complete
+              || Core.Ref.User.Set.mem r needed
                  && (Cpp_state.in_unmerged_wrapper (unit_context cx) r || held_in_collision_struct mp) )
             (packet_refs kn ind)
         then Some l
@@ -3171,7 +3171,7 @@ let concept_prereqs cx ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
         || match m with MPdot (m', _) -> under m' | _ -> false
       in
       if
-        Ref.User.Set.exists
+        Core.Ref.User.Set.exists
           (fun r -> under (modpath_of_r r))
           needed
       then Some l
@@ -3192,20 +3192,20 @@ let concept_prereqs cx ~wrapper_sels (s : Core.Program.t) : Names.Label.Set.t =
                 (add_type_refs needed ty, complete)
               | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
                 let body = body_refs kn ind in
-                (Ref.User.Set.union body needed, Ref.User.Set.union body complete)
+                (Core.Ref.User.Set.union body needed, Core.Ref.User.Set.union body complete)
               | _ -> refs
             in
             (labels, refs) )
         (labels, refs) elements
     in
     if
-      Ref.User.Set.equal needed needed'
-      && Ref.User.Set.equal complete complete'
+      Core.Ref.User.Set.equal needed needed'
+      && Core.Ref.User.Set.equal complete complete'
       && Names.Label.Set.equal labels labels'
     then labels'
     else fixpoint (needed', complete') labels'
   in
-  fixpoint (seed, Ref.User.Set.empty) Names.Label.Set.empty
+  fixpoint (seed, Core.Ref.User.Set.empty) Names.Label.Set.empty
 
 (** Whether an element is a function, which a wrapper module writes into its
     struct. *)
@@ -3280,7 +3280,7 @@ let check_value_order cx scheduled =
           | _ -> None)
         (Cpp_ast.declarations_in_order scheduled)
     in
-    let position = Ref.Can.Map.of_list (List.mapi (fun i (r, _) -> (r, i)) values) in
+    let position = Core.Ref.Can.Map.of_list (List.mapi (fun i (r, _) -> (r, i)) values) in
     let names d =
       let found = ref [] in
       Cpp_ir.Globrefs.iter (fun r -> found := r :: !found) d;
@@ -3294,19 +3294,19 @@ let check_value_order cx scheduled =
           | Variable _ -> m
           | d -> (
             match Cpp_ir.Globrefs.declared d with
-            | Some r -> Ref.Can.Map.update r (fun l -> Some (names d @ Option.default [] l)) m
+            | Some r -> Core.Ref.Can.Map.update r (fun l -> Some (names d @ Option.default [] l)) m
             | None -> m ))
-        Ref.Can.Map.empty (Unit_program.installed_finished ())
+        Core.Ref.Can.Map.empty (Unit_program.installed_finished ())
     in
     (* The values of the file [r]'s initialiser reads, directly or through a
        function: what a value reads is its own to check. *)
     let reads r d =
-      let seen = ref Ref.Can.Set.empty and read = ref [] in
+      let seen = ref Core.Ref.Can.Set.empty and read = ref [] in
       let rec visit g =
-        if not (Ref.Can.Set.mem g !seen) then begin
-          seen := Ref.Can.Set.add g !seen;
-          if Ref.Can.Map.mem g position then (if not (Common.globref_equal g r) then read := g :: !read)
-          else Option.iter (List.iter visit) (Ref.Can.Map.find_opt g functions)
+        if not (Core.Ref.Can.Set.mem g !seen) then begin
+          seen := Core.Ref.Can.Set.add g !seen;
+          if Core.Ref.Can.Map.mem g position then (if not (Common.globref_equal g r) then read := g :: !read)
+          else Option.iter (List.iter visit) (Core.Ref.Can.Map.find_opt g functions)
         end
       in
       List.iter visit (names d);
@@ -3316,7 +3316,7 @@ let check_value_order cx scheduled =
       (fun i (r, d) ->
         List.iter
           (fun g ->
-            if Ref.Can.Map.find g position > i then
+            if Core.Ref.Can.Map.find g position > i then
               Probe.violation "value order"
                 Pp.(
                   str "the value " ++ GlobRef.print r ++ str " reads " ++ GlobRef.print g

@@ -5,17 +5,17 @@
     [splices.mli]. *)
 
 
-type t = { decided : Ref.User.Set.t; entered : Core.Occurrence.t Ref.User.Map.t }
+type t = { decided : Core.Ref.User.Set.t; entered : Core.Occurrence.t Core.Ref.User.Map.t }
 
-let empty = { decided = Ref.User.Set.empty; entered = Ref.User.Map.empty }
+let empty = { decided = Core.Ref.User.Set.empty; entered = Core.Ref.User.Map.empty }
 
 let decide ?entered r s =
-  { decided = Ref.User.Set.add r s.decided;
-    entered = (match entered with Some o -> Ref.User.Map.add r o s.entered | None -> s.entered) }
+  { decided = Core.Ref.User.Set.add r s.decided;
+    entered = (match entered with Some o -> Core.Ref.User.Map.add r o s.entered | None -> s.entered) }
 
-let decided s r = Ref.User.Set.mem r s.decided
-let entered_copy s r = Ref.User.Map.find_opt r s.entered
-let is_entered_copy s o = Ref.User.Map.exists (fun _ o' -> Core.Occurrence.equal o o') s.entered
+let decided s r = Core.Ref.User.Set.mem r s.decided
+let entered_copy s r = Core.Ref.User.Map.find_opt r s.entered
+let is_entered_copy s o = Core.Ref.User.Map.exists (fun _ o' -> Core.Occurrence.equal o o') s.entered
 
 let equal s s' =
-  Ref.User.Set.equal s.decided s'.decided && Ref.User.Map.equal Core.Occurrence.equal s.entered s'.entered
+  Core.Ref.User.Set.equal s.decided s'.decided && Core.Ref.User.Map.equal Core.Occurrence.equal s.entered s'.entered

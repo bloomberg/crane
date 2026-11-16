@@ -7,19 +7,19 @@
 (* [e] with each variable a use in it leaves rigid that [rigid] solves
    solved so. *)
 let rec solve_rigid rigid e =
-  let solves v (s : Core.Type.t Scheme.slot) =
-    match s.solution with Scheme.Identity -> Option.has_some (rigid v) | Scheme.Type _ -> false
+  let solves v (s : Core.Type.t Core.Scheme.slot) =
+    match s.solution with Core.Scheme.Identity -> Option.has_some (rigid v) | Core.Scheme.Type _ -> false
   in
   match e with
   | Core.Expr.Global u -> (
     match Core.Global_use.instantiation u with
-    | Some inst when Scheme.Instantiation.exists solves inst ->
+    | Some inst when Core.Scheme.Instantiation.exists solves inst ->
       Core.Expr.Global
         (Core.Global_use.polymorphic (Core.Global_use.callee u)
-           (Scheme.Instantiation.map_slots
-              (fun v (s : Core.Type.t Scheme.slot) ->
+           (Core.Scheme.Instantiation.map_slots
+              (fun v (s : Core.Type.t Core.Scheme.slot) ->
                 match (s.solution, rigid v) with
-                | Scheme.Identity, Some t -> {s with solution = Scheme.Type t}
+                | Core.Scheme.Identity, Some t -> {s with solution = Core.Scheme.Type t}
                 | _ -> s )
               inst ) )
     | _ -> e )
@@ -43,12 +43,12 @@ let solutions use =
   match Core.Global_use.instantiation use with
   | None -> (Fun.id, fun _ -> None)
   | Some inst ->
-    let scheme = Scheme.Instantiation.scheme inst in
+    let scheme = Core.Scheme.Instantiation.scheme inst in
     let rigid v =
-      Option.bind (Scheme.Var.of_tvar scheme (Scheme.Var.ordinal v)) (fun w ->
-          match (Scheme.Instantiation.slot inst w).solution with
-          | Scheme.Type t -> Some t
-          | Scheme.Identity -> None )
+      Option.bind (Core.Scheme.Var.of_tvar scheme (Core.Scheme.Var.ordinal v)) (fun w ->
+          match (Core.Scheme.Instantiation.slot inst w).solution with
+          | Core.Scheme.Type t -> Some t
+          | Core.Scheme.Identity -> None )
     in
     ((fun t -> (Core_util.Partial.instantiate inst t : Core.Phase.frozen Core_util.Partial.t :> Core.Type.t)), rigid)
 

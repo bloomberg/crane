@@ -23,7 +23,7 @@ type t = {
   unmerged_wrappers : ModPath.t CString.Map.t;
       (** The wrapper structs that hold declarations, by name, each with
           the module it wraps. *)
-  promoted_inductives : Ref.User.Set.t;
+  promoted_inductives : Core.Ref.User.Set.t;
       (** The inductives promoted to their eponymous module's struct. *)
   accessors : Cpp_state.accessors;
       (** The constants emitted as accessor functions. *)

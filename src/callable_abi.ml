@@ -18,7 +18,7 @@ module Template_param = struct
 end
 
 type origin =
-  | From_scheme of Scheme.Var.t
+  | From_scheme of Core.Scheme.Var.t
   | From_instance of int
   | From_callable of int
   | Derived of Id.t
@@ -42,7 +42,7 @@ type template_parameter = {
 }
 
 type receiver = {
-  dropped : Scheme.Var.t list;
+  dropped : Core.Scheme.Var.t list;
   dropped_names : Id.t list;
   params : ty list;
   ret : ty;
@@ -70,7 +70,7 @@ type t = {
   receiver : receiver option;
   passing : passing list option;
   signature : signature option;
-  variables : (Scheme.Var.t * omission option) list;
+  variables : (Core.Scheme.Var.t * omission option) list;
       (** every variable of the callee's scheme, with why the convention
           omits it, if it does *)
   relaxations : Head_relaxation.t list;
@@ -90,26 +90,26 @@ let template_head abi = abi.head
 let receiver abi = abi.receiver
 
 let scheme_variables ?(omitted = fun _ -> None) scheme =
-  List.map (fun v -> (v, omitted v)) (Option.cata Scheme.Var.all [] scheme)
+  List.map (fun v -> (v, omitted v)) (Option.cata Core.Scheme.Var.all [] scheme)
 
 let keeps abi v =
-  match List.find_opt (fun (v', _) -> Scheme.Var.equal v v') abi.variables with
+  match List.find_opt (fun (v', _) -> Core.Scheme.Var.equal v v') abi.variables with
   | Some (_, Some _) -> false
   | Some (_, None) | None -> true
 
 let keeps_tvar abi i =
-  match List.find_opt (fun (v, _) -> Int.equal (Scheme.Var.ordinal v) i) abi.variables with
+  match List.find_opt (fun (v, _) -> Int.equal (Core.Scheme.Var.ordinal v) i) abi.variables with
   | Some (v, _) -> keeps abi v
   | None -> true
 
 let dictionary_carriers abi =
   let mentioned =
     List.fold_left
-      (fun n (v, o) -> if o = Some Unmentioned then n else max n (Scheme.Var.ordinal v))
+      (fun n (v, o) -> if o = Some Unmentioned then n else max n (Core.Scheme.Var.ordinal v))
       0 abi.variables
   in
   List.filter_map
-    (fun (v, o) -> if o <> None && Scheme.Var.ordinal v <= mentioned then Some v else None)
+    (fun (v, o) -> if o <> None && Core.Scheme.Var.ordinal v <= mentioned then Some v else None)
     abi.variables
 
 (* The first [n] parameters standing for scheme variables are the
@@ -138,7 +138,7 @@ let mark_phantoms n head =
 let minted_origin ~relaxed ~scheme minted name =
   match List.assoc_opt name minted with
   | Some (Scheme_param i) -> (
-    match if relaxed i then None else Option.bind scheme (fun s -> Scheme.Var.of_tvar s i) with
+    match if relaxed i then None else Option.bind scheme (fun s -> Core.Scheme.Var.of_tvar s i) with
     | Some v -> From_scheme v
     | None -> Derived name )
   | Some (Instance_param k) -> From_instance k
@@ -194,7 +194,7 @@ let parameter_of_var abi v =
   List.find_opt
     (fun p ->
       match p.origin with
-      | From_scheme v' -> Scheme.Var.equal v v'
+      | From_scheme v' -> Core.Scheme.Var.equal v v'
       | _ -> false )
     abi.head
 
@@ -216,12 +216,12 @@ let validate abi =
   let owned =
     List.filter_map
       (fun v ->
-        if GlobRef.UserOrd.equal (Scheme.Id.owner (Scheme.Var.owner v)) abi.callee then None
+        if GlobRef.UserOrd.equal (Core.Scheme.Id.owner (Core.Scheme.Var.owner v)) abi.callee then None
         else Some "a parameter declares another declaration's variable" )
       scheme_origins
   in
   let unique_origins =
-    if List.length (List.sort_uniq Scheme.Var.compare scheme_origins) = List.length scheme_origins
+    if List.length (List.sort_uniq Core.Scheme.Var.compare scheme_origins) = List.length scheme_origins
     then []
     else ["two parameters declare one variable"]
   in
@@ -232,20 +232,20 @@ let validate abi =
    with none recorded is a new identity each time it is asked for. *)
 let same_head a b =
   let origin_key = function
-    | From_scheme v -> `Scheme (Scheme.Var.ordinal v)
+    | From_scheme v -> `Scheme (Core.Scheme.Var.ordinal v)
     | From_instance k -> `Instance k
     | From_callable i -> `Callable i
     | Derived n -> `Derived (Id.to_string n)
   in
   let key p = (Id.to_string (Template_param.name p.id), origin_key p.origin, p.kind, p.write) in
   let receiver_key r =
-    ( List.map Scheme.Var.ordinal r.dropped,
+    ( List.map Core.Scheme.Var.ordinal r.dropped,
       List.map Id.to_string r.dropped_names,
       r.params,
       r.ret,
       List.map Id.to_string r.return_only )
   in
-  let variables_key abi = List.map (fun (v, o) -> (Scheme.Var.ordinal v, o)) abi.variables in
+  let variables_key abi = List.map (fun (v, o) -> (Core.Scheme.Var.ordinal v, o)) abi.variables in
   List.equal (fun p q -> key p = key q) a.head b.head
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
   && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
@@ -260,8 +260,8 @@ let equal a b = GlobRef.UserOrd.equal a.callee b.callee && same_head a b
    deduce, by callee; the methods of each instance's struct, by name. *)
 type decided = {
   plans : t GlobRef.Map_env.t;
-  assumed : Param_pos.orig Param_pos.pos list Ref.User.Map.t;
-  instance_methods : (Id.t * t) list Ref.User.Map.t;
+  assumed : Param_pos.orig Param_pos.pos list Core.Ref.User.Map.t;
+  instance_methods : (Id.t * t) list Core.Ref.User.Map.t;
   (* The unit's foreign plans, without dictionaries, by callee. *)
   foreign : t GlobRef.Map_env.t;
   (* How many of them emission found. *)
@@ -273,8 +273,8 @@ type decided = {
 
 let undecided =
   { plans = GlobRef.Map_env.empty;
-    assumed = Ref.User.Map.empty;
-    instance_methods = Ref.User.Map.empty;
+    assumed = Core.Ref.User.Map.empty;
+    instance_methods = Core.Ref.User.Map.empty;
     foreign = GlobRef.Map_env.empty;
     foreign_found = ref 0;
     projections = GlobRef.Map_env.empty }
@@ -290,7 +290,7 @@ let describe abi =
     | Concept _ -> "concept"
   in
   let origin = function
-    | From_scheme v -> Printf.sprintf "var %d" (Scheme.Var.ordinal v)
+    | From_scheme v -> Printf.sprintf "var %d" (Core.Scheme.Var.ordinal v)
     | From_instance k -> Printf.sprintf "instance %d" k
     | From_callable i -> Printf.sprintf "callable %d" i
     | Derived _ -> "derived"
@@ -335,13 +335,13 @@ let decide ~callables ~assumed ~instance_methods =
         | None -> GlobRef.Map_env.add abi.callee abi m )
       GlobRef.Map_env.empty callables
   in
-  let assumed = List.fold_left (fun m (r, ps) -> Ref.User.Map.add r ps m) Ref.User.Map.empty assumed in
+  let assumed = List.fold_left (fun m (r, ps) -> Core.Ref.User.Map.add r ps m) Core.Ref.User.Map.empty assumed in
   let instance_methods =
     List.fold_left
       (fun m (instance, methods) ->
         List.iter (fun (_, abi) -> validated abi) methods;
-        Ref.User.Map.add instance methods m )
-      Ref.User.Map.empty instance_methods
+        Core.Ref.User.Map.add instance methods m )
+      Core.Ref.User.Map.empty instance_methods
   in
   {undecided with plans; assumed; instance_methods; foreign_found = ref 0}
 
@@ -356,7 +356,7 @@ let planned d r =
   | None -> unplanned Pp.(str "the declaration of " ++ GlobRef.print r)
 
 let instance_method d ~instance name =
-  Option.bind (Ref.User.Map.find_opt instance d.instance_methods) (fun methods ->
+  Option.bind (Core.Ref.User.Map.find_opt instance d.instance_methods) (fun methods ->
       List.find_map (fun (n, abi) -> if Id.equal n name then Some abi else None) methods )
 
 let planned_instance_method d ~instance name =
@@ -375,7 +375,7 @@ let check d abi =
 let deduces_callable d r pos =
   match lookup d r with
   | Some abi -> deduces_callable_at abi pos
-  | None -> List.exists (Param_pos.equal pos) (Option.default [] (Ref.User.Map.find_opt r d.assumed))
+  | None -> List.exists (Param_pos.equal pos) (Option.default [] (Core.Ref.User.Map.find_opt r d.assumed))
 
 (* [abi] with [instances] dictionaries in front of its head, as a call
    passing that many writes it. *)
@@ -396,15 +396,15 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
   let variables =
     List.map
       (fun v ->
-        let name = Common.tvar_id (Scheme.Var.ordinal v) in
-        if relaxed (Scheme.Var.ordinal v) then
+        let name = Common.tvar_id (Core.Scheme.Var.ordinal v) in
+        if relaxed (Core.Scheme.Var.ordinal v) then
           ((Typename_default Void : kind), name, Derived name)
         else
           ( (if higher_kinded v then Template 1 else Typename),
             name,
             From_scheme v ) )
       (List.filteri (fun k _ -> k < reachable)
-         (List.filter kept (Option.cata Scheme.Var.all [] scheme)) )
+         (List.filter kept (Option.cata Core.Scheme.Var.all [] scheme)) )
   in
   let head =
     List.mapi
@@ -486,7 +486,7 @@ let report_foreign d =
 
 let dropped_positions d r =
   match lookup d r with
-  | Some {receiver = Some {dropped; _}; _} -> List.map (fun v -> Scheme.Var.ordinal v - 1) dropped
+  | Some {receiver = Some {dropped; _}; _} -> List.map (fun v -> Core.Scheme.Var.ordinal v - 1) dropped
   | _ -> []
 
 let method_params d r =

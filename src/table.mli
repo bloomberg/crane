@@ -949,7 +949,7 @@ type unit_config = {concurrent : bool}
 
 (** The configuration of a unit whose program names the customs [names]
     (the [used_customs] of {!Program_facts.t}). *)
-val unit_config : names:Ref.User.Set.t -> unit_config
+val unit_config : names:Core.Ref.User.Set.t -> unit_config
 
 (** Whether non-atomic reference counting ([crane::rc]) is in effect for a
     unit of the configuration given, swapping
@@ -1270,11 +1270,11 @@ val get_custom_imports : unit -> string list
 
 (** Plan the custom references the unit's files write, from what was
     generated ahead of them: their imports are {!get_custom_imports}. *)
-val plan_written_customs : Ref.User.Set.t -> unit
+val plan_written_customs : Core.Ref.User.Set.t -> unit
 
 (** The planned custom references the unit's files write (none before they
     are planned). *)
-val written_customs : unit -> Ref.User.Set.t
+val written_customs : unit -> Core.Ref.User.Set.t
 
 (** Warns ([crane-mapping-standard-header]), once a session per mapping,
     where an operation mapping the unit writes -- a constant's, a

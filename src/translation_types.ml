@@ -112,7 +112,7 @@ let type_term_arg : (Translation_state.t -> env -> Core.Expr.t -> Cpp_ir.Lowered
     pointer. *)
 let rec cpp_ir_of_core_type cx
     env
-    ?(ns : Ref.User.Set.t = Ref.User.Set.empty)
+    ?(ns : Core.Ref.User.Set.t = Core.Ref.User.Set.empty)
     (tvars : Id.t list)
     (core_t : Core.Type.t) : Cpp_ir.Lowered.Type.t =
   (* [ns] is the only source of recursive-storage wrapping.  Most callers
@@ -228,7 +228,7 @@ let rec cpp_ir_of_core_type cx
         | None ->
           (* Fallback: if tvars is non-empty and this is a local reference, use
              tvars length *)
-          let is_local = Ref.User.Set.mem g ns || spells_bare cx g in
+          let is_local = Core.Ref.User.Set.mem g ns || spells_bare cx g in
           if is_local && tvars <> [] then
             safe_firstn (List.length tvars) ts
           else
@@ -241,7 +241,7 @@ let rec cpp_ir_of_core_type cx
        stay bare — the field-level wrapping handles the cycle-breaking.
        This ensures type variables are never shared_ptr-wrapped at instantiation. *)
     let ns_for_args =
-      if Ref.User.Set.mem g ns then ns else Ref.User.Set.empty
+      if Core.Ref.User.Set.mem g ns then ns else Core.Ref.User.Set.empty
     in
     let converted_ts =
       List.map (cpp_ir_of_core_type cx env ~ns:ns_for_args tvars) filtered_ts
@@ -275,7 +275,7 @@ let rec cpp_ir_of_core_type cx
     | GlobRef.IndRef _ ->
       (* Enum inductives are value types - no shared_ptr wrapping *)
       if is_enum_inductive g then
-        let is_local = Ref.User.Set.mem g ns || spells_bare cx g in
+        let is_local = Core.Ref.User.Set.mem g ns || spells_bare cx g in
         if is_local then
           core
         else
@@ -283,7 +283,7 @@ let rec cpp_ir_of_core_type cx
       else
         (* Check if this inductive is in the explicit ns list or in
            local_inductives context *)
-        let is_self_ref = Ref.User.Set.mem g ns in
+        let is_self_ref = Core.Ref.User.Set.mem g ns in
         (* Check if g is a mutual sibling: shares the same MutInd.t KerName
            as any member of ns, but at a different index. Mutual siblings
            need shared_ptr because their types are incomplete (forward-declared). *)
@@ -291,7 +291,7 @@ let rec cpp_ir_of_core_type cx
           (not is_self_ref) &&
           match g with
           | GlobRef.IndRef (kn_g, _) ->
-            Ref.User.Set.exists (fun r ->
+            Core.Ref.User.Set.exists (fun r ->
               match r with
               | GlobRef.IndRef (kn_r, _) ->
                 MutInd.CanOrd.equal kn_g kn_r
@@ -453,7 +453,7 @@ let template_arg_of_core_type cx ~site env tvars ty =
   (* Template params emitted at expression/function-call sites are public API
      types. Recursive storage wrapping is introduced only when converting
      constructor fields with an explicit storage namespace. *)
-  Cpp_ir.Types.spell_arrows site (cpp_ir_of_core_type cx env ~ns:Ref.User.Set.empty tvars (type_simpl ty))
+  Cpp_ir.Types.spell_arrows site (cpp_ir_of_core_type cx env ~ns:Core.Ref.User.Set.empty tvars (type_simpl ty))
 
 let build_template_params cx ~site env tvars tys =
   List.map

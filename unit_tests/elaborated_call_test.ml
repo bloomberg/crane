@@ -23,9 +23,9 @@ let declare s ty =
   Table.add_frozen_type (r s) ty;
   Core.Expr.Global (Core.Global_use.monomorphic (r s))
 
-let binder ?(role = Lexenv.Value) s ty = {Lexenv.id = Id.of_string s; type_ = ty; role = role}
+let binder ?(role = Core.Lexenv.Value) s ty = {Core.Lexenv.id = Id.of_string s; type_ = ty; role = role}
 
-let elaborate ?(lex = Lexenv.empty) f args =
+let elaborate ?(lex = Core.Lexenv.empty) f args =
   Core_elaborate.elaborate_arguments ~lex (Core.Global_use.monomorphic f) args
 
 let () =
@@ -68,13 +68,13 @@ let () =
   let h = r "h" in
   Table.add_frozen_type h
     (Core.Type.Arrow {parameter = class_ty; result = Core.Type.Arrow {parameter = nat; result = nat}});
-  let lex = Lexenv.push [binder "x" nat; binder ~role:Lexenv.Dictionary "inst" class_ty] Lexenv.empty in
+  let lex = Core.Lexenv.push [binder "x" nat; binder ~role:Core.Lexenv.Dictionary "inst" class_ty] Core.Lexenv.empty in
   let call = elaborate ~lex h [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1] in
   check "a declaration's class-typed parameter is passed as its dictionary"
     (call.instances = [Core.Expr.fresh_rel 2] && call.regular = [Core.Expr.fresh_rel 1]
     && call.roles = [Elaborated_call.Dictionary; Regular]);
   check "the dictionary occupies the leading parameter" (Elaborated_call.leading_params call = 1);
-  let lex = Lexenv.push [binder "inst" class_ty; binder "x" nat] Lexenv.empty in
+  let lex = Core.Lexenv.push [binder "inst" class_ty; binder "x" nat] Core.Lexenv.empty in
   let local = elaborate ~lex h [Core.Expr.fresh_rel 1; Core.Expr.fresh_rel 2] in
   check "a class-typed binder bound in a body is a value" (local.instances = [])
 
@@ -87,11 +87,11 @@ let () =
                                                                      variable = 1};
                                      result = Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                                   variable = 1}});
-  let scheme = Scheme.Id.fresh f ~arity:1 in
+  let scheme = Core.Scheme.Id.fresh f ~arity:1 in
   let at_nat () =
     Core.Global_use.polymorphic f
-      (Scheme.Instantiation.make scheme (fun _ ->
-           {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) )
+      (Core.Scheme.Instantiation.make scheme (fun _ ->
+           {Core.Scheme.solution = Core.Scheme.Type nat; source = Core.Scheme.Not_written} ) )
   in
   let use = at_nat () in
   let rewritten = Core.Global_use.map_types Fun.id use in
@@ -124,8 +124,8 @@ let () =
     = List.sort GlobRef.UserOrd.compare [f; r "pa"]);
   Common.end_planning ();
   let walk = Some elaborated in
-  ignore (Core_elaborate.elaboration ~walk ~lex:Lexenv.empty rewritten [a]);
-  ignore (Core_elaborate.elaboration ~walk ~lex:Lexenv.empty again [a]);
+  ignore (Core_elaborate.elaboration ~walk ~lex:Core.Lexenv.empty rewritten [a]);
+  ignore (Core_elaborate.elaboration ~walk ~lex:Core.Lexenv.empty again [a]);
   (* The argument, a global named unapplied, is planned as its call with no
      arguments. *)
   check "a call whose use was rewritten is found planned, one built afresh is not"
@@ -136,13 +136,13 @@ let () =
      translated, which a rewrite rebuilt. *)
   let a' = match a with Core.Expr.Global u -> Core.Expr.Global (Core.Global_use.map_types Fun.id u) | e -> e in
   let inst =
-    Core_elaborate.instantiation ~walk ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
+    Core_elaborate.instantiation ~walk ~lex:Core.Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
       rewritten [a']
   in
   check "a call's instantiation is the one planned, at the arguments translated"
     (Elaborated_call.same_instantiation inst
-       (Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
-          (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty rewritten [a']) )
+       (Core_elaborate.instantiate ~lex:Core.Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None ~scope:[]
+          (Core_elaborate.elaborate_arguments ~lex:Core.Lexenv.empty rewritten [a']) )
     && List.equal ( == ) inst.call.args [a']
     && Core_elaborate.report elaborated
        = "elaborated calls: 2 planned; emission found 2, elaborated 1 itself; took 1 instantiations planned, \
@@ -159,17 +159,17 @@ let () =
                                        {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument;
                                                                result = Core.Type.Arrow {parameter = a1;
                                                                                          result = a1}}});
-  let scheme = Scheme.Id.fresh f ~arity:1 in
+  let scheme = Core.Scheme.Id.fresh f ~arity:1 in
   let use =
     Core.Global_use.polymorphic f
-      (Scheme.Instantiation.make scheme (fun _ ->
-           { Scheme.solution = Scheme.Type nat;
-             source = Scheme.Written {binder = Scheme.Binder.of_position 0; observed = Some nat} } ) )
+      (Core.Scheme.Instantiation.make scheme (fun _ ->
+           { Core.Scheme.solution = Core.Scheme.Type nat;
+             source = Core.Scheme.Written {binder = Core.Scheme.Binder.of_position 0; observed = Some nat} } ) )
   in
   let a = declare "ka" nat and b = declare "kb" nat in
   let inst =
-    Core_elaborate.instantiate ~lex:Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None
-      ~scope:[] (Core_elaborate.elaborate_arguments ~lex:Lexenv.empty use [a; b])
+    Core_elaborate.instantiate ~lex:Core.Lexenv.empty ~expected_core:None ~stated_core:None ~caller:None
+      ~scope:[] (Core_elaborate.elaborate_arguments ~lex:Core.Lexenv.empty use [a; b])
   in
   check "the callee's type is instantiated at the reading"
     (inst.callee_type_at_call = Core.Type.Arrow

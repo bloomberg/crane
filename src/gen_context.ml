@@ -73,7 +73,7 @@ let with_method_env_types cx ?(cpp : Cpp_ir.Lowered.Type.t option list = []) ?(o
   reset_env_types cx;
   Translation_binders.push_parameters cx env outer;
   Translation_binders.push_binders cx ~cpp env params;
-  set_lexical cx (fun l -> { l with declared_outer = (if cpp = [] then None else Some (Lexenv.depth
+  set_lexical cx (fun l -> { l with declared_outer = (if cpp = [] then None else Some (Core.Lexenv.depth
     l.env_types, cpp)) });
   Fun.protect
     ~finally:(fun () ->

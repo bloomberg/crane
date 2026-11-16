@@ -79,9 +79,9 @@ val worth_moving_ref : ('a -> bool) -> Names.GlobRef.t -> 'a list -> bool
     what follows does not own it. *)
 type resume = {
   calls : Core.Occurrence.t list;
-  kept : Core_binder.t list;
-  held : Core_binder.t list;
-  passed : Core_binder.t list;
+  kept : Core.Binder.t list;
+  held : Core.Binder.t list;
+  passed : Core.Binder.t list;
 }
 
 (** The points the definition [origin], whose body is lowered as a machine
@@ -100,7 +100,7 @@ type resume = {
 type resumes = {
   origin : Names.GlobRef.t;
   depth : int;
-  resume_at : Core_binder.t -> resume option;
+  resume_at : Core.Binder.t -> resume option;
   entry_captures : int option;
   parameter_type : int -> Core.Type.t option;
 }
@@ -356,24 +356,24 @@ val continue_moves : effects:Core_effects.t -> Control_ir.Term.loop -> (Core.Occ
     reads it at a closure's uses or after the let, and the frame keeps no
     part of it, nor anything it is a part of, beside it.  What follows the
     let reads it in the frame.  [None] of a let no point resumes at. *)
-val save_moves : t -> Core.Occurrence.t -> Core_binder.t list option
+val save_moves : t -> Core.Occurrence.t -> Core.Binder.t list option
 
 (** Which binders each frame saved at a resume point moves into it, by the
     Core binder of the let the machine resumes at: what translation, which
     holds the plan, says ({!save_moves}) where it generates that let, read by
     the frame machine ({!Loopify_frame}) where it saves the frame. *)
 module Frame_save : sig
-  type t = Core_binder.t list
+  type t = Core.Binder.t list
 
   (** [record binder t]: the frame saved at the let binding [binder] moves
       the binders [t].  A let generated twice is generated alike: under
       [CRANE_CHECK_IR], recording another set is a violation, and only what
       both move is moved. *)
-  val record : Core_binder.t -> t -> unit
+  val record : Core.Binder.t -> t -> unit
 
   (** What was recorded of the let binding [binder]: [None] where no frame
       is saved there. *)
-  val lookup : Core_binder.t -> t option
+  val lookup : Core.Binder.t -> t option
 end
 
 (** How each function of a local fixpoint passes its parameters -- the
@@ -402,7 +402,7 @@ end
     lowered as -- certainly or perhaps -- keeps the binder [b] across a
     resume ({!save_moves}): its value is stored in the frame, and read once
     the frame resumes, after the scope binding it has ended. *)
-val kept_by_frame : t -> Core_binder.t -> bool
+val kept_by_frame : t -> Core.Binder.t -> bool
 
 (** How the lambda of each local fixpoint function holds what it captures
     ({!captures}, {!captures_by_member}), recorded where it is generated:
@@ -432,7 +432,7 @@ end
     after the call nor beside it, each owned there, or held by the entry's
     frame.  The frame holds each by value, where the callee may have lent
     it. *)
-val entry_moves : t -> (Core.Occurrence.t * Core_binder.t list) list
+val entry_moves : t -> (Core.Occurrence.t * Core.Binder.t list) list
 
 (** A region's plan, as {!Entry_moves} names it. *)
 type region_plan = t
@@ -442,7 +442,7 @@ type region_plan = t
     ({!entry_moves}) where it plans the region, read by the frame machine
     ({!Loopify_frame}) where it pushes the frame. *)
 module Entry_moves : sig
-  type t = Core_binder.t list
+  type t = Core.Binder.t list
 
   (** [record call t]: the frame entering an entry at [call] moves [t].
       Recording another set is a violation under [CRANE_CHECK_IR], and only

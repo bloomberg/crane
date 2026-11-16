@@ -42,12 +42,12 @@ type def =
   | Fix of Core.Recursion.Definition.extracted
 
 (** The structure's definitions, those inside its modules included. *)
-val definitions : Core.Program.extracted -> def Ref.User.Map.t
+val definitions : Core.Program.extracted -> def Core.Ref.User.Map.t
 
 (** The body of the global a use names, where it may be unfolded, at the
     type arguments the use wrote: [None] for a mapped global, and where the
     use did not write an argument for every variable its type mentions. *)
-val body_of : def Ref.User.Map.t -> Core.Global_use.extracted -> Core.Expr.extracted option
+val body_of : def Core.Ref.User.Map.t -> Core.Global_use.extracted -> Core.Expr.extracted option
 
 (** [instantiate b args]: [b] applied to [args], its leading lambdas
     instantiated: a value argument substituted, any other bound once by a

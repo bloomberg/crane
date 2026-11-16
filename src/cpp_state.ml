@@ -722,19 +722,19 @@ let element_position mp c =
     installed declarations before either file is rendered ({!Cpp.plan_function_reads}):
     [None] until planned.  Compared by the definition a name reaches, so a
     read through a module alias counts. *)
-let function_reads : Ref.Can.Set.t option ref = owned_ref None
+let function_reads : Core.Ref.Can.Set.t option ref = owned_ref None
 
 (* What the declarations of every unit of a separate extraction name, from
    the whole program before any unit is generated: another unit's function
    is not generated when this one is planned. *)
-let program_reads : Ref.Can.Set.t ref = owned_ref Ref.Can.Set.empty
+let program_reads : Core.Ref.Can.Set.t ref = owned_ref Core.Ref.Can.Set.empty
 
 let note_program_reads s = program_reads := s
-let plan_function_reads s = function_reads := Some (Ref.Can.Set.union s !program_reads)
+let plan_function_reads s = function_reads := Some (Core.Ref.Can.Set.union s !program_reads)
 
 let read_by_a_function r =
   match !function_reads with
-  | Some s -> Ref.Can.Set.mem r s
+  | Some s -> Core.Ref.Can.Set.mem r s
   | None -> false
 
 type accessors = Struct_plan.accessors

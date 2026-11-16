@@ -6,8 +6,8 @@
 
 
 type t = {
-  used_customs : Ref.User.Set.t;
-  higher_order_projections : Ref.User.Set.t;
+  used_customs : Core.Ref.User.Set.t;
+  higher_order_projections : Core.Ref.User.Set.t;
   effects : Core_effects.t;
 }
 
@@ -38,17 +38,17 @@ let analyze_program cx normalized =
         recursion normalized }
 
 let lowering (program : program) : Translation_state.program_facts =
-  { throwing_values = List.fold_left (fun s r -> Ref.Can.Set.add r s) Ref.Can.Set.empty program.throwing_values;
+  { throwing_values = List.fold_left (fun s r -> Core.Ref.Can.Set.add r s) Core.Ref.Can.Set.empty program.throwing_values;
     parameter_ownership =
-      List.fold_left (fun m (r, f) -> Ref.User.Map.add r f m) Ref.User.Map.empty program.parameter_ownership;
+      List.fold_left (fun m (r, f) -> Core.Ref.User.Map.add r f m) Core.Ref.User.Map.empty program.parameter_ownership;
     partner_closure_params =
-      List.fold_left (fun m (g, is) -> Ref.User.Map.add g is m) Ref.User.Map.empty program.partner_closure_params }
+      List.fold_left (fun m (g, is) -> Core.Ref.User.Map.add g is m) Core.Ref.User.Map.empty program.partner_closure_params }
 
 (* The custom-extracted references [struc] names, a used constructor
    adding its inductive. *)
 let used_customs struc =
-  let used = ref Ref.User.Set.empty in
-  let add r = used := Ref.User.Set.add r !used in
+  let used = ref Core.Ref.User.Set.empty in
+  let add r = used := Core.Ref.User.Set.add r !used in
   let mark r =
     if Table.is_custom r then begin
       add r;
@@ -67,9 +67,9 @@ let used_customs struc =
 (* The projections [struc]'s term definitions name anywhere in their
    bodies. *)
 let higher_order_projections struc =
-  let found = ref Ref.User.Set.empty in
+  let found = ref Core.Ref.User.Set.empty in
   let rec scan = function
-    | Core.Expr.Global {callee = r; _} when Table.is_projection r -> found := Ref.User.Set.add r !found
+    | Core.Expr.Global {callee = r; _} when Table.is_projection r -> found := Core.Ref.User.Set.add r !found
     | a -> Core_util.ast_iter scan a
   in
   Modutil.struct_iter
@@ -85,6 +85,6 @@ let analyze struc =
     effects = Core_effects.analyze struc }
 
 let equal a b =
-  Ref.User.Set.equal a.used_customs b.used_customs
-  && Ref.User.Set.equal a.higher_order_projections b.higher_order_projections
+  Core.Ref.User.Set.equal a.used_customs b.used_customs
+  && Core.Ref.User.Set.equal a.higher_order_projections b.higher_order_projections
   && Core_effects.equal a.effects b.effects

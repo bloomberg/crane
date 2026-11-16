@@ -10,8 +10,8 @@ open Core_query
 open Cpp_ir.Type
 
 let push ids lex =
-  Lexenv.push
-    (List.map (fun (x, ty) -> {Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = Lexenv.Value}) ids)
+  Core.Lexenv.push
+    (List.map (fun (x, ty) -> {Core.Lexenv.id = Core_util.id_of_binder_name x; type_ = ty; role = Core.Lexenv.Value}) ids)
     lex
 
 (* The return type a let's right-hand side is generated under
@@ -26,8 +26,8 @@ let let_result cx env ~(ret : Cpp_ir.Lowered.Type.t option) t =
 (* An environment naming the binders of [lex] as they are bound, for the
    conversions that look a binder's name up (an instance passed as a
    template argument); a position's type names none. *)
-let named_env (lex : Lexenv.t) : Common.env =
-  (List.map (fun (b : Lexenv.binder) -> b.id) (lex :> Lexenv.binder list), Names.Id.Set.empty)
+let named_env (lex : Core.Lexenv.t) : Common.env =
+  (List.map (fun (b : Core.Lexenv.binder) -> b.id) (lex :> Core.Lexenv.binder list), Names.Id.Set.empty)
 
 (* The slot a coercion's inner term is generated in
    ({!Translation_expr.gen_crossing}): boxed where it crosses from a
@@ -137,7 +137,7 @@ let region cx ~outer ~reads body =
      ({!Translation_constructors.custom_field}). *)
   and custom ~pos ~slot lex ty r ts =
     let env = named_env lex in
-    let var i occ = (is_boxed i occ, Lexenv.type_opt lex i) in
+    let var i occ = (is_boxed i occ, Core.Lexenv.type_opt lex i) in
     let slot = Translation_constructors.into_erased_return cx slot in
     let ty = Translation_constructors.custom_refined_annotation cx env ~expected_ty:pos ~slot ty r ts in
     with_in_constructor_expr cx true @@ fun () ->

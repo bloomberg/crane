@@ -9,7 +9,7 @@ type role =
 
 type binder = {
   id : Names.Id.t;
-  type_ : Core.Type.t;
+  type_ : Type.t;
   role : role;
 }
 

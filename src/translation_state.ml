@@ -32,13 +32,13 @@ let mk_cppglob ?yields (r : GlobRef.t) (tys : Cpp_ir.Lowered.Type.t list) : Cpp_
   Entity (r, tys, Some {inline = Option.map Cpp_ir.Foreign.template_of_text (Table.inline_custom_text r);
                         custom_yields = yields})
 
-(** What a binder of the lexical environment stands for ({!Lexenv.role}). *)
-type binder_role = Lexenv.role =
+(** What a binder of the lexical environment stands for ({!Core.Lexenv.role}). *)
+type binder_role = Core.Lexenv.role =
   | Value
   | Dictionary
 
-(** A binder of the lexical environment ({!Lexenv.binder}). *)
-type env_binder = Lexenv.binder = {
+(** A binder of the lexical environment ({!Core.Lexenv.binder}). *)
+type env_binder = Core.Lexenv.binder = {
   id : Id.t;
   type_ : Core.Type.t;
   role : binder_role;
@@ -104,17 +104,17 @@ and generation_site =
     recursive group a partner's call passes a closure for
     ({!Translation_callable_params.partner_closure_params}). *)
 type program_facts = {
-  throwing_values : Ref.Can.Set.t;
-  parameter_ownership : bool list Ref.User.Map.t;
-  partner_closure_params : int list Ref.User.Map.t;
+  throwing_values : Core.Ref.Can.Set.t;
+  parameter_ownership : bool list Core.Ref.User.Map.t;
+  partner_closure_params : int list Core.Ref.User.Map.t;
 }
 
 (** The facts of a program nothing was analysed for: lowering outside an
     extraction's units, or before its program is frozen. *)
 let no_program_facts =
-  { throwing_values = Ref.Can.Set.empty;
-    parameter_ownership = Ref.User.Map.empty;
-    partner_closure_params = Ref.User.Map.empty }
+  { throwing_values = Core.Ref.Can.Set.empty;
+    parameter_ownership = Core.Ref.User.Map.empty;
+    partner_closure_params = Core.Ref.User.Map.empty }
 
 (** What analysing and planning the unit being extracted decided that
     lowering reads, set for the extent of the unit
@@ -126,7 +126,7 @@ let no_program_facts =
     backend's passes decided about the unit ({!Cpp_state.plans}), which
     the declarations generated and rendered after them read. *)
 type unit_facts = {
-  higher_order_projections : Ref.User.Set.t;
+  higher_order_projections : Core.Ref.User.Set.t;
   effects : Core_effects.t;
   elaborations : Core_elaborate.t option;
   context : Unit_context.t;
@@ -135,7 +135,7 @@ type unit_facts = {
 
 (** The facts of no unit: lowering outside a unit's extent. *)
 let no_unit_facts =
-  { higher_order_projections = Ref.User.Set.empty;
+  { higher_order_projections = Core.Ref.User.Set.empty;
     effects = Core_effects.empty;
     elaborations = None;
     context = Unit_context.detached;
@@ -167,14 +167,14 @@ type input = {
      enclosing declaration's head. *)
   current_template_head : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters;
   (** The Core binders of the parameters of the declaration whose body is
-     being generated ({!Core_binder}), which call sites and matches ask a
+     being generated ({!Core.Binder}), which call sites and matches ask a
      variable's type as a parameter of: by binder, since every binder the
      body pushes shifts a parameter's index.  Keying by binder rather than
      index is what lets it stay fixed for the body. *)
-  current_parameters : Core_binder.t list;
+  current_parameters : Core.Binder.t list;
   (** The definition whose body is being generated
      ({!Gen_context.begin_body}): what its Core binders are binders of
-     ({!Core_binder}).  [None] outside a body, where {!with_region} plans
+     ({!Core.Binder}).  [None] outside a body, where {!with_region} plans
      no representation or positions. *)
   body_owner : GlobRef.t option;
   (** Whether that body is a function's, generated as one, rather than a
@@ -190,7 +190,7 @@ type input = {
      argument of convert_core_type_to_cpp_type so that self-refs inside
      container types (e.g. List<tree>) get shared_ptr wrapping, matching
      the struct definition. Empty outside method bodies. *)
-  method_self_ns : Ref.User.Set.t;
+  method_self_ns : Core.Ref.User.Set.t;
   (** Where generation is, as far as which inductives it spells bare goes:
      inside the body of a module, whose planned local inductives
      ({!Scope_plan.local_inductives}) it spells bare, or outside every
@@ -228,7 +228,7 @@ type lexical = {
   current_cpp_return_type : Cpp_ir.Lowered.Type.t option;
   (** De Bruijn environment: each variable's binder, with its Core type and
      role.  Extended by every binder a scope introduces. *)
-  env_types : Lexenv.t;
+  env_types : Core.Lexenv.t;
   (** The C++ type of {e every} binder in scope, by de Bruijn index, paired
       with what decided it.
 
@@ -286,7 +286,7 @@ type lexical = {
      site and field.  Set beside {!move_plan} ({!with_region}) in a body;
      under [CRANE_CHECK_IR] translation checks it against the binder's
      recorded C++ type. *)
-  representation : (Core_binder.site * int * planned_repr) list;
+  representation : (Core.Binder.site * int * planned_repr) list;
   (** Whether the binder each variable read of the region reads holds a box,
      as {!Representation_plan} plans it: by the read's occurrence.  Set
      beside {!representation}; the only answer lowering reads
@@ -365,14 +365,14 @@ let create ~pp_cpp_type () =
           body_owner = None;
           body_function = false;
           itree_mode = Sequential;
-          method_self_ns = Ref.User.Set.empty;
+          method_self_ns = Core.Ref.User.Set.empty;
           generating = None;
           program = no_program_facts;
           unit = no_unit_facts };
       lexical =
         { current_type_vars = [];
           current_cpp_return_type = None;
-          env_types = Lexenv.empty;
+          env_types = Core.Lexenv.empty;
           cpp_binder_types = IntMap.empty;
           declared_outer = None;
           promoted_var_map = [];
@@ -493,7 +493,7 @@ let returns_void cx =
 
 (** [with_parameters bs f] runs [f] with [bs] as the binders of the
     declaration's parameters ({!input.current_parameters}). *)
-let with_parameters cx (bs : Core_binder.t list) (f : unit -> 'a) : 'a =
+let with_parameters cx (bs : Core.Binder.t list) (f : unit -> 'a) : 'a =
   with_field cx
     (fun c -> c.input.current_parameters)
     (fun bs -> set_input cx (fun i -> { i with current_parameters = bs }))
@@ -502,7 +502,7 @@ let with_parameters cx (bs : Core_binder.t list) (f : unit -> 'a) : 'a =
 (** [with_method_self_ns ns f] runs [f] with [ns] as the inductives whose
     methods are being generated, so self-references inside container types get
     the same [shared_ptr] wrapping as in the struct definition. *)
-let with_method_self_ns cx (ns : Ref.User.Set.t) (f : unit -> 'a) : 'a =
+let with_method_self_ns cx (ns : Core.Ref.User.Set.t) (f : unit -> 'a) : 'a =
   with_field cx
     (fun c -> c.input.method_self_ns)
     (fun ns -> set_input cx (fun i -> { i with method_self_ns = ns }))
@@ -523,7 +523,7 @@ let unit_facts cx = cx.ctx.input.unit
 
 (** Whether the unit uses the projection [r] as a function value, which is
     then written as a standalone function ({!unit_facts}). *)
-let is_higher_order_projection cx r = Ref.User.Set.mem r cx.ctx.input.unit.higher_order_projections
+let is_higher_order_projection cx r = Core.Ref.User.Set.mem r cx.ctx.input.unit.higher_order_projections
 
 (** The elaborations of the unit's calls ({!unit_facts}): [None] until the
     unit is walked. *)
@@ -580,12 +580,12 @@ let callee_core_type_exn cx r = match callee_core_type cx r with Some t -> t | N
 
 (** Whether the analysis of the program found that the body of the
     definition [r] only throws ({!program_facts}). *)
-let is_throwing_value cx r = Ref.Can.Set.mem r cx.ctx.input.program.throwing_values
+let is_throwing_value cx r = Core.Ref.Can.Set.mem r cx.ctx.input.program.throwing_values
 
 (** The ownership of the global [r]'s parameters, innermost first, settled
     across calls ({!program_facts}): [None] for one the analysis did not
     settle. *)
-let settled_ownership cx r = Ref.User.Map.find_opt r cx.ctx.input.program.parameter_ownership
+let settled_ownership cx r = Core.Ref.User.Map.find_opt r cx.ctx.input.program.parameter_ownership
 
 (** [generating_at site f] runs [f] with generation at [site]
     ({!input.generating}); the entries below are the only callers. *)
@@ -688,14 +688,14 @@ let with_itree_mode cx (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
 let plan_representation :
     (t ->
     Core.Expr.t ->
-    (Core_binder.site * int * planned_repr) list * (Core.Occurrence.t * Planned_read.t) list)
+    (Core.Binder.site * int * planned_repr) list * (Core.Occurrence.t * Planned_read.t) list)
     ref =
   ref (fun _ _ -> ([], []))
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
 let plan_positions :
-    (t -> outer:Lexenv.t -> reads:(Core.Occurrence.t * Planned_read.t) list -> Core.Expr.t ->
+    (t -> outer:Core.Lexenv.t -> reads:(Core.Occurrence.t * Planned_read.t) list -> Core.Expr.t ->
       (Core.Occurrence.t * Cpp_ir.Lowered.Type.t option) list)
     ref =
   ref (fun _ ~outer:_ ~reads:_ _ -> [])
@@ -708,7 +708,7 @@ let plan_positions :
     into the frames entering the machine's entries recorded
     ({!Ownership_ir.Entry_moves}). *)
 let with_region cx ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr.t) (f : unit -> 'a) : 'a =
-  let outer = Lexenv.type_opt cx.ctx.lexical.env_types in
+  let outer = Core.Lexenv.type_opt cx.ctx.lexical.env_types in
   let p =
     Ownership_ir.region ~owned ~copied ~outer ?resumes ?certain ~effects:cx.ctx.input.unit.effects
       ~n_outer:(List.length cx.ctx.lexical.current_type_vars) body
@@ -758,7 +758,7 @@ let with_reuse_token cx (tok : Cpp_ir.Lowered.Expr.t option) (f : unit -> 'a) : 
     tok f
 
 (** Set {!input.current_parameters}. *)
-let set_current_parameters cx (bs : Core_binder.t list) =
+let set_current_parameters cx (bs : Core.Binder.t list) =
   set_input cx (fun i -> { i with current_parameters = bs })
 
 (** Lift a declaration out of the body being generated, to the generation
@@ -830,7 +830,7 @@ let push_env_binders cx (binders : env_binder list) =
     else m
   in
   set_lexical cx (fun l -> { l with cpp_binder_types = shift l.cpp_binder_types });
-  set_lexical cx (fun l -> { l with env_types = Lexenv.push binders l.env_types })
+  set_lexical cx (fun l -> { l with env_types = Core.Lexenv.push binders l.env_types })
 
 (** Prepend value bindings, innermost first. *)
 let push_env_types cx (ids : (Id.t * Core.Type.t) list) =
@@ -851,8 +851,8 @@ let push_env_parameters cx (ids : (Id.t * Core.Type.t) list) =
     down.  Leaving them shifted is worse than leaving them stale -- every
     surviving binder's recorded type then describes some other binder, so a
     concrete value can be read back as a box. *)
-let restore_env_types cx (saved : Lexenv.t) =
-  let n = Lexenv.depth cx.ctx.lexical.env_types - Lexenv.depth saved in
+let restore_env_types cx (saved : Core.Lexenv.t) =
+  let n = Core.Lexenv.depth cx.ctx.lexical.env_types - Core.Lexenv.depth saved in
   if n > 0 && not (IntMap.is_empty cx.ctx.lexical.cpp_binder_types) then
     set_lexical cx (fun l ->
         { l with
@@ -867,7 +867,7 @@ let get_env_type cx (i : int) : Core.Type.t =
 
 (** The binder at de Bruijn index [i] (1-based), or [None] when [i] is out of
     range (or non-positive). *)
-let get_env_binder_opt cx (i : int) : env_binder option = Lexenv.binder cx.ctx.lexical.env_types i
+let get_env_binder_opt cx (i : int) : env_binder option = Core.Lexenv.binder cx.ctx.lexical.env_types i
 
 (** Like {!get_env_type} but returns [None] instead of raising when [i] is out
     of range (or non-positive). *)
@@ -880,16 +880,16 @@ let env_type_of_id cx (id : Id.t) : Core.Type.t option =
     (List.find_opt (fun b -> Id.equal b.id id) (cx.ctx.lexical.env_types :> env_binder list))
 
 (** The lexical environment the traversal is generating code in. *)
-let current_lexenv cx () : Lexenv.t = cx.ctx.lexical.env_types
+let current_lexenv cx () : Core.Lexenv.t = cx.ctx.lexical.env_types
 
 (** The Core binder of the variable at de Bruijn index [db] in [env], in the
-    definition whose body is being generated ({!Core_binder}): [env] binds
+    definition whose body is being generated ({!Core.Binder}): [env] binds
     the definition's Core binders, its parameters first, so the variable's
     level is the number bound outside it.  [site] is the let, bind or
     pattern binding it, where one does. *)
 let core_binder cx ?site env db =
   Option.map
-    (fun origin -> Core_binder.make ~origin ~level:(List.length (fst env) - db) ?site ())
+    (fun origin -> Core.Binder.make ~origin ~level:(List.length (fst env) - db) ?site ())
     cx.ctx.input.body_owner
 
 (** The de Bruijn index of the innermost name [id] in a list of names,
@@ -919,14 +919,14 @@ let local_binder cx ?site env id = Option.bind (index_of_name id 1 (fst env)) (c
     ({!input.current_parameters}). *)
 let parameter_type cx env i =
   match core_binder cx env i with
-  | Some b when List.exists (Core_binder.equal b) cx.ctx.input.current_parameters -> get_env_type_opt cx i
+  | Some b when List.exists (Core.Binder.equal b) cx.ctx.input.current_parameters -> get_env_type_opt cx i
   | Some _ | None -> None
 
 (** Reset the environment type stack to empty.
     Also clears {!cpp_binder_types} and the head's declared types
     ([declared_outer]). *)
 let reset_env_types cx =
-  set_lexical cx (fun l -> { l with env_types = Lexenv.empty });
+  set_lexical cx (fun l -> { l with env_types = Core.Lexenv.empty });
   set_lexical cx (fun l -> { l with cpp_binder_types = IntMap.empty; declared_outer = None })
 
 (** Run [f] in a fresh escape-analysis scope, restoring the enclosing one

@@ -26,10 +26,10 @@
     apart from any other's: patterns are flat, a constructor applied to
     variables. *)
 type site =
-  | Binding of Core.Occurrence.t
+  | Binding of Occurrence.t
       (** the let binding it, or the use of the bind whose continuation's
           parameter it is *)
-  | Branch of Core.Occurrence.t * int
+  | Branch of Occurrence.t * int
       (** the match and the index, among its branches, of the branch whose
           pattern binds it *)
 

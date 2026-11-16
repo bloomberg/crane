@@ -31,7 +31,7 @@ type t = private
 val plan :
   Callable_abi.t ->
   instance:(int -> Cpp_ir.Lowered.Type.t option) ->
-  scheme:(Scheme.Var.t -> Cpp_ir.Lowered.Type.t option) ->
+  scheme:(Core.Scheme.Var.t -> Cpp_ir.Lowered.Type.t option) ->
   t
 
 (** The arguments as a list, [[]] for {!Deduce_all}. *)

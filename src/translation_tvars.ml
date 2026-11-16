@@ -108,7 +108,7 @@ let type_arg_omission r =
     | hkt ->
       let occurring = collect_tvars_set IntSet.empty ty in
       fun v ->
-        let i = Scheme.Var.ordinal v in
+        let i = Core.Scheme.Var.ordinal v in
         if List.mem i hkt then Some Callable_abi.Class_carrier
         else if IntSet.is_empty occurring || IntSet.mem i occurring then None
         else Some Callable_abi.Unmentioned )

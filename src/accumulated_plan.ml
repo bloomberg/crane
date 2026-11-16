@@ -10,7 +10,7 @@ type t = {
   modules : Module_plan.layout;
   pointer_fields : Pointer_fields.t;
   unmerged_wrappers : ModPath.t CString.Map.t;
-  promoted_inductives : Ref.User.Set.t;
+  promoted_inductives : Core.Ref.User.Set.t;
   accessors : Cpp_state.accessors;
   nested_structs : Cpp_state.nested_struct_owner list CString.Map.t;
   instance_promoted_types : (Id.t * Core.Type.t) list GlobRef.Map.t;
@@ -20,7 +20,7 @@ let start ~accessors =
   { modules = Module_plan.no_layout;
     pointer_fields = Pointer_fields.none;
     unmerged_wrappers = CString.Map.empty;
-    promoted_inductives = Ref.User.Set.empty;
+    promoted_inductives = Core.Ref.User.Set.empty;
     accessors;
     nested_structs = CString.Map.empty;
     instance_promoted_types = GlobRef.Map.empty }

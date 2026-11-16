@@ -35,19 +35,19 @@ let mono s = Core.Global_use.monomorphic (r s)
 
 (* A use of [f] whose every variable is a hole: written nowhere. *)
 let unwritten f ~arity =
-  let scheme = Scheme.Id.fresh f ~arity in
+  let scheme = Core.Scheme.Id.fresh f ~arity in
   Core.Global_use.polymorphic f
-    (Scheme.Instantiation.make scheme (fun _ ->
-         {Scheme.solution = Scheme.Type (Core.Type.Hole (Scheme.Hole.fresh ())); source = Scheme.Not_written} ) )
+    (Core.Scheme.Instantiation.make scheme (fun _ ->
+         {Core.Scheme.solution = Core.Scheme.Type (Core.Type.Hole (Core.Scheme.Hole.fresh ())); source = Core.Scheme.Not_written} ) )
 
-let instantiate ?(lex = Lexenv.empty) ?caller ?(scope = []) use args =
+let instantiate ?(lex = Core.Lexenv.empty) ?caller ?(scope = []) use args =
   Core_elaborate.instantiate ~lex ~expected_core:None ~stated_core:None ~caller ~scope
     (Core_elaborate.elaborate_arguments ~lex use args)
 
 (* The type the reading gives the callee's variable [i], where it gives one. *)
 let var_type (inst : Elaborated_call.instantiated) i =
   List.find_map
-    (fun (var, ty) -> if Scheme.Var.ordinal var = i then Some ty else None)
+    (fun (var, ty) -> if Core.Scheme.Var.ordinal var = i then Some ty else None)
     (Core_util.Var_types.bindings inst.tys)
 
 let mutind m l = MutInd.make1 (KerName.make (ModPath.MPfile (DirPath.make [Id.of_string m])) (Label.make l))
@@ -152,8 +152,8 @@ let () =
   let inst () = Core.Expr.fresh_rel 2 and y () = Core.Expr.fresh_rel 1 in
   let closed = Core.Global_use.monomorphic g and open_ = Core.Global_use.monomorphic g in
   let member = Core.Global_use.polymorphic fld
-      (Scheme.Instantiation.make (Scheme.Id.fresh fld ~arity:1) (fun _ ->
-           {Scheme.solution = Scheme.Type nat; source = Scheme.Not_written} ) ) in
+      (Core.Scheme.Instantiation.make (Core.Scheme.Id.fresh fld ~arity:1) (fun _ ->
+           {Core.Scheme.solution = Core.Scheme.Type nat; source = Core.Scheme.Not_written} ) ) in
   let plain = Core.Global_use.monomorphic fld_mono in
   let body =
     Core.Expr.Tuple
@@ -174,10 +174,10 @@ let () =
   check "the declaration's class-typed parameter is its dictionary"
     (Core_elaborate.roles t closed 3 = Some [Elaborated_call.Dictionary; Regular; Excess]);
   let lex =
-    Lexenv.push
-      [ {Lexenv.id = Id.of_string "y"; type_ = nat; role = Lexenv.Value};
+    Core.Lexenv.push
+      [ {Core.Lexenv.id = Id.of_string "y"; type_ = nat; role = Core.Lexenv.Value};
         {id = Id.of_string "inst"; type_ = cls; role = Dictionary} ]
-      Lexenv.empty
+      Core.Lexenv.empty
   in
   let args_closed = [inst (); c; y ()] and args_open = [inst (); y (); y ()] in
   check "a head of the dictionary and a global is closed"
@@ -196,9 +196,9 @@ let () =
     (* Asked in an environment with no binders, the live answer differs:
        the walk's is the one given. *)
     check "the closed head is the walk's, not the asker's environment's"
-      (Core_elaborate.closed_head_call ~walk:(Some t) ~lex:Lexenv.empty closed args_closed);
+      (Core_elaborate.closed_head_call ~walk:(Some t) ~lex:Core.Lexenv.empty closed args_closed);
     check "the member template is the walk's"
-      (Core_elaborate.member_template_call ~walk:(Some t) ~lex:Lexenv.empty member [inst (); y ()]);
+      (Core_elaborate.member_template_call ~walk:(Some t) ~lex:Core.Lexenv.empty member [inst (); y ()]);
     check "a singleton dictionary the walk did not find there is none, whatever the asker says"
       (Core_elaborate.singleton_dictionary_call ~walk:(Some t) ~live:(fun () -> Some (d, d)) (occ ()) = None) )
 

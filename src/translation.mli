@@ -53,7 +53,7 @@ val gen_stmts :
     method-self namespace, restoring the enclosing one on the way out however
     [f] leaves.  Containers built inside such a scope then spell those
     inductives' type parameters as their struct fields do. *)
-val with_method_ns_for_locals : Translation_state.t -> ?base:Ref.User.Set.t -> (unit -> 'a) -> 'a
+val with_method_ns_for_locals : Translation_state.t -> ?base:Core.Ref.User.Set.t -> (unit -> 'a) -> 'a
 
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
     on an inductive whose kept parameters are [param_vars], has no C++ spelling
