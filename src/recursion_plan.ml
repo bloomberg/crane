@@ -1385,10 +1385,10 @@ let splice_member ~suspension ~inlines ~defs ~members (fd : Core.Recursion.Defin
   | spliced -> spliced
 
 let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
-                                          splices} : Core_phase.normalizing) : Core_phase.normalizing =
+                                          splices} : Core_passes.Phase.normalizing) : Core_passes.Phase.normalizing =
   let groups = Recursive_groups.analyze struc in
   let originals = ref Core.Ref.User.Map.empty in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d ->
       List.iter (fun (fd : Core.Recursion.Definition.t) -> originals := Core.Ref.User.Map.add fd.entity fd !originals)
         (Base.Core_util.term_defs d))
@@ -1400,7 +1400,7 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
     Core.Ref.User.Map.filter_map
       (fun r fd ->
         match Recursive_groups.group groups r with
-        | Some members when loopified r && (not (Base.Table.is_custom r)) && not (Splices.decided splices r) ->
+        | Some members when loopified r && (not (Base.Table.is_custom r)) && not (Core_passes.Splices.decided splices r) ->
           Some (splice_member ~suspension ~inlines ~defs ~members fd)
         | Some _ | None -> None )
       defs
@@ -1432,7 +1432,7 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
     | Some (_, None) | None -> fd
   in
   { structure =
-      Modutil.map_struct_decls
+      Core_passes.Modutil.map_struct_decls
         (function
           | Core.Decl.Recursive_group fds -> Core.Decl.Recursive_group (Core.Nonempty.map splice fds)
           | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
@@ -1440,7 +1440,7 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
             Core.Decl.Value {entity = r; body = fd.body; type_ = ty}
           | d -> d )
         struc;
-    splices = Core.Ref.User.Map.fold (fun r (entered, _) s -> Splices.decide ?entered r s) decisions splices }
+    splices = Core.Ref.User.Map.fold (fun r (entered, _) s -> Core_passes.Splices.decide ?entered r s) decisions splices }
 
 (* A member of a group recurses by the calls of itself it makes, those in
    the copies of its partners spliced into its body included
@@ -1448,11 +1448,11 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
    spliced stays a call of another function.  A function on no cycle calls
    no function it could recurse through. *)
 let analyze ~suspension groups program =
-  let struc = Core_phase.structure program in
+  let struc = Core_passes.Phase.structure program in
   let effects = Core_effects.analyze struc in
   let defs = ref Core.Ref.User.Map.empty in
   let add (fd : Core.Recursion.Definition.t) = defs := Core.Ref.User.Map.add fd.entity fd !defs in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d -> List.iter add (Base.Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())
@@ -1543,7 +1543,7 @@ let analyze ~suspension groups program =
           | _ -> []
         in
         let lex, body = Core_elaborate.declaration_scope fd.type_ fd.body in
-        resumes_of ~effects ~entered:(Splices.is_entered_copy (Core_phase.splices program))
+        resumes_of ~effects ~entered:(Core_passes.Splices.is_entered_copy (Core_passes.Phase.splices program))
           ~origin:r ~targets lex body )
       defs
   in

@@ -565,7 +565,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
   let missing = unwritten_parameters ty ids b in
   (* A body's lambda parameter types agree with the signature's by now: the
      one Core rewrite that broke that, promoting a polymorphic let-fix to a
-     top-level Core.Decl.Recursive_group, unifies them where it promotes ([Modutil.decl_of_term]),
+     top-level Core.Decl.Recursive_group, unifies them where it promotes ([Core_passes.Modutil.decl_of_term]),
      before the program is frozen.  What a binder left open stays open
      ({!Core.Type.Open}), and is reconciled with the signature's type. *)
   let n_missing = List.length missing in
@@ -1935,7 +1935,7 @@ let gen_spec__inner cx n b ty =
       (* Strip a coercion wrapper and track whether a type coercion from std::any
          is needed.  Core.Expr.Coerce wraps expressions when the extraction detects a
          type mismatch (e.g. Obj = std::any vs nat = unsigned int).  The body
-         is canonical ({!Core_normalize}), so no application in it has a
+         is canonical ({!Core_passes.Spines}), so no application in it has a
          coercion at its head. *)
       let has_magic, inner_body =
         match b with

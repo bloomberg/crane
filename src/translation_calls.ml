@@ -132,9 +132,9 @@ let core_app_result_type_with cx ~find (f : _ Core.Expr.at) (args : _ Core.Expr.
 let core_app_result_type cx (f : Core.Expr.t) (args : Core.Expr.t list) : Core.Type.t option =
   core_app_result_type_with cx ~find:find_type_opt f args
 
-(** What {!Local_types} asks of lowering, from the context [cx]. *)
+(** What {!Core_passes.Local_types} asks of lowering, from the context [cx]. *)
 let local_types_lowering cx =
-  {Local_types.app_result_type = (fun ~find f args -> core_app_result_type_with cx ~find f args)}
+  {Core_passes.Local_types.app_result_type = (fun ~find f args -> core_app_result_type_with cx ~find f args)}
 
 (** The variable {!Plan_templates.relax_tt_applied_return} takes out of [id]'s
     template head, if any: the higher-kinded head of an applied codomain that
@@ -1715,7 +1715,7 @@ let assumed_callables cx struc callables =
     (fun (r, b, ty) ->
       if GlobRef.Map_env.mem r planned then None
       else Some (r, assumed_deduced_callables cx r b ty) )
-    (Modutil.struct_functions struc)
+    (Core_passes.Modutil.struct_functions struc)
 
 (** [slot] for a lambda going to a callable its callee deduces: the positions
     the slot erases are left to deduction ([const auto&]), so the lambda takes

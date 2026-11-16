@@ -21,7 +21,7 @@ type program = {
 }
 
 let analyze_program cx normalized =
-  let struc = Core_phase.structure normalized in
+  let struc = Core_passes.Phase.structure normalized in
   let recursive_groups = Recursive_groups.analyze struc in
   let methods = Method_registry.create ~ret_is_erased:(Translation.return_type_is_erased cx) struc in
   let receiver r = Option.map snd (Method_registry.is_registered_method methods r) in
@@ -57,9 +57,9 @@ let used_customs struc =
       match r with Names.GlobRef.ConstructRef (ip, _) -> add (Names.GlobRef.IndRef ip) | _ -> ()
     end
   in
-  Modutil.struct_iter
-    (Modutil.decl_iter_references mark mark mark)
-    (Modutil.spec_iter_references mark mark mark)
+  Core_passes.Modutil.struct_iter
+    (Core_passes.Modutil.decl_iter_references mark mark mark)
+    (Core_passes.Modutil.spec_iter_references mark mark mark)
     (fun _ -> ())
     struc;
   !used
@@ -72,7 +72,7 @@ let higher_order_projections struc =
     | Core.Expr.Global {callee = r; _} when Base.Table.is_projection r -> found := Core.Ref.User.Set.add r !found
     | a -> Base.Core_util.ast_iter scan a
   in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d -> List.iter (fun (fd : Core.Recursion.Definition.t) -> scan fd.body) (Base.Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())

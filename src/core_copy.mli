@@ -26,7 +26,7 @@ val copy : Core.Expr.t -> Core.Expr.t
     there ({!Core.Scheme.Identity}) included, whose variable is the callee's.
     Substitution reaches every variable of the callee's range, as
     {!Base.Core_util.instantiate_body}'s does: a local definition's own variable
-    numbered within it ({!Local_types}) is replaced too. *)
+    numbered within it ({!Core_passes.Local_types}) is replaced too. *)
 val instance : Core.Global_use.t -> Core.Expr.t -> Core.Expr.t
 
 (** [call ~ty use body args]: the call of [use]'s callee, defined as [body]

@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Core, the functional program extraction produces and the first IR of the
-    pipeline: [extraction.ml] builds it, the Core passes ({!Core_phase})
+    pipeline: [extraction.ml] builds it, the Core passes ({!Core_passes.Phase})
     rewrite it, and lowering (Translation and the Translation_* modules)
     turns it into CppIR.  [grammar.ml] defines the language.
 

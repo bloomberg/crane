@@ -1222,7 +1222,7 @@ val inspect_type : GlobRef.t -> 'a type_reader -> 'a
 val add_frozen_type : GlobRef.t -> Core.Type.t -> unit
 
 (** [freeze_types f] freezes every type registered since the last call with
-    [f], which {!Core_phase.freeze} gives: from then on {!find_type}
+    [f], which {!Core_passes.Phase.freeze} gives: from then on {!find_type}
     answers it. *)
 val freeze_types : (Core.Type.extracted -> Core.Type.t) -> unit
 

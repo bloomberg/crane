@@ -191,7 +191,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
         in
         Some
           ( fresh @ args,
-            Core_normalize.apply (ast_lift k a) (List.init k (fun i -> Core.Expr.fresh_rel (k - i))) )
+            Core_passes.Spines.apply (ast_lift k a) (List.init k (fun i -> Core.Expr.fresh_rel (k - i))) )
     in
     match Option.bind expected_ty fun_ty_of with
     | Some (n, cod) when n > 0 && fun_ty_of cod <> None ->

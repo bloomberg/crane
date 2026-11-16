@@ -56,7 +56,7 @@ let layers ty body =
       let applied =
         match Base.Core_util.ast_lift 1 body with
         | Core.Expr.Apply {callee = f; arguments = args} -> Core.Expr.Apply {callee = f; arguments = args @ [arg]}
-        | f -> Core_normalize.apply f [arg]
+        | f -> Core_passes.Spines.apply f [arg]
       in
       let body =
         Core.Expr.Lambda
@@ -257,9 +257,9 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
      and each generation gives the body's open annotations identities of its
      own. *)
   (* A field body is substituted into ([record_body]) and applied to
-     invented parameters ([layers]) after {!Core_normalize.structure} ran:
+     invented parameters ([layers]) after {!Core_passes.Spines.structure} ran:
      canonical again only once its spines are read again. *)
-  let field_body = Core_normalize.spine (strip_magic field_body) in
+  let field_body = Core_passes.Spines.spine (strip_magic field_body) in
   let field_body = if freshen then Base.Core_util.freshen_metas field_body else field_body in
   (* The class field's type loses the method's own quantifier; give it back
      before renumbering and substituting.  The instance's class arguments are
@@ -462,7 +462,7 @@ let prepare_method ?(freshen = true) ({class_ref; type_args; tvar_count = instan
               Core.Expr.Lambda
                 {parameter = Core.Binder_name.Source (Id.of_string ("a" ^ string_of_int i));
                   parameter_type = ty; body = acc} )
-            (Core_normalize.apply inner args)
+            (Core_passes.Spines.apply inner args)
             (List.rev (List.mapi (fun i t -> (i, t)) missing_tys))
       in
       expand field_body
@@ -555,7 +555,7 @@ let eta_call m inner_body =
     in
     let params = List.mapi (fun i t -> (Id.of_string ("a" ^ string_of_int i), t)) arg_types in
     (* The body's de Bruijn indices lifted over the new parameters. *)
-    Some (params, Core_normalize.apply (Base.Core_util.ast_lift nparams inner_body) core_rels)
+    Some (params, Core_passes.Spines.apply (Base.Core_util.ast_lift nparams inner_body) core_rels)
 
 let methods name body ty =
   let {inner_ty; inner_body; lam_params; _} = layers ty body in

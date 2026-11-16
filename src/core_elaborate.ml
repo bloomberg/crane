@@ -691,7 +691,7 @@ and walk_type w lex ty =
 
 (* The variables a declaration of type [ty] is generated under: the type
    variables of its head, which a let-bound lambda in its body is numbered
-   past ({!Local_types}). *)
+   past ({!Core_passes.Local_types}). *)
 let head_variables ty = Base.Core_util.IntSet.fold max (Base.Core_util.core_tvars ty) 0
 
 (* A declaration's own parameters are bound as its parameters, at the types
@@ -875,7 +875,7 @@ let structure ~methods struc =
         ind.packets in
   let as_methods =
     let acc = ref GlobRef.Set_env.empty in
-    Modutil.struct_iter
+    Core_passes.Modutil.struct_iter
       (function
         | Core.Decl.Inductive {entity = kn; definition = ind} ->
           List.iter (fun (_, (r, _, _, _)) -> acc := GlobRef.Set_env.add r !acc) (methods kn ind)
@@ -884,7 +884,7 @@ let structure ~methods struc =
     !acc
   in
   let as_method r = GlobRef.Set_env.mem r as_methods in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (function
       | Core.Decl.Value {entity = r; _} when as_method r -> define r
       | Core.Decl.Value {entity = r; body; type_ = ty} ->

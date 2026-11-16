@@ -58,7 +58,7 @@ type suspension = {
 (** [analyze ~suspension groups p] plans every function the normalized
     program [p] defines, in the recursive groups [groups], a body suspended
     as [suspension] says. *)
-val analyze : suspension:suspension -> Recursive_groups.t -> Core_phase.normalized Core_phase.program -> t
+val analyze : suspension:suspension -> Recursive_groups.t -> Core_passes.Phase.normalized Core_passes.Phase.program -> t
 
 (** Whether two plans decide every function and fixpoint alike. *)
 val equal : t -> t -> bool
@@ -204,7 +204,7 @@ val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
     of its uses of itself is a call made there -- the copy entered is no
     value a closure could call -- and no other partner is entered: a copy of it is bound in front of the body, a
     local fixpoint whose calls of the partner are its own, and each such
-    call is a call of the copy ({!Splices.entered_copy}).  Any other is
+    call is a call of the copy ({!Core_passes.Splices.entered_copy}).  Any other is
     replaced by a copy of the partner's body as a tail call is, run where
     the call was, where no partner's call is read.  Once no partner is left
     to splice, a partner whose copies brought calls of it that are not tail
@@ -222,7 +222,7 @@ val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
     it is, so normalizing the result again rewrites nothing. *)
 val splice_partners :
   suspension:suspension -> loopified:(Names.GlobRef.t -> bool) -> inlines:(Names.GlobRef.t -> bool) ->
-    Core_phase.normalizing -> Core_phase.normalizing
+    Core_passes.Phase.normalizing -> Core_passes.Phase.normalizing
 
 (** Whether functions of types [a] and [b] yield one type, once every
     abbreviation is unfolded and a variable of the definition's scheme is

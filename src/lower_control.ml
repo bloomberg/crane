@@ -228,13 +228,13 @@ let rec fixpoints wanted acc e =
   !acc
 
 let lower ~methods plan program =
-  let struc = Core_phase.structure program in
+  let struc = Core_passes.Phase.structure program in
   let effects = Core_effects.analyze struc in
   let functions, locals = Recursion_plan.tail_loops plan in
   let modulo_cons, local_modulo_cons = Recursion_plan.modulo_cons_loops plan in
   let frame_functions, frame_locals = Recursion_plan.frame_loops plan in
   let defs = ref Names.GlobRef.Map_env.empty in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) -> defs := Names.GlobRef.Map_env.add fd.entity fd !defs)
@@ -268,9 +268,9 @@ let lower ~methods plan program =
     | Some _ | None -> None
   in
   (* A partner's copy spliced into the body of [r] is entered by the
-     machine [lowered] lowers it as ({!Splices.entered_copy}). *)
+     machine [lowered] lowers it as ({!Core_passes.Splices.entered_copy}). *)
   let check_entered r lowered =
-    match Splices.entered_copy (Core_phase.splices program) r with
+    match Core_passes.Splices.entered_copy (Core_passes.Phase.splices program) r with
     | Some o when Base.Probe.checking () ->
       let enters t =
         List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.Term.entries t) in
@@ -285,7 +285,7 @@ let lower ~methods plan program =
     if not (List.exists (fun (l, _) -> Loop.equal l target) !loops) then
       loops := (target, Loop {loop = target; parameters = List.rev parameters; body}) :: !loops
   in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) ->

@@ -519,7 +519,7 @@ let file_calls modpath decls =
     decls;
   fun body ->
     let acc = ref [] in
-    Modutil.ast_iter_references
+    Core_passes.Modutil.ast_iter_references
       (fun r -> if Core.Ref.User.Tbl.mem terms r then acc := r :: !acc)
       (fun _ -> ())
       (fun _ -> ())

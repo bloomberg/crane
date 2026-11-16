@@ -248,13 +248,13 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
                      arguments = args} when singleton_call cx env i occ <> None ->
     Translation_application.gen_singleton_dictionary_call cx env ~i ~occ ~args
   (* Every application translation is handed is canonical
-     ({!Core_normalize}): no head here is a global already applied, a
+     ({!Core_passes.Spines}): no head here is a global already applied, a
      coercion, or a one-branch match, and no numeral literal is spelled
      as a converter's application or as a constructor term. *)
   | (Core.Expr.Apply _ | Core.Expr.Construct _) as e when Base.Probe.checking ()
-    && not (Core_normalize.canonical_application e) ->
+    && not (Core_passes.Spines.canonical_application e) ->
     Base.Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
-    gen_expr cx ?expected_ty ~slot env (Core_normalize.spine e)
+    gen_expr cx ?expected_ty ~slot env (Core_passes.Spines.spine e)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
                      arguments = a1 :: l} when Translation_monadic.is_effect cx Core_effects.Return use ->
     Translation_effects.gen_return_expr cx env ~r ~use ~a1 ~l

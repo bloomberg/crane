@@ -563,7 +563,7 @@ let eta_bound_lambda t a =
       let applied =
         match ast_lift d body with
         | Core.Expr.Apply {callee = f; arguments = xs} -> Core.Expr.Apply {callee = f; arguments = xs @ args}
-        | lifted -> Core_normalize.apply lifted args
+        | lifted -> Core_passes.Spines.apply lifted args
       in
       named_lams binders (named_lams (List.rev new_binders) applied)
   | _ -> a
@@ -579,7 +579,7 @@ type let_lambda =
           type parameters alone -- used at several instances.  It has no C++
           value to bind, only a template no call could deduce, so each use
           calls what it abbreviates: this is [b] with a copy of [a] of its
-          own ({!Fresh_occurrences.term}) put in place of each read of [x]
+          own ({!Core_passes.Fresh_occurrences.term}) put in place of each read of [x]
           and the applications reduced, [alias nat 9] becoming [id 9]. *)
   | Lifted  (** Lifted out to a function template of its own. *)
 
@@ -611,7 +611,7 @@ let let_lambda ~lex ~n_outer t a b =
           | Core.Expr.Apply {callee = (Core.Expr.Lambda _ as f); arguments = args} -> beta_red_app args f
           | t -> ast_map beta_normalize t
         in
-        Inlined (beta_normalize (ast_subst_each (fun () -> Fresh_occurrences.term a) b))
+        Inlined (beta_normalize (ast_subst_each (fun () -> Core_passes.Fresh_occurrences.term a) b))
 
 (** Check if a GlobRef returns a typeclass type (possibly through Core.Type.Arrow layers). *)
 let ref_returns_typeclass r =

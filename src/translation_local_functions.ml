@@ -417,7 +417,7 @@ let fix_captures cx ~in_place fix = Ownership_ir.captures_by_member ~in_place cx
     them. *)
 let ungenerated_let_lambda what =
   if Base.Probe.checking () then
-    Base.Probe.violation "let-bound lambda" Pp.(str "Core_phase.normalize left " ++ str what ++ str " to translation")
+    Base.Probe.violation "let-bound lambda" Pp.(str "Core_passes.Phase.normalize left " ++ str what ++ str " to translation")
 
 (** Under [CRANE_CHECK_IR], the region's plan must have decided as translation
     does whether [let _ : ty := a] binds the closure [a] to a local
@@ -569,8 +569,8 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
   ~fix_term ~b
   ~let_occ : Cpp_ir.Lowered.Stmt.t list =
   (* Special case for let-fix: the let binding name is the fix function name *)
-  Local_types.check_minted ids;
-  let ids, funs = Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
+  Core_passes.Local_types.check_minted ids;
+  let ids, funs = Core_passes.Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
   register_erased_members ~let_ty occ ids;
   (* Collect all Core.Type.Variable indices from the fixpoint types *)
   let fix_tvar_indices =
@@ -779,7 +779,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   (* A type the binding leaves open is the binding's own, minted before
      the program was frozen past the enclosing declaration's variables,
      which [Core.Type.Variable 1] .. [Core.Type.Variable n_outer] already name. *)
-  Local_types.check_let_lambda ~outer:n_outer t a;
+  Core_passes.Local_types.check_let_lambda ~outer:n_outer t a;
   (* Collect all Core.Type.Variable indices from the let-binding type *)
   let tvar_indices = collect_tvars [] t in
   (* Also collect Tvars from the lambda body *)
@@ -1165,8 +1165,8 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
 let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ~x ~ids ~funs ~occ
   ~fix_term ~args :
   Cpp_ir.Lowered.Stmt.t list =
-  Local_types.check_minted ids;
-  let ids, funs = Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
+  Core_passes.Local_types.check_minted ids;
+  let ids, funs = Core_passes.Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
   register_erased_members occ ids;
   (* Collect Tvars from bodies too *)
   let body_tvars = Array.fold_left Translation_lifting.collect_tvars_ast [] funs in
@@ -1384,8 +1384,8 @@ let gen_standalone_fix cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.
      RHS of a let-binding.  Since the fixpoint value itself is returned (not
      called in place), it will always escape.  Use the Y-combinator pattern:
      the generated wrapper lambda [fix_name] is already a plain callable. *)
-  Local_types.check_minted ids;
-  let ids, funs = Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
+  Core_passes.Local_types.check_minted ids;
+  let ids, funs = Core_passes.Local_types.recover_fix_codomains (Translation_calls.local_types_lowering cx) ids funs in
   let all_fix_ids_list = Array.to_list ids in
   let funs_compiled =
     Array.to_list

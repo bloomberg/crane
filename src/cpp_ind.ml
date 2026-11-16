@@ -107,7 +107,7 @@ let template_kinds cx struc =
     List.iter (fun (r, k) -> Cpp_ir.Tparam_kinds.record r k) l;
     kinds := List.rev_append l !kinds
   in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (function
       | Core.Decl.Inductive {entity = kn; definition = ind} -> decide (ind_template_kinds kn ind)
       | Core.Decl.Type_alias {entity = r; parameters = l; body = t} -> decide (alias_template_kinds cx r l t)

@@ -21,7 +21,7 @@ open CErrors
 open Util
 open Base.Table
 open Extraction
-open Modutil
+open Core_passes.Modutil
 open Base.Common
 
 (****************************************)
@@ -131,14 +131,14 @@ module Visit : VISIT = struct
       | VarRef _ -> assert false
 
   (* Prune numeral-converter applications (e.g. [Nat.of_num_uint (...)]):
-     Core writes them as the literals they compute ({!Numeral_literal.fold}),
+     Core writes them as the literals they compute ({!Core_passes.Numeral_literal.fold}),
      so the converter, its digit-chain argument, and everything they
      transitively reference are never emitted.  Visiting them anyway would
      pull in the vestigial [of_num_uint]/[of_uint]/[Uint] machinery that no
      generated code calls. *)
   let add_decl_deps d =
     decl_iter_references
-      ~prune:Numeral_literal.converter_folds
+      ~prune:Core_passes.Numeral_literal.converter_folds
       add_ref add_ref add_ref d
 
   let add_spec_deps s = spec_iter_references add_ref add_ref add_ref s
@@ -500,7 +500,7 @@ and extract_mexpr access env mp = function
   | me when lang () != Cpp ->
     (* In Haskell/Scheme, we expand everything. For now, we also extract
        everything, dead code will be removed later (see
-       [Modutil.optimize_struct]. *)
+       [Core_passes.Modutil.optimize_struct]. *)
     let sign, delta = expand_mexpr env mp me in
     extract_msignature access env mp delta ~all:true sign
   | MEident mp ->
@@ -1353,25 +1353,25 @@ let report_body_generations fn =
              (fun (p, n) -> str (phase_name p) ++ str " " ++ int n)
              (Gen_decls.body_generation_counts ()) )
 
-(** [Modutil.optimize_struct], one body for coinciding definitions, a
+(** [Core_passes.Modutil.optimize_struct], one body for coinciding definitions, a
     recursive function specialized to the lambda a definition passes it,
     the knot of a well-founded recursion tied directly, every read of a
     local its own, and the open types of local definitions
     minted: the rewrites the program goes through before it is frozen. *)
 let core_passes cx to_appear : Core.Program.extracted Base.Pipeline_trace.pass list =
   let open Base.Pipeline_trace in
-  [ pass "modutil" (Modutil.optimize_struct to_appear);
+  [ pass "modutil" (Core_passes.Modutil.optimize_struct to_appear);
     (* Which inductives are shared variants is a property of their
        declarations, final from here; the method registry {!Normalize} builds
        already asks. *)
     effect_ "shared_variants" Structure_analysis.register_shared_variants;
-    pass "dedup" Core_dedup.structure;
-    pass "specialize" Core_specialize.structure;
-    pass "knot" Core_knot.structure;
-    pass "fix_shape" Fix_shape.structure;
-    pass "fresh_occurrences" Fresh_occurrences.structure;
-    effect_ "local_types" (Local_types.structure (Translation_calls.local_types_lowering cx));
-    effect_ "ir_check" Core_check.structure ]
+    pass "dedup" Core_passes.Dedup.structure;
+    pass "specialize" Core_passes.Specialize.structure;
+    pass "knot" Core_passes.Knot.structure;
+    pass "fix_shape" Core_passes.Fix_shape.structure;
+    pass "fresh_occurrences" Core_passes.Fresh_occurrences.structure;
+    effect_ "local_types" (Core_passes.Local_types.structure (Translation_calls.local_types_lowering cx));
+    effect_ "ir_check" Core_passes.Check.structure ]
 
 (** A translation context nothing has been lowered in yet, quoting finished
     types in its reports as the printer spells them. *)
@@ -1382,7 +1382,7 @@ let core_pass_names =
   let cx = translation_context () in
   Base.Pipeline_trace.names (core_passes cx ([], []))
 
-(** {!Normalize}, on the frozen program ({!Core_phase.normalize}), before it is
+(** {!Normalize}, on the frozen program ({!Core_passes.Phase.normalize}), before it is
     analysed: every consumer of the structure (the method registry built
     before printing as much as the printer) sees the same bodies, and a body
     an optimization introduces meets Normalize's contract like any other.
@@ -1392,8 +1392,8 @@ let core_pass_names =
     the body Normalize names the calls of and splices partners into: a call
     written in stages or through a coercion is one call there.  Normalize
     keeps it canonical, which [CRANE_CHECK_IR] checks. *)
-let normalize_passes cx : Core_phase.normalizing Base.Pipeline_trace.pass list =
-  let rewriting f (p : Core_phase.normalizing) = {p with structure = f p.structure} in
+let normalize_passes cx : Core_passes.Phase.normalizing Base.Pipeline_trace.pass list =
+  let rewriting f (p : Core_passes.Phase.normalizing) = {p with structure = f p.structure} in
   let lowering =
     { Normalize.app_result_type = (fun f args -> Translation_calls.core_app_result_type cx f args);
       return_type_is_erased = (fun params ret -> Translation.return_type_is_erased cx params ret);
@@ -1402,9 +1402,9 @@ let normalize_passes cx : Core_phase.normalizing Base.Pipeline_trace.pass list =
   Base.Pipeline_trace.
     [ pass "eta_expand" (rewriting Normalize.eta_expand);
       pass "let_lambdas" (rewriting Normalize.let_lambdas);
-      pass "spines" (rewriting Core_normalize.structure);
+      pass "spines" (rewriting Core_passes.Spines.structure);
       pass "normalize" (Normalize.structure lowering);
-      effect_ "canonical" (fun (p : Core_phase.normalizing) -> Core_normalize.check p.structure) ]
+      effect_ "canonical" (fun (p : Core_passes.Phase.normalizing) -> Core_passes.Spines.check p.structure) ]
 
 let normalize_pass_names =
   let cx = translation_context () in
@@ -1445,8 +1445,8 @@ let check_structure_unchanged planned struc =
             ++ prlist_with_sep pr_comma Label.print changed) )
     planned
 
-(** [freeze core f]: [f] of the frozen program ({!Core_phase.freeze}),
-    normalized ({!Core_phase.normalize}), lowered with the facts the whole of
+(** [freeze core f]: [f] of the frozen program ({!Core_passes.Phase.freeze}),
+    normalized ({!Core_passes.Phase.normalize}), lowered with the facts the whole of
     it is analysed for -- which definitions only throw, which parameters
     are owned, settled across calls, how each function recurses
     ({!Program_facts.analyze_program}), and handed with what loop lowering
@@ -1455,7 +1455,7 @@ let freeze cx core f =
   let normalized, program =
     Translation_state.generating_outside_modules cx @@ fun () ->
     let normalized =
-      Core_phase.normalize (Base.Pipeline_trace.run ~stage:"normalize" (normalize_passes cx)) (Core_phase.freeze core)
+      Core_passes.Phase.normalize (Base.Pipeline_trace.run ~stage:"normalize" (normalize_passes cx)) (Core_passes.Phase.freeze core)
     in
     Base.Pipeline_trace.event "core" "analyze_program";
     (normalized, Program_facts.analyze_program cx normalized)
@@ -1467,9 +1467,9 @@ let freeze cx core f =
     ({!core_pass_names}), keeping what [to_appear] names. *)
 let optimize_struct cx to_appear struc =
   let core =
-    Core_phase.optimize (Base.Pipeline_trace.run ~stage:"core" (core_passes cx to_appear)) (Core_phase.extracted struc)
+    Core_passes.Phase.optimize (Base.Pipeline_trace.run ~stage:"core" (core_passes cx to_appear)) (Core_passes.Phase.extracted struc)
   in
-  if Base.Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core_phase.structure core));
+  if Base.Pipeline_trace.enabled () then ignore (observed_fingerprint ~stage:"core" (Core_passes.Phase.structure core));
   core
 
 (** The steps of {!analyze_and_plan}, in order. *)
@@ -1641,7 +1641,7 @@ let declares struc =
         Array.iteri (fun j _ -> add (GlobRef.ConstructRef ((kn, i), j + 1))) p.constructor_argument_types )
       ind.packets
   in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (function
       | Core.Decl.Inductive {entity = kn; definition = ind} -> inductive kn ind
       | Core.Decl.Type_alias {entity = r; _} | Core.Decl.Value {entity = r; _} -> add r
@@ -1660,10 +1660,10 @@ let declares struc =
     a separate extraction starts from ({!Accumulated_plan.for_next_unit}). *)
 let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
-    (fn, si, mo) dry (loops : Loop_facts.t) (core : Core_phase.normalized Core_phase.program) =
+    (fn, si, mo) dry (loops : Loop_facts.t) (core : Core_passes.Phase.normalized Core_passes.Phase.program) =
   let dry = dry || Base.Probe.census_dry () in
   Base.Probe.census_unit ();
-  let struc = Core_phase.structure core in
+  let struc = Core_passes.Phase.structure core in
   Buffer.clear buf;
   let d = descr () in
   (* Empties every per-file cell, the mutual-recursion registry among them,
@@ -2041,7 +2041,7 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
              nothing. *)
           let current = MPfile (Lib.library_dp ()) in
           let foreign, own =
-            Core_phase.partition
+            Core_passes.Phase.partition
               (fun mp ->
                 (not (ModPath.equal mp current))
                 &&
@@ -2050,8 +2050,8 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
                 | None -> false )
               core
           in
-          List.iter (fun (mp, _) -> Base.Table.claim_extracted_unit mp target) (Core_phase.modules own);
-          (List.map fst (Core_phase.modules foreign), own)
+          List.iter (fun (mp, _) -> Base.Table.claim_extracted_unit mp target) (Core_passes.Phase.modules own);
+          (List.map fst (Core_passes.Phase.modules foreign), own)
       in
       let unit_includes =
         List.sort_uniq String.compare (List.filter_map Base.Table.extracted_unit_of foreign)
@@ -2095,8 +2095,8 @@ let full_extraction_exports ?(validate = true) ~opaque_access f lr =
     each in a namespace of its own: [Separate Extraction]'s layout, and
     [Extraction Library]'s.  The file of a library [dry] says is rendered but
     not written. *)
-let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.program) =
-  let struc = Core_phase.structure core in
+let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_passes.Phase.program) =
+  let struc = Core_passes.Phase.structure core in
   (* Run all per-unit cleanup in [~finally] so state is reset even when the
      body aborts. *)
   Fun.protect
@@ -2116,7 +2116,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
   warns ();
   (* Skip modules whose declarations are all custom-extracted (they would
      produce empty files containing only boilerplate headers). *)
-  let decl_refs = Modutil.declared_refs in
+  let decl_refs = Core_passes.Modutil.declared_refs in
   let has_real_decls sel =
     List.exists
       (fun (_, se) ->
@@ -2247,7 +2247,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
           Base.Common.rename_file_namespace mp ns )
     struc;
   let print earlier (mp, unit) =
-    match (mp, Core_phase.structure unit) with
+    match (mp, Core_passes.Phase.structure unit) with
     | MPfile _, [(_, sel)] ->
       if not (has_real_decls sel) then earlier
       else begin
@@ -2278,10 +2278,10 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
      initialised wherever its header is included
      ({!Cpp_state.read_by_a_function}). *)
   let program_reads = ref Core.Ref.Can.Set.empty in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d ->
       let own = List.map (fun (fd : Core.Recursion.Definition.t) -> fd.entity) (Base.Core_util.term_defs d) in
-      Modutil.decl_iter_references
+      Core_passes.Modutil.decl_iter_references
         (fun r -> if not (List.exists (Core.Ref.Can.equal r) own) then program_reads := Core.Ref.Can.Set.add r !program_reads)
         ignore ignore d)
     ignore ignore struc;
@@ -2330,7 +2330,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
     | _ -> ()
   ) struc;
   (* Each unit is planned with what the units before it planned. *)
-  ignore (List.fold_left print (Accumulated_plan.start ~accessors:!accessors) (Core_phase.modules core))
+  ignore (List.fold_left print (Accumulated_plan.start ~accessors:!accessors) (Core_passes.Phase.modules core))
 
 (** Entry point for extracting specific references to separate files. Each Rocq
     .v file gets its own C++ output file. *)
@@ -2348,7 +2348,7 @@ let separate_extraction ~opaque_access lr =
       | (MPdot _ | MPbound _), _ ->
         user_err
           (str "Separate Extraction from inside a module is not supported.") )
-    (Core_phase.modules core);
+    (Core_passes.Phase.modules core);
   freeze cx core (print_per_library cx ~dry:(fun _ -> false))
 
 (** {2 Simple extraction in the Rocq toplevel. The vernacular command is
@@ -2637,9 +2637,9 @@ let show_extraction ~pstate =
        facts about the whole program -- its recursion plan among them --
        that lowering the term reads are analysed from. *)
     freeze cx
-      (Core_phase.optimize Fun.id (Core_phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])]))
+      (Core_passes.Phase.optimize Fun.id (Core_passes.Phase.extracted [(mp, [(l, Core.Module.Structure_item.Declaration decl)])]))
       (fun loops frozen ->
-        let struc = Core_phase.structure frozen in
+        let struc = Core_passes.Phase.structure frozen in
         match struc with
         | [(_, [(_, Core.Module.Structure_item.Declaration decl)])] -> print_one_decl cx loops struc mp decl
         | _ -> assert false )

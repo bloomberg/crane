@@ -13,7 +13,7 @@
 (** Utility functions over Core types and terms, type environments, and
     optimization passes.  Shared by every stage that handles Core: type
     reconstruction in extraction, the {!normalize} simplifier that
-    {!Modutil.optimize_struct} runs, and the backend's readers of types and
+    {!Core_passes.Modutil.optimize_struct} runs, and the backend's readers of types and
     global uses. *)
 
 open Names
@@ -604,7 +604,7 @@ val ast_size : 'p Core.Expr.at -> int
     to every argument, a coercion of the head is dropped, and applying a
     one-branch match applies its branch.  No head of a canonical application
     is a global already applied, a coercion, or a match with one branch.
-    See {!Core_normalize}. *)
+    See {!Core_passes.Spines}. *)
 val canonical_app : 'p Core.Expr.at -> 'p Core.Expr.at list -> 'p Core.Expr.at
 
 (** [canonical e] is [e] with every application canonical
@@ -643,7 +643,7 @@ val normalize : 'p Core.Expr.at -> 'p Core.Expr.at
     callers that build an application after simplification has already run,
     such as eta-expansion to a declaration's arity.  The result is
     canonical ({!canonical}), as every term built after
-    {!Core_normalize.structure} must be. *)
+    {!Core_passes.Spines.structure} must be. *)
 val apply_eta_args : 'p Core.Expr.at -> 'p Core.Expr.at list -> 'p Core.Expr.at
 
 (** Optimize fixpoint expressions. *)

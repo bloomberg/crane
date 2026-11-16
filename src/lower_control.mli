@@ -83,7 +83,7 @@ val tail_loop :
     fixpoint returning another type than its function -- told apart with
     every abbreviation unfolded, as the C++ does not spell them -- for a
     machine has one result. *)
-val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core_phase.normalized Core_phase.program -> t
+val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core_passes.Phase.normalized Core_passes.Phase.program -> t
 
 (** The loop [l] in [t], if it is lowered: a [Control_ir.Term.Loop]. *)
 val loop : t -> Control_ir.Loop.t -> Control_ir.Term.t option

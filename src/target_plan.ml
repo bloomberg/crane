@@ -259,7 +259,7 @@ let value_use_demotion prior struc =
     | Core.Signature.Declaration.Type {body = ot; _} -> Option.iter scan_type ot
     | Core.Signature.Declaration.Value {type_ = u; _} -> scan_term_type u
   in
-  Modutil.struct_iter scan_decl scan_spec (fun _ -> ()) struc;
+  Core_passes.Modutil.struct_iter scan_decl scan_spec (fun _ -> ()) struc;
   let decisions = ref [] in
   let decide kn ind =
     match kind_after prior kn ind with
@@ -268,7 +268,7 @@ let value_use_demotion prior struc =
     | _ -> ()
   in
   if not (Mindmap_env.is_empty !demoted) then
-    Modutil.struct_iter
+    Core_passes.Modutil.struct_iter
       (function Core.Decl.Inductive {entity = kn; definition = ind} -> decide kn ind | _ -> ())
       (function Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> decide kn ind | _ -> ())
       (fun _ -> ())
@@ -385,7 +385,7 @@ let record_kinds t struc =
     (fun {block; kind; _} ->
       Base.Table.add_inductive_kind block kind;
       let record kn (ind : Core.Inductive.t) = if MutInd.UserOrd.equal kn block then ind.kind <- kind in
-      Modutil.struct_iter
+      Core_passes.Modutil.struct_iter
         (function Core.Decl.Inductive {entity = kn; definition = ind} -> record kn ind | _ -> ())
         (function Core.Signature.Declaration.Inductive {entity = kn; definition = ind} -> record kn ind | _ -> ())
         (fun _ -> ())

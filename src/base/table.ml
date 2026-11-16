@@ -4105,7 +4105,7 @@ let extract_numeral r fmt =
     (* Try to detect a Peano pattern: the last nullary constructor is taken
        as zero and the last unary one as successor, -1 where there is none.
        Non-Peano types get indices too (N: N0 and Npos; Z: Z0 and Zneg), and
-       are not folded only because [Numeral_literal.peano] never finds a
+       are not folded only because [Core_passes.Numeral_literal.peano] never finds a
        chain of them ending in the zero constructor. *)
     let ctor_arities = mip.mind_consnrealdecls in
     let zero_idx = ref (-1) in

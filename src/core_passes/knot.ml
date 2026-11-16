@@ -48,9 +48,9 @@ let tie defs f ~kept k j body =
       Core.Expr.Apply {callee = Core.Expr.Global (Core.Global_use.monomorphic f); arguments = args}
     | Core.Expr.Bound_variable {index = i; _} when i = k - j + d -> raise_notrace Read
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when List.exists (knot d) args -> (
-      match (Core.Ref.User.Map.find_opt use.callee defs, Core_specialize.body_of defs use) with
-      | Some (Core_specialize.Term _), Some helper -> (
-        match Core_specialize.instantiate helper args with Some e -> self d e | None -> raise_notrace Read )
+      match (Core.Ref.User.Map.find_opt use.callee defs, Specialize.body_of defs use) with
+      | Some (Specialize.Term _), Some helper -> (
+        match Specialize.instantiate helper args with Some e -> self d e | None -> raise_notrace Read )
       | _ -> raise_notrace Read )
     | _ -> Base.Core_util.ast_map_lift self d e
   in
@@ -67,9 +67,9 @@ let fixpoint defs (fd : Core.Recursion.Definition.extracted) =
       let indexed = List.mapi (fun i a -> (i, a)) args in
       let knots = List.filter_map (fun (i, a) -> Option.map (fun kept -> (i, kept)) (eta_of f a)) indexed in
       match (knots, Core.Ref.User.Map.find_opt g defs) with
-      | [(j, kept)], Some (Core_specialize.Term _)
+      | [(j, kept)], Some (Specialize.Term _)
         when not (List.exists (fun (i, a) -> i <> j && mentions f a) indexed) -> (
-        match Core_specialize.body_of defs use with
+        match Specialize.body_of defs use with
         | None -> None
         | Some functional -> (
           let gparams, gbody = Base.Core_util.collect_lams functional in
@@ -84,12 +84,12 @@ let fixpoint defs (fd : Core.Recursion.Definition.extracted) =
               Option.map
                 (fun body ->
                   {fd with Core.Recursion.Definition.body = Base.Core_util.named_lams params (Base.Core_util.normalize body)})
-                (Core_specialize.instantiate (Base.Core_util.named_lams gparams tied) args) ) )
+                (Specialize.instantiate (Base.Core_util.named_lams gparams tied) args) ) )
       | _ -> None )
     | _ -> None
 
 let structure struc =
-  let defs = Core_specialize.definitions struc in
+  let defs = Specialize.definitions struc in
   let rec elems l =
     List.map
       (fun (lbl, se) ->

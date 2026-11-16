@@ -485,14 +485,14 @@ let topological_sort
              of, so [X]'s module has to come first; [Module Type T := O.U] is
              emitted as [concept T = U<M>], which likewise cannot precede [U].
 
-             The traversal is {!Modutil.struct_iter} rather than a local one,
+             The traversal is {!Core_passes.Modutil.struct_iter} rather than a local one,
              because a hand-written walk answers "what does this module name"
              only for the cases it happens to list.  A module type must count
              too: a file whose content is a bare alias depends on the file it
              aliases and must be written after it. *)
-          Modutil.struct_iter
-            (Modutil.decl_iter_references add_dep add_dep add_dep)
-            (Modutil.spec_iter_references add_dep add_dep add_dep)
+          Core_passes.Modutil.struct_iter
+            (Core_passes.Modutil.decl_iter_references add_dep add_dep add_dep)
+            (Core_passes.Modutil.spec_iter_references add_dep add_dep add_dep)
             add_dep_mp
             [(mp_i, sel)];
           let dep_list = Hashtbl.fold (fun k () acc -> k :: acc) dep_set [] in
@@ -666,7 +666,7 @@ let sort_inductives_within_module reg (s : Core.Program.t) sel =
           match Core.Ref.User.Tbl.find_opt alias_body r with
           | Some ty when not (Core.Ref.User.Tbl.mem seen_alias r) ->
             Core.Ref.User.Tbl.replace seen_alias r ();
-            Modutil.type_iter_references add_type_dep ty
+            Core_passes.Modutil.type_iter_references add_type_dep ty
           | _ -> ()
         in
         (* A method body reaches the type it needs through the functions it
@@ -675,7 +675,7 @@ let sort_inductives_within_module reg (s : Core.Program.t) sel =
            references. *)
         let seen : unit Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
         let rec scan d =
-          Modutil.decl_iter_references (follow add_dep) add_dep add_type_dep d
+          Core_passes.Modutil.decl_iter_references (follow add_dep) add_dep add_type_dep d
         and follow k r =
           k r;
           if not (Core.Ref.User.Tbl.mem seen r) then begin

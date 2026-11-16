@@ -35,7 +35,7 @@ let () =
   check "the class arguments are substituted into the declared type"
     (reduced.subst_ty = Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
   check "the declared arity is the field's" (reduced.declared_arity = 2);
-  (* Expanded canonically ({!Core_normalize}): the global is applied once. *)
+  (* Expanded canonically ({!Core_passes.Spines}): the global is applied once. *)
   check "a body eta-reduced below the declared arity is expanded back to it"
     ( reduced.body
     = Core.Expr.Lambda

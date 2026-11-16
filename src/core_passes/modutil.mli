@@ -13,7 +13,7 @@
 (** Core module utilities: traversal, search, and optimization functions
     over a Core program's module structure ({!Core.Program.t}).
     {!optimize_struct} is the first of the Core passes ([core_passes] in
-    [extract_env.ml], run under {!Core_phase.optimize}): beta-iota
+    [extract_env.ml], run under {!Phase.optimize}): beta-iota
     simplification, inlining and dead-code elimination.  The iterators and
     maps are shared by every later pass that walks a structure. *)
 

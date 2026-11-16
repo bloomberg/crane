@@ -40,7 +40,7 @@ type group = {
   locals : (int * local array) list;
   fresh : unit -> Core.Binder_name.t;
   effects : Core_effects.t;
-  splices : Splices.t;
+  splices : Core_passes.Splices.t;
 }
 
 (* A supply of the declaration's temporaries, numbered from 1, so no two of
@@ -324,7 +324,7 @@ let rec scope cx ~group ~depth ?expected e =
       let group =
         match rhs with
         | Core.Expr.Fixpoint {members = [|{body = fn; _}|];
-                              occurrence = o; _} when Splices.is_entered_copy group.splices o ->
+                              occurrence = o; _} when Core_passes.Splices.is_entered_copy group.splices o ->
           (* A partner's copy the machine enters stands for the partner: its
              calls are the group's. *)
           {group with locals = (depth + 1, [|{type_ = ty; arity = Base.Core_util.nb_lams fn}|]) :: group.locals}
@@ -470,7 +470,7 @@ let eta_body ty b =
         (Base.Core_util.apply_eta_args (Base.Core_util.ast_lift (List.length missing) body) args)
 
 let eta_expand =
-  Modutil.map_struct_decls (function
+  Core_passes.Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
       Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
@@ -482,7 +482,7 @@ let eta_expand =
     | d -> d )
 
 let let_lambdas =
-  Modutil.map_struct_decls (function
+  Core_passes.Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
       Core.Decl.Value {entity = r; body = Core_elaborate.generated_definition ty b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
@@ -499,13 +499,13 @@ let methods_of cx struc = Method_registry.create ~ret_is_erased:cx.return_type_i
 (* The effect operations are those of the program being normalized, read
    off it first ({!Core_effects.analyze}): a bind is sequencing only where
    the declaration it is written in erases its monad. *)
-let structure cx (program : Core_phase.normalizing) : Core_phase.normalizing =
+let structure cx (program : Core_passes.Phase.normalizing) : Core_passes.Phase.normalizing =
   let methods = methods_of cx program.structure in
-  let {Core_phase.structure = struc; splices} =
+  let {Core_passes.Phase.structure = struc; splices} =
     Recursion_plan.splice_partners ~suspension:cx.suspension ~loopified:(loopified ~methods)
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program
   in
-  {structure = Modutil.map_struct_decls
+  {structure = Core_passes.Modutil.map_struct_decls
     (decl cx ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of cx struc)) struc;
    splices}

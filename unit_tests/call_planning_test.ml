@@ -295,16 +295,16 @@ let () =
     (Core.Type.Arrow {parameter = nat; result = Core.Type.Arrow {parameter = nat; result = nat}});
   let staged = Core.Expr.Apply {callee = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a]};
                                 arguments = [b]} in
-  check "a staged application is not canonical" (not (Core_normalize.is_canonical staged));
+  check "a staged application is not canonical" (not (Core_passes.Spines.is_canonical staged));
   check "a global applied in stages is applied once"
-    (Core_normalize.spine staged = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]});
+    (Core_passes.Spines.spine staged = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]});
   check "a coercion of the head is dropped"
-    (Core_normalize.apply (Core.Expr.Boxed_value {value = Core.Expr.Global f; occurrence = occ ()}) [a; b] =
+    (Core_passes.Spines.apply (Core.Expr.Boxed_value {value = Core.Expr.Global f; occurrence = occ ()}) [a; b] =
       Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]});
   check "an erased head is itself, its arguments never evaluated"
-    (Core_normalize.apply (Core.Expr.Erased_value Core.Erasure_reason.Proof) [a] = Core.Expr.Erased_value
+    (Core_passes.Spines.apply (Core.Expr.Erased_value Core.Erasure_reason.Proof) [a] = Core.Expr.Erased_value
       Core.Erasure_reason.Proof
-    && Core_normalize.apply (Core.Expr.Runtime_error "absurd") [a] = Core.Expr.Runtime_error "absurd");
+    && Core_passes.Spines.apply (Core.Expr.Runtime_error "absurd") [a] = Core.Expr.Runtime_error "absurd");
   (* [(let (x, y) := p in g x) a] is [let (x, y) := p in g x a]: the
      argument is lifted past the branch's binders. *)
   let ids = [(id "x", nat); (id "y", nat)] in
@@ -318,7 +318,7 @@ let () =
                                    body = body}|];
                      occurrence = mocc}
   in
-  ( match Core_normalize.apply
+  ( match Core_passes.Spines.apply
     (destructure (Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [Core.Expr.fresh_rel 2]}))
       [Core.Expr.fresh_rel 1] with
   | Core.Expr.Match
@@ -331,21 +331,21 @@ let () =
       (Core.Global_use.callee f' = r "nf" && Core.Occurrence.equal o mocc)
   | _ -> check "applying a one-branch match applies its branch" false );
   let local = Core.Expr.Apply {callee = Core.Expr.fresh_rel 1; arguments = [a]} in
-  check "a variable head is canonical" (Core_normalize.canonical_application local);
+  check "a variable head is canonical" (Core_passes.Spines.canonical_application local);
   check "a nested staged application is made canonical under a lambda"
-    (Core_normalize.spine (Core.Expr.Lambda {parameter = id "z"; parameter_type = nat; body = staged}) =
+    (Core_passes.Spines.spine (Core.Expr.Lambda {parameter = id "z"; parameter_type = nat; body = staged}) =
       Core.Expr.Lambda
         {parameter = id "z"; parameter_type = nat;
           body = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a; b]}});
   check "spine makes every application canonical"
-    (Core_normalize.is_canonical
-      (Core_normalize.spine
+    (Core_passes.Spines.is_canonical
+      (Core_passes.Spines.spine
         (Core.Expr.Tuple
           [staged;
             destructure
               (Core.Expr.Apply
                 {callee = Core.Expr.Apply {callee = Core.Expr.Global f; arguments = [a]}; arguments = [b]})])));
-  check "spine leaves a canonical term alone" (Core_normalize.spine local = local)
+  check "spine leaves a canonical term alone" (Core_passes.Spines.spine local = local)
 
 (* A constructor chain of an inductive no numeral mapping names is no
    literal, and a global no mapping names is no converter. *)
@@ -364,11 +364,11 @@ let () =
                                              occurrence = occ ()}];
                                  occurrence = occ ()} in
   check "an unregistered Peano chain does not fold"
-    ((not (Numeral_literal.folds two)) && Numeral_literal.fold two == two
-    && Numeral_literal.constructor_literal two = None);
-  check "spine leaves it a construction" (Core_normalize.spine two = two && Core_normalize.canonical_application two);
+    ((not (Core_passes.Numeral_literal.folds two)) && Core_passes.Numeral_literal.fold two == two
+    && Core_passes.Numeral_literal.constructor_literal two = None);
+  check "spine leaves it a construction" (Core_passes.Spines.spine two = two && Core_passes.Spines.canonical_application two);
   let conv = Core.Expr.Apply {callee = Core.Expr.Global (mono "nconv"); arguments = [two]} in
   check "a global no mapping names is no numeral converter"
-    ((not (Numeral_literal.converter_folds conv)) && Numeral_literal.converter_literal (r "nconv") two = None);
+    ((not (Core_passes.Numeral_literal.converter_folds conv)) && Core_passes.Numeral_literal.converter_literal (r "nconv") two = None);
   check "no constructor of an unregistered inductive is a registered digit"
-    (Numeral_literal.registered_constructor "num.uint.type" zero = None)
+    (Core_passes.Numeral_literal.registered_constructor "num.uint.type" zero = None)

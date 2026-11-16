@@ -1437,7 +1437,7 @@ let prepare_structure cx (u : Unit_context.t) s =
   (* Whether an inductive is a flat struct, and whether a type is an axiom,
      are properties of their declarations; every reader, before or after the
      declaration is generated, gets one answer. *)
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (function
       | Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)} ->
         Array.iteri
@@ -2415,7 +2415,7 @@ let plan_referenced_names s =
       name Term r;
       ty t
   in
-  Modutil.struct_iter decl spec (fun mp -> ignore (Base.Common.emitted_module_name mp)) s;
+  Core_passes.Modutil.struct_iter decl spec (fun mp -> ignore (Base.Common.emitted_module_name mp)) s;
   (* Under separate extraction a promoted type variable another file declares
      is brought into scope by a [using] naming its field. *)
   if Base.Common.get_force_cross_file_qualification () then

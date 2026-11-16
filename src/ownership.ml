@@ -19,7 +19,7 @@ let read_off ~settled params body =
 let functions struc =
   let acc = ref [] in
   let add r b ty = if not (Base.Table.is_custom r) then acc := (r, b, ty) :: !acc in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (function
       | Core.Decl.Value {entity = r; body = b; type_ = ty} when Base.Type_util.core_domains ty <> [] -> add r b ty
       | Core.Decl.Recursive_group fds ->

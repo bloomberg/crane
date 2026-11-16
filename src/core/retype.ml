@@ -2,10 +2,10 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** A term or program taken from one phase to another by mapping each of
-    its annotations: what freezing a program does ({!Core_phase.freeze}),
+    its annotations: what freezing a program does ({!Core_passes.Phase.freeze}),
     and what widening a frozen term does ({!Widen}).  The annotations are
     visited in the order {!Base.Core_util.ast_map_types} and
-    {!Modutil.map_struct} visit them, so a mapping with an effect -- minting
+    {!Core_passes.Modutil.map_struct} visit them, so a mapping with an effect -- minting
     an open annotation for each unsolved metavariable it meets -- has it in
     the same order. *)
 
@@ -15,7 +15,7 @@ open Grammar
     payload does not mention the phase: a variable, a hole, an open
     annotation, an erased slot, [Unknown], [Axiom] or [String].  Freezing
     keeps such a node rather than copying it, as the in-place freezing it
-    replaced did: {!Local_types} tells a minted variable apart by the node.
+    replaced did: {!Core_passes.Local_types} tells a minted variable apart by the node.
     Raises [Invalid_argument] for any other node. *)
 let type_leaf : 'p Type.at -> 'q Type.at = function
   | (Type.Variable _ | Type.Hole _ | Type.Open _ | Type.Erased _ | Type.Unknown | Type.Axiom | Type.String) as t ->

@@ -3,7 +3,7 @@
 
 (** Boundary checks on Core as it leaves extraction and the Core passes, run
     under [CRANE_CHECK_IR] as the last of those passes ([core_passes] in
-    [extract_env.ml]), before {!Core_phase.freeze}: every global use carries a
+    [extract_env.ml]), before {!Phase.freeze}: every global use carries a
     well-formed instantiation of its callee's own type scheme.  Without
     [CRANE_CHECK_IR] it does nothing. *)
 

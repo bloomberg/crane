@@ -4,7 +4,7 @@
 (** The phase index of Core's grammar: every family that holds a type takes
     one ([_ Core.Type.at], [_ Core.Expr.at], ...), and each family's [t] is
     its [frozen] instance, the one every consumer after
-    {!Core_phase.freeze} reads.
+    {!Core_passes.Phase.freeze} reads.
 
     What tells the two apart is the metavariable: a {!Core.Type.Meta} holds
     a cell of its own phase, and only an [extracted] cell can be made

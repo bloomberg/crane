@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** [Core.Program]: a whole extracted program's implementation, what
-    extraction hands to the Core passes ({!Core_phase}). *)
+    extraction hands to the Core passes ({!Core_passes.Phase}). *)
 
 (** The module structure of each module path, in dependency order, at the
     phase ['p]. *)

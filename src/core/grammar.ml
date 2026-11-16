@@ -24,7 +24,7 @@
     families: {!Core.Type} for type expressions, {!Core.Expr} for terms,
     {!Core.Inductive} for inductive declarations, {!Core.Decl} and
     {!Core.Module} for whole definitions and module components.  The Core
-    passes ({!Core_phase}: inlining, dead-code elimination, deduplication,
+    passes ({!Core_passes.Phase}: inlining, dead-code elimination, deduplication,
     specialisation, knot-tying, freezing, normalisation) run over these trees
     before lowering turns them into CppIR.
 
@@ -132,7 +132,7 @@ and Type : sig
             reports it. *)
     | Open of Open.t
         (** An annotation reconstruction left open: a metavariable nothing
-            solved, as {!Core_phase.freeze} hands it on.  Immutable, and read
+            solved, as {!Core_passes.Phase.freeze} hands it on.  Immutable, and read
             as erased.  The annotations that shared the metavariable share the
             [Open.t], so a reader that fills it from other evidence fills it
             wherever it is written ({!Base.Type_util.fill_holes}).  Unlike a
@@ -367,7 +367,7 @@ and Expr : sig
       }
         (** A value of a numeral inductive -- one [Crane Extract Numeral]
             registers: what a numeral converter applied to a digit chain
-            computes ({!Numeral_literal}). *)
+            computes ({!Core_passes.Numeral_literal}). *)
 end =
   Expr
 

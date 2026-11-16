@@ -15,7 +15,7 @@ let empty = Map.empty
 
 let analyze struc =
   let defs = ref [] in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d -> List.iter (fun fd -> defs := fd :: !defs) (Base.Core_util.term_defs d))
     (fun _ -> ())
     (fun _ -> ())

@@ -47,7 +47,7 @@ let analyze struc =
     | Core.Expr.Global use -> record mode use
     | a -> Base.Core_util.ast_iter (body mode) a
   in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d ->
       List.iter (fun (fd : Core.Recursion.Definition.t) -> body (declaration_mode fd.type_) fd.body)
         (Base.Core_util.term_defs d))

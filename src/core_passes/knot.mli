@@ -24,7 +24,7 @@
     place.
 
     One of the Core passes run before the program is frozen ([core_passes]
-    in [extract_env.ml]), after {!Core_specialize}. *)
+    in [extract_env.ml]), after {!Specialize}. *)
 
 (** [structure s]: [s] with every knot of a single-member fixpoint that
     satisfies the conditions above tied; anything else unchanged. *)

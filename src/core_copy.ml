@@ -30,7 +30,7 @@ let rec solve_rigid rigid e =
    whose open annotations are numbered apart from the callee's and may share
    a number with one of them. *)
 let copy_with ~types ~rigid e =
-  Fresh_occurrences.term
+  Core_passes.Fresh_occurrences.term
     (solve_rigid rigid (Base.Core_util.ast_map_types types (Base.Core_util.freshen_holes (Base.Core_util.freshen_metas e))))
 
 (* A copy at no instantiation. *)

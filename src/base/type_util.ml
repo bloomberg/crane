@@ -249,7 +249,7 @@ let unwritten_parameters ty params body =
         Pp.(
           str "a definition binds " ++ int (List.length params) ++ str " of the "
           ++ int (List.length params + List.length missing)
-          ++ str " parameters its type declares; Core_phase.normalize eta-expands every one" ) );
+          ++ str " parameters its type declares; Core_passes.Phase.normalize eta-expands every one" ) );
   missing
 
 let declared_parameters ty b =

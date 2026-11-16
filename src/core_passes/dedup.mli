@@ -14,8 +14,8 @@
     function stay two.  Mapped definitions and projections are left alone.
 
     One of the Core passes run before the program is frozen ([core_passes]
-    in [extract_env.ml], under {!Core_phase.optimize}): after
-    [Modutil.optimize_struct], just before {!Core_specialize}. *)
+    in [extract_env.ml], under {!Phase.optimize}): after
+    [Modutil.optimize_struct], just before {!Specialize}. *)
 
 (** Every module of the structure with its coinciding definitions made
     forwarders. *)

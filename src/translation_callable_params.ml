@@ -388,7 +388,7 @@ let closure_feedback_params ~callee bodies =
     [struc]: a member calls a partner by name. *)
 let partner_closure_params groups struc =
   let members = ref [] in
-  Modutil.struct_iter
+  Core_passes.Modutil.struct_iter
     (fun d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) ->
