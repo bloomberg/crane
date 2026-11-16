@@ -534,14 +534,16 @@ let gen_fix env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_idx 
     match (local, lifted) with
     | Some occ, _ when n_fix_funs = 1 -> (
       match
-        Control_to_cpp_ir.local_resumes ~owner:(!tctx).input.body_owner ~function_:(!tctx).input.body_function
+        Control_to_cpp_ir.local_resumes ~unit:(Translation_state.unit_context ()) ~owner:(!tctx).input.body_owner
+          ~function_:(!tctx).input.body_function
           ~lifted:(!tctx).lexical.lifted_fixpoints ~member:(occ, fix_idx)
             ~depth:(List.length (fst env)) ~arity:n_lam_params
       with
       | Some (resumes, certain) -> (Some resumes, Some certain)
       | None -> (None, None) )
     | _, Some r when n_fix_funs = 1 ->
-      ( Control_to_cpp_ir.lifted_resumes r ~owner:(!tctx).input.body_owner ~depth:(List.length (fst env))
+      ( Control_to_cpp_ir.lifted_resumes ~unit:(Translation_state.unit_context ()) r ~owner:(!tctx).input.body_owner
+          ~depth:(List.length (fst env))
           ~arity:n_lam_params,
         None )
     | _ -> (None, None)

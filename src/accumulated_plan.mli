@@ -18,7 +18,7 @@ type t = {
   modules : Module_plan.layout;
       (** The layout: where each declaration lives and what it is called
           ({!Module_plan.extend}). *)
-  pointer_fields : Loopify_analysis.pointer_fields;
+  pointer_fields : Pointer_fields.t;
       (** The fields each constructor struct stores behind the pointer. *)
   unmerged_wrappers : ModPath.t CString.Map.t;
       (** The wrapper structs that hold declarations, by name, each with
@@ -39,12 +39,11 @@ type t = {
 val start : accessors:Cpp_state.accessors -> t
 
 (** [context t u] is the unit's context [u] holding the facts of [t] its
-    readers read off it: the layout. *)
+    readers read off it: the layout and the pointer fields. *)
 val context : t -> Unit_context.t -> Unit_context.t
 
 (** [bind t f] is [f ()] with each other fact of [t] the one its readers
-    answer from ({!Loopify_analysis.with_pointer_fields},
-    {!Cpp_state.with_unmerged_wrappers}, {!Table.with_promoted_inductives},
+    answer from ({!Cpp_state.with_unmerged_wrappers}, {!Table.with_promoted_inductives},
     {!Cpp_state.with_accessors}, {!Cpp_state.with_nested_struct_names},
     {!Table.with_instance_promoted_types}). *)
 val bind : t -> (unit -> 'a) -> 'a

@@ -1436,7 +1436,9 @@ let gen_dfun ~minted n b cty ty temps =
   in
   begin_body ~owner:n ~function_:true ();
   set_current_parameters (List.map snd (parameter_binders env all_ids));
-  let resumes = Control_to_cpp_ir.function_resumes n ~depth:(List.length all_ids) in
+  let resumes =
+    Control_to_cpp_ir.function_resumes ~unit:(Translation_state.unit_context ()) n ~depth:(List.length all_ids)
+  in
   (* The parameters the body owns, at de Bruijn indices 1..n_params: those
      the head declares by value. *)
   let owned_params =

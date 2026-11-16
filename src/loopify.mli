@@ -92,11 +92,11 @@ val definition_calls : GlobRef.t -> Core.Occurrence.t list
     lowers it to none, a deferral for a suspended cofixpoint, and otherwise
     the decline, or the planned strategy read off [body]: a decline where a
     call of [f] is left in it ({!Loopify_analysis.report_outcome}). *)
-val record_unlowered : ?unlowered:unlowered -> func -> stmt list -> unit
+val record_unlowered : unit:Unit_context.t -> ?unlowered:unlowered -> func -> stmt list -> unit
 
 (** [record_unlowered_method m] is {!record_unlowered} for the method [m],
     of which no loop is attempted: its calls those of the method. *)
-val record_unlowered_method : meth -> unit
+val record_unlowered_method : unit:Unit_context.t -> meth -> unit
 
 (** [modulo_cons_loop ~jumped ?cursor ~varying ~parts ~shapes ~tparams check
     f params body] is the tail-modulo-cons loop of the function [f], whose

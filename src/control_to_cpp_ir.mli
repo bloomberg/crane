@@ -69,7 +69,7 @@
     binders bound before a point that what follows reads, except the
     parameters every turn passes on unchanged, which the machine holds
     outside its frames. *)
-val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_ir.resumes option
+val function_resumes : unit:Unit_context.t -> Names.GlobRef.t -> depth:int -> Ownership_ir.resumes option
 
 (** [method_resumes r ~inductive ~receiver ~depth]: the points the method
     made of the function [r] in the struct of [inductive], its receiver its
@@ -81,6 +81,7 @@ val function_resumes : Names.GlobRef.t -> depth:int -> Ownership_ir.resumes opti
     whether it certainly is -- which of its struct's settings decides that,
     its being merged into its module's or not, is decided after. *)
 val method_resumes :
+  unit:Unit_context.t ->
   Names.GlobRef.t ->
   inductive:Names.GlobRef.t ->
   receiver:int ->
@@ -97,6 +98,7 @@ val method_resumes :
     {!local_loop} leaves, perhaps, as Loopify may make one of the
     Y-combinator it is generated as. *)
 val local_resumes :
+  unit:Unit_context.t ->
   owner:Names.GlobRef.t option ->
   function_:bool ->
   lifted:Core.Occurrence.t list ->
@@ -111,6 +113,7 @@ val local_resumes :
     adopting nothing ({!lower_lifted}): its body standing under [depth] of
     [owner]'s binders, the last [arity] of them the fixpoint's parameters. *)
 val lifted_resumes :
+  unit:Unit_context.t ->
   Names.GlobRef.t -> owner:Names.GlobRef.t option -> depth:int -> arity:int -> Ownership_ir.resumes option
 
 (** [local_loop ~owner ~function_ ~lifted ~member ~tparams ~name l]
@@ -190,4 +193,4 @@ val lower_group : unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t list -> Cpp_ir.Lo
     ({!Lower_control.taken_continues}).  It checks the constructor structs'
     pointer fields against those planned before rendering, which the
     recursion plan's tail-modulo-cons chains were read with. *)
-val check_lowered : Cpp_ir.Lowered.Decl.t -> unit
+val check_lowered : unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit

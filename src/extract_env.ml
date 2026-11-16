@@ -1087,7 +1087,7 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
   let field_names = Cpp.plan_field_names struc in
   Pipeline_trace.event "layout" plan_pointer_fields;
   let pointer_fields = Cpp.plan_pointer_fields struc in
-  let acc = {acc with pointer_fields = Loopify_analysis.add_pointer_fields acc.pointer_fields pointer_fields} in
+  let acc = {acc with pointer_fields = Pointer_fields.add acc.pointer_fields pointer_fields} in
   bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in

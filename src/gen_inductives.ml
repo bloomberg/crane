@@ -728,8 +728,8 @@ let generate_method name vars ((func_ref, _, ty, this_pos) as candidate) =
      saves are planned with the body: certainly, or perhaps. *)
   let resumes, certain =
     match
-      Control_to_cpp_ir.method_resumes func_ref ~inductive:name ~receiver:this_pos
-        ~depth:(List.length (fst env))
+      Control_to_cpp_ir.method_resumes ~unit:(Translation_state.unit_context ()) func_ref ~inductive:name
+        ~receiver:this_pos ~depth:(List.length (fst env))
     with
     | Some (resumes, certain) -> (Some resumes, Some certain)
     | None -> (None, None)
@@ -1128,7 +1128,7 @@ let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir
 (** The fields of a constructor of [name], of types [tys], that its struct
     stores behind the smart pointer, each with whether it holds [name]
     itself: what loop lowering reads off the struct, decided before it is
-    generated ({!Loopify_analysis.add_pointer_fields}). *)
+    generated ({!Pointer_fields.add}). *)
 let constructor_pointer_fields ~name ~is_coinductive vars tys =
   List.concat
     (List.mapi

@@ -8,7 +8,7 @@ open Names
 
 type t = {
   modules : Module_plan.layout;
-  pointer_fields : Loopify_analysis.pointer_fields;
+  pointer_fields : Pointer_fields.t;
   unmerged_wrappers : ModPath.t CString.Map.t;
   promoted_inductives : Ref.User.Set.t;
   accessors : Cpp_state.accessors;
@@ -18,17 +18,16 @@ type t = {
 
 let start ~accessors =
   { modules = Module_plan.no_layout;
-    pointer_fields = Loopify_analysis.no_pointer_fields;
+    pointer_fields = Pointer_fields.none;
     unmerged_wrappers = CString.Map.empty;
     promoted_inductives = Ref.User.Set.empty;
     accessors;
     nested_structs = CString.Map.empty;
     instance_promoted_types = GlobRef.Map.empty }
 
-let context t (u : Unit_context.t) = {u with modules = t.modules}
+let context t (u : Unit_context.t) = {u with modules = t.modules; pointer_fields = t.pointer_fields}
 
 let bind t f =
-  Loopify_analysis.with_pointer_fields t.pointer_fields @@ fun () ->
   Cpp_state.with_unmerged_wrappers t.unmerged_wrappers @@ fun () ->
   Table.with_promoted_inductives t.promoted_inductives @@ fun () ->
   Cpp_state.with_accessors t.accessors @@ fun () ->

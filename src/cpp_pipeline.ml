@@ -96,15 +96,16 @@ let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
 
-(** Every pass before the {!Cpp_erasure} seam, in the order they run. *)
-let lowered_passes : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
+(** Every pass before the {!Cpp_erasure} seam, in the order they run, over a
+    declaration of the unit [u]. *)
+let lowered_passes u : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_cpp_ir}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)
     on_decl "control" (fun d ->
-        if Probe.checking () then Control_to_cpp_ir.check_lowered d;
+        if Probe.checking () then Control_to_cpp_ir.check_lowered ~unit:u d;
         d );
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
@@ -180,7 +181,9 @@ let settled_passes u : Cpp_erasure.settled Pipeline_trace.pass list =
 let instantiation_passes u = [foreign; qualifiers; pointer_slots u; scrutinees; captures; initialisers]
 
 let pass_names =
-  Pipeline_trace.names lowered_passes @ [seam] @ Pipeline_trace.names (settled_passes Unit_context.detached)
+  Pipeline_trace.names (lowered_passes Unit_context.detached)
+  @ [seam]
+  @ Pipeline_trace.names (settled_passes Unit_context.detached)
   @ Pipeline_trace.names (instantiation_passes Unit_context.detached)
 
 (** {2 What the printer is not owed}
@@ -346,7 +349,7 @@ let finish u decl =
         d' )
       d passes
   in
-  let decl = run Fun.id lowered_passes decl in
+  let decl = run Fun.id (lowered_passes u) decl in
   let settled = Cpp_erasure.materialise decl in
   let inj (d : Cpp_erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);

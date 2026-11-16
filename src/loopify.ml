@@ -208,11 +208,12 @@ let checked_frame_machine loop transform =
     fixpoint it lowers ({!Recursion_plan.strategy_at}).  A body with no
     fixpoint recorded on it, or one the plan does not know, a violation, is
     not loopified. *)
-let planned_local_strategy (fixpoint : local_fixpoint option) =
+let planned_local_strategy ~unit (fixpoint : local_fixpoint option) =
   match fixpoint with
   | Some {member; binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print binder) in
-    match (Recursion_plan.strategy_at (Loop_facts.recursion ())) ~pointer_fields:constructor_pointer_fields member with
+    let pointer_fields = constructor_pointer_fields unit in
+    match Recursion_plan.strategy_at (Loop_facts.recursion ()) ~pointer_fields member with
     | Some planned -> planned
     | None ->
       Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
@@ -293,7 +294,7 @@ let member_plan ~unit ~frames member params =
     else
       let invariant = Control_ir.Term.invariant_parameters l in
       let in_place = Recursion_plan.in_place in
-      let parts = Control_ir.Term.parts_passed ~pointer_fields:constructor_pointer_fields ~in_place l in
+      let parts = Control_ir.Term.parts_passed ~pointer_fields:(constructor_pointer_fields unit) ~in_place l in
       let parts =
         if not frames then parts
         else
@@ -311,7 +312,7 @@ let member_plan ~unit ~frames member params =
           List.map2
             (fun part (storage : Ownership_ir.Storage.t) -> part || storage = Local)
             parts
-            (Frame_storage.plan ~pointer_fields:constructor_pointer_fields ~in_place ~holdable l).own
+            (Frame_storage.plan ~pointer_fields:(constructor_pointer_fields unit) ~in_place ~holdable l).own
       in
       Some
         { member_varying = List.map (fun i -> not (List.nth invariant i)) kept;
@@ -371,7 +372,7 @@ let loopify_inner_lambdas ~unit ?(tail_only = false) ~tparams ?(outer_env = []) 
     | Some {name; member; _}, Some self_id -> (
       let check = planned_self_checker member in
       let lbody = expose_tail_calls check lbody in
-      match planned_local_strategy fixpoint with
+      match planned_local_strategy ~unit fixpoint with
       | No_loop -> None
       (* A local cofixpoint: its calls run when a thunk is forced, after it
          has returned, as a top-level one's do. *)
@@ -728,11 +729,11 @@ let function_loop r =
     neither is a member the backend generates itself -- a factory, a deep
     copy -- which has no Core body and no reference, and calls itself
     nowhere. *)
-let planned_strategy r =
+let planned_strategy ~unit r =
   match r with
   | None -> Recursion_plan.No_loop
   | Some r -> (
-    let pointer_fields = constructor_pointer_fields in
+    let pointer_fields = constructor_pointer_fields unit in
     let planned =
       match Option.map Lifted.site (Lifted.of_ref r) with
       | Some (Fixpoint (occurrence, member)) ->
@@ -830,10 +831,10 @@ let frame_machine ~unit ~loop ?entry ?entered_pointers ~varying ~parts ~tparams 
     | Some (made, _) -> Ok (made, survived)
     | None -> declined
 
-let record_unlowered ?(unlowered = Left None) (f : func) body =
+let record_unlowered ~unit ?(unlowered = Left None) (f : func) body =
   let name = fundef_display_name f.path in
   let check = survivors f in
-  match (planned_strategy (Some (fst f.path.outer)), unlowered) with
+  match (planned_strategy ~unit (Some (fst f.path.outer)), unlowered) with
   | No_loop, _ -> ()
   | Suspended _, _ -> record_outcome name deferred_cofixpoint
   | (Tail_loop | Modulo_cons _ | Frame_stack), Declined why -> record_outcome name (Declined why)
@@ -927,7 +928,7 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
   let n_params = List.length mf.params in
   let this_position = receiver_position mf in
   let name = Id.to_string mf.name in
-  let strategy = planned_strategy mf.globref in
+  let strategy = planned_strategy ~unit mf.globref in
     ( match strategy with
     (* A suspended method returns in O(1) stack frames, as a function does. *)
     | Suspended _ ->
@@ -1060,10 +1061,10 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
       else
         Method {mf with body = body'} )
 
-let record_unlowered_method mf =
+let record_unlowered_method ~unit mf =
   let check = method_survivors mf in
   let name = Id.to_string mf.name in
-  match planned_strategy mf.globref with
+  match planned_strategy ~unit mf.globref with
   | No_loop -> ()
   | Suspended _ -> record_outcome name deferred_cofixpoint
   | Tail_loop -> ignore (report_outcome ~name ~check ~strategy:Tail mf.body)

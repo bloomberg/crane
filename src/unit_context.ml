@@ -7,11 +7,16 @@ type t = {
   config : Table.unit_config;
   callables : Callable_abi.decided;
   modules : Module_plan.layout;
+  pointer_fields : Pointer_fields.t;
   scopes : Scope_plan.bound;
 }
 
 let make ~config =
-  {config; callables = Callable_abi.undecided; modules = Module_plan.no_layout; scopes = Scope_plan.none}
+  { config;
+    callables = Callable_abi.undecided;
+    modules = Module_plan.no_layout;
+    pointer_fields = Pointer_fields.none;
+    scopes = Scope_plan.none }
 let detached = make ~config:{Table.concurrent = false}
 let non_atomic_rc u = Table.non_atomic_rc_for u.config
 let count_rc u = Table.count_rc_for u.config
