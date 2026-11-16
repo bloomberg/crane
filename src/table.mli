@@ -990,14 +990,24 @@ val unit_config : names:Ref.User.Set.t -> unit_config
     run on one thread. *)
 val with_unit_config : unit_config -> (unit -> 'a) -> 'a
 
+(** {!non_atomic_rc} in the unit configuration given, for a reader that
+    holds its unit's plan. *)
+val non_atomic_rc_for : unit_config -> bool
+
+(** {!single_threaded} in the unit configuration given. *)
+val single_threaded_for : unit_config -> bool
+
+(** {!count_rc} in the unit configuration given. *)
+val count_rc_for : unit_config -> bool
+
 (** Whether the unit being extracted runs on several threads, as its
     configuration says ({!unit_config}). *)
 val unit_is_concurrent : unit -> bool
 
 (** Warn, once per unit, if [Set Crane NonAtomicRc] was requested but withheld
-    because the unit is concurrent.  Call inside the unit's configuration
-    ({!with_unit_config}) and before any code generation. *)
-val check_non_atomic_rc_request : unit -> unit
+    because the unit, configured as given, is concurrent.  Call before any
+    code generation. *)
+val check_non_atomic_rc_request : unit_config -> unit
 
 (** [Set Crane Arena]: whether the runtime scoped-arena factory
     ([crane::arena_make_shared] / [crane::rc<T>::make]) is emitted for recursive
@@ -1322,8 +1332,9 @@ val written_customs : unit -> Ref.User.Set.t
 val check_written_mapping_headers : unit -> unit
 
 (** Under [CRANE_CHECK_IR], that the files write no custom starting a thread
-    unless the program was decided to start one ({!unit_is_concurrent}). *)
-val check_concurrency_decided : unit -> unit
+    unless the program was decided to start one, in the unit configuration
+    given. *)
+val check_concurrency_decided : unit_config -> unit
 
 (** Extract constant with import custom code.
     @param inline  [true] to mark as Inline, [false] for NoInline

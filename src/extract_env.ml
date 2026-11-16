@@ -715,7 +715,7 @@ let header fn () =
 
 (** Generates the header file preamble: include guard, includes, and BDE
     concept boilerplate (if applicable). *)
-let spec_header ?(unit_includes = []) si () =
+let spec_header ?(unit_includes = []) ~(config : Table.unit_config) si () =
   (* Headers of the units that already emitted libraries this one depends on
      come first: they are the reason those declarations are absent below. *)
   let imps = List.map (fun u -> u ^ ".h") unit_includes @ get_custom_imports () in
@@ -774,7 +774,7 @@ let spec_header ?(unit_includes = []) si () =
      before any runtime header, since lazy.h and crane_fn.h include fn.h
      themselves. *)
   let h =
-    if Table.non_atomic_rc () then
+    if Table.non_atomic_rc_for config then
       h ++ str "#define CRANE_NON_ATOMIC_RC 1" ++ fnl ()
     else
       h
@@ -782,7 +782,7 @@ let spec_header ?(unit_includes = []) si () =
   (* [Crane SingleThreaded]: the block heap is one global (pool.h), likewise
      ahead of every runtime header. *)
   let h =
-    if Table.single_threaded () then
+    if Table.single_threaded_for config then
       h ++ str "#define CRANE_SINGLE_THREADED 1" ++ fnl ()
     else
       h
@@ -872,7 +872,7 @@ let spec_header ?(unit_includes = []) si () =
   (* [crane::rc]/[crane::make_rc]/[crane::enable_rc_from_this] (the non-atomic
      reference-counted pointer selected by [Crane NonAtomicRc]) live in rc.h. *)
   let h =
-    if Table.non_atomic_rc ()
+    if Table.non_atomic_rc_for config
        && not (List.exists (fun s -> String.equal s "rc.h") included)
     then
       h ++ mk_include_quoted "rc.h" ++ fnl ()
@@ -882,7 +882,7 @@ let spec_header ?(unit_includes = []) si () =
   (* [crane::counting_ptr] (the measurement-only reference-count-counting
      shared pointer selected by [CRANE_COUNT_RC]) lives in count_rc.h. *)
   let h =
-    if Table.count_rc ()
+    if Table.count_rc_for config
        && not (List.exists (fun s -> String.equal s "count_rc.h") included)
     then
       h ++ mk_include_quoted "count_rc.h" ++ fnl ()
@@ -906,7 +906,7 @@ let spec_header ?(unit_includes = []) si () =
      drains reach for [std::atomic_thread_fence].  [Crane NonAtomicRc] emits no
      fence and so needs no include. *)
   let h =
-    if Table.needs_small_vector () && not (Table.non_atomic_rc ())
+    if Table.needs_small_vector () && not (Table.non_atomic_rc_for config)
        && not (List.exists (fun s -> String.equal s "atomic") included)
     then
       h ++ mk_include "atomic" ++ fnl ()
@@ -914,14 +914,14 @@ let spec_header ?(unit_includes = []) si () =
       h
   in
   (* A unit that runs on several threads (it starts them, or uses
-     transactional memory: {!Table.unit_is_concurrent}) needs atomic counts
+     transactional memory, as its configuration says) needs atomic counts
      in every shared runtime block it can reach, and within one translation
      unit the policy is fixed by whichever runtime header came first --
      possibly another unit's, under [Crane NonAtomicRc].  That is checked
      here, after every include, so it is a compile error rather than a
      race. *)
   let h =
-    if Table.unit_is_concurrent () then
+    if config.concurrent then
       h
       ++ mk_include_quoted "shared_block.h"
       ++ fnl ()
@@ -1464,12 +1464,12 @@ let analyze_and_plan struc =
 
 (** What a unit decides about its structure before its layout, in order.
     [namespace] is the C++ namespace of a separately extracted file. *)
-let unit_passes ~namespace : Core.Program.t Pipeline_trace.pass list =
+let unit_passes ~namespace ~config : Core.Program.t Pipeline_trace.pass list =
   let open Pipeline_trace in
   [ (* The customs the program names decide whether this unit can spawn a
        thread, which is what resolves a [Crane NonAtomicRc] or [Crane
        SingleThreaded] request. *)
-    effect_ "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request ());
+    effect_ "non_atomic_rc" (fun _ -> Table.check_non_atomic_rc_request config);
     (* This file's demands start from nothing, so that one file's needs don't
        leak into a later file of a separate extraction. *)
     effect_ "reset_demands" (fun _ -> Table.reset_demands ());
@@ -1478,7 +1478,8 @@ let unit_passes ~namespace : Core.Program.t Pipeline_trace.pass list =
     effect_ "cross_file_qualification" (fun _ ->
         if namespace <> None then Common.set_force_cross_file_qualification () ) ]
 
-let unit_pass_names = Pipeline_trace.names (unit_passes ~namespace:None)
+let unit_pass_names =
+  Pipeline_trace.names (unit_passes ~namespace:None ~config:(Table.unit_config ~names:Ref.User.Set.empty))
 
 (** The steps of {!plan_representation}, in order. *)
 let template_kinds = "template_kinds"
@@ -1640,7 +1641,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     {higher_order_projections = facts.higher_order_projections; effects = facts.effects; elaborations = None}
   @@ fun () ->
   Loop_facts.with_unit ~effects:facts.effects @@ fun () ->
-  ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace) struc);
+  ignore (Pipeline_trace.run ~stage:"unit" (unit_passes ~namespace ~config:plan.config) struc);
   let plan = plan_representation plan struc in
   let planned = observed_fingerprint ~stage:"unit" struc in
   plan_layout earlier struc @@ fun acc (modules, representation, callables, assumed, elaborations) ->
@@ -1704,7 +1705,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   report_body_generations fn;
   Table.freeze_demands ();
   Common.check_written_files ();
-  Table.check_concurrency_decided ();
+  Table.check_concurrency_decided plan.config;
   check_no_late_decisions ~planned:planned_checkpoint ~generated:generated_checkpoint;
   Unit_program.check_against_plan ~declares:(declares struc);
   Unit_program.check_against_ahead ();
@@ -1795,7 +1796,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       let sig_buf = Buffer.create 65536 in
       let ft = formatter false sig_buf in
       ( try
-          pp_with ft (spec_header ~unit_includes (Some si) ());
+          pp_with ft (spec_header ~unit_includes ~config:plan.config (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
           pp_with ft ns_open;
           pp_with ft body_hstruct;
@@ -1814,7 +1815,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
     let ft = formatter false buf in
     try
       pp_with ft (fnl2 () ++ str "/* Signature (.h) */" ++ fnl ());
-      pp_with ft (spec_header ~unit_includes None ());
+      pp_with ft (spec_header ~unit_includes ~config:plan.config None ());
       pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
       pp_with ft ns_open;
       pp_with ft body_hstruct;

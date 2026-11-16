@@ -151,7 +151,7 @@ let gen_match_branch env (typ : Core.Type.t) rty cname ids dummies body sname
           if Probe.checking () then
             List.iteri
               (fun i _ ->
-                Representation_plan.check ~site ~field:i
+                Representation_plan.check !tctx ~site ~field:i
                   ~live:(Translation_binders.binder_is_boxed (n_pat_vars - i)) () )
               rev_ids;
           gen_stmts env_for_body (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ))
@@ -865,7 +865,7 @@ let gen_cpp_case (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
             if Probe.checking () then
               List.iteri
                 (fun i _ ->
-                  Representation_plan.check ~as_bound:true ~site:(Branch (case_occ, branch_idx)) ~field:i
+                  Representation_plan.check ~as_bound:true !tctx ~site:(Branch (case_occ, branch_idx)) ~field:i
                     ~live:(Translation_binders.binder_is_boxed (List.length ids' - i)) () )
                 rev_ids';
             let scrut_vmut : Cpp_ir.Lowered.Expr.t =
@@ -1265,7 +1265,7 @@ let gen_custom_cpp_case env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t)
       if Probe.checking () then
         List.iteri
           (fun field_i _ ->
-            Representation_plan.check ~site:(Branch (case_occ, i)) ~field:field_i
+            Representation_plan.check !tctx ~site:(Branch (case_occ, i)) ~field:field_i
               ~live:(Translation_binders.binder_is_boxed (n_pat_vars - field_i)) () )
           ids;
       let scrut_ind_opt =
@@ -1947,7 +1947,7 @@ let gen_record_projection ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ ~t 
              if Probe.checking () then
                List.iteri
                  (fun i _ ->
-                   Representation_plan.check ~as_bound:true ~site:(Branch (case_occ, 0)) ~field:i
+                   Representation_plan.check ~as_bound:true !tctx ~site:(Branch (case_occ, 0)) ~field:i
                      ~live:(Translation_binders.binder_is_boxed (n - i)) () )
                  ids;
              with_iife_return_type expected_ty (fun () ->
@@ -2055,7 +2055,7 @@ let gen_record_match_stmts ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
     if Probe.checking () then
       List.iteri
         (fun i _ ->
-          Representation_plan.check ~site:(Branch (case_occ, 0)) ~field:i
+          Representation_plan.check !tctx ~site:(Branch (case_occ, 0)) ~field:i
             ~live:(Translation_binders.binder_is_boxed (n - i)) () )
         ids;
     let body_stmts =

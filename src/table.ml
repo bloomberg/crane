@@ -3507,8 +3507,8 @@ let with_unit_config c f = State.bind current_unit_config c f
 
 let unit_is_concurrent () = !current_unit_config.concurrent
 
-let check_concurrency_decided () =
-  if Probe.checking () && runs_on_threads (written_customs ()) && not (unit_is_concurrent ()) then
+let check_concurrency_decided config =
+  if Probe.checking () && runs_on_threads (written_customs ()) && not config.concurrent then
     Probe.violation "written customs"
       (str "the files write a custom that runs on several threads, but the customs the program names were "
        ++ str "found to need none, which is what a NonAtomicRc or SingleThreaded request is withheld by")
@@ -3520,9 +3520,13 @@ let check_concurrency_decided () =
    corrupts the heap. The promise is therefore not taken on trust: it holds
    only where the customs this unit's program names say it runs on one
    thread ({!concurrency_headers}). *)
-let non_atomic_rc () = non_atomic_rc_requested () && not (unit_is_concurrent ())
+let non_atomic_rc_for config = non_atomic_rc_requested () && not config.concurrent
 
-let single_threaded () = single_threaded_requested () && not (unit_is_concurrent ())
+let non_atomic_rc () = non_atomic_rc_for !current_unit_config
+
+let single_threaded_for config = single_threaded_requested () && not config.concurrent
+
+let single_threaded () = single_threaded_for !current_unit_config
 
 (* [CRANE_COUNT_RC=1] swaps the shared pointer for the counting one in
    count_rc.h, so a run reports its reference-count traffic.  It is an
@@ -3535,8 +3539,9 @@ let single_threaded () = single_threaded_requested () && not (unit_is_concurrent
    count-aware codegen (the in-place reuse helpers name [crane::rc]
    outright), and substituting a different pointer under it would not
    compile. *)
-let count_rc () =
-  Sys.getenv_opt "CRANE_COUNT_RC" = Some "1" && not (non_atomic_rc ())
+let count_rc_for config = Sys.getenv_opt "CRANE_COUNT_RC" = Some "1" && not (non_atomic_rc_for config)
+
+let count_rc () = count_rc_for !current_unit_config
 
 (* [CRANE_STAMP=1] prints, as a comment at the top of every generated file, a
    digest of the plugin binary that produced it.  Like [CRANE_COUNT_RC] it is
@@ -3615,10 +3620,10 @@ let warn_single_threaded_concurrent =
          block heap shared between threads corrupts it. Falling back to a \
          heap per thread." )
 
-let check_non_atomic_rc_request () =
-  if non_atomic_rc_requested () && unit_is_concurrent () then
+let check_non_atomic_rc_request config =
+  if non_atomic_rc_requested () && config.concurrent then
     warn_non_atomic_rc_concurrent ();
-  if single_threaded_requested () && unit_is_concurrent () then
+  if single_threaded_requested () && config.concurrent then
     warn_single_threaded_concurrent ()
 
 let extract_callback optstr x =

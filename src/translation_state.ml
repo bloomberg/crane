@@ -646,11 +646,11 @@ let with_itree_mode (m : itree_extraction_mode) (f : unit -> 'a) : 'a =
 (** {!Representation_plan.region}, which is translation's to name: it reads
     types the way translation converts them. *)
 let plan_representation :
-    (outer:Lexenv.t ->
+    (translation_ctx ->
     Core.Expr.t ->
     (Core_binder.site * int * planned_repr) list * (Core.Occurrence.t * Planned_read.t) list)
     ref =
-  ref (fun ~outer:_ _ -> ([], []))
+  ref (fun _ _ -> ([], []))
 
 (** {!Position_plan.region}, which is translation's to name, for the same
     reason as {!plan_representation}. *)
@@ -683,7 +683,7 @@ let with_region ?(owned = []) ?(copied = []) ?resumes ?certain (body : Core.Expr
   let representation, reads, positions =
     match (!tctx).input.body_owner with
     | Some _ ->
-      let binders, reads = !plan_representation ~outer:(!tctx).lexical.env_types body in
+      let binders, reads = !plan_representation !tctx body in
       (* A nested region's positions are planned at its own return type,
          which the enclosing walk does not know; they come first. *)
       let reads = (!tctx).lexical.planned_reads @ reads in
