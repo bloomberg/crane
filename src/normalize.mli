@@ -15,12 +15,24 @@
     is copied into its branches instead ({!into_branches}), so the calls
     ending them are turns too. *)
 
+(** What normalization asks of lowering, which comes after it and so cannot
+    be named here: the Core type a global application yields
+    ({!Translation_calls.core_app_result_type}), whether a method's return
+    type has no C++ spelling ({!Translation.return_type_is_erased}), and the
+    suspension rules splicing keeps ({!Translation_suspension.suspension}).
+    The driver builds it from its translation context. *)
+type lowering = {
+  app_result_type : Core.Expr.t -> Core.Expr.t list -> Core.Type.t option;
+  return_type_is_erased : Names.Id.t list -> Core.Type.t -> bool;
+  suspension : Recursion_plan.suspension;
+}
+
 (** [eta_expand s] gives every definition in [s] a parameter at each arrow
     of its type, applying the body it writes to the ones it leaves out: the
     body translation generates, here once for every consumer instead of
     re-derived by each.  It runs first in {!Core_phase.normalize}, so the calls
     {!structure} names are those of that body. *)
-val eta_expand : Translation_state.t -> Core.Program.t -> Core.Program.t
+val eta_expand : Core.Program.t -> Core.Program.t
 
 (** [let_lambdas s] puts every let-bound lambda in [s]'s definitions as it is
     generated ({!Core_elaborate.generated_definition}): an alias of a
@@ -52,4 +64,4 @@ val into_branches :
     function is to have inlined is spliced into it
     ({!Recursion_plan.splice_partners}), and records what splicing
     decided. *)
-val structure : Translation_state.t -> Core_phase.normalizing -> Core_phase.normalizing
+val structure : lowering -> Core_phase.normalizing -> Core_phase.normalizing

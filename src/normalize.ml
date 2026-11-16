@@ -56,13 +56,19 @@ let temporaries () =
    would turn a direct argument into a closure. *)
 let full_result = function Some (Core.Type.Arrow _) -> None | ty -> ty
 
+type lowering = {
+  app_result_type : Core.Expr.t -> Core.Expr.t list -> Core.Type.t option;
+  return_type_is_erased : Id.t list -> Core.Type.t -> bool;
+  suspension : Recursion_plan.suspension;
+}
+
 (* The type a call at binder depth [depth] to one of [group]'s functions
    yields, if it is one and is applied fully. *)
 let group_call cx group ~depth e =
   match e with
   | Core.Expr.Apply {callee = (Core.Expr.Global {callee = r; _} as f);
                      arguments = args} when List.exists (GlobRef.UserOrd.equal r) group.globals ->
-    full_result (Translation_calls.core_app_result_type cx f args)
+    full_result (cx.app_result_type f args)
   | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; _}; arguments = args} -> (
     match
       List.find_map
@@ -445,7 +451,7 @@ let decl cx ~effects ~splices ~methods = function
 (* A definition of type [ty] as it is generated: binding a parameter at each
    of its type's arrows ({!Type_util.eta_parameters}), the body it writes
    applied to the ones it does not, at each that extraction did not erase. *)
-let eta_body cx ty b =
+let eta_body ty b =
   match b with
   | Core.Expr.Axiom_value _ | Core.Expr.Runtime_error _ -> b
   | _ ->
@@ -463,15 +469,15 @@ let eta_body cx ty b =
       Core_util.named_lams (missing @ params)
         (Core_util.apply_eta_args (Core_util.ast_lift (List.length missing) body) args)
 
-let eta_expand cx =
+let eta_expand =
   Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
-      Core.Decl.Value {entity = r; body = eta_body cx ty b; type_ = ty}
+      Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
            (fun (fd : Core.Recursion.Definition.t) ->
-             {fd with Core.Recursion.Definition.body = eta_body cx fd.type_ fd.body})
+             {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body})
            fds )
     | d -> d )
 
@@ -488,7 +494,7 @@ let let_lambdas =
     | d -> d )
 
 (* The methods the structure's functions become. *)
-let methods_of cx struc = Method_registry.create ~ret_is_erased:(Translation.return_type_is_erased cx) struc
+let methods_of cx struc = Method_registry.create ~ret_is_erased:cx.return_type_is_erased struc
 
 (* The effect operations are those of the program being normalized, read
    off it first ({!Core_effects.analyze}): a bind is sequencing only where
@@ -496,7 +502,7 @@ let methods_of cx struc = Method_registry.create ~ret_is_erased:(Translation.ret
 let structure cx (program : Core_phase.normalizing) : Core_phase.normalizing =
   let methods = methods_of cx program.structure in
   let {Core_phase.structure = struc; splices} =
-    Recursion_plan.splice_partners ~suspension:(Translation_suspension.suspension cx) ~loopified:(loopified ~methods)
+    Recursion_plan.splice_partners ~suspension:cx.suspension ~loopified:(loopified ~methods)
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program
   in

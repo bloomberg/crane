@@ -1389,11 +1389,16 @@ let core_pass_names =
     keeps it canonical, which [CRANE_CHECK_IR] checks. *)
 let normalize_passes cx : Core_phase.normalizing Pipeline_trace.pass list =
   let rewriting f (p : Core_phase.normalizing) = {p with structure = f p.structure} in
+  let lowering =
+    { Normalize.app_result_type = (fun f args -> Translation_calls.core_app_result_type cx f args);
+      return_type_is_erased = (fun params ret -> Translation.return_type_is_erased cx params ret);
+      suspension = Translation_suspension.suspension cx }
+  in
   Pipeline_trace.
-    [ pass "eta_expand" (rewriting (Normalize.eta_expand cx));
+    [ pass "eta_expand" (rewriting Normalize.eta_expand);
       pass "let_lambdas" (rewriting Normalize.let_lambdas);
       pass "spines" (rewriting Core_normalize.structure);
-      pass "normalize" (Normalize.structure cx);
+      pass "normalize" (Normalize.structure lowering);
       effect_ "canonical" (fun (p : Core_phase.normalizing) -> Core_normalize.check p.structure) ]
 
 let normalize_pass_names =
