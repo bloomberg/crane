@@ -18,7 +18,7 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {
     return std::optional<crane::fn<uint64_t(uint64_t)>>();
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, a1, _] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
     const NestedMatchClosure::tree &a0_value = *a0;
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
@@ -26,7 +26,7 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
           [=](uint64_t x) { return (a1 + x); });
     } else {
-      const auto &[a00, a10, a20] =
+      const auto &[_, a10, _] =
           std::get<typename NestedMatchClosure::tree::Node>(a0_value.v());
       uint64_t combined = (a1 + a10);
       auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
@@ -52,21 +52,21 @@ NestedMatchClosure::make_deep_combiner(const NestedMatchClosure::tree &t) {
   if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(t.v())) {
     return std::optional<crane::fn<uint64_t(uint64_t)>>();
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, a1, _] =
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
     const NestedMatchClosure::tree &a0_value = *a0;
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             a0_value.v())) {
       return std::optional<crane::fn<uint64_t(uint64_t)>>();
     } else {
-      const auto &[a00, a10, a20] =
+      const auto &[a00, a10, _] =
           std::get<typename NestedMatchClosure::tree::Node>(a0_value.v());
       const NestedMatchClosure::tree &a00_value = *a00;
       if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
               a00_value.v())) {
         return std::optional<crane::fn<uint64_t(uint64_t)>>();
       } else {
-        const auto &[a01, a11, a21] =
+        const auto &[_, a11, _] =
             std::get<typename NestedMatchClosure::tree::Node>(a00_value.v());
         uint64_t total = ((a1 + a10) + a11);
         auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {

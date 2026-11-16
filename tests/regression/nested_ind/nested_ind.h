@@ -230,7 +230,7 @@ struct NestedInd {
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
+            const auto &[_, a1] =
                 std::get<typename custom_list<A>::Ccons>(_sv.v());
             _stack.emplace_back(CraneCont_Ccons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
@@ -385,12 +385,12 @@ struct NestedInd {
     const variant_t &v() const { return v_; }
 
     uint64_t children_count() const {
-      const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
+      const auto &[_, a1] = std::get<typename rose<A>::Node>(this->v());
       return a1->custom_list_length();
     }
 
     A root() const {
-      const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
+      const auto &[a0, _] = std::get<typename rose<A>::Node>(this->v());
       return a0;
     }
 

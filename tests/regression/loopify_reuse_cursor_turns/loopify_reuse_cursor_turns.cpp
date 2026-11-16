@@ -272,7 +272,7 @@ LoopifyReuseCursorTurns::suffix_sums(LoopifyReuseCursorTurns::lst l) {
       *_write = crane::make_rc<LoopifyReuseCursorTurns::lst>(lst::nil());
       break;
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename LoopifyReuseCursorTurns::lst::Cons>(_loop_l->v());
       auto _read = sum(*_loop_l);
       auto _rs = crane::reuse_step(_own, _uniq, a1);

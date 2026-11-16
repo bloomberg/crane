@@ -51,22 +51,22 @@ struct CoindProjectionBorrow {
       const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
       const uint64_t &hd() const & {
-        const auto &[a0, a1] = std::get<typename stream::Scons>(this->v());
+        const auto &[a0, _] = std::get<typename stream::Scons>(this->v());
         return a0;
       }
 
       uint64_t hd() const && {
-        const auto &[a0, a1] = std::get<typename stream::Scons>(this->v());
+        const auto &[a0, _] = std::get<typename stream::Scons>(this->v());
         return a0;
       }
 
       const stream &tl() const & {
-        const auto &[a0, a1] = std::get<typename stream::Scons>(this->v());
+        const auto &[_, a1] = std::get<typename stream::Scons>(this->v());
         return a1;
       }
 
       stream tl() const && {
-        const auto &[a0, a1] = std::get<typename stream::Scons>(this->v());
+        const auto &[_, a1] = std::get<typename stream::Scons>(this->v());
         return a1;
       }
     };

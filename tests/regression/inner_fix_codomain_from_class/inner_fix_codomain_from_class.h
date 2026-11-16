@@ -396,7 +396,7 @@ collect(const Nat &n, const List<std::pair<typename _tcI0::PTR::ptr,
           return EOU_monad::template mret<
               dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>(a0);
         } else {
-          const auto &[a02, a12] = std::get<typename List<
+          const auto &[a02, _] = std::get<typename List<
               dv<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Cons>(
               a01.v());
           return EOU_monad::template mret<

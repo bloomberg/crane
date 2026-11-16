@@ -12,7 +12,7 @@ ClosureEscapeMatch::make_prepender_opt(
     return std::optional<crane::fn<ClosureEscapeMatch::mylist<uint64_t>(
         ClosureEscapeMatch::mylist<uint64_t>)>>();
   } else {
-    const auto &[a0, a1] = std::get<typename ClosureEscapeMatch::mylist<
+    const auto &[a0, _] = std::get<typename ClosureEscapeMatch::mylist<
         ClosureEscapeMatch::mylist<uint64_t>>::Mycons>(l.v());
     return std::make_optional<crane::fn<ClosureEscapeMatch::mylist<uint64_t>(
         ClosureEscapeMatch::mylist<uint64_t>)>>(
@@ -54,20 +54,20 @@ ClosureEscapeMatch::nested_closure_opt(
             typename ClosureEscapeMatch::mylist<uint64_t>::Mynil>(b.v())) {
       return std::optional<crane::fn<uint64_t(uint64_t)>>();
     } else {
-      const auto &[a00, a10] = std::get<
+      const auto &[a00, _] = std::get<
           typename ClosureEscapeMatch::mylist<uint64_t>::Mycons>(b.v());
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
           [=](uint64_t n) { return (a00 + n); });
     }
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename ClosureEscapeMatch::mylist<uint64_t>::Mycons>(a.v());
     if (std::holds_alternative<
             typename ClosureEscapeMatch::mylist<uint64_t>::Mynil>(b.v())) {
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
           [=](uint64_t n) { return (a0 + n); });
     } else {
-      const auto &[a00, a10] = std::get<
+      const auto &[a00, _] = std::get<
           typename ClosureEscapeMatch::mylist<uint64_t>::Mycons>(b.v());
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
           [=](uint64_t n) { return ((a0 + a00) + n); });
@@ -85,7 +85,7 @@ ClosureEscapeMatch::closure_in_pair(
     return std::make_pair(
         UINT64_C(0), [](ClosureEscapeMatch::mylist<uint64_t> x) { return x; });
   } else {
-    const auto &[a0, a1] = std::get<typename ClosureEscapeMatch::mylist<
+    const auto &[a0, _] = std::get<typename ClosureEscapeMatch::mylist<
         ClosureEscapeMatch::mylist<uint64_t>>::Mycons>(l.v());
     return std::make_pair(length<uint64_t>(a0),
                           [=](ClosureEscapeMatch::mylist<uint64_t> x) {

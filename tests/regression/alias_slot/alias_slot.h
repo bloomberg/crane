@@ -103,7 +103,7 @@ public:
         if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = crane::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }

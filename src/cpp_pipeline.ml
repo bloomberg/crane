@@ -92,6 +92,7 @@ let foreign = Pipeline_trace.pass "foreign" Cpp_erasure.instantiate_foreign
 let qualifiers = Pipeline_trace.pass "qualifiers" Cpp_erasure.lower_qualifiers
 (* The slots of the pointers of a declaration of the unit [u]. *)
 let pointer_slots u = Pipeline_trace.pass "pointer_slots" (Cpp_erasure.lower_pointer_slots u)
+let unused_bindings = Pipeline_trace.pass "unused_bindings" Cpp_erasure.mark_unused_bindings
 let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
@@ -173,12 +174,14 @@ let settled_passes u : Cpp_erasure.settled Pipeline_trace.pass list =
     checks of what a declaration moves and borrows read the instantiated
     pieces, a pair projection's included.
     A type qualifying a member in value position is spelled as the value it
-    names.  A pointer is written in the slot its pointee is held in.  Each
+    names.  A pointer is written in the slot its pointee is held in.  A match field
+    its branch does not read is marked, to be written [_].  Each
     match's computed scrutinee is declared, named, in front of it.  With
     every body final, what each lambda captures is written down; last, an
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
-let instantiation_passes u = [foreign; qualifiers; pointer_slots u; scrutinees; captures; initialisers]
+let instantiation_passes u =
+  [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; captures; initialisers]
 
 let pass_names =
   Pipeline_trace.names (lowered_passes Unit_context.detached)

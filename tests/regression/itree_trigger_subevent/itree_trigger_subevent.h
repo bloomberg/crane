@@ -429,7 +429,7 @@ struct ItreeTriggerSubevent {
             typename ItreeF<Sum1<fooE, BarE, crane::obj>, Nat,
                             Itree<Sum1<fooE, BarE, crane::obj>, Nat>>::VisF>(
             _sv.v())) {
-      const auto &[x, e0] = std::get<
+      const auto &[x, _] = std::get<
           typename ItreeF<Sum1<fooE, BarE, crane::obj>, Nat,
                           Itree<Sum1<fooE, BarE, crane::obj>, Nat>>::VisF>(
           _sv.v());

@@ -103,7 +103,7 @@ struct RamInitReset {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return List<T1>::cons(x, *a1);
       }
     } else {

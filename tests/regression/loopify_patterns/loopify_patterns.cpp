@@ -711,7 +711,7 @@ LoopifyPatterns::list_len(const LoopifyPatterns::list<uint64_t> &l) { /// CraneE
               l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});

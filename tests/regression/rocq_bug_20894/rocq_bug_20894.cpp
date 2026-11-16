@@ -4,7 +4,7 @@ void RocqBug20894::M::fold(const List<Unit> &l) {
   if (std::holds_alternative<typename List<Unit>::Nil>(l.v())) {
     return;
   } else {
-    const auto &[a0, a1] = std::get<typename List<Unit>::Cons>(l.v());
+    const auto &[_, a1] = std::get<typename List<Unit>::Cons>(l.v());
     fold(*a1);
     return;
   }

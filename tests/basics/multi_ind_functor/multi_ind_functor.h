@@ -213,7 +213,7 @@ template <Elem E> struct Container {
     if (std::holds_alternative<typename mlist::MNil>(l.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename mlist::MCons>(l.v());
+      const auto &[_, a1] = std::get<typename mlist::MCons>(l.v());
       return (mlist_length(*a1) + 1);
     }
   }

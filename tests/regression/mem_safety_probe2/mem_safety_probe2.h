@@ -235,13 +235,12 @@ struct MemSafetyProbe2 {
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (a1 + x);
         } else {
-          const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
+          const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (a10 + x);
           } else {
-            const auto &[a01, a11, a21] =
-                std::get<typename tree::Node>(_sv1.v());
+            const auto &[_, a11, _] = std::get<typename tree::Node>(_sv1.v());
             return (((a10 + a11) + a1) + x);
           }
         }
@@ -444,8 +443,7 @@ struct MemSafetyProbe2 {
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
+            const auto &[_, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
             _stack.emplace_back(CraneCont_Mycons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }

@@ -149,7 +149,7 @@ MemSafetyProbe9::collect_left_sums(
       if (std::holds_alternative<typename MemSafetyProbe9::tree::Leaf>(t.v())) {
         _result = std::move(acc);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename MemSafetyProbe9::tree::Node>(t.v());
         const MemSafetyProbe9::tree &a0_value = *a0;
         const MemSafetyProbe9::tree &a2_value = *a2;

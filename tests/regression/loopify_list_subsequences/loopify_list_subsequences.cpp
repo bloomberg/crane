@@ -44,7 +44,7 @@ List<List<uint64_t>> LoopifyListSubsequences::tails(const List<uint64_t> &l) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _cell = typename List<List<uint64_t>>::Cons(*_loop_l, nullptr);
       List<List<uint64_t>> &_node =

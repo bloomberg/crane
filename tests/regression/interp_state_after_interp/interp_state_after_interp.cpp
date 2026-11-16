@@ -33,7 +33,7 @@ std::optional<Nat> InterpStateAfterInterp::first_out(
                 std::pair<Nat, Nat>>>::TauF>(_sv0.v());
       return first_out(*a0, t0);
     } else {
-      const auto &[x0, e0] = std::get<typename ItreeF<
+      const auto &[x0, _] = std::get<typename ItreeF<
           Sum1<InterpStateAfterInterp::outE, InterpStateAfterInterp::noE,
                crane::obj>,
           std::pair<Nat, Nat>,

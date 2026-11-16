@@ -19,7 +19,7 @@ Nat LoopifyShadowInScrutineeCall::walk(const Nat &n, const List<Nat> &xs,
       if (std::holds_alternative<typename List<Nat>::Nil>(_sv0.v())) {
         _loop_n = crane_raw(a0);
       } else {
-        const auto &[a00, a10] = std::get<typename List<Nat>::Cons>(_sv0.v());
+        const auto &[a00, _] = std::get<typename List<Nat>::Cons>(_sv0.v());
         _loop_acc = _loop_acc.add(a00);
         _loop_n = crane_raw(a0);
       }

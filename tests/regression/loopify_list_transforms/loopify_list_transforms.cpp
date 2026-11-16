@@ -132,7 +132,7 @@ LoopifyListTransforms::sliding_pairs_fuel(uint64_t fuel,
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a00, a10] =
+          const auto &[a00, _] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
               std::make_pair(a0, a00), nullptr);
@@ -201,7 +201,7 @@ LoopifyListTransforms::differences_fuel(uint64_t fuel,
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a00, a10] =
+          const auto &[a00, _] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           auto _cell =
               typename List<uint64_t>::Cons(abs_diff(a0, a00), nullptr);
@@ -275,7 +275,7 @@ List<uint64_t> LoopifyListTransforms::drop(uint64_t n,
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return List<uint64_t>::nil();
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a1);
         _loop_n = n_;
@@ -407,7 +407,7 @@ LoopifyListTransforms::uniq_sorted_fuel(uint64_t fuel,
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a00, a10] =
+          const auto &[a00, _] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (a0 == a00) {
             _loop_l = crane_raw(a1);

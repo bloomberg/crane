@@ -157,12 +157,12 @@ struct LoopifyCoindStream {
   };
 
   template <typename T1> static T1 hd(const stream<T1> &s) {
-    const auto &[a0, a1] = std::get<typename stream<T1>::Scons>(s.v());
+    const auto &[a0, _] = std::get<typename stream<T1>::Scons>(s.v());
     return a0;
   }
 
   template <typename T1> static stream<T1> tl(const stream<T1> &s) {
-    const auto &[a0, a1] = std::get<typename stream<T1>::Scons>(s.v());
+    const auto &[_, a1] = std::get<typename stream<T1>::Scons>(s.v());
     return a1;
   }
 

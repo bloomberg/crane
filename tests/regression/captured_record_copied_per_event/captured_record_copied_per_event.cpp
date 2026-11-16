@@ -96,7 +96,7 @@ std::optional<Nat> CapturedRecordCopiedPerEvent::run(
           Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::TauF>(_sv0.v());
       return run(*a0, t0);
     } else {
-      const auto &[x0, e0] = std::get<typename ItreeF<
+      const auto &[_, e0] = std::get<typename ItreeF<
           CapturedRecordCopiedPerEvent::TickE, Nat,
           Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::VisF>(_sv0.v());
       return run(*a0, e0(std::monostate{}));

@@ -196,7 +196,7 @@ bool LoopifyExtrema::all_equal(const List<uint64_t> &l) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         return true;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 == a00) {
           _loop_l = crane_raw(a1);
@@ -220,7 +220,7 @@ bool LoopifyExtrema::is_sorted(const List<uint64_t> &l) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         return true;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 <= a00) {
           _loop_l = crane_raw(a1);

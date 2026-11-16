@@ -341,7 +341,7 @@ struct LoopifyOwnedChildPointer {
           if (crane::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = List<crane::fn<uint64_t(uint64_t)>>::nil();
           } else {
-            const auto &[a0, a1, a2] = crane::get<typename tree::Node>(_sv.v());
+            const auto &[a0, _, a2] = crane::get<typename tree::Node>(_sv.v());
             const tree &a0_value = *a0;
             const tree &a2_value = *a2;
             _stack.emplace_back(CraneCont_Node{a0, crane_raw(a2)});

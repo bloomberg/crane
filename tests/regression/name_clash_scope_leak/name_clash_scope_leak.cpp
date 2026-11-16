@@ -17,7 +17,7 @@ uint64_t NameClashScopeLeak::heads_sum(const List<uint64_t> &l1,
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
+      const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l1.v());
       return a0;
     }
   }();
@@ -25,7 +25,7 @@ uint64_t NameClashScopeLeak::heads_sum(const List<uint64_t> &l1,
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
+      const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(l2.v());
       return a00;
     }
   }();
@@ -42,8 +42,7 @@ uint64_t NameClashScopeLeak::first_two_sum(const List<uint64_t> &l) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
       return a0;
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(_sv0.v());
       return (a0 + a00);
     }
   }
@@ -54,7 +53,7 @@ uint64_t NameClashScopeLeak::branch_let_clash(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     return (a0 * UINT64_C(2));
   }
 }
@@ -67,7 +66,7 @@ uint64_t NameClashScopeLeak::triple_head(const List<uint64_t> &l1,
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
+      const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l1.v());
       return a0;
     }
   }();
@@ -75,7 +74,7 @@ uint64_t NameClashScopeLeak::triple_head(const List<uint64_t> &l1,
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
+      const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(l2.v());
       return a00;
     }
   }();
@@ -83,7 +82,7 @@ uint64_t NameClashScopeLeak::triple_head(const List<uint64_t> &l1,
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l3.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a01, a11] = std::get<typename List<uint64_t>::Cons>(l3.v());
+      const auto &[a01, _] = std::get<typename List<uint64_t>::Cons>(l3.v());
       return a01;
     }
   }();
@@ -98,7 +97,7 @@ uint64_t NameClashScopeLeak::pair_match(
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l1.v());
+      const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l1.v());
       return a0;
     }
   }();
@@ -106,7 +105,7 @@ uint64_t NameClashScopeLeak::pair_match(
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l2.v());
+      const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(l2.v());
       return a00;
     }
   }();

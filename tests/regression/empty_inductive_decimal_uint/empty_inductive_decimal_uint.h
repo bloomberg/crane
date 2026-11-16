@@ -431,7 +431,7 @@ public:
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
+        const auto &[_, a1] = std::get<typename String::String0>(_sv.v());
         auto _cell = typename Nat::nat::S(nullptr);
         Nat::nat &_node =
             (_write ? *(*_write = std::make_shared<Nat::nat>(std::move(_cell)))

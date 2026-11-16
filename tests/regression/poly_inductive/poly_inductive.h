@@ -85,12 +85,12 @@ struct PolyInductive {
     }
 
     B psnd() const {
-      const auto &[a0, a1] = *this;
+      const auto &[_, a1] = *this;
       return a1;
     }
 
     A pfst() const {
-      const auto &[a0, a1] = *this;
+      const auto &[a0, _] = *this;
       return a0;
     }
 

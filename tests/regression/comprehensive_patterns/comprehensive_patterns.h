@@ -538,7 +538,7 @@ struct ComprehensivePatterns {
         const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
         return Tree::node(*this, a0, *this);
       } else {
-        const auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
+        const auto &[_, a1, _] = std::get<typename Tree::Node>(this->v());
         return Tree::leaf(a1);
       }
     }

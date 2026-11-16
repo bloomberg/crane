@@ -132,7 +132,7 @@ LoopifySpecialRecursion::remove_if_sum_even(const List<uint64_t> &l) {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
           return UINT64_C(0);
         } else {
-          const auto &[a00, a10] =
+          const auto &[a00, _] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           return a00;
         }

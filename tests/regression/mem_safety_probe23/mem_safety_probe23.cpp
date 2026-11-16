@@ -97,7 +97,7 @@ MemSafetyProbe23::tree_size(const MemSafetyProbe23::tree &t) { /// CraneEnter:
       if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(t.v())) {
         _result = UINT64_C(1);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename MemSafetyProbe23::tree::Node>(t.v());
         _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
         _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -584,7 +584,7 @@ MemSafetyProbe23::mixed_recurse(const MemSafetyProbe23::tree &t,
         if (std::holds_alternative<typename MemSafetyProbe23::tree::Leaf>(t.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1, a2] =
+          const auto &[_, a1, a2] =
               std::get<typename MemSafetyProbe23::tree::Node>(t.v());
           _stack.emplace_back(CraneCont_Node{n_, a2});
           _stack.emplace_back(CraneEnter{n_, tree::node(t, a1, tree::leaf())});

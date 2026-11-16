@@ -6,7 +6,7 @@ List<uint64_t> LoadProgramHeadWrite::update_nth(uint64_t n, uint64_t x,
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return l;
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+      const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       return List<uint64_t>::cons(x, *a1);
     }
   } else {

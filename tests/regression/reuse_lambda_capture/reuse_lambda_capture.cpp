@@ -2,7 +2,7 @@
 
 uint64_t ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
   if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(l.v())) {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
     return (UINT64_C(1) + length(*a1));
   } else {

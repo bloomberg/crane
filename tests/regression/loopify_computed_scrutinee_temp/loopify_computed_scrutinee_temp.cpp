@@ -27,7 +27,7 @@ LoopifyComputedScrutineeTemp::hd(const LoopifyComputedScrutineeTemp::lst &l) {
           l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(l.v());
     return a0;
   }

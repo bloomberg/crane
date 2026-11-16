@@ -69,7 +69,7 @@ uint64_t LoopifyHofs::head_default(uint64_t default0, const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return default0;
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     return a0;
   }
 }
@@ -311,7 +311,7 @@ LoopifyHofs::longest_run_fuel(uint64_t fuel,
               rec_result.v_mut())) {
         _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
       } else {
-        auto &[a01, a11] =
+        auto &[a01, _] =
             std::get<typename List<uint64_t>::Cons>(rec_result.v_mut());
         if (a0 == a01) {
           _result = std::move(rec_result);

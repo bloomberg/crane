@@ -261,22 +261,22 @@ struct Cotree {
     const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
     const A &root() const & {
-      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
+      const auto &[a0, _] = std::get<typename cotree<A>::Conode>(this->v());
       return a0;
     }
 
     A root() const && {
-      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
+      const auto &[a0, _] = std::get<typename cotree<A>::Conode>(this->v());
       return a0;
     }
 
     const colist<cotree<A>> &children() const & {
-      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
+      const auto &[_, a1] = std::get<typename cotree<A>::Conode>(this->v());
       return a1;
     }
 
     colist<cotree<A>> children() const && {
-      const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
+      const auto &[_, a1] = std::get<typename cotree<A>::Conode>(this->v());
       return a1;
     }
 
@@ -393,7 +393,7 @@ struct Cotree {
   }
 
   template <typename T1> static T1 tree_root(const tree<T1> &t) {
-    const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t.v());
+    const auto &[a0, _] = std::get<typename tree<T1>::Node>(t.v());
     return a0;
   }
 
@@ -457,7 +457,7 @@ struct Cotree {
   }
 
   template <typename T1> static uint64_t tree_size(const tree<T1> &t) {
-    const auto &[a0, a1] = std::get<typename tree<T1>::Node>(t.v());
+    const auto &[_, a1] = std::get<typename tree<T1>::Node>(t.v());
     return ([&]() {
       auto aux_impl = [](auto &_self_aux, const List<tree<T1>> &l) -> uint64_t {
         if (std::holds_alternative<typename List<tree<T1>>::Nil>(l.v())) {

@@ -57,7 +57,7 @@ CtorArgMoveAlias::pack CtorArgMoveAlias::grab(
           o.v())) {
     return pack::plist(o);
   } else {
-    const auto &[a0, a1] = std::get<
+    const auto &[a0, _] = std::get<
         typename CtorArgMoveAlias::mylist<CtorArgMoveAlias::inner>::Mycons>(
         o.v());
     return pack::pack0(a0, osum(o));

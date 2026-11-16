@@ -121,7 +121,7 @@ struct AnonLiftNameCollision {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           return UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           return (_self_f(_self_f, *a1) + 1);
         }
       };

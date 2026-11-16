@@ -17,7 +17,7 @@ uint64_t LetFixIntermediateRef::sum_heads(const List<List<uint64_t>> &ll) {
           if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
             return UINT64_C(0);
           } else {
-            const auto &[a00, a10] =
+            const auto &[a00, _] =
                 std::get<typename List<uint64_t>::Cons>(a0.v());
             return a00;
           }

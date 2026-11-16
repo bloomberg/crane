@@ -96,7 +96,7 @@ public:
         if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename Tree::Node>(_sv.v());
+          const auto &[a0, _] = std::get<typename Tree::Node>(_sv.v());
           _stack.emplace_back(CraneCont_Node{});
           _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }

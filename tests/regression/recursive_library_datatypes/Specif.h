@@ -200,12 +200,12 @@ template <typename A, typename P> struct SigT {
   }
 
   A projT1() const {
-    const auto &[x0, a1] = *this;
+    const auto &[x0, _] = *this;
     return x0;
   }
 
   P projT2() const {
-    const auto &[x0, a1] = *this;
+    const auto &[_, a1] = *this;
     return a1;
   }
 
@@ -303,17 +303,17 @@ template <typename A, typename P, typename Q> struct SigT2 {
   SigT<A, P> sigT_of_sigT2() const {
     return SigT<A, P>::existt(
         [&]() {
-          const auto &[x0, a1, a2] = *this;
+          const auto &[x0, _, _] = *this;
           return x0;
         }(),
         [&]() {
-          const auto &[x0, a10, a20] = *this;
+          const auto &[_, a10, _] = *this;
           return a10;
         }());
   }
 
   Q projT3() const {
-    const auto &[x, a1, a2] = *this;
+    const auto &[_, _, a2] = *this;
     return a2;
   }
 
@@ -503,7 +503,7 @@ Choice2(std::type_identity_t<crane::fn<SigT<T2, T3>(T1)>> h) {
   return SigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>::existt(
       [=](const T1 &z) { return h(z).projT1(); }, [=](const T1 &z) {
         SigT<T2, T3> s = h(z);
-        auto &[x, a1] = s;
+        auto &[_, a1] = s;
         return std::move(a1);
       });
 }

@@ -368,7 +368,7 @@ struct FamilySumAlias {
             Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
             Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
                   Nat>>::VisF>(_sv.v())) {
-      const auto &[x, e0] = std::get<typename ItreeF<
+      const auto &[x, _] = std::get<typename ItreeF<
           Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
           Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
                 Nat>>::VisF>(_sv.v());

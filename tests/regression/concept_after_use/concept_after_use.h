@@ -282,7 +282,7 @@ struct ConceptAfterUse {
     if (std::holds_alternative<typename ty::TB>(t.v())) {
       return N::n0();
     } else {
-      const auto &[sz0, t0] = std::get<typename ty::TA>(t.v());
+      const auto &[_, t0] = std::get<typename ty::TA>(t.v());
       return _tcI0::size_of(*t0);
     }
   }

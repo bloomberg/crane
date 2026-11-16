@@ -28,7 +28,7 @@ InnerFixCapturesInd::len(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
       if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename InnerFixCapturesInd::lst::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
@@ -73,7 +73,7 @@ InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
       if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename InnerFixCapturesInd::lst::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{a1});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
@@ -91,7 +91,7 @@ InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
                         typename InnerFixCapturesInd::lst::Nil>(_loop_m->v())) {
                   return _loop_a;
                 } else {
-                  const auto &[a2, a3] =
+                  const auto &[_, a3] =
                       std::get<typename InnerFixCapturesInd::lst::Cons>(
                           _loop_m->v());
                   _loop_a = (_loop_a + len(*a1));

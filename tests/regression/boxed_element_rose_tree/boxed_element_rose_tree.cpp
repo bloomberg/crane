@@ -5,7 +5,7 @@
 /// where it recurses through the container, so list rose is
 /// crane::list<crane::box<rose>> while list nat stays unboxed.
 uint64_t BoxedElementRoseTree::size(const BoxedElementRoseTree::rose &r) {
-  const auto &[n, kids] =
+  const auto &[_, kids] =
       std::get<typename BoxedElementRoseTree::rose::Node>(r.v());
   return ([&]() {
     auto go_impl =
@@ -59,7 +59,7 @@ BoxedElementRoseTree::labels(const BoxedElementRoseTree::rose &r) {
   return crane::cons(
       n0, ListDef::template map<BoxedElementRoseTree::rose, uint64_t>(
               [](const BoxedElementRoseTree::rose &k) {
-                const auto &[n1, kids0] =
+                const auto &[n1, _] =
                     std::get<typename BoxedElementRoseTree::rose::Node>(k.v());
                 return n1;
               },

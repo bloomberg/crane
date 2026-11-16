@@ -124,7 +124,7 @@ struct ReuseLambdaCapture {
         UINT64_C(5), mylist::mycons(UINT64_C(6), mylist::mynil())),
                                     true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
-      const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
+      const auto &[a0, _] = std::get<typename mylist::Mycons>(_sv.v());
       return a0;
     } else {
       return UINT64_C(999);

@@ -56,7 +56,7 @@ uint64_t LetFixNestedClone::count_nested(const List<List<uint64_t>> &ll) {
                     _loop_ys->v())) {
               return _loop_n;
             } else {
-              const auto &[a00, a10] =
+              const auto &[_, a10] =
                   std::get<typename List<uint64_t>::Cons>(_loop_ys->v());
               _loop_n = (UINT64_C(1) + _loop_n);
               _loop_ys = crane_raw(a10);

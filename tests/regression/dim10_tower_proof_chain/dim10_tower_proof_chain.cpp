@@ -100,7 +100,7 @@ SigT<uint64_t,
      crane::obj> Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     uint64_t base_dim) {
   auto e = D_n_measure_eventually_zero(base_dim);
-  auto &[x0, a1] = e;
+  auto &[x0, _] = e;
   return SigT<uint64_t, crane::obj>::existt(std::move(x0), crane::obj());
 }
 

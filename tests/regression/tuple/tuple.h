@@ -107,12 +107,12 @@ struct Tuple {
   }
 
   template <typename T1, typename T2> static T1 fst(Prod<T1, T2> p) {
-    auto &[a0, a1] = p;
+    auto &[a0, _] = p;
     return std::move(a0);
   }
 
   template <typename T1, typename T2> static T2 snd(Prod<T1, T2> p) {
-    auto &[a0, a1] = p;
+    auto &[_, a1] = p;
     return std::move(a1);
   }
 

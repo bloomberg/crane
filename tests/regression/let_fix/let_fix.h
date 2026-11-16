@@ -120,7 +120,7 @@ struct LetFix {
     if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
+      const auto &[_, a1] = std::get<typename List<T1>::Cons>(xs.v());
       return (local_length<T1>(*a1) + 1);
     }
   }

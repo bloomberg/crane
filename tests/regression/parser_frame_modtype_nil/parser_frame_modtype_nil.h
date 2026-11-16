@@ -67,7 +67,7 @@ template <SymbolTypes Ty> struct DefsFn {
     } else {
       const auto &f = frs.front();
       std::deque<frame> frs_(frs.begin()+1, frs.end());
-      const auto &[pre, sem, suf0] = f;
+      const auto &[_, _, suf0] = f;
       return (static_cast<uint64_t>(suf0.size()) + tail_lengths(frs_));
     }
   }
@@ -83,7 +83,7 @@ template <T D> struct ParserFn {
   step_stack(const std::pair<typename D::Defs::frame,
                              std::deque<typename D::Defs::frame>> &s) {
     const auto &[f, frs] = s;
-    const auto &[pre, sem, suf0] = f;
+    const auto &[_, _, suf0] = f;
     return (static_cast<uint64_t>(suf0.size()) + D::Defs::tail_lengths(frs));
   }
 

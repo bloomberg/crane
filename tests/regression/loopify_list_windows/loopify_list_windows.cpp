@@ -25,7 +25,7 @@ LoopifyListWindows::len(const List<uint64_t> &l) { /// CraneEnter: captures
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -79,7 +79,7 @@ List<uint64_t> LoopifyListWindows::drop(uint64_t m, const List<uint64_t> &xs) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
         return List<uint64_t>::nil();
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
         _loop_xs = crane_raw(a1);
         _loop_m = m_;
@@ -163,7 +163,7 @@ List<uint64_t> LoopifyListWindows::differences(const List<uint64_t> &l) {
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a01, a11] =
+          const auto &[a01, _] =
               std::get<typename List<uint64_t>::Cons>(_sv1.v());
           auto _cell = typename List<uint64_t>::Cons(
               (((a01 - a0) > a01 ? 0 : (a01 - a0))), nullptr);
@@ -215,7 +215,7 @@ LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a01, a11] =
+          const auto &[a01, _] =
               std::get<typename List<uint64_t>::Cons>(_sv1.v());
           auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
               std::make_pair(a0, a01), nullptr);
@@ -293,7 +293,7 @@ List<List<uint64_t>> LoopifyListWindows::tails(const List<uint64_t> &l) {
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _cell = typename List<List<uint64_t>>::Cons(*_loop_l, nullptr);
       List<List<uint64_t>> &_node =
@@ -367,7 +367,7 @@ List<List<uint64_t>> LoopifyListWindows::windows_fuel(uint64_t fuel, uint64_t n,
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (len(*_loop_l) < n) {
           auto _value = List<List<uint64_t>>::nil();

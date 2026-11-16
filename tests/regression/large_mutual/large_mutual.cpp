@@ -39,7 +39,7 @@ uint64_t LargeMutual::bexpr_size(const LargeMutual::bexpr &b) {
 
 uint64_t LargeMutual::stmt_size(const LargeMutual::stmt &s) {
   if (std::holds_alternative<typename LargeMutual::stmt::SAssign>(s.v())) {
-    const auto &[a0, a1] = std::get<typename LargeMutual::stmt::SAssign>(s.v());
+    const auto &[_, a1] = std::get<typename LargeMutual::stmt::SAssign>(s.v());
     return (expr_size(*a1) + 1);
   } else if (std::holds_alternative<typename LargeMutual::stmt::SSeq>(s.v())) {
     const auto &[a0, a1] = std::get<typename LargeMutual::stmt::SSeq>(s.v());

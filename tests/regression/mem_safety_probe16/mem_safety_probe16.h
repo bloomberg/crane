@@ -431,8 +431,7 @@ struct MemSafetyProbe16 {
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
+            const auto &[_, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
             _stack.emplace_back(CraneCont_Mycons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }

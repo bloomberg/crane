@@ -129,7 +129,7 @@ struct List {
           if (std::holds_alternative<typename List::list<A>::Nil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
+            const auto &[_, a1] =
                 std::get<typename List::list<A>::Cons>(_sv.v());
             _stack.emplace_back(CraneCont_Cons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});

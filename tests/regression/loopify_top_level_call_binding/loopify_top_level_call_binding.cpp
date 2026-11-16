@@ -11,14 +11,14 @@
 /// rerouted call was left naming the entry, which is no function.
 uint64_t
 LoopifyTopLevelCallBinding::key(const LoopifyTopLevelCallBinding::cell &c) {
-  const auto &[key1, kids0] =
+  const auto &[key1, _] =
       std::get<typename LoopifyTopLevelCallBinding::cell::MkCell>(c.v());
   return key1;
 }
 
 List<LoopifyTopLevelCallBinding::cell>
 LoopifyTopLevelCallBinding::kids(const LoopifyTopLevelCallBinding::cell &c) {
-  const auto &[key0, kids1] =
+  const auto &[_, kids1] =
       std::get<typename LoopifyTopLevelCallBinding::cell::MkCell>(c.v());
   return *kids1;
 }

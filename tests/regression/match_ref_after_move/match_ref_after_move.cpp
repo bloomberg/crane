@@ -69,7 +69,7 @@ MatchRefAfterMove::double_match(const MatchRefAfterMove::mylist<uint64_t> &l) {
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
       return a0;
     }
@@ -79,7 +79,7 @@ MatchRefAfterMove::double_match(const MatchRefAfterMove::mylist<uint64_t> &l) {
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
       return mylist<uint64_t>::mynil();
     } else {
-      const auto &[a00, a10] =
+      const auto &[_, a10] =
           std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
       return *a10;
     }
@@ -113,7 +113,7 @@ uint64_t MatchRefAfterMove::complex_match(
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(a0.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00, a10] = std::get<
+      const auto &[a00, _] = std::get<
           typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(a0.v());
       return a00;
     }

@@ -37,7 +37,7 @@ uint64_t FixFoldEscape::apply_head(const List<crane::fn<uint64_t(uint64_t)>> &l,
           l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename List<crane::fn<uint64_t(uint64_t)>>::Cons>(l.v());
     return a0(x);
   }

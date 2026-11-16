@@ -126,12 +126,12 @@ struct BoxedFields {
     static point pt(uint64_t a0, uint64_t a1) { return {a0, a1}; }
 
     uint64_t py() const {
-      const auto &[a0, a1] = *this;
+      const auto &[_, a1] = *this;
       return a1;
     }
 
     uint64_t px() const {
-      const auto &[a0, a1] = *this;
+      const auto &[a0, _] = *this;
       return a0;
     }
 
@@ -494,12 +494,12 @@ struct BoxedFields {
     static tagged<A> tag(uint64_t a0, A a1) { return {a0, std::move(a1)}; }
 
     uint64_t tag_of() const {
-      const auto &[a0, a1] = *this;
+      const auto &[a0, _] = *this;
       return a0;
     }
 
     A untag() const {
-      const auto &[a0, a1] = *this;
+      const auto &[_, a1] = *this;
       return crane::unbox(a1);
     }
 

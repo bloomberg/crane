@@ -111,7 +111,7 @@ struct FixLetBinderSelfReference {
             if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
               return UINT64_C(0);
             } else {
-              auto &[a0, a1] =
+              auto &[_, a1] =
                   std::get<typename List<uint64_t>::Cons>(l.v_mut());
               return h0(*a1);
             }

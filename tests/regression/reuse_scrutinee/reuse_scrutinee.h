@@ -133,7 +133,7 @@ struct ReuseScrutinee {
     if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
       return tree::leaf();
     } else {
-      auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v_mut());
+      auto &[_, _, a2] = std::get<typename tree::Node>(t.v_mut());
       return tree::node(tree::leaf(), subtree_sum(t), *a2);
     }
   }();

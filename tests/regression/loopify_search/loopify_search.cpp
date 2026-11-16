@@ -199,7 +199,7 @@ LoopifySearch::longest_increasing_subseq(const List<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 < a00) {
           auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -229,7 +229,7 @@ uint64_t LoopifySearch::nth_impl(uint64_t n, const List<uint64_t> &l) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
+        const auto &[a0, _] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         return std::move(a0);
       }
@@ -238,7 +238,7 @@ uint64_t LoopifySearch::nth_impl(uint64_t n, const List<uint64_t> &l) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a00, a10] =
+        const auto &[_, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a10);
         _loop_n = m;
@@ -297,7 +297,7 @@ List<uint64_t> LoopifySearch::drop_impl(uint64_t k, const List<uint64_t> &l) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         return List<uint64_t>::nil();
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a1);
         _loop_k = m;
@@ -372,7 +372,7 @@ List<uint64_t> LoopifySearch::longest_run_aux(List<uint64_t> current_run,
           return new_run;
         }
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 == a00) {
           _loop_l = crane_raw(a1);
@@ -952,7 +952,7 @@ LoopifySearch::merge_sort_fuel(uint64_t fuel,
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(l);

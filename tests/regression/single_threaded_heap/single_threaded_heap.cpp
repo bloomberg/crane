@@ -19,7 +19,7 @@ uint64_t SingleThreadedHeap::size(const SingleThreadedHeap::tree &t) {
   if (crane::holds_alternative<typename SingleThreadedHeap::tree::Leaf>(t.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         crane::get<typename SingleThreadedHeap::tree::Node>(t.v());
     return ((UINT64_C(1) + size(*a0)) + size(*a2));
   }

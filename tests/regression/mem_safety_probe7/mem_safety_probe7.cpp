@@ -65,7 +65,7 @@ MemSafetyProbe7::build_len_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
               _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
@@ -153,7 +153,7 @@ MemSafetyProbe7::build_sum_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(
               _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;

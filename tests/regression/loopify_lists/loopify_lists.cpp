@@ -530,7 +530,7 @@ LoopifyLists::uniq_sorted(const LoopifyLists::list<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
         if (a0 == a00) {
           _loop_l = crane_raw(a1);
@@ -630,7 +630,7 @@ LoopifyLists::len_list(const LoopifyLists::list<uint64_t> &l) { /// CraneEnter:
               l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
@@ -671,7 +671,7 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
         if (len_list(*_loop_l) < n) {
           auto _value = list<LoopifyLists::list<uint64_t>>::nil();
@@ -1278,7 +1278,7 @@ LoopifyLists::list<LoopifyLists::list<uint64_t>> LoopifyLists::group_fuel(
                 list<uint64_t>::cons(a0, list<uint64_t>::nil()),
                 list<LoopifyLists::list<uint64_t>>::nil());
           } else {
-            const auto &[a00, a10] =
+            const auto &[a00, _] =
                 std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
             if (a0 == a00) {
               _stack.emplace_back(CraneCont1{a0});
@@ -1491,7 +1491,7 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
         if ((UINT64_C(2) ? (a0 + a00) % UINT64_C(2) : (a0 + a00)) ==
             UINT64_C(0)) {
@@ -1683,7 +1683,7 @@ LoopifyLists::drop(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
             _loop_l->v())) {
       return list<uint64_t>::nil();
     } else {
-      const auto &[a0, a1] =
+      const auto &[_, a1] =
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
         return *_loop_l;

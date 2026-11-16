@@ -290,7 +290,7 @@ public:
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
@@ -1225,9 +1225,7 @@ struct CoalitionBidHonorTraceCase {
     std::optional<Commander> get_side_commander(Side side) const {
       if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
               this->v())) {
-        const auto &[challenge, response, attacker_bid, defender_bid,
-                     attacker_coalition0, defender_coalition0, bid_history,
-                     ready] =
+        const auto &[_, _, attacker_bid, defender_bid, _, _, _, _] =
             std::get<typename BatchallPhase::PhaseBidding>(this->v());
         switch (side) {
         case Side::ATTACKER: {
@@ -1247,9 +1245,7 @@ struct CoalitionBidHonorTraceCase {
     uint64_t get_bidding_measure() const {
       if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
               this->v())) {
-        const auto &[challenge, response, attacker_bid, defender_bid,
-                     attacker_coalition0, defender_coalition0, bid_history,
-                     ready0] =
+        const auto &[_, _, attacker_bid, defender_bid, _, _, _, ready0] =
             std::get<typename BatchallPhase::PhaseBidding>(this->v());
         return ((bid_metrics(attacker_bid).fm_total_ecr +
                  bid_metrics(defender_bid).fm_total_ecr) +
@@ -1577,7 +1573,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -1585,7 +1581,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

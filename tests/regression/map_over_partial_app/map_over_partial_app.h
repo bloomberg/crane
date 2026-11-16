@@ -203,7 +203,7 @@ struct MapOverPartialApp {
     if (std::holds_alternative<typename List<crane::fn<Nat(Nat)>>::Nil>(_sv.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename List<crane::fn<Nat(Nat)>>::Cons>(_sv.v());
       return a0(Nat::o());
     }

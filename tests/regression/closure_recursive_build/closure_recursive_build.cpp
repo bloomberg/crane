@@ -35,7 +35,7 @@ ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
           fl.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
     return a0(x);
   }

@@ -120,7 +120,7 @@ public:
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
@@ -165,7 +165,7 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
   P projT2() const {
-    const auto &[x0, a1] = *this;
+    const auto &[_, a1] = *this;
     return a1;
   }
 };

@@ -470,7 +470,7 @@ struct Comp {
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
             _result = Nat::o();
           } else {
-            const auto &[a0, a1, a2, a3, a4] =
+            const auto &[a0, _, _, a3, _] =
                 std::get<typename avl::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{crane_raw(a3)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -496,7 +496,7 @@ struct Comp {
         if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
           return expr::lit(Nat::o());
         } else {
-          const auto &[a0, a1, a2, a3, a4] =
+          const auto &[a0, a1, a2, a3, _] =
               std::get<typename avl::Node>(_sv.v());
           switch (PeanoNat::ltb(k, a1)) {
           case Bool0::TRUE_: {
@@ -638,7 +638,7 @@ struct Comp {
       if (std::holds_alternative<typename avl::Leaf>(r.v())) {
         return this->mk(k, v, r);
       } else {
-        const auto &[a0, a1, a2, a3, a4] = std::get<typename avl::Node>(r.v());
+        const auto &[a0, a1, a2, a3, _] = std::get<typename avl::Node>(r.v());
         return this->mk(k, v, *a0).mk(a1, a2, *a3);
       }
     }
@@ -647,7 +647,7 @@ struct Comp {
       if (std::holds_alternative<typename avl::Leaf>(this->v())) {
         return this->mk(k, v, r);
       } else {
-        const auto &[a0, a1, a2, a3, a4] =
+        const auto &[a0, a1, a2, a3, _] =
             std::get<typename avl::Node>(this->v());
         return a0->mk(a1, a2, a3->mk(k, v, r));
       }
@@ -662,8 +662,7 @@ struct Comp {
       if (std::holds_alternative<typename avl::Leaf>(this->v())) {
         return Nat::o();
       } else {
-        const auto &[a0, a1, a2, a3, a4] =
-            std::get<typename avl::Node>(this->v());
+        const auto &[_, _, _, _, a4] = std::get<typename avl::Node>(this->v());
         return a4;
       }
     }

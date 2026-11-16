@@ -31,12 +31,12 @@ struct ErasedMultiIndex {
     }
 
     template <typename T2> T2 get_val() const {
-      const auto &[k, v_1] = *this;
+      const auto &[_, v_1] = *this;
       return crane_any_cast<T2>(v_1);
     }
 
     template <typename T1> T1 get_key() const {
-      const auto &[k0, v_1] = *this;
+      const auto &[k0, _] = *this;
       return crane_any_cast<T1>(k0);
     }
 
@@ -145,7 +145,7 @@ struct ErasedMultiIndex {
           if (std::holds_alternative<typename hlist::HNil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a, a1] = std::get<typename hlist::HCons>(_sv.v());
+            const auto &[_, a1] = std::get<typename hlist::HCons>(_sv.v());
             _stack.emplace_back(CraneCont_HCons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }

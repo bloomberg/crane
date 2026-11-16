@@ -6,7 +6,7 @@ uint64_t AbsurdUnderProofBinder::hd(const List<uint64_t> &l) {
         UINT64_C(0), UINT64_C(0),
         ([]() -> uint64_t { throw std::logic_error("absurd case"); })());
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     return a0;
   }
 }

@@ -28,7 +28,7 @@ struct FunctorParamCtorField {
     }
 
     static uint64_t depth(const typename D::frame &f) {
-      const auto &[lhs, n0] = f;
+      const auto &[_, n0] = f;
       return n0;
     }
   };

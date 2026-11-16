@@ -22,7 +22,7 @@ Nat CollisionStructConceptNamesInductive::first(const List<Nat> &l) {
   if (std::holds_alternative<typename List<Nat>::Nil>(l.v())) {
     return Nat::o();
   } else {
-    const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<Nat>::Cons>(l.v());
     return a0;
   }
 }

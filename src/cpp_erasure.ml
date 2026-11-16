@@ -899,6 +899,32 @@ let lower_pointer_slots u (d : settled) : settled = Map.decl (pointer_slots u ()
 
 let instantiate_type u t = (pointer_slots u () ()).type_ (instantiated_type ~boxing:true t)
 
+(** {2 Unused bindings} *)
+
+(* A branch whose body and conditions read none of its fields binds none of
+   them, and so binds no alternative either. *)
+let mark_unused_bindings (d : settled) : settled =
+  let branch (b : phase Match.branch) : phase Match.branch =
+    match b.field_bindings with
+    | [] -> b
+    | fields ->
+      let read =
+        List.concat_map Cpp_ir.Variables.free_in_expr b.extra_conditions @ Cpp_ir.Variables.free_in_body b.body
+      in
+      let fields =
+        List.map (fun (fb : phase Match.field_binding) -> {fb with used = Cpp_ir.Variables.mem fb.name read}) fields
+      in
+      if List.exists (fun (fb : phase Match.field_binding) -> fb.used) fields then {b with field_bindings = fields}
+      else {b with field_bindings = []; var = None}
+  in
+  let rec fs (s : stmt) : stmt =
+    match Map.stmt (rw ()) s with
+    | Match (scrut, branches, default) -> Match (scrut, List.map branch branches, default)
+    | s -> s
+  and fe e = Map.expr (rw ()) e
+  and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+  Map.decl (rw ()) d
+
 (** {2 Naming scrutinees} *)
 
 (* The local a match holds its scrutinee in, named after the match's first

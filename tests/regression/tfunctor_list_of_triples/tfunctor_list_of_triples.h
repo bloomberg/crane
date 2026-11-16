@@ -412,7 +412,7 @@ struct TfunctorListOfTriples {
             _sv.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1] = std::get<typename List<
+      const auto &[a0, _] = std::get<typename List<
           std::pair<std::pair<Nat, phi<Nat>>, List<metadata<Nat>>>>::Cons>(
           _sv.v());
       const auto &[p0, _x0] = a0;

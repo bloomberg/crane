@@ -158,7 +158,7 @@ struct ModuleTypeParameterisedInductive {
       if (std::holds_alternative<typename X::template tr<T1>::L>(t.v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename X::template tr<T1>::N>(t.v());
         return ((size<T1>(*a0) + size<T1>(*a2)) + 1);
       }

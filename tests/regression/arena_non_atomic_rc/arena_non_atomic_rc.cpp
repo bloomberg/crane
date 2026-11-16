@@ -7,7 +7,7 @@ Nat ArenaNonAtomicRc::size(const ArenaNonAtomicRc::tree &t) {
   if (std::holds_alternative<typename ArenaNonAtomicRc::tree::Leaf>(t.v())) {
     return Nat::s(Nat::o());
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         std::get<typename ArenaNonAtomicRc::tree::Node>(t.v());
     return Nat::s(Nat::o()).add(size(*a0)).add(size(*a2));
   }

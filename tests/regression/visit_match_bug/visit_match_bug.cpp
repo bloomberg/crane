@@ -8,8 +8,7 @@ uint64_t VisitMatchBug::match_after_consume(VisitMatchBug::Tree t) {
     auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t2.v_mut());
     return std::move(a0);
   } else {
-    auto &[a0, a1, a2] =
-        std::get<typename VisitMatchBug::Tree::Node>(t2.v_mut());
+    auto &[_, a1, _] = std::get<typename VisitMatchBug::Tree::Node>(t2.v_mut());
     return std::move(a1);
   }
 }
@@ -19,7 +18,7 @@ uint64_t VisitMatchBug::match_last_use(const VisitMatchBug::Tree &t) {
     const auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t.v());
     return a0;
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[_, a1, _] =
         std::get<typename VisitMatchBug::Tree::Node>(t.v());
     return a1;
   }
@@ -36,8 +35,7 @@ uint64_t VisitMatchBug::chain_then_match(VisitMatchBug::Tree t1) {
     auto &[a0] = std::get<typename VisitMatchBug::Tree::Leaf>(t3.v_mut());
     return std::move(a0);
   } else {
-    auto &[a0, a1, a2] =
-        std::get<typename VisitMatchBug::Tree::Node>(t3.v_mut());
+    auto &[_, a1, _] = std::get<typename VisitMatchBug::Tree::Node>(t3.v_mut());
     return std::move(a1);
   }
 }

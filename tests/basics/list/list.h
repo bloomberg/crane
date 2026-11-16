@@ -106,7 +106,7 @@ public:
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<A>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      const auto &[_, a1] = std::get<typename List<A>::Cons>(this->v());
       return *a1;
     }
   }
@@ -115,7 +115,7 @@ public:
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return x;
     } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      const auto &[a0, _] = std::get<typename List<A>::Cons>(this->v());
       return a0;
     }
   }

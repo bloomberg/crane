@@ -149,17 +149,17 @@ struct InductiveLetinParams {
     }
 
     List<A> tri_rest() const {
-      const auto &[a0, a1, a2] = *this;
+      const auto &[_, _, a2] = *this;
       return a2;
     }
 
     B tri_second() const {
-      const auto &[a0, a1, a2] = *this;
+      const auto &[_, a1, _] = *this;
       return a1;
     }
 
     A tri_first() const {
-      const auto &[a0, a1, a2] = *this;
+      const auto &[a0, _, _] = *this;
       return a0;
     }
 

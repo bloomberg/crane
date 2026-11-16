@@ -399,7 +399,7 @@ struct TfunctorAliasOfApplied {
             _sv.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename List<definition<Nat, cfg<Nat>>>::Cons>(_sv.v());
       return a0.df_ty.add(a0.df_body.blk);
     }

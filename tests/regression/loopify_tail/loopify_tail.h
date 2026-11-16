@@ -167,7 +167,7 @@ struct LoopifyTail {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         return _loop_acc;
       } else {
-        const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
+        const auto &[_, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         _loop_l = crane_raw(a1);
         _loop_acc = (_loop_acc + 1);
       }

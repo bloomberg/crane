@@ -81,7 +81,7 @@ struct FactoryNameCollision {
       if (std::holds_alternative<typename lst::Nil>(this->v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a0, a1] = std::get<typename lst::Cons>(this->v());
+        const auto &[a0, _] = std::get<typename lst::Cons>(this->v());
         return a0;
       }
     }

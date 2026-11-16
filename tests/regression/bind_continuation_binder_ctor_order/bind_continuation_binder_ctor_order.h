@@ -204,7 +204,7 @@ public:
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
         auto _cell = typename Nat::S(nullptr);
         Nat &_node =
             (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
@@ -411,7 +411,7 @@ bytes_to_dv(const Nat &n, const List<Byte> &bs) {
                   List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
                   List<Dv<typename _tcI0::tag, typename _tcI0::addr>>::nil());
             } else {
-              auto &[a02, a12] = std::get<typename List<Nat>::Cons>(ds.v_mut());
+              auto &[_, a12] = std::get<typename List<Nat>::Cons>(ds.v_mut());
               const List<Nat> &a12_value = *a12;
               return EOU_monad::template bind<
                   Dv<typename _tcI0::tag, typename _tcI0::addr>,

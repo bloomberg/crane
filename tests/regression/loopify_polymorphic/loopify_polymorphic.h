@@ -145,7 +145,7 @@ struct LoopifyPolymorphic {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+          const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
@@ -288,8 +288,7 @@ struct LoopifyPolymorphic {
         if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
           return List<T1>::nil();
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<T1>::Cons>(_loop_l->v());
+          const auto &[_, a1] = std::get<typename List<T1>::Cons>(_loop_l->v());
           _loop_l = crane_raw(a1);
           _loop_n = n_;
         }

@@ -368,7 +368,7 @@ List<uint64_t> LoopifySequences::differences(const List<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         auto _cell = typename List<uint64_t>::Cons(
             (((a00 - a0) > a00 ? 0 : (a00 - a0))), nullptr);
@@ -474,7 +474,7 @@ uint64_t LoopifySequences::first_elem(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     return a0;
   }
 }
@@ -503,7 +503,7 @@ List<uint64_t> LoopifySequences::tail_list(const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return List<uint64_t>::nil();
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     return *a1;
   }
 }
@@ -779,7 +779,7 @@ List<uint64_t> LoopifySequences::lis(const List<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 < a00) {
           auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -967,7 +967,7 @@ LoopifySequences::group_fuel(uint64_t fuel,
                 List<uint64_t>::cons(a0, List<uint64_t>::nil()),
                 List<List<uint64_t>>::nil());
           } else {
-            const auto &[a00, a10] =
+            const auto &[a00, _] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
             if (a0 == a00) {
               _stack.emplace_back(CraneCont1{a0});
@@ -1013,7 +1013,7 @@ uint64_t LoopifySequences::head_or(uint64_t default0, const List<uint64_t> &l) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
     return default0;
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(l.v());
     return a0;
   }
 }

@@ -7,7 +7,7 @@
 /// else, or the module satisfying the module type does not satisfy the
 /// concept: children's result is asked for by std::same_as.
 uint64_t BoxedElementConcept::size(const BoxedElementConcept::rose &r) {
-  const auto &[n, kids] =
+  const auto &[_, kids] =
       std::get<typename BoxedElementConcept::rose::Node>(r.v());
   return ([&]() {
     auto go_impl =
@@ -40,7 +40,7 @@ uint64_t BoxedElementConcept::Forest::count(
 
 crane::list<crane::box<BoxedElementConcept::rose>>
 BoxedElementConcept::Forest::children(const BoxedElementConcept::rose &r) {
-  const auto &[n, kids] =
+  const auto &[_, kids] =
       std::get<typename BoxedElementConcept::rose::Node>(r.v());
   return kids;
 }

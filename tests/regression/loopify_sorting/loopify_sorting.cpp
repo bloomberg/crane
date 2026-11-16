@@ -191,7 +191,7 @@ LoopifySorting::merge_sort_fuel(uint64_t fuel,
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
         } else {
-          const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+          const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto &&_sv = *a1;
           if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
             _result = std::move(l);
@@ -390,7 +390,7 @@ List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
                 : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
         if (a0 == a00) {
           _loop_l = crane_raw(a1);

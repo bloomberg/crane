@@ -363,7 +363,7 @@ public:
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      const auto &[a0, _, a2] = std::get<typename Tree<A>::Node>(this->v());
       return Nat::s(Nat::o()).add(a0->size()).add(a2->size());
     }
   }
@@ -373,7 +373,7 @@ public:
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      const auto &[a0, _, a2] = std::get<typename Tree<A>::Node>(this->v());
       return Nat::s(Nat::o()).add(a0->height().max(a2->height()));
     }
   }
@@ -407,7 +407,7 @@ public:
       if (std::holds_alternative<typename Tree<A>::Leaf>(t2.v())) {
         return Tree<A>::leaf();
       } else {
-        const auto &[a00, a10, a20] = std::get<typename Tree<A>::Node>(t2.v());
+        const auto &[_, a10, _] = std::get<typename Tree<A>::Node>(t2.v());
         return Tree<A>::node(Tree<A>::leaf(), a10, Tree<A>::leaf());
       }
     } else {

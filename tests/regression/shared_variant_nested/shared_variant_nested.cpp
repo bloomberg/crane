@@ -3,7 +3,7 @@
 uint64_t SharedVariantNested::ssize(const SharedVariantNested::stmt &s) {
   if (crane::holds_alternative<typename SharedVariantNested::stmt::Assign>(
           s.v())) {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         crane::get<typename SharedVariantNested::stmt::Assign>(s.v());
     return (UINT64_C(1) + esize(*a1));
   } else if (

@@ -97,7 +97,7 @@ MemSafetyProbe27::tree_depth(const MemSafetyProbe27::tree &t) { /// CraneEnter:
       if (std::holds_alternative<typename MemSafetyProbe27::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename MemSafetyProbe27::tree::Node>(t.v());
         _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
         _stack.emplace_back(CraneEnter{crane_raw(a0)});

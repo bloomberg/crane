@@ -328,12 +328,11 @@ struct LoopifyTrees {
               _result = false;
             }
           } else {
-            const auto &[a0, a1, a2] =
-                std::get<typename tree<A>::Node>(_sv.v());
+            const auto &[a0, _, a2] = std::get<typename tree<A>::Node>(_sv.v());
             if (std::holds_alternative<typename tree<A>::Leaf>(t2.v())) {
               _result = false;
             } else {
-              const auto &[a00, a10, a20] =
+              const auto &[a00, _, a20] =
                   std::get<typename tree<A>::Node>(t2.v());
               _stack.emplace_back(CraneCont_Node{crane_raw(a2),
                                                  crane_raw(a00)});
@@ -454,8 +453,7 @@ struct LoopifyTrees {
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = UINT64_C(1);
           } else {
-            const auto &[a0, a1, a2] =
-                std::get<typename tree<A>::Node>(_sv.v());
+            const auto &[a0, _, a2] = std::get<typename tree<A>::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
@@ -479,7 +477,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
           return default0;
         } else {
-          const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
+          const auto &[_, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a2;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             return std::move(a1);
@@ -498,7 +496,7 @@ struct LoopifyTrees {
         if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
           return default0;
         } else {
-          const auto &[a0, a1, a2] = std::get<typename tree<A>::Node>(_sv.v());
+          const auto &[a0, a1, _] = std::get<typename tree<A>::Node>(_sv.v());
           auto &&_sv = *a0;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             return std::move(a1);
@@ -546,12 +544,11 @@ struct LoopifyTrees {
               _result = false;
             }
           } else {
-            const auto &[a0, a1, a2] =
-                std::get<typename tree<A>::Node>(_sv.v());
+            const auto &[a0, _, a2] = std::get<typename tree<A>::Node>(_sv.v());
             if (std::holds_alternative<typename tree<T1>::Leaf>(t2.v())) {
               _result = false;
             } else {
-              const auto &[a00, a10, a20] =
+              const auto &[a00, _, a20] =
                   std::get<typename tree<T1>::Node>(t2.v());
               _stack.emplace_back(CraneCont_Node{crane_raw(a2),
                                                  crane_raw(a20)});
@@ -668,8 +665,7 @@ struct LoopifyTrees {
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2] =
-                std::get<typename tree<A>::Node>(_sv.v());
+            const auto &[a0, _, a2] = std::get<typename tree<A>::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
@@ -723,8 +719,7 @@ struct LoopifyTrees {
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2] =
-                std::get<typename tree<A>::Node>(_sv.v());
+            const auto &[a0, _, a2] = std::get<typename tree<A>::Node>(_sv.v());
             _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
@@ -950,7 +945,7 @@ struct LoopifyTrees {
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2, a3] =
+            const auto &[a0, a1, a2, _] =
                 std::get<typename ternary::TNode>(_sv.v());
             _stack.emplace_back(CraneCont_TNode{crane_raw(a1), crane_raw(a2)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -1235,7 +1230,7 @@ struct LoopifyTrees {
 
     /// rose_depth t computes the depth of a rose tree.
     uint64_t rose_depth() const {
-      const auto &[a0, a1] = std::get<typename rose::RNode>(this->v());
+      const auto &[_, a1] = std::get<typename rose::RNode>(this->v());
       return (depth_rose_list_fuel(UINT64_C(1000), *a1) + 1);
     }
 

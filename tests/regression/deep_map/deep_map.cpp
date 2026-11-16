@@ -29,7 +29,7 @@ uint64_t DeepMap::root_or_zero(const DeepMap::tree<uint64_t> &t) {
   if (std::holds_alternative<typename DeepMap::tree<uint64_t>::Leaf>(t.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[_, a1, _] =
         std::get<typename DeepMap::tree<uint64_t>::Node>(t.v());
     return a1;
   }

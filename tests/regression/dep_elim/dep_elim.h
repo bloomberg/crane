@@ -335,7 +335,7 @@ struct DepElim {
         return crane::any_cast<vec<crane::obj>>(
             ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
-        const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
+        const auto &[_, _, a2] = std::get<typename vec<A>::Vcons>(this->v());
         return *a2;
       }
     }
@@ -345,7 +345,7 @@ struct DepElim {
         return crane_any_cast<A>(
             ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
-        const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
+        const auto &[_, a1, _] = std::get<typename vec<A>::Vcons>(this->v());
         return a1;
       }
     }
@@ -389,7 +389,7 @@ struct DepElim {
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(_sv.v());
+          const auto &[_, a1, a2] = std::get<typename vec<A>::Vcons>(_sv.v());
           auto _cell = typename List<A>::Cons(a1, nullptr);
           List<A> &_node =
               (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))

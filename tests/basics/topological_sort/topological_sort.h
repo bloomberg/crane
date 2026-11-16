@@ -328,7 +328,7 @@ public:
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _stack.emplace_back(CraneCont_Cons{});
           _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
@@ -546,7 +546,7 @@ struct TopologicalSort {
         if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
           return elem;
         } else {
-          auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+          auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v_mut());
           return cycle_entry_aux<T1>(eqb_node, graph0,
                                      List<T1>::cons(std::move(elem), seens),
                                      std::move(a0), c);
@@ -562,7 +562,7 @@ struct TopologicalSort {
             graph0.v())) {
       return std::optional<T1>();
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename List<std::pair<T1, List<T1>>>::Cons>(graph0.v());
       const auto &[e, _x0] = a0;
       return std::make_optional<T1>(cycle_entry_aux<T1>(

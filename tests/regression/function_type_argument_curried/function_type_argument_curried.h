@@ -164,7 +164,7 @@ struct FunctionTypeArgumentCurried {
             _sv.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename List<crane::fn<uint64_t(uint64_t,
                                                     uint64_t)>>::Cons>(_sv.v());
       return a0(UINT64_C(3), UINT64_C(4));

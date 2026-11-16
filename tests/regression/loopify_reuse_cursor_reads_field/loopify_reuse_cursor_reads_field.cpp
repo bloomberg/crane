@@ -26,7 +26,7 @@ uint64_t LoopifyReuseCursorReadsField::len(
               typename LoopifyReuseCursorReadsField::lst::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
+        const auto &[_, a1] =
             std::get<typename LoopifyReuseCursorReadsField::lst::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});

@@ -533,7 +533,7 @@ struct ReuseListShapes {
                                                              _sv.v())) {
                                                        return UINT64_C(0);
                                                      } else {
-                                                       const auto &[a0, a1] =
+                                                       const auto &[a0, _] =
                                                            crane::get<
                                                                typename frames::Push>(
                                                                _sv.v());

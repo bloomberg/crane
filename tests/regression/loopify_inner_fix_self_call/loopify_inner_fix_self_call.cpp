@@ -49,7 +49,7 @@ LoopifyInnerFixSelfCall::size(const LoopifyInnerFixSelfCall::tree &t) { /// Cran
               t.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
+        const auto &[a0, _, a2] =
             std::get<typename LoopifyInnerFixSelfCall::tree::Node>(t.v());
         _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
         _stack.emplace_back(CraneEnter{crane_raw(a0)});

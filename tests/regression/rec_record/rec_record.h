@@ -119,7 +119,7 @@ struct RecRecord {
           if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
+            const auto &[_, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
             _stack.emplace_back(CraneCont_Rcons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
@@ -252,14 +252,12 @@ struct RecRecord {
     }
 
     std::optional<RNode> rn_next() const {
-      const auto &[rn_value0, rn_next1] =
-          std::get<typename RNode::MkRNode>(this->v());
+      const auto &[_, rn_next1] = std::get<typename RNode::MkRNode>(this->v());
       return *rn_next1;
     }
 
     uint64_t rn_value() const {
-      const auto &[rn_value1, rn_next0] =
-          std::get<typename RNode::MkRNode>(this->v());
+      const auto &[rn_value1, _] = std::get<typename RNode::MkRNode>(this->v());
       return rn_value1;
     }
 

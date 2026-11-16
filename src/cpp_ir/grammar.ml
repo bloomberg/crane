@@ -549,7 +549,7 @@ and Match : sig
     type_ : 'p Type.t;
     used : bool;
         (** whether the branch body reads the binding; one it does not is
-            written [[[maybe_unused]]] *)
+            written as the placeholder [_] *)
     binder : Core_binder.t option;
   }
 
