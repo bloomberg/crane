@@ -349,7 +349,7 @@ val resolved_is_qualified : resolved -> bool
     Each of these is a function of the visibility it is given and the naming
     tables, so it answers the same wherever it is asked.  No visibility is
     installed anywhere: whoever names something says where it is written
-    ({!Cpp_state.render_ctx.rc_visibility}). *)
+    ({!Cpp_state.render_ctx.visibility}). *)
 
 (** The name of a reference written where the visibility is, using the
     kernel name key to find its defining module. *)

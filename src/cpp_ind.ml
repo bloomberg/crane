@@ -142,7 +142,7 @@ type header_scope = {
 }
 
 (* The header scope the position [ctx] is in. *)
-let scope_at (ctx : render_ctx) = {in_struct = ctx.rc_in_struct; concepts_hoisted = ctx.rc_concepts_hoisted}
+let scope_at (ctx : render_ctx) = {in_struct = ctx.in_struct; concepts_hoisted = ctx.concepts_hoisted}
 
 (** Render inductive type header (.h file).
     TypeClasses become C++ concepts, Records become structs,
@@ -1288,9 +1288,9 @@ let planned_header_scope mp =
 let header_element_position mp =
   let {in_struct; concepts_hoisted} = planned_header_scope mp in
   { (file_start Intf) with
-    rc_in_struct = in_struct;
-    rc_concepts_hoisted = concepts_hoisted;
-    rc_in_template = Scope_plan.templated mp }
+    in_struct = in_struct;
+    concepts_hoisted = concepts_hoisted;
+    in_template = Scope_plan.templated mp }
 
 type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
@@ -1331,10 +1331,10 @@ let planned_visibility mp =
 (* The position a declaration spelled [spelling] is written at in [file],
    a function of the plan alone: nothing installed around it reaches it. *)
 let spelling_position ~file spelling =
-  let element mp c = {c with rc_module = Some mp; rc_visibility = Some (planned_visibility mp)} in
+  let element mp c = {c with module_ = Some mp; visibility = Some (planned_visibility mp)} in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
   | Intf, Element_of mp -> element mp (header_element_position mp)
-  | Intf, Member_of mp -> element mp {(header_element_position mp) with rc_in_struct = true}
+  | Intf, Member_of mp -> element mp {(header_element_position mp) with in_struct = true}
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)

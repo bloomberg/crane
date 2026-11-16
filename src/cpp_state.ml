@@ -451,15 +451,15 @@ type holder_argument = Captured_variable of int * Names.Id.t option | Captured_i
     its own, where it is spelled as a template template argument
     ({!Cpp_leaf_plan.ctor_alias_at}). *)
 type ctor_alias = {
-  ca_base : string;  (** What its name is made from. *)
-  ca_holder : holder_parameter list option;
-  ca_declared : declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
-  ca_body : string;
+  base : string;  (** What its name is made from. *)
+  holder : holder_parameter list option;
+  declared : declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
+  body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
-  ca_type : Cpp_ir.Resolved.Type.t;  (** That type. *)
-  ca_vars : Id.t list;  (** The names of the variables it names by index. *)
-  ca_uses : tyctor_use list;  (** How its body writes the type constructors in it. *)
+  type_ : Cpp_ir.Resolved.Type.t;  (** That type. *)
+  vars : Id.t list;  (** The names of the variables it names by index. *)
+  uses : tyctor_use list;  (** How its body writes the type constructors in it. *)
 }
 
 (** How a type constructor written as a template template argument is
@@ -468,10 +468,20 @@ type ctor_alias = {
     with the arguments a holder is applied to, if it has no template name
     of its own ({!Cpp_leaf_plan.ctor_alias_at}). *)
 and tyctor_use = {
-  tu_constructor : Cpp_ir.Resolved.Type.t;
-  tu_vars : Id.t list;
-  tu_alias : (ctor_alias * holder_argument list) option;
+  constructor : Cpp_ir.Resolved.Type.t;
+  vars : Id.t list;
+  alias : (ctor_alias * holder_argument list) option;
 }
+
+(** The out-of-line definition being written: the scope it is a member
+    of, and the promoted type variables whose alias its file declares at
+    file scope. *)
+module Out_of_line = struct
+  type t = {
+    scope : Scope_plan.scope;
+    file_scope_aliases : Id.Set.t;
+  }
+end
 
 (** What the names written at a position are read off: nothing, where
     naming anything is an anomaly; the program, where the resolver names
@@ -485,11 +495,11 @@ type naming = No_names | Naming_live of live_namers | Names_resolved of Cpp_reso
    answers any key: what the naming functions shared with the printer call
    where the resolver uses them. *)
 and live_namers = {
-  live_key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
-  live_global : render_ctx -> Common.kind -> GlobRef.t -> Cpp_name.t;
-  live_inline : GlobRef.t -> string option;
-  live_head : render_ctx -> Cpp_resolution.head_form -> GlobRef.t -> Cpp_resolution.head;
-  live_value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
+  key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
+  global : render_ctx -> Common.kind -> GlobRef.t -> Cpp_name.t;
+  inline : GlobRef.t -> string option;
+  head : render_ctx -> Cpp_resolution.head_form -> GlobRef.t -> Cpp_resolution.head;
+  value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
 }
 
 (** Where the type printer reads how a type constructor is written: nowhere,
@@ -505,92 +515,86 @@ and tyctor_decision = {
   noted : tyctor_use list ref;
 }
 
-(** The out-of-line definition being written: the scope it is a member
-    of, and the promoted type variables whose alias its file declares at
-    file scope. *)
-and out_of_line = {
-  ol_scope : Scope_plan.scope;
-  ol_file_scope_aliases : Id.Set.t;
-}
-
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered.  No
     position is installed anywhere for a reader to find. *)
 and render_ctx = {
   (* The file being written. *)
-  rc_file : Common.file;
+  file : Common.file;
   (* Inside a struct body? Affects qualification of nested type references. *)
-  rc_in_struct : bool;
+  in_struct : bool;
   (* Type_class concepts already emitted for the current module? *)
-  rc_concepts_hoisted : bool;
+  concepts_hoisted : bool;
   (* The out-of-line definition being printed, if one is: the struct it is
      a member of, which a name written outside that struct's body is
      qualified by, and the type names its file declares at file scope.  Set
      by the definition, from the plans. *)
-  rc_scope : out_of_line option;
+  scope : Out_of_line.t option;
   (* Inside a template struct (functor)? Affects typename keyword insertion. *)
-  rc_in_template : bool;
+  in_template : bool;
   (* The module whose element is being written, if one is: said by whatever
      writes or plans it, from the module it is an element of. *)
-  rc_module : Names.ModPath.t option;
+  module_ : Names.ModPath.t option;
   (* The scopes printing the declaration being written has entered inside
      the one it is written in, innermost first ({!Cpp_names.enter}). *)
-  rc_frame : Cpp_resolution.frame;
+  frame : Cpp_resolution.frame;
   (* What the names written here are read off. *)
-  rc_names : naming;
+  names : naming;
   (* The scopes whose names are visible where the declaration being written
      is written, innermost first: its planned visibility; none where nothing
      planned it, where nothing may be named.  The layers of the scopes
      entered inside it are added where the resolver reads it
      ({!Cpp_names.visibility_at}). *)
-  rc_visibility : Common.visibility option;
+  visibility : Common.visibility option;
   (* Where the synthesised templates spelled from here are collected, if
      anything collects them. *)
-  rc_aliases : ctor_alias list ref option;
+  aliases : ctor_alias list ref option;
   (* How the type constructors written from here are written. *)
-  rc_tyctors : tyctor_plan;
+  tyctors : tyctor_plan;
 }
 
 (** The context at the start of the file [file]: file scope, outside every
     struct. *)
-let file_start rc_file =
+let file_start file =
   {
-    rc_file;
-    rc_in_struct = false;
-    rc_concepts_hoisted = false;
-    rc_scope = None;
-    rc_in_template = false;
-    rc_module = None;
-    rc_frame = [];
-    rc_names = No_names;
-    rc_visibility = None;
-    rc_aliases = None;
-    rc_tyctors = Unplanned;
+    file;
+    in_struct = false;
+    concepts_hoisted = false;
+    scope = None;
+    in_template = false;
+    module_ = None;
+    frame = [];
+    names = No_names;
+    visibility = None;
+    aliases = None;
+    tyctors = Unplanned;
   }
 
 (** What a file declares at file scope: the types, by the entity each
     declaration declares, and the promoted type variables among them, by
     the name of their alias. *)
-type file_scope = {
-  fs_types : GlobRef.Set.t;
-  fs_aliases : Id.Set.t;
-}
+module File_scope = struct
+  type t = {
+    types : GlobRef.Set.t;
+    aliases : Id.Set.t;
+  }
+end
 
 (* What the header declares at file scope: the types (an erased type-class
    field's [using], a wrapper, a struct), and among them the promoted type
    variables' aliases.  A definition written out of line qualifies the plain
    names in its signature with its struct's, which is right for a member and
    wrong for one of these aliases. *)
-let header_file_scope : file_scope option ref = State.cell State.Unit None
+let header_file_scope : File_scope.t option ref = State.cell State.Unit None
 
 let file_scope_types_of file =
   match (file, !header_file_scope) with
-  | Common.Intf, Some fs -> fs.fs_types
+  | Common.Intf, Some fs -> fs.types
   | (Common.Intf | Common.Impl), _ -> GlobRef.Set.empty
 
 let file_scope_aliases_of file =
   match (file, !header_file_scope) with
-  | Common.Intf, Some fs -> fs.fs_aliases
+  | Common.Intf, Some fs -> fs.aliases
   | (Common.Intf | Common.Impl), _ -> Id.Set.empty
 
 (** The modules whose module types are file-scope concepts of a functor
@@ -652,15 +656,15 @@ let planned_held_back ~file mp =
   | Impl -> []
 
 let concept_held_back ctx c =
-  ctx.rc_in_struct
-  && match ctx.rc_module with Some mp -> is_held_back_in (planned_held_back ~file:ctx.rc_file mp) c | None -> false
+  ctx.in_struct
+  && match ctx.module_ with Some mp -> is_held_back_in (planned_held_back ~file:ctx.file mp) c | None -> false
 
 let class_concept_held_back ctx r = concept_held_back ctx (Class r)
 
 let element_position mp c =
-  if c.rc_frame <> [] then
+  if c.frame <> [] then
     CErrors.anomaly (Pp.str "Crane: a module's element is written inside a scope a declaration entered.");
-  {c with rc_module = Some mp; rc_visibility = Scope_plan.visibility mp}
+  {c with module_ = Some mp; visibility = Scope_plan.visibility mp}
 
 (** The globals the unit's function bodies name, planned from the unit's
     installed declarations before either file is rendered ({!Cpp.plan_function_reads}):

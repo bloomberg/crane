@@ -171,14 +171,14 @@ val note_file_scope_type : Cpp_state.render_ctx -> decl -> unit
     template, or a holder -- a struct over the enclosing declaration's
     parameters the body names, with the alias as its member [c]. *)
 type ctor_alias = Cpp_state.ctor_alias = {
-  ca_base : string;  (** What its name is made from. *)
-  ca_holder : Cpp_state.holder_parameter list option;  (** A holder's parameters. *)
-  ca_declared : Cpp_ast.declared_in;  (** Where it is declared. *)
-  ca_body : string;
+  base : string;  (** What its name is made from. *)
+  holder : Cpp_state.holder_parameter list option;  (** A holder's parameters. *)
+  declared : Cpp_ast.declared_in;  (** Where it is declared. *)
+  body : string;
       (** The type it abbreviates, as written where it is declared. *)
-  ca_type : ty;  (** That type. *)
-  ca_vars : Id.t list;  (** The names of the variables it names by index. *)
-  ca_uses : Cpp_state.tyctor_use list;  (** How its body writes the type constructors in it. *)
+  type_ : ty;  (** That type. *)
+  vars : Id.t list;  (** The names of the variables it names by index. *)
+  uses : Cpp_state.tyctor_use list;  (** How its body writes the type constructors in it. *)
 }
 
 (** The name of a template, a function of its body. *)

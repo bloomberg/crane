@@ -436,26 +436,26 @@ let () =
   let start = Cpp_state.file_start Common.Intf in
   let s = Cpp_names.next Cpp_resolution.In_struct start in
   check "entering a struct's body is in a struct, at a frame one deeper"
-    (s.rc_in_struct && (not s.rc_in_template) && s.rc_frame = [Cpp_resolution.In_struct]);
+    (s.in_struct && (not s.in_template) && s.frame = [Cpp_resolution.In_struct]);
   let t = Cpp_names.next Cpp_resolution.In_template s in
   check "entering a class template's body keeps what was entered, innermost first"
-    (t.rc_in_struct && t.rc_in_template && t.rc_frame = [Cpp_resolution.In_template; In_struct]);
+    (t.in_struct && t.in_template && t.frame = [Cpp_resolution.In_template; In_struct]);
   let signature = Cpp_resolution.Signature {signature = m; parameters = []} in
   let g = Cpp_names.next signature start in
   check "entering a signature where nothing planned what is visible changes only the frame"
-    ({g with rc_frame = []} = start && g.rc_frame = [signature]);
+    ({g with frame = []} = start && g.frame = [signature]);
   let visible = Common.toplevel_visibility [ModPath.MPfile (DirPath.make [Id.of_string "F"])] in
-  let planned = Cpp_names.next signature {start with rc_visibility = Some visible} in
+  let planned = Cpp_names.next signature {start with visibility = Some visible} in
   check "entering a signature makes what it declares visible where the resolver reads it"
     (Common.equal_visibility (Cpp_names.visibility_at planned (Pp.mt ())) (Common.inside m [] visible));
   check "entering a signature keeps the visibility of where the declaration is written"
-    (Option.equal Common.equal_visibility planned.rc_visibility (Some visible));
+    (Option.equal Common.equal_visibility planned.visibility (Some visible));
   let scope = Some {Scope_plan.module_ = m; qualifier = ["M"]} in
   let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) s in
-  check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.rc_scope = None);
+  check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.scope = None);
   let o = Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) start in
   check "a function defined outside every struct body is a member of the scope its frame carries"
-    (match o.rc_scope with Some {ol_scope; _} ->
-      Scope_plan.equal ol_scope {module_ = m; qualifier = ["M"]} | None -> false);
+    (match o.scope with Some {scope; _} ->
+      Scope_plan.equal scope {module_ = m; qualifier = ["M"]} | None -> false);
   check "entering scopes one after another is entering each in turn"
     (Cpp_names.entering_from start [In_struct; In_template] Fun.id = t)

@@ -509,7 +509,7 @@ let is_held_back_assertion ctx d =
 
 (* {!declaration_names_into_a_struct}, its names as [names] resolved them. *)
 let resolved_names_into_a_struct ctx names (d : Cpp_ir.Resolved.Decl.t) =
-  declaration_names_into_a_struct {ctx with rc_names = Names_resolved names} d
+  declaration_names_into_a_struct {ctx with names = Names_resolved names} d
 
 (** What a file writes that places the templates it writes: a declaration,
     or the fields of the eponymous record merged into a module's struct,
@@ -542,11 +542,13 @@ end)
     render reads it back, the synthesised templates it writes, in the
     order written, and how it writes each type constructor it writes as a
     template template argument. *)
-type ctor_aliases_read = {
-  read_written : Written.key;
-  read_aliases : ctor_alias list;
-  read_uses : tyctor_use list;
-}
+module Ctor_aliases_read = struct
+  type t = {
+    written : Written.key;
+    aliases : ctor_alias list;
+    uses : tyctor_use list;
+  }
+end
 
 (** The synthesised templates each file writes, planned before either is
     rendered ({!Cpp.plan_ctor_aliases}): each file's, in the order it first
@@ -573,10 +575,10 @@ let plan_ctor_aliases written =
     let writes = Written.create 64 in
     List.iter
       (fun r ->
-        if not (Written.mem writes r.read_written) then
-          Written.add writes r.read_written (r.read_aliases, r.read_uses) )
+        if not (Written.mem writes r.Ctor_aliases_read.written) then
+          Written.add writes r.written (r.aliases, r.uses) )
       reads;
-    (dedup (List.concat_map (fun r -> r.read_aliases) reads), writes)
+    (dedup (List.concat_map (fun (r : Ctor_aliases_read.t) -> r.aliases) reads), writes)
   in
   let intf, intf_writes = planned Common.Intf in
   let impl, impl_writes = planned Common.Impl in
@@ -585,13 +587,13 @@ let plan_ctor_aliases written =
 (** The declaration of the template [a], printed where the tree puts it as
     declared where it is ({!Cpp_ast.Template_in}). *)
 let ctor_alias_declaration a =
-  Cpp_ast.synthesised_template ~tyctors:a.ca_uses
+  Cpp_ast.synthesised_template ~tyctors:a.uses
     { name = ctor_alias_name a;
-      holder = a.ca_holder;
-      declared_in = a.ca_declared;
-      body = a.ca_type;
-      vars = a.ca_vars;
-      planned = a.ca_body }
+      holder = a.holder;
+      declared_in = a.declared;
+      body = a.type_;
+      vars = a.vars;
+      planned = a.body }
 
 (** The templates the file [file] declares, each once, in the order planned:
     the aliases it writes, and, in the header, every holder the unit writes.
@@ -604,8 +606,8 @@ let ctor_aliases_declared_in ~file =
   let declared =
     match (!ctor_alias_plan, file) with
     | None, _ -> []
-    | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> Option.has_some a.ca_holder) plan.impl
-    | Some plan, Common.Impl -> List.filter (fun a -> Option.is_empty a.ca_holder) plan.impl
+    | Some plan, Common.Intf -> plan.intf @ List.filter (fun a -> Option.has_some a.holder) plan.impl
+    | Some plan, Common.Impl -> List.filter (fun a -> Option.is_empty a.holder) plan.impl
   in
   List.fold_left
     (fun acc a ->
@@ -654,8 +656,8 @@ let check_ctor_alias_plan ~file =
     in
     let spelled = take_ctor_aliases_spelled () in
     let describe a =
-      Printf.sprintf "%s %s%s" (if Option.has_some a.ca_holder then "holder" else "alias") a.ca_body
-        (match a.ca_declared with In_struct_of mp -> " in " ^ ModPath.to_string mp | At_namespace_scope _ -> "")
+      Printf.sprintf "%s %s%s" (if Option.has_some a.holder then "holder" else "alias") a.body
+        (match a.declared with In_struct_of mp -> " in " ^ ModPath.to_string mp | At_namespace_scope _ -> "")
     in
     let missing l l' = List.filter (fun a -> not (List.mem a l')) l in
     match (missing spelled planned, missing planned spelled) with
@@ -774,7 +776,7 @@ let defined_ref : Cpp_ast.defined -> _ = function Defined_struct {struct_ = r; _
     complete type -- a scoped enum has a fixed underlying type -- so replaying
     it in the header prologue is enough for the members naming it ahead of
     its definition, which still follows in its own place. *)
-type forward_declaration = {fwd_ref : GlobRef.t; fwd_tree : Cpp_ast.t; fwd_constrained : bool}
+type forward_declaration = {ref : GlobRef.t; tree : Cpp_ast.t; constrained : bool}
 
 (* Whether [tparams] make the [requires] clause the printer's
    [pp_requires_of_tparams] prints. *)
@@ -803,13 +805,13 @@ let constrained ctx : Cpp_ast.defined -> bool = function
     namespace scope, in the order it defines them: none inside a struct,
     where a member is not nameable before its enclosing struct anyway. *)
 let forward_declarations ctx ~module_ env (d : Cpp_ir.Resolved.Decl.t) =
-  if ctx.rc_in_struct then []
+  if ctx.in_struct then []
   else
     List.map
       (fun defined ->
-        { fwd_ref = defined_ref defined;
-          fwd_tree = Cpp_ast.elements ~source:module_ (Cpp_ast.forward_declaration env defined);
-          fwd_constrained = constrained ctx defined } )
+        { ref = defined_ref defined;
+          tree = Cpp_ast.elements ~source:module_ (Cpp_ast.forward_declaration env defined);
+          constrained = constrained ctx defined } )
       (structs_defined d)
 
 (* What writing the type constructor [x] -- a template template argument,
@@ -838,9 +840,9 @@ and tyctors_spelled ctx vl t =
 (* [ctx], naming what writing [t] there names as resolved there. *)
 let resolved_for ctx t =
   { ctx with
-    rc_names =
+    names =
       Names_resolved
-        (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names [ctx.rc_frame] (type_globals t)))
+        (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names [ctx.frame] (type_globals t)))
   }
 
 (** {2 Synthesised templates}
@@ -862,7 +864,7 @@ let resolved_for ctx t =
     defined out of line around it.  Where no module's element is being
     written, there is none. *)
 let ctor_alias_home ctx body =
-  match ctx.rc_module with
+  match ctx.module_ with
   | None -> None
   | Some cur ->
     let modpath_of = function
@@ -921,17 +923,17 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
     spelled at [ctx] are. *)
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   let start =
-    { (file_start ctx.rc_file) with
-      rc_visibility = Some (ctor_alias_visibility declared);
-      rc_aliases = ctx.rc_aliases }
+    { (file_start ctx.file) with
+      visibility = Some (ctor_alias_visibility declared);
+      aliases = ctx.aliases }
   in
-  match (declared, ctx.rc_file) with
+  match (declared, ctx.file) with
   | At_namespace_scope _, _ -> start
   | In_struct_of home, Common.Intf ->
-    {start with rc_in_struct = true; rc_in_template = Scope_plan.templated home; rc_module = Some home}
+    {start with in_struct = true; in_template = Scope_plan.templated home; module_ = Some home}
   | In_struct_of home, Common.Impl ->
-    let out_of_line ol_scope = {ol_scope; ol_file_scope_aliases = file_scope_aliases_of Common.Impl} in
-    {start with rc_scope = Option.map out_of_line (Scope_plan.of_module home); rc_module = Some home}
+    let out_of_line scope = {scope; Cpp_state.Out_of_line.file_scope_aliases = file_scope_aliases_of Common.Impl} in
+    {start with scope = Option.map out_of_line (Scope_plan.of_module home); module_ = Some home}
 
 (* The indices of the type variables writing [t], naming the variables [vl]
    by index, writes, its type constructors written as [uses] says, read off
@@ -965,10 +967,10 @@ let vars_written uses vl t =
     | Apply (head, args) -> go head @ List.concat_map go args
     | Type_constructor x -> (
       let c = tyctor_constructor x in
-      match List.find_opt (fun u -> compare u.tu_constructor c = 0 && u.tu_vars = vl) uses with
-      | Some {tu_alias = Some (_, args); _} ->
+      match List.find_opt (fun u -> compare u.constructor c = 0 && u.vars = vl) uses with
+      | Some {alias = Some (_, args); _} ->
         List.filter_map (function Captured_variable (i, _) -> Some i | Captured_instance _ -> None) args
-      | Some {tu_alias = None; _} -> (
+      | Some {alias = None; _} -> (
         match c with
         | Entity_application (_, _ :: _, _) | Foreign {types = _ :: _; _} -> []
         | Member (base, _) -> go base
@@ -1134,13 +1136,13 @@ and ctor_alias_of_probe ctx vl ~base probe =
     match (captured, instances) with
     | [], [] ->
       Some
-        ( { ca_base = base;
-            ca_holder = None;
-            ca_declared = declared_in;
-            ca_body = rendered;
-            ca_type = probe;
-            ca_vars = vl;
-            ca_uses = snd (Lazy.force rendered_with_uses) },
+        ( { base = base;
+            holder = None;
+            declared = declared_in;
+            body = rendered;
+            type_ = probe;
+            vars = vl;
+            uses = snd (Lazy.force rendered_with_uses) },
           [] )
     | vars, instances ->
       (* Rendered a second time with the captured names replaced by the
@@ -1172,14 +1174,14 @@ and ctor_alias_of_probe ctx vl ~base probe =
       in
       Some
         (
-          {ca_base = base; ca_holder = Some params; ca_declared = declared_in; ca_body = body; ca_type = renamed;
-            ca_vars = vl; ca_uses = uses},
+          {base = base; holder = Some params; declared = declared_in; body = body; type_ = renamed;
+            vars = vl; uses = uses},
           List.map (fun (i, name) -> Cpp_state.Captured_variable (i, name)) vars
           @ List.map (fun id -> Cpp_state.Captured_instance id) instances )
 
 (** [ctx], deciding each type constructor written there and noting the
     decision in [noted] ({!Cpp_state.Deciding}). *)
-and deciding ctx noted = {ctx with rc_tyctors = Deciding {decide = ctor_alias_at; noted}}
+and deciding ctx noted = {ctx with tyctors = Deciding {decide = ctor_alias_at; noted}}
 
 (** The body [t] of a synthesised template, naming the variables [vl] by
     index, written at [at], where the template is declared: how it writes
@@ -1189,16 +1191,16 @@ and deciding ctx noted = {ctx with rc_tyctors = Deciding {decide = ctor_alias_at
     must decide the same. *)
 and written_body at vl t =
   let noted = ref [] in
-  let found_before = Option.map ( ! ) at.rc_aliases in
+  let found_before = Option.map ( ! ) at.aliases in
   tyctors_spelled (deciding at noted) vl t;
   let uses = !noted in
-  let body = Pp.string_of_ppcmds (pp_cpp_type_at {(resolved_for at t) with rc_tyctors = Planned uses} false vl t) in
+  let body = Pp.string_of_ppcmds (pp_cpp_type_at {(resolved_for at t) with tyctors = Planned uses} false vl t) in
   ( if Probe.checking () then
       let noted' = ref [] in
-      let at' = {at with rc_aliases = Option.map ref found_before} in
+      let at' = {at with aliases = Option.map ref found_before} in
       let body' = Pp.string_of_ppcmds (pp_cpp_type_at (deciding (resolved_for at' t) noted') false vl t) in
       if (not (String.equal body body')) || compare !noted' uses <> 0
-         || compare (Option.map ( ! ) at'.rc_aliases) (Option.map ( ! ) at.rc_aliases) <> 0
+         || compare (Option.map ( ! ) at'.aliases) (Option.map ( ! ) at.aliases) <> 0
       then
         Probe.violation "structural spelling"
           (Pp.str ("the body " ^ body ^ " decides other type constructors than rendering it does")) );
@@ -1213,7 +1215,7 @@ and written_body at vl t =
     Under [CRANE_CHECK_IR], rendering each must decide the same. *)
 let ctor_aliases_found ctx visit =
   let found = ref [] and noted = ref [] in
-  let ctx = deciding {ctx with rc_aliases = Some found} noted in
+  let ctx = deciding {ctx with aliases = Some found} noted in
   visit (fun ~vl ~owner (t : ty) ->
       match t with
       | Type_constructor x ->
@@ -1222,7 +1224,7 @@ let ctor_aliases_found ctx visit =
       | _ -> () );
   ( if Probe.checking () then
       let found' = ref [] and noted' = ref [] in
-      let ctx' = deciding {ctx with rc_aliases = Some found'} noted' in
+      let ctx' = deciding {ctx with aliases = Some found'} noted' in
       visit (fun ~vl ~owner (t : ty) ->
           match t with
           | Type_constructor _ ->
@@ -1238,11 +1240,11 @@ let ctor_aliases_found ctx visit =
    it writes and how it writes its type constructors. *)
 let ctor_aliases_written ctx (d : Cpp_ir.Resolved.Decl.t) =
   let aliases, uses = ctor_aliases_found ctx (fun f -> Cpp_demands.tyctors_of_decl f d) in
-  {read_written = (module_written ctx, Written_declaration d); read_aliases = aliases; read_uses = uses}
+  {Ctor_aliases_read.written = (module_written ctx, Written_declaration d); aliases = aliases; uses = uses}
 
 let ctor_aliases_of_fields ctx ~vl r types =
   let aliases, uses = ctor_aliases_found ctx (fun f -> List.iter (Cpp_demands.tyctors_of_type f ~vl) types) in
-  {read_written = (module_written ctx, Written_fields r); read_aliases = aliases; read_uses = uses}
+  {Ctor_aliases_read.written = (module_written ctx, Written_fields r); aliases = aliases; uses = uses}
 
 (** The synthesised templates the finished declaration [d], written in the
     module [module_], writes in the file [file], as planned. *)
@@ -1255,9 +1257,9 @@ let planned_ctor_aliases ~file ~module_ (d : Cpp_ir.Resolved.Decl.t) =
 let ctor_aliases_planned ctx (d : Cpp_ir.Resolved.Decl.t) =
   if not (alias_plan_made ()) then []
   else
-    let file = ctx.rc_file in
+    let file = ctx.file in
     let aliases = planned_ctor_aliases ~file ~module_:(module_written ctx) d in
-    if Probe.checking () && (ctor_aliases_written ctx d).read_aliases <> aliases then
+    if Probe.checking () && (ctor_aliases_written ctx d).aliases <> aliases then
       Probe.violation "constructor aliases"
         Pp.(str "a declaration of the " ++ str (Common.file_name file)
             ++ str " writes other templates than were planned for it");
@@ -1293,9 +1295,9 @@ let needs_of ~templates d =
    for them, checked under [CRANE_CHECK_IR], and the constrained structs
    their types name. *)
 let fields_needs ctx ~module_ ~vl r types =
-  let file = ctx.rc_file in
+  let file = ctx.file in
   let aliases = planned_aliases ~file ~module_ (Written_fields r) in
-  if Probe.checking () && alias_plan_made () && (ctor_aliases_of_fields ctx ~vl r types).read_aliases <> aliases
+  if Probe.checking () && alias_plan_made () && (ctor_aliases_of_fields ctx ~vl r types).aliases <> aliases
   then
     Probe.violation "constructor aliases"
       Pp.(str "the fields of a record in the " ++ str (Common.file_name file)
@@ -1357,11 +1359,11 @@ let writing ctx d =
   let names =
     Cpp_resolution.resolve (fun frame key -> at_frame ctx frame (fun c -> live_value c key)) (declaration_names d)
   in
-  let ctx = {ctx with rc_names = Names_resolved names} in
+  let ctx = {ctx with names = Names_resolved names} in
   if not (alias_plan_made ()) then deciding ctx (ref [])
   else
-    match planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration d) with
-    | Some uses -> {ctx with rc_tyctors = Planned uses}
+    match planned_tyctors ~file:ctx.file ~module_:(module_written ctx) (Written_declaration d) with
+    | Some uses -> {ctx with tyctors = Planned uses}
     | None -> deciding ctx (ref [])
 
 (** The types [d], written at namespace scope, introduces there, by the
@@ -1431,7 +1433,7 @@ let write_decl ctx env d =
 let write_absorbing ctx ~homed env d =
   let tyctors =
     if not (alias_plan_made ()) then None
-    else planned_tyctors ~file:ctx.rc_file ~module_:(module_written ctx) (Written_declaration d)
+    else planned_tyctors ~file:ctx.file ~module_:(module_written ctx) (Written_declaration d)
   in
   let tree = absorbing (writing ctx d) ~homed ?tyctors env d in
   let needs = printed_needs ctx d in
@@ -1451,7 +1453,7 @@ let planned_needs ~file ~module_ d =
   needs_of ~templates:(List.map ctor_alias_name (planned_ctor_aliases ~file ~module_ d)) d
 
 let unprinted ctx ~module_ env d =
-  let file = ctx.rc_file in
+  let file = ctx.file in
   Cpp_ast.unprinted ~needs:(planned_needs ~file ~module_ d)
     ?tyctors:(planned_tyctors ~file ~module_ (Written_declaration d))
     env d
@@ -1459,7 +1461,7 @@ let unprinted ctx ~module_ env d =
 let unprinted_fields ctx ~module_ ~vl r fields =
   Cpp_ast.fields
     ~needs:(fields_needs ctx ~module_ ~vl r (List.map snd fields))
-    ?tyctors:(planned_tyctors ~file:ctx.rc_file ~module_ (Written_fields r))
+    ?tyctors:(planned_tyctors ~file:ctx.file ~module_ (Written_fields r))
     ~record:r ~vars:vl fields
 
 
@@ -1472,9 +1474,9 @@ let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
   ( if Probe.checking () then
       let tyctors =
         match u.declaration with
-        | Declaration {decl; _} -> Some (ctor_aliases_written ctx decl).read_uses
+        | Declaration {decl; _} -> Some (ctor_aliases_written ctx decl).uses
         | Fields {record; vars; fields} ->
-          Some (ctor_aliases_of_fields ctx ~vl:vars record (List.map snd fields)).read_uses
+          Some (ctor_aliases_of_fields ctx ~vl:vars record (List.map snd fields)).uses
         | Synthesised_template s -> Some (snd (written_body ctx s.vars s.body))
         | _ -> u.tyctors
       in

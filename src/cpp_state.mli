@@ -147,17 +147,17 @@ type holder_argument = Captured_variable of int * Names.Id.t option | Captured_i
     its own, where it is spelled as a template template argument
     ([Cpp_leaf_plan.ctor_alias_at]). *)
 type ctor_alias = {
-  ca_base : string;  (** What its name is made from. *)
-  ca_holder : holder_parameter list option;
+  base : string;  (** What its name is made from. *)
+  holder : holder_parameter list option;
       (** A holder's parameters, in order, where it is one; none where it is
           a plain alias. *)
-  ca_declared : declared_in;  (** Where it is declared ([Cpp_leaf_plan.ctor_alias_declared]). *)
-  ca_body : string;
+  declared : declared_in;  (** Where it is declared ([Cpp_leaf_plan.ctor_alias_declared]). *)
+  body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
-  ca_type : Cpp_ir.Resolved.Type.t;  (** That type. *)
-  ca_vars : Names.Id.t list;  (** The names of the variables it names by index. *)
-  ca_uses : tyctor_use list;
+  type_ : Cpp_ir.Resolved.Type.t;  (** That type. *)
+  vars : Names.Id.t list;  (** The names of the variables it names by index. *)
+  uses : tyctor_use list;
       (** How its body writes the type constructors in it, decided where the
           body was planned: what printing its declaration reads. *)
 }
@@ -165,14 +165,28 @@ type ctor_alias = {
 (** How a type constructor written as a template template argument is
     written, decided where it is planned ([Cpp_leaf_plan.ctor_alias_at]). *)
 and tyctor_use = {
-  tu_constructor : Cpp_ir.Resolved.Type.t;
+  constructor : Cpp_ir.Resolved.Type.t;
       (** The constructor: the type with its arguments stripped
           ([Cpp_print.tyctor_constructor]). *)
-  tu_vars : Names.Id.t list;  (** The names of the type variables it names by index. *)
-  tu_alias : (ctor_alias * holder_argument list) option;
+  vars : Names.Id.t list;  (** The names of the type variables it names by index. *)
+  alias : (ctor_alias * holder_argument list) option;
       (** The template synthesised for it, with the arguments a holder is
           applied to, if it has no template name of its own. *)
 }
+
+(** The out-of-line definition being written: the scope it is a member
+    of, as planned, which a name written outside that struct's body is
+    qualified by; and the promoted type variables whose alias its file
+    declares at file scope ({!header_file_scope}), which such a variable
+    written in it means instead of a member of that struct. *)
+module Out_of_line : sig
+  type t = {
+    scope : Scope_plan.scope;  (** The scope it is a member of. *)
+    file_scope_aliases : Names.Id.Set.t;
+        (** The promoted type variables whose alias its file declares at file
+            scope. *)
+  }
+end
 
 (** What the names written at a position are read off. *)
 type naming =
@@ -193,11 +207,11 @@ type naming =
     custom text of a global, if it has one, writes a global type's head,
     and answers any key. *)
 and live_namers = {
-  live_key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
-  live_global : render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t;
-  live_inline : Names.GlobRef.t -> string option;
-  live_head : render_ctx -> Cpp_resolution.head_form -> Names.GlobRef.t -> Cpp_resolution.head;
-  live_value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
+  key : render_ctx -> Cpp_resolution.key -> Cpp_name.t;
+  global : render_ctx -> Common.kind -> Names.GlobRef.t -> Cpp_name.t;
+  inline : Names.GlobRef.t -> string option;
+  head : render_ctx -> Cpp_resolution.head_form -> Names.GlobRef.t -> Cpp_resolution.head;
+  value : render_ctx -> Cpp_resolution.key -> Cpp_resolution.value;
 }
 
 (** Where the type printer reads how a type constructor is written. *)
@@ -219,61 +233,49 @@ and tyctor_decision = {
   noted : tyctor_use list ref;  (** The uses decided so far, in the order first spelled. *)
 }
 
-(** The out-of-line definition being written: the scope it is a member
-    of, as planned, which a name written outside that struct's body is
-    qualified by; and the promoted type variables whose alias its file
-    declares at file scope ({!header_file_scope}), which such a variable
-    written in it means instead of a member of that struct. *)
-and out_of_line = {
-  ol_scope : Scope_plan.scope;  (** The scope it is a member of. *)
-  ol_file_scope_aliases : Names.Id.Set.t;
-      (** The promoted type variables whose alias its file declares at file
-          scope. *)
-}
-
 (** Where in the output something is written or planned: a value, handed
     to whatever writes there and derived as each scope is entered
     ({!Cpp_names.next}).  No position is installed anywhere for a reader to
     find. *)
 and render_ctx = {
-  rc_file : Common.file;  (** The file being written. *)
-  rc_in_struct : bool;
+  file : Common.file;  (** The file being written. *)
+  in_struct : bool;
       (** Inside a struct body; affects how nested type references are
           qualified and whether a held-back concept may be named. *)
-  rc_concepts_hoisted : bool;
+  concepts_hoisted : bool;
       (** The type class concepts of the current module are already
           written. *)
-  rc_scope : out_of_line option;
+  scope : Out_of_line.t option;
       (** The out-of-line definition being written, if one is. *)
-  rc_in_template : bool;
+  in_template : bool;
       (** Inside a template struct (a functor); affects [typename]
           insertion and how a module-level value is written. *)
-  rc_module : Names.ModPath.t option;
+  module_ : Names.ModPath.t option;
       (** The module whose element is being written, if one is: the one
           whose struct a synthesised template it writes may be declared in
           ([Cpp_leaf_plan.ctor_alias_home]). *)
-  rc_frame : Cpp_resolution.frame;
+  frame : Cpp_resolution.frame;
       (** The scopes printing the declaration being written has entered
           inside the one it is written in, innermost first
           ({!Cpp_names.enter_from}). *)
-  rc_names : naming;  (** What the names written here are read off ({!naming}). *)
-  rc_visibility : Common.visibility option;
+  names : naming;  (** What the names written here are read off ({!naming}). *)
+  visibility : Common.visibility option;
       (** The scopes whose names are visible where the declaration being
           written is written, innermost first: its planned visibility
           ({!Scope_plan.visibility}); none where nothing planned it, where
           naming anything is an anomaly: no visibility is installed for a
           name to fall back on.  The scopes printing has entered inside it
-          ({!rc_frame}) that declare names add their layers where the
+          ({!render_ctx.frame}) that declare names add their layers where the
           resolver reads it ({!Cpp_names.visibility_at}): printing a
           resolved name needs none of them. *)
-  rc_aliases : ctor_alias list ref option;
+  aliases : ctor_alias list ref option;
       (** Where the synthesised templates spelled from here are collected,
           in the order first spelled, by what asked which ones its text
           spells ([Cpp_leaf_plan.ctor_aliases_found]); none where nothing
           collects them.  Every position derived from this one collects into
           the same list, a template's body written where it is declared
           included. *)
-  rc_tyctors : tyctor_plan;
+  tyctors : tyctor_plan;
       (** How the type constructors written from here are written
           ({!tyctor_plan}). *)
 }
@@ -285,16 +287,18 @@ val file_start : Common.file -> render_ctx
 (** What a file declares at file scope: the types, by the entity each
     declaration declares, and the promoted type variables among them, by
     the name their one alias is declared under ({!Table.promoted_type_var_field}). *)
-type file_scope = {
-  fs_types : Names.GlobRef.Set.t;  (** The types it declares at file scope. *)
-  fs_aliases : Names.Id.Set.t;  (** The promoted type variables among them, by alias name. *)
-}
+module File_scope : sig
+  type t = {
+    types : Names.GlobRef.Set.t;  (** The types it declares at file scope. *)
+    aliases : Names.Id.Set.t;  (** The promoted type variables among them, by alias name. *)
+  }
+end
 
 (** What the header declares at file scope, planned with its layout
     ({!Cpp_leaf_plan.file_scope_types}); [None] until planned, which file
     layout planning's own questions are asked before.  The implementation
     declares no type of its own. *)
-val header_file_scope : file_scope option ref
+val header_file_scope : File_scope.t option ref
 
 (** The types the file [file] declares at file scope, as planned: none
     before they are planned. *)

@@ -209,10 +209,10 @@ let rec is_empty = function
 let joined l = match List.filter (fun t -> not (is_empty t)) l with [] -> empty | [t] -> t | l -> Joined l
 let top_level t = if is_empty t then t else Top_level t
 
-type body = {body_module : ModPath.t; body_members : t list}
+type body = {module_ : ModPath.t; members : t list}
 
-let module_body mp members = {body_module = mp; body_members = List.filter (fun t -> not (is_empty t)) members}
-let body_is_empty b = b.body_members = []
+let module_body mp members = {module_ = mp; members = List.filter (fun t -> not (is_empty t)) members}
+let body_is_empty b = b.members = []
 
 let rec has_top_level = function
   | Text _ | Decl _ | Unprinted _ | Declarations _ -> false
@@ -225,12 +225,12 @@ let rec has_top_level = function
 
 let module_ enclosure ?(fields = empty) b =
   ( match enclosure with
-  | Struct _ when List.exists has_top_level (fields :: b.body_members) ->
+  | Struct _ when List.exists has_top_level (fields :: b.members) ->
     invalid_arg "Cpp_ast.module_: a chunk at namespace scope inside a struct"
-  | Struct {layout = One_line; _} when not (is_empty fields && b.body_members = []) ->
+  | Struct {layout = One_line; _} when not (is_empty fields && b.members = []) ->
     invalid_arg "Cpp_ast.module_: a struct laid out on one line with a body"
   | Struct _ | Out_of_line | In_enclosing_scope -> () );
-  let t = Module {module_ = b.body_module; enclosure; fields; members = b.body_members} in
+  let t = Module {module_ = b.module_; enclosure; fields; members = b.members} in
   if is_empty t then empty else t
 
 type declared = Declared of declaration | Struct_of of ModPath.t
@@ -339,7 +339,7 @@ let rec fill_wrappers bodies t =
   | Module m -> Module {m with fields = fill m.fields; members = List.map fill m.members}
   | Wrapper_struct {name; module_ = wrapped; fields} -> (
     match List.assoc_opt name bodies with
-    | Some b when ModPath.equal b.body_module wrapped ->
+    | Some b when ModPath.equal b.module_ wrapped ->
       module_ (Struct {head = {template = []; name = Named name; base = None}; layout = Block}) ~fields:(fill fields) b
     | Some _ -> invalid_arg ("Cpp_ast.fill_wrappers: the body given for " ^ name ^ " is another module's")
     | None -> invalid_arg ("Cpp_ast.fill_wrappers: no body for the wrapper struct " ^ name) )

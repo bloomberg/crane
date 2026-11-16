@@ -20,11 +20,13 @@ type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of
     written, read in the scope being written: what it is, in the module it
     is written in, the templates, and how it writes each type constructor
     it writes as a template template argument. *)
-type ctor_aliases_read = {
-  read_written : ModPath.t * written;
-  read_aliases : Cpp_print.ctor_alias list;
-  read_uses : Cpp_state.tyctor_use list;
-}
+module Ctor_aliases_read : sig
+  type t = {
+    written : ModPath.t * written;
+    aliases : Cpp_print.ctor_alias list;
+    uses : Cpp_state.tyctor_use list;
+  }
+end
 
 (** [read_decl ctx env decl] is a finished declaration printed at the
     position [ctx], its names resolved there first, its type constructors
@@ -143,13 +145,13 @@ val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolut
 (** What the finished declaration written at the position given, in the
     file it is in, writes; the render of the declaration there reads it back
     from the plan. *)
-val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_ir.Resolved.Decl.t -> ctor_aliases_read
+val ctor_aliases_written : Cpp_state.render_ctx -> Cpp_ir.Resolved.Decl.t -> Ctor_aliases_read.t
 
 (** What the fields of the record [r], of types [types], written at the
     position given, write, their type variables read as [vl]; the render of
     the fields there reads it back from the plan. *)
 val ctor_aliases_of_fields :
-  Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> Cpp_ir.Resolved.Type.t list -> ctor_aliases_read
+  Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> Cpp_ir.Resolved.Type.t list -> Ctor_aliases_read.t
 
 (** {!Cpp_print.print_unprinted}; under [CRANE_CHECK_IR] a declaration, a
     record's fields or a synthesised template must need, and write their
@@ -188,9 +190,9 @@ val held_back_assertions : Cpp_state.render_ctx -> Cpp_ir.Resolved.Decl.t -> Cpp
     concept-kinded parameter names a concept, which the header's prologue
     need not have declared. *)
 type forward_declaration = {
-  fwd_ref : Names.GlobRef.t;  (** The struct or enum it declares. *)
-  fwd_tree : Cpp_ast.t;  (** The declaration, as an element of its module. *)
-  fwd_constrained : bool;  (** Whether it is a constrained template. *)
+  ref : Names.GlobRef.t;  (** The struct or enum it declares. *)
+  tree : Cpp_ast.t;  (** The declaration, as an element of its module. *)
+  constrained : bool;  (** Whether it is a constrained template. *)
 }
 
 (** [forward_declarations ctx ~module_ env d] is the forward declaration of
@@ -204,7 +206,7 @@ val forward_declarations :
 (** [plan_ctor_aliases written] plans the templates each file writes,
     [written file] being what is read off what [file] writes, in the order
     written: the header's, then the implementation's. *)
-val plan_ctor_aliases : (Common.file -> ctor_aliases_read list) -> unit
+val plan_ctor_aliases : (Common.file -> Ctor_aliases_read.t list) -> unit
 
 (** The declaration of a template, written where the tree puts it as
     declared where it is ({!Cpp_ast.Template_in}). *)
