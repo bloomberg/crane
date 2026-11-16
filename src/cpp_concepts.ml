@@ -15,8 +15,8 @@ open Cpp_print
 open Cpp_leaf_plan
 
 (** The modelled module, the parameter every concept is written over
-    ({!Structure_analysis.concept_self_param}), followed by [::]. *)
-let self_scope = Structure_analysis.concept_self_param ^ "::"
+    ({!Core_plan.Structure.concept_self_param}), followed by [::]. *)
+let self_scope = Core_plan.Structure.concept_self_param ^ "::"
 
 (** What a module type contributes where a concept body is expected.
 
@@ -52,13 +52,13 @@ let pp_concept_clause name = function
 
 (** {!pp_concept_clause} with its [template<typename M>] introduction. *)
 let pp_concept_def name body =
-  str ("template<typename " ^ Structure_analysis.concept_self_param ^ ">") ++ fnl () ++ pp_concept_clause name body
+  str ("template<typename " ^ Core_plan.Structure.concept_self_param ^ ">") ++ fnl () ++ pp_concept_clause name body
 
 (** The type member [name] of [M], an enum's capitalised, applied to [args]
     when it is a template. *)
 let pp_member_type ~enum name r args =
   let name = Base.Cpp_name.pp (if enum then enum_name name r else name) in
-  let m = Base.Cpp_name.pp_scope (Base.Cpp_name.Parameter Structure_analysis.concept_self_param) in
+  let m = Base.Cpp_name.pp_scope (Base.Cpp_name.Parameter Core_plan.Structure.concept_self_param) in
   match args with
   | [] -> str "typename " ++ m ++ name
   | _ ->
@@ -313,7 +313,7 @@ let pp_modtype_concept cx ctx ~names ~params path (c : Modtype_concept.t) =
   let here key = Base.Cpp_name.pp (name_in ctx names [] key) in
   let name = here (Modtype_concept_declared path) in
   let head =
-    str ("template<typename " ^ Structure_analysis.concept_self_param)
+    str ("template<typename " ^ Core_plan.Structure.concept_self_param)
     ++ prlist (fun p -> str ", typename " ++ here (Module p)) params
     ++ str ">" ++ fnl ()
   in
@@ -323,7 +323,7 @@ let pp_modtype_concept cx ctx ~names ~params path (c : Modtype_concept.t) =
       prlist (fun p -> str ", " ++ here (Module p)) (concept_extra_args base)
     in
     head ++ str "concept " ++ name ++ str " = " ++ here (Modtype_concept base)
-    ++ str ("<" ^ Structure_analysis.concept_self_param) ++ base_args ++ str ">"
+    ++ str ("<" ^ Core_plan.Structure.concept_self_param) ++ base_args ++ str ">"
     ++ prlist (fun c -> str " && " ++ c) (pp_refinements ctx refinements)
     ++ str ";"
   | Constraint c ->

@@ -13,7 +13,7 @@ open Base.Table
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Translation_knot
 open Translation_lambda
 
@@ -78,14 +78,14 @@ let erased_lambda (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) ~params ~ret ~
 
 (** The instance parameter, the class and its one method, where the variable
    [i], read at [occ] at the head of an application, is a singleton class's
-   dictionary, as Core decided it ({!Core_elaborate.singleton_dictionary_call});
+   dictionary, as Core decided it ({!Core_plan.Elaborate.singleton_dictionary_call});
    {!Translation_calls.singleton_dictionary} is the traversal's own reading, checked against
    it. *)
 let singleton_call cx env i occ =
   let live () =
     Option.map (fun (_, c, m) -> (c, m))
       (Translation_calls.singleton_dictionary cx env (Core.Expr.Bound_variable {index = i; occurrence = occ})) in
-  match Core_elaborate.singleton_dictionary_call ~walk:(elaborations cx) ~live occ with
+  match Core_plan.Elaborate.singleton_dictionary_call ~walk:(elaborations cx) ~live occ with
   | Some (c, m) -> Option.map (fun id -> (id, c, m)) (Base.Common.get_db_name_opt i env)
   | None -> None
 
@@ -95,7 +95,7 @@ let singleton_call cx env i occ =
    concrete, so the term is an ordinary application and not the single-branch
    match a projection through an instance {e variable} extracts to; the C++ is
    the same either way. *)
-let project_through_instance cx env (use : Core.Global_use.t) args (projection : Elaborated_call.static_projection) :
+let project_through_instance cx env (use : Core.Global_use.t) args (projection : Core_plan.Elaborated_call.static_projection) :
   Cpp_ir.Lowered.Expr.t =
   let inst = List.nth args projection.instance in
   let x = use.callee and tys = Base.Core_util.written_type_args use in
@@ -118,9 +118,9 @@ let project_through_instance cx env (use : Core.Global_use.t) args (projection :
   let targs =
     let by_var = List.map (fun (v, t) -> (v, Translation_types.cpp_of_core cx env t))
       (Base.Core_util.Var_types.bindings tys) in
-    Template_application.to_list
-      (Template_application.plan
-         (Callable_abi.projection (Translation_state.callables cx) Translation_calls.projection_abi x)
+    Core_plan.Template_application.to_list
+      (Core_plan.Template_application.plan
+         (Core_plan.Callable_abi.projection (Translation_state.callables cx) Translation_calls.projection_abi x)
          ~instance:(fun _ -> None)
          ~scheme:(fun v -> Core.Scheme.Var.assoc_opt v by_var) )
   in
@@ -164,8 +164,8 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
   let {
     Translation_calls.instantiated =
       {
-        Elaborated_call.call =
-          {Elaborated_call.regular = regular_core_args; callee_type = fn_core_ty; _} as call;
+        Core_plan.Elaborated_call.call =
+          {Core_plan.Elaborated_call.regular = regular_core_args; callee_type = fn_core_ty; _} as call;
         tys;
         params = fn_param_core_tys;
         params_orig = fn_param_core_tys_orig;
@@ -179,7 +179,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
     result_tvar_map = result_tvar_map;
     _
   } = plan in
-  let leading_params = Elaborated_call.leading_params call in
+  let leading_params = Core_plan.Elaborated_call.leading_params call in
   List.mapi (fun i core_arg : Cpp_ir.Lowered.Expr.t ->
     match strip_magic core_arg with
     | Core.Expr.Erased_value _ -> (
@@ -188,8 +188,8 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
          is [Type -> Type] -- which is called, so it is a callable of the
          declared arity handing back a box. *)
       match
-        Param_pos.nth fn_param_core_tys_orig
-          (Param_pos.of_regular ~leading:leading_params i)
+        Core_plan.Param_pos.nth fn_param_core_tys_orig
+          (Core_plan.Param_pos.of_regular ~leading:leading_params i)
       with
       | Some pt when count_core_value_arrows pt > 0 ->
         Cpp_ir.Build.lambda
@@ -233,7 +233,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
     let core_arg, split_ret_ty =
       match core_arg with
       | Core.Expr.Lambda _ ->
-        ( match Param_pos.nth fn_param_core_tys_orig param_index with
+        ( match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
         | Some param_ty ->
           let rec count_arrows = function
             | Core.Type.Arrow {result = rest; _} -> 1 + count_arrows rest
@@ -362,7 +362,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
       in
       match Cpp_names.lookup_method_this_pos id with
       | Some pos
-        when Param_pos.equal (Param_pos.of_receiver pos) param_index
+        when Core_plan.Param_pos.equal (Core_plan.Param_pos.of_receiver pos) param_index
              && receiver_is_boxed -> (
         match param_expected_subst () with
         | Some into when not (Cpp_ir.Types.prints_as_any into) ->
@@ -409,7 +409,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
        ({!Translation_binders.read_is_boxed}) — e.g. a leaf pulled out of an erased-pair
        destructure — passed directly to a plain global function whose
        parameter type is concrete.  Mirrors the equivalent check for
-       non-global callees (~[Core.Expr.Bound_variable j when Escape.IntSet.mem ...] above). *)
+       non-global callees (~[Core.Expr.Bound_variable j when Core_plan.Escape.IntSet.mem ...] above). *)
     let core_arg_is_erased_rel =
       match core_arg with
       | Core.Expr.Bound_variable {index = j; occurrence = occ}
@@ -527,7 +527,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
              generic declaration and breaking template argument deduction.
              Suppress boxing here to match the declaration. *)
           let callee_generic_here =
-            match Param_pos.nth fn_param_core_tys_orig param_index with
+            match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
             | Some t -> Base.Type_util.core_type_contains_tvar t
             | None -> false
           in
@@ -584,7 +584,7 @@ let gen_call_args cx ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id 
             | _ -> false)
            && (match param_ty with Core.Type.Arrow _ -> true | _ -> false)
            && core_type_is_unit (core_codomain param_ty)
-           && (match Param_pos.nth fn_param_core_tys_orig param_index with
+           && (match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
                | Some orig_pt ->
                  not (core_type_is_unit (core_codomain orig_pt))
                | None -> false) ->
@@ -655,8 +655,8 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
     let {
       Translation_calls.instantiated =
         {
-          Elaborated_call.call =
-            { Elaborated_call.excess = excess_args;
+          Core_plan.Elaborated_call.call =
+            { Core_plan.Elaborated_call.excess = excess_args;
               primary = primary_core_args;
               instances = typeclass_core_args;
               regular = regular_core_args;
@@ -669,7 +669,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
       instance_promoted = instance_promoted_map;
       _
     } = plan in
-    let leading_params = Elaborated_call.leading_params call in
+    let leading_params = Core_plan.Elaborated_call.leading_params call in
     (* The C++ arguments of a call by name, from the regular arguments in
        declared order (the given ones, then any eta parameters): a declared
        [unit] parameter has no C++ counterpart
@@ -683,7 +683,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
         List.filteri
           (fun i _ ->
             not
-              (match Param_pos.nth fn_param_core_tys_orig (Param_pos.of_regular ~leading:leading_params i) with
+              (match Core_plan.Param_pos.nth fn_param_core_tys_orig (Core_plan.Param_pos.of_regular ~leading:leading_params i) with
                | Some t -> Base.Type_util.declaration_drops_binder t
                | None -> false ) )
           l
@@ -691,10 +691,10 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
     (* The callee applied to all but the excess args, where that names no
        local: a function -- a handler [case_] combines -- built from nothing
        the call can change, as Core decided it
-       ({!Core_elaborate.closed_head_call}). *)
+       ({!Core_plan.Elaborate.closed_head_call}). *)
     let closed_head =
       (not slot.Translation_slot.building_constant)
-        && Core_elaborate.closed_head_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args
+        && Core_plan.Elaborate.closed_head_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args
     in
     let args =
       let slot = if closed_head then {slot with Translation_slot.building_constant = true} else slot in
@@ -703,7 +703,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
     in
     let ty = lowered.Translation_calls.callee_type
     and tys = lowered.Translation_calls.written
-    and all_type_args = Template_application.to_list lowered.Translation_calls.application
+    and all_type_args = Core_plan.Template_application.to_list lowered.Translation_calls.application
     and written_tvar_args = lowered.Translation_calls.written_by_var in
     (* The callee's declared type at the type arguments the call writes: what
        C++ checks the arguments against and returns.  A type argument standing
@@ -766,7 +766,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
        forwarding to [_tcI0::bind] that repeats its argument passing, which a
        C++ compiler is not sure to see through.  A method erased at
        [std::any] is left to the dispatcher, which does the erasing.  Core
-       decides which calls those are ({!Core_elaborate.member_template_call}). *)
+       decides which calls those are ({!Core_plan.Elaborate.member_template_call}). *)
     let cglob =
       match
         ( plan.Translation_calls.instantiated.call.instances,
@@ -774,7 +774,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           all_type_args )
       with
       | [inst], [Some inst_ty], _ :: method_targs
-        when Core_elaborate.member_template_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use core_args ->
+        when Core_plan.Elaborate.member_template_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use core_args ->
         (Scope (Type_name inst_ty, Base.Common.id_of_global Term id, method_targs) : Cpp_ir.Lowered.Expr.t)
       | _ ->
         mk_cppglob
@@ -1115,7 +1115,7 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
               (List.filteri
                  (fun i _ ->
                    subst_index_of_orig
-                     (Param_pos.of_regular ~leading:leading_params i)
+                     (Core_plan.Param_pos.of_regular ~leading:leading_params i)
                    <> None )
                  args )
           in
@@ -1137,10 +1137,10 @@ let eta_fun cx ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowe
           let untaken =
             List.filter
               (fun (o, _) ->
-                match Param_pos.regular_of ~leading:leading_params o with
+                match Core_plan.Param_pos.regular_of ~leading:leading_params o with
                 | Some r -> r >= List.length args
                 | None -> false )
-              (Param_pos.positioned fn_param_core_tys_orig)
+              (Core_plan.Param_pos.positioned fn_param_core_tys_orig)
           in
           in_declared_order untaken from_dom
         in
@@ -2121,11 +2121,11 @@ let gen_singleton_dictionary_call cx env ~i ~occ ~args : Cpp_ir.Lowered.Expr.t =
     (List.map (gen_expr cx env) value_args)
 
 (** A class field projected through the instance [use] applied to [args]
-    names, as Core decided it ({!Core_elaborate.static_projection_call}); a
+    names, as Core decided it ({!Core_plan.Elaborate.static_projection_call}); a
     projection missing arguments is eta-expanded over them first. *)
 let gen_instance_projection cx ~expected_ty ~slot env ~use ~args : Cpp_ir.Lowered.Expr.t =
   let projection =
-    Option.get (Core_elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args) in
+    Option.get (Core_plan.Elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args) in
   match projection.missing with
   | [] -> project_through_instance cx env use args projection
   | missing ->

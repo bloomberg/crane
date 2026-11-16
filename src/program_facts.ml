@@ -8,33 +8,33 @@
 type t = {
   used_customs : Core.Ref.User.Set.t;
   higher_order_projections : Core.Ref.User.Set.t;
-  effects : Core_effects.t;
+  effects : Core_plan.Effects.t;
 }
 
 type program = {
   throwing_values : Names.GlobRef.t list;
   parameter_ownership : (Names.GlobRef.t * bool list) list;
-  recursive_groups : Recursive_groups.t;
+  recursive_groups : Core_plan.Recursive_groups.t;
   partner_closure_params : (Names.GlobRef.t * int list) list;
-  recursion : Recursion_plan.t;
+  recursion : Core_plan.Recursion.t;
   control : Lower_control.t;
 }
 
 let analyze_program cx normalized =
   let struc = Core_passes.Phase.structure normalized in
-  let recursive_groups = Recursive_groups.analyze struc in
-  let methods = Method_registry.create ~ret_is_erased:(Translation.return_type_is_erased cx) struc in
-  let receiver r = Option.map snd (Method_registry.is_registered_method methods r) in
-  let recursion = Recursion_plan.analyze ~suspension:(Translation_suspension.suspension cx) recursive_groups
+  let recursive_groups = Core_plan.Recursive_groups.analyze struc in
+  let methods = Core_plan.Method_registry.create ~ret_is_erased:(Translation.return_type_is_erased cx) struc in
+  let receiver r = Option.map snd (Core_plan.Method_registry.is_registered_method methods r) in
+  let recursion = Core_plan.Recursion.analyze ~suspension:(Translation_suspension.suspension cx) recursive_groups
     normalized in
-  { throwing_values = Structure_analysis.throwing_values struc;
-    parameter_ownership = Ownership.summarize ~receiver struc;
+  { throwing_values = Core_plan.Structure.throwing_values struc;
+    parameter_ownership = Core_plan.Ownership.summarize ~receiver struc;
     recursive_groups;
     partner_closure_params = Translation_callable_params.partner_closure_params recursive_groups struc;
     recursion;
     control =
       Lower_control.lower
-        ~methods:(fun r -> Option.has_some (Method_registry.is_registered_method methods r))
+        ~methods:(fun r -> Option.has_some (Core_plan.Method_registry.is_registered_method methods r))
         recursion normalized }
 
 let lowering (program : program) : Translation_state.program_facts =
@@ -82,9 +82,9 @@ let higher_order_projections struc =
 let analyze struc =
   { used_customs = used_customs struc;
     higher_order_projections = higher_order_projections struc;
-    effects = Core_effects.analyze struc }
+    effects = Core_plan.Effects.analyze struc }
 
 let equal a b =
   Core.Ref.User.Set.equal a.used_customs b.used_customs
   && Core.Ref.User.Set.equal a.higher_order_projections b.higher_order_projections
-  && Core_effects.equal a.effects b.effects
+  && Core_plan.Effects.equal a.effects b.effects

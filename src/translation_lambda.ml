@@ -12,10 +12,10 @@ open Base.Core_util
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Translation_knot
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** The names of the variables at the de Bruijn indices [is] a closure
    captures, in the order a capture list spells them; a class instance is a
@@ -37,7 +37,7 @@ let forwarded ~by_value ty (v : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
 
 (** Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
-let owned_flags passing = List.rev_map (fun p -> p = Callable_abi.Owned) (List.filter_map Fun.id passing)
+let owned_flags passing = List.rev_map (fun p -> p = Core_plan.Callable_abi.Owned) (List.filter_map Fun.id passing)
 
 (** The lambda [a] as a C++ closure, written against [expected_ty] where the
     position states a function type: its binders split where the expected
@@ -229,7 +229,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
 
      The inference is conservative: if a parameter escapes in any code path
      (e.g. captured by a closure, stored in a constructor, or returned), it
-     is marked as owned.  See {!Escape.infer_owned_params}. *)
+     is marked as owned.  See {!Core_plan.Escape.infer_owned_params}. *)
   let n_all_params = List.length lam_params in
   let owned_flags = Translation_ownership.infer_owned_flags cx a args
   in
@@ -279,7 +279,7 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
      positions become the lambda's own template parameter, so the parameter
      reads [const E<_X> &] and the body says [_X] where it would otherwise
      guess.  The callee recovers the result with [std::invoke_result_t]; see
-     {!Plan_templates.relax_tt_applied_return}. *)
+     {!Core_plan.Plan_templates.relax_tt_applied_return}. *)
   let rank2_carrier =
     (* Only where the slot deduces the callback's type.  A slot that spells
        its own signature -- a [std::function<Nat(std::any)>] field, say --

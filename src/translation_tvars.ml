@@ -13,23 +13,23 @@ open Base.Core_util
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (* [ref_is_skipped] and [core_ret_is_skipped] live in {!Base.Type_util}, which
-   {!Method_registry} also asks. *)
+   {!Core_plan.Method_registry} also asks. *)
 
 (* {!Base.Type_util.core_type_is_instance} works the answer out; a caller with a
    global asks {!ref_is_instance} and one with a binder asks
-   {!Core_query.binder_is_instance}. *)
+   {!Core_plan.Query.binder_is_instance}. *)
 
 (** Collect [Core.Binder_name.Source.t]s for typeclass-typed parameters in a Core arrow type.
 
     Only a parameter whose class Crane kept: each becomes a concept-constrained
     template parameter, and one whose class was skipped has nothing to be
     constrained by.  A skipped instance still has to be recognised as one where
-    it is {e used} -- see {!Core_query.binder_is_instance}. *)
+    it is {e used} -- see {!Core_plan.Query.binder_is_instance}. *)
 let collect_typeclass_param_ids ty =
   let rec aux acc i = function
     | Core.Type.Arrow {parameter = t1; result = t2} ->
@@ -91,7 +91,7 @@ let hkt_tvar_positions_of_type ?(source_order = false) ty =
   go 0 [] ty
 
 (** Why [r]'s convention declares no C++ template parameter for its scheme
-    variable [v], if it does not ({!Callable_abi.omission}): asked once, by
+    variable [v], if it does not ({!Core_plan.Callable_abi.omission}): asked once, by
     the planner, and recorded in [r]'s plan for its calls to read.
 
     A variable standing for a higher-kinded class parameter has none: it is
@@ -109,9 +109,9 @@ let type_arg_omission r =
       let occurring = collect_tvars_set IntSet.empty ty in
       fun v ->
         let i = Core.Scheme.Var.ordinal v in
-        if List.mem i hkt then Some Callable_abi.Class_carrier
+        if List.mem i hkt then Some Core_plan.Callable_abi.Class_carrier
         else if IntSet.is_empty occurring || IntSet.mem i occurring then None
-        else Some Callable_abi.Unmentioned )
+        else Some Core_plan.Callable_abi.Unmentioned )
 
 (** [ty] with every family variable written applied taken back to the bare
     variable: a plain family is declared without its index. *)

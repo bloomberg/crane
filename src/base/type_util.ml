@@ -1087,7 +1087,7 @@ let signed_neg_idx = 2
 
 (** {2 Template-parameter shape of a C++ signature}
 
-    These live here rather than in {!Plan_templates} because both the declaration
+    These live here rather than in {!Core_plan.Plan_templates} because both the declaration
     emitter and the call emitter need them: the first to decide which template
     parameters a signature can leave to deduction, the second to supply the
     ones it cannot. *)
@@ -1472,7 +1472,7 @@ let get_tvar_indices t = List.map fst (get_tvars_indexed t)
     signatures.
 
     Used by the function emitter (to choose between an [is_invocable_r_v]
-    constraint and plain [TTtypename]), by {!Plan_templates.phantom_aware_temps}
+    constraint and plain [TTtypename]), by {!Core_plan.Plan_templates.phantom_aware_temps}
     (to choose whether a template parameter needs a [void] default) and by the
     call emitter ({!explicit_tvar_prefix}). *)
 let primary_tvar_indices (dom : Cpp_ir.Lowered.Type.t list) cod =
@@ -1564,7 +1564,7 @@ let applied_core_tvar_arities tys =
 (** The type variables a declaration of type [core_ty] relaxes out of its template
     head.
 
-    {!Plan_templates.relax_applied_return} replaces a higher-kinded parameter that is
+    {!Core_plan.Plan_templates.relax_applied_return} replaces a higher-kinded parameter that is
     only ever {e applied} in the parameter list with one fresh [typename] per
     application, deduced from the argument, and leaves the original a phantom
     defaulted to [void]. A call must then not write a template name there,
@@ -1632,7 +1632,7 @@ let relaxed_applied_core_tvars core_ty =
     that would otherwise demand the higher kind is elsewhere in the signature
     ([trigger_cast' (e : E void) : itree E A] applies it in the domain and
     names it in the codomain).  That application is taken back off by
-    {!Plan_templates.deapply_plain_tvars} once the kind is refused. *)
+    {!Core_plan.Plan_templates.deapply_plain_tvars} once the kind is refused. *)
 let event_family_core_tvars tys =
   let fams = ref IntSet.empty in
   (* A variable handed to a family position of a generated type -- the [E] of
@@ -1696,7 +1696,7 @@ let event_family_core_tvars tys =
       plain [typename] stands for both.
     - It is an argument of a {b generated} type constructor at a position
       that constructor's own header declares [template <typename> class]
-      ({!Plan_templates.hkt_templates} records which), so whatever is written there
+      ({!Core_plan.Plan_templates.hkt_templates} records which), so whatever is written there
       has to be a template name.
 
     Neither holds for an event family threaded through custom mappings.
@@ -1754,7 +1754,7 @@ let higher_kinded_core_tvars tys =
       List.iter (scan ~generated_arg:false) args
     | Core.Type.Global_app {head = r; type_arguments = args; _} ->
       (* Only a position the constructor's header actually declares a
-         template: [Plan_templates.hkt_templates] recorded which, and a family
+         template: [Core_plan.Plan_templates.hkt_templates] recorded which, and a family
          parameter it left plain takes the family's own struct. *)
       List.iteri
         (fun i a ->
@@ -1780,7 +1780,7 @@ let relaxed_higher_kinded_tvars core_ty =
     constructor declares [template <typename> class].
 
     Being applied is the usual evidence for the higher kind, and
-    {!higher_kinded_core_tvars} and [Plan_templates.applied_tvar_arities] both look
+    {!higher_kinded_core_tvars} and [Core_plan.Plan_templates.applied_tvar_arities] both look
     for it.  It is not the only evidence.  [raiseUB (E : Type -> Type)
     (S : Sub UBE E) (B : Type)] applies [E] nowhere -- its result is [list B],
     and in the Vellvm original the result [itree E X] loses the event
@@ -1790,7 +1790,7 @@ let relaxed_higher_kinded_tvars core_ty =
     [Sub<UBE, T1>] wants a template where [T1] is a [typename].
 
     The position's kind is not guessed here.  It was decided and recorded by
-    {!Plan_templates.hkt_templates} when the constructor's own header was emitted,
+    {!Core_plan.Plan_templates.hkt_templates} when the constructor's own header was emitted,
     which is the same authority a {e use} of that constructor already consults
     to decide it must pass a bare template name. *)
 let hkt_arg_core_tvar_arities tys =
@@ -1882,11 +1882,11 @@ let result_is_index_only_tvar core_ty = Option.has_some (index_only_result_tvar 
     phantom sitting behind a deducible parameter is out of reach this way and
     keeps its [void] default at the declaration.
 
-    The declaration emitter ({!Plan_templates.phantom_aware_temps}) and the call
+    The declaration emitter ({!Core_plan.Plan_templates.phantom_aware_temps}) and the call
     emitter both read the count from here, off the callee's type alone, so
     they agree whichever is generated first.
 
-    @param force_required  as in {!Plan_templates.phantom_aware_temps}: indices that
+    @param force_required  as in {!Core_plan.Plan_templates.phantom_aware_temps}: indices that
       count as represented even though they do not appear in [cty]. *)
 let explicit_tvar_prefix ?(force_required = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   match cty with

@@ -5,9 +5,9 @@
     [loop_facts.mli]. *)
 
 type t = {
-  recursion : Recursion_plan.t;
+  recursion : Core_plan.Recursion.t;
   control : Lower_control.t;
-  effects : Core_effects.t;
+  effects : Core_plan.Effects.t;
 }
 
-let none = {recursion = Recursion_plan.empty; control = Lower_control.empty; effects = Core_effects.empty}
+let none = {recursion = Core_plan.Recursion.empty; control = Lower_control.empty; effects = Core_plan.Effects.empty}

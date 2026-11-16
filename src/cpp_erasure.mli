@@ -155,7 +155,7 @@ val lower_qualifiers : settled -> settled
 
 (** [lower_pointer_slots u decl] writes each pointer of [decl], a
     declaration of the unit [u], in the slot its pointee is held in
-    ({!Pointer_slot}): to a shared value, [crane::shared_box<T>] (and its
+    ({!Core_plan.Pointer_slot}): to a shared value, [crane::shared_box<T>] (and its
     allocation, [shared_box<T>::make]); to an inductive only a
     functor's instantiation knows the representation of,
     [crane::shared_or_t<T, P>] with [P] the ordinary pointer.  Afterwards a

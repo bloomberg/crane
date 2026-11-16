@@ -13,16 +13,16 @@ open Base.Core_util
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Base.Table
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** What a call to a global is, before its arguments are generated: the call
     as Core elaborated it, and what planning its C++ added; see
     {!plan_call}. *)
 type call_plan = {
-  instantiated : Elaborated_call.instantiated;
+  instantiated : Core_plan.Elaborated_call.instantiated;
       (** The call's semantic half, decided before any of the C++ below. *)
   expected_result : Cpp_ir.Lowered.Type.t option;
       (** The C++ type the call is expected to produce: the position's, with
@@ -59,15 +59,15 @@ type call_plan = {
     expanded, so they differ from the type rebuilt here by design. *)
 let check_planned_arity abi (live : Cpp_ir.Lowered.Type.t) =
   if Base.Probe.checking () then
-    match Callable_abi.signature abi with
+    match Core_plan.Callable_abi.signature abi with
     | None -> ()
-    | Some {Callable_abi.params; _} ->
+    | Some {Core_plan.Callable_abi.params; _} ->
       let doms = match live with Function (d, _) -> d | _ -> [] in
       let dicts, values = List.partition Base.Type_util.is_typeclass_type_cpp doms in
       let values = List.filter (fun t -> not (is_skipped_cpp_type t)) values in
       (* A declared [unit] parameter is left out ({!Base.Type_util.declaration_drops_binder}). *)
       let dropped =
-        let r = Callable_abi.callee abi in
+        let r = Core_plan.Callable_abi.callee abi in
         match find_type_opt r with
         | Some ty when not (Base.Table.is_custom r || Base.Table.is_projection r) ->
           List.length
@@ -81,20 +81,20 @@ let check_planned_arity abi (live : Cpp_ir.Lowered.Type.t) =
         List.length
           (List.filter
              (fun p ->
-               match p.Callable_abi.origin with Callable_abi.From_instance _ -> true | _ -> false )
-             (Callable_abi.template_head abi) )
+               match p.Core_plan.Callable_abi.origin with Core_plan.Callable_abi.From_instance _ -> true | _ -> false )
+             (Core_plan.Callable_abi.template_head abi) )
       in
       if List.length values <> List.length params || List.length dicts <> instances then
         Base.Probe.violation "callable ABI"
           Pp.(
-            str "the plan of " ++ GlobRef.print (Callable_abi.callee abi)
+            str "the plan of " ++ GlobRef.print (Core_plan.Callable_abi.callee abi)
             ++ str (Printf.sprintf " declares %d value parameters and %d dictionaries" (List.length params) instances)
             ++ str (Printf.sprintf " where its type has %d and %d" (List.length values) (List.length dicts)) )
 
 (** {!check_planned_arity} for the installed plan of [id], where it has one. *)
 let check_installed_arity cx id live =
   if Base.Probe.checking () then
-    Option.iter (fun abi -> check_planned_arity abi live) (Callable_abi.lookup (Translation_state.callables cx) id)
+    Option.iter (fun abi -> check_planned_arity abi live) (Core_plan.Callable_abi.lookup (Translation_state.callables cx) id)
 
 (** {!instantiate_at_call} at the type arguments [use] wrote, read by the
     callee's scheme variables. *)
@@ -136,7 +136,7 @@ let core_app_result_type cx (f : Core.Expr.t) (args : Core.Expr.t list) : Core.T
 let local_types_lowering cx =
   {Core_passes.Local_types.app_result_type = (fun ~find f args -> core_app_result_type_with cx ~find f args)}
 
-(** The variable {!Plan_templates.relax_tt_applied_return} takes out of [id]'s
+(** The variable {!Core_plan.Plan_templates.relax_tt_applied_return} takes out of [id]'s
     template head, if any: the higher-kinded head of an applied codomain that
     only a callback's result otherwise names -- [case_]'s [M] in [M X], which
     the declaration spells [std::invoke_result_t<F0 &, ...>] instead.  Read off
@@ -166,7 +166,7 @@ let relaxed_tt_return_var id =
 (** The Rocq type-variable positions a call may still write, given that the
     declaration reorders some of them out of reach.
 
-    {!Plan_templates.relax_applied_return} handles a variable named only by the
+    {!Core_plan.Plan_templates.relax_applied_return} handles a variable named only by the
     return type -- C++ deduces nothing from a return type -- by giving it the
     producing callback's result as its default and moving it {e last}, since a
     default may only name parameters declared before it.  That pass records
@@ -194,9 +194,9 @@ let writable_tvar_count id =
   (* Only a codomain that {e applies} a variable is relaxed.  [list B] names
      [B] as a plain leading parameter that the call still has to write, and
      dropping it would leave nothing to deduce it from; [T V] is the
-     higher-kinded shape {!Plan_templates.relax_applied_return} rewrites. *)
+     higher-kinded shape {!Core_plan.Plan_templates.relax_applied_return} rewrites. *)
   (* And only a higher-kinded head: a family's application is written plain,
-     which the declaration does not relax ({!Plan_templates.relax_applied_return}). *)
+     which the declaration does not relax ({!Core_plan.Plan_templates.relax_applied_return}). *)
   let applied_cod =
     match cod with
     | Core.Type.Variable_app {head = h; _} ->
@@ -273,7 +273,7 @@ let param_states_type_args x orig =
 (** A singleton class's dictionary at the head of a call: the instance
     parameter it is, the class, and the class's one method, as the
     traversal's environment reads it.  Emission takes Core's reading
-    ({!Core_elaborate.singleton_dictionary_call}) and checks it against this
+    ({!Core_plan.Elaborate.singleton_dictionary_call}) and checks it against this
     one. *)
 let singleton_dictionary cx env head =
   match strip_magic head with
@@ -734,7 +734,7 @@ let projection_abi x =
     | Some b -> Core.Scheme.Binder.position b.Core.Schema.binder >= n_class
     | None -> true
   in
-  Callable_abi.foreign ~callee:x ~scheme:(Base.Core_util.reference_scheme x) ~kept:of_method ()
+  Core_plan.Callable_abi.foreign ~callee:x ~scheme:(Base.Core_util.reference_scheme x) ~kept:of_method ()
 
 (** The plan a call to [id] is written against: the head [id] was declared
     with, or, where it is not generated here, the conventions its call sites
@@ -746,7 +746,7 @@ let callee_abi cx ~instances id =
   let hk = Option.cata declared_higher_kinded_tvars IntSet.empty core_ty in
   let relaxed_tt = relaxed_tt_return_var id in
   let omitted = Translation_tvars.type_arg_omission id in
-  Callable_abi.plan (Translation_state.callables cx) id ~scheme:(Base.Core_util.reference_scheme id) ~instances ~omitted
+  Core_plan.Callable_abi.plan (Translation_state.callables cx) id ~scheme:(Base.Core_util.reference_scheme id) ~instances ~omitted
     ~higher_kinded:(fun v -> IntSet.mem (Core.Scheme.Var.ordinal v) hk)
     ~kept:(fun v -> omitted v = None && relaxed_tt <> Some (Core.Scheme.Var.ordinal v))
     ?reachable:(writable_tvar_count id)
@@ -758,8 +758,8 @@ let callee_abi cx ~instances id =
     value for some of its variables, [by_var] pairing each variable with its
     C++ type: planned against [id]'s head, no dictionary among them. *)
 let written_at_variables cx id (by_var : (int * Cpp_ir.Lowered.Type.t) list) =
-  Template_application.to_list
-    (Template_application.plan (callee_abi cx ~instances:0 id)
+  Core_plan.Template_application.to_list
+    (Core_plan.Template_application.plan (callee_abi cx ~instances:0 id)
        ~instance:(fun _ -> None)
        ~scheme:(fun v -> List.assoc_opt (Core.Scheme.Var.ordinal v) by_var) )
 
@@ -773,8 +773,8 @@ type lowered_call = {
   plan : call_plan;
   callee_type : Cpp_ir.Lowered.Type.t;
   written : Core.Phase.frozen Base.Core_util.Var_types.t;
-  abi : Callable_abi.t;
-  application : Template_application.t;
+  abi : Core_plan.Callable_abi.t;
+  application : Core_plan.Template_application.t;
   written_by_var : (Core.Scheme.Var.t * Cpp_ir.Lowered.Type.t) list;
 }
 
@@ -791,8 +791,8 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
   let {
     instantiated =
       {
-        Elaborated_call.call =
-          {Elaborated_call.primary = primary_core_args; regular = regular_core_args; _} as call;
+        Core_plan.Elaborated_call.call =
+          {Core_plan.Elaborated_call.primary = primary_core_args; regular = regular_core_args; _} as call;
         reading = tyargs;
         callee_type_at_call = fn_core_ty_subst;
         params = fn_param_core_tys;
@@ -806,8 +806,8 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     result_tvar_map = result_tvar_map;
     _
   } = plan in
-  let leading_params = Elaborated_call.leading_params call in
-  let dictionary_filled = Elaborated_call.dictionary_filled call in
+  let leading_params = Core_plan.Elaborated_call.leading_params call in
+  let dictionary_filled = Core_plan.Elaborated_call.dictionary_filled call in
   (* The callee's variable its type spells [Core.Type.Variable (_, i)]. *)
   let scheme_var i =
     Option.bind (Base.Core_util.reference_scheme id) (fun s -> Core.Scheme.Var.of_tvar s i)
@@ -839,13 +839,13 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
      in [typename I::m<T>] and in the return type, both non-deduced.  The
      arguments still say what they are, so resolve them from those. *)
   let tyargs = resolve_from_argument_types ~lex tyargs primary_core_args in
-  let tys = Call_tyargs.by_variable tyargs in
+  let tys = Core_plan.Call_tyargs.by_variable tyargs in
   (* The whole list is built as a function of the reading because it may
      have to be built twice: what a call writes is decided by the erasure
      filters, and the recoveries below run only where they left nothing.  A
      pass that resolves one variable would otherwise silently disable them. *)
   let build_type_args tyargs =
-  let tys = Call_tyargs.by_variable tyargs in
+  let tys = Core_plan.Call_tyargs.by_variable tyargs in
   (* The callee's variables it applies and still declares plain: a carrier
      it writes at the erased element ([Iter M]'s [M] is [T1], standing for
      [M<crane::obj>]). *)
@@ -982,7 +982,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
           let from_instantiation =
             match subst_index_of_orig k with
             | Some ks -> (
-              match Option.map resolve_meta (Param_pos.nth fn_param_core_tys ks) with
+              match Option.map resolve_meta (Core_plan.Param_pos.nth fn_param_core_tys ks) with
               | Some (Core.Type.Global_app {head = g'; type_arguments = [x]; _})
                 when GlobRef.UserOrd.equal g g'
                      && not
@@ -1013,7 +1013,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
           | None ->
           match
             Option.bind
-              (Param_pos.regular_of ~leading:leading_params k)
+              (Core_plan.Param_pos.regular_of ~leading:leading_params k)
               (List.nth_opt regular_core_args)
           with
           | Some arg -> (
@@ -1032,7 +1032,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
             | _ -> None )
           | None -> None )
         | _ -> None )
-      (Param_pos.positioned fn_param_core_tys_orig)
+      (Core_plan.Param_pos.positioned fn_param_core_tys_orig)
   in
   (* The callee's leading phantoms, as its plan has them: it writes [void]
      at them when anything after them is written.  An erased argument there
@@ -1040,10 +1040,10 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
   let phantom_vars =
     List.filter_map
       (fun p ->
-        match (p.Callable_abi.write, p.Callable_abi.origin) with
-        | Callable_abi.Phantom _, Callable_abi.From_scheme v -> Some v
+        match (p.Core_plan.Callable_abi.write, p.Core_plan.Callable_abi.origin) with
+        | Core_plan.Callable_abi.Phantom _, Core_plan.Callable_abi.From_scheme v -> Some v
         | _ -> None )
-      (Callable_abi.template_head (callee_abi cx ~instances:0 id))
+      (Core_plan.Callable_abi.template_head (callee_abi cx ~instances:0 id))
   in
   (* Each value is kept with the scheme variable it stands for, from here to
      the plan: a recovery that fills or drops one leaves the others where
@@ -1066,10 +1066,10 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
   let in_head =
     List.filter_map
       (fun p ->
-        match p.Callable_abi.origin with
-        | Callable_abi.From_scheme v -> Some v
+        match p.Core_plan.Callable_abi.origin with
+        | Core_plan.Callable_abi.From_scheme v -> Some v
         | _ -> None )
-      (Callable_abi.template_head (callee_abi cx ~instances:0 id))
+      (Core_plan.Callable_abi.template_head (callee_abi cx ~instances:0 id))
   in
   let mem v vs = List.exists (Core.Scheme.Var.equal v) vs in
   let regular_of ?(keep = fun v -> mem v in_head) tys =
@@ -1194,7 +1194,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         not
           (List.exists
              (fun (v, t) -> IntSet.mem (Core.Scheme.Var.ordinal v) hk && Cpp_ir.Types.prints_as_any t)
-             (regular_of ~keep:(Callable_abi.keeps (callee_abi cx ~instances:0 id)) tys) )
+             (regular_of ~keep:(Core_plan.Callable_abi.keeps (callee_abi cx ~instances:0 id)) tys) )
     in
     (* Writing the list out is what this call is left with once the
        recoveries have declined, so an erased family is worth resolving from
@@ -1243,7 +1243,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         filter_erased_keyed ~preserve_positions:true
           (from_expected
              (regular_of
-                (Call_tyargs.by_variable (resolve_from_argument_heads ~lex tyargs primary_core_args)) ) )
+                (Core_plan.Call_tyargs.by_variable (resolve_from_argument_heads ~lex tyargs primary_core_args)) ) )
       else filtered
     in
     if filtered = [] && regular_type_args <> [] && dictionary_filled then
@@ -1316,7 +1316,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
   in
   let apply regular =
     let regular = at_plain_positions regular in
-    Template_application.plan abi
+    Core_plan.Template_application.plan abi
       ~instance:(fun k -> List.nth_opt instance_args k)
       ~scheme:(fun v -> Core.Scheme.Var.assoc_opt v regular)
   in
@@ -1369,7 +1369,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         resolve_from_argument_heads ~accept:(fun _ f -> not (no_struct f)) ~lex tyargs
           primary_core_args
       in
-      if List.equal Core.Scheme.Var.equal (Call_tyargs.holes refined) (Call_tyargs.holes tyargs)
+      if List.equal Core.Scheme.Var.equal (Core_plan.Call_tyargs.holes refined) (Core_plan.Call_tyargs.holes tyargs)
       then regular
       else
         match build_type_args refined with
@@ -1377,7 +1377,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
         | refilled -> refilled
   in
   let application = apply regular in
-  let all_type_args = Template_application.to_list application in
+  let all_type_args = Core_plan.Template_application.to_list application in
 
   (* An argument written as an erased placeholder at a variable the use
      wrote nothing for, and nothing resolved since, is a guess: such a
@@ -1386,22 +1386,22 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     List.concat
       (List.mapi
          (fun k p ->
-           match (p.Callable_abi.origin, List.nth_opt all_type_args k) with
-           | Callable_abi.From_scheme v, Some a
-             when Cpp_ir.Types.prints_as_any a && Call_tyargs.is_unwritten tyargs v ->
+           match (p.Core_plan.Callable_abi.origin, List.nth_opt all_type_args k) with
+           | Core_plan.Callable_abi.From_scheme v, Some a
+             when Cpp_ir.Types.prints_as_any a && Core_plan.Call_tyargs.is_unwritten tyargs v ->
              [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
                  (Core.Scheme.Var.ordinal v)
                  (Pp.string_of_ppcmds
                     (cx.Translation_state.pp_cpp_type (Translation_state.unit_context cx) (Translation_state.plans cx) false []
                        (Cpp_pipeline.spell_type a))) ]
            | _ -> [] )
-         (Callable_abi.template_head abi) )
+         (Core_plan.Callable_abi.template_head abi) )
   in
   List.iter
     (fun problem ->
       Base.Probe.violation "template application"
         Pp.(str "the call to " ++ GlobRef.print id ++ str ": " ++ str problem) )
-    (Template_application.validate abi application @ guessed);
+    (Core_plan.Template_application.validate abi application @ guessed);
   (* The written arguments that instantiate the callee's own type variables,
      by variable: each argument the plan wrote at a parameter declaring one,
      and at a carrier the call's class resolves -- a variable the head does
@@ -1412,12 +1412,12 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
       List.concat
         (List.mapi
            (fun k p ->
-             match (p.Callable_abi.origin, List.nth_opt all_type_args k) with
-             | Callable_abi.From_scheme v, Some t -> [(v, t)]
+             match (p.Core_plan.Callable_abi.origin, List.nth_opt all_type_args k) with
+             | Core_plan.Callable_abi.From_scheme v, Some t -> [(v, t)]
              | _ -> [] )
-           (Callable_abi.template_head abi) )
+           (Core_plan.Callable_abi.template_head abi) )
     in
-    let carriers = Callable_abi.dictionary_carriers abi in
+    let carriers = Core_plan.Callable_abi.dictionary_carriers abi in
     let dictionaries =
       List.filteri
         (fun j _ -> j >= List.length instance_args - List.length carriers)
@@ -1555,13 +1555,13 @@ let rec core_arg_to_template_type cx ?expected env core_arg : Cpp_ir.Lowered.Typ
      a call applies to its own: a position is what gives the others their
      meaning, so one that cannot be written costs the list. *)
   (* The variables the instance's struct declares a template parameter for,
-     in its head's order ({!Instance_methods.instance_tvars}), among those
+     in its head's order ({!Core_plan.Instance_methods.instance_tvars}), among those
      the use writes an argument for. *)
   let struct_vars r ts =
     let ty = find_type r in
     List.filter
       (fun j -> Base.Core_util.Var_types.find_tvar ts j <> None)
-      (Instance_methods.instance_tvars ty (Instance_methods.class_type ty))
+      (Core_plan.Instance_methods.instance_tvars ty (Core_plan.Instance_methods.class_type ty))
   in
   let instance_type_args r ts =
     Base.Type_util.filter_erased_type_args
@@ -1673,8 +1673,8 @@ let rec core_arg_to_template_type cx ?expected env core_arg : Cpp_ir.Lowered.Typ
     deduced [F &&]: the callee then calls it at its own instantiation, and an
     argument written against the erased slot -- adapted to unbox
     [List<std::any>] where the callee hands it a [List<T2>] -- reads the
-    wrong type out of every box ({!Callable_abi.deduces_callable}). *)
-let deduces_callable cx r pos = Callable_abi.deduces_callable (Translation_state.callables cx) r pos
+    wrong type out of every box ({!Core_plan.Callable_abi.deduces_callable}). *)
+let deduces_callable cx r pos = Core_plan.Callable_abi.deduces_callable (Translation_state.callables cx) r pos
 
 (** For the function [r] of the unit, [b] its body and [ty] its type, the
     declared positions of the callables a call to it assumes it deduces where
@@ -1694,13 +1694,13 @@ let assumed_deduced_callables cx r b ty =
       let primary = primary_tvar_indices dom cod in
       List.filter_map
         (fun (pos, pt) ->
-          match (declared pt, Param_pos.source_index binder_tys pos) with
+          match (declared pt, Core_plan.Param_pos.source_index binder_tys pos) with
           | (Function _ as f), Some i
-            when Translation_callable_params.generalises_callable ~kept_as_fn:(Escape.IntSet.mem i ungeneralised)
+            when Translation_callable_params.generalises_callable ~kept_as_fn:(Core_plan.Escape.IntSet.mem i ungeneralised)
                    ~primary f ->
             Some pos
           | _ -> None )
-        (Param_pos.positioned (Param_pos.orig_params ~expand:expand_core_fun_alias fn_core_ty))
+        (Core_plan.Param_pos.positioned (Core_plan.Param_pos.orig_params ~expand:expand_core_fun_alias fn_core_ty))
     | _ -> [] )
 
 (** {!assumed_deduced_callables} for each function of [struc] that none of
@@ -1708,7 +1708,7 @@ let assumed_deduced_callables cx r b ty =
 let assumed_callables cx struc callables =
   let planned =
     List.fold_left
-      (fun s abi -> GlobRef.Map_env.add (Callable_abi.callee abi) () s)
+      (fun s abi -> GlobRef.Map_env.add (Core_plan.Callable_abi.callee abi) () s)
       GlobRef.Map_env.empty callables
   in
   List.filter_map
@@ -1790,16 +1790,16 @@ let binding_results_of id compute =
   end
 
 (** [plan_call ?expected_ty env inst] -- what the instantiated call [inst]
-    ({!Core_elaborate.instantiate}) needs to know before its arguments are
+    ({!Core_plan.Elaborate.instantiate}) needs to know before its arguments are
     generated, beyond its instantiation: the C++ types its result and its
     dictionaries are expected at, and what those say of the callee's
     variables.  Read by {!gen_call_args} and by the assembly in {!eta_fun}.
     Nothing here changes the instantiation. *)
-let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Elaborated_call.instantiated) =
+let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : Core_plan.Elaborated_call.instantiated) =
   let {
-    Elaborated_call.call =
+    Core_plan.Elaborated_call.call =
       {
-        Elaborated_call.callee = id;
+        Core_plan.Elaborated_call.callee = id;
         primary = primary_core_args;
         excess = excess_args;
         instances = typeclass_core_args;
@@ -1965,7 +1965,7 @@ let plan_call cx ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option) env (inst : 
     ([expected]), and the return type in force while it is ([ret]),
     with what {!gen_call_args} reads of these afterwards. *)
 type argument_position = {
-  index : Param_pos.orig Param_pos.pos;
+  index : Core_plan.Param_pos.orig Core_plan.Param_pos.pos;
   param : Core.Type.t option;
   expected : Cpp_ir.Lowered.Type.t option;
   ret : Cpp_ir.Lowered.Type.t option;
@@ -1998,7 +1998,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
   let {
     instantiated =
       {
-        Elaborated_call.call = {Elaborated_call.callee_type = fn_core_ty; _} as call;
+        Core_plan.Elaborated_call.call = {Core_plan.Elaborated_call.callee_type = fn_core_ty; _} as call;
         tys;
         params = fn_param_core_tys;
         params_orig = fn_param_core_tys_orig;
@@ -2009,14 +2009,14 @@ let argument_position cx ~local_callable env id plan i core_arg =
     result_tvar_map = result_tvar_map;
     _
   } = plan in
-  let leading_params = Elaborated_call.leading_params call in
-  let dictionary_filled = Elaborated_call.dictionary_filled call in
+  let leading_params = Core_plan.Elaborated_call.leading_params call in
+  let dictionary_filled = Core_plan.Elaborated_call.dictionary_filled call in
   (* The callee's parameters are indexed from its class-dictionary
      arguments, which [regular_core_args] does not include, so this
      argument's parameter is at [param_index] of the unsubstituted list --
      and, being a position of that list, has to be converted before it
      indexes the substituted one (see [subst_index_of_orig]). *)
-  let param_index = Param_pos.of_regular ~leading:leading_params i in
+  let param_index = Core_plan.Param_pos.of_regular ~leading:leading_params i in
   (* Where that parameter stands in the substituted list.  The
      conversion is a statement about the callee's Core type, and it is worth
      making only where the Core type is what the callee's C++ signature was
@@ -2034,7 +2034,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
      confident wrong one is worse than the familiar one. *)
   let subst_param_index =
     if Base.Table.is_inline_custom id then
-      Some (Param_pos.subst_at_declared param_index)
+      Some (Core_plan.Param_pos.subst_at_declared param_index)
     else subst_index_of_orig param_index
   in
   (* Where substitution erased the parameter -- [IFun b c] at objects the
@@ -2042,14 +2042,14 @@ let argument_position cx ~local_callable env id plan i core_arg =
      declares, and an argument reaching it is recovered at that type. *)
   let param_core_ty =
     match subst_param_index with
-    | Some i -> Param_pos.nth fn_param_core_tys i
+    | Some i -> Core_plan.Param_pos.nth fn_param_core_tys i
     | None -> (
-      match Param_pos.nth fn_param_core_tys_orig param_index with
+      match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
       | Some t when not (erased_by_extraction t) -> Some t
       | _ -> None )
   in
   let param_expected_at params pos =
-    match Param_pos.nth params pos with
+    match Core_plan.Param_pos.nth params pos with
     | Some core_ty ->
       let cpp_ty = Translation_types.cpp_of_core cx env core_ty in
       if Cpp_ir.Types.prints_as_any cpp_ty then None else Some cpp_ty
@@ -2072,7 +2072,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
      the shape the substituted parameter type has, so a producer that has
      its own better source keeps it. *)
   let param_expected_recurried () =
-    match Param_pos.nth fn_param_core_tys_orig param_index with
+    match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
     | Some orig ->
       Option.bind (param_expected_subst ())
         (Cpp_ir.Types.respell_arrows (Cpp_ir.Types.Declared_at (count_core_value_arrows orig)))
@@ -2082,7 +2082,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
     match param_expected_recurried () with
     | Some _ as t -> t
     | None -> (
-      match Param_pos.nth fn_param_core_tys_orig param_index with
+      match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
       | Some _ -> param_expected_subst ()
       | None -> None )
   in
@@ -2111,17 +2111,17 @@ let argument_position cx ~local_callable env id plan i core_arg =
           (Translation_types.unfold_cpp_typedef cx env (Translation_types.cpp_of_core cx env t))
       | None -> false
     in
-    match Param_pos.nth fn_param_core_tys_orig this with
+    match Core_plan.Param_pos.nth fn_param_core_tys_orig this with
     | Some (Core.Type.Variable {variable = j; _}) when tvar_arg_erased j ->
       List.exists
         (fun (k, orig) ->
-          (not (Param_pos.equal k this))
+          (not (Core_plan.Param_pos.equal k this))
           && param_states_type_args id orig
           && mentions j orig
           && Base.Type_util.has_erased_type_in_type
                (Translation_types.unfold_cpp_typedef cx env
                   (Translation_types.cpp_of_core cx env (Base.Core_util.Var_types.apply tys orig))))
-        (Param_pos.positioned fn_param_core_tys_orig)
+        (Core_plan.Param_pos.positioned fn_param_core_tys_orig)
     | _ -> false
   in
   let arg_expected_ty =
@@ -2134,7 +2134,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
     | Core.Expr.Lambda_group_barrier {value = Core.Expr.Lambda _; _} -> param_expected_at_declared_arity ()
     | _ ->
     ( match
-        match Param_pos.nth fn_param_core_tys_orig param_index with
+        match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
         | Some (Core.Type.Variable _) ->
           param_expected_at_declared_arity ()
         | _ -> None
@@ -2176,7 +2176,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
   let arg_expected_ty =
     match
       ( Lazy.force result_tvar_map,
-        Param_pos.nth fn_param_core_tys_orig param_index )
+        Core_plan.Param_pos.nth fn_param_core_tys_orig param_index )
     with
     | (result_names, (_ :: _ as m)), Some pt -> (
       let d =
@@ -2221,7 +2221,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
      family with the monad's [BotE] turned the inner [interp] into one
      over the target family. *)
   let param_mentions_carrier =
-    match Param_pos.nth fn_param_core_tys_orig param_index with
+    match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
     | Some t ->
       let hk = declared_higher_kinded_tvars fn_core_ty in
       not (IntSet.is_empty (IntSet.inter hk (collect_tvars_set IntSet.empty t)))
@@ -2240,7 +2240,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
      self-call forwards its own ({!deduces_callable}); and a lambda takes
      what it is given where the slot erases. *)
   let deduced_callable =
-    Option.has_some (Param_pos.nth fn_param_core_tys_orig param_index)
+    Option.has_some (Core_plan.Param_pos.nth fn_param_core_tys_orig param_index)
     && deduces_callable cx id param_index
   in
   let arg_expected_ty =
@@ -2304,7 +2304,7 @@ let argument_position cx ~local_callable env id plan i core_arg =
 (** [lower_call ~caller ~slot ?expected_ty env use args]: the call [use]
     [args] in the declaration [caller], lowered against its callee before any
     of its arguments is -- its semantic half first, as Core planned it at
-    the Core types its position states ({!Core_elaborate.instantiation}), then how its
+    the Core types its position states ({!Core_plan.Elaborate.instantiation}), then how its
     arguments meet the callee's parameters in C++ ({!plan_call}), and the
     template application planned and validated against the callee's ABI
     ({!call_type_args}).  Generating the arguments reads the result and
@@ -2313,7 +2313,7 @@ let lower_call cx ~caller ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) en
   let id = use.callee in
   let lex = current_lexenv cx () in
   let inst =
-    Core_elaborate.instantiation ~walk:(elaborations cx) ~lex ~expected_core:slot.Translation_slot.expected_core_ty
+    Core_plan.Elaborate.instantiation ~walk:(elaborations cx) ~lex ~expected_core:slot.Translation_slot.expected_core_ty
       ~stated_core:slot.Translation_slot.stated_core_ty ~caller ~scope:cx.ctx.lexical.current_type_vars use args
   in
   let plan = plan_call cx ~lex ?expected_ty env inst in

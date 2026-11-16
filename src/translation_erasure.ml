@@ -13,7 +13,7 @@ open Base.Core_util
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
 (** Check if the return type of a Core function type is erased, i.e. it
     becomes [std::any] in C++.  This covers three cases:

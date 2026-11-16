@@ -69,7 +69,7 @@ val freeze : optimized program -> frozen program
 
 (** [normalize pass p] is [p] in the form control lowering reads: [pass]
     gives each definition a parameter at every arrow of its type
-    ({!Normalize.eta_expand}), then ({!Normalize.structure}) splices the
+    ({!Core_plan.Normalize.eta_expand}), then ({!Core_plan.Normalize.structure}) splices the
     partners of each loopified function into it and binds each call a
     function Loopify transforms makes to its own recursive group, where it
     is evaluated strictly and not in tail position, to a temporary of its

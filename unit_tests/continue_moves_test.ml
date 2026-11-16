@@ -49,7 +49,7 @@ let loop turn : Term.loop =
                   {constructor = cons; fields = [Core.Pattern.Bound_variable 2; Core.Pattern.Bound_variable 1]};
                 body = turn } ] } }
 
-let moves turn = Ownership_ir.continue_moves ~effects:Core_effects.empty (loop turn)
+let moves turn = Ownership_ir.continue_moves ~effects:Core_plan.Effects.empty (loop turn)
 let k = Ownership_ir.Continue_move.Keep
 let p = Ownership_ir.Continue_move.Move_parameter
 let a = Ownership_ir.Continue_move.Move_argument

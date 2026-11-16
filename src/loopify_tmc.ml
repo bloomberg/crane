@@ -169,12 +169,12 @@ type shape = {
   call : Core.Occurrence.t option;
 }
 
-(** The shapes of the recursion plan's [chains] ({!Recursion_plan.strategy}),
+(** The shapes of the recursion plan's [chains] ({!Core_plan.Recursion.strategy}),
     which do not say which call each is around. *)
 let chain_shapes chains =
   List.map
-    (fun (ch : Recursion_plan.chain) ->
-      { constructors = List.map (fun (c : Recursion_plan.cell) -> (c.constructor, c.hole)) (ch.around @ [ch.innermost]);
+    (fun (ch : Core_plan.Recursion.chain) ->
+      { constructors = List.map (fun (c : Core_plan.Recursion.cell) -> (c.constructor, c.hole)) (ch.around @ [ch.innermost]);
         call = None } )
     chains
 

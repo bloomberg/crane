@@ -10,7 +10,7 @@ open Base.Common
 open Names
 open Util
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Base.Table
 
 (** Whether a reference was methodified: spelled [x.f(...)] rather than
@@ -22,7 +22,7 @@ let is_methodified r = Cpp_names.lookup_method_this_pos r <> None
     outlive.  Where each lambda is made, Core has decided what it captures:
     a lambda the program writes is a closure; one holding
     references -- the lambdas of a local fixpoint generated in place
-    ({!Analyze_closures.In_place}), a lambda invoked where it is written, a
+    ({!Core_plan.Closures.In_place}), a lambda invoked where it is written, a
     single-use eta-expansion a let binds -- runs where it is written, and
     no body returns it.  A lambda invoked where it is written is not
     returned, whatever its result is: only what {e it} returns is looked

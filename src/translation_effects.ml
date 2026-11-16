@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 (** Monadic effects: [ret] and [bind] of a monad mapped to an effect
-    ({!Core_effects}), sequenced as statements in sequential mode and kept
+    ({!Core_plan.Effects}), sequenced as statements in sequential mode and kept
     as interaction-tree constructors in reified mode.  One of the modules
     lowering Core bodies to CppIR that {!Translation} drives. *)
 
@@ -19,7 +19,7 @@ open Translation_knot
     [ITree<R>::ret] in reified mode. *)
 let gen_return_expr cx env ~r ~use ~a1 ~l : Cpp_ir.Lowered.Expr.t =
   let ret_tys = Base.Core_util.written_type_args use in
-  if not (Translation_monadic.is_sequential_effect cx Core_effects.Return use) then begin
+  if not (Translation_monadic.is_sequential_effect cx Core_plan.Effects.Return use) then begin
     (* Reified mode: Ret produces ITree<R>::ret(value). Don't strip it. *)
     let t = Base.Common.last (a1 :: l) in
     match t with
@@ -76,7 +76,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
     | _ -> None
   in
   (* Reified mode: bind is a real function call, not desugared. *)
-  if not (Translation_monadic.is_sequential_effect cx Core_effects.Bind use) then
+  if not (Translation_monadic.is_sequential_effect cx Core_plan.Effects.Bind use) then
     Translation_cpp_build.inline_iife k ((gen_expr cx ~slot env ast))
   else begin
     (* Sequential mode: desugar bind into sequential statements. *)
@@ -105,7 +105,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
          can reference it if needed. *)
       let action_is_pure_ret =
         match a_core with
-        | Core.Expr.Apply {callee = Core.Expr.Global use; _} -> Translation_monadic.is_effect cx Core_effects.Return use
+        | Core.Expr.Apply {callee = Core.Expr.Global use; _} -> Translation_monadic.is_effect cx Core_plan.Effects.Return use
         | _ -> false
       in
       let side_effect : Cpp_ir.Lowered.Stmt.t list =
@@ -151,7 +151,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
       match a with Enum_value _ -> [] | _ -> [Expression a]
     in
     ( match f with
-    | Core.Expr.Global use when Translation_monadic.is_effect cx Core_effects.Return use ->
+    | Core.Expr.Global use when Translation_monadic.is_effect cx Core_plan.Effects.Return use ->
       (* Eta-reduced Ret: bind action Ret = action (monad right identity).
          In sequential mode, just execute the action and return. *)
       if returns_void cx then
@@ -192,7 +192,7 @@ let gen_bind_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
     lowered as an [ITree<R>::ret] in reified mode. *)
 let gen_return_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (ast : Core.Expr.t) ~use ~a1 ~l :
   Cpp_ir.Lowered.Stmt.t list =
-  if not (Translation_monadic.is_sequential_effect cx Core_effects.Return use) then begin
+  if not (Translation_monadic.is_sequential_effect cx Core_plan.Effects.Return use) then begin
     (* Reified mode: Ret is a constructor call, not desugared. *)
     Translation_cpp_build.inline_iife k ((gen_expr cx ~slot env ast))
   end

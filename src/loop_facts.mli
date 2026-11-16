@@ -10,9 +10,9 @@
     from {!Program_facts.analyze}. *)
 
 type t = {
-  recursion : Recursion_plan.t;  (** how each function recurses *)
+  recursion : Core_plan.Recursion.t;  (** how each function recurses *)
   control : Lower_control.t;  (** the loops that recursion lowers to *)
-  effects : Core_effects.t;
+  effects : Core_plan.Effects.t;
       (** the effect operations of the unit being lowered, which a loop's
           turns read as its statements ({!Ownership_ir.continue_moves}) *)
 }

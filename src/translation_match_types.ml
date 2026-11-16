@@ -12,7 +12,7 @@ open Base.Core_util
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
 (** For inductives with dependent parameters (e.g. [sigT]), unresolved
     rigid type variables correspond to fields whose C++ type

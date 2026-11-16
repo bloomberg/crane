@@ -8,7 +8,7 @@ type entered =
   | Inductive_struct of GlobRef.t
   | In_struct
   | In_template
-  | Function of {owner : GlobRef.t; defines : bool; scope : Scope_plan.scope option}
+  | Function of {owner : GlobRef.t; defines : bool; scope : Core_plan.Scope_plan.scope option}
 type frame = entered list
 type definition = Enum_definition | Struct_definition | Alias_definition
 type enumerator_site = Enumerator_value | Case_label
@@ -83,7 +83,7 @@ let compare_entered a b =
       match Bool.compare a.defines b.defines with
       | 0 ->
         Option.compare
-          (fun (s : Scope_plan.scope) (s' : Scope_plan.scope) ->
+          (fun (s : Core_plan.Scope_plan.scope) (s' : Core_plan.Scope_plan.scope) ->
             match ModPath.compare s.module_ s'.module_ with
             | 0 -> List.compare String.compare s.qualifier s'.qualifier
             | c -> c )
@@ -167,7 +167,7 @@ type value =
   | Reference of reference
   | Access of access
   | Holds of bool
-  | Scope of Scope_plan.scope option
+  | Scope of Core_plan.Scope_plan.scope option
 
 let pp_reference = function
   | Named_value {name; type_arguments} ->

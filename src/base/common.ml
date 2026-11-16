@@ -1705,7 +1705,7 @@ let field_param_id i = Id.of_string (field_param_name i)
     The registry lives in {!Common} rather than {!Cpp_state} to avoid a
     dependency cycle: [Translation] depends on [Common] but not on
     [Cpp_state], while [Cpp_state] transitively depends on [Translation]
-    through [Method_registry].  Cleared by {!reset_ctor_field_names} on every
+    through [Core_plan.Method_registry].  Cleared by {!reset_ctor_field_names} on every
     extraction reset (as {!Cpp_state.reset_cpp_state} triggers). *)
 
 (** [ctor_owner_key g] is a stable string identifying the inductive that owns

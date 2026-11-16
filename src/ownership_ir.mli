@@ -74,7 +74,7 @@ val worth_moving_ref : ('a -> bool) -> Names.GlobRef.t -> 'a list -> bool
     binding them again from what it holds -- the handler resuming there
     owns each, having moved its frame off the stack; [passed], those of
     [held] what follows passes on, as they are, to a parameter of a call
-    entering the machine ({!Recursion_plan.passing}): a frame may keep one
+    entering the machine ({!Core_plan.Recursion.passing}): a frame may keep one
     as a pointer to it, for an entry taking that parameter by pointer, so
     what follows does not own it. *)
 type resume = {
@@ -128,7 +128,7 @@ val region :
   ?outer:(int -> Core.Type.t option) ->
   ?resumes:resumes ->
   ?certain:bool ->
-  effects:Core_effects.t ->
+  effects:Core_plan.Effects.t ->
   n_outer:int ->
   Core.Expr.t ->
   t
@@ -170,7 +170,7 @@ val fields_by_value : t -> case:Core.Expr.t -> by_value:bool list -> t
 (** [bound_at_instance p ~let_] is [p] for the let at the occurrence [let_],
     binding a lambda with a type variable of its own that translation binds
     to a local all the same, at the one instance its uses agree on
-    ({!Core_query.let_lambda}): the local is the region's own, and
+    ({!Core_plan.Query.let_lambda}): the local is the region's own, and
     copies what it closes over where it is made. *)
 val bound_at_instance : t -> let_:Core.Occurrence.t -> t
 
@@ -272,7 +272,7 @@ module Capture : sig
   type t =
     | By_reference
         (** reads it where it stands: a local fixpoint generated in place
-            ({!Analyze_closures.In_place}), which runs while the scope does *)
+            ({!Core_plan.Closures.In_place}), which runs while the scope does *)
     | By_move
         (** takes its value where it is made: the variable is owned there,
             and the capture is its last use -- nothing after the closure,
@@ -346,7 +346,7 @@ end
     parameter is kept in a local, rather than by pointer, is the lowering's
     to say.  A machine's loop moves nothing so.  [effects] are the unit's
     effect operations ({!region}). *)
-val continue_moves : effects:Core_effects.t -> Control_ir.Term.loop -> (Core.Occurrence.t * Continue_move.t list) list
+val continue_moves : effects:Core_plan.Effects.t -> Control_ir.Term.loop -> (Core.Occurrence.t * Continue_move.t list) list
 
 (** [save_moves p let_]: of the let at the occurrence [let_], a point a
     machine with a stack of frames resumes at ({!resumes}), the binders the
@@ -385,7 +385,7 @@ end
     lambdas from it and before any loop is lowered from them
     (the [local_passing] of [Translation]). *)
 module Local_passing : sig
-  type t = Callable_abi.passing option list
+  type t = Core_plan.Callable_abi.passing option list
 
   (** [record member t]: the function [member] -- the fixpoint's
       occurrence, and the function's position in it -- passes its

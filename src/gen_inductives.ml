@@ -21,11 +21,11 @@ open Util
 open Translation_state
 open Base.Type_util
 open Translation
-open Plan_templates
+open Core_plan.Plan_templates
 open Gen_context
 open Gen_functions
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** Replace [this] in an expression that a method returns with
     [shared_from_this()] of [inner_ty], recursing into lambdas and calls: a
@@ -235,9 +235,9 @@ type method_scope = {
   params : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** The C++ parameters: the runtime ones other than the receiver, each
           wrapped by ownership, a callable as an [F &&]. *)
-  passing : Callable_abi.passing list;
+  passing : Core_plan.Callable_abi.passing list;
       (** How each of {!method_scope.params} is passed. *)
-  fun_params : (Id.t * Callable_abi.kind * Id.t) list;
+  fun_params : (Id.t * Core_plan.Callable_abi.kind * Id.t) list;
       (** The callable parameters generalised to a template parameter: the
           parameter, its [Callable_declared] constraint and the template
           parameter's name. *)
@@ -245,10 +245,10 @@ type method_scope = {
       (** The template parameters before {!method_head} drops any: the
           instances, then the function's own variables, then the
           callables. *)
-  minted : (Id.t * Callable_abi.minted) list;
+  minted : (Id.t * Core_plan.Callable_abi.minted) list;
       (** What each of {!method_scope.template_params} was made for: a dictionary, a
           variable of the function's scheme, or a callable parameter. *)
-  deduced_callables : Param_pos.orig Param_pos.pos list;
+  deduced_callables : Core_plan.Param_pos.orig Core_plan.Param_pos.pos list;
       (** The declared positions of the callables deduced as an [F &&]. *)
 }
 
@@ -267,15 +267,15 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
   let num_ind_vars = List.length vars in
   let _, ret_ty = get_args_and_ret [] ty in
   (* The function's variables renumbered so the inductive's come first and
-     its own after them ({!Method_registry.renumbering}), the positions
+     its own after them ({!Core_plan.Method_registry.renumbering}), the positions
      cpp_ir_of_core_type maps. *)
-  let renumbering = Method_registry.renumbering ~num_ind_vars ~this_pos ty in
+  let renumbering = Core_plan.Method_registry.renumbering ~num_ind_vars ~this_pos ty in
   let extra_tvars_orig = renumbering.extra in
   let remap_core_tvar = renumbering.rename in
-  let all_tvars = List.sort compare (Core_query.collect_tvars [] ty) in
-  let ty = Method_registry.renumber_type renumbering ty in
-  let ret_ty = Method_registry.renumber_type renumbering ret_ty in
-  let body = Method_registry.renumber_body renumbering body in
+  let all_tvars = List.sort compare (Core_plan.Query.collect_tvars [] ty) in
+  let ty = Core_plan.Method_registry.renumber_type renumbering ty in
+  let ret_ty = Core_plan.Method_registry.renumber_type renumbering ret_ty in
+  let body = Core_plan.Method_registry.renumber_body renumbering body in
   let extra_remap = List.mapi (fun i orig -> (orig, num_ind_vars + 1 + i)) extra_tvars_orig in
   (* After remapping, extra tvars are at positions num_ind_vars+1,
      num_ind_vars+2, ... *)
@@ -334,7 +334,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
   (* Infer owned/borrowed for method parameters. Note: method 'this' is always
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
-  let method_owned_flags = Ownership.read_off ~settled:(settled_ownership cx) ids_with_types inner_body in
+  let method_owned_flags = Core_plan.Ownership.read_off ~settled:(settled_ownership cx) ids_with_types inner_body in
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with
      body *)
@@ -386,7 +386,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
         let cpp_ty = strip_top_level_self_ptr cpp_ty in
         let cpp_ty = subst_extra_tvars cpp_ty in
         let owned = get_param_owned_flag orig_idx in
-        (id, cpp_ty, i, owned, not (Escape.IntSet.mem orig_idx ungeneralised)) )
+        (id, cpp_ty, i, owned, not (Core_plan.Escape.IntSet.mem orig_idx ungeneralised)) )
       param_ids_with_pos
   in
 
@@ -397,14 +397,14 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
         match cpp_ty with
         | Function (dom, cod) when generalised ->
           let cod = if is_cpp_unit_type cod then (Void : Cpp_ir.Lowered.Type.t) else cod in
-          Some (id, (Callable_declared (dom, cod) : Callable_abi.kind), fun_tparam_id i)
+          Some (id, (Callable_declared (dom, cod) : Core_plan.Callable_abi.kind), fun_tparam_id i)
         | _ -> None )
       params_with_idx
   in
 
   (* Build template params *)
   let extra_type_params =
-    List.map (fun name -> ((Typename : Callable_abi.kind), name)) extra_tvar_names
+    List.map (fun name -> ((Typename : Core_plan.Callable_abi.kind), name)) extra_tvar_names
   in
   let fun_template_params =
     List.map (fun (_, tt, fname) -> (tt, fname)) fun_params
@@ -424,7 +424,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
     List.filter_map
       (fun ((_, (cpp_ty : Cpp_ir.Lowered.Type.t), _, _, generalised), (_, _, orig_idx)) ->
         match cpp_ty with
-        | Function _ when generalised -> Param_pos.of_source_index binder_tys orig_idx
+        | Function _ when generalised -> Core_plan.Param_pos.of_source_index binder_tys orig_idx
         | _ -> None )
       (List.combine params_with_idx param_ids_with_pos)
   in
@@ -470,12 +470,12 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
     fun_params = fun_params;
     template_params = template_params;
     minted =
-      List.mapi (fun k (_, id, _, _) -> (id, Callable_abi.Instance_param k)) typeclass_temps
-      @ List.map2 (fun name orig -> (name, Callable_abi.Scheme_param orig)) extra_tvar_names extra_tvars_orig
+      List.mapi (fun k (_, id, _, _) -> (id, Core_plan.Callable_abi.Instance_param k)) typeclass_temps
+      @ List.map2 (fun name orig -> (name, Core_plan.Callable_abi.Scheme_param orig)) extra_tvar_names extra_tvars_orig
       @ List.filter_map
           (fun (_, (cpp_ty : Cpp_ir.Lowered.Type.t), i, _, generalised) ->
             match cpp_ty with
-            | Function _ when generalised -> Some (fun_tparam_id i, Callable_abi.Callable_param i)
+            | Function _ when generalised -> Some (fun_tparam_id i, Core_plan.Callable_abi.Callable_param i)
             | _ -> None )
           params_with_idx;
     deduced_callables = deduced_callables;
@@ -557,7 +557,7 @@ let method_head cx vars s =
     in
     let constraints =
       List.concat_map
-        (fun (_, (tt : Callable_abi.kind), _) -> match tt with Callable_declared (d, c) -> c :: d | _ -> [])
+        (fun (_, (tt : Core_plan.Callable_abi.kind), _) -> match tt with Callable_declared (d, c) -> c :: d | _ -> [])
         fun_params
     in
     fun name -> List.exists (cpp_type_has_tvar name) (constraints @ annotations)
@@ -622,7 +622,7 @@ let method_head cx vars s =
     variable it was renumbered from ({!method_scope}). *)
 let method_plan func_ref s h =
   let scheme = Base.Core_util.reference_scheme func_ref in
-  Callable_abi.of_head ~minted:s.minted
+  Core_plan.Callable_abi.of_head ~minted:s.minted
     ~omitted:(Translation_tvars.type_arg_omission func_ref)
     ~deduced_callables:s.deduced_callables ~passing:s.passing
     ~receiver:
@@ -647,12 +647,12 @@ let plan_method cx name vars ((func_ref, _, ty, _) as candidate) =
     of the variables it drops.  Under [CRANE_CHECK_IR] the head is decided
     again ({!method_head}) and checked against the plan. *)
 let planned_method_head cx func_ref vars s =
-  let abi = Callable_abi.planned (Translation_state.callables cx) func_ref in
+  let abi = Core_plan.Callable_abi.planned (Translation_state.callables cx) func_ref in
   if Base.Probe.checking () then
-    Callable_abi.check (Translation_state.callables cx) (method_plan func_ref s (method_head cx vars s));
-  match Callable_abi.receiver abi with
+    Core_plan.Callable_abi.check (Translation_state.callables cx) (method_plan func_ref s (method_head cx vars s));
+  match Core_plan.Callable_abi.receiver abi with
   | Some r ->
-    (Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
+    (Core_plan.Callable_abi.declared_head abi, r.ret, Id.Set.of_list r.return_only, r.dropped_names)
   | None ->
     CErrors.anomaly
       Pp.(str "the method " ++ GlobRef.print func_ref ++ str " was planned as a function.")
@@ -917,7 +917,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
               { this_position = this_pos;
                 is_const = true;
                 ref_qualifier = Any;
-                returns_field = Escape.returns_receiver_field ~this_pos body };
+                returns_field = Core_plan.Escape.returns_receiver_field ~this_pos body };
           is_inline = false;
           no_pure;
           constexpr = Undecided;
@@ -1128,7 +1128,7 @@ let constructor_field_at_own_vars vars (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir
 (** The fields of a constructor of [name], of types [tys], that its struct
     stores behind the smart pointer, each with whether it holds [name]
     itself: what loop lowering reads off the struct, decided before it is
-    generated ({!Pointer_fields.add}). *)
+    generated ({!Core_plan.Pointer_fields.add}). *)
 let constructor_pointer_fields cx ~name ~is_coinductive vars tys =
   List.concat
     (List.mapi

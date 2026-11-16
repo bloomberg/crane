@@ -1051,7 +1051,7 @@ let layout_pass_names =
     decide_callables ]
 
 (** Settle the unit's layout -- where each declaration lives and what it is
-    called ({!Module_plan}) -- then the names of the modules and the globals
+    called ({!Core_plan.Module_plan}) -- then the names of the modules and the globals
     it declares, in declaration order ({!Cpp.plan_module_names},
     {!Cpp.plan_names}), and those it refers to
     ({!Cpp.plan_referenced_names}), and of its constructors' fields
@@ -1063,7 +1063,7 @@ let layout_pass_names =
     accessor functions ({!Cpp.plan_accessors}), and how a definition written
     outside its struct's body names the struct ({!Cpp.plan_scopes}), then
     elaborate every call of the unit and bind the elaborations
-    ({!Core_elaborate.structure}), so that planning the callables reads
+    ({!Core_plan.Elaborate.structure}), so that planning the callables reads
     them as emission does, then plan the callable of each
     function and method a render will generate.  Each decision a later one
     or a reader asks about is in the unit's context [u] for the rest of the
@@ -1082,7 +1082,7 @@ let layout_pass_names =
 let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   Base.Pipeline_trace.event "layout" prepare_layout;
   let modules, names, analysis = Cpp.prepare_structure cx u struc in
-  let acc = {acc with modules = Module_plan.extend acc.modules modules} in
+  let acc = {acc with modules = Core_plan.Module_plan.extend acc.modules modules} in
   with_plans cx {Cpp_state.no_plans with analysis = Some analysis} @@ fun () ->
   with_plan cx {u with names = Some names} acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_names;
@@ -1094,7 +1094,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   let field_names = Cpp.plan_field_names struc in
   Base.Pipeline_trace.event "layout" plan_pointer_fields;
   let pointer_fields = Cpp.plan_pointer_fields cx struc in
-  let acc = {acc with pointer_fields = Pointer_fields.add acc.pointer_fields pointer_fields} in
+  let acc = {acc with pointer_fields = Core_plan.Pointer_fields.add acc.pointer_fields pointer_fields} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers cx () in
@@ -1106,11 +1106,11 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_concept_prerequisites;
   let modules = Cpp.plan_concept_prerequisites cx modules struc in
-  let acc = {acc with modules = Module_plan.extend acc.modules modules} in
+  let acc = {acc with modules = Core_plan.Module_plan.extend acc.modules modules} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_scopes;
   let scopes = Cpp.plan_scopes cx struc in
-  with_context cx {u with scopes = Scope_plan.bound_of scopes} @@ fun u ->
+  with_context cx {u with scopes = Core_plan.Scope_plan.bound_of scopes} @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_promoted_inductives;
   let promoted_inductives = Cpp.plan_promoted_inductives u struc in
   let acc =
@@ -1141,7 +1141,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   Base.Pipeline_trace.event "layout" elaborate_calls;
   let elaborations =
     Translation_state.generating_outside_modules cx @@ fun () ->
-    Core_elaborate.structure
+    Core_plan.Elaborate.structure
       ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods
         cx kn ind))
       struc
@@ -1163,7 +1163,7 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
     Translation_state.generating_outside_modules cx (fun () -> Translation_calls.assumed_callables cx struc
       callables) in
   Base.Pipeline_trace.event "layout" decide_callables;
-  let u = {u with Unit_context.callables = Callable_abi.decide ~callables ~assumed ~instance_methods} in
+  let u = {u with Unit_context.callables = Core_plan.Callable_abi.decide ~callables ~assumed ~instance_methods} in
   with_context cx u @@ fun u ->
   k u acc
   ( modules,
@@ -1362,9 +1362,9 @@ let core_passes cx to_appear : Core.Program.extracted Base.Pipeline_trace.pass l
   let open Base.Pipeline_trace in
   [ pass "modutil" (Core_passes.Modutil.optimize_struct to_appear);
     (* Which inductives are shared variants is a property of their
-       declarations, final from here; the method registry {!Normalize} builds
+       declarations, final from here; the method registry {!Core_plan.Normalize} builds
        already asks. *)
-    effect_ "shared_variants" Structure_analysis.register_shared_variants;
+    effect_ "shared_variants" Core_plan.Structure.register_shared_variants;
     pass "dedup" Core_passes.Dedup.structure;
     pass "specialize" Core_passes.Specialize.structure;
     pass "knot" Core_passes.Knot.structure;
@@ -1382,7 +1382,7 @@ let core_pass_names =
   let cx = translation_context () in
   Base.Pipeline_trace.names (core_passes cx ([], []))
 
-(** {!Normalize}, on the frozen program ({!Core_passes.Phase.normalize}), before it is
+(** {!Core_plan.Normalize}, on the frozen program ({!Core_passes.Phase.normalize}), before it is
     analysed: every consumer of the structure (the method registry built
     before printing as much as the printer) sees the same bodies, and a body
     an optimization introduces meets Normalize's contract like any other.
@@ -1395,15 +1395,15 @@ let core_pass_names =
 let normalize_passes cx : Core_passes.Phase.normalizing Base.Pipeline_trace.pass list =
   let rewriting f (p : Core_passes.Phase.normalizing) = {p with structure = f p.structure} in
   let lowering =
-    { Normalize.app_result_type = (fun f args -> Translation_calls.core_app_result_type cx f args);
+    { Core_plan.Normalize.app_result_type = (fun f args -> Translation_calls.core_app_result_type cx f args);
       return_type_is_erased = (fun params ret -> Translation.return_type_is_erased cx params ret);
       suspension = Translation_suspension.suspension cx }
   in
   Base.Pipeline_trace.
-    [ pass "eta_expand" (rewriting Normalize.eta_expand);
-      pass "let_lambdas" (rewriting Normalize.let_lambdas);
+    [ pass "eta_expand" (rewriting Core_plan.Normalize.eta_expand);
+      pass "let_lambdas" (rewriting Core_plan.Normalize.let_lambdas);
       pass "spines" (rewriting Core_passes.Spines.structure);
-      pass "normalize" (Normalize.structure lowering);
+      pass "normalize" (Core_plan.Normalize.structure lowering);
       effect_ "canonical" (fun (p : Core_passes.Phase.normalizing) -> Core_passes.Spines.check p.structure) ]
 
 let normalize_pass_names =
@@ -1535,19 +1535,19 @@ let elaborate_unit cx (u : Unit_context.t) elaborations =
   Translation_state.generating_outside_modules cx @@ fun () ->
   Base.Pipeline_trace.event "elaborate" plan_foreign_callables;
   let foreign =
-    Callable_abi.with_foreign u.callables
+    Core_plan.Callable_abi.with_foreign u.callables
       (fun r -> Translation_calls.callee_abi cx ~instances:0 r)
-      (Core_elaborate.referenced elaborations)
+      (Core_plan.Elaborate.referenced elaborations)
   in
   with_context cx {u with callables = foreign} @@ fun u ->
   (* Every global a call may project through an instance
-     ({!Core_query.static_projection}). *)
+     ({!Core_plan.Query.static_projection}). *)
   { u with
     callables =
-      Callable_abi.with_projections u.callables Translation_calls.projection_abi
+      Core_plan.Callable_abi.with_projections u.callables Translation_calls.projection_abi
         (List.filter
            (fun r -> Base.Table.is_inline_custom r || Base.Table.singleton_method_class r <> None)
-           (Core_elaborate.referenced elaborations) ) }
+           (Core_plan.Elaborate.referenced elaborations) ) }
 
 (** Decide the kinds of the template parameters of the unit's inductives and
     type aliases, into [plan].  They are decided from the inductive kinds
@@ -1762,9 +1762,9 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   check_against_plan plan;
   check_structure_unchanged planned struc;
   if Base.Pipeline_trace.enabled () then begin
-    Base.Pipeline_trace.event "emit" (Core_elaborate.report elaborations);
-    Base.Pipeline_trace.event "emit" (Core_effects.report facts.effects);
-    Base.Pipeline_trace.event "emit" (Callable_abi.report_foreign u.callables)
+    Base.Pipeline_trace.event "emit" (Core_plan.Elaborate.report elaborations);
+    Base.Pipeline_trace.event "emit" (Core_plan.Effects.report facts.effects);
+    Base.Pipeline_trace.event "emit" (Core_plan.Callable_abi.report_foreign u.callables)
   end;
   let opened = List.filter !opened_filter (opened_libraries ()) in
   (* The header includes every file either of the unit's files names, so a

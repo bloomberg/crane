@@ -375,7 +375,7 @@ let rec declared_by_reference : ty -> bool = function
 
 (* What the parameters [params] of a callable whose plan passes them as
    [passing] says, and whose body is [body], break of it. *)
-let passing_violations (passing : Callable_abi.passing list) params body =
+let passing_violations (passing : Core_plan.Callable_abi.passing list) params body =
   if List.compare_lengths passing params <> 0 then
     [ Printf.sprintf "the plan passes %d parameters, the declaration takes %d" (List.length passing)
         (List.length params) ]
@@ -393,7 +393,7 @@ let passing_violations (passing : Callable_abi.passing list) params body =
     List.iter (fun s -> ignore (fs s)) body;
     List.concat
       (List.map2
-         (fun (p : Callable_abi.passing) (x, (ty : ty)) ->
+         (fun (p : Core_plan.Callable_abi.passing) (x, (ty : ty)) ->
            let name = Id.to_string x in
            match (p, ty) with
            | Forwarded, Reference (Forwarding, _) -> []
@@ -411,7 +411,7 @@ let passing_violations (passing : Callable_abi.passing list) params body =
 let convention_violations d r params body =
   Option.map
     (fun passing -> passing_violations passing params body)
-    (Option.bind (Callable_abi.lookup d r) Callable_abi.passing)
+    (Option.bind (Core_plan.Callable_abi.lookup d r) Core_plan.Callable_abi.passing)
 
 let report_conventions owner =
   List.iter (fun what -> Base.Probe.violation "callable convention" Pp.(str "in " ++ owner ++ str ", " ++ str what))

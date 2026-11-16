@@ -11,7 +11,7 @@ open Names
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
 (** [recover_carrier_result ~fun_ty ~n_args ~want expr] converts a call whose
     declared result is a carrier applied to a type variable -- [M A], a

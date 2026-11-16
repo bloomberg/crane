@@ -4,7 +4,7 @@
    a parameter nothing can stand in for comes first. *)
 
 open Crane_plugin
-open Callable_abi
+open Core_plan.Callable_abi
 
 let check name cond =
   if not cond then (
@@ -12,7 +12,7 @@ let check name cond =
     exit 1 )
 
 let callee = Names.GlobRef.VarRef (Names.Id.of_string "f")
-let ty name : Callable_abi.ty = External (name, [])
+let ty name : Core_plan.Callable_abi.ty = External (name, [])
 
 let () =
   Random.init 20261013;
@@ -28,13 +28,13 @@ let () =
     in
     let entries =
       List.init (Random.int 2) (fun k ->
-          ((Typename : Callable_abi.kind), Base.Common.tc_instance_id k, Instance_param k) )
+          ((Typename : Core_plan.Callable_abi.kind), Base.Common.tc_instance_id k, Instance_param k) )
       @ List.concat_map
           (fun v ->
             let i = Core.Scheme.Var.ordinal v in
             let kind =
               match Random.int 4 with
-              | 0 -> (Template 1 : Callable_abi.kind)
+              | 0 -> (Template 1 : Core_plan.Callable_abi.kind)
               | 1 -> Typename_default Void
               | _ -> Typename
             in
@@ -52,13 +52,13 @@ let () =
     let value_of v = if Random.bool () then Some (ty ("V" ^ string_of_int (Core.Scheme.Var.ordinal v))) else None in
     let values = List.map (fun v -> (v, value_of v)) vars in
     let app =
-      Template_application.plan abi
+      Core_plan.Template_application.plan abi
         ~instance:(fun k -> Some (ty ("D" ^ string_of_int k)))
         ~scheme:(fun v -> Option.flatten (List.assoc_opt v values))
     in
-    let args = Template_application.to_list app in
+    let args = Core_plan.Template_application.to_list app in
     let head = template_head abi in
-    check "valid" (Template_application.validate abi app = []);
+    check "valid" (Core_plan.Template_application.validate abi app = []);
     check "no longer than the head" (List.length args <= List.length head);
     (* Written by identity: an argument at a variable's parameter is that
        variable's value, or the parameter's filler. *)

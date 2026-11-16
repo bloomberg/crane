@@ -12,7 +12,7 @@ open Names
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Cpp_ir.Type
 
 (** [slot], noting that a constructor built here goes straight into an erased

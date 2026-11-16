@@ -20,11 +20,11 @@ open Util
 open Translation_state
 open Base.Type_util
 open Translation
-open Plan_templates
+open Core_plan.Plan_templates
 open Gen_context
 open Gen_records
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** The right-hand side of the type alias [r] over its parameters [vars],
     with the note that goes with it.  [ot] is [None] for a signature entry
@@ -83,8 +83,8 @@ let gen_type_alias cx r vars ot =
     Option.map
       (Cpp_ir.Types.map (fun (t : Cpp_ir.Lowered.Type.t) ->
         match t with
-        | Apply (head, args) when List.exists (fun id -> Plan_templates.head_tvar_is id head) plain ->
-          Head_relaxation.rebind_plain_var_lowered ~in_scope head args
+        | Apply (head, args) when List.exists (fun id -> Core_plan.Plan_templates.head_tvar_is id head) plain ->
+          Core_plan.Head_relaxation.rebind_plain_var_lowered ~in_scope head args
         | t -> t ))
       du_rhs
   in
@@ -388,7 +388,7 @@ let sig_witness_expr name (core_ty : Core.Type.t) =
     e.g. ["std::shared_ptr<ITree<%t1>>"]. *)
 let with_itree_mode_for cx ty f =
   match Base.Type_util.codomain_monad ty with
-  | Some monad_ref -> with_itree_mode cx (Core_effects.mode_of_monad monad_ref) f
+  | Some monad_ref -> with_itree_mode cx (Core_plan.Effects.mode_of_monad monad_ref) f
   | None -> f ()
 
 (** A class-typed parameter is not a value in C++: the class is a concept, and
@@ -407,7 +407,7 @@ let promote_typeclass_params cx (params : (Id.t * Core.Type.t) list) =
   let params =
     List.map
       (fun (id, ty) ->
-        match Core_query.parameter_role ty with
+        match Core_plan.Query.parameter_role ty with
         | Value -> (id, ty)
         | Dictionary ->
           let i = !counter in
@@ -444,19 +444,19 @@ let promote_typeclass_params cx (params : (Id.t * Core.Type.t) list) =
     ({!declare_planned}). *)
 let declared_signature : Cpp_ir.Lowered.Decl.t -> _ = function
   | Function {return_type; shape = Definition (params, _); _} ->
-    Some {Callable_abi.params = List.map snd params; ret = return_type}
+    Some {Core_plan.Callable_abi.params = List.map snd params; ret = return_type}
   | Function {return_type; shape = Declaration params; _} ->
-    Some {Callable_abi.params = List.map snd params; ret = return_type}
+    Some {Core_plan.Callable_abi.params = List.map snd params; ret = return_type}
   | _ -> None
 
 (** The callable plan of [n], declared with the template head [temps] and
     the signature [declared]: both relaxed together
-    ({!Plan_templates.relax_function_head}), the plan recording what the
+    ({!Core_plan.Plan_templates.relax_function_head}), the plan recording what the
     relaxations decided, which carry them through the declaration. *)
 let plan_function_head cx ?deduced_callables ?passing ~minted n ty (temps : head_params)
-    (declared : Callable_abi.signature) =
+    (declared : Core_plan.Callable_abi.signature) =
   let temps, signature, relaxations = relax_function_head temps declared in
-  Callable_abi.of_head ?deduced_callables ?passing ~signature ~relaxations ~minted
+  Core_plan.Callable_abi.of_head ?deduced_callables ?passing ~signature ~relaxations ~minted
     ~omitted:(Translation_tvars.type_arg_omission n)
     ~phantom_prefix:(Translation_types.leading_phantom_count cx n)
     ~relaxed:(fun i -> IntSet.mem i (Base.Type_util.relaxed_higher_kinded_tvars ty))
@@ -465,7 +465,7 @@ let plan_function_head cx ?deduced_callables ?passing ~minted n ty (temps : head
 (** What a function's body is generated under, settled before the body:
     its return type, its parameters and the environment that names them, the
     body as the signature renumbers it, under every parameter
-    ({!Normalize.eta_expand}), and the head before the relaxations
+    ({!Core_plan.Normalize.eta_expand}), and the head before the relaxations
     ({!plan_function_head}). *)
 module Body_scope = struct
   type t = {
@@ -491,13 +491,13 @@ module Body_scope = struct
             resolution reads. *)
     temps : head_params;
         (** The template head before the relaxations. *)
-    minted : (Id.t * Callable_abi.minted) list;
+    minted : (Id.t * Core_plan.Callable_abi.minted) list;
         (** What the builders of {!Body_scope.temps} recorded of each parameter. *)
     promoted_var_resolutions : (Id.t * Cpp_ir.Lowered.Type.t) list;
         (** Each promoted type variable, qualified through the instance
             parameter that provides it. *)
     owned_flags : bool list;  (** Whether the body owns each of {!Body_scope.all_ids}. *)
-    passing : Callable_abi.passing list;
+    passing : Core_plan.Callable_abi.passing list;
         (** How each value parameter is passed, in declaration order. *)
     self_call_undeducible : (Id.t -> bool) option;
         (** Under polymorphic recursion, the parameters a self-call has to
@@ -510,7 +510,7 @@ module Body_scope = struct
     no_pure : bool;
         (** Whether [__attribute__((pure))] is withheld: a monadic result or a
             body that may throw. *)
-    deduced_callables : Param_pos.orig Param_pos.pos list;
+    deduced_callables : Core_plan.Param_pos.orig Core_plan.Param_pos.pos list;
         (** The declared positions of the callables deduced as an [F &&]. *)
   }
 end
@@ -537,7 +537,7 @@ end
     @param ty    the original Core type (used for domain decomposition and type
                  inference)
     @param temps template type parameters, and [minted] what their builder
-                 recorded of each ({!Callable_abi.minted}) *)
+                 recorded of each ({!Core_plan.Callable_abi.minted}) *)
 let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_params) =
   let dom, cod =
     match cty with Function (d, c) -> (d, c) | t -> ([ (Void : Cpp_ir.Lowered.Type.t) ], t)
@@ -575,7 +575,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
   let ids =
     if List.length ids = List.length sig_types_for_ids then
       List.map2
-        (fun (id, body_ty) sig_ty -> (id, Core_query.reconcile_parameter_type body_ty sig_ty))
+        (fun (id, body_ty) sig_ty -> (id, Core_plan.Query.reconcile_parameter_type body_ty sig_ty))
         ids sig_types_for_ids
     else ids
   in
@@ -919,7 +919,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
      outside this set (e.g., erased HKT type variables) get TTtypename (no
      is_invocable_v constraint) instead of TTfun, to avoid referencing template
      type parameters that were filtered out as phantom
-     ({!Plan_templates.phantom_aware_temps}, via {!with_function_head}). *)
+     ({!Core_plan.Plan_templates.phantom_aware_temps}, via {!with_function_head}). *)
   let primary = primary_tvar_indices dom cod in
   let unwrap_fun_ty2 : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t option = function
     | Const (Function _ as f) | Reference (Lvalue, Const (Function _ as f)) -> Some f
@@ -954,7 +954,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
       | (y, _) :: rest -> if Id.equal x y then Some i else index_of x (i + 1) rest
     in
     List.filter_map
-      (fun (x, _, _, _) -> Option.bind (index_of x 0 source) (Param_pos.of_source_index binder_tys))
+      (fun (x, _, _, _) -> Option.bind (index_of x 0 source) (Core_plan.Param_pos.of_source_index binder_tys))
       fun_tys
   in
   (* Replace the parameter type of promoted (forwarded) function params with the
@@ -1123,7 +1123,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
           | Some (Typename_default _, _) | None -> false
           | Some _ -> (
             match List.assoc_opt id minted with
-            | Some (Callable_abi.Scheme_param i) -> List.mem i constrained && not (List.mem i spelled)
+            | Some (Core_plan.Callable_abi.Scheme_param i) -> List.mem i constrained && not (List.mem i spelled)
             | _ -> false ) )
     else None
   in
@@ -1157,8 +1157,8 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
     temps = temps;
     minted =
       minted
-      @ List.mapi (fun k (_, id, _, _) -> (id, Callable_abi.Instance_param k)) typeclass_temps
-      @ List.map (fun (_, _, id, i) -> (id, Callable_abi.Callable_param i)) fun_tys;
+      @ List.mapi (fun k (_, id, _, _) -> (id, Core_plan.Callable_abi.Instance_param k)) typeclass_temps
+      @ List.map (fun (_, _, id, i) -> (id, Core_plan.Callable_abi.Callable_param i)) fun_tys;
     promoted_var_resolutions = promoted_var_resolutions;
     owned_flags = owned_flags;
     passing =
@@ -1176,15 +1176,15 @@ let plan_scope_head cx n ty scope =
   with_type_vars cx [] (fun () ->
       plan_function_head cx ~deduced_callables:scope.Body_scope.deduced_callables ~passing:scope.passing
         ~minted:scope.minted n ty scope.temps
-        {Callable_abi.params = List.rev_map snd scope.ids; ret = scope.cod})
+        {Core_plan.Callable_abi.params = List.rev_map snd scope.ids; ret = scope.cod})
 
 (** What the relaxations of the function [n] generated under [scope]
     decided: its plan's, which was made before anything was generated.
     Under [CRANE_CHECK_IR] the head is decided again from [scope] and checked
     against the plan. *)
 let planned_relaxations cx n ty scope =
-  if Base.Probe.checking () then Callable_abi.check (Translation_state.callables cx) (plan_scope_head cx n ty scope);
-  Callable_abi.relaxations (Callable_abi.planned (Translation_state.callables cx) n)
+  if Base.Probe.checking () then Core_plan.Callable_abi.check (Translation_state.callables cx) (plan_scope_head cx n ty scope);
+  Core_plan.Callable_abi.relaxations (Core_plan.Callable_abi.planned (Translation_state.callables cx) n)
 
 (** The global [r] at the type arguments [tys], with what its custom
     extraction inlines, if anything. *)
@@ -1205,10 +1205,10 @@ let self_call_reference cx n ~undeducible =
   let writable =
     List.filter_map
       (fun p ->
-        match (p.Callable_abi.write, p.Callable_abi.origin) with
-        | Callable_abi.Deduce_only, _ | _, Callable_abi.From_callable _ -> None
-        | _ -> Some (p.Callable_abi.origin, Callable_abi.Template_param.name p.Callable_abi.id) )
-      (Callable_abi.template_head (Callable_abi.planned (Translation_state.callables cx) n))
+        match (p.Core_plan.Callable_abi.write, p.Core_plan.Callable_abi.origin) with
+        | Core_plan.Callable_abi.Deduce_only, _ | _, Core_plan.Callable_abi.From_callable _ -> None
+        | _ -> Some (p.Core_plan.Callable_abi.origin, Core_plan.Callable_abi.Template_param.name p.Core_plan.Callable_abi.id) )
+      (Core_plan.Callable_abi.template_head (Core_plan.Callable_abi.planned (Translation_state.callables cx) n))
   in
   let written =
     match undeducible with
@@ -1216,7 +1216,7 @@ let self_call_reference cx n ~undeducible =
     | Some undeducible ->
       let dicts, rest =
         List.partition
-          (function Callable_abi.From_instance _, _ -> true | _ -> false)
+          (function Core_plan.Callable_abi.From_instance _, _ -> true | _ -> false)
           writable
       in
       let _, k =
@@ -1230,15 +1230,15 @@ let self_call_reference cx n ~undeducible =
 
 (** The declaration of the function [n] whose definition [decl] is, as its
     body was generated: the head is a projection of [n]'s plan -- the
-    template head it declares ({!Callable_abi.declared_head}), and the
+    template head it declares ({!Core_plan.Callable_abi.declared_head}), and the
     value-parameter types and return type of its signature
-    ({!Callable_abi.signature}) -- so the head a caller planned against is
+    ({!Core_plan.Callable_abi.signature}) -- so the head a caller planned against is
     the one declared; [decl] gives only the parameter names and the body.
     Under [CRANE_CHECK_IR] the generated signature is held to the plan's.  A
     top-level sequential [main] keeps its own signature: it is declared to
     return [int] for the entry point, which no call of it reads. *)
 let declare_planned cx n decl =
-  let abi = Callable_abi.planned (Translation_state.callables cx) n in
+  let abi = Core_plan.Callable_abi.planned (Translation_state.callables cx) n in
   let is_entry_point =
     match (n, (decl : Cpp_ir.Lowered.Decl.t)) with
     | GlobRef.ConstRef c, Function {return_type = External ("int", []); _} ->
@@ -1248,21 +1248,21 @@ let declare_planned cx n decl =
   let decl =
     if is_entry_point then decl
     else
-      let planned = Callable_abi.signature abi in
+      let planned = Core_plan.Callable_abi.signature abi in
       if Base.Probe.checking () && not (Option.equal ( = ) planned (declared_signature decl)) then
         Base.Probe.violation "callable ABI"
           Pp.(
             str "the declaration of " ++ GlobRef.print n
             ++ str " has another signature than its plan" );
       match (planned, decl) with
-      | Some {Callable_abi.params; ret}, Function ({shape = Definition (ps, body); _} as f)
+      | Some {Core_plan.Callable_abi.params; ret}, Function ({shape = Definition (ps, body); _} as f)
         when List.compare_lengths params ps = 0 ->
         Function {f with return_type = ret; shape = Definition (List.map2 (fun (id, _) t -> (id, t)) ps params, body)}
       | _ ->
         CErrors.anomaly
           Pp.(str "the definition of " ++ GlobRef.print n ++ str " does not have its plan's parameters.")
   in
-  match Callable_abi.declared_head abi with
+  match Core_plan.Callable_abi.declared_head abi with
   | [] -> decl
   | head -> Template (head, None, decl)
 
@@ -1279,7 +1279,7 @@ let declare_planned cx n decl =
                  and codomain)
     @param ty    the original Core type
     @param temps template type parameters, and [minted] what their builder
-                 recorded of each ({!Callable_abi.minted}) *)
+                 recorded of each ({!Core_plan.Callable_abi.minted}) *)
 let gen_dfun cx ~minted n b cty ty temps =
   let scope = dfun_body_scope cx ~minted n b cty ty temps in
   let relaxations = planned_relaxations cx n ty scope in
@@ -1310,9 +1310,9 @@ let gen_dfun cx ~minted n b cty ty temps =
      The scope is read by Core variable -- entry [i - 1] names [Core.Type.Variable i] -- and
      the head is not: it leaves out a variable the C++ type never spells
      ([after_family]'s [A], mentioned only by an erased family), and a
-     parameter declared for scheme variable [i] ({!Callable_abi}) is then
+     parameter declared for scheme variable [i] ({!Core_plan.Callable_abi}) is then
      not the head's [i]th.  Where the head's builder recorded the variables
-     its parameters are for ({!Callable_abi.minted}), the scope is laid out
+     its parameters are for ({!Core_plan.Callable_abi.minted}), the scope is laid out
      by those numbers; a variable the head omits
      keeps its own name, which nothing declares, rather than taking a
      neighbour's. *)
@@ -1327,7 +1327,7 @@ let gen_dfun cx ~minted n b cty ty temps =
     in
     let scheme_number id =
       match List.assoc_opt id scope.minted with
-      | Some (Callable_abi.Scheme_param i) -> Some i
+      | Some (Core_plan.Callable_abi.Scheme_param i) -> Some i
       | _ -> None
     in
     match List.filter_map scheme_number declared with
@@ -1608,7 +1608,7 @@ let gen_dfun cx ~minted n b cty ty temps =
   in
     (inner, env)
   in
-  (declare_planned cx n (Head_relaxation.apply_all relaxations inner), env)
+  (declare_planned cx n (Core_plan.Head_relaxation.apply_all relaxations inner), env)
 
 (** Whether a recovered type names an associated type of the enclosing class,
     and so is worth writing back into the binder it came from.  Anything else
@@ -1687,16 +1687,16 @@ let gen_constant_value cx ?expected_ty b =
 
 (** The parameters a head declares for the type variables [cty] spells,
     and for the Core variables [extra] it does not, by the variable each
-    stands for: the name {!Plan_templates.phantom_aware_temps} gives it. *)
+    stands for: the name {!Core_plan.Plan_templates.phantom_aware_temps} gives it. *)
 let scheme_params ?(extra = IntSet.empty) (cty : Cpp_ir.Lowered.Type.t) =
   let spelled =
     List.filter (fun (i, _) -> i > 0) (Base.Type_util.get_tvars_indexed cty)
   in
-  List.map (fun (i, id) -> (id, Callable_abi.Scheme_param i)) spelled
+  List.map (fun (i, id) -> (id, Core_plan.Callable_abi.Scheme_param i)) spelled
   @ List.filter_map
       (fun i ->
         if List.mem_assoc i spelled then None
-        else Some (Base.Common.tvar_id i, Callable_abi.Scheme_param i) )
+        else Some (Base.Common.tvar_id i, Core_plan.Callable_abi.Scheme_param i) )
       (IntSet.elements extra)
 
 (** A function reaching a generator for what is not one: a function's head
@@ -1780,7 +1780,7 @@ type function_head = {
   body : Core.Expr.t;
   cty : Cpp_ir.Lowered.Type.t;
   temps : head_params;
-  minted : (Id.t * Callable_abi.minted) list;
+  minted : (Id.t * Core_plan.Callable_abi.minted) list;
       (** The variable each of {!function_head.temps} is declared for. *)
   tvars : Id.t list;
       (** Typeclass-typed parameters first -- they become template parameters

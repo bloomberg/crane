@@ -44,31 +44,31 @@ let default_std_names =
 
 type t = {
   config : Base.Table.unit_config;
-  callables : Callable_abi.decided;
-  modules : Module_plan.layout;
-  pointer_fields : Pointer_fields.t;
+  callables : Core_plan.Callable_abi.decided;
+  modules : Core_plan.Module_plan.layout;
+  pointer_fields : Core_plan.Pointer_fields.t;
   unmerged_wrappers : Names.ModPath.t CString.Map.t;
-  accessors : Struct_plan.accessors;
-  nested_structs : Struct_plan.nested_structs;
+  accessors : Core_plan.Struct_plan.accessors;
+  nested_structs : Core_plan.Struct_plan.nested_structs;
   promoted_inductives : Core.Ref.User.Set.t;
   instance_promoted_types : (Names.Id.t * Core.Type.t) list Names.GlobRef.Map.t;
-  scopes : Scope_plan.bound;
-  names : Name_resolution.t option;
+  scopes : Core_plan.Scope_plan.bound;
+  names : Core_plan.Name_resolution.t option;
   loops : Loop_facts.t;
   std_names : std_names;
 }
 
 let make ~config =
   { config;
-    callables = Callable_abi.undecided;
-    modules = Module_plan.no_layout;
-    pointer_fields = Pointer_fields.none;
+    callables = Core_plan.Callable_abi.undecided;
+    modules = Core_plan.Module_plan.no_layout;
+    pointer_fields = Core_plan.Pointer_fields.none;
     unmerged_wrappers = CString.Map.empty;
-    accessors = Struct_plan.no_accessors;
+    accessors = Core_plan.Struct_plan.no_accessors;
     nested_structs = CString.Map.empty;
     promoted_inductives = Core.Ref.User.Set.empty;
     instance_promoted_types = Names.GlobRef.Map.empty;
-    scopes = Scope_plan.none;
+    scopes = Core_plan.Scope_plan.none;
     names = None;
     loops = Loop_facts.none;
     std_names = default_std_names }

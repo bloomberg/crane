@@ -23,13 +23,13 @@ let dead_branch_message = "unreachable: impossible dependent match branch"
 
 (** [mk_lambda ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
     with template parameters of its own, [tparams], less those none of its
-    [params] (source order) deduces ({!Head_relaxation.settle_lowered_lambda}). *)
+    [params] (source order) deduces ({!Core_plan.Head_relaxation.settle_lowered_lambda}). *)
 let mk_lambda ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) body ~capture : Cpp_ir.Lowered.Expr.t =
   match tparams with
   | [] -> Cpp_ir.Build.lambda params ret body ~capture
   | _ ->
     let l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t =
-      Head_relaxation.settle_lowered_lambda
+      Core_plan.Head_relaxation.settle_lowered_lambda
         { params;
           type_params = tparams;
           return_type = (match ret with Some (Const t) -> Some t | r -> r);

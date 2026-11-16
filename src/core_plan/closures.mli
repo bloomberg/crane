@@ -33,7 +33,7 @@ type group =
     effect operations are [effects]: let-bound in [continuation], where it
     is given, or else applied in place. *)
 val group :
-  effects:Core_effects.t ->
+  effects:Effects.t ->
   n_outer:int ->
   ?continuation:Core.Expr.t ->
   cofix:bool ->

@@ -133,7 +133,7 @@ let tolerant (ty : ty) =
 
 (** [is_method n] -- [n] is rendered as a member function: one the registry
     found in its up-front scan, which every candidate a render collects is
-    ({!Method_registry.planned_candidate}). *)
+    ({!Core_plan.Method_registry.planned_candidate}). *)
 let is_method (n : GlobRef.t) : bool = Cpp_state.is_registered_method n <> None
 
 (** [returns_a_box e] -- [e] is a call whose result is declared [std::any], so
@@ -852,7 +852,7 @@ let lower_qualifiers (d : settled) : settled =
   Map.decl (rw ()) d
 
 (* A pointer is written in the slot its pointee is held in
-   ({!Pointer_slot}): a shared value is its own handle, [shared_box<T>]; where
+   ({!Core_plan.Pointer_slot}): a shared value is its own handle, [shared_box<T>]; where
    only a functor's instantiation knows, [shared_or_t<T, P>] chooses between
    that and the pointer [P].  What is left as a pointer is an ordinary
    pointer.  A slot already chosen is a fixed point: [shared_or_t]'s pointer
@@ -867,10 +867,10 @@ let pointer_slots u () =
           Some (External (n, [ft p; Shared_pointer p']))
         | Shared_pointer p -> (
           let p' = ft p in
-          match Pointer_slot.of_pointee p with
-          | Pointer_slot.Shared -> Some (External (Cpp_ir.Crane_rt.shared_box, [p']))
-          | Pointer_slot.At_instantiation -> Some (External (Cpp_ir.Crane_rt.shared_or, [p'; Shared_pointer p']))
-          | Pointer_slot.Pointer -> Some (Shared_pointer p') )
+          match Core_plan.Pointer_slot.of_pointee p with
+          | Core_plan.Pointer_slot.Shared -> Some (External (Cpp_ir.Crane_rt.shared_box, [p']))
+          | Core_plan.Pointer_slot.At_instantiation -> Some (External (Cpp_ir.Crane_rt.shared_or, [p'; Shared_pointer p']))
+          | Core_plan.Pointer_slot.Pointer -> Some (Shared_pointer p') )
         | Type_of e -> Some (Type_of (fe e))
         | Entity_application (r, tys, (_ :: _ as args)) ->
           let args = List.map fe args in
@@ -884,7 +884,7 @@ let pointer_slots u () =
   and fe (e : expr) : expr =
     match Map.expr (rw ()) e with
     (* A shared value goes into its slot as it is: no cell to allocate. *)
-    | Allocate ((Heap | Arena_scoped), t) when Pointer_slot.of_pointee t = Pointer_slot.Shared ->
+    | Allocate ((Heap | Arena_scoped), t) when Core_plan.Pointer_slot.of_pointee t = Core_plan.Pointer_slot.Shared ->
       Type_member (External (Cpp_ir.Crane_rt.shared_box, [t]), Id.of_string "make")
     (* A unit of non-atomic pointers allocates in an arena through its own
        pointer's factory. *)
@@ -1072,7 +1072,7 @@ let method_value u n (tys : ty list) pos : expr =
       (* The plan records the declared parameters in order, without the
          receiver's slot; each carries however many qualifiers the
          declaration gave it, and the lambda spells its own. *)
-      let declared = Option.default [] (Callable_abi.method_params u.Unit_context.callables n) in
+      let declared = Option.default [] (Core_plan.Callable_abi.method_params u.Unit_context.callables n) in
       let rec unqualified : ty -> ty = function Reference (_, t) | Const t -> unqualified t | t -> t in
       let param i =
         if i = pos then receiver
@@ -1320,7 +1320,7 @@ let tvar_spellings (ty : ty) =
     generated against the Core type, which still carries the definition's own
     [forall].  Where the two disagree the body wins nothing -- it names [T2]
     under a head declaring [T1], and a name nothing declares does not compile.
-    Erasing the use is the same repair {!Head_relaxation.settle_lowered_lambda} makes for a
+    Erasing the use is the same repair {!Core_plan.Head_relaxation.settle_lowered_lambda} makes for a
     lambda, one level up, and for the same reason: half a quantifier is worth
     less than none.
 

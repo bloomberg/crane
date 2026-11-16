@@ -1,7 +1,7 @@
 (* Copyright 2025 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
-(** Putting back the temporaries {!Normalize} introduced.
+(** Putting back the temporaries {!Core_plan.Normalize} introduced.
 
     Normalize names every recursive call it takes out of an expression, so
     that loopification meets the call as a statement it can split the

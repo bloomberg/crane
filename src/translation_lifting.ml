@@ -14,9 +14,9 @@ open Base.Core_util
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** Collect all Core.Type.Variable indices from a Core term, using collect_tvars on embedded
     types. Used to find all type variables referenced in a function body. *)
@@ -546,7 +546,7 @@ let self_call_rewriter ?(passing = true) (selves : local_fix_self list) :
 (** Whether the generated code [stmts] lets the local fixpoint [target_id]
     escape: names it other than as the callee of a direct call
     [Call (_, Local target_id, args)], or names it at all inside a
-    {!Closure}.  Core decides this ({!Analyze_closures}); the generated code
+    {!Closure}.  Core decides this ({!Core_plan.Closures}); the generated code
     is only the oracle [CRANE_CHECK_IR] checks it against. *)
 let fixpoint_escapes_in_stmts target_id (stmts : Cpp_ir.Lowered.Stmt.t list) =
   let rec check_expr (e : Cpp_ir.Lowered.Expr.t) =
@@ -592,7 +592,7 @@ let fixpoint_escapes_in_stmts target_id (stmts : Cpp_ir.Lowered.Stmt.t list) =
 
 (** Whether the generated bodies [funs_with_params] of a local fixpoint
     group let a member of [renamed_ids] escape ({!fixpoint_escapes_in_stmts}):
-    the oracle of {!Analyze_closures} for a group's own bodies. *)
+    the oracle of {!Core_plan.Closures} for a group's own bodies. *)
 let fix_escapes_in_own_bodies renamed_ids funs_with_params =
   List.exists
     (fun (id, _) ->

@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** What splicing decided about the partners of a program's loopified
-    functions ({!Recursion_plan.splice_partners}): which functions it
+    functions ({!Core_plan.Recursion.splice_partners}): which functions it
     decided, and, for each whose machine enters a copy of a partner spliced
     into its body, the local fixpoint that copy is.  A value of the program
     being normalized ({!Phase.normalize}), read by the passes after it. *)

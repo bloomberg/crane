@@ -3,7 +3,7 @@
 
 (** What the template parameters of a generated inductive or alias are, by
     0-based position in its C++ template parameter list.  Planned before
-    anything is rendered and recorded again by [Plan_templates.hkt_templates]
+    anything is rendered and recorded again by [Core_plan.Plan_templates.hkt_templates]
     when the declaration's header is generated; read back wherever a use of
     the declaration is converted.
 

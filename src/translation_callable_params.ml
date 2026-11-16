@@ -14,7 +14,7 @@ open Util
 open Translation_state
 open Base.Type_util
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (* Walk a Core term and collect source-order parameter indices that are NOT
    simply forwarded unchanged at recursive call sites.  [is_self_call depth f]
@@ -107,7 +107,7 @@ let escaping_params cx ~suspended n_params body =
       spine (List.length args) depth f;
       List.iter (walk under depth) args
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = (_ :: _ :: _ as args)}
-      when Translation_monadic.is_sequential_effect cx Core_effects.Bind use ->
+      when Translation_monadic.is_sequential_effect cx Core_plan.Effects.Bind use ->
       (* A bind outside reified mode is desugared into statements: its
          continuation runs where it is written, so the binders it opens are
          locals, not a closure's. *)
@@ -392,7 +392,7 @@ let partner_closure_params groups struc =
     (fun d ->
       List.iter
         (fun (fd : Core.Recursion.Definition.t) ->
-          if Recursive_groups.group groups fd.entity <> None then
+          if Core_plan.Recursive_groups.group groups fd.entity <> None then
             members := (fd.entity, fd.body) :: !members )
         (Base.Core_util.term_defs d) )
     (fun _ -> ())
@@ -410,7 +410,7 @@ let partner_closure_params groups struc =
     closure_feedback_params
       ~callee:(fun self _ f ->
         match f with
-        | Core.Expr.Global {callee = g; _} when Recursive_groups.in_group groups refs.(self) g -> index g
+        | Core.Expr.Global {callee = g; _} when Core_plan.Recursive_groups.in_group groups refs.(self) g -> index g
         | _ -> None )
       (Array.map snd members)
   in
@@ -462,7 +462,7 @@ let ungeneralised_callable_params cx ~self_ref ~suspended n_params body =
       (fun i -> i < n_params)
       (Option.default [] (Core.Ref.User.Map.find_opt self_ref cx.ctx.input.program.partner_closure_params))
   in
-  Escape.IntSet.of_list
+  Core_plan.Escape.IntSet.of_list
     (detect_non_forwarded_params self_ref n_params body
     @ partners
     @ escaping_params cx ~suspended n_params body)

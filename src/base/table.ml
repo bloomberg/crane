@@ -2395,7 +2395,7 @@ let reset_extraction_reuse () = Lib.add_leaf (reset_reuse ())
    [non_atomic_rc] below, which withholds the swap from a unit that runs on
    several threads.  Outside this file the request is read only by analyses of the
    whole program, which no unit's concurrency may change (see table.mli),
-   such as [Escape.is_reuse_scrutinee]'s program-wide ownership summary. *)
+   such as [Core_plan.Escape.is_reuse_scrutinee]'s program-wide ownership summary. *)
 let {Goptions.get = non_atomic_rc_requested} =
   declare_bool_option_and_ref ~key:["Crane"; "NonAtomicRc"] ~value:false ()
 
@@ -3080,7 +3080,7 @@ let is_shared_variant_packet kn (ind : Core.Inductive.t) i =
     && (List.exists (type_mentions_kn ~descend_arr:false kn) fields || holds_something ())
   with _ -> false
 
-(* Registered by [Structure_analysis] before anything is rendered, so the
+(* Registered by [Core_plan.Structure] before anything is rendered, so the
    type's own declaration and every slot that holds it agree -- the [.cpp] is
    printed before the [.h], and an answer worked out at each site from
    whatever the inductive cache held then did not. *)

@@ -15,11 +15,11 @@ open Base.Table
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Translation_knot
 open Translation_construct
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** How a match branch reads a field of the constructor it matched: as the
    structured binding has it; through the pointer the field is stored behind
@@ -944,7 +944,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
         (* Pick the first candidate whose matched constructor has a recursive
            field (skips nullary-reconstruction arms like Nil->Nil that have no
            cell to recycle). *)
-        List.find_map try_cand (Escape.find_reuse_candidates pv)
+        List.find_map try_cand (Core_plan.Escape.find_reuse_candidates pv)
       else None
     in
     ( match reuse_stmts_opt with
@@ -1387,15 +1387,15 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
                 let params =
                   List.filteri
                     (fun i _ -> i >= List.length insts)
-                    (Callable_abi.template_head (Translation_calls.callee_abi cx ~instances:(List.length insts) r))
+                    (Core_plan.Callable_abi.template_head (Translation_calls.callee_abi cx ~instances:(List.length insts) r))
                 in
                 if List.length params <> List.length regular then None
                 else
                   Some
                     (List.map
                        (fun p ->
-                         match p.Callable_abi.origin with
-                         | Callable_abi.From_scheme v ->
+                         match p.Core_plan.Callable_abi.origin with
+                         | Core_plan.Callable_abi.From_scheme v ->
                            not (IntSet.mem (Core.Scheme.Var.ordinal v) deducible)
                          | _ -> true )
                        params )
@@ -1537,8 +1537,8 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
   let {Core.Match.Branch.binders = ids; result_type = r; pattern = pat; body = body} = pv.(0) in
   let n = List.length ids in
   let is_typeclass, record_body =
-    match Core_elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ with
-    | Match_kind.Record {typeclass; body} -> (typeclass, body)
+    match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ with
+    | Core_plan.Match_kind.Record {typeclass; body} -> (typeclass, body)
     | Custom | Variant -> CErrors.anomaly (Pp.str "gen_expr: a record projection Core did not classify as one")
   in
   (* Build lists that correctly account for erased fields.
@@ -1966,8 +1966,8 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
   let {Core.Match.Branch.binders = ids; body = body; _} = pv.(0) in
   let n = List.length ids in
   let is_typeclass, is_simple =
-    match Core_elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ with
-    | Match_kind.Record {typeclass; body = Projection {application = Read | Call; _}} -> (typeclass, true)
+    match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ with
+    | Core_plan.Match_kind.Record {typeclass; body = Projection {application = Read | Call; _}} -> (typeclass, true)
     | Record {typeclass; body = Projection {application = Coerced_call; _} | Destructure} -> (typeclass, false)
     | Custom | Variant -> CErrors.anomaly (Pp.str "gen_stmts: a record projection Core did not classify as one")
   in

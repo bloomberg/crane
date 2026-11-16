@@ -60,7 +60,7 @@ let pp_decls ctx (ds : rendered) =
     members are spelled.  Both kinds are emitted after every datatype, so a
     datatype's member naming either one is naming something still to come. *)
 let module_struct_name cx (mp : ModPath.t) : string option =
-  match Module_plan.wrapper_struct (Translation_state.unit_context cx).modules mp with
+  match Core_plan.Module_plan.wrapper_struct (Translation_state.unit_context cx).modules mp with
   | Some name -> Some name
   | None -> (
     match mp with
@@ -81,7 +81,7 @@ let ind_template_kinds kn (ind : Core.Inductive.t) =
           Some
             ( r,
               snd
-                (Plan_templates.template_kinds
+                (Core_plan.Plan_templates.template_kinds
                    (Base.Common.ind_struct_tparams kn ind p)
                    (List.concat (Array.to_list p.constructor_argument_types)) ) ) )
       (List.mapi (fun i p -> (i, p)) (Array.to_list ind.packets))
@@ -185,7 +185,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
     (not scope.in_struct)
-    || Array.for_all (Module_plan.is_namespace_scope_ref (Translation_state.unit_context cx).modules) names
+    || Array.for_all (Core_plan.Module_plan.is_namespace_scope_ref (Translation_state.unit_context cx).modules) names
   in
   let cnames =
     Array.mapi
@@ -253,7 +253,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
       else
       let ind_modpath = modpath_of_r ind_ref in
       let module_type_aliases =
-        ref (Method_registry.collect_module_type_aliases
+        ref (Core_plan.Method_registry.collect_module_type_aliases
                ~extract_decl:(fun (_l, se) ->
                  match se with Core.Module.Structure_item.Declaration d -> Some d | _ -> None)
                ind_modpath !current_structure_decls)
@@ -293,13 +293,13 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
       (* Check if function comes from the same Rocq module as the inductive *)
       let same_module r = ModPath.equal (modpath_of_r r) ind_modpath in
       (* Collect the candidates first, then keep only those the rule about
-         calls keeps ([Method_registry.settle_file_calls]). *)
+         calls keeps ([Core_plan.Method_registry.settle_file_calls]). *)
       let eligible = ref [] in
       let consider r body ty =
         if
           same_module r
           && (not (refs_excluded ty))
-          && Method_registry.would_register ~func:r ind_ref body ty
+          && Core_plan.Method_registry.would_register ~func:r ind_ref body ty
         then eligible := (r, body, ty) :: !eligible
       in
       List.iter
@@ -314,13 +314,13 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
       (* A call to a method of any type is rendered on its receiver, so only
          a callee that is a method of nothing is left for the rule. *)
       let already_method c =
-        Method_registry.lookup (get_method_registry ()) c <> None
+        Core_plan.Method_registry.lookup (get_method_registry ()) c <> None
       in
       let calls =
-        Method_registry.file_calls ind_modpath !current_structure_decls
+        Core_plan.Method_registry.file_calls ind_modpath !current_structure_decls
       in
       let kept =
-        Method_registry.settle_file_calls ~already_method
+        Core_plan.Method_registry.settle_file_calls ~already_method
           ~calls:(fun (_, body, _) -> calls body)
           ~ref_of:(fun (r, _, _) -> r)
           (List.rev !eligible)
@@ -408,7 +408,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
              forward reference errors in C++. *)
           let methods =
             let reg_candidates =
-              Method_registry.get_candidates (get_method_registry ()) ind_ref
+              Core_plan.Method_registry.get_candidates (get_method_registry ()) ind_ref
             in
             if reg_candidates = [] then
               methods
@@ -493,7 +493,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
               p.constructor_argument_types
               (List.rev methods)
               ind.kind
-            |> Plan_templates.deapply_plain_struct_tvars
+            |> Core_plan.Plan_templates.deapply_plain_struct_tvars
           in
           (* Check if this inductive is being promoted into its module struct.
              When promoted, render fields flat (no wrapping struct) since the
@@ -603,7 +603,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
 
 (** The step an instance's struct takes before its methods are planned
     and generated, the same in both. *)
-let finish_instance_struct = Plan_templates.deapply_plain_struct_tvars
+let finish_instance_struct = Core_plan.Plan_templates.deapply_plain_struct_tvars
 
 let plan_instance_methods cx r a t =
   Gen_decls.plan_instance_methods cx ~finish:finish_instance_struct r a t
@@ -614,13 +614,13 @@ let plan_instance_methods cx r a t =
 let planned_methods cx ~minted r (decl : Cpp_ir.Lowered.Decl.t) =
   let planned (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
     if Base.Probe.checking () then
-      Callable_abi.check_instance_method (Translation_state.callables cx) ~instance:r m.name
-        (Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:r m);
-    let abi = Callable_abi.planned_instance_method (Translation_state.callables cx) ~instance:r m.name in
-    match Callable_abi.receiver abi with
+      Core_plan.Callable_abi.check_instance_method (Translation_state.callables cx) ~instance:r m.name
+        (Core_plan.Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:r m);
+    let abi = Core_plan.Callable_abi.planned_instance_method (Translation_state.callables cx) ~instance:r m.name in
+    match Core_plan.Callable_abi.receiver abi with
     | Some {params; ret; _} when List.length params = List.length m.params ->
       { m with
-        type_params = Callable_abi.declared_head abi;
+        type_params = Core_plan.Callable_abi.declared_head abi;
         return_type = ret;
         params = List.map2 (fun (id, _) t -> (id, t)) m.params params }
     | Some _ | None ->
@@ -699,10 +699,10 @@ and lifted_placement =
   | Unwritten  (** A fixpoint inside a template struct writes none. *)
 
 (** Whether the module [module_] is one whose members the header defines
-    in a class template ({!Scope_plan.templated}).  Asked of the
+    in a class template ({!Core_plan.Scope_plan.templated}).  Asked of the
     plan, not of the render context: the implementation writes no template,
     and generates what the header does all the same. *)
-let in_template cx ~module_ = Scope_plan.templated (Translation_state.unit_context cx).scopes module_
+let in_template cx ~module_ = Core_plan.Scope_plan.templated (Translation_state.unit_context cx).scopes module_
 
 (** [functions ~module_ ~lifted funs], generated in [module_], with every
     definition filed in the header inside a template struct, which has no
@@ -937,7 +937,7 @@ let alias_written cx ~module_ d l t =
     generate nothing. *)
 let generate cx scope ~module_ d =
   (* A method candidate is a registered method
-     ({!Method_registry.planned_candidate}). *)
+     ({!Core_plan.Method_registry.planned_candidate}). *)
   let skipped r =
     is_eponymous_record_projection r
     || is_suppressed_projection ~higher_order:(Translation_state.is_higher_order_projection cx) r
@@ -1295,7 +1295,7 @@ let header_element_position cx u mp =
   { (file_start u (Translation_state.plans cx) Intf) with
     in_struct = in_struct;
     concepts_hoisted = concepts_hoisted;
-    in_template = Scope_plan.templated u.Unit_context.scopes mp }
+    in_template = Core_plan.Scope_plan.templated u.Unit_context.scopes mp }
 
 type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
@@ -1328,7 +1328,7 @@ let concept_placement plan c =
 
 (* The visibility planned for the body of [mp]; an anomaly if none was. *)
 let planned_visibility (u : Unit_context.t) mp =
-  match Scope_plan.visibility u.scopes mp with
+  match Core_plan.Scope_plan.visibility u.scopes mp with
   | Some v -> v
   | None ->
     CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
@@ -1343,7 +1343,7 @@ let spelling_position cx ~file spelling =
   | Intf, Member_of mp -> element mp {(header_element_position cx u mp) with in_struct = true}
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
-     it ({!Scope_plan.of_declaration}). *)
+     it ({!Core_plan.Scope_plan.of_declaration}). *)
   | Impl, Element_of mp -> element mp (file_start u (Translation_state.plans cx) Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly

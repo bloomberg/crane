@@ -450,12 +450,12 @@ let () =
     (Base.Common.equal_visibility (Cpp_names.visibility_at planned (Pp.mt ())) (Base.Common.inside m [] visible));
   check "entering a signature keeps the visibility of where the declaration is written"
     (Option.equal Base.Common.equal_visibility planned.visibility (Some visible));
-  let scope = Some {Scope_plan.module_ = m; qualifier = ["M"]} in
+  let scope = Some {Core_plan.Scope_plan.module_ = m; qualifier = ["M"]} in
   let f = Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) s in
   check "a function defined in a struct's body is defined there, in no out-of-line scope" (f.scope = None);
   let o = Cpp_names.next (Function {owner = ref_of "f"; defines = true; scope}) start in
   check "a function defined outside every struct body is a member of the scope its frame carries"
     (match o.scope with Some {scope; _} ->
-      Scope_plan.equal scope {module_ = m; qualifier = ["M"]} | None -> false);
+      Core_plan.Scope_plan.equal scope {module_ = m; qualifier = ["M"]} | None -> false);
   check "entering scopes one after another is entering each in turn"
     (Cpp_names.entering_from start [In_struct; In_template] Fun.id = t)

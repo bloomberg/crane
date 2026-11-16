@@ -17,7 +17,7 @@ type t = Cpp_state.module_frame = {
           methods. *)
   eponymous_record : (GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
       (** The record the module is named after, merged into its struct. *)
-  method_candidates : Method_registry.method_candidate list;
+  method_candidates : Core_plan.Method_registry.method_candidate list;
       (** The functions of the module and of the structure declaring it
           that become methods of the eponymous inductive or record, newest
           first; none for a custom type or an enum, which hold none. *)
@@ -42,7 +42,7 @@ val of_module :
 
 (** Whether a class [sel] declares has a concept named as the module [mp]
     is, by the names both are planned under in [layout]. *)
-val concept_collision : Module_plan.layout -> ModPath.t -> (Label.t * Core.Module.Structure_item.t) list -> bool
+val concept_collision : Core_plan.Module_plan.layout -> ModPath.t -> (Label.t * Core.Module.Structure_item.t) list -> bool
 
 (** Whether two frames say the same of a module: the same eponymous
     inductive and record, the same candidates at the same receiver
@@ -55,11 +55,11 @@ val equal : t -> t -> bool
 val planned : Cpp_state.plans -> ModPath.t -> t
 
 (** The modules whose frames the body of the module [mp] is written in,
-    innermost first, as [scopes] plans them ({!Scope_plan.frames}). *)
-val frames_around : Scope_plan.bound -> ModPath.t -> ModPath.t list
+    innermost first, as [scopes] plans them ({!Core_plan.Scope_plan.frames}). *)
+val frames_around : Core_plan.Scope_plan.bound -> ModPath.t -> ModPath.t list
 
 (** The inductives not promoted in the body of the module [mp]: the
     eponymous inductive of each frame around it that does not promote it,
     whatever the unit's plan promotes, the frames as [plans] has them;
     [scopes] is the unit's scope plan. *)
-val demoted_around : Cpp_state.plans -> Scope_plan.bound -> ModPath.t -> GlobRef.t list
+val demoted_around : Cpp_state.plans -> Core_plan.Scope_plan.bound -> ModPath.t -> GlobRef.t list

@@ -25,7 +25,7 @@ type entered =
           module declares under their names. *)
   | In_struct  (** A struct's body. *)
   | In_template  (** A class template's body. *)
-  | Function of {owner : GlobRef.t; defines : bool; scope : Scope_plan.scope option}
+  | Function of {owner : GlobRef.t; defines : bool; scope : Core_plan.Scope_plan.scope option}
       (** A function of the declaration [owner] -- defined, if [defines] --
           which outside every struct body is defined out of line, as a member
           of [scope], the struct its plan's scope names, resolved where the
@@ -164,7 +164,7 @@ type value =
   | Reference of reference
   | Access of access
   | Holds of bool
-  | Scope of Scope_plan.scope option
+  | Scope of Core_plan.Scope_plan.scope option
 
 (** A reference described in words, for diagnostics. *)
 val pp_reference : reference -> Pp.t
@@ -218,4 +218,4 @@ val find_holds : table -> frame -> key -> bool lookup
 
 (** The out-of-line scope of the declaration at [frame]
     ({!Out_of_line_scope}). *)
-val find_scope : table -> frame -> GlobRef.t -> Scope_plan.scope option lookup
+val find_scope : table -> frame -> GlobRef.t -> Core_plan.Scope_plan.scope option lookup

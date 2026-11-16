@@ -26,7 +26,7 @@ type representation = {
   promoted_inductives : GlobRef.t list;
   accessors : GlobRef.t list;
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
-  scopes : Scope_plan.t;
+  scopes : Core_plan.Scope_plan.t;
   instance_promoted_types : (GlobRef.t * (Id.t * Core.Type.t) list) list;
 }
 
@@ -35,11 +35,11 @@ type t = {
   config : Base.Table.unit_config;
   inductive_kinds : kind_decision list;
   template_kinds : (GlobRef.t * Cpp_ir.Tparam_kinds.t) list;
-  modules : Module_plan.t;
+  modules : Core_plan.Module_plan.t;
   representation : representation;
-  callables : Callable_abi.t list;
-  instance_methods : (GlobRef.t * (Id.t * Callable_abi.t) list) list;
-  assumed_callables : (GlobRef.t * Param_pos.orig Param_pos.pos list) list;
+  callables : Core_plan.Callable_abi.t list;
+  instance_methods : (GlobRef.t * (Id.t * Core_plan.Callable_abi.t) list) list;
+  assumed_callables : (GlobRef.t * Core_plan.Param_pos.orig Core_plan.Param_pos.pos list) list;
 }
 
 (** The last of [decisions] about [kn]. *)
@@ -286,14 +286,14 @@ let plan (facts : Program_facts.t) struc =
     config = Base.Table.unit_config ~names:facts.used_customs;
     inductive_kinds = aligned @ value_use_demotion aligned struc;
     template_kinds = [];
-    modules = Module_plan.empty;
+    modules = Core_plan.Module_plan.empty;
     representation =
       {module_names = []; names = []; referenced_names = []; field_names = []; pointer_fields = [];
         unmerged_wrappers = [];
         promoted_inductives = [];
         accessors = [];
         nested_structs = [];
-        scopes = Scope_plan.empty;
+        scopes = Core_plan.Scope_plan.empty;
         instance_promoted_types = [] };
     callables = [];
     instance_methods = [];
@@ -310,7 +310,7 @@ let same_instance_methods a b =
        (fun (r, ms) ->
          match List.find_opt (fun (r', _) -> GlobRef.UserOrd.equal r r') b with
          | Some (_, ms') ->
-           List.equal (fun (n, abi) (n', abi') -> Id.equal n n' && Callable_abi.equal abi abi') ms ms'
+           List.equal (fun (n, abi) (n', abi') -> Id.equal n n' && Core_plan.Callable_abi.equal abi abi') ms ms'
          | None -> false )
        a
 
@@ -320,8 +320,8 @@ let same_callables a b =
        (fun abi ->
          List.exists
            (fun abi' ->
-             GlobRef.UserOrd.equal (Callable_abi.callee abi) (Callable_abi.callee abi')
-             && Callable_abi.equal abi abi' )
+             GlobRef.UserOrd.equal (Core_plan.Callable_abi.callee abi) (Core_plan.Callable_abi.callee abi')
+             && Core_plan.Callable_abi.equal abi abi' )
            b )
        a
 
@@ -348,7 +348,7 @@ let equal a b =
   && List.equal
        (fun (r, k) (r', k') -> GlobRef.UserOrd.equal r r' && Cpp_ir.Tparam_kinds.equal k k')
        a.template_kinds b.template_kinds
-  && Module_plan.equal a.modules b.modules
+  && Core_plan.Module_plan.equal a.modules b.modules
   && List.equal
        (fun (mp, s) (mp', s') -> ModPath.equal mp mp' && String.equal s s')
        a.representation.module_names b.representation.module_names
@@ -368,7 +368,7 @@ let equal a b =
   && List.equal
        (fun (n, o) (n', o') -> String.equal n n' && Cpp_state.nested_struct_owner_equal o o')
        a.representation.nested_structs b.representation.nested_structs
-  && Scope_plan.equal_plans a.representation.scopes b.representation.scopes
+  && Core_plan.Scope_plan.equal_plans a.representation.scopes b.representation.scopes
   && List.equal
        (fun (r, bs) (r', bs') ->
          GlobRef.UserOrd.equal r r'
@@ -377,7 +377,7 @@ let equal a b =
   && same_callables a.callables b.callables
   && same_instance_methods a.instance_methods b.instance_methods
   && List.equal
-       (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Param_pos.equal ps ps')
+       (fun (r, ps) (r', ps') -> GlobRef.UserOrd.equal r r' && List.equal Core_plan.Param_pos.equal ps ps')
        a.assumed_callables b.assumed_callables
 
 let record_kinds t struc =

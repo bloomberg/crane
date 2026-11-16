@@ -12,7 +12,7 @@ open Base.Table
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Translation_constructors
 open Translation_knot
 open Translation_lambda

@@ -79,7 +79,7 @@ let is_moveable_param_type = function
     Under [Crane Reuse] with non-atomic reference counts in the unit [u]
     ({!Unit_context.non_atomic_rc}) an owned by-value parameter qualifies too.  Reuse
     needs the scrutinee owned (that is what gives the loop cells it may
-    recycle), and escape analysis ({!Escape}) therefore passes it by value;
+    recycle), and escape analysis ({!Core_plan.Escape}) therefore passes it by value;
     without this case the shadow
     would be a [T] and every iteration would copy the whole node -- strictly
     worse than the borrow it replaced.  A by-value parameter lives for the whole

@@ -14,7 +14,7 @@ let arity f = List.length (fst (Base.Core_util.collect_lams f))
 
 (* Whether [use] is a monadic bind generated as sequencing, as the unit's
    effect operations [effects] say. *)
-let sequential_bind effects use = Core_effects.lookup effects use = Some {operation = Bind; mode = Sequential}
+let sequential_bind effects use = Effects.lookup effects use = Some {operation = Bind; mode = Sequential}
 
 let rec group ~effects ~n_outer ?continuation ~cofix ids bodies =
   if Base.Type_util.own_type_variables ~n_outer (List.map snd (Array.to_list ids)) then Lifted

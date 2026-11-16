@@ -57,7 +57,7 @@ val stale_references : Cpp_ir.Lowered.Stmt.t list -> (Names.Id.t * Names.Id.t) l
 
 (** [convention_violations d r params body]: what the parameters [params]
     of the callable [r], in declaration order, and its [body] contradict of
-    the convention its callable plan in [d] states ({!Callable_abi.passing}), [None]
+    the convention its callable plan in [d] states ({!Core_plan.Callable_abi.passing}), [None]
     where no plan states one.  The plan passes each parameter one way: a
     deduced callable forwarded exactly where the declaration is an [F &&],
     one it owns declared by value, and none it lends by reference moved out
@@ -65,5 +65,5 @@ val stale_references : Cpp_ir.Lowered.Stmt.t list -> (Names.Id.t * Names.Id.t) l
     the body (a name the body declares again, as a frame handler binds a
     parameter's to the frame's field, is that local's). *)
 val convention_violations :
-  Callable_abi.decided ->
+  Core_plan.Callable_abi.decided ->
   Names.GlobRef.t -> (Names.Id.t * Cpp_ir.Lowered.Type.t) list -> Cpp_ir.Lowered.Stmt.t list -> string list option

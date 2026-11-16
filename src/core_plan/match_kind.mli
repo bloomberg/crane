@@ -5,7 +5,7 @@
     type and its branches.  Every pass asking how a match comes out reads it
     from here -- the ownership plan, the recursion plan, the representation
     plan -- and lowering reads the kind the elaboration walk recorded for
-    the match's occurrence ({!Core_elaborate.match_kind}). *)
+    the match's occurrence ({!Elaborate.match_kind}). *)
 
 (** How a record projection applies the field it reads: returned as it is,
     called, or called through a coercion around the field. *)

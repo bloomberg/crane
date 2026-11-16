@@ -18,12 +18,12 @@ open Base.Core_util
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Translation_knot
 open Translation_lambda
 open Translation_application
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
@@ -87,7 +87,7 @@ let local_fix_stmts cx selves ~binders ~self_passing (impl_stmts : Cpp_ir.Lowere
 (** How each function of the local fixpoint group whose bodies are [funs]
     passes its parameters ({!Ownership_ir.Local_passing}): a group of
     [closures] takes each by value; one generated in place lends each its
-    body does not own ({!Escape.infer_owned_params}).  A parameter of no
+    body does not own ({!Core_plan.Escape.infer_owned_params}).  A parameter of no
     runtime value is taken by no lambda, but is a binder of the body all the
     same: the flag of the parameter [i]th innermost is that of the body's
     binder [i + 1], whatever binders inside it lack a runtime value. *)
@@ -97,13 +97,13 @@ let local_passing cx ~closures funs =
     let lam_ids, inner = Base.Core_util.collect_lams f in
     let flags =
       if closures then [] else
-        Escape.infer_owned_params ~callee_flags:(settled_ownership cx) (List.length lam_ids + n_fix) inner in
+        Core_plan.Escape.infer_owned_params ~callee_flags:(settled_ownership cx) (List.length lam_ids + n_fix) inner in
     (* [lam_ids] is innermost first, and the plan outermost first. *)
     List.rev
       (List.mapi
          (fun i (_, ty) ->
            if void_binder ty then None
-           else Some (if closures || List.nth flags i then Callable_abi.Owned else Callable_abi.Borrowed) )
+           else Some (if closures || List.nth flags i then Core_plan.Callable_abi.Owned else Core_plan.Callable_abi.Borrowed) )
          lam_ids )
   in
   Array.to_list (Array.map member funs)
@@ -284,7 +284,7 @@ let gen_local_fix_ycomb cx env ~binders ~passing ~captures renamed_ids funs_with
 
 (** Generate local fixpoint declarations using the [\[&\]]-capture pattern.
 
-    Used for a group Core generates {!Analyze_closures.In_place}: no member
+    Used for a group Core generates {!Core_plan.Closures.In_place}: no member
     is used other than in direct call position or escapes into a closure or
     data structure.  The [\[&\]] capture is
     lightweight (no heap allocation, no indirection) but creates dangling
@@ -413,7 +413,7 @@ let fix_captures cx ~in_place fix = Ownership_ir.captures_by_member ~in_place cx
 
 (** Report, under [CRANE_CHECK_IR], a let-bound lambda [what] that reached
     translation other than as it is generated: Core puts every one so
-    before ({!Normalize.let_lambdas}), and translation only binds or lifts
+    before ({!Core_plan.Normalize.let_lambdas}), and translation only binds or lifts
     them. *)
 let ungenerated_let_lambda what =
   if Base.Probe.checking () then
@@ -434,7 +434,7 @@ let check_closure_local cx ty a ~local =
     | _ -> ()
 
 (** Under [CRANE_CHECK_IR], the local fixpoint [name], whose group Core takes
-   to hold copies where [closures] says so ({!Analyze_closures}), must be
+   to hold copies where [closures] says so ({!Core_plan.Closures}), must be
    one its generated code lets escape just as much: named, after its binding
    or in its own bodies, other than as the function a call applies, or
    inside a closure. *)
@@ -508,8 +508,8 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
      parameter by value ([by_value]: its group's plan owns each,
      {!local_passing}) owns each: it holds its own copy. *)
   let n_total = n_lam_params + n_fix_funs in
-  let fix_owned_base = Escape.infer_owned_params ~callee_flags:(settled_ownership cx) n_total f in
-  let fix_sub_esc = Escape.infer_sub_bindings_escape_params n_total f in
+  let fix_owned_base = Core_plan.Escape.infer_owned_params ~callee_flags:(settled_ownership cx) n_total f in
+  let fix_sub_esc = Core_plan.Escape.infer_sub_bindings_escape_params n_total f in
   let owned_params =
     Translation_ownership.owned_parameters n_lam_params
       ~owned:(fun i ->
@@ -688,7 +688,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
           instead of the correct [1].
        3. Generate the group by reference ({!gen_local_fix_by_ref}) or as
           closures holding copies ({!gen_local_fix_ycomb}), as Core decides
-          whether a member escapes ({!Analyze_closures}).
+          whether a member escapes ({!Core_plan.Closures}).
 
        The variables the fixpoint bodies capture are not moved in the
        continuation while a [\[&\]] lambda may still refer to them: the
@@ -708,7 +708,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
     let closures =
       kept_by_frame
-        || Analyze_closures.group ~effects:cx.ctx.input.unit.effects ~n_outer ~continuation:b ~cofix
+        || Core_plan.Closures.group ~effects:cx.ctx.input.unit.effects ~n_outer ~continuation:b ~cofix
           ids funs = Closures in
     let funs_compiled =
       Array.to_list
@@ -1284,7 +1284,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
          applied to fewer arguments than its function takes parameters of
          a runtime value: their bodies own every parameter. *)
       let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
-      let escapes = Analyze_closures.group ~effects:cx.ctx.input.unit.effects ~n_outer ~cofix ids funs = Closures in
+      let escapes = Core_plan.Closures.group ~effects:cx.ctx.input.unit.effects ~n_outer ~cofix ids funs = Closures in
       let partial =
         List.compare_length_with args
           (List.length (List.filter (fun (_, ty) -> not (void_binder ty)) (fst (collect_lams funs.(x)))))

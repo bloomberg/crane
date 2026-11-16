@@ -7,7 +7,7 @@
 open Names
 open Util
 open Base.Type_util
-open Core_query
+open Query
 
 type layers = {
   inner_ty : Core.Type.t;

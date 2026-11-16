@@ -69,7 +69,7 @@ val is_static_member_declaration : Cpp_ir.Resolved.Decl.t -> bool
     place of [t] once [t] is moved out of it to namespace scope.  Only an
     alias's name and an enum's are spelled the way a reference to them is,
     so only those are stood in for. *)
-val stand_ins : Module_plan.layout -> Cpp_ast.t -> Cpp_ast.t list
+val stand_ins : Core_plan.Module_plan.layout -> Cpp_ast.t -> Cpp_ast.t list
 
 (** The wrapper structs the declaration writes around something other than
     a sole struct merged into them, in the order it writes them, each by the

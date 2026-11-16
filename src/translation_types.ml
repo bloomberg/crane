@@ -14,7 +14,7 @@ open Base.Table
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
 (** [promoted_var_binding var_id] -- what the scope says the promoted variable
     named [var_id] stands for, by name.  Reached from a globref through
@@ -567,7 +567,7 @@ let rec normalize_erased_types cx : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type
 (** How many of [id]'s leading template parameters no signature mentions,
     counted by {!Base.Type_util.explicit_tvar_prefix} off its declared type: its
     leading phantoms.  Nothing deduces them, so a call writes them, and
-    {!Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
+    {!Core_plan.Callable_abi} records them as [Phantom] parameters of [id]'s plan.  The
     declaration emitter counts the same run and leaves those parameters
     undefaulted. *)
 let leading_phantom_count cx id =

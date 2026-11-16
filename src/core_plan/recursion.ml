@@ -131,8 +131,8 @@ let rec split_params n = function
    sequentially: a bind's continuation and a ret's value then stand where
    the operation does. *)
 let sequential effects use =
-  match Core_effects.lookup effects use with
-  | Some {Core_effects.operation; mode = Core_effects.Sequential} -> Some operation
+  match Effects.lookup effects use with
+  | Some {Effects.operation; mode = Effects.Sequential} -> Some operation
   | Some _ | None -> None
 
 (* A custom whose replacement text is its one argument writes nothing
@@ -171,7 +171,7 @@ let classify ~effects ~callee body =
       if n < parameters then ()
       else if tail && n = parameters then tail_call := true
       else nontail_call := true
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Bind -> (
       (* The action runs, and the continuation's body goes on where the bind
          stands. *)
       match List.rev args with
@@ -180,7 +180,7 @@ let classify ~effects ~callee body =
         walk ~tail:false action;
         continuation ~depth ~tail k
       | _ -> List.iter (walk ~tail:false) args )
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Return -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Return -> (
       match List.rev args with
       | value :: rest ->
         List.iter (walk ~tail:false) rest;
@@ -346,14 +346,14 @@ let modulo_cons_chains ~effects ~member ~bodies self =
     | Core.Expr.Apply {callee = Core.Expr.Global use;
                        arguments = [a]} when identity use.callee && Base.Table.to_inline use.callee ->
       walk_under 0 a
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Bind -> (
       match List.rev args with
       | (Core.Expr.Lambda _ as k) :: action :: rest ->
         general_if (List.exists (fun a -> calls ~depth a > 0) (action :: rest));
         let n, b = split_params 0 k in
         walk_under n b
       | _ -> general_if (calls ~depth e > 0) )
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Return -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Return -> (
       match List.rev args with
       | value :: rest ->
         general_if (List.exists (fun a -> calls ~depth a > 0) rest);
@@ -429,7 +429,7 @@ let suspends_within ~suspension ~self lex e =
    suspension: it is suspended whole ({!suspension.whole}), or at a
    constructor. *)
 let definition_suspends ~suspension self ty body =
-  let lex, body = Core_elaborate.declaration_scope ty body in
+  let lex, body = Elaborate.declaration_scope ty body in
   suspension.whole self (Base.Type_util.core_return_type ty) body || suspends_within ~suspension ~self lex body
 
 (* The levels of the binders outside [e] that [e] reads as values, [e]
@@ -567,7 +567,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | Core.Expr.Boxed_value {value = e; _}
       | Core.Expr.Lambda_group_barrier {value = e; _} ->
         go ~enters d e
-      | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
+      | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Bind -> (
         match List.rev args with
         | Core.Expr.Lambda {body = k; _} :: action :: others ->
           go ~enters:true d action;
@@ -759,7 +759,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         | _ -> (targets, heads, fixpoints, captures)
       in
       walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + 1) b
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Bind -> (
       match List.rev args with
       | Core.Expr.Lambda {body = k; _} :: action :: rest ->
         let after = targets ~depth action in
@@ -976,7 +976,7 @@ let local_groups ~suspension ~effects defs =
   in
   Core.Ref.User.Map.iter
     (fun r (fd : Core.Recursion.Definition.t) ->
-      let lex, body = Core_elaborate.declaration_scope fd.type_ fd.body in
+      let lex, body = Elaborate.declaration_scope fd.type_ fd.body in
       let bound = bound_calls body in
       iter_scoped
         (fun lex -> function
@@ -1069,14 +1069,14 @@ let inlined_calls ~suspension ~self ~effects ~parameters ~inlines body =
       | Returning | Binding ->
         operand s;
         Array.iter (fun {Core.Match.Branch.body = b; _} -> go pos b) branches )
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Bind -> (
       match (pos, List.rev args) with
       | (Returning | Binding), Core.Expr.Lambda {body = k; _} :: action :: rest ->
         List.iter operand (List.rev rest);
         operand action;
         go pos k
       | _ -> () )
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Return -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Return -> (
       match List.rev args with
       | value :: rest ->
         List.iter operand (List.rev rest);
@@ -1108,7 +1108,7 @@ let inlined_calls ~suspension ~self ~effects ~parameters ~inlines body =
 (* The body of the function [r], defined as [fd], as it is generated: [None]
    where it is suspended whole. *)
 let flow_of ~suspension r (fd : Core.Recursion.Definition.t) =
-  let _, body = Core_elaborate.declaration_scope fd.type_ fd.body in
+  let _, body = Elaborate.declaration_scope fd.type_ fd.body in
   if suspension.whole r (Base.Type_util.core_return_type fd.type_) body then None else Some body
 
 (* The number of parameters the definition [fd] is generated taking: every
@@ -1175,7 +1175,7 @@ let uses_in e =
 
 (* [body] with each call of the function defined as [def] made at [sites]
    replaced by [def]'s body, its parameters bound to the call's arguments
-   ({!Core_copy.call}), and the uses in the bodies so copied; [Error why]
+   ({!Copy.call}), and the uses in the bodies so copied; [Error why]
    unless every site is such a call, with an argument for each parameter,
    of a use that solves none of its callee's variables, whose body then
    needs no instantiation. *)
@@ -1187,7 +1187,7 @@ let splice_calls (def : Core.Recursion.Definition.t) sites body =
     match e with
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when at use -> (
       if solves_variables use then raise_notrace (Unspliced "instantiated");
-      match Core_copy.call ~ty:def.type_ use def.body args with
+      match Copy.call ~ty:def.type_ use def.body args with
       | None -> raise_notrace (Unspliced "arguments")
       | Some spliced ->
         left := List.filter (fun o -> not (Core.Occurrence.equal o (Core.Global_use.occurrence use))) !left;
@@ -1202,7 +1202,7 @@ let splice_calls (def : Core.Recursion.Definition.t) sites body =
 
 (* The effect operations of [fd]'s body alone, generated in its mode. *)
 let definition_effects fd =
-  Core_effects.analyze
+  Effects.analyze
     [ ( Names.ModPath.MPfile Names.DirPath.empty,
         [(Names.Label.make "spliced",
             Core.Module.Structure_item.Declaration (Core.Decl.Recursive_group (Core.Nonempty.singleton fd)))] ) ]
@@ -1288,7 +1288,7 @@ let adopt_calls (def : Core.Recursion.Definition.t) sites body =
     | _ -> Base.Core_util.ast_map_lift reroute depth e
   in
   let params, inner = Base.Core_util.collect_lams body in
-  match (own 0 (Core_copy.copy def.body), reroute 0 (Base.Core_util.ast_lift 1 inner)) with
+  match (own 0 (Copy.copy def.body), reroute 0 (Base.Core_util.ast_lift 1 inner)) with
   | _ when arity = 0 -> Error "arguments"
   | _ when !left <> [] -> Error "unreached"
   | copy, inner ->
@@ -1311,7 +1311,7 @@ let recurses (fd : Core.Recursion.Definition.t) =
     | Core.Expr.Global (use : Core.Global_use.t) when Names.GlobRef.UserOrd.equal use.callee fd.entity -> Some arity
     | _ -> None
   in
-  let _, body = Core_elaborate.declaration_scope fd.type_ fd.body in
+  let _, body = Elaborate.declaration_scope fd.type_ fd.body in
   classify ~effects:(definition_effects fd) ~callee body <> No_recursion
 
 (* The partners of [fd], a function of the group [members], in the order
@@ -1449,7 +1449,7 @@ let splice_partners ~suspension ~loopified ~inlines ({structure = struc;
    no function it could recurse through. *)
 let analyze ~suspension groups program =
   let struc = Core_passes.Phase.structure program in
-  let effects = Core_effects.analyze struc in
+  let effects = Effects.analyze struc in
   let defs = ref Core.Ref.User.Map.empty in
   let add (fd : Core.Recursion.Definition.t) = defs := Core.Ref.User.Map.add fd.entity fd !defs in
   Core_passes.Modutil.struct_iter
@@ -1459,7 +1459,7 @@ let analyze ~suspension groups program =
     struc;
   let defs = !defs in
   (* A function is generated taking every parameter its type declares, its
-     body applied to those it does not bind ({!Core_elaborate.declaration_scope}):
+     body applied to those it does not bind ({!Elaborate.declaration_scope}):
      its calls are read there, a call with fewer arguments than that being
      the closure the C++ makes of it. *)
   (* A member's own calls: what a loop of the member can take. *)
@@ -1469,7 +1469,7 @@ let analyze ~suspension groups program =
         Some (definition_parameter_count fd)
       | _ -> None
     in
-    classify ~effects ~callee (snd (Core_elaborate.declaration_scope fd.type_ fd.body))
+    classify ~effects ~callee (snd (Elaborate.declaration_scope fd.type_ fd.body))
   in
   let kinds = Core.Ref.User.Map.mapi member_kind defs in
   let plans =
@@ -1542,7 +1542,7 @@ let analyze ~suspension groups program =
             [{target = Function use.callee; occurrence = Core.Global_use.occurrence use}]
           | _ -> []
         in
-        let lex, body = Core_elaborate.declaration_scope fd.type_ fd.body in
+        let lex, body = Elaborate.declaration_scope fd.type_ fd.body in
         resumes_of ~effects ~entered:(Core_passes.Splices.is_entered_copy (Core_passes.Phase.splices program))
           ~origin:r ~targets lex body )
       defs
@@ -1555,7 +1555,7 @@ let analyze ~suspension groups program =
           | Core.Expr.Global (use : Core.Global_use.t) -> List.exists (Base.Common.globref_equal use.callee) members
           | _ -> false
         in
-        let lex, body = Core_elaborate.declaration_scope fd.type_ fd.body in
+        let lex, body = Elaborate.declaration_scope fd.type_ fd.body in
         flow_fixpoints ~names (Core.Lexenv.depth lex) body )
       defs
   in

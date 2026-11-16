@@ -34,11 +34,11 @@ let owned_parameters ?(declared : int -> Cpp_ir.Lowered.Type.t option = fun _ ->
   List.filter_map (fun i -> if owned i && worth i then Some (i + 1) else None) (List.init n Fun.id)
 
 (** Which of [params], innermost first, the function whose [body] stands
-    under them owns ({!Ownership.read_off}): those {!Ownership} settled for
+    under them owns ({!Core_plan.Ownership.read_off}): those {!Core_plan.Ownership} settled for
     the global [owner] where they cover [params], and otherwise -- a global
     nothing settled, a lambda -- what its own body reads. *)
 let infer_owned_flags cx ?owner body params =
-  let read_off_body () = Ownership.read_off ~settled:(settled_ownership cx) params body in
+  let read_off_body () = Core_plan.Ownership.read_off ~settled:(settled_ownership cx) params body in
   match Option.bind owner (settled_ownership cx) with
   | Some settled when List.length settled = List.length params ->
     if Base.Probe.checking () && settled <> read_off_body () then
@@ -170,5 +170,5 @@ let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowere
     passed. *)
 let param_passing ~owned (t : Cpp_ir.Lowered.Type.t) =
   match t with
-  | Reference (Forwarding, _) -> Callable_abi.Forwarded
-  | _ -> if owned then Callable_abi.Owned else Callable_abi.Borrowed
+  | Reference (Forwarding, _) -> Core_plan.Callable_abi.Forwarded
+  | _ -> if owned then Core_plan.Callable_abi.Owned else Core_plan.Callable_abi.Borrowed

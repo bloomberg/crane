@@ -10,11 +10,11 @@
     {- A {!Var.t} is a variable of the callee's Core type scheme, owned by
        the scheme ({!Binder_name.Source.t}) it belongs to.}
     {- A template parameter of the C++ declaration is the third, and lives
-       with the callable's ABI plan ({!Callable_abi}).}}
+       with the callable's ABI plan ({!Core_plan.Callable_abi}).}}
 
     None of them is an [int] to its clients, so an index of one cannot be
     used as an index of another; every crossing is a named function, the way
-    {!Param_pos} separates a callee's parameter lists.  The module depends on
+    {!Core_plan.Param_pos} separates a callee's parameter lists.  The module depends on
     nothing of the IR, so that {!Core} can name an instantiation. *)
 
 (** The identity of one type scheme: the declaration it belongs to and how

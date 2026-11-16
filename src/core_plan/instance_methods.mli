@@ -11,7 +11,7 @@
     variables are renumbered to match, and a body extraction eta-reduced below
     the field's declared arity is expanded back to it.  This module is all of
     that, in Core terms alone, so that the elaborated bodies are a value both
-    the walk elaborating a unit's calls ({!Core_elaborate}) and the generator
+    the walk elaborating a unit's calls ({!Elaborate}) and the generator
     of the instance's struct ({!Gen_instances}) read, rather than something
     the generator works out while it emits. *)
 

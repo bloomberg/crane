@@ -7,7 +7,7 @@
 open Names
 open Util
 open Base.Type_util
-open Core_query
+open Query
 open Base.Table
 
 (** [classify ~lex id written] -- the role each argument the call of [id]
@@ -329,7 +329,7 @@ type site =
     planned where the walk met it ({!instantiate}), if that succeeded,
     whether it builds a closed instance ({!builds_closed_instance}),
     whether it calls a class field as a static member of an instance
-    ({!Core_query.static_projection}), whether its head is closed
+    ({!Query.static_projection}), whether its head is closed
     ({!closed_head}), and whether it calls a kept instance's member template
     ({!member_template_projection}). *)
 type entry = {
@@ -422,7 +422,7 @@ let closed_head ~lex use (call : Elaborated_call.t) =
 
 (* Whether the call [call], standing in [lex], projects a class field
    through its one dictionary argument where that instance was kept
-   ({!Core_query.kept_instance_of_projection}) and its class declares
+   ({!Query.kept_instance_of_projection}) and its class declares
    the field as a member template: the instance's own method can then be
    called in place of the field's dispatcher. *)
 let member_template_projection ~lex (call : Elaborated_call.t) =
@@ -606,7 +606,7 @@ let rec walk w ?(position = no_position) lex e =
     List.iter (fun (_, ty) -> walk_type w lex ty) ids;
     go ~position:(lambda_body_position ~n:(List.length ids) position) (push Core.Lexenv.Value ids lex) body
   (* An alias of a polymorphic function is not bound but put in place of its
-     uses ({!Core_query.let_lambda}), and its calls are those of
+     uses ({!Query.let_lambda}), and its calls are those of
      what it abbreviates, at the arguments each use gives it.  A lambda that
      is bound is generated as a function of its own, at no position. *)
   | Core.Expr.Let {binder = x; binder_type = ty; value = (Core.Expr.Lambda _ as a); body; _} -> (
@@ -695,9 +695,9 @@ and walk_type w lex ty =
 let head_variables ty = Base.Core_util.IntSet.fold max (Base.Core_util.core_tvars ty) 0
 
 (* A declaration's own parameters are bound as its parameters, at the types
-   its body is generated with ({!Core_query.reconcile_parameter_type}):
+   its body is generated with ({!Query.reconcile_parameter_type}):
    the class-typed ones are its dictionaries
-   ({!Core_query.parameter_role}).  Translation unifies a parameter's
+   ({!Query.parameter_role}).  Translation unifies a parameter's
    annotation with the declaration's type when it generates the head; an
    annotation that is still a bare metavariable is solved to the declared
    type there, so that is the type read here, without solving anything.  The
@@ -719,10 +719,10 @@ let declaration_scope ty body =
 
 (* [e], standing in [lex] under a head of [n_outer] type variables, with
    every let-bound lambda as translation generates it
-   ({!Core_query.let_lambda}): an alias it inlines put in place of
+   ({!Query.let_lambda}): an alias it inlines put in place of
    its uses, one used at a single instance bound at it, and one bound as a
    value given a binder for every value arrow of its type
-   ({!Core_query.eta_bound_lambda}). *)
+   ({!Query.eta_bound_lambda}). *)
 let rec inline_aliases ~n_outer lex e =
   let go = inline_aliases ~n_outer in
   let under ids body = go (push Core.Lexenv.Value ids lex) body in
@@ -741,7 +741,7 @@ let rec inline_aliases ~n_outer lex e =
     | Bound ->
       Core.Expr.Let {binder = x;
                      binder_type = ty;
-                     value = go lex (Core_query.eta_bound_lambda ty a);
+                     value = go lex (Query.eta_bound_lambda ty a);
                      body = under [(x, ty)] body;
                      occurrence = occ}
     | Lifted ->

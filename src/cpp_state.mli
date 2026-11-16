@@ -36,22 +36,22 @@ val owned_ref : 'a -> 'a ref
 
 (** The unit's method registry, built once per extraction pass by scanning
     the [Core.Program.t]; read through {!get_method_registry}. *)
-val method_registry : Method_registry.t option ref
+val method_registry : Core_plan.Method_registry.t option ref
 
 (** Pre-built registry from the full [Core.Program.t], used in separate extraction
     so cross-module method calls are recognised. [None] when unset; cleared by
     [reset_cpp_state]. *)
-val global_method_registry : Method_registry.t option ref
+val global_method_registry : Core_plan.Method_registry.t option ref
 
 (** Set [global_method_registry] to [Some] the given registry. *)
-val set_global_method_registry : Method_registry.t -> unit
+val set_global_method_registry : Core_plan.Method_registry.t -> unit
 
 (** Reset [global_method_registry] to [None]. *)
 val clear_global_method_registry : unit -> unit
 
 (** Return the contents of [method_registry].
     @raise CErrors.Anomaly if the registry has not been initialized. *)
-val get_method_registry : unit -> Method_registry.t
+val get_method_registry : unit -> Core_plan.Method_registry.t
 
 (** Print a type variable by its name. *)
 val pp_tvar : Names.variable -> Pp.t
@@ -171,7 +171,7 @@ and tyctor_use = {
     written in it means instead of a member of that struct. *)
 module Out_of_line : sig
   type t = {
-    scope : Scope_plan.scope;  (** The scope it is a member of. *)
+    scope : Core_plan.Scope_plan.scope;  (** The scope it is a member of. *)
     file_scope_aliases : Names.Id.Set.t;
         (** The promoted type variables whose alias its file declares at file
             scope. *)
@@ -214,7 +214,7 @@ type concept_plan = {
 type module_frame = {
   eponymous_type : Names.GlobRef.t option;
   eponymous_record : (Names.GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
-  method_candidates : Method_registry.method_candidate list;
+  method_candidates : Core_plan.Method_registry.method_candidate list;
   concept_collision : bool;
   promoted : Names.Id.t list option;
 }
@@ -243,7 +243,7 @@ type ctor_alias_plan = {
     held beside the unit's context ({!Translation_state.unit_facts}) and
     on each position ({!render_ctx}). *)
 type plans = {
-  analysis : Structure_analysis.t option;
+  analysis : Core_plan.Structure.t option;
       (** What analysing the structure concluded ([Cpp.prepare_structure]). *)
   frames : module_frame Names.MPmap.t;
       (** Each module's frame, as the walk that plans the unit's callables
@@ -333,7 +333,7 @@ and render_ctx = {
   visibility : Base.Common.visibility option;
       (** The scopes whose names are visible where the declaration being
           written is written, innermost first: its planned visibility
-          ({!Scope_plan.visibility}); none where nothing planned it, where
+          ({!Core_plan.Scope_plan.visibility}); none where nothing planned it, where
           naming anything is an anomaly: no visibility is installed for a
           name to fall back on.  The scopes printing has entered inside it
           ({!render_ctx.frame}) that declare names add their layers where the
@@ -387,10 +387,10 @@ val file_scope_aliases_of : Base.Common.file -> Names.Id.Set.t
 val held_concept_equal : held_concept -> held_concept -> bool
 
 (** The modules whose module types are file-scope concepts over a
-    functor's parameters ({!Module_plan.concept_scope}): a functor's body,
+    functor's parameters ({!Core_plan.Module_plan.concept_scope}): a functor's body,
     an application of the functor, or an alias of the application, each by
     its path, with the functor and its argument modules. *)
-val functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list ref
+val functor_concept_scopes : (Names.ModPath.t * Core_plan.Module_plan.concept_scope) list ref
 
 (** Whether a concept is one the current frame is holding back. *)
 val is_held_back_in : held_concept list -> held_concept -> bool
@@ -403,11 +403,11 @@ val concept_plan : plans -> Names.ModPath.t -> concept_plan
 
 (** [planned_held_back plans scopes ~file mp] is what the concepts held back
     around the body of the module [mp] are in [file], innermost first: in
-    the header, those each module frame around it ({!Scope_plan.frames} of
+    the header, those each module frame around it ({!Core_plan.Scope_plan.frames} of
     [scopes]) holds back,
     as [plans] has them ({!concept_plan}); in the implementation, which
     declares no concept, none. *)
-val planned_held_back : plans -> Scope_plan.bound -> file:Base.Common.file -> Names.ModPath.t -> held_concept list
+val planned_held_back : plans -> Core_plan.Scope_plan.bound -> file:Base.Common.file -> Names.ModPath.t -> held_concept list
 
 (** Whether the struct the position is in holds concept [c] back: declared
     after it, so a constraint inside it cannot name [c] yet.  What is held
@@ -453,8 +453,8 @@ val read_by_a_function : Names.GlobRef.t -> bool
     instead of static inline variables, to avoid template static
     initialisation order problems: by module path and label, and by the
     canonical kernel name of a constant, which is what a constant reached
-    through a module alias is ({!Struct_plan.accessors}). *)
-type accessors = Struct_plan.accessors
+    through a module alias is ({!Core_plan.Struct_plan.accessors}). *)
+type accessors = Core_plan.Struct_plan.accessors
 
 (** No accessors. *)
 val no_accessors : accessors
@@ -590,8 +590,8 @@ val in_unmerged_wrapper : Unit_context.t -> Names.GlobRef.t -> bool
 (** {!in_unmerged_wrapper}, the inductive's short name given. *)
 val in_unmerged_wrapper_named : Unit_context.t -> string -> Names.GlobRef.t -> bool
 
-(** What a nested struct name was emitted for ({!Struct_plan.nested_struct_owner}). *)
-type nested_struct_owner = Struct_plan.nested_struct_owner =
+(** What a nested struct name was emitted for ({!Core_plan.Struct_plan.nested_struct_owner}). *)
+type nested_struct_owner = Core_plan.Struct_plan.nested_struct_owner =
   | Global of Names.GlobRef.t
   | Module of Names.ModPath.t
 
@@ -636,17 +636,17 @@ val is_shadowed_global_name : Unit_context.t -> string -> Names.GlobRef.t -> boo
     collision-wrapped modules, whose child qualifier is replaced by the wrapper
     struct name.  The wrappers are those [layout] plans.
     @return the possibly-qualified name *)
-val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
+val wrapper_qualify : Core_plan.Module_plan.layout -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** {2 Method registration} *)
 
 (** The candidate a function, given its body and type, is as a method of an
     eponymous type, where the registry made it one
-    ({!Method_registry.planned_candidate}); the render adds no method. *)
+    ({!Core_plan.Method_registry.planned_candidate}); the render adds no method. *)
 val planned_method_candidate :
   Names.GlobRef.t ->
   Names.GlobRef.t ->
-  Core.Expr.t -> Core.Type.t -> Method_registry.method_candidate option
+  Core.Expr.t -> Core.Type.t -> Core_plan.Method_registry.method_candidate option
 
 (** Look up a function in the method registry.
     @return [Some (eponymous_type, this_position)] if it is registered as a
@@ -663,7 +663,7 @@ val lookup_method_arity : Names.GlobRef.t -> int
 val lookup_method_ind_tvar_positions : Names.GlobRef.t -> int list
 
 (** Whether the method's return type is erased to [std::any]
-    ({!Method_registry.method_returns_any}). *)
+    ({!Core_plan.Method_registry.method_returns_any}). *)
 val method_returns_any : Names.GlobRef.t -> bool
 
 (** {2 Current structure} *)

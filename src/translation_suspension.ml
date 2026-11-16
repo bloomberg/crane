@@ -4,18 +4,18 @@
 (** When naming or building something runs code: why a global is emitted as
     a function of no parameters, whether a definition or a coinductive
     constructor application is suspended, and whether evaluating a term may
-    throw.  Read by lowering, {!Recursion_plan} and the function
+    throw.  Read by lowering, {!Core_plan.Recursion} and the function
     generators. *)
 
 open Base.Common
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
 (** Why a global is emitted as a function of no parameters, so that naming it
     calls it: a cofixpoint, whose value is built when asked for; a definition
-    whose body only throws ({!Structure_analysis.throwing_values}),
+    whose body only throws ({!Core_plan.Structure.throwing_values}),
     which must throw when asked for rather than during static
     initialisation; a monadic action, run when performed. *)
 type thunk_reason = Cofixpoint | Throws | Monadic
@@ -129,9 +129,9 @@ let suspends_constructor cx ~self ~binder_type n ts =
   && (not (List.for_all (core_is_value cx) ts))
   && args_may_corecurse ~self ~binder_type ts
 
-(** When a coinductive body is suspended, as {!Recursion_plan} reads it:
+(** When a coinductive body is suspended, as {!Core_plan.Recursion} reads it:
     {!suspends_whole} and {!suspends_constructor}. *)
-let suspension cx : Recursion_plan.suspension = {whole = suspends_whole; at_constructor = suspends_constructor cx}
+let suspension cx : Core_plan.Recursion.suspension = {whole = suspends_whole; at_constructor = suspends_constructor cx}
 
 (** [suspend_ctor ty ctor args] is the coinductive constructor [ctor] of
     type [ty] applied to [args], suspended:

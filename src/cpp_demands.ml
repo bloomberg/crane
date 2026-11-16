@@ -67,7 +67,7 @@ module Ir = struct
       | Variant (Inline, _) -> variant ()
       | Variant (Shared, _) -> rt Cpp_ir.Crane_rt.shared_variant_header
       | Shared_pointer t -> (
-        match Pointer_slot.of_pointee t with
+        match Core_plan.Pointer_slot.of_pointee t with
         | Shared -> rt Cpp_ir.Crane_rt.shared_variant_header
         | At_instantiation ->
           rt Cpp_ir.Crane_rt.shared_variant_header;

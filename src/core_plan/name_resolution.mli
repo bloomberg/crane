@@ -6,7 +6,7 @@
     A per-extraction cache of how each inductive type is rendered.
 
     {!create} scans the [Core.Program.t] once, after
-    {!Structure_analysis.analyze} and before rendering, and records for every
+    {!Structure.analyze} and before rendering, and records for every
     inductive declared at top level or in a module structure its
     classification ({!Cpp_ir.Inductive.Kind}: sum, enum, record,
     eponymous record or type class).  The printer reads the classification
@@ -34,7 +34,7 @@ open Names
 type t
 
 (** Create the cache for a structure. Called once per extraction pass, after
-    {!Structure_analysis.analyze}.  Inductives inside functor bodies are not
+    {!Structure.analyze}.  Inductives inside functor bodies are not
     scanned.  A record is eponymous as [layout] says
     ({!Module_plan.is_eponymous_record}).
     @return a freshly built name resolution cache *)

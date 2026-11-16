@@ -17,14 +17,14 @@
     literal it computes ({!Numeral_literal.fold}).
 
     The contract is total.  {!structure} makes every definition body
-    canonical before {!Normalize.structure} reads it, which keeps it so --
+    canonical before {!Core_plan.Normalize.structure} reads it, which keeps it so --
     it names calls by variables, and a partner it splices in stands for its
     parameters by variables or lets ({!check}) -- extraction makes the terms
     a type carries canonical where it builds them
     ([Rocq_to_core.Extraction.extract_type_app]), and every application built later is
     built with {!apply} or {!Base.Core_util.apply_eta_args}.  So translation
     reads each call as it is written, and an analysis of the structure --
-    which parameters a call owns ({!Escape}) -- reads the same call the
+    which parameters a call owns ({!Core_plan.Escape}) -- reads the same call the
     printer emits: a global applied in stages had its first stage taken for
     a partial application that captures its arguments. *)
 

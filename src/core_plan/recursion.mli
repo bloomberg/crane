@@ -8,7 +8,7 @@
     rediscovers; Loopify transforms a function by it.
 
     A call is a tail call where the function's result is the call's.  The
-    effect operations are read as {!Core_effects} elaborates them: in a
+    effect operations are read as {!Effects} elaborates them: in a
     sequential computation the continuation of a [bind] and the value of a
     [ret] stand where the operation does.  A custom whose replacement text is
     just its one argument stands for that argument.  The plan is per
@@ -66,7 +66,7 @@ val equal : t -> t -> bool
 (** The effect operation the use [use] is, where [effects] says it is
     generated sequentially: a bind's continuation and a ret's value then
     stand where the operation does. *)
-val sequential : Core_effects.t -> Core.Global_use.t -> Core_effects.operation option
+val sequential : Effects.t -> Core.Global_use.t -> Effects.operation option
 
 (** Whether the custom [r]'s replacement text is its one argument, which is
     then where the custom is. *)
@@ -196,7 +196,7 @@ val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
     fixpoint or bind standing as an operand, or a match bound by a let,
     which translation runs in a lambda invoked in place -- or in an enum's
     match.  Each tail call is replaced by the partner's body, its
-    parameters bound to the call's arguments ({!Core_copy.call}), where the
+    parameters bound to the call's arguments ({!Copy.call}), where the
     next partners' calls are read too.  A call that runs in place of one,
     where [inlines] says the function takes its partners' bodies at such
     calls -- a method does not -- is entered where the partner yields what

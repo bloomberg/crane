@@ -92,7 +92,7 @@ type t = {
   saved_owned : (Core.Occurrence.t * Levels.t) list;  (* of each let [saves] names, the levels it keeps owned there *)
   entries : entry_read list;
   entry_owned : (Core.Occurrence.t * Levels.t) list;  (* of each call [entries] names, the levels owned there *)
-  effects : Core_effects.t;  (* the unit's effect operations: a sequential bind runs its continuation inline *)
+  effects : Core_plan.Effects.t;  (* the unit's effect operations: a sequential bind runs its continuation inline *)
 }
 
 let empty =
@@ -115,7 +115,7 @@ let empty =
     saved_owned = [];
     entries = [];
     entry_owned = [];
-    effects = Core_effects.empty }
+    effects = Core_plan.Effects.empty }
 
 (* The reads in [t] of variables bound outside it, by level, [t] standing [d]
    binders deep. *)
@@ -435,7 +435,7 @@ let rec spelled_in_place = function
    a record's fields are read one at a time, and any other custom match
    evaluates its scrutinee once. *)
 let scrutinee_consumed ty scrut branches =
-  match Match_kind.classify ty branches with
+  match Core_plan.Match_kind.classify ty branches with
   | Custom ->
     let uses =
       List.length
@@ -460,7 +460,7 @@ let evaluations r =
   | Some s when Base.Table.is_inline_custom r -> Cpp_ir.Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
 
-let sequential_bind effects use = Core_effects.lookup effects use = Some {operation = Bind; mode = Sequential}
+let sequential_bind effects use = Core_plan.Effects.lookup effects use = Some {operation = Bind; mode = Sequential}
 
 (* What an application, perhaps applied in turn, applies: through casts. *)
 let rec call_head f = match strip f with Core.Expr.Apply {callee = g; _} -> call_head g | h -> h
@@ -482,8 +482,8 @@ let call_of a =
 
 (* Whether the branches of a match on a value of type [ty] are where the
    value of the match is bound, rather than in a closure run in its place
-   (as {!Recursion_plan} reads a right-hand side ending in its branches). *)
-let bound_in_place ty branches = Match_kind.bound_in_place (Match_kind.classify ty branches)
+   (as {!Core_plan.Recursion} reads a right-hand side ending in its branches). *)
+let bound_in_place ty branches = Core_plan.Match_kind.bound_in_place (Core_plan.Match_kind.classify ty branches)
 
 (* The calls [a] ends in: the call it is, or those the branches of a match
    bound in place end in, through lets and casts. *)
@@ -837,13 +837,13 @@ module Binding = struct
     match scrutinee_var scrut with
     | Some (i, o) ->
       let {Core.Match.Branch.binders = ids; body = body; _} = branches.(0) in
-      owned i o && Escape.nb_occur_match (i + List.length ids) body = 0
+      owned i o && Core_plan.Escape.nb_occur_match (i + List.length ids) body = 0
     | None -> true
 
   (* A let binds by reference the field it projects out of a record that is
      not moved there. *)
   let projects_in_place ~owned ~fate ty a =
-    Escape.is_shared_ptr_type ty
+    Core_plan.Escape.is_shared_ptr_type ty
     &&
     match a with
     | Core.Expr.Match {scrutinee = Core.Expr.Bound_variable {index = k; occurrence = o};
@@ -1043,7 +1043,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
     in
     let reads_scrutinee body =
       match scrutinee_storage scrut with
-      | Some (i, _) -> Escape.nb_occur_match (i + n) body > 0
+      | Some (i, _) -> Core_plan.Escape.nb_occur_match (i + n) body > 0
       | None -> false
     in
     let ind = matched_inductive branches in
@@ -1057,7 +1057,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
       (* Rebuilding in the scrutinee's storage moves every field out of it. *)
       Levels.union (Levels.remove (d - i) owned) (fields (fun _ _ -> true))
     | _ -> (
-      match Match_kind.classify ty branches with
+      match Core_plan.Match_kind.classify ty branches with
       | Custom ->
         if Binding.pair_by_value ~owned:(owned_var owned d) scrut branches then
           Levels.union owned (fields (fun _ (_, ty) -> worth_moving ty))
@@ -1156,7 +1156,7 @@ let reuse_arm p ~scrutinee ~branch ~constructor =
         let {Core.Match.Branch.body = body; _} = brs.(branch) in
         List.filter
           (function Core.Expr.Construct {constructor = r; _} -> Base.Common.globref_equal r constructor | _ -> false)
-          (Escape.tail_constructions body)
+          (Core_plan.Escape.tail_constructions body)
       | _ -> []
     in
     if consumers = [] && Base.Probe.checking () then
@@ -1485,7 +1485,7 @@ let eta_captures p ts =
   List.map (fun i -> (i, mode_of moved i)) (read_indices ts)
 
 module Local_passing = struct
-  type t = Callable_abi.passing option list
+  type t = Core_plan.Callable_abi.passing option list
 
   let recorded : ((Core.Occurrence.t * int) * t) list ref = Base.State.cell Base.State.Extraction []
 

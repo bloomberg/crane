@@ -13,7 +13,7 @@
 
     Which methods are projections is not read off their C++ bodies: it is
     decided from the Core function each method is made of
-    ({!Escape.returns_receiver_field}), and recorded on its receiver
+    ({!Core_plan.Escape.returns_receiver_field}), and recorded on its receiver
     ([returns_field] of {!Cpp_ir.Field.Receiver.t}).  Under [CRANE_CHECK_IR]
     the body is checked to agree.
 

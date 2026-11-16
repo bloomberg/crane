@@ -144,8 +144,8 @@ let () =
 let () =
   let f = GlobRef.VarRef (id "f") in
   let decided =
-    Callable_abi.decide
-      ~callables:[Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []]
+    Core_plan.Callable_abi.decide
+      ~callables:[Core_plan.Callable_abi.of_head ~passing:[Owned; Borrowed] ~callee:f ~scheme:None []]
       ~assumed:[] ~instance_methods:[]
   in
   let cref : ty = Reference (Lvalue, Const tree) in

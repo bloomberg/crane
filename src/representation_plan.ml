@@ -7,7 +7,7 @@
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
 (* What decided a binder's C++ type, as {!Translation_state.Binder_origin}
    says for the recorded one: the conversion of its Core type where it is
@@ -259,7 +259,7 @@ let region cx body =
                        scrutinee = scrut;
                        branches = ([|{Core.Match.Branch.binders = ids; body = body; _}|] as branches);
                        occurrence = occ}
-      when Match_kind.is_record (Match_kind.classify ty branches) ->
+      when Core_plan.Match_kind.is_record (Core_plan.Match_kind.classify ty branches) ->
       walk scope scrut;
       let bound = List.map (fun (_, t) -> at_binding cx t) ids in
       let retyped = List.map (fun (_, t) -> at_binding cx t) (Translation_match_types.retype_dependent_params ty ids) in
@@ -275,7 +275,7 @@ let region cx body =
       walk scope scrut;
       let var_type = Core.Lexenv.type_opt scope.lex in
       let fields =
-        if Match_kind.classify ty branches = Match_kind.Custom then
+        if Core_plan.Match_kind.classify ty branches = Core_plan.Match_kind.Custom then
           let cs =
             Translation_match_types.custom_match_scrutinee cx (Base.Common.empty_env ()) ty scrut branches
               ~var_boxed:(fun i _ -> boxed cx (planned scope i)) ~var_type
@@ -404,26 +404,26 @@ let region cx body =
     (* A lambda passed to a global is generated in the slot of the parameter
        it is passed at, its binders refined against that parameter's Core type
        ({!Translation_lambda_params.slot_refined_lambda}): the callee's declared
-       type at the call's reading ({!Core_elaborate.instantiate}), where it
+       type at the call's reading ({!Core_plan.Elaborate.instantiate}), where it
        erases nothing.  Read with no type the call's position states. *)
     | Core.Expr.Apply {callee = Core.Expr.Global (use : Core.Global_use.t);
                        arguments = args} when List.exists is_lambda args ->
-      let call = Core_elaborate.elaborate_arguments ~lex:scope.lex use args in
+      let call = Core_plan.Elaborate.elaborate_arguments ~lex:scope.lex use args in
       let inst =
-        Core_elaborate.instantiate ~lex:scope.lex ~expected_core:None ~stated_core:None ~caller:ctx.input.body_owner
+        Core_plan.Elaborate.instantiate ~lex:scope.lex ~expected_core:None ~stated_core:None ~caller:ctx.input.body_owner
           ~scope:type_vars call
       in
-      let leading = Elaborated_call.leading_params call in
+      let leading = Core_plan.Elaborated_call.leading_params call in
       let param_core_ty i =
-        let param_index = Param_pos.of_regular ~leading i in
+        let param_index = Core_plan.Param_pos.of_regular ~leading i in
         let subst =
-          if Base.Table.is_inline_custom use.callee then Some (Param_pos.subst_at_declared param_index)
+          if Base.Table.is_inline_custom use.callee then Some (Core_plan.Param_pos.subst_at_declared param_index)
           else inst.subst_index_of_orig param_index
         in
         match subst with
-        | Some j -> Param_pos.nth inst.params j
+        | Some j -> Core_plan.Param_pos.nth inst.params j
         | None -> (
-          match Param_pos.nth inst.params_orig param_index with
+          match Core_plan.Param_pos.nth inst.params_orig param_index with
           | Some t when not (erased_by_extraction t) -> Some t
           | _ -> None )
       in
@@ -446,8 +446,8 @@ let region cx body =
                [const auto &] where the slot's domain is a box
                ({!Translation_calls.deduce_erased_domains}). *)
             let deduced =
-              Callable_abi.deduces_callable ctx.input.unit.context.callables use.callee
-                (Param_pos.of_regular ~leading i)
+              Core_plan.Callable_abi.deduces_callable ctx.input.unit.context.callables use.callee
+                (Core_plan.Param_pos.of_regular ~leading i)
             in
             let slot_ty =
               match param_core_ty i with

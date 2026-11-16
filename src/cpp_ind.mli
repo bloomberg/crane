@@ -49,7 +49,7 @@ val instance_decls :
 (** The callable plan of each method of the instance's struct, by name: the
     head {!instance_decls} declares it with, planned without a body. *)
 val plan_instance_methods :
-  Translation_state.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> (Names.Id.t * Callable_abi.t) list
+  Translation_state.t -> Names.GlobRef.t -> Core.Expr.t -> Core.Type.t -> (Names.Id.t * Core_plan.Callable_abi.t) list
 
 (** [generated_once ~module_ ?on_reuse ?on_peek ?planned node gen] is [gen ()] ahead
     of the files ({!generating_ahead}), recorded by the physical Core node
@@ -289,7 +289,7 @@ val record_methods :
   Translation_state.t -> module_:Names.ModPath.t ->
   Names.GlobRef.t ->
   Names.Id.t list ->
-  Method_registry.method_candidate list ->
+  Core_plan.Method_registry.method_candidate list ->
   Cpp_ir.Lowered.phase Cpp_ir.Field.member list * Cpp_ir.Lowered.Decl.t list
 
 (** [record_field_types r vars fields] is the C++ type of each of the

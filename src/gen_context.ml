@@ -14,7 +14,7 @@ open Base.Core_util
 open Util
 open Translation_state
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** Top-level bodies generated in each phase of the unit being extracted;
     see {!body_generation_counts}. *)
@@ -511,18 +511,18 @@ let promoted_resolutions_of_body cx ?r ?ty b =
       snd (empty_env ()) )
   in
   let rec walk_at d e =
-    match Core_query.strip_magic e with
+    match Core_plan.Query.strip_magic e with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
-      when instance_class_at r <> None && (not (closed (Core_query.strip_magic e)))
-           && leading <> [] && spellable d (Core_query.strip_magic e) ->
+      when instance_class_at r <> None && (not (closed (Core_plan.Query.strip_magic e)))
+           && leading <> [] && spellable d (Core_plan.Query.strip_magic e) ->
       Option.iter
         (add_at (Option.get (instance_class_at r)) r)
-        (Translation_calls.core_arg_to_template_type cx (env_at d) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type cx (env_at d) (Core_plan.Query.strip_magic e));
       (* As [walk] does: the arguments are read on, all but the instance's own
          dictionary arguments. *)
       List.iter
         (fun a ->
-          match Core_query.strip_magic a with
+          match Core_plan.Query.strip_magic a with
           | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
             when instance_class r' <> None ->
             ()
@@ -539,11 +539,11 @@ let promoted_resolutions_of_body cx ?r ?ty b =
     | e' -> Base.Core_util.ast_iter (walk_at d) e'
   in
   let rec walk e =
-        match Core_query.strip_magic e with
+        match Core_plan.Query.strip_magic e with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args}
-      when instance_class r <> None && closed (Core_query.strip_magic e) ->
+      when instance_class r <> None && closed (Core_plan.Query.strip_magic e) ->
       Option.iter (add r)
-        (Translation_calls.core_arg_to_template_type cx (empty_env ()) (Core_query.strip_magic e));
+        (Translation_calls.core_arg_to_template_type cx (empty_env ()) (Core_plan.Query.strip_magic e));
       (* An instance's own dictionary arguments are not independent mentions.
          What they say is already said, in this instance's spelling, by
          {!instance_arg_resolutions}; read separately they answer the same name
@@ -552,7 +552,7 @@ let promoted_resolutions_of_body cx ?r ?ty b =
          ambiguous, leaving the name erased. *)
       List.iter
         (fun a ->
-          match Core_query.strip_magic a with
+          match Core_plan.Query.strip_magic a with
           | Core.Expr.Global {callee = r'; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r'; _}; _}
             when instance_class r' <> None ->
             ()
@@ -606,7 +606,7 @@ let promoted_resolutions_of_body cx ?r ?ty b =
 let type_resolutions_of_referenced_globals b =
   let found = ref [] in
   let rec walk e =
-    ( match Core_query.strip_magic e with
+    ( match Core_plan.Query.strip_magic e with
     | Core.Expr.Global {callee = r; _} -> found := !found @ ind_type_resolutions r
     | _ -> () );
     Base.Core_util.ast_iter walk e
@@ -678,7 +678,7 @@ let mentioned_promoted_args r =
     [name]'s family parameters in [ty], spelled at [vars].  A family is a plain
     [typename] -- [E X] is written [E] -- and so is the parameter a conversion
     from another instantiation declares in its place, which the struct-level
-    {!Plan_templates.deapply_plain_tvars} does not see. *)
+    {!Core_plan.Plan_templates.deapply_plain_tvars} does not see. *)
 let deapply_families name vars =
   let families = List.filteri (fun i _ -> Base.Table.is_family_ind_param name i) vars in
   Cpp_ir.Types.map (function

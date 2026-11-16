@@ -21,7 +21,7 @@ type lowering =
   | Frames
 
 (* How the recursion plan's [strategy] lowers a loop. *)
-let lowering_of (strategy : Recursion_plan.strategy option) =
+let lowering_of (strategy : Core_plan.Recursion.strategy option) =
   match strategy with
   | Some Tail_loop -> Some Tail
   | Some (Modulo_cons _) -> Some Modulo_cons
@@ -60,7 +60,7 @@ let loop_of ~unit ~lowerings r =
   else
     shaped_loop ~unit ~lowerings r
       (lowering_of
-        ((Recursion_plan.strategy (Unit_context.recursion unit))
+        ((Core_plan.Recursion.strategy (Unit_context.recursion unit))
           ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r))
       (Control_ir.Loop.Function r)
 
@@ -78,7 +78,7 @@ let reason = function
   | Loopify.Declined why | Left (Some why) -> why
   | Left None -> "left as generated"
 
-let in_place = Recursion_plan.in_place
+let in_place = Core_plan.Recursion.in_place
 
 (* What each parameter of the loop [l] is passed by its Continues
    ({!Control_ir.Term.parts_passed}), read with the planned representation. *)
@@ -103,9 +103,9 @@ let derived_passed ~unit l =
    {!Frame_storage} decides from the C++ parameters, after the plan. *)
 let resumes_of ~unit ?entry_captures ~origin ~depth ~available ~parameters:(first, (l : Control_ir.Term.loop)) () :
     Ownership_ir.resumes =
-  let rebuilt (p : Recursion_plan.resume) =
+  let rebuilt (p : Core_plan.Recursion.resume) =
     List.fold_left
-      (fun rebuilt (c : Recursion_plan.recomputable) ->
+      (fun rebuilt (c : Core_plan.Recursion.recomputable) ->
         if List.for_all (fun b -> available b || List.exists (Core.Binder.equal b) rebuilt) c.from then
           c.recomputed :: rebuilt
         else rebuilt )
@@ -118,18 +118,18 @@ let resumes_of ~unit ?entry_captures ~origin ~depth ~available ~parameters:(firs
       (fun level -> if level < first then None else Option.map snd (List.nth_opt l.parameters (level - first)));
     resume_at =
       (fun b ->
-        match (Recursion_plan.resumes_binding (Unit_context.recursion unit)) b with
+        match (Core_plan.Recursion.resumes_binding (Unit_context.recursion unit)) b with
         | [p] ->
           let kept = List.filter (fun b -> not (available b)) p.live in
           let rebuilt = rebuilt p in
           let held = List.filter (fun b -> not (List.exists (Core.Binder.equal b) rebuilt)) kept in
           Some
-            { calls = List.map (fun (c : Recursion_plan.call) -> c.occurrence) p.after;
+            { calls = List.map (fun (c : Core_plan.Recursion.call) -> c.occurrence) p.after;
               kept;
               held;
               passed =
                 List.filter
-                  (fun b -> List.exists (fun (q : Recursion_plan.passing) -> Core.Binder.equal q.passed b) p.passes)
+                  (fun b -> List.exists (fun (q : Core_plan.Recursion.passing) -> Core.Binder.equal q.passed b) p.passes)
                   held }
         | _ -> None ) }
 
@@ -148,9 +148,9 @@ let function_machine ~unit r =
   let frames =
     Base.Table.should_loopify r
     && Option.is_empty (Base.Lifted.of_ref r)
-    && Recursion_plan.strategy (Unit_context.recursion unit)
+    && Core_plan.Recursion.strategy (Unit_context.recursion unit)
          ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r
-       = Some Recursion_plan.Frame_stack
+       = Some Core_plan.Recursion.Frame_stack
   in
   match if frames then (Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Function r) else None with
   | Some (Control_ir.Term.Loop l) when List.compare_length_with (Control_ir.Term.entries l.body) 1 <= 0 -> Some l
@@ -270,7 +270,7 @@ let holdable_type ~unit ty = Option.has_some (Loopify_tail.borrowed_value_param_
 let planned_holdable ~unit r k ty =
   Option.map
     (fun passing -> Frame_storage.passed_holdable unit (List.nth_opt passing k) ty)
-    (Option.bind (Callable_abi.lookup unit.callables r) Callable_abi.passing)
+    (Option.bind (Core_plan.Callable_abi.lookup unit.callables r) Core_plan.Callable_abi.passing)
 
 (* [held k cty] for {!storage_at} of the machine of the callable [r], its
    loop [l], the C++ parameter at [k] declared at [cty] and standing for the
@@ -498,7 +498,7 @@ let loopified r =
 let machine ~unit r =
   loopified r
   &&
-  match (Recursion_plan.strategy (Unit_context.recursion unit))
+  match (Core_plan.Recursion.strategy (Unit_context.recursion unit))
     ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r with
   | Some (Modulo_cons _ | Frame_stack) -> true
   | Some (No_loop | Tail_loop | Suspended _) | None -> false
@@ -515,14 +515,14 @@ let lowers_local_machines ~function_ r = function_ && Base.Table.should_loopify 
    function a fixpoint is in the flow of adopts it only where it is a
    machine itself, which a local tail loop is never lowered inside. *)
 let local_lowering ~unit ~owner ~function_ ~lifted ~member:((occurrence, _) as member) =
-  match (Recursion_plan.strategy_at (Unit_context.recursion unit))
+  match (Core_plan.Recursion.strategy_at (Unit_context.recursion unit))
     ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member with
   | Some Tail_loop ->
-    if (Recursion_plan.adoptable_by_fixpoint (Unit_context.recursion unit)) ~lifted occurrence
+    if (Core_plan.Recursion.adoptable_by_fixpoint (Unit_context.recursion unit)) ~lifted occurrence
       || Option.cata (machine ~unit) false owner then None
     else Some Tail
   | Some (Modulo_cons _ | Frame_stack)
-    when (not ((Recursion_plan.adoptable_somewhere (Unit_context.recursion unit)) ~lifted occurrence))
+    when (not ((Core_plan.Recursion.adoptable_somewhere (Unit_context.recursion unit)) ~lifted occurrence))
          && Option.cata (lowers_local_machines ~function_) false owner ->
     Some Frames
   | Some (No_loop | Modulo_cons _ | Frame_stack | Suspended _) | None -> None
@@ -547,7 +547,7 @@ let local_resumes ~unit ~owner ~function_ ~lifted ~member ~depth ~arity =
     | Some Frames -> Some true
     | Some (Tail | Modulo_cons) -> None
     | None -> (
-      match (Recursion_plan.strategy_at (Unit_context.recursion unit))
+      match (Core_plan.Recursion.strategy_at (Unit_context.recursion unit))
         ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member with
       | Some (Modulo_cons _ | Frame_stack) -> Some false
       | Some (No_loop | Tail_loop | Suspended _) | None -> None )
@@ -612,8 +612,8 @@ let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lam
         (* A call of the fixpoint the loop does not take -- one in a closure
            it builds -- or the fixpoint named as a value calls a lambda that
            is no longer there: it stays the Y-combinator Loopify declines. *)
-        let left = Loopify_analysis.calls_checker (Recursion_plan.member_calls (Unit_context.recursion unit) member) in
-        if (Recursion_plan.named_as_value (Unit_context.recursion unit)) member
+        let left = Loopify_analysis.calls_checker (Core_plan.Recursion.member_calls (Unit_context.recursion unit) member) in
+        if (Core_plan.Recursion.named_as_value (Unit_context.recursion unit)) member
           || Loopify_analysis.body_exists (fun e -> Option.has_some (left e)) body
         then declined ()
         else begin
@@ -776,7 +776,7 @@ let lifted_loop ~unit r =
   | Some member when Base.Table.should_loopify r ->
     shaped_loop ~unit ~lowerings:[Tail; Modulo_cons; Frames] r
       (lowering_of
-        ((Recursion_plan.strategy_at (Unit_context.recursion unit))
+        ((Core_plan.Recursion.strategy_at (Unit_context.recursion unit))
           ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member))
       (Control_ir.Loop.Member (fst member, snd member))
   | Some _ | None -> None
@@ -890,7 +890,7 @@ let makes_statement_call calls (stmts : Ir.Stmt.t list) =
    each is made of. *)
 let loop_calls ~unit : Control_ir.Loop.t -> Core.Occurrence.t list = function
   | Function r -> Loopify.definition_calls ~unit r
-  | Member (o, m) -> (Recursion_plan.member_calls (Unit_context.recursion unit)) (o, m)
+  | Member (o, m) -> (Core_plan.Recursion.member_calls (Unit_context.recursion unit)) (o, m)
 
 (* The pointer fields of each constructor struct of [s], checked against
    those planned before rendering ({!Loopify_analysis.agree_ptr_fields}). *)
@@ -975,7 +975,7 @@ let check_lowered ~unit (decl : Ir.Decl.t) =
         | Some (Declined _ | Unlowered _) | None -> false )
     | Some {member = (o, m) as member; encoding = Self_passing [_]; _} ->
       let committed =
-        match (Recursion_plan.strategy_at (Unit_context.recursion unit))
+        match (Core_plan.Recursion.strategy_at (Unit_context.recursion unit))
           ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) member with
         | Some (Tail_loop | Modulo_cons _ | Frame_stack) -> true
         | Some (No_loop | Suspended _) | None -> false

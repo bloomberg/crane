@@ -244,7 +244,7 @@ let concept_name c r = named c (Class_concept r)
 (* {!concept_name} as the resolver names it where [v] is visible. *)
 let live_concept_name layout v r =
   let name =
-    match Module_plan.concept_name layout r with
+    match Core_plan.Module_plan.concept_name layout r with
     | Some name -> name
     | None -> Base.Common.pp_global_name Type r
   in
@@ -321,12 +321,12 @@ let is_record_inductive r =
 
 (** Whether [r] is an inductive spelled bare at the position [c]: one the body
     of the module whose element is being written spells bare, as planned
-    ({!Scope_plan.local_inductives}); none where no module's element is. *)
+    ({!Core_plan.Scope_plan.local_inductives}); none where no module's element is. *)
 let local_at (c : render_ctx) r =
   match c.module_ with
   | None -> false
   | Some mp -> (
-    match Scope_plan.local_inductives c.unit.scopes mp with
+    match Core_plan.Scope_plan.local_inductives c.unit.scopes mp with
     | Some local -> List.exists (globref_equal r) local
     | None ->
       CErrors.anomaly
@@ -374,7 +374,7 @@ let capitalize_struct n =
 let inductive_name ctx r =
   let n, needs_ns =
     match r with
-    | GlobRef.IndRef _ when Module_plan.is_eponymous_record ctx.unit.modules r ->
+    | GlobRef.IndRef _ when Core_plan.Module_plan.is_eponymous_record ctx.unit.modules r ->
       (Base.Cpp_name.unqualified (Base.Common.pp_type_name_capitalized r), false)
     | GlobRef.IndRef _ when promoted_at ctx r ->
       (capitalize_struct (global_name ctx Type r), false)
@@ -460,7 +460,7 @@ let dedup_tail ?(allow_bare = false) n =
 let inductive_type_name ctx r =
   let force = Base.Common.get_force_cross_file_qualification () in
   match r with
-  | GlobRef.IndRef _ when Module_plan.is_eponymous_record ctx.unit.modules r ->
+  | GlobRef.IndRef _ when Core_plan.Module_plan.is_eponymous_record ctx.unit.modules r ->
     let cap_name = Base.Common.pp_type_name_capitalized r in
     if force && Base.Cpp_name.is_qualified (global_name ctx Type r) then
       Base.Cpp_name.name [Base.Cpp_name.Class cap_name] cap_name
@@ -531,21 +531,21 @@ let struct_scopes_for (ctx : render_ctx) r n =
   match ctx.scope with
   | Some {scope = scope; _} when not ctx.in_struct ->
     let classes = List.map (fun s -> Base.Cpp_name.Class s) in
-    let struct_scopes = classes scope.Scope_plan.qualifier in
+    let struct_scopes = classes scope.Core_plan.Scope_plan.qualifier in
     (* How [r]'s module stands to the struct's, by kernel path: the textual
        tests below fire on a sibling module whose path merely contains the
        struct's name -- a file named after its module. *)
-    let relation = mp_relation_to ~struct_mp:scope.Scope_plan.module_ r in
+    let relation = mp_relation_to ~struct_mp:scope.Core_plan.Scope_plan.module_ r in
     let member_of_struct () = relation = Member in
     (* Already qualified by the struct -- nothing to add. *)
-    if names_through n scope.Scope_plan.qualifier then []
+    if names_through n scope.Core_plan.Scope_plan.qualifier then []
     (* An inductive promoted to the struct, and an eponymous record merged
        into it, is the struct, and qualified by its own name it would name
        the struct's constructor; it takes the qualifier the struct itself is
        written with. *)
     else if
-      (promoted_at ctx r || Module_plan.is_eponymous_record ctx.unit.modules r)
-      && ModPath.equal (modpath_of_r r) scope.Scope_plan.module_
+      (promoted_at ctx r || Core_plan.Module_plan.is_eponymous_record ctx.unit.modules r)
+      && ModPath.equal (modpath_of_r r) scope.Core_plan.Scope_plan.module_
     then
       match List.rev struct_scopes with
       | _ :: (_ :: _ as enclosing) -> List.rev enclosing
@@ -554,14 +554,14 @@ let struct_scopes_for (ctx : render_ctx) r n =
        so they don't get an extra wrapper prefix.  However, when the record
        itself lives inside the current struct (nested sub-module), we must
        still qualify it in the [.cpp] file. *)
-    else if Module_plan.is_eponymous_record ctx.unit.modules r then
+    else if Core_plan.Module_plan.is_eponymous_record ctx.unit.modules r then
       if member_of_struct () then struct_scopes else []
     (* Non-local records are placed at C++ global scope (before the struct),
        so they never need the struct prefix. *)
     else if is_record_inductive r && not (local_at ctx r) then []
     (* Enums at global scope need no prefix; those inside the struct do. *)
     else if Base.Table.is_enum_inductive r then
-      if Module_plan.is_global_scope_enum ctx.unit.modules r then []
+      if Core_plan.Module_plan.is_global_scope_enum ctx.unit.modules r then []
       else if member_of_struct () then struct_scopes
       else []
     (* A name the struct's module contributes to global scope rather than to
@@ -571,7 +571,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
        recorded by the module layout, which knows where the declaration goes;
        the kernel module path consulted below only knows where it came from,
        and for these two answers [Member]. *)
-    else if Module_plan.is_global_scope_type ctx.unit.modules r then []
+    else if Core_plan.Module_plan.is_global_scope_type ctx.unit.modules r then []
     (* The kernel module path settles the question: the type is a member of
        this struct exactly when it was declared in the module the struct came
        from, or in one nested inside it.  Comparing the struct's C++ name with
@@ -591,10 +591,10 @@ let struct_scopes_for (ctx : render_ctx) r n =
          emitted as a struct of its own.  The extraction root is not: its
          members sit at global scope, so the bare name is already right.  A
          module that is a struct is named as its plan qualifies its
-         out-of-line members ({!Scope_plan.qualifier}). *)
+         out-of-line members ({!Core_plan.Scope_plan.qualifier}). *)
       | Ancestor -> (
-        match Scope_plan.of_module ctx.unit.scopes (modpath_of_r r) with
-        | Some sc when Base.Common.is_struct_module (modpath_of_r r) -> classes sc.Scope_plan.qualifier
+        match Core_plan.Scope_plan.of_module ctx.unit.scopes (modpath_of_r r) with
+        | Some sc when Base.Common.is_struct_module (modpath_of_r r) -> classes sc.Core_plan.Scope_plan.qualifier
         | _ -> [] ) )
   | _ -> []
 
@@ -650,7 +650,7 @@ let wrapper_qualified_type_name (ctx : render_ctx) r n =
   match r with
   | GlobRef.IndRef _ | GlobRef.ConstructRef _ -> n
   | _ when Base.Table.is_typeclass r -> n
-  | _ when Module_plan.is_global_scope_type ctx.unit.modules r -> n
+  | _ when Core_plan.Module_plan.is_global_scope_type ctx.unit.modules r -> n
   | _ -> if ctx.in_struct then n else wrapper_qualify ctx.unit.modules r n
 
 (** Whether the global [x] needs a [::] prefix at the position [ctx]: in an
@@ -661,7 +661,7 @@ let needs_global_qualifier (ctx : render_ctx) x =
   match ctx.scope with
   | Some {scope = scope; _} ->
     (not (Base.Cpp_name.is_qualified (global_name ctx Term x)))
-    && not (mp_encloses (modpath_of_r x) scope.Scope_plan.module_)
+    && not (mp_encloses (modpath_of_r x) scope.Core_plan.Scope_plan.module_)
   | None -> false
 
 (* The answer [key] resolved to, read off it by [read], at the position
@@ -730,17 +730,17 @@ let out_of_line_scope c owner =
     ~find:(fun names frame -> Cpp_resolution.find_scope names frame owner)
     ~read:(function Cpp_resolution.Scope s -> s | _ -> not_answered key)
     ~equal:
-      (Option.equal (fun (s : Scope_plan.scope) (s' : Scope_plan.scope) ->
+      (Option.equal (fun (s : Core_plan.Scope_plan.scope) (s' : Core_plan.Scope_plan.scope) ->
            ModPath.equal s.module_ s'.module_ && List.equal String.equal s.qualifier s'.qualifier ))
-    ~pp:(function Some s -> Pp.str (Scope_plan.qualifier s) | None -> Pp.str "no scope")
+    ~pp:(function Some s -> Pp.str (Core_plan.Scope_plan.qualifier s) | None -> Pp.str "no scope")
 
 (* {!value_reference} as the resolver answers it at [ctx]: through the
    eponymous template record a member of one is written through; otherwise
    by its name, qualified by the collision wrapper holding it, or with [::]
    from an out-of-line definition of a struct that does not enclose it. *)
 let live_value_reference ctx x : Cpp_resolution.reference =
-  match Module_plan.eponymous_record_containing ctx.unit.modules x with
-  | Some {Module_plan.record; type_params} when type_params > 0 -> Record_member {record; type_params}
+  match Core_plan.Module_plan.eponymous_record_containing ctx.unit.modules x with
+  | Some {Core_plan.Module_plan.record; type_params} when type_params > 0 -> Record_member {record; type_params}
   | containing ->
     let name = global_name ctx Term x in
     let qualified = wrapper_qualify ctx.unit.modules x name in
@@ -758,7 +758,7 @@ let live_access (u : Unit_context.t) x : Cpp_resolution.access =
   let x_mp = modpath_of_r x in
   let x_lbl = label_of_r x in
   let rec resolve_mp mp =
-    match Module_plan.functor_app_source u.modules mp with
+    match Core_plan.Module_plan.functor_app_source u.modules mp with
     | Some source -> resolve_mp source (* iterate to fixpoint *)
     | None -> (
       match mp with
@@ -790,7 +790,7 @@ let live_access (u : Unit_context.t) x : Cpp_resolution.access =
 
 (** {2 Name-resolution cache and cached predicates} *)
 
-(* These query the precomputed {!Name_resolution} cache, where the unit's
+(* These query the precomputed {!Core_plan.Name_resolution} cache, where the unit's
    context holds it ({!Unit_context.t.names}), for how an inductive is classified:
    eponymous record, enum, record.  The names themselves are produced by the
    functions above ({!inductive_type_name}, {!inductive_name}), which depend
@@ -799,30 +799,30 @@ let live_access (u : Unit_context.t) x : Cpp_resolution.access =
 
 (** [cached_lookup] of the name-resolution cache where the unit's context
     [u] holds one; otherwise [fallback].
-    @param cached_lookup function applied to the [Name_resolution.t] cache and
+    @param cached_lookup function applied to the [Core_plan.Name_resolution.t] cache and
                          [r] when the cache is available
     @param fallback      function applied to [r] when no cache is present
     @param r             the global reference to classify
     @return the result of [cached_lookup] or [fallback], depending on cache
             availability *)
 let with_cache (u : Unit_context.t)
-    (cached_lookup : Name_resolution.t -> GlobRef.t -> 'a)
+    (cached_lookup : Core_plan.Name_resolution.t -> GlobRef.t -> 'a)
     (fallback : GlobRef.t -> 'a)
     (r : GlobRef.t) : 'a =
   match u.names with
   | Some cache -> cached_lookup cache r
   | None -> fallback r
 
-(** {!Module_plan.is_eponymous_record} of [layout]. *)
-let is_eponymous_record_cached layout r = Module_plan.is_eponymous_record layout r
+(** {!Core_plan.Module_plan.is_eponymous_record} of [layout]. *)
+let is_eponymous_record_cached layout r = Core_plan.Module_plan.is_eponymous_record layout r
 
-(** {!Module_plan.is_global_scope_enum} of [layout]. *)
-let is_global_scope_enum_cached layout r = Module_plan.is_global_scope_enum layout r
+(** {!Core_plan.Module_plan.is_global_scope_enum} of [layout]. *)
+let is_global_scope_enum_cached layout r = Core_plan.Module_plan.is_global_scope_enum layout r
 
 (** The C++ inductive kind of [r], as the cache classifies it; [None]
     where no cache is installed or it does not classify [r]. *)
 let get_ind_kind_cached u : GlobRef.t -> Cpp_ir.Inductive.Kind.t option =
-  with_cache u Name_resolution.get_ind_kind (fun _ -> None)
+  with_cache u Core_plan.Name_resolution.get_ind_kind (fun _ -> None)
 
 (** Whether [r] is an enum, as the cache classifies it, falling back to
     [is_enum_inductive]. *)
@@ -877,7 +877,7 @@ let struct_declaration_name u ~merged ~promoted ~local id =
 
 (** Look up method info for a function reference in the method registry,
     where every candidate a render collects is registered
-    ({!Method_registry.planned_candidate}): the position of the receiver
+    ({!Core_plan.Method_registry.planned_candidate}): the position of the receiver
     argument where [n] is a method, [None] otherwise.
 
     The answer is in the numbering of the arguments a C++ call site writes,
@@ -891,7 +891,7 @@ let method_type_args d n tys =
   | [] -> []
   | _ ->
     let carried = lookup_method_ind_tvar_positions n in
-    let dropped = Callable_abi.dropped_positions d n in
+    let dropped = Core_plan.Callable_abi.dropped_positions d n in
     List.filteri (fun i _ -> not (List.mem i carried || List.mem i dropped)) tys
 
 module IdSet = Set.Make (Names.Id)
@@ -913,10 +913,10 @@ let concept_scope_of = function ModPath.MPdot (mp0, _) -> functor_concept_scope 
 let concept_extra_args kn = match concept_scope_of kn with Some scope -> scope.args | None -> []
 
 let modtype_concept_name layout mp =
-  let base = Structure_analysis.concept_name_of_label in
+  let base = Core_plan.Structure.concept_name_of_label in
   match (mp, concept_scope_of mp) with
   | ModPath.MPdot (_, l), Some {functor_ = MPdot (_, fl); _} -> base fl ^ "_" ^ base l
-  | MPdot (_, l), _ -> Option.default (base l) (Module_plan.modtype_concept_name layout mp)
+  | MPdot (_, l), _ -> Option.default (base l) (Core_plan.Module_plan.modtype_concept_name layout mp)
   | (MPfile _ | MPbound _), _ ->
     CErrors.anomaly (Pp.str "modtype_concept_name: a module type is a member of a structure")
 
@@ -1155,8 +1155,8 @@ let rec live_name c (key : Cpp_resolution.key) =
        name ({!Cpp_resolution.Module}): a bystander's struct is a concrete
        one, never dependent. *)
     let n = Base.Common.resolve_module_in v mp in
-    match Module_plan.wrapper c.unit.modules mp with
-    | Some (struct_name, Module_plan.Bystander)
+    match Core_plan.Module_plan.wrapper c.unit.modules mp with
+    | Some (struct_name, Core_plan.Module_plan.Bystander)
       when not (String.starts_with ~prefix:(struct_name ^ "::") (Base.Cpp_name.to_string n)) ->
       Base.Cpp_name.within (Base.Cpp_name.Class struct_name) n
     | _ -> n )
@@ -1214,7 +1214,7 @@ and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   | Value_access r -> Access (live_access c.unit r)
   | Read_by_a_function r -> Holds (Cpp_state.read_by_a_function r)
   | Held_back_concept r -> Holds (class_concept_held_back c r)
-  | Out_of_line_scope r -> Scope (Scope_plan.of_declaration c.unit.modules c.unit.scopes r)
+  | Out_of_line_scope r -> Scope (Core_plan.Scope_plan.of_declaration c.unit.modules c.unit.scopes r)
   | _ -> Name (live_name c key)
 
 let () =

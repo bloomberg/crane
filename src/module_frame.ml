@@ -7,7 +7,7 @@ open Base.Common
 type t = Cpp_state.module_frame = {
   eponymous_type : GlobRef.t option;
   eponymous_record : (GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
-  method_candidates : Method_registry.method_candidate list;
+  method_candidates : Core_plan.Method_registry.method_candidate list;
   concept_collision : bool;
   promoted : Id.t list option;
 }
@@ -43,7 +43,7 @@ let method_candidates epon_ref sel ~enclosing =
   let epon_modpath = Base.Table.modpath_of_r epon_ref in
   let same_module r = ModPath.equal (Base.Table.modpath_of_r r) epon_modpath in
   let module_type_aliases =
-    Method_registry.collect_module_type_aliases
+    Core_plan.Method_registry.collect_module_type_aliases
       ~extract_decl:(fun (_, se) -> match se with Core.Module.Structure_item.Declaration d -> Some d | _ -> None)
       epon_modpath sel
   in
@@ -113,7 +113,7 @@ let method_candidates epon_ref sel ~enclosing =
    spells: those depend on where the reference is written from. *)
 let concept_collision layout mp sel =
   let concept_name r =
-    match Module_plan.concept_name layout r with Some name -> Some name | None -> Base.Common.decided_global_name r
+    match Core_plan.Module_plan.concept_name layout r with Some name -> Some name | None -> Base.Common.decided_global_name r
   in
   List.exists
     (fun (_, se) ->
@@ -141,7 +141,7 @@ let promoted scopes mp sel eponymous_type =
       (List.filter
         (function _, Core.Module.Structure_item.Declaration (Core.Decl.Inductive _) -> true | _ -> false) sel) in
   match eponymous_type with
-  | Some epon when (not (Scope_plan.nested scopes mp)) && (not has_submodules) && inductives <= 1 ->
+  | Some epon when (not (Core_plan.Scope_plan.nested scopes mp)) && (not has_submodules) && inductives <= 1 ->
     List.find_map
       (fun (_, se) ->
         match se with
@@ -191,7 +191,7 @@ let planned (plans : Cpp_state.plans) mp =
       Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned frame.")
 
 let frames_around scopes mp =
-  match Scope_plan.frames scopes mp with
+  match Core_plan.Scope_plan.frames scopes mp with
   | Some frames -> frames
   | None ->
     CErrors.anomaly

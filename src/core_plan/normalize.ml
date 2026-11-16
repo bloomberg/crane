@@ -33,13 +33,13 @@ type local = {type_ : Core.Type.t; arity : int}
    there.  [own_tvars] counts the type variables of the declaration, [Core.Type.Variable 1]
    to [Core.Type.Variable own_tvars]; [fresh] names the next temporary of the declaration,
    [effects] are the effect operations of the program it is in, and
-   [splices] what splicing decided there ({!Recursion_plan.splice_partners}). *)
+   [splices] what splicing decided there ({!Recursion.splice_partners}). *)
 type group = {
   globals : GlobRef.t list;
   own_tvars : int;
   locals : (int * local array) list;
   fresh : unit -> Core.Binder_name.t;
-  effects : Core_effects.t;
+  effects : Effects.t;
   splices : Core_passes.Splices.t;
 }
 
@@ -59,7 +59,7 @@ let full_result = function Some (Core.Type.Arrow _) -> None | ty -> ty
 type lowering = {
   app_result_type : Core.Expr.t -> Core.Expr.t list -> Core.Type.t option;
   return_type_is_erased : Id.t list -> Core.Type.t -> bool;
-  suspension : Recursion_plan.suspension;
+  suspension : Recursion.suspension;
 }
 
 (* The type a call at binder depth [depth] to one of [group]'s functions
@@ -115,7 +115,7 @@ let held group ~reading e ty =
     &&
     match e with
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} ->
-      Option.cata Base.Type_util.result_is_index_only_tvar false (Core_query.find_type_opt r)
+      Option.cata Base.Type_util.result_is_index_only_tvar false (Query.find_type_opt r)
     | _ -> false
   in
   if not boxed_only then Some ty
@@ -200,7 +200,7 @@ let into_branches ~fresh ~rty (id, ty, occ) branches rest =
     let branch i ({Core.Match.Branch.binders = ids; body = b; _} as br) =
       let id, rest, occ =
         if i = 0 then (id, rest, occ)
-        else (renamed id, renamed_temporaries fresh (Core_copy.copy rest), Core.Occurrence.fresh ())
+        else (renamed id, renamed_temporaries fresh (Copy.copy rest), Core.Occurrence.fresh ())
       in
       let n = List.length ids in
       let rec plug m = function
@@ -226,7 +226,7 @@ let into_branches ~fresh ~rty (id, ty, occ) branches rest =
 
    A match bound to a variable runs where it is bound, in a lambda invoked
    in place or a conditional expression, so the calls ending its branches
-   are no turns of a loop ({!Recursion_plan.match_bound_in_place}).  Where
+   are no turns of a loop ({!Recursion.match_bound_in_place}).  Where
    the scope's type is known ([expected], a branch's annotation), what
    follows such a match is copied into each of its branches instead, after
    the branch's own bindings: [let t := match x with p => b in k] becomes
@@ -251,7 +251,7 @@ let rec scope cx ~group ~depth ?expected e =
   let rec strict ?(reading = Passed) ~tail e =
     match e with
     | Core.Expr.Apply {callee = (Core.Expr.Global use as f); arguments = args}
-      when Core_effects.lookup group.effects use = Some {operation = Bind; mode = Sequential} ->
+      when Effects.lookup group.effects use = Some {operation = Bind; mode = Sequential} ->
       (* Monadic sequencing: the action runs where the bind puts it, and a
          recursive call that is the whole action is a tail call there.  A
          reified bind is a call building the tree, its action evaluated
@@ -391,7 +391,7 @@ let rec scope cx ~group ~depth ?expected e =
                                                 occurrence = case_occ};
                        body = rest;
                        occurrence = occ}, Some rty
-        when (not (Recursion_plan.match_bound_in_place cty branches)) && branch_reaches_call cx group ~depth branches ->
+        when (not (Recursion.match_bound_in_place cty branches)) && branch_reaches_call cx group ~depth branches ->
         into_branches ~fresh:group.fresh ~rty (id, ty, occ) branches rest
         |> Option.map (fun branches ->
                Core.Expr.Match {scrutinee_type = cty; scrutinee = scrut; branches = Array.map
@@ -484,12 +484,12 @@ let eta_expand =
 let let_lambdas =
   Core_passes.Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
-      Core.Decl.Value {entity = r; body = Core_elaborate.generated_definition ty b; type_ = ty}
+      Core.Decl.Value {entity = r; body = Elaborate.generated_definition ty b; type_ = ty}
     | Core.Decl.Recursive_group fds ->
       Core.Decl.Recursive_group
         (Core.Nonempty.map
            (fun (fd : Core.Recursion.Definition.t) ->
-             {fd with Core.Recursion.Definition.body = Core_elaborate.generated_definition fd.type_ fd.body} )
+             {fd with Core.Recursion.Definition.body = Elaborate.generated_definition fd.type_ fd.body} )
            fds)
     | d -> d )
 
@@ -497,15 +497,15 @@ let let_lambdas =
 let methods_of cx struc = Method_registry.create ~ret_is_erased:cx.return_type_is_erased struc
 
 (* The effect operations are those of the program being normalized, read
-   off it first ({!Core_effects.analyze}): a bind is sequencing only where
+   off it first ({!Effects.analyze}): a bind is sequencing only where
    the declaration it is written in erases its monad. *)
 let structure cx (program : Core_passes.Phase.normalizing) : Core_passes.Phase.normalizing =
   let methods = methods_of cx program.structure in
   let {Core_passes.Phase.structure = struc; splices} =
-    Recursion_plan.splice_partners ~suspension:cx.suspension ~loopified:(loopified ~methods)
+    Recursion.splice_partners ~suspension:cx.suspension ~loopified:(loopified ~methods)
       ~inlines:(fun r -> Method_registry.is_registered_method methods r = None)
       program
   in
   {structure = Core_passes.Modutil.map_struct_decls
-    (decl cx ~effects:(Core_effects.analyze struc) ~splices ~methods:(methods_of cx struc)) struc;
+    (decl cx ~effects:(Effects.analyze struc) ~splices ~methods:(methods_of cx struc)) struc;
    splices}

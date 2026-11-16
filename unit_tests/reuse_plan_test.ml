@@ -43,7 +43,7 @@ let arm body =
                 body = body}
             |]; occurrence = Core.Occurrence.fresh ()}}
   in
-  let p = Ownership_ir.region ~owned:[1] ~effects:Core_effects.empty ~n_outer:0 root in
+  let p = Ownership_ir.region ~owned:[1] ~effects:Core_plan.Effects.empty ~n_outer:0 root in
   (p, Ownership_ir.reuse_arm p ~scrutinee ~branch:1 ~constructor:cons)
 
 let () =
@@ -149,7 +149,7 @@ let () =
           else None ) }
   in
   let use resumes =
-    Ownership_ir.use (Ownership_ir.region ~owned:[1] ?resumes ~effects:Core_effects.empty ~n_outer:0 root) read in
+    Ownership_ir.use (Ownership_ir.region ~owned:[1] ?resumes ~effects:Core_plan.Effects.empty ~n_outer:0 root) read in
   check "an argument read again after the call is copied" (copied (use None));
   check "one a frame keeps across the call is moved" (use (Some (resumes [call_site])) = Some Ownership_ir.Use.Move);
   check "not where the let resumes after another call" (copied (use (Some (resumes [Core.Occurrence.fresh ()]))))
@@ -187,7 +187,7 @@ let () =
           else None ) }
   in
   let use =
-    Ownership_ir.use (Ownership_ir.region ~owned:[1] ~resumes ~effects:Core_effects.empty ~n_outer:0 root) read in
+    Ownership_ir.use (Ownership_ir.region ~owned:[1] ~resumes ~effects:Core_plan.Effects.empty ~n_outer:0 root) read in
   check "a read before the frame keeping it is saved is copied" (copied use)
 
 (* [let r := weigh a in g s r] under [t] and [s], a frame keeping [s]
@@ -217,7 +217,7 @@ let () =
               Some {calls = [call_site]; kept = [s]; held = [s]; passed = []}
             else None ) }
     in
-    Ownership_ir.save_moves (Ownership_ir.region ~owned ~resumes ~effects:Core_effects.empty ~n_outer:0 root) site
+    Ownership_ir.save_moves (Ownership_ir.region ~owned ~resumes ~effects:Core_plan.Effects.empty ~n_outer:0 root) site
   in
   let moved = function Some [b] -> Core.Binder.equal b s | _ -> false in
   check "a save moves what the region owns and the call does not read"
@@ -226,7 +226,7 @@ let () =
   check "nor what the region does not own" (moves ~owned:[] (Core.Expr.fresh_rel 2) = Some []);
   check "a let no machine resumes at saves nothing"
     (Ownership_ir.save_moves
-      (Ownership_ir.region ~owned:[1] ~effects:Core_effects.empty ~n_outer:0 (Core.Expr.fresh_rel 1))
+      (Ownership_ir.region ~owned:[1] ~effects:Core_plan.Effects.empty ~n_outer:0 (Core.Expr.fresh_rel 1))
         (Core.Occurrence.fresh ()) = None)
 
 (* [let y := weigh t in let r := weigh t in g s y r] under [t] and [s], [s]
@@ -264,7 +264,7 @@ let () =
           List.find_map
             (fun (at, r) -> if Core.Binder.equal b at && Core.Binder.same_site b at then Some r else None) points) }
   in
-  let p = Ownership_ir.region ~resumes ~effects:Core_effects.empty ~n_outer:0 root in
+  let p = Ownership_ir.region ~resumes ~effects:Core_plan.Effects.empty ~n_outer:0 root in
   check "the first save keeps what the region lends" (Ownership_ir.save_moves p outer_site = Some []);
   check "the second moves what the first frame holds"
     (match Ownership_ir.save_moves p inner_site with Some [b] -> Core.Binder.equal b s | _ -> false)
@@ -299,7 +299,7 @@ let () =
               Some {calls = [call_site]; kept = [c]; held = [c]; passed = []}
             else None ) }
     in
-    Ownership_ir.save_moves (Ownership_ir.region ~resumes ~effects:Core_effects.empty ~n_outer:0 root) site
+    Ownership_ir.save_moves (Ownership_ir.region ~resumes ~effects:Core_plan.Effects.empty ~n_outer:0 root) site
   in
   check "a save keeps a capture the call re-entering the entry passes"
     (moves (Core.Expr.Apply {callee = Core.Expr.fresh_rel 2; arguments = [Core.Expr.fresh_rel 1]}) = Some []);
@@ -326,7 +326,7 @@ let () =
             body = body (Core.Expr.Apply {callee = f; arguments = [Core.Expr.fresh_rel 2]});
               occurrence = Core.Occurrence.fresh ()} in
     let planned =
-      Ownership_ir.entry_moves (Ownership_ir.region ~owned:[1] ~resumes ~effects:Core_effects.empty ~n_outer:0 root) in
+      Ownership_ir.entry_moves (Ownership_ir.region ~owned:[1] ~resumes ~effects:Core_plan.Effects.empty ~n_outer:0 root) in
     match List.find_map (fun (o, bs) -> if Core.Occurrence.equal o at then Some bs else None) planned with
     | Some bs -> bs
     | None -> []
@@ -354,7 +354,7 @@ let () =
     in
     let root = Core.Expr.Apply {callee = fix; arguments = [call "len" [Core.Expr.fresh_rel 1]; s]} in
     let read = match s with Core.Expr.Bound_variable {occurrence = o; _} -> o | _ -> assert false in
-    let p = Ownership_ir.region ~owned:[1] ~effects:Core_effects.empty ~n_outer:0 root in
+    let p = Ownership_ir.region ~owned:[1] ~effects:Core_plan.Effects.empty ~n_outer:0 root in
     (Ownership_ir.use p read, Ownership_ir.evaluated_first p at)
   in
   let use, first = applied (call "g" [Core.Expr.fresh_rel 2; Core.Expr.fresh_rel 1]) in
@@ -402,7 +402,7 @@ let () =
               Some {calls = [call_site]; kept = [s]; held = [s]; passed}
             else None ) }
     in
-    Ownership_ir.use (Ownership_ir.region ~resumes ~certain ~effects:Core_effects.empty ~n_outer:0 root) o
+    Ownership_ir.use (Ownership_ir.region ~resumes ~certain ~effects:Core_plan.Effects.empty ~n_outer:0 root) o
   in
   let moved = Some Ownership_ir.Use.Move in
   check "what follows a resume owns what the frame holds" (use true = moved);
@@ -422,7 +422,7 @@ let () =
     let read = Core.Expr.fresh_rel 1 in
     let root = call "g" [read; Core.Expr.fresh_rel 1] in
     let o = match read with Core.Expr.Bound_variable {occurrence = o; _} -> o | _ -> assert false in
-    (Ownership_ir.region ~owned:[1] ~outer:(fun _ -> Some ty) ~effects:Core_effects.empty ~n_outer:0 root, o)
+    (Ownership_ir.region ~owned:[1] ~outer:(fun _ -> Some ty) ~effects:Core_plan.Effects.empty ~n_outer:0 root, o)
   in
   let mode ty = let p, o = plan ty in Ownership_ir.use p o in
   let typed ty = let p, o = plan ty in Ownership_ir.read_is_typed p o in
@@ -450,7 +450,7 @@ let () =
   let modes ?in_place last =
     let lam = closure () in
     let root = call "g" [lam; Core.Expr.fresh_rel last] in
-    Ownership_ir.captures ?in_place (Ownership_ir.region ~owned:[1; 2] ~effects:Core_effects.empty ~n_outer:0 root) lam
+    Ownership_ir.captures ?in_place (Ownership_ir.region ~owned:[1; 2] ~effects:Core_plan.Effects.empty ~n_outer:0 root) lam
   in
   check "a last capture takes by move" (modes 2 = [(1, Ownership_ir.Capture.By_move)]);
   check "one read again shares" (modes 1 = [(1, Ownership_ir.Capture.Shared)]);
@@ -470,7 +470,7 @@ let () =
     in
     let root = call "g" [fix] in
     Ownership_ir.captures_by_member ?in_place
-      (Ownership_ir.region ~owned:[1] ~effects:Core_effects.empty ~n_outer:0 root) fix
+      (Ownership_ir.region ~owned:[1] ~effects:Core_plan.Effects.empty ~n_outer:0 root) fix
   in
   check "a closures group's last reader takes by move" (modes () = [[(1, Ownership_ir.Capture.By_move)]]);
   check "an in-place group's members read by reference"

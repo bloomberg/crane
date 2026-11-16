@@ -20,7 +20,7 @@ module IntMap = Map.Make (Int)
 
 open Base.Common
 open Names
-open Core_query
+open Core_plan.Query
 
 (** An [Entity] for the global [r] at [tys], its custom extraction
     ({!Base.Table.inline_custom_text}) looked up once here.  [yields] is what
@@ -85,8 +85,8 @@ type planned_repr = {
 }
 
 (** Mode for ITree effect extraction: sequential erases the tree,
-    reified preserves it as [shared_ptr<ITree<R>>] ({!Core_effects.mode}). *)
-type itree_extraction_mode = Core_effects.mode =
+    reified preserves it as [shared_ptr<ITree<R>>] ({!Core_plan.Effects.mode}). *)
+type itree_extraction_mode = Core_plan.Effects.mode =
   | Sequential  (** Default: erase [itree E R] to [R]; bind becomes [;] *)
   | Reified     (** Preserve structure: [itree E R] becomes [shared_ptr<ITree<R>>] *)
 
@@ -100,7 +100,7 @@ and generation_site =
     the definitions whose body only throws, which are spelled as
     zero-argument functions ({!Translation_suspension.thunk_reason}), which
     parameters of each function it owns, innermost first, settled across
-    calls ({!Ownership.summarize}), and the parameters of a member of a
+    calls ({!Core_plan.Ownership.summarize}), and the parameters of a member of a
     recursive group a partner's call passes a closure for
     ({!Translation_callable_params.partner_closure_params}). *)
 type program_facts = {
@@ -121,14 +121,14 @@ let no_program_facts =
     ({!with_unit_facts}): the projections used as function values, which
     are written as standalone functions, and the effect operations its
     applications are ({!Program_facts.t}), and the elaborations of the
-    unit's calls ({!Core_elaborate.structure}), [None] until the unit is
+    unit's calls ({!Core_plan.Elaborate.structure}), [None] until the unit is
     walked; the unit's context ({!Unit_context}); and what the C++
     backend's passes decided about the unit ({!Cpp_state.plans}), which
     the declarations generated and rendered after them read. *)
 type unit_facts = {
   higher_order_projections : Core.Ref.User.Set.t;
-  effects : Core_effects.t;
-  elaborations : Core_elaborate.t option;
+  effects : Core_plan.Effects.t;
+  elaborations : Core_plan.Elaborate.t option;
   context : Unit_context.t;
   plans : Cpp_state.plans;
 }
@@ -136,7 +136,7 @@ type unit_facts = {
 (** The facts of no unit: lowering outside a unit's extent. *)
 let no_unit_facts =
   { higher_order_projections = Core.Ref.User.Set.empty;
-    effects = Core_effects.empty;
+    effects = Core_plan.Effects.empty;
     elaborations = None;
     context = Unit_context.detached;
     plans = Cpp_state.no_plans }
@@ -193,7 +193,7 @@ type input = {
   method_self_ns : Core.Ref.User.Set.t;
   (** Where generation is, as far as which inductives it spells bare goes:
      inside the body of a module, whose planned local inductives
-     ({!Scope_plan.local_inductives}) it spells bare, or outside every
+     ({!Core_plan.Scope_plan.local_inductives}) it spells bare, or outside every
      module, where it spells none.  Set where generation enters a module
      ({!generating_in}) or a pass over the whole unit
      ({!generating_outside_modules}); [None] before either, where nothing
@@ -544,13 +544,13 @@ let non_atomic_rc cx = Unit_context.non_atomic_rc (unit_context cx)
 let callables cx = (unit_context cx).callables
 
 (** [callee_core_type r] -- the Core type of the callable [r] as the unit's plan
-    of it records it ({!Callable_abi.core_type}): the signature call
+    of it records it ({!Core_plan.Callable_abi.core_type}): the signature call
     translation rebuilds a C++ head from.  While the plans are being made a
     global has none, and is read off the table; under [CRANE_CHECK_IR] a
     planned one is held to the table, and emission finding none is a
     violation. *)
 let callee_core_type cx (r : GlobRef.t) : Core.Type.t option =
-  match Callable_abi.planned_core_type (callables cx) r with
+  match Core_plan.Callable_abi.planned_core_type (callables cx) r with
   | Some planned ->
     if Base.Probe.checking () then begin
       let live = find_type_opt r in
@@ -598,7 +598,7 @@ let generating_at cx (site : generation_site) (f : unit -> 'a) : 'a =
 (** [generating_in mp f] runs [f] generating an element of the body of the
     module [mp], whose planned local inductives it spells bare. *)
 let generating_in cx (mp : ModPath.t) (f : unit -> 'a) : 'a =
-  match Scope_plan.local_inductives (unit_context cx).scopes mp with
+  match Core_plan.Scope_plan.local_inductives (unit_context cx).scopes mp with
   | Some _ -> generating_at cx (In_module mp) f
   | None ->
     CErrors.anomaly
@@ -617,7 +617,7 @@ let generating_outside_modules cx (f : unit -> 'a) : 'a = generating_at cx Outsi
 let local_inductives_in_scope cx =
   match cx.ctx.input.generating with
   | Some (In_module mp) -> (
-    match Scope_plan.local_inductives (unit_context cx).scopes mp with
+    match Core_plan.Scope_plan.local_inductives (unit_context cx).scopes mp with
     | Some local -> local
     | None ->
       CErrors.anomaly

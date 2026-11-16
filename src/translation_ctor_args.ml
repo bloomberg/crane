@@ -10,7 +10,7 @@ open Names
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Base.Table
 
 (** [core_ast_type_hint e] is the Core type [e] carries, when it carries one: a

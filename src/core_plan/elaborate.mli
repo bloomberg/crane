@@ -88,10 +88,10 @@ val declaration_scope : Core.Type.t -> Core.Expr.t -> Core.Lexenv.t * Core.Expr.
 
 (** [generated_definition ty body] is the definition [body] of type [ty],
     eta-expanded ({!Normalize.eta_expand}), with every let-bound lambda in
-    it as it is generated ({!Core_query.let_lambda}): an alias of a
+    it as it is generated ({!Query.let_lambda}): an alias of a
     polymorphic function put in place of its uses, one used at a single
     instance bound at it, and one bound as a value given a binder for each
-    value arrow of its type ({!Core_query.eta_bound_lambda}).  An
+    value arrow of its type ({!Query.eta_bound_lambda}).  An
     inlined alias binds nothing, so a binder after one is a level shallower
     than in the body as written. *)
 val generated_definition : Core.Type.t -> Core.Expr.t -> Core.Expr.t
@@ -161,7 +161,7 @@ val closed_instance_call : walk:t option -> lex:Core.Lexenv.t -> Core.Global_use
     calls a class field as a static member of the instance it projects
     through: which argument that instance is, the member's value
     parameters, and the operands the call leaves out
-    ({!Core_query.static_projection}), as the walk decided it where
+    ({!Query.static_projection}), as the walk decided it where
     it met the application, from the call and the binders of its own
     environment.  Where the walk made no single decision there, or the unit
     is not walked yet, it is decided from the call and [lex]; under
@@ -182,7 +182,7 @@ val closed_head_call : walk:t option -> lex:Core.Lexenv.t -> Core.Global_use.t -
 
 (** [member_template_call ~walk ~lex use args] -- whether the call [use args]
     projects a class field through its one dictionary argument, an instance
-    Crane kept ({!Core_query.kept_instance_of_projection}), whose class
+    Crane kept ({!Query.kept_instance_of_projection}), whose class
     declares the field as a member template, so the instance's own method can
     stand for the field's dispatcher.  Decided, and checked, as
     {!closed_head_call} is. *)

@@ -3,7 +3,7 @@
    head put it. *)
 
 open Crane_plugin
-open Callable_abi
+open Core_plan.Callable_abi
 
 let check name cond =
   if not cond then (

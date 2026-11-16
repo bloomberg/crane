@@ -73,7 +73,7 @@ let () =
               {callee = fix; arguments = [Core.Expr.Apply {callee = self; arguments = [Core.Expr.fresh_rel 1]}]};
                 occurrence = Core.Occurrence.fresh ()}}
   in
-  let copied = Core_copy.copy body in
+  let copied = Core_plan.Copy.copy body in
   check "a copy is the term it copies" (copied = body);
   check "a copy shares no occurrence with its original" (not (shares body copied));
   check "the copied term itself has every occurrence once"
@@ -91,13 +91,13 @@ let () =
                      body = Core.Expr.fresh_rel 1; occurrence = Core.Occurrence.fresh ()} } |];
                        occurrence = Core.Occurrence.fresh ()}}
   in
-  check "a copied match is a match of its own" (not (shares matching (Core_copy.copy matching)));
+  check "a copied match is a match of its own" (not (shares matching (Core_plan.Copy.copy matching)));
   (* Holes: renamed apart from the original's, the same new one wherever
      the original shares one. *)
   let h = Core.Type.Hole (Core.Scheme.Hole.fresh ()) in
   let two = Core.Expr.Apply {callee = Core.Expr.Global (use_at scheme (fun _ -> slot (Core.Scheme.Type h)));
                              arguments = [Core.Expr.Global (use_at scheme (fun _ -> slot (Core.Scheme.Type h)))]} in
-  ( match Core_copy.copy two with
+  ( match Core_plan.Copy.copy two with
   | Core.Expr.Apply {callee = f; arguments = [g]} ->
     let hf = use_holes f and hg = use_holes g in
     check "a copied hole is a new hole" (hf <> holes h);
@@ -107,7 +107,7 @@ let () =
   let o = Core.Type.Open (Core.Open.fresh 7) in
   Core.Extracted.Meta.freeze ();
   let opened =
-    Core_copy.copy
+    Core_plan.Copy.copy
       (Core.Expr.Lambda
         {parameter = x "p"; parameter_type = o;
           body = Core.Expr.Lambda {parameter = x "q"; parameter_type = o; body = Core.Expr.fresh_rel 1}}) in
@@ -122,7 +122,7 @@ let () =
   (* Instantiation: the use's solutions replace the callee's variables, in
      annotations and in a rigid self-reference's slots. *)
   let at_nat = use_at scheme (fun _ -> slot (Core.Scheme.Type nat)) in
-  let inst = Core_copy.instance at_nat body in
+  let inst = Core_plan.Copy.instance at_nat body in
   ( match inst with
   | Core.Expr.Lambda {parameter_type = t;
                       body = Core.Expr.Let
@@ -143,7 +143,7 @@ let () =
     | None -> check "the self-reference stays polymorphic" false )
   | _ -> check "an instance keeps the shape" false );
   check "an instance shares no occurrence with its original" (not (shares body inst));
-  let rigid = Core_copy.instance (Core.Global_use.identity (r "g") scheme) body in
+  let rigid = Core_plan.Copy.instance (Core.Global_use.identity (r "g") scheme) body in
   ( match rigid with
   | Core.Expr.Lambda
     {body = Core.Expr.Let
@@ -180,7 +180,7 @@ let () =
                             arguments = [Core.Expr.fresh_rel 3]} and a2 = Core.Expr.fresh_rel 1
                               and a3 =
                                 Core.Expr.Apply {callee = Core.Expr.Global k; arguments = [Core.Expr.fresh_rel 2]} in
-  ( match Core_copy.call ~ty use body [a1; a2; a3] with
+  ( match Core_plan.Copy.call ~ty use body [a1; a2; a3] with
   | Some
       (Core.Expr.Let {binder = p;
                       binder_type = tp;
@@ -201,15 +201,15 @@ let () =
     check "a parameter passed a variable reads it as a read of its own"
       (match a2 with Core.Expr.Bound_variable {occurrence = o2; _} -> not (Core.Occurrence.equal o o2) | _ -> false)
   | _ -> check "a call is lets around the body" false );
-  ( match Core_copy.call ~ty:(Core.Type.Arrow {parameter = nat; result = nat}) use
+  ( match Core_plan.Copy.call ~ty:(Core.Type.Arrow {parameter = nat; result = nat}) use
     (Core.Expr.Lambda {parameter = x "p"; parameter_type = nat; body = Core.Expr.fresh_rel 1})
       [Core.Expr.Erased_value Core.Erasure_reason.Type_argument] with
   | Some (Core.Expr.Erased_value Core.Erasure_reason.Type_argument) -> ()
   | _ -> check "a parameter passed an erased value is that value" false );
-  check "a call with too few arguments is not made" (Core_copy.call ~ty use body [a1] = None);
-  check "a call with too many arguments is not made" (Core_copy.call ~ty use body [a1; a2; a3; a2] = None);
+  check "a call with too few arguments is not made" (Core_plan.Copy.call ~ty use body [a1] = None);
+  check "a call with too many arguments is not made" (Core_plan.Copy.call ~ty use body [a1; a2; a3; a2] = None);
   check "a body binding fewer parameters than its type is not called"
-    (Core_copy.call ~ty use
+    (Core_plan.Copy.call ~ty use
       (Core.Expr.Lambda
         {parameter = x "p"; parameter_type = nat; body = Core.Expr.Erased_value Core.Erasure_reason.Type_argument})
           [a1; a2; a3] = None)

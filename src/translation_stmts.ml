@@ -16,7 +16,7 @@ open Base.Table
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Translation_knot
 open Translation_match
 
@@ -99,7 +99,7 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
         | _ -> ()
       in
       (* What the continuation reads, in the right-hand side's coordinates. *)
-      let cont_free = Escape.free_rels 1 b in
+      let cont_free = Core_plan.Escape.free_rels 1 b in
       let asgn =
         (* Single-use partial application optimization: when the RHS is a partial
            application and the bound variable is used at most once in the
@@ -113,13 +113,13 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
           | Core.Expr.Coerce {value = Core.Expr.Apply {callee = head; arguments = core_args}; _}
           | Core.Expr.Boxed_value {value = Core.Expr.Apply {callee = head; arguments = core_args}; _}
           | Core.Expr.Lambda_group_barrier {value = Core.Expr.Apply {callee = head; arguments = core_args}; _} ->
-            (match Escape.partial_app_remaining head core_args with
+            (match Core_plan.Escape.partial_app_remaining head core_args with
              | Some remaining ->
-               Escape.nb_occur_match 1 b <= 1
-               && not (Escape.escapes 1 b)
-               && Escape.IntSet.is_empty
-                    (Escape.IntSet.inter (Escape.free_rels 0 a) cont_free)
-               && Escape.single_use_nargs 1 b >= remaining
+               Core_plan.Escape.nb_occur_match 1 b <= 1
+               && not (Core_plan.Escape.escapes 1 b)
+               && Core_plan.Escape.IntSet.is_empty
+                    (Core_plan.Escape.IntSet.inter (Core_plan.Escape.free_rels 0 a) cont_free)
+               && Core_plan.Escape.single_use_nargs 1 b >= remaining
              | None -> false)
           | _ -> false
         in
@@ -369,16 +369,16 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
     and occ = rec_group.occurrence in
     Translation_local_functions.gen_standalone_fix cx env k ~x ~ids ~funs ~occ ~fix_term
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
-                     arguments = a1 :: a2 :: l} when Translation_monadic.is_effect cx Core_effects.Bind use ->
+                     arguments = a1 :: a2 :: l} when Translation_monadic.is_effect cx Core_plan.Effects.Bind use ->
     Translation_effects.gen_bind_stmts cx ~slot env k ast ~r ~use ~a1 ~a2 ~l
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = a1 :: l}
-    when Translation_monadic.is_effect cx Core_effects.Return use ->
+    when Translation_monadic.is_effect cx Core_plan.Effects.Return use ->
     Translation_effects.gen_return_stmts cx ~slot env k ast ~use ~a1 ~l
   | Core.Expr.Match {scrutinee_type = typ;
                      scrutinee = t;
                      branches = pv;
                      occurrence = case_occ}
-                       when Core_elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Match_kind.Custom ->
+                       when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
     gen_custom_cpp_case cx env k typ t pv case_occ
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Base.Table.is_tt_constructor r
       && returns_void cx ->
@@ -407,7 +407,7 @@ let rec gen_stmts cx ?(slot = Translation_slot.empty_slot) env (k : Cpp_ir.Lower
                      scrutinee = t;
                      branches = pv;
                      occurrence = case_occ}
-                       when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
+                       when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
     Translation_match.gen_record_match_stmts cx ~slot env k ast ~typ ~t ~pv ~case_occ
   | t ->
     (* Tail position.  No deref_reified needed: in sequential mode, monadic

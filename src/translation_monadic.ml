@@ -11,7 +11,7 @@ open Names
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 
 (** Extract the innermost result type from a (possibly monadic) Core type.
     For [nat -> itree ioE unit], returns [unit].
@@ -34,19 +34,19 @@ let core_result_type ty =
 let is_monad_reified = Base.Table.is_monad_reified
 
 (** The effect operation the use [use] heads, as Core elaborated it
-    ({!Core_effects}): its operation, and the mode it is generated in, read
+    ({!Core_plan.Effects}): its operation, and the mode it is generated in, read
     from the unit's facts, set before anything is planned
     ({!Translation_state.unit_facts}).  One the analysis did not reach heads
     none.  Under [CRANE_CHECK_IR] both are checked against what the global's
     registration and the mode of the generation translating it would say. *)
 let effect_of cx (use : Core.Global_use.t) =
-  let found = Core_effects.lookup cx.ctx.input.unit.effects use in
-  if Option.has_some found then Core_effects.tally ();
+  let found = Core_plan.Effects.lookup cx.ctx.input.unit.effects use in
+  if Option.has_some found then Core_plan.Effects.tally ();
   if Base.Probe.checking () then begin
     let here =
       Option.map
-        (fun operation -> {Core_effects.operation; mode = cx.ctx.input.itree_mode})
-        (Core_effects.operation_of use.callee)
+        (fun operation -> {Core_plan.Effects.operation; mode = cx.ctx.input.itree_mode})
+        (Core_plan.Effects.operation_of use.callee)
     in
     match (found, here) with
     | Some e, here when here <> Some e ->
@@ -65,13 +65,13 @@ let effect_of cx (use : Core.Global_use.t) =
 
 (** Whether the use [use] heads the effect operation [op]. *)
 let is_effect cx op use =
-  match effect_of cx use with Some e -> e.Core_effects.operation = op | None -> false
+  match effect_of cx use with Some e -> e.Core_plan.Effects.operation = op | None -> false
 
 (** Whether the use [use] heads the effect operation [op], generated in
-    {!Core_effects.Sequential} mode. *)
+    {!Core_plan.Effects.Sequential} mode. *)
 let is_sequential_effect cx op use =
   match effect_of cx use with
-  | Some {Core_effects.operation; mode = Sequential} -> operation = op
+  | Some {Core_plan.Effects.operation; mode = Sequential} -> operation = op
   | _ -> false
 
 (** Apply unit-to-void conversion on a C++ type.  [unit_void] comes from

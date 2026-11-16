@@ -35,27 +35,27 @@
 val cpp_descr : Translation_state.t Backend.t
 
 (** The methods registered for the inductives of a structure
-    ({!Method_registry.create}), decided outside every module body. *)
-val method_registry_of : Translation_state.t -> Core.Program.t -> Method_registry.t
+    ({!Core_plan.Method_registry.create}), decided outside every module body. *)
+val method_registry_of : Translation_state.t -> Core.Program.t -> Core_plan.Method_registry.t
 
 (** Decide the unit's layout before either file is rendered: analyse the
-    structure ({!Structure_analysis}), record what rendering reads of the
-    analysis, and return the {!Module_plan} it decides, which the unit's
+    structure ({!Core_plan.Structure}), record what rendering reads of the
+    analysis, and return the {!Core_plan.Module_plan} it decides, which the unit's
     context [u] does not hold yet, how the unit's inductives are
     classified ({!Unit_context.t.names}), and the analysis, which the
     backend's plans for the unit hold ({!Cpp_state.plans.analysis}). *)
 val prepare_structure :
-  Translation_state.t -> Unit_context.t -> Core.Program.t -> Module_plan.t * Name_resolution.t * Structure_analysis.t
+  Translation_state.t -> Unit_context.t -> Core.Program.t -> Core_plan.Module_plan.t * Core_plan.Name_resolution.t * Core_plan.Structure.t
 
 (** [registered_methods kn ind] -- each function registered as a method of
     one of [ind]'s inductives, generated with it: the inductive, the
     variables of the struct it is generated in -- an eponymous record's own,
     otherwise the inductive's struct's -- and the method's candidate. *)
 val registered_methods :
-  Translation_state.t -> ?order:(Method_registry.method_candidate list -> Method_registry.method_candidate list) ->
+  Translation_state.t -> ?order:(Core_plan.Method_registry.method_candidate list -> Core_plan.Method_registry.method_candidate list) ->
   Names.MutInd.t ->
   Core.Inductive.t ->
-  (Names.GlobRef.t * Names.Id.t list * Method_registry.method_candidate) list
+  (Names.GlobRef.t * Names.Id.t list * Core_plan.Method_registry.method_candidate) list
 
 (** The callable plan of each function the renders will generate, in the
     order of the unit's modules and declarations, or the reverse if
@@ -69,7 +69,7 @@ val registered_methods :
 val plan_callables :
   Translation_state.t -> ?reversed:bool ->
   Core.Program.t ->
-  (Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list)
+  (Core_plan.Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Core_plan.Callable_abi.t) list) list)
   * (Cpp_state.module_frame Names.MPmap.t * Cpp_state.concept_plan Names.MPmap.t)
 
 (** Generate every function the renders write, and every instance's struct,
@@ -160,7 +160,7 @@ val plan_accessors : Translation_state.t -> Unit_context.t -> Core.Program.t -> 
 (** The scope of each module the unit emits as a struct: how a definition of
     one of its members, written outside the struct's body, names the
     struct. *)
-val plan_scopes : Translation_state.t -> Core.Program.t -> Scope_plan.t
+val plan_scopes : Translation_state.t -> Core.Program.t -> Core_plan.Scope_plan.t
 
 (** The structs written inside another struct, each with the name it is
     written under: a module's, and an inductive's -- its struct or its enum
@@ -189,7 +189,7 @@ val plan_unmerged_wrappers : Translation_state.t -> unit -> (string * Names.ModP
     header cannot be read without, which move ahead of them.  Asked once the
     wrappers holding declarations are installed: whether an inductive is
     spelled qualified by its wrapper depends on them. *)
-val plan_concept_prerequisites : Translation_state.t -> Module_plan.t -> Core.Program.t -> Module_plan.t
+val plan_concept_prerequisites : Translation_state.t -> Core_plan.Module_plan.t -> Core.Program.t -> Core_plan.Module_plan.t
 
 (** The fields each constructor struct of an inductive the unit generates
     stores behind the smart pointer

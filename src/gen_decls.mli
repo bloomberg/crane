@@ -66,13 +66,13 @@ val gen_decl_for_pp_dual : Translation_state.t -> GlobRef.t -> Core.Expr.t -> Co
     function.  A member of a recursive group is always generated as a
     function; a constant only where its C++ type is one. *)
 val plan_function :
-  Translation_state.t -> fixpoint:bool -> GlobRef.t -> Core.Expr.t -> Core.Type.t -> Callable_abi.t option
+  Translation_state.t -> fixpoint:bool -> GlobRef.t -> Core.Expr.t -> Core.Type.t -> Core_plan.Callable_abi.t option
 
 (** [plan_method name vars candidate] is the callable plan of the method
     made of [candidate] in the inductive [name], whose variables are [vars],
     as generating it would plan it, without generating its body. *)
 val plan_method :
-  Translation_state.t -> GlobRef.t -> Id.t list -> GlobRef.t * Core.Expr.t * Core.Type.t * int -> Callable_abi.t
+  Translation_state.t -> GlobRef.t -> Id.t list -> GlobRef.t * Core.Expr.t * Core.Type.t * int -> Core_plan.Callable_abi.t
 
 (** [generate_method_ahead name vars candidate] generates the method made of
     [candidate] in the inductive [name], whose variables are [vars], before
@@ -162,7 +162,7 @@ val gen_record_methods :
     come back already converted and resolved, because they are only correct in
     the promoted-variable scope of the instance they were read in.  Last,
     by method name, what the struct's builder recorded of each of the
-    method's template parameters ({!Callable_abi.minted}). *)
+    method's template parameters ({!Core_plan.Callable_abi.minted}). *)
 val gen_instance_struct :
   Translation_state.t -> ?bodies:bool ->
   GlobRef.t ->
@@ -171,7 +171,7 @@ val gen_instance_struct :
   Cpp_ir.Lowered.Decl.t option
   * GlobRef.t option
   * Cpp_ir.Lowered.Type.t list
-  * (Id.t * (Id.t * Callable_abi.minted) list) list
+  * (Id.t * (Id.t * Core_plan.Callable_abi.minted) list) list
 
 (** [plan_instance_methods ~finish r b ty] is the callable plan of each
     method of the instance [r] -- of body [b] and type [ty] -- by the method's
@@ -182,7 +182,7 @@ val plan_instance_methods :
   GlobRef.t ->
   Core.Expr.t ->
   Core.Type.t ->
-  (Id.t * Callable_abi.t) list
+  (Id.t * Core_plan.Callable_abi.t) list
 
 (** [gen_type_alias r vars ot] is the [using] declaration for a type alias.
 

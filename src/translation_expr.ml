@@ -15,7 +15,7 @@ open Base.Table
 open Util
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Translation_application
 open Translation_construct
 open Translation_match
@@ -256,13 +256,13 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
     Base.Probe.violation "non-canonical application" (Pp.str "a term Core_normalize writes otherwise");
     gen_expr cx ?expected_ty ~slot env (Core_passes.Spines.spine e)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use);
-                     arguments = a1 :: l} when Translation_monadic.is_effect cx Core_effects.Return use ->
+                     arguments = a1 :: l} when Translation_monadic.is_effect cx Core_plan.Effects.Return use ->
     Translation_effects.gen_return_expr cx env ~r ~use ~a1 ~l
   (* | Core.Expr.Apply (Core.Expr.Global {callee = h; _}, a1 :: a2 :: l) when is_hoist h -> gen_expr env
      (Core.Expr.Apply (a1, a2::[])) *)
   | Core.Expr.Apply {callee = Core.Expr.Global use;
                      arguments = _ :: _ :: _} as a
-    when Translation_monadic.is_sequential_effect cx Core_effects.Bind use ->
+    when Translation_monadic.is_sequential_effect cx Core_plan.Effects.Bind use ->
     Translation_effects.gen_bind_expr cx env a
   | Core.Expr.Apply {callee = (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _); _} as a ->
     (* Nested fix application in expression context (e.g., S((fix aux ...) es)).
@@ -272,9 +272,9 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
       Cpp_ir.Build.iife None (gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a) ) )
   (* A class field is projected through the instance wherever the instance
      survived, whatever mapping the field carries, as Core decided it
-     ({!Core_elaborate.static_projection_call}). *)
+     ({!Core_plan.Elaborate.static_projection_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args}
-    when Core_elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args <> None ->
+    when Core_plan.Elaborate.static_projection_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args <> None ->
     Translation_application.gen_instance_projection cx ~expected_ty ~slot env ~use ~args
   (* A closed call building a typeclass instance -- an event injection
      [ReSum_inr] composed from instances and closed lambdas, say -- is the
@@ -282,10 +282,10 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
      closures.  It is built once and kept, as a closed constructor term is
      (see {!Cpp_constants}).  An instance is a pure value, so building it
      once cannot drop an effect; only where it comes out as a call.  Core
-     decides which calls those are ({!Core_elaborate.closed_instance_call}). *)
+     decides which calls those are ({!Core_plan.Elaborate.closed_instance_call}). *)
   | Core.Expr.Apply {callee = Core.Expr.Global ({callee = f; _} as use); arguments = args} as e
     when (not slot.Translation_slot.building_constant)
-         && Core_elaborate.closed_instance_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args -> (
+         && Core_plan.Elaborate.closed_instance_call ~walk:(elaborations cx) ~lex:(current_lexenv cx ()) use args -> (
     let built = gen_expr cx ?expected_ty ~slot:{slot with Translation_slot.building_constant = true} env e in
     match built with
     | Call _ ->
@@ -472,9 +472,9 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
      runtime makes every block it holds immortal too.  Only where the term
      comes out as its factory call: a conversion into another slot type is
      left as it is.  Core decides which terms those are
-     ({!Core_elaborate.shared_constant}). *)
+     ({!Core_plan.Elaborate.shared_constant}). *)
   | Core.Expr.Construct {arguments = ts; _} as e
-    when (not slot.Translation_slot.building_constant) && Core_elaborate.shared_constant ~walk:(elaborations cx) e
+    when (not slot.Translation_slot.building_constant) && Core_plan.Elaborate.shared_constant ~walk:(elaborations cx) e
          && not (takes_reuse_token cx e) -> (
     let built = gen_expr cx ?expected_ty ~slot:{slot with Translation_slot.building_constant = true} env e in
     match built with
@@ -488,10 +488,10 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Trans
                      scrutinee = t;
                      branches = pv;
                      occurrence = case_occ}
-                       when Core_elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Match_kind.Custom ->
+                       when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
     Translation_match.gen_custom_match_expr cx env ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ}
-    when Match_kind.is_record (Core_elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
+    when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
     Translation_match.gen_record_projection cx ~expected_ty ~slot env core_e ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ} when lang () == Cpp ->
     gen_cpp_case cx typ t env pv case_occ

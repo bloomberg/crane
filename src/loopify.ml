@@ -53,12 +53,12 @@
     {- {b Strategy}: the recursion plan decides, from each function's Core
        body before any is lowered, whether it is a tail loop, a loop tail
        modulo cons, a machine with a stack of frames, suspended, or not
-       looped at all ({!planned_strategy}, {!Recursion_plan.strategy}).}
+       looped at all ({!planned_strategy}, {!Core_plan.Recursion.strategy}).}
     {- {b Transformation}: the strategy picks the rewrite:
        {!transform_tail} for a [while] loop with shadow variables,
        {!transform_tmc} for tail modulo cons, {!transform_nontail} for a
        frame-based stack.}
-    {- {b Normalized input}: {!Normalize} binds every non-tail recursive
+    {- {b Normalized input}: {!Core_plan.Normalize} binds every non-tail recursive
        call in evaluation order before translation, so the transforms meet
        each one as a statement; tail modulo cons reads the body with those
        bindings put back ({!Cpp_temporaries.own_stmts}).}
@@ -96,7 +96,7 @@
     classifies recursive calls, {!Loopify_tail}, {!Loopify_tmc} and
     {!Loopify_frame} are the rewrite strategies, and this module dispatches
     between them.  A mutual-recursion partner is spliced into a function's
-    Core body before any of this ({!Recursion_plan.splice_partners}).  What
+    Core body before any of this ({!Core_plan.Recursion.splice_partners}).  What
     it lowers, and where,
     is the recursion plan's, read off the ControlIR of each loop as the
     definition is generated ({!Control_to_cpp_ir}).
@@ -205,7 +205,7 @@ let checked_frame_machine ~unit loop transform =
     | None -> Some (body, !entries)
 
 (** The strategy of the local fixpoint [fixpoint] as planned for the Core
-    fixpoint it lowers ({!Recursion_plan.strategy_at}).  A body with no
+    fixpoint it lowers ({!Core_plan.Recursion.strategy_at}).  A body with no
     fixpoint recorded on it, or one the plan does not know, a violation, is
     not loopified. *)
 let planned_local_strategy ~unit (fixpoint : local_fixpoint option) =
@@ -213,11 +213,11 @@ let planned_local_strategy ~unit (fixpoint : local_fixpoint option) =
   | Some {member; binder; _} -> (
     let what () = Pp.(str "the local fixpoint " ++ Id.print binder) in
     let pointer_fields = constructor_pointer_fields unit in
-    match Recursion_plan.strategy_at (Unit_context.recursion unit) ~pointer_fields member with
+    match Core_plan.Recursion.strategy_at (Unit_context.recursion unit) ~pointer_fields member with
     | Some planned -> planned
     | None ->
       Base.Probe.violation "recursion plan" Pp.(str "the recursion plan does not know " ++ what ());
-      Recursion_plan.No_loop )
+      Core_plan.Recursion.No_loop )
   | None ->
     Base.Probe.violation "recursion plan"
       (Pp.str "a local fixpoint's body was reached with no Core fixpoint recorded on it");
@@ -225,14 +225,14 @@ let planned_local_strategy ~unit (fixpoint : local_fixpoint option) =
 
 (** The calls the machine of the function [r] is entered by, as the
     recursion plan names what a point resumes after: its own. *)
-let entered_by_function r (c : Recursion_plan.call) =
+let entered_by_function r (c : Core_plan.Recursion.call) =
   match c.target with
   | Function g -> Base.Common.globref_equal g r
   | Member _ | Entering _ -> false
 
 (** The calls the machine of the function [member] of a local fixpoint is
     entered by: that member's. *)
-let entered_by_member (occurrence, member) (c : Recursion_plan.call) =
+let entered_by_member (occurrence, member) (c : Core_plan.Recursion.call) =
   match c.target with
   | Member (o, m) -> Core.Occurrence.equal o occurrence && Int.equal m member
   | Function _ | Entering _ -> false
@@ -247,13 +247,13 @@ let entered_by_definition r =
 
 (** The recursive calls of the definition [r], each by the occurrence the
     C++ call made of it records: a function's own, in its recursive group's
-    bodies ({!Recursion_plan.calls}), or those of the member of the local
+    bodies ({!Core_plan.Recursion.calls}), or those of the member of the local
     fixpoint a helper lifted for it lowers.  A call of one of them left in
     its finished body is one it still recurses by. *)
 let definition_calls ~unit r =
   match Base.Lifted.of_ref r with
-  | Some h -> Option.cata (Recursion_plan.member_calls (Unit_context.recursion unit)) [] (Base.Lifted.fixpoint h)
-  | None -> (Recursion_plan.calls (Unit_context.recursion unit)) r
+  | Some h -> Option.cata (Core_plan.Recursion.member_calls (Unit_context.recursion unit)) [] (Base.Lifted.fixpoint h)
+  | None -> (Core_plan.Recursion.calls (Unit_context.recursion unit)) r
 
 (** The calls a finished body of the function [f] still recurses by
     ({!definition_calls}), whatever C++ heads them. *)
@@ -293,7 +293,7 @@ let member_plan ~unit ~frames member params =
     if List.compare_lengths kept params <> 0 then None
     else
       let invariant = Control_ir.Term.invariant_parameters l in
-      let in_place = Recursion_plan.in_place in
+      let in_place = Core_plan.Recursion.in_place in
       let parts = Control_ir.Term.parts_passed ~pointer_fields:(constructor_pointer_fields unit) ~in_place l in
       let parts =
         if not frames then parts
@@ -556,7 +556,7 @@ let loopify_inner_lambdas ~unit ?(tail_only = false) ~tparams ?(outer_env = []) 
     whose arguments may run the corecursion.  This defers evaluation so the
     infinite corecursive structure is built on demand rather than eagerly.
     The recursion plan says which functions these are, before any is lowered
-    ({!Recursion_plan.Suspended}).
+    ({!Core_plan.Recursion.Suspended}).
 
     {b Why loopification is unnecessary.}  The [lazy_] wrapper means the
     generated C++ function has this shape:
@@ -666,12 +666,12 @@ let apply_nontail_loopification ~unit ?(param_inits = []) ?fn_name ?adopted ?ent
      body. *)
   try
   (* Tail modulo cons reads constructor cells around calls, which
-     {!Normalize} took out into temporaries; it reads the body with them put
+     {!Core_plan.Normalize} took out into temporaries; it reads the body with them put
      back.  Everything else reads the normalized body. *)
   let restored = Cpp_temporaries.own_stmts body in
   (* The loop, where the plan lowers the function tail modulo cons: every
      call that is not a tail call is the one call of one of its chains
-     ({!Recursion_plan.Modulo_cons}), so the transform, which rewrites calls
+     ({!Core_plan.Recursion.Modulo_cons}), so the transform, which rewrites calls
      directly under a constructor, leaves none behind -- a body mixing a
      branch that conses onto the recursive result with one that scrutinises
      it has no plan to be.  A self-call left behind is the finished body
@@ -719,7 +719,7 @@ let function_loop r =
   | None -> Some (Control_ir.Loop.Function r)
 
 (** The strategy of the function [r]: as the program's recursion plan has
-    it ({!Recursion_plan.strategy}), read off its Core body and its recursive
+    it ({!Core_plan.Recursion.strategy}), read off its Core body and its recursive
     group's before any of them was lowered, given the constructor fields planned
     behind the pointer.  A helper lifted out of a definition for one of its
     local fixpoints is planned by that fixpoint, and one lifted for a lambda a
@@ -731,15 +731,15 @@ let function_loop r =
     nowhere. *)
 let planned_strategy ~unit r =
   match r with
-  | None -> Recursion_plan.No_loop
+  | None -> Core_plan.Recursion.No_loop
   | Some r -> (
     let pointer_fields = constructor_pointer_fields unit in
     let planned =
       match Option.map Base.Lifted.site (Base.Lifted.of_ref r) with
       | Some (Fixpoint (occurrence, member)) ->
-        (Recursion_plan.strategy_at (Unit_context.recursion unit)) ~pointer_fields (occurrence, member)
-      | Some (Let occurrence) -> (Recursion_plan.strategy_of_let (Unit_context.recursion unit)) occurrence
-      | None -> (Recursion_plan.strategy (Unit_context.recursion unit)) ~pointer_fields r
+        (Core_plan.Recursion.strategy_at (Unit_context.recursion unit)) ~pointer_fields (occurrence, member)
+      | Some (Let occurrence) -> (Core_plan.Recursion.strategy_of_let (Unit_context.recursion unit)) occurrence
+      | None -> (Core_plan.Recursion.strategy (Unit_context.recursion unit)) ~pointer_fields r
     in
     let what () = Pp.str (Base.Table.kername_of_global r) in
     match planned with
@@ -749,17 +749,17 @@ let planned_strategy ~unit r =
       No_loop )
 
 (** The local fixpoints the machine of [r] may adopt, as the recursion plan
-    has them ({!Recursion_plan.adoptable}): a helper lifted for a local
+    has them ({!Core_plan.Recursion.adoptable}): a helper lifted for a local
     fixpoint's function is planned by it. *)
 let planned_adoptable ~unit r =
   match Base.Lifted.of_ref r with
   | Some h -> (
-    match Base.Lifted.fixpoint h with Some m -> (Recursion_plan.adoptable_at (Unit_context.recursion unit)) m | None -> [] )
-  | None -> (Recursion_plan.adoptable_in (Unit_context.recursion unit)) r
+    match Base.Lifted.fixpoint h with Some m -> (Core_plan.Recursion.adoptable_at (Unit_context.recursion unit)) m | None -> [] )
+  | None -> (Core_plan.Recursion.adoptable_in (Unit_context.recursion unit)) r
 
 (** The chains a strategy lowers tail modulo cons around, if it does. *)
 let modulo_cons_chains = function
-  | Recursion_plan.Modulo_cons chains -> Some chains
+  | Core_plan.Recursion.Modulo_cons chains -> Some chains
   | No_loop | Tail_loop | Frame_stack | Suspended _ -> None
 
 let after_tail_loop ~unit ?(strategy = Tail) ?survived ~tparams (f : func) params loop =

@@ -7,8 +7,8 @@
 open Names
 
 type t = {
-  modules : Module_plan.layout;
-  pointer_fields : Pointer_fields.t;
+  modules : Core_plan.Module_plan.layout;
+  pointer_fields : Core_plan.Pointer_fields.t;
   unmerged_wrappers : ModPath.t CString.Map.t;
   promoted_inductives : Core.Ref.User.Set.t;
   accessors : Cpp_state.accessors;
@@ -17,8 +17,8 @@ type t = {
 }
 
 let start ~accessors =
-  { modules = Module_plan.no_layout;
-    pointer_fields = Pointer_fields.none;
+  { modules = Core_plan.Module_plan.no_layout;
+    pointer_fields = Core_plan.Pointer_fields.none;
     unmerged_wrappers = CString.Map.empty;
     promoted_inductives = Core.Ref.User.Set.empty;
     accessors;
@@ -36,4 +36,4 @@ let context t (u : Unit_context.t) =
     instance_promoted_types = t.instance_promoted_types }
 
 
-let for_next_unit t = {t with modules = Module_plan.for_next_unit t.modules}
+let for_next_unit t = {t with modules = Core_plan.Module_plan.for_next_unit t.modules}

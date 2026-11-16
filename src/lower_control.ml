@@ -28,7 +28,7 @@ let occurrence f =
    where [f], under [depth] binders inside them, names it.  A machine
    adopting the local fixpoint at [adopted] has that entry too. *)
 let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target ~callee body =
-  let effect_ = Recursion_plan.sequential effects in
+  let effect_ = Core_plan.Recursion.sequential effects in
   (* The loops a read names, by the binders it stands under: the loop it
      continues, and its number of parameters. *)
   let own ~depth f = Option.map (fun n -> (target, n)) (callee ~depth f) in
@@ -47,7 +47,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
           Option.map (fun o -> (l, o, args)) (occurrence f) )
     | _ -> None
   (* The constructors [e] builds around one call of the loop's function,
-     outermost first, as {!Recursion_plan.strategy} reads a chain: each
+     outermost first, as {!Core_plan.Recursion.strategy} reads a chain: each
      holds the next in the one argument that calls the function, the
      innermost holding the call itself, and none calls it elsewhere. *)
   and chain callee depth e =
@@ -108,7 +108,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     {loop = target; parameters = List.rev parameters; body = lower callee 0 inner}
   (* [bound] says [e] is a let's value, or a bind's action: a match there
      that translation does not generate as statements each assigning the
-     binder ({!Recursion_plan.match_bound_in_place}) runs in a lambda
+     binder ({!Core_plan.Recursion.match_bound_in_place}) runs in a lambda
      invoked in place, where no call is a turn. *)
   and recognise ~bound callee depth e =
     let lower ?(bound = bound) = lower ~bound in
@@ -154,11 +154,11 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     | f when Option.has_some (named callee ~depth f 0) -> continue_ f (Option.get (named callee ~depth f 0)) []
     | Core.Expr.Apply {callee = f; arguments = args} when Option.has_some (named callee ~depth f (List.length args)) ->
       continue_ f (Option.get (named callee ~depth f (List.length args))) args
-    | Core.Expr.Construct {constructor = c; arguments = [a]; _} when Recursion_plan.identity c -> lower callee depth a
+    | Core.Expr.Construct {constructor = c; arguments = [a]; _} when Core_plan.Recursion.identity c -> lower callee depth a
     | Core.Expr.Apply {callee = Core.Expr.Global use;
-                       arguments = [a]} when Recursion_plan.identity use.callee && Base.Table.to_inline use.callee ->
+                       arguments = [a]} when Core_plan.Recursion.identity use.callee && Base.Table.to_inline use.callee ->
       lower callee depth a
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Bind -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_plan.Effects.Bind -> (
       match List.rev args with
       | Core.Expr.Lambda {parameter = x;
                           parameter_type = ty;
@@ -170,7 +170,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
       | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = k} :: action :: _ ->
         Let {binder = x; binder_type = ty; value = action; body = lower callee (depth + 1) k}
       | _ -> Return e )
-    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_effects.Return -> (
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_plan.Effects.Return -> (
       match List.rev args with value :: _ -> lower callee depth value | [] -> Return e )
     | Core.Expr.Apply {callee = (Core.Expr.Lambda _ as f); arguments = args} ->
       let rec enter depth f args =
@@ -187,7 +187,7 @@ let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target
     | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
       Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b}
     | Core.Expr.Match {scrutinee_type = ty;
-                       branches; _} when bound && not (Recursion_plan.match_bound_in_place ty branches) -> Return e
+                       branches; _} when bound && not (Core_plan.Recursion.match_bound_in_place ty branches) -> Return e
     | Core.Expr.Match {scrutinee_type = ty; scrutinee = s; branches; _} ->
       Match
         { scrutinee_type = ty;
@@ -229,10 +229,10 @@ let rec fixpoints wanted acc e =
 
 let lower ~methods plan program =
   let struc = Core_passes.Phase.structure program in
-  let effects = Core_effects.analyze struc in
-  let functions, locals = Recursion_plan.tail_loops plan in
-  let modulo_cons, local_modulo_cons = Recursion_plan.modulo_cons_loops plan in
-  let frame_functions, frame_locals = Recursion_plan.frame_loops plan in
+  let effects = Core_plan.Effects.analyze struc in
+  let functions, locals = Core_plan.Recursion.tail_loops plan in
+  let modulo_cons, local_modulo_cons = Core_plan.Recursion.modulo_cons_loops plan in
+  let frame_functions, frame_locals = Core_plan.Recursion.frame_loops plan in
   let defs = ref Names.GlobRef.Map_env.empty in
   Core_passes.Modutil.struct_iter
     (fun d ->
@@ -249,7 +249,7 @@ let lower ~methods plan program =
      Normalize's temporaries put back, as the plan reads its chains. *)
   let read ~builds fd =
     let parameters, inner = generated fd in
-    (parameters, if builds then Recursion_plan.restore_temporaries inner else inner)
+    (parameters, if builds then Core_plan.Recursion.restore_temporaries inner else inner)
   in
   (* What the machine of the function [r], whose body is [inner], adopts:
      the first fixpoint of one member the plan has it adopt
@@ -260,10 +260,10 @@ let lower ~methods plan program =
     let first o = List.find_opt single (fixpoints [o] [] inner) in
     let yields_own ty =
       match Names.GlobRef.Map_env.find_opt r !defs with
-      | Some own -> Recursion_plan.yields_alike own.type_ ty
+      | Some own -> Core_plan.Recursion.yields_alike own.type_ ty
       | None -> false
     in
-    match List.find_map first (Recursion_plan.adoptable_in plan r) with
+    match List.find_map first (Core_plan.Recursion.adoptable_in plan r) with
     | Some (o, types, _) when yields_own types.(0) -> Some o
     | Some _ | None -> None
   in
@@ -312,7 +312,7 @@ let lower ~methods plan program =
               let builds = List.exists (Core.Occurrence.equal occ) local_modulo_cons in
               let frames = List.exists (Core.Occurrence.equal occ) frame_locals in
               let parameters, inner = Base.Core_util.collect_lams funs.(0) in
-              let inner = if builds then Recursion_plan.restore_temporaries inner else inner in
+              let inner = if builds then Core_plan.Recursion.restore_temporaries inner else inner in
               let arity = List.length parameters in
               let callee ~depth f =
                 match strip f with

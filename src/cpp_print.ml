@@ -380,7 +380,7 @@ let member_scopes (ctx : render_ctx) (t : ty) =
   in
   match ctx.scope with
   | Some {scope; file_scope_aliases} when (not ctx.in_struct) && not (at_file_scope file_scope_aliases) ->
-    Some (List.map (fun s -> Base.Cpp_name.Class s) scope.Scope_plan.qualifier)
+    Some (List.map (fun s -> Base.Cpp_name.Class s) scope.Core_plan.Scope_plan.qualifier)
   | _ -> None
 
 (** A type's name as the type printer writes it: the qualifiers written in
@@ -614,7 +614,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
        an inductive only a functor's instantiation knows the representation
        of, the pointer [shared_or_t] is given as its alternative. *)
     | Shared_pointer t ->
-      if Base.Probe.checking () && Pointer_slot.of_pointee t = Pointer_slot.Shared then
+      if Base.Probe.checking () && Core_plan.Pointer_slot.of_pointee t = Core_plan.Pointer_slot.Shared then
         CErrors.anomaly (Pp.str "pp_cpp_type: a pointer's slot not chosen (Cpp_erasure.lower_pointer_slots)");
       writes_standard "memory";
       cpp_angle (sn ctx.unit).shared_ptr (pp_rec false t)
@@ -2622,7 +2622,7 @@ and pp_leaf_decl ctx env (d : decl) =
     in
     let name =
       match scope with
-      | Some {scope = ol_scope; _} when not is_lifted -> str (Scope_plan.qualifier ol_scope) ++ str "::" ++ base_name
+      | Some {scope = ol_scope; _} when not is_lifted -> str (Core_plan.Scope_plan.qualifier ol_scope) ++ str "::" ++ base_name
       | _ -> base_name
     in
     (* Anything the name says beyond a bare identifier -- a [::] qualifier or

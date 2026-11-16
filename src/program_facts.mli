@@ -15,7 +15,7 @@ type t = {
   higher_order_projections : Core.Ref.User.Set.t;
       (** The projections used as function values rather than as field
           accessors, which need a standalone definition. *)
-  effects : Core_effects.t;
+  effects : Core_plan.Effects.t;
       (** Which applications are a monad's [bind] or [ret], and the mode
           each is generated in. *)
 }
@@ -30,20 +30,20 @@ type program = {
       (** The definitions whose body only throws. *)
   parameter_ownership : (Names.GlobRef.t * bool list) list;
       (** Which parameters of each function it owns rather than borrows,
-          innermost first ({!Ownership.summarize}). *)
-  recursive_groups : Recursive_groups.t;
+          innermost first ({!Core_plan.Ownership.summarize}). *)
+  recursive_groups : Core_plan.Recursive_groups.t;
       (** Which functions recurse through which. *)
   partner_closure_params : (Names.GlobRef.t * int list) list;
       (** Which parameters of each function a call from its recursive group
           passes a closure for ({!Translation_callable_params.partner_closure_params}). *)
-  recursion : Recursion_plan.t;
+  recursion : Core_plan.Recursion.t;
       (** How each function recurses through itself. *)
   control : Lower_control.t;
       (** The control the recursion plan lowers to ({!Control_ir}). *)
 }
 
 (** [analyze_program p] analyses the normalized program [p].  Its one write
-    is the enum inductives {!Method_registry.create} registers
+    is the enum inductives {!Core_plan.Method_registry.create} registers
     ({!Base.Table.add_enum_inductive}), a property of their declarations. *)
 val analyze_program : Translation_state.t -> Core_passes.Phase.normalized Core_passes.Phase.program -> program
 

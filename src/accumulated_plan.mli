@@ -15,10 +15,10 @@
 open Names
 
 type t = {
-  modules : Module_plan.layout;
+  modules : Core_plan.Module_plan.layout;
       (** The layout: where each declaration lives and what it is called
-          ({!Module_plan.extend}). *)
-  pointer_fields : Pointer_fields.t;
+          ({!Core_plan.Module_plan.extend}). *)
+  pointer_fields : Core_plan.Pointer_fields.t;
       (** The fields each constructor struct stores behind the pointer. *)
   unmerged_wrappers : ModPath.t CString.Map.t;
       (** The wrapper structs that hold declarations, by name, each with
@@ -44,7 +44,7 @@ val context : t -> Unit_context.t -> Unit_context.t
 
 (** What the next unit of the extraction starts from, once a unit planned
     [t]: [t] without the facts that belong to one unit, the per-unit
-    layout ({!Module_plan.for_next_unit}).  The callable plans are the
+    layout ({!Core_plan.Module_plan.for_next_unit}).  The callable plans are the
     unit's own ({!Unit_context.t.callables}): a callee another unit defines
-    is planned as foreign ({!Callable_abi.with_foreign}). *)
+    is planned as foreign ({!Core_plan.Callable_abi.with_foreign}). *)
 val for_next_unit : t -> t

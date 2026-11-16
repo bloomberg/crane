@@ -10,9 +10,9 @@
     It lowers the loop of direct tail recursion of a top-level
     function ({!Control_ir.Loop.Function}) that the configuration loopifies
     ({!Base.Table.should_loopify}) and that the recursion plan lowers so
-    ({!Recursion_plan.Tail_loop}).  A recursive group is lowered once all
+    ({!Core_plan.Recursion.Tail_loop}).  A recursive group is lowered once all
     of its members are generated, each member alone: its partners' bodies
-    are spliced into its Core body ({!Recursion_plan.splice_partners}).
+    are spliced into its Core body ({!Core_plan.Recursion.splice_partners}).
     Its jumps are the C++ calls made of the loop's [Continue]s, by the
     occurrence each records ({!Cpp_ir.Expr.Call.signature}); the
     parameters a jump leaves alone are those every [Continue] passes on
@@ -23,7 +23,7 @@
     ({!Loopify.after_tail_loop}).
 
     So is the loop of a top-level function the plan lowers tail modulo cons
-    ({!Recursion_plan.Modulo_cons}): its turns that build what they return
+    ({!Core_plan.Recursion.Modulo_cons}): its turns that build what they return
     ({!Control_ir.Term.Continue_into}) are the branches its cells are made
     in, each read along the constructors of its chain around the call its
     occurrence names ({!Loopify_tmc.branch_along}), and the others its
@@ -33,7 +33,7 @@
     fall back to a frame stack.
 
     So is the machine with a stack of frames of a function the plan lowers
-    so ({!Recursion_plan.Frame_stack}): the calls entering it are those made
+    so ({!Core_plan.Recursion.Frame_stack}): the calls entering it are those made
     of its loop's [Continue]s, those it resumes after the [Continue]s in a
     [Resume]'s value ({!Loopify.frame_machine}), and the parameters its
     re-entries leave alone, which its frames do not save, those every
@@ -128,7 +128,7 @@ val lifted_resumes :
     lowers it ({!Loopify.local_frame_machine}), even where that function is a
     machine itself, whose transform takes the local machine as the closure it
     is.  [None] where it is not one: a fixpoint that may be adopted into a
-    machine ({!Recursion_plan.adoptable_somewhere}), a tail loop in a definition
+    machine ({!Core_plan.Recursion.adoptable_somewhere}), a tail loop in a definition
     Loopify makes a machine with a stack of its own of, one whose loop leaves
     one of its calls behind, or that Loopify declines; it is then generated as
     the Y-combinator Loopify recognises.  A tail loop that only the function it

@@ -14,7 +14,7 @@ open Util
 open Base.Type_util
 open Gen_context
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** Generate C++ struct for a record type.
 

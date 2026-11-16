@@ -19,14 +19,14 @@ open Translation
 open Gen_context
 open Gen_records
 
-module IntSet = Escape.IntSet
+module IntSet = Core_plan.Escape.IntSet
 
 (** An instance's type and body past its own parameters -- erased type
     binders and class dictionaries, an eta-reduced instance's included
-    ({!Instance_methods.layers}) -- with the template parameters the
+    ({!Core_plan.Instance_methods.layers}) -- with the template parameters the
     dictionaries become and the binders stripped. *)
 let instance_layers cx ty body =
-  let {Instance_methods.inner_ty; inner_body; dictionaries; lam_params} = Instance_methods.layers ty body in
+  let {Core_plan.Instance_methods.inner_ty; inner_body; dictionaries; lam_params} = Core_plan.Instance_methods.layers ty body in
   (* A dictionary becomes a concept-constrained template parameter -- [PreCategory
      _tcI0] instead of [typename _tcI0] -- so the compiler enforces concept
      satisfaction.  Unary concepts are expressed inline as [Eq _tcI0];
@@ -50,9 +50,9 @@ let instance_promoted_types cx name body ty =
   let inner_ty, inner_body, _, lam_params = instance_layers cx ty body in
   match (inner_ty : Core.Type.t) with
   | Core.Type.Global_app {head = class_ref; type_arguments = type_args; _} when Base.Table.is_typeclass class_ref -> (
-    match Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
+    match Core_plan.Instance_methods.record_body name class_ref inner_ty lam_params inner_body with
     | Core.Expr.Construct {result_type = cons_ty; _} ->
-      let type_args = Instance_methods.record_type_args cons_ty type_args in
+      let type_args = Core_plan.Instance_methods.record_type_args cons_ty type_args in
       let promoted_vars = class_promoted_vars class_ref in
       let promoted_concrete = class_promoted_concrete class_ref type_args in
       if List.length promoted_vars = List.length promoted_concrete && promoted_vars <> [] then
@@ -78,13 +78,13 @@ let instance_promoted_types cx name body ty =
     declares nothing; the class, [None] if [ty] is not a class; the arguments
     the [static_assert] against the class's concept spells; and, by method
     name, the template parameters each method mints for its class-typed
-    arguments ({!Callable_abi.minted}).  [~bodies:false] generates the
+    arguments ({!Core_plan.Callable_abi.minted}).  [~bodies:false] generates the
     methods' heads alone. *)
 let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr.t) (ty : Core.Type.t) :
     Cpp_ir.Lowered.Decl.t option
     * GlobRef.t option
     * Cpp_ir.Lowered.Type.t list
-    * (Id.t * (Id.t * Callable_abi.minted) list) list =
+    * (Id.t * (Id.t * Core_plan.Callable_abi.minted) list) list =
   let instance_ref = name in
   (* Without bodies the methods are their heads alone: what planning reads
      ({!plan_instance_methods}), decided by the very code that generates
@@ -98,7 +98,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
      parameterized instances like numOption : Numeric (option A), the return
      type is Core.Type.Global_app(Numeric, [option A], []) which contains Core.Type.Variable for A. These
      need to become template typename parameters (T1, T2, etc.). *)
-  let instance_tvars = Instance_methods.instance_tvars ty inner_ty in
+  let instance_tvars = Core_plan.Instance_methods.instance_tvars ty inner_ty in
   let tv_temps =
     List.mapi (fun i _ -> (Cpp_ir.Template.Parameter_kind.Typename, tvar_id (i + 1))) instance_tvars
   in
@@ -204,7 +204,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
     let fields = Base.Table.record_field_bindings_of_type inner_ty in
     (* Promoted dependent records may have their constructor wrapped in
        Core.Expr.Coerce due to Core.Type.Variable/Core.Type.Global_app mismatches during extraction unification. *)
-    let inner_body = Instance_methods.record_body name class_ref inner_ty lam_params inner_body in
+    let inner_body = Core_plan.Instance_methods.record_body name class_ref inner_ty lam_params inner_body in
     ( match inner_body with
     | Core.Expr.Construct {result_type = cons_ty; constructor = _ctor_ref; arguments = method_bodies; _} ->
       (* For promoted dependent records, the definition type Core.Type.Global_app(Magma,[],[])
@@ -218,7 +218,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
          constructor's, because a class field standing as a type is a
          projection the constructor's unification drops.  Take the better of
          the two at each position rather than one list whole. *)
-      let type_args = Instance_methods.record_type_args cons_ty type_args in
+      let type_args = Core_plan.Instance_methods.record_type_args cons_ty type_args in
       (* How many type variables the instance itself binds.  Not the number of
          template parameters it declares: a higher-kinded carrier ([Instance
          ... (M : Type -> Type)]) is a variable the instance's arguments name,
@@ -233,8 +233,8 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
          method variable too many, which spends [_A0] on the inner monad and
          erases [A], the variable the name was for.  The instance's own type
          is where every variable it binds is visible. *)
-      let instance_tvar_count = Instance_methods.tvar_count ~instance_tvars ty type_args in
-      let inst = {Instance_methods.class_ref; type_args; tvar_count = instance_tvar_count} in
+      let instance_tvar_count = Core_plan.Instance_methods.tvar_count ~instance_tvars ty type_args in
+      let inst = {Core_plan.Instance_methods.class_ref; type_args; tvar_count = instance_tvar_count} in
       (* The concrete types it gives its class's promoted variables, which
          call sites substitute, were planned before rendering
          ({!instance_promoted_types}). *)
@@ -284,15 +284,15 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
           let method_name =
             Base.Common.id_of_global Term method_ref
           in
-          let m = Instance_methods.prepare_method inst method_ref field_core_ty field_body in
-          let {Instance_methods.field_core_ty;
+          let m = Core_plan.Instance_methods.prepare_method inst method_ref field_core_ty field_body in
+          let {Core_plan.Instance_methods.field_core_ty;
                subst_args;
                subst_ty;
                n_method_tvars;
                declared_arity;
                body = field_body} = m in
-          let method_args_and_ret () = Instance_methods.args_and_ret m in
-          let orig_args_and_ret () = Instance_methods.declared_args_and_ret m in
+          let method_args_and_ret () = Core_plan.Instance_methods.args_and_ret m in
+          let orig_args_and_ret () = Core_plan.Instance_methods.declared_args_and_ret m in
           (* With the quantifier back, the method is a member template:
              [template <typename _A0> static Opt<_A0> mret(_A0)] rather than a
              signature erased to [std::any].  Its own type variables sit past
@@ -312,7 +312,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
               (names, type_var_names @ pad @ names)
           in
           set_current_type_vars cx type_var_names;
-          let subst_promoted_tvars = Instance_methods.subst_promoted_tvars inst in
+          let subst_promoted_tvars = Core_plan.Instance_methods.subst_promoted_tvars inst in
           (* The instance's own binders were extracted at the class's erased
              field types.  For a higher-kinded class the declared signature
              ([subst_ty]) knows better: it still names the element type. *)
@@ -403,10 +403,10 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
              becomes one of the method's own template parameters, which is
              where its uses ([pa::width()]) already look for it. *)
           let binders, inner_body =
-            let params, inner_body = Instance_methods.params m in
+            let params, inner_body = Core_plan.Instance_methods.params m in
             let _, binders =
               List.fold_left_map
-                (fun n {Instance_methods.binder = id; binder_ty = ty; erased} ->
+                (fun n {Core_plan.Instance_methods.binder = id; binder_ty = ty; erased} ->
                   if erased then
                     (n, {name = id_of_binder_name id; core_ty = ty; cpp_ty = Any; kind = `Erased})
                   else
@@ -477,7 +477,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
             List.mapi
               (fun i _ -> tc_instance_id i)
               (List.filter
-                 (fun ty -> Core_query.parameter_role ty = Dictionary)
+                 (fun ty -> Core_plan.Query.parameter_role ty = Dictionary)
                  (fst (method_args_and_ret ())) )
           in
           let cpp_params, ret_ty, body_stmts, tc_tparams =
@@ -488,7 +488,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                  a function reference that needs eta-expansion, or a
                  non-function value field.  An erased binder is no parameter,
                  so a body that opens with nothing else is this case too. *)
-              ( match Instance_methods.eta_call m inner_body with
+              ( match Core_plan.Instance_methods.eta_call m inner_body with
               | None ->
                 (* Non-function field (like m_id : carrier) — generate as a
                    static value with a nullary accessor method. *)
@@ -683,7 +683,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
           in
           (* The class-typed arguments are the method's dictionaries, in
              order; its own variables are no scheme's. *)
-          let minted = List.mapi (fun k p -> (p, Callable_abi.Instance_param k)) tc_tparams in
+          let minted = List.mapi (fun k p -> (p, Core_plan.Callable_abi.Instance_param k)) tc_tparams in
           let method_ : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t =
             { name = method_name;
               (* The global the method is made from is the instance: it has
@@ -1049,7 +1049,7 @@ let plan_instance_methods cx ~finish name body ty =
     List.map
       (fun (m : Cpp_ir.Lowered.phase Cpp_ir.Field.Method.t) ->
         ( m.name,
-          Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:name m ) )
+          Core_plan.Callable_abi.of_instance_method ?minted:(List.assoc_opt m.name minted) ~instance:name m ) )
       (methods (finish decl))
   | None, _, _, _ -> []
 

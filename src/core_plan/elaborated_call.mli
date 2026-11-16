@@ -8,10 +8,10 @@
     template argument.
 
     Transitional.  Its roles are elaborated from Core ahead of translation
-    ({!Core_elaborate}) where translation meets the call as written, and
+    ({!Elaborate}) where translation meets the call as written, and
     where it is translated otherwise; the holes its context states are
     resolved, and the callee's types instantiated, by
-    {!Core_elaborate.instantiate} ({!instantiated}), which the C++ part of
+    {!Elaborate.instantiate} ({!instantiated}), which the C++ part of
     planning the call ({!Translation_calls.plan_call}) starts from. *)
 
 (** The role an argument the call writes has. *)
@@ -83,14 +83,14 @@ val dictionary_filled : t -> bool
 
 (** A call whose reading of its callee's scheme variables is complete, and
     the callee's types at that reading: the semantic half of planning a
-    call ({!Core_elaborate.instantiate}).  It holds no C++ type, and is
+    call ({!Elaborate.instantiate}).  It holds no C++ type, and is
     decided before, and without, anything about
     the call's C++: the C++ half of planning
     ({!Translation_calls.plan_call}) reads it and adds to it, never the
     other way.
 
     Planned ahead of translation by the Core walk
-    ({!Core_elaborate.structure}), in the walk's lexical environment and
+    ({!Elaborate.structure}), in the walk's lexical environment and
     with the Core types it gives the call's position, and taken at the
     argument nodes translation meets ({!at_call}).  Transitional: a call
     translation builds itself is instantiated where it is translated, in the

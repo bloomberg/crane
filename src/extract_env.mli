@@ -31,7 +31,7 @@
       structure ({!Target_plan.record_kinds}), then, once the unit's
       preparation has run, the template-parameter kinds.
     + {b Layout} ([Base.Common.Plan]): {!Cpp.prepare_structure} runs
-      {!Structure_analysis.analyze} and decides the layout ({!Module_plan});
+      {!Core_plan.Structure.analyze} and decides the layout ({!Core_plan.Module_plan});
       then the names of every global and module the unit declares and refers
       to are decided ({!Cpp.plan_names}, {!Cpp.plan_referenced_names}), the
       constructor structs' fields and storage, and every generated
@@ -172,5 +172,5 @@ val represent_pass_names : string list
 val layout_pass_names : string list
 
 (** The steps run on a unit's Core once its layout is planned
-    ({!Callable_abi.with_foreign}), in order. *)
+    ({!Core_plan.Callable_abi.with_foreign}), in order. *)
 val elaborate_pass_names : string list

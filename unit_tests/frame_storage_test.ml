@@ -140,9 +140,9 @@ let () =
   check "a function's loop has no local plan" (local_holdable (machine (Core.Expr.fresh_rel 1)) 0 = None);
   check "nor a member translation generated no lambda for"
     (local_holdable (loop [(id "t", tree)]) 0 = None);
-  Ownership_ir.Local_passing.record (o, 0) [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded];
+  Ownership_ir.Local_passing.record (o, 0) [None; Some Core_plan.Callable_abi.Borrowed; Some Core_plan.Callable_abi.Forwarded];
   check "the plan is looked up by the member"
-    (Ownership_ir.Local_passing.lookup (o, 0) = Some [None; Some Callable_abi.Borrowed; Some Callable_abi.Forwarded]);
+    (Ownership_ir.Local_passing.lookup (o, 0) = Some [None; Some Core_plan.Callable_abi.Borrowed; Some Core_plan.Callable_abi.Forwarded]);
   check "of another function of the group nothing is recorded" (Ownership_ir.Local_passing.lookup (o, 1) = None);
   let l = loop [(id "p", nat); (id "t", tree); (id "k", nat)] in
   check "a parameter of no runtime value is held by no pointer" (local_holdable l 0 = Some false);

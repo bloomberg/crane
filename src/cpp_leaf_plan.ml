@@ -60,8 +60,8 @@ module Ir = struct
       ( match e with
       | Literal (Uint63 _) -> found := Option.cata (fun r -> [r]) [] (uint63_type ()) @ !found
       | Entity (x, _, _) -> (
-        match Module_plan.eponymous_record_containing u.modules x with
-        | Some {Module_plan.record; _} -> found := record :: !found
+        match Core_plan.Module_plan.eponymous_record_containing u.modules x with
+        | Some {Core_plan.Module_plan.record; _} -> found := record :: !found
         | None -> () )
       | _ -> () );
       Children.expr visitor e
@@ -129,7 +129,7 @@ module Ir = struct
       | Function f ->
         let defines = match f.shape with Definition _ -> true | Declaration _ -> false in
         let owner = fst f.path.outer in
-        [Cpp_resolution.Function {owner; defines; scope = Scope_plan.of_declaration u.modules u.scopes owner} :: frame]
+        [Cpp_resolution.Function {owner; defines; scope = Core_plan.Scope_plan.of_declaration u.modules u.scopes owner} :: frame]
       | Struct s -> [frame; entered frame (Cpp_resolution.Inductive_struct s.ref_ :: template_body s.type_params)]
       | Member_definition m ->
         [frame; entered frame (template_body m.type_params @ [Cpp_resolution.Inductive_struct m.owner])]
@@ -419,7 +419,7 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
   let names_through n = head_names_into_a_struct (unqualified_head n) in
   match d with
   | Function {path = {outer; inner}; return_type; shape = Declaration params; _} ->
-    let scope = Scope_plan.of_declaration ctx.unit.modules ctx.unit.scopes (fst outer) in
+    let scope = Core_plan.Scope_plan.of_declaration ctx.unit.modules ctx.unit.scopes (fst outer) in
     let ctx = next (Function {owner = fst outer; defines = false; scope}) ctx in
     let path = outer :: inner in
     if List.exists (fun (n, _) -> names_through (global_name ctx Type n)) path then Some true
@@ -481,9 +481,9 @@ let rec declared_types layout ?(outer = []) (d : Cpp_ir.Resolved.Decl.t) =
   | Template (tparams, _, inner) -> declared_types layout ~outer:(outer @ tparams) inner
   | Type_alias u -> [(u.name, Cpp_ast.Alias_definition, outer @ u.type_params)]
   | Enum {ref_; _} -> [(ref_, Cpp_ast.Enum_definition, outer)]
-  | Struct {ref_; type_params; _} when Module_plan.is_namespace_scope_ref layout ref_ ->
+  | Struct {ref_; type_params; _} when Core_plan.Module_plan.is_namespace_scope_ref layout ref_ ->
     [(ref_, Cpp_ast.Struct_definition, outer @ type_params)]
-  | Namespace (Some w, ds) when Module_plan.is_namespace_scope_ref layout w.ref_ ->
+  | Namespace (Some w, ds) when Core_plan.Module_plan.is_namespace_scope_ref layout w.ref_ ->
     List.concat_map (declared_types layout ~outer) ds
   | _ -> []
 
@@ -872,7 +872,7 @@ let ctor_alias_declared ctx body : Cpp_ast.declared_in =
     body of its home module, as planned, or outside every module body. *)
 let ctor_alias_visibility scopes : Cpp_ast.declared_in -> _ = function
   | In_struct_of home -> (
-    match Scope_plan.visibility scopes home with
+    match Core_plan.Scope_plan.visibility scopes home with
     | Some v -> v
     | None ->
       CErrors.anomaly
@@ -895,10 +895,10 @@ let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   match (declared, ctx.file) with
   | At_namespace_scope _, _ -> start
   | In_struct_of home, Base.Common.Intf ->
-    {start with in_struct = true; in_template = Scope_plan.templated ctx.unit.scopes home; module_ = Some home}
+    {start with in_struct = true; in_template = Core_plan.Scope_plan.templated ctx.unit.scopes home; module_ = Some home}
   | In_struct_of home, Base.Common.Impl ->
     let out_of_line scope = {scope; Cpp_state.Out_of_line.file_scope_aliases = file_scope_aliases_of Base.Common.Impl} in
-    {start with scope = Option.map out_of_line (Scope_plan.of_module ctx.unit.scopes home); module_ = Some home}
+    {start with scope = Option.map out_of_line (Core_plan.Scope_plan.of_module ctx.unit.scopes home); module_ = Some home}
 
 (* The indices of the type variables writing [t], naming the variables [vl]
    by index, writes, its type constructors written as [uses] says, read off

@@ -921,7 +921,7 @@ val is_shared_variant : GlobRef.t -> bool
 val is_shared_variant_packet : Names.MutInd.t -> Core.Inductive.t -> int -> bool
 
 (** Record that an inductive is stored as a shared variant; done by
-    [Structure_analysis] for every packet {!is_shared_variant_packet}
+    [Core_plan.Structure] for every packet {!is_shared_variant_packet}
     accepts, before rendering. *)
 val add_shared_variant : GlobRef.t -> unit
 
@@ -932,9 +932,9 @@ val fast_variant : unit -> bool
 (** The raw [Set Crane NonAtomicRc] request, before {!non_atomic_rc_for} withholds
     it from a concurrent unit.  It is program-wide, so a decision that has to
     agree across the units of one extraction reads it rather than the per-unit
-    answer: the parameter ownership {!Ownership} settles for the whole program
+    answer: the parameter ownership {!Core_plan.Ownership} settles for the whole program
     in [Extract_env.freeze], before any unit's configuration is decided, and
-    {!Escape.is_reuse_scrutinee}'s analysis runs before any unit's concurrency
+    {!Core_plan.Escape.is_reuse_scrutinee}'s analysis runs before any unit's concurrency
     is decided too.  Everything a unit generates reads {!non_atomic_rc_for}. *)
 val non_atomic_rc_requested : unit -> bool
 

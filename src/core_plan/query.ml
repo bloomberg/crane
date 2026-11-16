@@ -6,7 +6,7 @@
     the type variables a call's arguments instantiate or a C++ compiler
     deduces, how a let-bound lambda is generated, which arguments are class
     dictionaries, and where a class-field call projects statically.  Nothing
-    here reads translation's state or builds C++: {!Core_elaborate} plans on
+    here reads translation's state or builds C++: {!Elaborate} plans on
     it before translation runs. *)
 
 open Names
@@ -585,7 +585,7 @@ type let_lambda =
 
 (** The decision {!let_lambda} names, made from the Core term alone: it is
     the one owner of it, applied once in Core
-    ({!Core_elaborate.generated_definition}), after which translation meets
+    ({!Elaborate.generated_definition}), after which translation meets
     only lambdas it binds or lifts. *)
 let let_lambda ~lex ~n_outer t a b =
   if not (Base.Type_util.own_type_variables ~n_outer [t]) then Bound

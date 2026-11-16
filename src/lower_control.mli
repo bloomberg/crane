@@ -2,14 +2,14 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The {!Control_ir} of a normalized program, lowered from its Core
-    bodies and its recursion plan.  It runs after {!Recursion_plan} has
+    bodies and its recursion plan.  It runs after {!Core_plan.Recursion} has
     chosen each function's strategy and before translation, whose loop
     lowering reads the loops it decided ({!loop}, {!Loop_facts}).
 
     It lowers the loops of direct tail recursion
-    ({!Recursion_plan.tail_loops}): a function, or a local fixpoint of one
+    ({!Core_plan.Recursion.tail_loops}): a function, or a local fixpoint of one
     member, that recurses only by tail calls.  Its
-    body is read as {!Recursion_plan} reads it -- applications whole, a
+    body is read as {!Core_plan.Recursion} reads it -- applications whole, a
     let's body, a match's branches, a coercion's operand, a beta-redex's
     body, a sequential bind's continuation and a ret's value, and a custom
     that is its argument, standing where the term does -- and each of its
@@ -17,7 +17,7 @@
     in is a [Return] of it as it is.
 
     It also lowers the loops of tail modulo cons
-    ({!Recursion_plan.modulo_cons_loops}): a function, or a local fixpoint
+    ({!Core_plan.Recursion.modulo_cons_loops}): a function, or a local fixpoint
     of one member, whose every recursive
     call that is not a tail call is held in the hole of a chain of
     constructors returned is a loop whose turn there is a [Continue_into],
@@ -27,7 +27,7 @@
     [Continue_into]s.
 
     And the loops of the machines with a stack of frames
-    ({!Recursion_plan.frame_loops}): a function recursing by a call that is
+    ({!Core_plan.Recursion.frame_loops}): a function recursing by a call that is
     not a tail call is a loop where each let, or sequential bind, whose
     right-hand side makes a recursive call is a [Resume].  What its machine
     adopts, a local fixpoint calling back into it, is an [Entry] of it.  Loopify lowers
@@ -58,11 +58,11 @@ val empty : t
     and rets are sequential.  With [modulo_cons], a constructor
     application holding a recursive call as the one call of a chain of
     them is a [Continue_into], the chain read as
-    {!Recursion_plan.strategy} reads it.  With [frames], a let or a
+    {!Core_plan.Recursion.strategy} reads it.  With [frames], a let or a
     sequential bind whose right-hand side calls the function is a [Resume]
     of its continuation, the right-hand side read as a body is.  A machine
     adopting the local fixpoint of one member at the occurrence [adopted]
-    ({!Recursion_plan.adoptable}) has a further entry: the fixpoint is an
+    ({!Core_plan.Recursion.adoptable}) has a further entry: the fixpoint is an
     [Entry] where it is applied, entered by a [Continue] of it, or where a
     let binds it, the reads of the let's binder in its scope continuing it.
     An entry's body continues the loop too. *)
@@ -70,7 +70,7 @@ val tail_loop :
   ?modulo_cons:bool ->
   ?frames:bool ->
   ?adopted:Core.Occurrence.t ->
-  effects:Core_effects.t ->
+  effects:Core_plan.Effects.t ->
   target:Control_ir.Loop.t ->
   callee:(depth:int -> Core.Expr.t -> int option) ->
   Core.Expr.t ->
@@ -83,7 +83,7 @@ val tail_loop :
     fixpoint returning another type than its function -- told apart with
     every abbreviation unfolded, as the C++ does not spell them -- for a
     machine has one result. *)
-val lower : methods:(Names.GlobRef.t -> bool) -> Recursion_plan.t -> Core_passes.Phase.normalized Core_passes.Phase.program -> t
+val lower : methods:(Names.GlobRef.t -> bool) -> Core_plan.Recursion.t -> Core_passes.Phase.normalized Core_passes.Phase.program -> t
 
 (** The loop [l] in [t], if it is lowered: a [Control_ir.Term.Loop]. *)
 val loop : t -> Control_ir.Loop.t -> Control_ir.Term.t option

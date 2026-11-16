@@ -68,7 +68,7 @@ let () =
                    body = Core.Expr.fresh_rel 1;
                    occurrence = Core.Occurrence.fresh ()}
   in
-  match Normalize.into_branches ~fresh ~rty:tree (tmp 1, nat, occ) branches rest with
+  match Core_plan.Normalize.into_branches ~fresh ~rty:tree (tmp 1, nat, occ) branches rest with
   | Some [| {Core.Match.Branch.result_type = rty0;
              body = b0; _}; {Core.Match.Branch.result_type = rty1; body = b1; _} |] ->
     check "each branch is of the type of what follows" (rty0 = tree && rty1 = tree);
@@ -117,7 +117,7 @@ let () =
                 pattern = Core.Pattern.Wildcard;
                 body = Core.Expr.Erased_value Core.Erasure_reason.Type_argument} in
   let at n arity =
-    Normalize.into_branches ~fresh ~rty:nat (tmp 1, nat, Core.Occurrence.fresh ())
+    Core_plan.Normalize.into_branches ~fresh ~rty:nat (tmp 1, nat, Core.Occurrence.fresh ())
       (Array.make arity branch) (sized n) in
   check "a size whose copies fit the budget is copied" (Option.has_some (at 15 3));
   check "one more node per copy is refused" (not (Option.has_some (at 17 3)));

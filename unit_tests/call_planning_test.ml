@@ -41,11 +41,11 @@ let unwritten f ~arity =
          {Core.Scheme.solution = Core.Scheme.Type (Core.Type.Hole (Core.Scheme.Hole.fresh ())); source = Core.Scheme.Not_written} ) )
 
 let instantiate ?(lex = Core.Lexenv.empty) ?caller ?(scope = []) use args =
-  Core_elaborate.instantiate ~lex ~expected_core:None ~stated_core:None ~caller ~scope
-    (Core_elaborate.elaborate_arguments ~lex use args)
+  Core_plan.Elaborate.instantiate ~lex ~expected_core:None ~stated_core:None ~caller ~scope
+    (Core_plan.Elaborate.elaborate_arguments ~lex use args)
 
 (* The type the reading gives the callee's variable [i], where it gives one. *)
-let var_type (inst : Elaborated_call.instantiated) i =
+let var_type (inst : Core_plan.Elaborated_call.instantiated) i =
   List.find_map
     (fun (var, ty) -> if Core.Scheme.Var.ordinal var = i then Some ty else None)
     (Base.Core_util.Var_types.bindings inst.tys)
@@ -56,7 +56,7 @@ let unit_path = ModPath.MPfile (DirPath.make [Id.of_string "CP"])
 (* A unit of the given declarations, walked: what lowering reads the
    walk's facts from. *)
 let walk decls =
-  Core_elaborate.structure ~methods:(fun _ _ -> [])
+  Core_plan.Elaborate.structure ~methods:(fun _ _ -> [])
     [(unit_path, List.map (fun d -> (Label.make "d", Core.Module.Structure_item.Declaration d)) decls)]
 
 (* The walk's answers are told apart from the live ones by asking in an
@@ -75,20 +75,20 @@ let () =
   check "a partial application binds the variables it leaves open"
     (var_type partial 1 = Some (v 1) && var_type partial 2 = Some (v 2));
   check "the eta lambda's variables are said to come from it"
-    (Call_tyargs.resolved_from Call_tyargs.Eta_parameter partial.reading);
+    (Core_plan.Call_tyargs.resolved_from Core_plan.Call_tyargs.Eta_parameter partial.reading);
   let colliding = instantiate ~scope:[Id.of_string "T2"] (unwritten f ~arity:2) [a] in
   check "a codomain variable spelled like a caller's is erased, not misread"
     (var_type colliding 2 = Some Core.Type.Unknown && var_type colliding 1 = Some (v 1));
   let self = instantiate ~caller:f (unwritten f ~arity:2) [a] in
   check "a self-call reads its variables as the caller's own"
     (Base.Core_util.Var_types.is_empty self.tys
-    && not (Call_tyargs.resolved_from Call_tyargs.Eta_parameter self.reading));
+    && not (Core_plan.Call_tyargs.resolved_from Core_plan.Call_tyargs.Eta_parameter self.reading));
   let full = instantiate (unwritten f ~arity:2) [a; a] in
   check "a full application leaves its holes to deduction"
-    (Base.Core_util.Var_types.is_empty full.tys && Call_tyargs.holes full.reading <> []);
+    (Base.Core_util.Var_types.is_empty full.tys && Core_plan.Call_tyargs.holes full.reading <> []);
   check "the declared parameters are the callee's, at any arity"
-    (Param_pos.to_list full.params_orig = [v 1; v 1]
-    && Param_pos.to_list partial.params_orig = [v 1; v 1])
+    (Core_plan.Param_pos.to_list full.params_orig = [v 1; v 1]
+    && Core_plan.Param_pos.to_list partial.params_orig = [v 1; v 1])
 
 (* A variable only a function-typed parameter names is one C++ cannot
    deduce, so a partial application fills it from the argument's type. *)
@@ -99,16 +99,16 @@ let () =
                                      result = Core.Type.Arrow {parameter = nat; result = v 1}});
   let partial = instantiate (unwritten f ~arity:1) [g] in
   check "an undeducible hole is filled from the argument's type" (var_type partial 1 = Some nat);
-  check "and says so" (Call_tyargs.resolved_from Call_tyargs.Argument_types partial.reading);
+  check "and says so" (Core_plan.Call_tyargs.resolved_from Core_plan.Call_tyargs.Argument_types partial.reading);
   check "the callee's type is instantiated at the filled reading"
     (partial.callee_type_at_call = Core.Type.Arrow
       {parameter = Core.Type.Arrow {parameter = nat; result = nat};
         result = Core.Type.Arrow {parameter = nat; result = nat}});
   check "its parameters too"
-    (Param_pos.to_list partial.params = [Core.Type.Arrow {parameter = nat; result = nat}; nat]);
+    (Core_plan.Param_pos.to_list partial.params = [Core.Type.Arrow {parameter = nat; result = nat}; nat]);
   let full = instantiate (unwritten f ~arity:1) [g; b] in
   check "a full application is not eta-expanded, so nothing is filled"
-    (not (Call_tyargs.resolved_from Call_tyargs.Argument_types full.reading))
+    (not (Core_plan.Call_tyargs.resolved_from Core_plan.Call_tyargs.Argument_types full.reading))
 
 (* An argument past the callee's arity is applied to its result: the
    instantiation is of the callee's own parameters, and the excess argument
@@ -119,14 +119,14 @@ let () =
   Base.Table.add_frozen_type k (Core.Type.Arrow {parameter = nat; result = nat});
   let over = instantiate (Core.Global_use.monomorphic k) [a; a] in
   check "an over-application's excess is not a parameter"
-    (over.call.excess = [a] && over.call.primary = [a] && Param_pos.to_list over.params = [nat]);
+    (over.call.excess = [a] && over.call.primary = [a] && Core_plan.Param_pos.to_list over.params = [nat]);
   check "its declared position maps to the same parameter"
-    (Option.bind (over.subst_index_of_orig (Param_pos.of_regular ~leading:0 0)) (Param_pos.nth over.params)
+    (Option.bind (over.subst_index_of_orig (Core_plan.Param_pos.of_regular ~leading:0 0)) (Core_plan.Param_pos.nth over.params)
     = Some nat);
   let dummy =
     instantiate (Core.Global_use.monomorphic k) [Core.Expr.Erased_value Core.Erasure_reason.Type_argument; a] in
   check "an erased argument at a value domain stays, so the call's arity does not change"
-    (dummy.call.excess = [a] && dummy.call.roles = [Elaborated_call.Regular; Excess])
+    (dummy.call.excess = [a] && dummy.call.roles = [Core_plan.Elaborated_call.Regular; Excess])
 
 (* The facts the walk records, from the call and the binders of the walk's
    own environment, read back by lowering after the unit is installed.  A
@@ -172,7 +172,7 @@ let () =
             {parameter = id "inst"; parameter_type = cls;
               body = Core.Expr.Lambda {parameter = id "y"; parameter_type = nat; body}}; type_ = dty}] in
   check "the declaration's class-typed parameter is its dictionary"
-    (Core_elaborate.roles t closed 3 = Some [Elaborated_call.Dictionary; Regular; Excess]);
+    (Core_plan.Elaborate.roles t closed 3 = Some [Core_plan.Elaborated_call.Dictionary; Regular; Excess]);
   let lex =
     Core.Lexenv.push
       [ {Core.Lexenv.id = Id.of_string "y"; type_ = nat; role = Core.Lexenv.Value};
@@ -181,26 +181,26 @@ let () =
   in
   let args_closed = [inst (); c; y ()] and args_open = [inst (); y (); y ()] in
   check "a head of the dictionary and a global is closed"
-    (Core_elaborate.closed_head_call ~walk:(Some t) ~lex closed args_closed);
+    (Core_plan.Elaborate.closed_head_call ~walk:(Some t) ~lex closed args_closed);
   check "a head naming a value binder is not"
-    (not (Core_elaborate.closed_head_call ~walk:(Some t) ~lex open_ args_open));
+    (not (Core_plan.Elaborate.closed_head_call ~walk:(Some t) ~lex open_ args_open));
   check "a projection through a kept instance of a polymorphic field is a member template"
-    (Core_elaborate.member_template_call ~walk:(Some t) ~lex member [inst (); y ()]);
+    (Core_plan.Elaborate.member_template_call ~walk:(Some t) ~lex member [inst (); y ()]);
   check "one of a field with no variable of its own is not"
-    (not (Core_elaborate.member_template_call ~walk:(Some t) ~lex plain [inst (); y ()]));
+    (not (Core_plan.Elaborate.member_template_call ~walk:(Some t) ~lex plain [inst (); y ()]));
   check "a field neither mapped nor a singleton's method is no static projection"
-    (Core_elaborate.static_projection_call ~walk:(Some t) ~lex member [inst (); y ()] = None);
+    (Core_plan.Elaborate.static_projection_call ~walk:(Some t) ~lex member [inst (); y ()] = None);
   check "a call of a global Rocq does not know is no closed instance"
-    (not (Core_elaborate.closed_instance_call ~walk:(Some t) ~lex closed args_closed));
+    (not (Core_plan.Elaborate.closed_instance_call ~walk:(Some t) ~lex closed args_closed));
   if not checking then (
     (* Asked in an environment with no binders, the live answer differs:
        the walk's is the one given. *)
     check "the closed head is the walk's, not the asker's environment's"
-      (Core_elaborate.closed_head_call ~walk:(Some t) ~lex:Core.Lexenv.empty closed args_closed);
+      (Core_plan.Elaborate.closed_head_call ~walk:(Some t) ~lex:Core.Lexenv.empty closed args_closed);
     check "the member template is the walk's"
-      (Core_elaborate.member_template_call ~walk:(Some t) ~lex:Core.Lexenv.empty member [inst (); y ()]);
+      (Core_plan.Elaborate.member_template_call ~walk:(Some t) ~lex:Core.Lexenv.empty member [inst (); y ()]);
     check "a singleton dictionary the walk did not find there is none, whatever the asker says"
-      (Core_elaborate.singleton_dictionary_call ~walk:(Some t) ~live:(fun () -> Some (d, d)) (occ ()) = None) )
+      (Core_plan.Elaborate.singleton_dictionary_call ~walk:(Some t) ~live:(fun () -> Some (d, d)) (occ ()) = None) )
 
 (* A shared constant is a construction of a shared variant, which only
    [Set Crane SharedVariant] makes one: setting that option needs a Rocq
@@ -220,11 +220,11 @@ let () =
                                           Core.Expr.Erased_value Core.Erasure_reason.Proof];
                                       occurrence = occ ()} in
   check "without the option no construction is a shared constant"
-    ((not (Base.Table.is_shared_variant ind)) && not (Core_elaborate.shared_constant ~walk:None constant));
+    ((not (Base.Table.is_shared_variant ind)) && not (Core_plan.Elaborate.shared_constant ~walk:None constant));
   let walk = Some (walk [Core.Decl.Value {entity = r "sd"; body = constant; type_ = ty}]) in
-  check "the walk agrees for the occurrence" (not (Core_elaborate.shared_constant ~walk constant));
+  check "the walk agrees for the occurrence" (not (Core_plan.Elaborate.shared_constant ~walk constant));
   check "a term that is no construction is never one"
-    (not (Core_elaborate.shared_constant ~walk (Core.Expr.UInt63 (Uint63.of_int 3))))
+    (not (Core_plan.Elaborate.shared_constant ~walk (Core.Expr.UInt63 (Uint63.of_int 3))))
 
 (* How a match is lowered, from its annotated type and branches alone. *)
 let () =
@@ -245,7 +245,7 @@ let () =
   let ids = [(id "x", nat); (id "y", Core.Type.Arrow {parameter = nat; result = nat})] in
   let one body = [|{Core.Match.Branch.binders = ids; result_type = nat; pattern = pat; body = body}|] in
   let a = declare "ma" nat in
-  let kind = Match_kind.classify rec_ty in
+  let kind = Core_plan.Match_kind.classify rec_ty in
   check "reading the first field is a projection of field 0"
     (kind (one (Core.Expr.fresh_rel 2)) = Record
       {typeclass = false; body = Projection {field = 0; application = Read}});
@@ -264,15 +264,15 @@ let () =
     (kind (one (Core.Expr.fresh_rel 3)) = Record {typeclass = false; body = Destructure});
   check "any other body destructures" (kind (one a) = Record {typeclass = false; body = Destructure});
   check "a class's dictionary is a record match marked typeclass"
-    (Match_kind.classify cls_ty
+    (Core_plan.Match_kind.classify cls_ty
        [|{Core.Match.Branch.binders = [(id "x", nat)]; result_type = nat; pattern = pat; body = Core.Expr.fresh_rel 1}|]
     = Record {typeclass = true; body = Projection {field = 0; application = Read}});
   let both = {Core.Match.Branch.binders = ids; result_type = nat; pattern = pat; body = a} in
   check "two branches are a variant" (kind [|both; both|] = Variant);
-  check "one branch over no record is a variant" (Match_kind.classify nat (one a) = Variant);
+  check "one branch over no record is a variant" (Core_plan.Match_kind.classify nat (one a) = Variant);
   check "a record match is bound in place, a variant is not"
-    (Match_kind.bound_in_place (kind (one a)) && Match_kind.is_record (kind (one a))
-    && (not (Match_kind.bound_in_place Variant)) && not (Match_kind.is_record Variant));
+    (Core_plan.Match_kind.bound_in_place (kind (one a)) && Core_plan.Match_kind.is_record (kind (one a))
+    && (not (Core_plan.Match_kind.bound_in_place Variant)) && not (Core_plan.Match_kind.is_record Variant));
   (* The walk records the kind by the match's occurrence. *)
   let at = occ () in
   let m = Core.Expr.Match {scrutinee_type = rec_ty;
@@ -281,11 +281,11 @@ let () =
                            occurrence = at} in
   let walk = Some (walk [Core.Decl.Value {entity = r "md"; body = m; type_ = nat}]) in
   check "lowering reads the kind the walk recorded"
-    (Core_elaborate.match_kind ~walk rec_ty (one (Core.Expr.fresh_rel 2)) at
+    (Core_plan.Elaborate.match_kind ~walk rec_ty (one (Core.Expr.fresh_rel 2)) at
     = Record {typeclass = false; body = Projection {field = 0; application = Read}});
   if not checking then
     check "the recorded kind stands for the occurrence, whatever type it is asked at"
-      (Core_elaborate.match_kind ~walk nat (one (Core.Expr.fresh_rel 2)) at
+      (Core_plan.Elaborate.match_kind ~walk nat (one (Core.Expr.fresh_rel 2)) at
       = Record {typeclass = false; body = Projection {field = 0; application = Read}})
 
 (* Canonical spines: each call read whole, written once. *)

@@ -793,7 +793,7 @@ val relaxed_higher_kinded_tvars : 'p Core.Type.at -> IntSet.t
 
 (** The type variables a declaration of type [core_ty] relaxes out of its
     template head: applied somewhere in the domains, and spelled nowhere
-    unapplied and nowhere in the codomain.  {!Plan_templates.relax_applied_return}
+    unapplied and nowhere in the codomain.  {!Core_plan.Plan_templates.relax_applied_return}
     turns each such application into its own deduced parameter and leaves the
     original a phantom, so a call must not write a template name there. *)
 val relaxed_applied_core_tvars : 'p Core.Type.at -> IntSet.t

@@ -445,7 +445,7 @@ val id_of_name : Name.t -> Id.t
     identifier). *)
 val unreserve_leading_underscore : string -> string
 
-(** The [n]th temporary of a declaration: the binder {!Normalize} gives a
+(** The [n]th temporary of a declaration: the binder {!Core_plan.Normalize} gives a
     call it takes out of an expression.  The name is in the space Crane
     reserves for itself, which no Rocq binder reaches (see
     {!unreserve_leading_underscore}), so the name alone says what the binding

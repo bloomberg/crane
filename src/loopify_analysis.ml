@@ -331,16 +331,16 @@ let movable ty = (not (is_borrowed ty)) && (ty = Auto || worthwhile_move_type ty
    - outcomes : reset per generated file (Base.State.Unit) *)
 
 (** A constructor field stored behind the smart pointer
-    ({!Pointer_fields.field}). *)
-type ptr_field = Pointer_fields.field = Recursive of int | Boxed of int
+    ({!Core_plan.Pointer_fields.field}). *)
+type ptr_field = Core_plan.Pointer_fields.field = Recursive of int | Boxed of int
 
-let ptr_field_index = Pointer_fields.index
+let ptr_field_index = Core_plan.Pointer_fields.index
 
 (** The pointer fields of the constructor struct [key] in the unit [u], if
     it has any; queried by {!Loopify_tmc.make_cell} to determine which
     fields need [make_shared] wrapping in the direct-struct-construction
     path. *)
-let pointer_fields_of (u : Unit_context.t) key = Pointer_fields.find u.pointer_fields key
+let pointer_fields_of (u : Unit_context.t) key = Core_plan.Pointer_fields.find u.pointer_fields key
 
 (** The arguments of the constructor [c] its struct stores behind the pointer
     in the unit [u], as planned, or [None] where it stores none. *)
@@ -552,12 +552,12 @@ let fixpoint_self (fixpoint : local_fixpoint option) params =
 
 (** A checker matching the calls of the function [member] of a local
     fixpoint to itself, as the recursion plan has them
-    ({!Recursion_plan.member_calls}), each forwarding the self-parameter as
+    ({!Core_plan.Recursion.member_calls}), each forwarding the self-parameter as
     its first argument, which the call site drops.  The other arguments are
     reported the last first, parallel to the parameters a local fixpoint's
     loop is lowered over. *)
 let planned_self_checker ~unit member : call_checker =
-  let calls = (Recursion_plan.member_calls (Unit_context.recursion unit)) member in
+  let calls = (Core_plan.Recursion.member_calls (Unit_context.recursion unit)) member in
   fun e ->
     let planned =
       match e with

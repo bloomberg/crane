@@ -45,7 +45,7 @@ let with_method_ns_for_locals cx ?base (f : unit -> 'a) : 'a =
     on an inductive whose kept parameters are [param_vars], has no C++ spelling
     and must be rendered as [std::any].
 
-    This is the judgement {!Method_registry.create} asks for.  It lives here
+    This is the judgement {!Core_plan.Method_registry.create} asks for.  It lives here
     because it is a question about C++ types, and the registry is deliberately
     kept below the type translation. *)
 let return_type_is_erased cx (param_vars : Id.t list) (ret : Core.Type.t) : bool =

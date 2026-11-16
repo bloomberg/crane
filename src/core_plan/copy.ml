@@ -65,12 +65,12 @@ let call ~ty use body args =
   let domains = Base.Type_util.core_domains ty in
   if List.length params <> List.length domains || List.length args <> List.length params then None
   else
-    (* At the type {!Core_elaborate.declaration_scope} binds the parameter
+    (* At the type {!Elaborate.declaration_scope} binds the parameter
        at, which is the type translation declares it with. *)
     let parameter_type annotated declared =
       match annotated with
       | Core.Type.Open _ -> declared
-      | t -> Core_query.reconcile_parameter_type t declared
+      | t -> Query.reconcile_parameter_type t declared
     in
     (* A parameter passed a variable, or an erased value, is read as it:
        bound by a let, it would be a copy of what the call passes. *)

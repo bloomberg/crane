@@ -193,7 +193,7 @@ val struct_scopes_for : Cpp_state.render_ctx -> Names.GlobRef.t -> Base.Cpp_name
 val global_scopes_for : Unit_context.t -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.scope list
 
 (** {!Cpp_state.wrapper_qualify}. *)
-val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
+val wrapper_qualify : Core_plan.Module_plan.layout -> Names.GlobRef.t -> Base.Cpp_name.t -> Base.Cpp_name.t
 
 (** The name a type is written under from outside the wrapper struct that owns
     it; the name unchanged while that struct's own body is being printed, as
@@ -217,7 +217,7 @@ val access : Cpp_state.render_ctx -> Names.GlobRef.t -> Cpp_resolution.access
     body at the position is a member of, as its plan's scope names it
     ({!Cpp_resolution.Out_of_line_scope}): what entering the function's
     {!Cpp_resolution.Function} frame carries. *)
-val out_of_line_scope : Cpp_state.render_ctx -> Names.GlobRef.t -> Scope_plan.scope option
+val out_of_line_scope : Cpp_state.render_ctx -> Names.GlobRef.t -> Core_plan.Scope_plan.scope option
 
 (** The struct a value of the type is built through, named at the position
     given ({!Cpp_resolution.Built_struct}). *)
@@ -242,14 +242,14 @@ val read_by_a_function : Cpp_state.render_ctx -> Names.GlobRef.t -> bool
     holds, falling back otherwise. *)
 val with_cache :
   Unit_context.t ->
-  (Name_resolution.t -> Names.GlobRef.t -> 'a) ->
+  (Core_plan.Name_resolution.t -> Names.GlobRef.t -> 'a) ->
   (Names.GlobRef.t -> 'a) -> Names.GlobRef.t -> 'a
 
 (** Whether the global is an eponymous record, in the layout given. *)
-val is_eponymous_record_cached : Module_plan.layout -> Names.GlobRef.t -> bool
+val is_eponymous_record_cached : Core_plan.Module_plan.layout -> Names.GlobRef.t -> bool
 
 (** Whether the global is a global-scope enum, in the layout given. *)
-val is_global_scope_enum_cached : Module_plan.layout -> Names.GlobRef.t -> bool
+val is_global_scope_enum_cached : Core_plan.Module_plan.layout -> Names.GlobRef.t -> bool
 
 (** Cached in the unit's context: the C++ inductive kind of the global, if any. *)
 val get_ind_kind_cached : Unit_context.t -> Names.GlobRef.t -> Cpp_ir.Inductive.Kind.t option
@@ -269,7 +269,7 @@ val lookup_method_this_pos : Names.GlobRef.t -> int option
     the method [n] was instantiated at, the ones a call must write: the
     receiver's struct carries its own parameters, and the parameters the
     method's plan drops are not in its signature at all. *)
-val method_type_args : Callable_abi.decided -> Names.GlobRef.t -> 'a list -> 'a list
+val method_type_args : Core_plan.Callable_abi.decided -> Names.GlobRef.t -> 'a list -> 'a list
 
 (** Sets of identifiers ([Names.variable]). *)
 module IdSet : Set.S with type elt = Names.variable
@@ -283,7 +283,7 @@ val module_written : Cpp_state.render_ctx -> Names.ModPath.t
 (** Where the concepts of the module types [mp] declares are declared, if a
     functor declares them: [mp] is the functor's body, an application of it
     or an alias of the application ({!Cpp_state.functor_concept_scopes}). *)
-val functor_concept_scope : Names.ModPath.t -> Module_plan.concept_scope option
+val functor_concept_scope : Names.ModPath.t -> Core_plan.Module_plan.concept_scope option
 
 (** The arguments, after the constrained module, of the concept of the module
     type [kn]: the parameters of the functor declaring it, if [kn] is in its
@@ -294,11 +294,11 @@ val concept_extra_args : Names.ModPath.t -> Names.ModPath.t list
     its declaration and at every reference: named after the functor whose
     body declares it, where one does ({!functor_concept_scope}); qualified
     with its module where another concept shares its name
-    ({!Module_plan.modtype_concept_name}); and otherwise its label
-    ({!Structure_analysis.concept_name_of_label}).  Every site naming a
+    ({!Core_plan.Module_plan.modtype_concept_name}); and otherwise its label
+    ({!Core_plan.Structure.concept_name_of_label}).  Every site naming a
     module-type concept goes through this, so no two can disagree.  The
     names are planned in [layout]. *)
-val modtype_concept_name : Module_plan.layout -> Names.ModPath.t -> string
+val modtype_concept_name : Core_plan.Module_plan.layout -> Names.ModPath.t -> string
 
 (** The file whose namespace a name, written for [key] in the unit of the
     files [unit_files], reaches into: what resolving it notes

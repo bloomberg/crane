@@ -58,6 +58,6 @@ val with_method_ns_for_locals : Translation_state.t -> ?base:Core.Ref.User.Set.t
 (** [return_type_is_erased param_vars ret] -- [ret], the return type of a method
     on an inductive whose kept parameters are [param_vars], has no C++ spelling
     and must be rendered as [std::any].  Pass this to
-    {!Method_registry.create}: the registry needs the judgement but is kept
+    {!Core_plan.Method_registry.create}: the registry needs the judgement but is kept
     below the type translation, so it is told rather than deciding. *)
 val return_type_is_erased : Translation_state.t -> Id.t list -> Core.Type.t -> bool

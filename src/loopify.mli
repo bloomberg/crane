@@ -7,7 +7,7 @@
     and before the finish pipeline ({!Cpp_pipeline}); ControlIR lowering
     ({!Control_to_cpp_ir}) is its main caller.  Each function, method and local fixpoint is
     lowered as the recursion plan decided from its Core body
-    ({!Recursion_plan.strategy}): a [while] loop, a loop tail modulo cons,
+    ({!Core_plan.Recursion.strategy}): a [while] loop, a loop tail modulo cons,
     or a machine with an explicit stack of frames, which keeps deep inputs
     from overflowing the C++ stack.  Each loop must agree with its ControlIR
     ({!Lower_control.loop}); under [CRANE_CHECK_IR] a disagreement is a
@@ -81,7 +81,7 @@ val frame_machine :
 
 (** The recursive calls of the definition [r], each by the occurrence the
     C++ call made of it records: a function's own, in its recursive group's
-    bodies ({!Recursion_plan.calls}), or those of the member of the local
+    bodies ({!Core_plan.Recursion.calls}), or those of the member of the local
     fixpoint a helper lifted for it lowers. *)
 val definition_calls : unit:Unit_context.t -> GlobRef.t -> Core.Occurrence.t list
 

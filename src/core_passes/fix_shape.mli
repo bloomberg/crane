@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** Every fixpoint takes the shape its type says, before anything counts its
-    parameters: {!Normalize}, {!Ownership.summarize}, and translation.
+    parameters: {!Core_plan.Normalize}, {!Core_plan.Ownership.summarize}, and translation.
     It runs among the core passes, after the knot is tied and before fresh
     occurrences are minted.
 

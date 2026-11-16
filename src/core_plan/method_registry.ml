@@ -487,7 +487,7 @@ let register_into
     [State::replace_nth] undeclared).
 
     A call to a method of any type is fine: it is rendered on the receiver,
-    and [Structure_analysis] orders the receiver's struct before the caller's.
+    and [Structure] orders the receiver's struct before the caller's.
     Only a call to a function that is a method of nothing reaches into the
     file's struct.
 

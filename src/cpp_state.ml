@@ -61,11 +61,11 @@ let owned_ref init =
 
 (** The method registry, created once per extraction pass by scanning the
     full Core.Program.t.  Queries go through {!get_method_registry}. *)
-let method_registry : Method_registry.t option ref = owned_ref None
+let method_registry : Core_plan.Method_registry.t option ref = owned_ref None
 
 (** In separate extraction, a pre-built method registry from the full
     structure is used so that cross-module method calls are recognized. *)
-let global_method_registry : Method_registry.t option ref = owned_ref None
+let global_method_registry : Core_plan.Method_registry.t option ref = owned_ref None
 
 let set_global_method_registry reg = global_method_registry := Some reg
 let clear_global_method_registry () = global_method_registry := None
@@ -468,7 +468,7 @@ and tyctor_use = {
     file scope. *)
 module Out_of_line = struct
   type t = {
-    scope : Scope_plan.scope;
+    scope : Core_plan.Scope_plan.scope;
     file_scope_aliases : Id.Set.t;
   }
 end
@@ -495,7 +495,7 @@ type concept_plan = {
 type module_frame = {
   eponymous_type : Names.GlobRef.t option;
   eponymous_record : (Names.GlobRef.t * Core.Record.Field.t list * Core.Inductive.Packet.t) option;
-  method_candidates : Method_registry.method_candidate list;
+  method_candidates : Core_plan.Method_registry.method_candidate list;
   concept_collision : bool;
   promoted : Names.Id.t list option;
 }
@@ -538,7 +538,7 @@ type ctor_alias_plan = {
 }
 
 type plans = {
-  analysis : Structure_analysis.t option;
+  analysis : Core_plan.Structure.t option;
   frames : module_frame Names.MPmap.t;
   concepts : concept_plan Names.MPmap.t;
   ctor_aliases : ctor_alias_plan option;
@@ -667,9 +667,9 @@ let file_scope_aliases_of file =
   | (Base.Common.Intf | Base.Common.Impl), _ -> Id.Set.empty
 
 (** The modules whose module types are file-scope concepts of a functor
-    ({!Module_plan.concept_scope}): a functor's body, an application of the
+    ({!Core_plan.Module_plan.concept_scope}): a functor's body, an application of the
     functor, an alias of the application. *)
-let functor_concept_scopes : (Names.ModPath.t * Module_plan.concept_scope) list ref =
+let functor_concept_scopes : (Names.ModPath.t * Core_plan.Module_plan.concept_scope) list ref =
   owned_list "functor_concept_scopes"
 
 
@@ -697,7 +697,7 @@ let concept_plan plans mp =
 let planned_held_back plans scopes ~file mp =
   match (file : Base.Common.file) with
   | Intf -> (
-    match Scope_plan.frames scopes mp with
+    match Core_plan.Scope_plan.frames scopes mp with
     | Some frames -> List.concat_map (fun m -> (concept_plan plans m).held_back) frames
     | None ->
       CErrors.anomaly
@@ -716,7 +716,7 @@ let class_concept_held_back ctx r = concept_held_back ctx (Class r)
 let element_position mp c =
   if c.frame <> [] then
     CErrors.anomaly (Pp.str "Crane: a module's element is written inside a scope a declaration entered.");
-  {c with module_ = Some mp; visibility = Scope_plan.visibility c.unit.scopes mp}
+  {c with module_ = Some mp; visibility = Core_plan.Scope_plan.visibility c.unit.scopes mp}
 
 (** The globals the unit's function bodies name, planned from the unit's
     installed declarations before either file is rendered ({!Cpp.plan_function_reads}):
@@ -737,17 +737,17 @@ let read_by_a_function r =
   | Some s -> Core.Ref.Can.Set.mem r s
   | None -> false
 
-type accessors = Struct_plan.accessors
+type accessors = Core_plan.Struct_plan.accessors
 
-let no_accessors = Struct_plan.no_accessors
-let add_accessor = Struct_plan.add_accessor
-let add_accessor_ref = Struct_plan.add_accessor_ref
+let no_accessors = Core_plan.Struct_plan.no_accessors
+let add_accessor = Core_plan.Struct_plan.add_accessor
+let add_accessor_ref = Core_plan.Struct_plan.add_accessor_ref
 
 let template_static_accessor_names (u : Unit_context.t) = u.accessors.accessor_names
 
-let is_template_static_accessor_constant (u : Unit_context.t) c = Struct_plan.is_accessor_constant u.accessors c
+let is_template_static_accessor_constant (u : Unit_context.t) c = Core_plan.Struct_plan.is_accessor_constant u.accessors c
 
-let is_template_static_accessor (u : Unit_context.t) mp lbl = Struct_plan.is_accessor u.accessors mp lbl
+let is_template_static_accessor (u : Unit_context.t) mp lbl = Core_plan.Struct_plan.is_accessor u.accessors mp lbl
 
 
 (** Track eponymous type info for method generation. When a module M contains an
@@ -935,7 +935,7 @@ let with_std_names (u : Unit_context.t) = {u with std_names = std_names_of u}
 
     Asking where the name was {i emitted} is the only question that answers
     this; where it was {i declared} in Rocq says the opposite.  The answer is
-    planned before any rendering begins ({!Module_plan.is_namespace_scope_ref}),
+    planned before any rendering begins ({!Core_plan.Module_plan.is_namespace_scope_ref}),
     which is what makes it safe to read from a [.cpp] body printed before the
     [.h] declares the name. *)
 
@@ -962,9 +962,9 @@ let in_unmerged_wrapper_named u short r =
 
 let in_unmerged_wrapper u r = in_unmerged_wrapper_named u (Base.Common.pp_global_name Type r) r
 
-type nested_struct_owner = Struct_plan.nested_struct_owner = Global of GlobRef.t | Module of ModPath.t
+type nested_struct_owner = Core_plan.Struct_plan.nested_struct_owner = Global of GlobRef.t | Module of ModPath.t
 
-let nested_struct_owner_equal = Struct_plan.nested_struct_owner_equal
+let nested_struct_owner_equal = Core_plan.Struct_plan.nested_struct_owner_equal
 
 (** The inductives a module's rendering promoted, under [CRANE_CHECK_IR]:
     the unit's planned ones must be exactly these. *)
@@ -981,7 +981,7 @@ let printed_nested_structs : (string * nested_struct_owner) list ref = Base.Stat
 let printed_nested_struct name owner =
   if Base.Probe.checking () then printed_nested_structs := (name, owner) :: !printed_nested_structs
 
-let add_nested_struct_name = Struct_plan.add_nested_struct_name
+let add_nested_struct_name = Core_plan.Struct_plan.add_nested_struct_name
 
 (** Whether [r] is itself emitted as a struct nested inside another one --
     the case where its own name does not reach a use written outside that
@@ -1006,7 +1006,7 @@ let is_shadowed_global_name (u : Unit_context.t) name r =
   match CString.Map.find_opt name u.nested_structs with
   | Some owners ->
     let owners = List.filter may_shadow owners in
-    owners <> [] && not (List.exists (Struct_plan.nested_struct_owner_covers r) owners)
+    owners <> [] && not (List.exists (Core_plan.Struct_plan.nested_struct_owner_covers r) owners)
   | None -> false
 
 (** The struct a bystander [mp] keeps inside its collision wrapper: its
@@ -1039,39 +1039,39 @@ let bystander_struct_name mp =
 let wrapper_qualify layout (r : GlobRef.t) (name : Base.Cpp_name.t) : Base.Cpp_name.t =
   match r with
   | GlobRef.VarRef _ -> name
-  | _ when Module_plan.is_namespace_scope_ref layout r -> name
+  | _ when Core_plan.Module_plan.is_namespace_scope_ref layout r -> name
   | _ -> (
     let mp = modpath_of_r r in
-    match (Module_plan.wrapper layout mp, name) with
+    match (Core_plan.Module_plan.wrapper layout mp, name) with
     | None, _ | _, Base.Cpp_name.Foreign _ -> name
     | Some (struct_name, role), Base.Cpp_name.Name {scopes = []; base} ->
       let through_child =
-        if role = Module_plan.Bystander then [Base.Cpp_name.Class (bystander_struct_name mp)]
+        if role = Core_plan.Module_plan.Bystander then [Base.Cpp_name.Class (bystander_struct_name mp)]
         else []
       in
       Base.Cpp_name.name (Base.Cpp_name.Class struct_name :: through_child) base
-    | Some (_, Module_plan.Flattened), Base.Cpp_name.Name {scopes = Base.Cpp_name.Global :: _; _} -> name
-    | Some (struct_name, Module_plan.Flattened), Base.Cpp_name.Name {scopes = _ :: inner; base} ->
+    | Some (_, Core_plan.Module_plan.Flattened), Base.Cpp_name.Name {scopes = Base.Cpp_name.Global :: _; _} -> name
+    | Some (struct_name, Core_plan.Module_plan.Flattened), Base.Cpp_name.Name {scopes = _ :: inner; base} ->
       Base.Cpp_name.name (Base.Cpp_name.Class struct_name :: inner) base
-    | Some (struct_name, Module_plan.Bystander), Base.Cpp_name.Name {scopes = first :: _; _} ->
+    | Some (struct_name, Core_plan.Module_plan.Bystander), Base.Cpp_name.Name {scopes = first :: _; _} ->
       if first <> Base.Cpp_name.Global && String.equal (Base.Cpp_name.scope_text first) struct_name then name
       else Base.Cpp_name.within (Base.Cpp_name.Class struct_name) name
     | Some _, _ -> name )
 
 (** The candidate a function the render meets is as a method of [epon_ref]
-    ({!Method_registry.planned_candidate}). *)
+    ({!Core_plan.Method_registry.planned_candidate}). *)
 let planned_method_candidate epon_ref func_ref body ty =
-  Method_registry.planned_candidate (get_method_registry ()) epon_ref func_ref body ty
+  Core_plan.Method_registry.planned_candidate (get_method_registry ()) epon_ref func_ref body ty
 
 (** Check if a function is registered as a method, returning its eponymous type
     and this position if so. *)
 let is_registered_method (func_ref : GlobRef.t) : (GlobRef.t * int) option =
-  Method_registry.is_registered_method (get_method_registry ()) func_ref
+  Core_plan.Method_registry.is_registered_method (get_method_registry ()) func_ref
 
 (** The number of value parameters a registered method takes, receiver
     included; [0] when unknown. *)
 let lookup_method_arity (func_ref : GlobRef.t) : int =
-  Method_registry.lookup_arity (get_method_registry ()) func_ref
+  Core_plan.Method_registry.lookup_arity (get_method_registry ()) func_ref
 
 (** Look up the inductive's type variable positions (0-based indices into the
     function's tys list) for a registered method. These positions correspond to
@@ -1079,12 +1079,12 @@ let lookup_method_arity (func_ref : GlobRef.t) : int =
     receiver object and should be omitted from explicit template arguments in
     method calls. *)
 let lookup_method_ind_tvar_positions (func_ref : GlobRef.t) : int list =
-  Method_registry.lookup_ind_tvar_positions (get_method_registry ()) func_ref
+  Core_plan.Method_registry.lookup_ind_tvar_positions (get_method_registry ()) func_ref
 
 (** Whether a registered method's return type is erased to [std::any] (or
     [bsl::any]). *)
 let method_returns_any (func_ref : GlobRef.t) : bool =
-  Method_registry.method_returns_any (get_method_registry ()) func_ref
+  Core_plan.Method_registry.method_returns_any (get_method_registry ()) func_ref
 
 (** Eponymous records across modules. When a module M contains a record with
     the same name (e.g., module CHT with record CHT), the record fields are
@@ -1095,7 +1095,7 @@ let method_returns_any (func_ref : GlobRef.t) : bool =
     references from other modules need to know how to render the type name
     too, or a reference to CHT from another module would generate
     "CHT::cHT" instead of just "CHT".  That unit-wide answer is planned in
-    {!Module_plan.is_eponymous_record}, which {!Cpp_names.inductive_type_name}
+    {!Core_plan.Module_plan.is_eponymous_record}, which {!Cpp_names.inductive_type_name}
     reads. *)
 
 (** Track current structure's declarations for finding methods from sibling

@@ -38,7 +38,7 @@
     drafted instantiation; one passed to a global, refined against the
     parameter's Core type at the call's reading
     ({!Translation_lambda_params.slot_refined_lambda},
-    {!Core_elaborate.instantiate}).  Its parameters are declared and assigned
+    {!Core_plan.Elaborate.instantiate}).  Its parameters are declared and assigned
     as lowering declares them ({!Translation_lambda_params.lambda_binder_emitted},
     {!Translation_lambda_params.lambda_param_cpp_type},
     {!Translation_lambda_params.lambda_param_assigned}), against the C++ slot the

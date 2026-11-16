@@ -6,7 +6,7 @@
 
 open Translation_state
 open Base.Type_util
-open Core_query
+open Core_plan.Query
 open Cpp_ir.Type
 
 let push ids lex =
@@ -69,12 +69,12 @@ let region cx ~outer ~reads body =
       with_cpp_return_type cx ret (fun () -> construction ~pos ~ret ~slot lex ty r ts)
     (* Only the returned value is generated, at no position. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use;
-                       arguments = (_ :: _ as args)} when Translation_monadic.is_effect cx Core_effects.Return use ->
+                       arguments = (_ :: _ as args)} when Translation_monadic.is_effect cx Core_plan.Effects.Return use ->
       expr ~pos:None ~ret lex (Base.Common.last args)
     (* A sequential bind in an expression is the statements it desugars to. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use;
                        arguments = _ :: _ :: _} when Translation_monadic.is_sequential_effect cx
-                         Core_effects.Bind use ->
+                         Core_plan.Effects.Bind use ->
       stmts ~ret lex e
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} -> call ~pos ~ret ~slot lex use args
     | Core.Expr.Apply {callee = (Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ as f); arguments = args} ->
@@ -84,14 +84,14 @@ let region cx ~outer ~reads body =
     | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> stmts ~ret lex e
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} -> (
       expr ~pos:None ~ret lex scrut;
-      match Core_elaborate.match_kind ~walk:(elaborations cx) typ branches occ with
-      | Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
-      | Match_kind.Custom ->
+      match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with
+      | Core_plan.Match_kind.Record _ -> Array.iter (branch ~ret:pos lex) branches
+      | Core_plan.Match_kind.Custom ->
         let rty = match Array.to_list branches with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ in
         let r = Translation_types.cpp_of_core cx env rty in
         let ret = if is_cpp_unit_type r || Translation_monadic.core_type_is_void_call rty then Some Void else ret in
         Array.iter (branch ~ret lex) branches
-      | Match_kind.Variant ->
+      | Core_plan.Match_kind.Variant ->
         let is_enum =
           match typ with Core.Type.Global_app {head = (Names.GlobRef.IndRef _ as r); _} ->
             Base.Table.is_enum_inductive r | _ -> false
@@ -164,7 +164,7 @@ let region cx ~outer ~reads body =
     | Core.Expr.Match {scrutinee_type = typ; scrutinee = scrut; branches; occurrence = occ} ->
       expr ~pos:None ~ret lex scrut;
       let slot =
-        match Core_elaborate.match_kind ~walk:(elaborations cx) typ branches occ with Match_kind.Record _ ->
+        match Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ branches occ with Core_plan.Match_kind.Record _ ->
           slot | _ -> Translation_slot.empty_slot in
       Array.iter (branch ~ret ~slot lex) branches
     | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
@@ -174,16 +174,16 @@ let region cx ~outer ~reads body =
     (* A sequential bind is its action, generated at no position, then its
        continuation's body as statements under the same return type. *)
     | Core.Expr.Apply {callee = Core.Expr.Global use;
-                       arguments = (_ :: _ :: _ as args)} when Translation_monadic.is_effect cx Core_effects.Bind use ->
-      if Translation_monadic.is_sequential_effect cx Core_effects.Bind use then (
+                       arguments = (_ :: _ :: _ as args)} when Translation_monadic.is_effect cx Core_plan.Effects.Bind use ->
+      if Translation_monadic.is_sequential_effect cx Core_plan.Effects.Bind use then (
         let a, f = Base.Common.last_two args in
         expr ~pos:None ~ret lex a;
         let ids, body = Base.Core_util.collect_lams f in
         stmts ~ret ~slot (push ids lex) body )
       else expr ~pos:None ~ret lex e
     | Core.Expr.Apply {callee = Core.Expr.Global use;
-                       arguments = (_ :: _ as args)} when Translation_monadic.is_effect cx Core_effects.Return use ->
-      if Translation_monadic.is_sequential_effect cx Core_effects.Return use then (
+                       arguments = (_ :: _ as args)} when Translation_monadic.is_effect cx Core_plan.Effects.Return use ->
+      if Translation_monadic.is_sequential_effect cx Core_plan.Effects.Return use then (
         if ret <> Some Void then expr ~pos:ret ~ret lex (Base.Common.last args) )
       else expr ~pos:None ~ret lex e
     | e -> expr ~pos:ret ~ret ~slot lex e
@@ -191,7 +191,7 @@ let region cx ~outer ~reads body =
      ({!Translation_calls.argument_position}), into the call's slot at the
      parameter's Core type. *)
   and call ~pos ~ret ~slot lex (use : Core.Global_use.t) args =
-    match Core_elaborate.planned_instantiation ~walk:(elaborations cx) use args with
+    match Core_plan.Elaborate.planned_instantiation ~walk:(elaborations cx) use args with
     | None -> List.iter (expr ~pos:None ~ret lex) args
     | Some inst ->
       let plan =

@@ -8,7 +8,7 @@
     It rewrites a translated C++ function body into a dispatch loop over a
     stack of frames ({!transform_nontail}).  What the machine keeps across a
     call, which calls enter it, and which values a frame holds by pointer or
-    moves are read from the recursion plan ({!Recursion_plan}), the function's
+    moves are read from the recursion plan ({!Core_plan.Recursion}), the function's
     ControlIR ({!Control_ir}) and the ownership plan ({!Ownership_ir}); this
     module decides only their C++ spelling. *)
 
@@ -599,7 +599,7 @@ let decline_reason ad =
 (** Adopt the local fixpoint [stmt] binds, if the recursion plan says the
     enclosing function's machine may: [planned] holds of the fixpoints some
     member of which calls back into the enclosing function
-    ({!Recursion_plan.adoptable}).
+    ({!Core_plan.Recursion.adoptable}).
 
     The shape is the Y-combinator pair [Translation_local_functions.gen_local_fix_by_ref]
     emits (see {!Loopify_analysis.fixpoint_self}).  A fixpoint whose body calls none of the
@@ -649,7 +649,7 @@ let adopt_local_fix ~unit ~stmts ~planned = function
            whose names another fixpoint may share.  How it is rerouted is
            its shape: one through the self-parameter forwards it as a
            leading argument the entry does not take. *)
-        let entering = (Recursion_plan.entering (Unit_context.recursion unit)) (fst fixpoint.member) in
+        let entering = (Core_plan.Recursion.entering (Unit_context.recursion unit)) (fst fixpoint.member) in
         let reroute e =
           match e with
           | Call (({occurrence = Some o; _} as res), Local id, args)
@@ -760,7 +760,7 @@ type enter_rewrite_ctx = {
       (** The locals the machine's body has declared so far, innermost
           first, each with the statement declaring it: what a continuation
           binds again of what its frame does not keep. *)
-  entered_by : (Recursion_plan.call -> bool) option;
+  entered_by : (Core_plan.Recursion.call -> bool) option;
       (** The calls that enter the machine, as the recursion plan names
           what a point resumes after; [None] where the plan does not
           describe the machine. *)
@@ -878,10 +878,10 @@ let available ctx b = Id.Set.exists (stands_for ctx b) ctx.invariant_params
 
 (** The binders the point [p] has in scope that its continuation binds again
     rather than keeps: each recomputable from binders {!available} or so
-    bound in turn ({!Recursion_plan.recomputable}). *)
-let rebuilt_binders ctx (p : Recursion_plan.resume) =
+    bound in turn ({!Core_plan.Recursion.recomputable}). *)
+let rebuilt_binders ctx (p : Core_plan.Recursion.resume) =
   List.fold_left
-    (fun rebuilt (c : Recursion_plan.recomputable) ->
+    (fun rebuilt (c : Core_plan.Recursion.recomputable) ->
       if List.for_all (fun b -> available ctx b || List.exists (Core.Binder.equal b) rebuilt) c.from then
         c.recomputed :: rebuilt
       else rebuilt )
@@ -933,7 +933,7 @@ let declared_binders binders = function
     it finds live, the innermost local in scope standing for it that
     [keeps] picks.  Under [CRANE_CHECK_IR] every binder it finds live has a
     local in scope standing for it: the frame would otherwise lose it. *)
-let planned_frame ctx ~keeps (p : Recursion_plan.resume) =
+let planned_frame ctx ~keeps (p : Core_plan.Recursion.resume) =
   List.filter_map
     (fun b ->
       match List.filter (fun (x, _) -> stands_for ctx b x) ctx.binders with
@@ -963,7 +963,7 @@ let planned_point ctx id (tgt : binding) =
     | Existing -> binder_of ctx id
     | Declare_static _ -> None
   in
-  match Option.map (Recursion_plan.resumes_binding (Unit_context.recursion ctx.unit)) binder with
+  match Option.map (Core_plan.Recursion.resumes_binding (Unit_context.recursion ctx.unit)) binder with
   | Some [p] -> p
   | Some points ->
     Base.Probe.violation "frame plan"
@@ -976,7 +976,7 @@ let planned_point ctx id (tgt : binding) =
 (** Whether the statement binding [e] to [id] by [tgt] is a point the
     machine resumes at once a call returns, as the recursion plan has it:
     whether the point resuming at the Core binder [id] stands for
-    ({!Recursion_plan.resumes_binding}) resumes after a call that enters the
+    ({!Core_plan.Recursion.resumes_binding}) resumes after a call that enters the
     machine ({!enter_rewrite_ctx.entered_by}).  A statement assigning a
     local declared before it is one branch of a match the Core binds as one
     let, and resumes only if [e] is itself such a call, which the call the
@@ -985,7 +985,7 @@ let planned_point ctx id (tgt : binding) =
     backend's own, or the machine is not one the plan describes. *)
 let planned_resume ctx id (tgt : binding) e =
   let point b =
-    match Recursion_plan.resumes_binding (Unit_context.recursion ctx.unit) b with [p] -> Some p | _ -> None
+    match Core_plan.Recursion.resumes_binding (Unit_context.recursion ctx.unit) b with [p] -> Some p | _ -> None
   in
   match ctx.entered_by with
   | None -> None
@@ -999,7 +999,7 @@ let planned_resume ctx id (tgt : binding) e =
           match (point b, e) with
           | Some p, Call ({occurrence = Some o; _}, _, _) ->
             List.exists
-              (fun (c : Recursion_plan.call) -> entered_by c && Core.Occurrence.equal c.occurrence o)
+              (fun (c : Core_plan.Recursion.call) -> entered_by c && Core.Occurrence.equal c.occurrence o)
               p.after
           | _ -> false )
         (Option.flatten (List.assoc_opt id ctx.binders))
@@ -1041,7 +1041,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
     [If {condition = cond; then_ = rw_then; else_ = rw_else}]
   | Custom_match ({scrutinee = scrut; branches; _} as m) ->
     (* A recursive call in the scrutinee is bound before the match by
-       {!Normalize}; only the branches are left to rewrite. *)
+       {!Core_plan.Normalize}; only the branches are left to rewrite. *)
     [
       Custom_match
         { m with
@@ -1208,7 +1208,7 @@ and rewrite_enter_stmts ctx stmts =
         in
         let passed b =
           List.exists
-            (fun (q : Recursion_plan.passing) ->
+            (fun (q : Core_plan.Recursion.passing) ->
               Core.Binder.equal q.passed b && ctx.points_into q.into
               && List.exists (Core.Occurrence.equal q.call.occurrence) entering )
             p.passes
@@ -1287,7 +1287,7 @@ and rewrite_enter_stmts ctx stmts =
       in
       (* A local the frame keeps is read for the last time where it is
          saved, unless the call the frame is saved for reads it, which the
-         plan says ({!Recursion_plan.resume.read_by_call}); one held by value
+         plan says ({!Core_plan.Recursion.resume.read_by_call}); one held by value
          is moved into the frame there.  One the frame keeps as a pointer is
          pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
          none of those the plan says they do not.  Which a save moves is the
@@ -1319,7 +1319,7 @@ and rewrite_enter_stmts ctx stmts =
             b
             ::
               ( match List.find_opt
-                (fun (c : Recursion_plan.recomputable) -> Core.Binder.equal c.recomputed b) p.recomputable with
+                (fun (c : Core_plan.Recursion.recomputable) -> Core.Binder.equal c.recomputed b) p.recomputable with
                | Some c -> List.concat_map through c.from
                | None -> [] )
           in
@@ -1360,7 +1360,7 @@ and rewrite_enter_stmts ctx stmts =
       ]
     in
     (* Whether the statement resumes is the plan's ({!planned_resume}); the
-       call the frame re-enters by is the one {!Normalize} bound there, the
+       call the frame re-enters by is the one {!Core_plan.Normalize} bound there, the
        whole right-hand side, one call the machine's checker recognises.  A
        statement the plan says nothing of, or one the C++ disagrees with
        the plan about, is a violation, and the machine is not made. *)
@@ -2054,7 +2054,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
     match adopted with
     | None -> entered_by
     | Some (ad, _) ->
-      let adopted_enters (c : Recursion_plan.call) =
+      let adopted_enters (c : Core_plan.Recursion.call) =
         match c.target with
         | Member (o, _) | Entering o -> Core.Occurrence.equal o ad.fixpoint
         | Function _ -> false
@@ -2194,7 +2194,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
                aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top
-     level -- a temporary {!Normalize} made of a call in the function's
+     level -- a temporary {!Core_plan.Normalize} made of a call in the function's
      result -- resumes into the statements after it. *)
   let rewritten_body = rewrite_enter_stmts ctx body in
   (* The adopted entry's handler is that body, rewritten under a context

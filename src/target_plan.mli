@@ -63,7 +63,7 @@ type representation = {
       (** The constants emitted as accessor functions, which a use calls. *)
   nested_structs : (string * Cpp_state.nested_struct_owner) list;
       (** The structs written inside another struct, with their names. *)
-  scopes : Scope_plan.t;
+  scopes : Core_plan.Scope_plan.t;
       (** How a definition written outside its struct's body names the
           struct, for each module emitted as one, and which modules are
           written inside a struct's body. *)
@@ -92,19 +92,19 @@ type t = {
       (** The kinds of the template parameters of each inductive and type
           alias the unit generates, decided once the inductive kinds are
           recorded ({!with_template_kinds}). *)
-  modules : Module_plan.t;
+  modules : Core_plan.Module_plan.t;
       (** Where each declaration lives and what it is called, decided once
           the template-parameter kinds are decided ({!with_layout}). *)
   representation : representation;
       (** How declarations are spelled and stored, decided with the layout
           ({!with_layout}). *)
-  callables : Callable_abi.t list;
+  callables : Core_plan.Callable_abi.t list;
       (** The callable plan of each function and method the unit generates,
           decided once the layout is bound ({!with_layout}). *)
-  instance_methods : (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list;
+  instance_methods : (Names.GlobRef.t * (Names.Id.t * Core_plan.Callable_abi.t) list) list;
       (** The callable plan of each method of each instance's struct, by
           name, decided with the callable plans. *)
-  assumed_callables : (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list;
+  assumed_callables : (Names.GlobRef.t * Core_plan.Param_pos.orig Core_plan.Param_pos.pos list) list;
       (** For each function of the unit that has no callable plan -- a
           custom mapping's, a projection's -- the declared positions of the
           callables its call sites assume it deduces, decided with the
@@ -141,19 +141,19 @@ val with_template_kinds : t -> (Names.GlobRef.t * Cpp_ir.Tparam_kinds.t) list ->
     declarations, the callable plans and the assumed callables. *)
 val with_layout :
   t ->
-  Module_plan.t ->
+  Core_plan.Module_plan.t ->
   representation ->
-  Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list ->
-  (Names.GlobRef.t * Param_pos.orig Param_pos.pos list) list ->
+  Core_plan.Callable_abi.t list * (Names.GlobRef.t * (Names.Id.t * Core_plan.Callable_abi.t) list) list ->
+  (Names.GlobRef.t * Core_plan.Param_pos.orig Core_plan.Param_pos.pos list) list ->
   t
 
 (** The same callable plans, whatever order they were planned in. *)
-val same_callables : Callable_abi.t list -> Callable_abi.t list -> bool
+val same_callables : Core_plan.Callable_abi.t list -> Core_plan.Callable_abi.t list -> bool
 
 (** {!same_callables} for the plans of instances' methods. *)
 val same_instance_methods :
-  (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list ->
-  (Names.GlobRef.t * (Names.Id.t * Callable_abi.t) list) list ->
+  (Names.GlobRef.t * (Names.Id.t * Core_plan.Callable_abi.t) list) list ->
+  (Names.GlobRef.t * (Names.Id.t * Core_plan.Callable_abi.t) list) list ->
   bool
 
 (** The kind decided for [block], if any. *)
