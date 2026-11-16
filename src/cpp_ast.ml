@@ -284,7 +284,7 @@ let starts_with_doc_comment t =
 
 (* Each two of [l] separated by a break, or by a newline where what follows
    opens with a doc comment: an unbroken [}///] or [;///] reads as a
-   trailing comment, which the formatter cannot repair.  What follows is
+   trailing comment, which the layout cannot repair.  What follows is
    [following rest], the items after the break. *)
 let rec join ~following = function
   | [] -> []

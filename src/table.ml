@@ -2133,14 +2133,11 @@ let () =
           | Some i -> chg_flag (max i 0) );
     }
 
-(* This option is passed to clang-format in the -style option. With one
-   exception, if the option is set to "BDE", then bde-format will be called
-   instead of clang-format. *)
+(* Whether the generated C++ is laid out ({!Cpp_layout}): ["None"] keeps
+   the printer's text as written, any other value lays it out.  The values
+   clang-format styles once named are accepted and lay out alike. *)
 let {Goptions.get = format_style} =
-  declare_string_option_and_ref
-    ~key:["Crane"; "Format"; "Style"]
-    ~value:"{BasedOnStyle: LLVM, SeparateDefinitionBlocks: Always}"
-    ()
+  declare_string_option_and_ref ~key:["Crane"; "Format"; "Style"] ~value:"LLVM" ()
 
 let {Goptions.get = bde_dir} =
   declare_string_option_and_ref ~key:["Crane"; "BDE"; "Directory"] ~value:"" ()
