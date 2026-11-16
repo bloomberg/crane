@@ -171,7 +171,7 @@ struct LoopifyGapNestedFix {
                                             UINT64_C(4), List<rose>::nil()),
                                                          List<rose>::nil())),
                                                      List<rose>::nil())));
-  static uint64_t rose_sum_sample(std::monostate _x);
+  static uint64_t rose_sum_sample();
 };
 
 #endif // INCLUDED_LOOPIFY_GAP_NESTED_FIX

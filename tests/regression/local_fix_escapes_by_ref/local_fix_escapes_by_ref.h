@@ -261,7 +261,7 @@ struct LocalFixEscapesByRef {
 
   /// Each step doubles the element and counts one state tick.
   static res<List<uint64_t>> run(const List<uint64_t> &l);
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 template <Monad _tcI0, typename T2>

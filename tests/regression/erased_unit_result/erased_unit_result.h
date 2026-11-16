@@ -2,10 +2,8 @@
 #define INCLUDED_ERASED_UNIT_RESULT
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include <cstdint>
-#include <functional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -61,7 +59,7 @@ struct ErasedUnitResult {
     }
   }
 
-  static bool is_tt(std::monostate u);
+  static bool is_tt();
   static bool
   through_sig(const SigT<crane::obj, std::pair<crane::obj, crane::obj>> &p);
   static inline const bool check =

@@ -334,9 +334,9 @@ struct LoopifyInnerInstanceCall {
         return Monad_itree<Ev>::template ret<std::pair<uint64_t, uint64_t>>(
             std::make_pair(s, UINT64_C(41)));
       };
-  static Itree<Ev, std::pair<uint64_t, uint64_t>> bumped(std::monostate _x);
+  static Itree<Ev, std::pair<uint64_t, uint64_t>> bumped();
   /// 5 is the state, 41 + 1 the value.
-  static Itree<Ev, bool> check(std::monostate _x);
+  static Itree<Ev, bool> check();
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

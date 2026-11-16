@@ -345,6 +345,6 @@ using grammar_entry = SigT<production, production_semty>;
                                 SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                                      std::pair<crane::obj,
                                                crane::obj>>>{}))))));
-uint64_t num_entries(std::monostate _x);
+uint64_t num_entries();
 
 #endif // INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH

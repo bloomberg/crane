@@ -434,7 +434,7 @@ N ConceptAfterUse::sz(const ConceptAfterUse::ty &t) {
   }
 }
 
-bool ConceptAfterUse::check(std::monostate) {
+bool ConceptAfterUse::check() {
   return BinNat::eqb(
       walk<ConceptAfterUse::SizeI>(
           ty::ta(

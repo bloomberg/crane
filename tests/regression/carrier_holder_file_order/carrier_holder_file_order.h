@@ -377,7 +377,7 @@ static_assert(Params<natParams>);
 
 struct CarrierHolderFileOrder {
   static Itree<AllE<typename natParams::ptr, crane::obj>, std::pair<Nat, Nat>>
-  first(std::monostate _x);
+  first();
 };
 
 template <Params _tcI0>

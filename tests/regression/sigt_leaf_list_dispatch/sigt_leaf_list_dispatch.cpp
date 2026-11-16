@@ -15,7 +15,7 @@ domty run(const SigT<uint64_t, crane::fn<crane::obj(std::monostate)>> &e) {
   return e.projT2()(std::monostate{});
 }
 
-bool check(std::monostate) {
+bool check() {
   return wrap_list(
       List<uint64_t>(crane::any_cast<List<crane::obj>>(run(entry_trees))));
 }

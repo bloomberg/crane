@@ -564,7 +564,7 @@ struct BorrowedFieldMovedIntoMethod {
           Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))));
   static Z get(const std::optional<Z> &o);
   /// Each walk is 3 * 8 = 24.
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 #endif // INCLUDED_BORROWED_FIELD_MOVED_INTO_METHOD

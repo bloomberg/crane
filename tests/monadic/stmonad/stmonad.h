@@ -443,8 +443,8 @@ struct STMonadTests {
                                           List<uint64_t>::cons(
                                               UINT64_C(10645),
                                               List<uint64_t>::nil()))))))))));
-  static std::string test_quicksort_ST(std::monostate _x);
-  static std::string test_quicksort_fun(std::monostate _x);
+  static std::string test_quicksort_ST();
+  static std::string test_quicksort_fun();
 };
 
 template <typename F1>

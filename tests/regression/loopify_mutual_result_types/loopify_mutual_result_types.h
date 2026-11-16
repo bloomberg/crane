@@ -372,7 +372,7 @@ struct LoopifyMutualResultTypes {
                  md::mconst(e::add(e::leaf(UINT64_C(2)), e::leaf(UINT64_C(3)))),
                  md::mpair(md::mnull(), md::mconst(e::leaf(UINT64_C(4)))))));
   /// 2 * (1 + 2 + 3 + 4)
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 #endif // INCLUDED_LOOPIFY_MUTUAL_RESULT_TYPES

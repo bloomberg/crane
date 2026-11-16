@@ -270,6 +270,6 @@ using grammar_entry = SigT<production, production_semty>;
                       return Val::vint(crane::any_cast<uint64_t>(i));
                     })))),
             List<grammar_entry>::nil()));
-uint64_t num_entries(std::monostate _x);
+uint64_t num_entries();
 
 #endif // INCLUDED_GRAMMAR_TUPLE_LEAF_CTOR

@@ -439,12 +439,12 @@ STMonadTests::rep_list_nat(List<uint64_t> l,
   return _result;
 }
 
-std::string STMonadTests::test_quicksort_ST(std::monostate) {
+std::string STMonadTests::test_quicksort_ST() {
   List<uint64_t> out = quicksort_ST_mine(input_lst1);
   return list_to_string(std::move(out));
 }
 
-std::string STMonadTests::test_quicksort_fun(std::monostate) {
+std::string STMonadTests::test_quicksort_fun() {
   List<uint64_t> out = quicksort_fun(input_lst1);
   return list_to_string(std::move(out));
 }

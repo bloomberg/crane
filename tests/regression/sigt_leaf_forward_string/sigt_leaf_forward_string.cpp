@@ -14,4 +14,4 @@ Inst::sem my_arg(std::monostate) {
          std::string();
 }
 
-bool check(std::monostate) { return M::run(my_entry, my_arg); }
+bool check() { return M::run(my_entry, my_arg); }

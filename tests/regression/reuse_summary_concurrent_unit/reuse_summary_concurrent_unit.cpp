@@ -63,7 +63,7 @@ void ReuseSummaryConcurrentUnit::test() {
   return;
 }
 
-void ReuseSummaryConcurrentUnit::run(std::monostate) {
+void ReuseSummaryConcurrentUnit::run() {
   {
     test();
     return;

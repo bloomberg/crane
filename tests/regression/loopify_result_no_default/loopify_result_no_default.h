@@ -395,7 +395,7 @@ struct LoopifyResultNoDefault {
   /// A real event type: at void1 the instance is emitted as a bare
   /// Monad_itree, a separate problem.
   enum class Ev { ASK };
-  static Itree<Ev, uint64_t> sum_tree(std::monostate _x);
+  static Itree<Ev, uint64_t> sum_tree();
 };
 
 template <Monad _tcI0, typename T2>

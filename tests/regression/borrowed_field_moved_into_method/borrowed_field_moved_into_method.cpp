@@ -696,7 +696,7 @@ Z BorrowedFieldMovedIntoMethod::get(const std::optional<Z> &o) {
 }
 
 /// Each walk is 3 * 8 = 24.
-bool BorrowedFieldMovedIntoMethod::check(std::monostate) {
+bool BorrowedFieldMovedIntoMethod::check() {
   return BinInt::eqb(
       BinInt::add(
           get(walk<BorrowedFieldMovedIntoMethod::SizeI>(

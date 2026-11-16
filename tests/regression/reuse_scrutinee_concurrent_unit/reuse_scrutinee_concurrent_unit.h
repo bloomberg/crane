@@ -94,8 +94,8 @@ struct ReuseScrutineeConcurrentUnit {
   static uint64_t churn(uint64_t n, const lst &l);
   static void worker(uint64_t n);
   static void test();
-  static void run(std::monostate _x);
-  static uint64_t total(std::monostate _x);
+  static void run();
+  static uint64_t total();
 };
 
 #endif // INCLUDED_REUSE_SCRUTINEE_CONCURRENT_UNIT

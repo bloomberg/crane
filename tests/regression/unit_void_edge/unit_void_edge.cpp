@@ -37,7 +37,7 @@ std::optional<std::monostate> UnitVoidEdge::return_some_tt(uint64_t n) {
   }
 }
 
-void UnitVoidEdge::unit_chain(std::monostate) { return; }
+void UnitVoidEdge::unit_chain() { return; }
 
 void UnitVoidEdge::helper_void(uint64_t _x) {
   return_unit(_x);
@@ -46,13 +46,13 @@ void UnitVoidEdge::helper_void(uint64_t _x) {
 
 uint64_t UnitVoidEdge::use_helper(uint64_t n) { return n; }
 
-uint64_t UnitVoidEdge::match_unit_nontail(std::monostate) {
+uint64_t UnitVoidEdge::match_unit_nontail() {
   {
     return UINT64_C(7);
   }
 }
 
-void UnitVoidEdge::unit_to_unit_with_work(std::monostate) {
+void UnitVoidEdge::unit_to_unit_with_work() {
   {
     return;
   }
@@ -71,7 +71,7 @@ void UnitVoidEdge::conditional_unit(bool b) {
   }
 }
 
-uint64_t UnitVoidEdge::double_match_unit(std::monostate, std::monostate) {
+uint64_t UnitVoidEdge::double_match_unit() {
   {
     {
       return UINT64_C(99);
@@ -87,7 +87,7 @@ uint64_t UnitVoidEdge::get_value(const UnitVoidEdge::tagged_nat &t) {
   return t.tn_value;
 }
 
-void UnitVoidEdge::make_callback(uint64_t n, std::monostate) {
+void UnitVoidEdge::make_callback(uint64_t n) {
   return_unit(n);
   return;
 }

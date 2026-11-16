@@ -477,6 +477,6 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) { /// Cr
 }
 
 /// 2 * (1 + 2 + 3 + 4)
-bool LoopifyMutualResultTypes::check(std::monostate) {
+bool LoopifyMutualResultTypes::check() {
   return sum_e(dbl_e(sample)) == UINT64_C(20);
 }

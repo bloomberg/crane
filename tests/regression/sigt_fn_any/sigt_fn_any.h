@@ -183,6 +183,6 @@ Inst::sem my_arg(std::monostate _x);
 /// C++ now returns true as well.  Kept as a function (not a value) so the C++
 /// test driver can invoke it under try/catch (before the fix it threw
 /// std::bad_any_cast).
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_FN_ANY

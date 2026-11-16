@@ -330,7 +330,7 @@ struct LoopifyPartnerSelfInClosure {
   static uint64_t sum_e(const e &x);
   static uint64_t sum_md(const md &m);
   /// 1 + (2 + (1 + 3))
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 #endif // INCLUDED_LOOPIFY_PARTNER_SELF_IN_CLOSURE

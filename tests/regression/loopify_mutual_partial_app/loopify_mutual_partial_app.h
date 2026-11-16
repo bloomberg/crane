@@ -839,7 +839,7 @@ struct LoopifyMutualPartialApp {
                                        List<md<uint64_t>>::nil()))))));
   /// leaves doubled: 2*(1+2+4) = 14; tags and consts +100 each: 107 + 105 + 101
   /// = 313
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 #endif // INCLUDED_LOOPIFY_MUTUAL_PARTIAL_APP

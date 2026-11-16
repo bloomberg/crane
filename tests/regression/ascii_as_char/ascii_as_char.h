@@ -40,7 +40,7 @@ struct AsciiAsChar {
   /// Looks inside a character: its low bit.
   static bool odd_code(char c);
   static bool decide(char a, char b);
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 template <typename A> struct List {

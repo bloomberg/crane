@@ -97,7 +97,6 @@ struct UnitVoidEdge {
   static void return_unit(uint64_t _x);
   static inline const uint64_t let_bind_void_call = []() {
     return_unit(UINT64_C(5));
-    std::monostate x = std::monostate{};
     {
       return UINT64_C(42);
     }
@@ -129,11 +128,11 @@ struct UnitVoidEdge {
       std::optional<std::monostate>();
   static uint64_t match_option_unit(const std::optional<std::monostate> &o);
   static std::optional<std::monostate> return_some_tt(uint64_t n);
-  static void unit_chain(std::monostate u);
+  static void unit_chain();
   static void helper_void(uint64_t _x);
   static uint64_t use_helper(uint64_t n);
-  static uint64_t match_unit_nontail(std::monostate u);
-  static void unit_to_unit_with_work(std::monostate u);
+  static uint64_t match_unit_nontail();
+  static void unit_to_unit_with_work();
   static void seq_voids(uint64_t _x);
   static void conditional_unit(bool b);
 
@@ -147,7 +146,7 @@ struct UnitVoidEdge {
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
                                 std::monostate{}, List<std::monostate>::nil()));
-  static uint64_t double_match_unit(std::monostate u1, std::monostate u2);
+  static uint64_t double_match_unit();
 
   template <typename F0> static void apply_and_discard(F0 &&f, uint64_t x0_) {
     apply_unit_fn(f, x0_);
@@ -170,9 +169,9 @@ struct UnitVoidEdge {
     tagged_nat t = make_tagged(UINT64_C(99));
     return get_value(std::move(t));
   }();
-  static void make_callback(uint64_t n, std::monostate _x);
+  static void make_callback(uint64_t n);
   static inline const std::monostate test_make_callback = []() {
-    make_callback(UINT64_C(5), std::monostate{});
+    make_callback(UINT64_C(5));
     return std::monostate{};
   }();
 
@@ -202,10 +201,8 @@ struct UnitVoidEdge {
   static inline const std::optional<std::monostate> test_return_some =
       return_some_tt(UINT64_C(1));
   static inline const uint64_t test_use_helper = use_helper(UINT64_C(7));
-  static inline const uint64_t test_match_nontail =
-      match_unit_nontail(std::monostate{});
-  static inline const uint64_t test_double_match =
-      double_match_unit(std::monostate{}, std::monostate{});
+  static inline const uint64_t test_match_nontail = match_unit_nontail();
+  static inline const uint64_t test_double_match = double_match_unit();
   static inline const uint64_t test_take_tt = take_tt;
 };
 

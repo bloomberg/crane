@@ -33,7 +33,7 @@ LocalFixEscapesByRef::run(const List<uint64_t> &l) {
              .runst(UINT64_C(0));
 }
 
-bool LocalFixEscapesByRef::check(std::monostate) {
+bool LocalFixEscapesByRef::check() {
   const auto &_sv = run(List<uint64_t>::cons(
       UINT64_C(1),
       List<uint64_t>::cons(

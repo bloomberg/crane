@@ -35,6 +35,8 @@ void threadtest::test(uint64_t m, uint64_t n) {
 }
 
 void threadtest::test_pure(uint64_t m, uint64_t n) {
-  test(m, n);
-  return;
+  {
+    test(m, n);
+    return;
+  }
 }

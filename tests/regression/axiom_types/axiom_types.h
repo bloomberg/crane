@@ -16,14 +16,14 @@ struct AxiomTypes {
   using MysteryType = crane::obj /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
   static MysteryType mystery_function(MysteryType x0_);
-  static MysteryType use_axiom(std::monostate _x);
+  static MysteryType use_axiom();
 
   struct AxiomRecord {
     uint64_t normal_field;
     MysteryType axiom_field;
   };
 
-  static AxiomRecord make_axiom_record(std::monostate _x);
+  static AxiomRecord make_axiom_record();
   static MysteryType extract_axiom_field(const AxiomRecord &r);
 
   struct AxiomInductive {
@@ -82,9 +82,9 @@ struct AxiomTypes {
     return AxiomInductive_rect<T1>(f, f0, a);
   }
 
-  static AxiomInductive use_axiom_inductive(std::monostate _x);
+  static AxiomInductive use_axiom_inductive();
   static MysteryType axiom_identity(MysteryType x);
-  static MysteryType nested_axiom(std::monostate _x);
+  static MysteryType nested_axiom();
 
   template <typename A> struct list {
     // TYPES
@@ -215,11 +215,11 @@ struct AxiomTypes {
     }
   };
 
-  static list<MysteryType> axiom_list(std::monostate _x);
+  static list<MysteryType> axiom_list();
 
   template <typename T1> static T1 poly_axiom(T1 x) { return x; }
 
-  static MysteryType use_poly_axiom(std::monostate _x);
+  static MysteryType use_poly_axiom();
 };
 
 #endif // INCLUDED_AXIOM_TYPES

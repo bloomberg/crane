@@ -193,6 +193,6 @@ const entry entry_tree =
     mk(UINT64_C(0), [](std::monostate) {
       return List<crane::obj>::cons(run(entry_tree), List<crane::obj>::nil());
     });
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_LEAF_LIST_DISPATCH

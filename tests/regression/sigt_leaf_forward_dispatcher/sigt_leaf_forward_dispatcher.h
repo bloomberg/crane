@@ -176,6 +176,6 @@ bool mk_action(uint64_t n, domty tup);
 domty garg(uint64_t n);
 bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
                     std::pair<crane::obj, crane::obj>> &e);
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_LEAF_FORWARD_DISPATCHER

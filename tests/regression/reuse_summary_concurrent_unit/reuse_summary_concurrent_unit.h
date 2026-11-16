@@ -95,7 +95,7 @@ struct ReuseSummaryConcurrentUnit {
   static inline const uint64_t total = churn(UINT64_C(3), shared);
   static void worker(uint64_t n);
   static void test();
-  static void run(std::monostate _x);
+  static void run();
 };
 
 #endif // INCLUDED_REUSE_SUMMARY_CONCURRENT_UNIT

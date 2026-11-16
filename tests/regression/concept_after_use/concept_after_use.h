@@ -293,7 +293,7 @@ struct ConceptAfterUse {
     static N size_of(ty a0) { return sz(std::move(a0)); }
   };
 
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 template <typename I>

@@ -7,7 +7,6 @@
 #include <deque>
 #include <stdexcept>
 #include <utility>
-#include <variant>
 
 template <typename A, typename P> struct SigT;
 struct rgb;
@@ -122,6 +121,6 @@ using grammar_entry = SigT<production, production_semty>;
                     [](const auto &) { return std::deque<crane::obj>{}; })))),
           std::deque<SigT<std::pair<crane::obj, std::deque<Symbol>>,
                           std::pair<crane::obj, crane::obj>>>{}));
-uint64_t num_entries(std::monostate _x);
+uint64_t num_entries();
 
 #endif // INCLUDED_GRAMMAR_TUPLE_RECORD_CONS

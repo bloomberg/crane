@@ -15,7 +15,7 @@
 ///
 /// Found in Vellvm with the global Set Crane Loopify:
 /// Denotation.combine_lists_varargs, 3 of its 59 errors.
-bool LoopifyFrameLambdaType::check(std::monostate) {
+bool LoopifyFrameLambdaType::check() {
   auto &&_sv = comb<uint64_t, uint64_t>(
       List<uint64_t>::cons(
           UINT64_C(1),

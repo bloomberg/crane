@@ -82,6 +82,6 @@ LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose &r) { /// CraneEnt
   return _result;
 }
 
-uint64_t LoopifyGapNestedFix::rose_sum_sample(std::monostate) {
+uint64_t LoopifyGapNestedFix::rose_sum_sample() {
   return rose_sum(sample_tree);
 }

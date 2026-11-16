@@ -18,12 +18,14 @@ struct RocqBug14843 {
   };
 
   struct M {
-    static void f1(Unit _x);
-    static void f2(Unit _x);
-    static inline const r cf = r{f1, f2};
-    static void f1_(Unit _x);
-    static void f2_(Unit _x);
-    static inline const r_ cf_ = r_{f1_, f2_};
+    static void f1();
+    static void f2();
+    static inline const r cf =
+        r{[](const auto &) { f1(); }, [](const auto &) { f2(); }};
+    static void f1_();
+    static void f2_();
+    static inline const r_ cf_ =
+        r_{[](const auto &) { f1_(); }, [](const auto &) { f2_(); }};
   };
 };
 

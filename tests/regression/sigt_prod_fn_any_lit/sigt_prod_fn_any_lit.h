@@ -186,6 +186,6 @@ using M = Make<Inst>;
 Inst::sem my_arg(std::monostate _x);
 /// In Rocq this is true (predicate 0 =? 0), and the extracted C++ now
 /// agrees.
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_PROD_FN_ANY_LIT

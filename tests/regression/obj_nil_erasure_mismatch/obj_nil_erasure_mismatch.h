@@ -241,7 +241,7 @@ const std::deque<SigT<Sym, crane::fn<semty(Unit)>>> entries =
 /// Directly-callable copies of the two TOPSYM-shaped actions, so the C++
 /// test driver can invoke the "cons" and "nil" cases individually and
 /// observe the mismatched erased shapes.
-std::deque<Prod<Nat, Nat>> top_cons_action(Unit _x);
-std::deque<Prod<Nat, Nat>> top_nil_action(Unit _x);
+std::deque<Prod<Nat, Nat>> top_cons_action();
+std::deque<Prod<Nat, Nat>> top_nil_action();
 
 #endif // INCLUDED_OBJ_NIL_ERASURE_MISMATCH
