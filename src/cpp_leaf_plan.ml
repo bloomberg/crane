@@ -684,7 +684,7 @@ let constrained_structs : GlobRef.t list ref = State.cell State.Unit []
    head; and of every global, how a value naming it reads it, whether a
    function reads it, and, of a type class, whether its concept is held
    back. *)
-let global_names frames globals =
+let global_names u frames globals =
   let decided r = Option.has_some (Common.decided_global_name r) in
   let globals =
     List.sort_uniq GlobRef.UserOrd.compare
@@ -702,7 +702,7 @@ let global_names frames globals =
         match r with
         | GlobRef.IndRef _ ->
           Cpp_resolution.[Inductive_value r; Inductive_scope r; Type_head (Inductive_head, r)]
-          @ if Cpp_names.is_enum_cached r then
+          @ if Cpp_names.is_enum_cached u r then
             Cpp_resolution.[Enumerator_qualifier (Enumerator_value, r); Enumerator_qualifier (Case_label, r)] else []
         | GlobRef.ConstRef _ | GlobRef.ConstructRef _ -> [Cpp_resolution.Value_reference r]
         | GlobRef.VarRef _ -> [] )
@@ -844,7 +844,7 @@ let resolved_for ctx t =
   { ctx with
     names =
       Names_resolved
-        (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names [ctx.frame] (type_globals t)))
+        (Cpp_resolution.resolve (fun _ key -> live_value ctx key) (global_names ctx.unit [ctx.frame] (type_globals t)))
   }
 
 (** {2 Synthesised templates}
@@ -1334,21 +1334,21 @@ let constraint_globals c =
    definitions it makes. *)
 let declaration_names u d =
   let frames = Ir.declaration_frames u d and defined = Ir.defined_types d in
-  global_names frames (Ir.declaration_globals u d)
+  global_names u frames (Ir.declaration_globals u d)
   @ List.concat_map (fun frame -> List.map (fun key -> (frame, key)) defined) frames
   @ Ir.function_scopes d
 
 let unprinted_names u : Cpp_ast.declaration -> _ = function
   | Declaration {decl; _} | Absorbed {decl; _} -> declaration_names u decl
-  | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> type_globals ty) fields)
-  | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map type_globals args)
-  | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
+  | Fields {fields; _} -> global_names u [[]] (List.concat_map (fun (_, ty) -> type_globals ty) fields)
+  | Assertion {subject = Instance {args; _}; _} -> global_names u [[]] (List.concat_map type_globals args)
+  | Global_alias (Alias_of_type {tparams; _}) -> global_names u [[]] (template_param_globals tparams)
   | Forward_declaration {defined = Defined_struct {struct_; tparams; constraint_; _}; _} ->
     ([], Cpp_resolution.Definition (Struct_definition, struct_))
-    :: global_names [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
+    :: global_names u [[]] ((struct_ :: template_param_globals tparams) @ Option.cata constraint_globals [] constraint_)
   | Forward_declaration {defined = Defined_enum r; _} ->
-    ([], Cpp_resolution.Definition (Enum_definition, r)) :: global_names [[]] [r]
-  | Synthesised_template {body; _} -> global_names [[]] (type_globals body)
+    ([], Cpp_resolution.Definition (Enum_definition, r)) :: global_names u [[]] [r]
+  | Synthesised_template {body; _} -> global_names u [[]] (type_globals body)
   | Assertion {subject = Module _; _} | Global_alias (Alias_of_module _) | Modtype_concept _ | Module_alias _
   | Functor_alias _ | Derived_functor _ ->
     []

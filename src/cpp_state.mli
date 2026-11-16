@@ -53,16 +53,6 @@ val clear_global_method_registry : unit -> unit
     @raise CErrors.Anomaly if the registry has not been initialized. *)
 val get_method_registry : unit -> Method_registry.t
 
-(** {2 Name resolution} *)
-
-(** The name-resolution cache, populated once per extraction pass; read
-    through {!get_name_cache}. *)
-val name_cache : Name_resolution.t option ref
-
-(** Return the contents of [name_cache].
-    @raise CErrors.Anomaly if the cache has not been initialized. *)
-val get_name_cache : unit -> Name_resolution.t
-
 (** Print a type variable by its name. *)
 val pp_tvar : Names.variable -> Pp.t
 

@@ -1075,9 +1075,9 @@ let layout_pass_names =
     in it. *)
 let plan_layout u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" prepare_layout;
-  let modules = Cpp.prepare_structure u struc in
+  let modules, names = Cpp.prepare_structure u struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
-  with_plan u acc @@ fun u ->
+  with_plan {u with names = Some names} acc @@ fun u ->
   Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
@@ -1699,7 +1699,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   end_planning ();
   Pipeline_trace.event "emit" "generate_ahead";
   Cpp.generate_ahead u struc;
-  Common.plan_written_files (Cpp.files_named_ahead struc);
+  Common.plan_written_files (Cpp.files_named_ahead u struc);
   Table.plan_written_customs (Cpp.customs_written_ahead u);
   Table.check_written_mapping_headers ();
   Cpp.plan_function_reads ();

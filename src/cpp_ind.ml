@@ -1370,7 +1370,8 @@ let resolver_at ~file spelling frame key =
 (* The names a declaration asks resolution for: those its leaves print and
    those its concepts name. *)
 let requested d =
-  Cpp_leaf_plan.unprinted_names (Translation_state.unit_context ()) d @ Cpp_concepts.names_requested d
+  let u = Translation_state.unit_context () in
+  Cpp_leaf_plan.unprinted_names u d @ Cpp_concepts.names_requested u d
 
 let resolve_tree ~file t =
   Common.without_noting_written_files (fun () ->

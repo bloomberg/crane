@@ -48,6 +48,11 @@ type t = {
       (** How a definition written outside its struct's body names the
           struct, and the other facts of the unit's scope plan: none until
           the plan is decided ({!Cpp.plan_scopes}). *)
+  names : Name_resolution.t option;
+      (** How each inductive of the unit is classified -- enum, record,
+          eponymous record ({!Name_resolution}) --, decided where the
+          structure is analysed ([Cpp.prepare_structure]); none before
+          that, where readers fall back on the table. *)
   loops : Loop_facts.t;
       (** What loop lowering reads of the analysis of the program and of
           the unit: how each function recurses, the loops it lowers to, and

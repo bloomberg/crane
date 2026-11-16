@@ -119,12 +119,12 @@ val unprinted_fields :
   Cpp_state.render_ctx ->
   module_:ModPath.t -> vl:Id.t list -> GlobRef.t -> (string * Cpp_ir.Resolved.Type.t) list -> Cpp_ast.t
 
-(** [global_names frames globals] asks for [globals] by name at each of
-    [frames]: each whose name is decided -- printing decides none -- as a
+(** [global_names u frames globals] asks for [globals] by name at each of
+    [frames], in the unit of context [u]: each whose name is decided -- printing decides none -- as a
     type, as a term and as a type class's concept, an inductive as a value
     too; and each custom's text. *)
 val global_names :
-  Cpp_resolution.frame list -> GlobRef.t list -> (Cpp_resolution.frame * Cpp_resolution.key) list
+  Unit_context.t -> Cpp_resolution.frame list -> GlobRef.t list -> (Cpp_resolution.frame * Cpp_resolution.key) list
 
 (** The globals writing the type names, for {!global_names}: those whose
     names it writes and the customs it is written from. *)

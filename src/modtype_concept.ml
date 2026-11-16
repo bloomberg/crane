@@ -81,7 +81,7 @@ let rec concept_type signature (ty : Cpp_ir.Lowered.Type.t) =
   let args = List.map (concept_type signature) in
   match ty with
   | Entity_application (r, tys, _) when (not (Table.is_custom r)) && is_member_ref signature r ->
-    Member {member = r; enum = Cpp_names.is_enum_cached r; arguments = args tys}
+    Member {member = r; enum = Cpp_names.is_enum_cached (Translation_state.unit_context ()) r; arguments = args tys}
   | Entity_application (r, [], _) when (not (Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
   | Entity_application (r, tys, _) -> (
     match Table.find_custom_opt r with
@@ -133,7 +133,10 @@ let requirements signature = function
       (Array.mapi
          (fun i (p : Core.Inductive.Packet.t) ->
            let r = GlobRef.IndRef (kn, i) in
-           Inductive_member {member = r; enum = Cpp_names.is_enum_cached r; arity = List.length p.type_variables} )
+           Inductive_member
+             { member = r;
+               enum = Cpp_names.is_enum_cached (Translation_state.unit_context ()) r;
+               arity = List.length p.type_variables } )
          ind.packets )
   (* A polymorphic value is a member template, which a requires-expression
      cannot name without choosing its arguments: it asks nothing. *)

@@ -14,6 +14,7 @@ type t = {
   promoted_inductives : Ref.User.Set.t;
   instance_promoted_types : (Names.Id.t * Core.Type.t) list Names.GlobRef.Map.t;
   scopes : Scope_plan.bound;
+  names : Name_resolution.t option;
   loops : Loop_facts.t;
 }
 
@@ -28,6 +29,7 @@ let make ~config =
     promoted_inductives = Ref.User.Set.empty;
     instance_promoted_types = Names.GlobRef.Map.empty;
     scopes = Scope_plan.none;
+    names = None;
     loops = Loop_facts.none }
 let detached = make ~config:{Table.concurrent = false}
 let non_atomic_rc u = Table.non_atomic_rc_for u.config

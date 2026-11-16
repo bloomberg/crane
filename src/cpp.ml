@@ -1423,7 +1423,7 @@ let method_registry_of s =
     implementation, so they must hold one answer, decided before anything
     renders, which is what lets the layout be planned ahead. *)
 let prepare_structure (u : Unit_context.t) s =
-  let analysis =
+  let analysis, names =
     Common.detect_sibling_module_inductive_collisions s;
   method_registry :=
     Some
@@ -1456,11 +1456,10 @@ let prepare_structure (u : Unit_context.t) s =
     (fun _ -> ())
     (fun _ -> ())
     s;
-    name_cache := Some (Name_resolution.create u.modules s);
-    analysis
+    (analysis, Name_resolution.create u.modules s)
   in
   structure_analysis := Some analysis;
-  module_plan_of_analysis analysis
+  (module_plan_of_analysis analysis, names)
 
 (** The functions registered as methods of each packet of the inductive
     [kn] -- its projections apart, which its struct declares itself --, each
@@ -1788,19 +1787,19 @@ let structure_module_names s =
   in
   List.concat_map (fun (mp, sel) -> elems ~in_struct:false mp sel) s
 
-(** The files the unit [s]'s names are written through, read off what was
+(** The files the unit [s], of context [u], names are written through, read off what was
     generated ahead of its files where the printer writes it
     ({!Cpp_demands.globals_of_decl}): the installed finished program's, the
     types of the eponymous record fields generated with it, and what the
     module-type concepts generated with it name; and off the modules of [s]
     ({!structure_module_names}). *)
-let files_named_ahead s =
+let files_named_ahead u s =
   let unit_files = List.filter_map (fun (mp, _) -> if is_modfile mp then Some mp else None) s in
   let globals =
     Unit_program.installed_globals ()
     @ List.concat_map Cpp_demands.globals_of_type (Cpp_ind.generated_record_field_types ())
   in
-  let keys = List.map snd (List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())) in
+  let keys = List.map snd (List.concat_map (Cpp_concepts.concept_body_names u) (Cpp_ind.generated_concepts ())) in
   List.filter_map (Common.file_named_by ~unit_files) globals
   @ List.filter_map (Cpp_names.file_named_by_key ~unit_files) (keys @ structure_module_names s)
   |> List.sort_uniq ModPath.compare
@@ -1816,8 +1815,8 @@ let customs_written_ahead u =
     @ List.concat_map Cpp_leaf_plan.type_globals (Cpp_ind.generated_record_field_types ())
   in
   let keys =
-    Cpp_leaf_plan.global_names [[]] globals
-      @ List.concat_map Cpp_concepts.concept_body_names (Cpp_ind.generated_concepts ())
+    Cpp_leaf_plan.global_names u [[]] globals
+      @ List.concat_map (Cpp_concepts.concept_body_names u) (Cpp_ind.generated_concepts ())
   in
   List.fold_left
     (fun customs -> function _, Cpp_resolution.Custom_text r -> Ref.User.Set.add r customs | _ -> customs)
@@ -2844,7 +2843,7 @@ let plan_nested_structs s =
              (* Moved out of the collision struct holding it to namespace
                 scope, where it is generated ({!plan_concept_prerequisites}). *)
              | _ when Module_plan.is_namespace_scope_ref (layout ()) r -> []
-             | _ -> [(struct_declaration_name (layout ()) ~merged ~promoted ~local r, Global r)] )
+             | _ -> [(struct_declaration_name (unit_context ()) ~merged ~promoted ~local r, Global r)] )
          (Array.to_list ind.packets) )
   in
   let rec elems ~in_struct ~local ?(role = fun _ -> None) parent sel =

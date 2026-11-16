@@ -31,10 +31,10 @@ val pp_assertion : Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
     concept, every name its declaration writes, the globals of the types it
     writes included ({!Cpp_leaf_plan.global_names}); of any other
     declaration, nothing. *)
-val names_requested : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
+val names_requested : Unit_context.t -> Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
 
 (** What the definition of the concept [c] names after its head, at the
     frames inside it: the base concept it refines, the modules that concept
     is applied to past [M] and the globals of the refinements' types, or its
     requirements' names. *)
-val concept_body_names : Modtype_concept.t -> (Cpp_resolution.frame * Cpp_resolution.key) list
+val concept_body_names : Unit_context.t -> Modtype_concept.t -> (Cpp_resolution.frame * Cpp_resolution.key) list

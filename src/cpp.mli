@@ -41,8 +41,9 @@ val method_registry_of : Core.Program.t -> Method_registry.t
 (** Decide the unit's layout before either file is rendered: analyse the
     structure ({!Structure_analysis}), record what rendering reads of the
     analysis, and return the {!Module_plan} it decides, which the unit's
-    context [u] does not hold yet. *)
-val prepare_structure : Unit_context.t -> Core.Program.t -> Module_plan.t
+    context [u] does not hold yet, and how the unit's inductives are
+    classified ({!Unit_context.t.names}). *)
+val prepare_structure : Unit_context.t -> Core.Program.t -> Module_plan.t * Name_resolution.t
 
 (** [registered_methods kn ind] -- each function registered as a method of
     one of [ind]'s inductives, generated with it: the inductive, the
@@ -79,7 +80,7 @@ val generate_decl_ahead : Unit_context.t -> module_:Names.ModPath.t -> Core.Decl
 
 (** The files the names of the unit [s] are written through, read off what
     {!generate_ahead} generated: what its files include. *)
-val files_named_ahead : Core.Program.t -> Names.ModPath.t list
+val files_named_ahead : Unit_context.t -> Core.Program.t -> Names.ModPath.t list
 
 (** The customs the unit's files write, read off what {!generate_ahead}
     generated in the unit given: whose imports its files include. *)

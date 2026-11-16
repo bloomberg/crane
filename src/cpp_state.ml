@@ -76,16 +76,6 @@ let get_method_registry () =
   | Some r -> r
   | None -> CErrors.anomaly (Pp.str "method_registry not initialized.")
 
-(** Pre-computed name resolution cache, populated once per extraction pass.
-    Queries go through {!get_name_cache}. *)
-let name_cache : Name_resolution.t option ref = owned_ref None
-
-(** Get the name cache, raising an anomaly if not initialized. *)
-let get_name_cache () =
-  match !name_cache with
-  | Some c -> c
-  | None -> CErrors.anomaly (Pp.str "name_cache not initialized.")
-
 (** {2 Some utility functions.} *)
 
 (** Pretty-print a type variable as a string. *)
