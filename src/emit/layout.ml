@@ -507,19 +507,21 @@ type doc =
   | Break of string  (** the string when flat, a line break when broken *)
   | Hard  (** a line break *)
   | Group of doc  (** flat when it fits, else its own breaks broken *)
-  | Fill of doc list
+  | Fill of doc list * int option
       (** content, separator, content...: each separator breaks when the
           content after it does not fit, or when the content before it took
-          more than one line *)
+          more than one line; and the width it takes laid out flat, if known
+          ({!flat_width}) *)
   | Fill_next of doc * doc list * int ref
       (** a {!Fill} at a separator, with the line the content before it
           started on *)
   | Nest of int * doc  (** indented past the enclosing indentation *)
   | Align of doc  (** indented to the column it starts at *)
-  | Args of doc list * string * bool
+  | Args of doc list * string * bool * int option
       (** the items of a bracketed list, each but the last ending with its
-          comma, after the opening bracket; the closing bracket; and whether
-          the list is a braced list with no name before it *)
+          comma, after the opening bracket; the closing bracket; whether the
+          list is a braced list with no name before it; and the width the
+          items and the bracket take laid out flat, if known ({!flat_width}) *)
   | Rhs of doc  (** the right side of an assignment, after the operator *)
   | Ternary of doc * doc  (** the branches of a conditional, after its condition *)
   | Body of block * bool  (** a block, whose brace takes a space before it *)
@@ -545,9 +547,51 @@ type mode =
 
 (** The width of [s] in columns: UTF-8 continuation bytes take none. *)
 let width s =
-  let w = ref 0 in
-  String.iter (fun c -> if Char.code c land 0xC0 <> 0x80 then incr w) s;
-  !w
+  let n = String.length s in
+  let rec go i w =
+    if i = n then w else go (i + 1) (if Char.code (String.unsafe_get s i) land 0xC0 <> 0x80 then w + 1 else w)
+  in
+  go 0 0
+
+(** Whether [it] is not a blank line. *)
+let not_blank = function Blank -> false | _ -> true
+
+(** [ds] each paired with [m], ahead of [cmds]. *)
+let with_mode m ds cmds = List.fold_right (fun d acc -> (m, d) :: acc) ds cmds
+
+(** The width [d] takes laid out flat, as {!fits} measures it there, or
+    [None] if it holds a line break or a block, which {!fits} does not
+    measure by width alone.  A list or a fill reads the width it was built
+    with, so that measuring a document built of nested lists is linear. *)
+let rec flat_width = function
+  | Text s | Lit s -> Some (width s)
+  | Break s -> Some (String.length s)
+  | Hard | Body _ -> None
+  | Cat ds -> flat_widths 0 ds
+  | Fill (_, (Some _ as w)) -> w
+  | Fill (ds, None) -> flat_widths 0 ds
+  | Fill_next (s, ds, _) -> flat_widths 0 (s :: ds)
+  | Args (_, _, _, (Some _ as w)) -> w
+  | Args (items, close, _, None) -> args_width items close
+  | Group d | Nest (_, d) | Align d | Anchor d | Flatten d | Choose (d, _) -> flat_width d
+  | Rhs d -> Option.map (fun w -> w + 1) (flat_width d)
+  | Ternary (a, b) -> flat_widths 6 [a; b]
+  | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ | Last_space _ | Operand -> Some 0
+
+and flat_widths acc = function
+  | [] -> Some acc
+  | d :: ds -> ( match flat_width d with Some w -> flat_widths (acc + w) ds | None -> None )
+
+(* A list's items flat, one space between them, and its closing bracket. *)
+and args_width items close =
+  Option.map (fun w -> w + List.length items - 1 + width close) (flat_widths 0 items)
+
+(** A fill of [ds], with the width it takes flat. *)
+let fill ds = Fill (ds, flat_widths 0 ds)
+
+(** A bracketed list of [items] closed by [close], with the width they take
+    flat. *)
+let args items close anonymous = Args (items, close, anonymous, args_width items close)
 
 let interleave sep = function
   | [] -> []
@@ -556,7 +600,7 @@ let interleave sep = function
 (** Whether a block is laid out on more than one line however wide the
     line: it holds more than one item, or a block. *)
 let multiline_block b =
-  match List.filter (fun it -> it <> Blank) b.items with
+  match List.filter not_blank b.items with
   | [] -> false
   | [Stmt elems] -> List.exists (function Block _ -> true | Tok t -> t.kind = Line_comment) elems
   | _ -> true
@@ -564,7 +608,7 @@ let multiline_block b =
 (** The width of block [b] merged into one line, [{ s }], as near as the
     tokens tell, if the style may merge it. *)
 let merged_width b =
-  let items = List.filter (fun it -> it <> Blank) b.items in
+  let items = List.filter not_blank b.items in
   let toks_width elems =
     List.fold_left
       (fun acc e ->
@@ -616,7 +660,7 @@ let fits ?(head = false) ?after rem (cmds : (mode * doc) list) (rest : (int * mo
         | Text s | Lit s ->
           rem := !rem - width s;
           !rem >= 0 && go cmds rest
-        | Cat ds -> go (List.map (fun d -> (m, d)) ds @ cmds) rest
+        | Cat ds -> go (with_mode m ds cmds) rest
         | Break s -> (
           match m with
           | Broken -> true
@@ -626,13 +670,21 @@ let fits ?(head = false) ?after rem (cmds : (mode * doc) list) (rest : (int * mo
         | Hard -> !in_rest
         | Group d -> go ((undecided m, d) :: cmds) rest
         | Nest (_, d) | Align d | Anchor d -> go ((m, d) :: cmds) rest
-        | Fill ds -> go (List.map (fun d -> (undecided m, d)) ds @ cmds) rest
-        | Fill_next (s, ds, _) -> go (List.map (fun d -> (undecided m, d)) (s :: ds) @ cmds) rest
+        | Fill (_, Some w) when undecided m = Flat ->
+          rem := !rem - w;
+          !rem >= 0 && go cmds rest
+        | Fill (ds, _) -> go (with_mode (undecided m) ds cmds) rest
+        | Fill_next (s, ds, _) -> go (with_mode (undecided m) (s :: ds) cmds) rest
         | Choose (a, _) -> go ((m, a) :: cmds) rest
         | Flatten d -> go ((Flat, d) :: cmds) rest
-        | Args (items, close, _) ->
+        | Args (items, close, _, w) -> (
           if undecided m = Broken then true
-          else go (List.map (fun d -> (Flat, d)) (interleave (Text " ") items @ [Text close]) @ cmds) rest
+          else
+            match w with
+            | Some w ->
+              rem := !rem - w;
+              !rem >= 0 && go cmds rest
+            | None -> go (with_mode Flat (interleave (Text " ") items @ [Text close]) cmds) rest )
         | Rhs d -> if undecided m = Broken then true else go ((Flat, Text " ") :: (Flat, d) :: cmds) rest
         | Ternary (a, b) ->
           if undecided m = Broken then go ((Flat, Text " ? ") :: (Broken, a) :: cmds) rest
@@ -661,10 +713,10 @@ let flat_text d =
     | Cat ds -> List.iter go ds
     | Hard | Body _ -> raise Exit
     | Group d | Nest (_, d) | Align d | Anchor d | Flatten d -> go d
-    | Fill ds -> List.iter go ds
+    | Fill (ds, _) -> List.iter go ds
     | Fill_next (s, ds, _) -> List.iter go (s :: ds)
     | Choose (a, _) -> go a
-    | Args (items, close, _) ->
+    | Args (items, close, _, _) ->
       List.iter go (interleave (Text " ") items);
       Buffer.add_string b close
     | Rhs d ->
@@ -853,7 +905,7 @@ let rec seq_doc (nodes : node list) : doc =
               start := k + 1 )
           done;
           let parts = List.rev (seq_doc (sub_list arr !start n) :: !parts) in
-          Align (Fill (interleave (Break " ") parts))
+          Align (fill (interleave (Break " ") parts))
         | None -> atoms_doc nodes )
 
 (** Nodes joined as the input spaced them. *)
@@ -915,7 +967,7 @@ and brack_doc ?(grouping = false) o items cl =
   | [] -> Text (o.text ^ close)
   | first :: more ->
     let first = if grouping then Cat [Operand; first] else first in
-    Cat [Text o.text; Args (first :: more, close, is_punct o "{" && o.gap)]
+    Cat [Text o.text; args (first :: more) close (is_punct o "{" && o.gap)]
 
 (** An item of a list, ending with its comma if it has one. *)
 and item_doc part =
@@ -985,7 +1037,7 @@ let comma_parts (nodes : node list) =
   if !cur <> [] then parts := List.rev !cur :: !parts;
   List.rev !parts
 
-let packed items = Align (Fill (interleave (Break " ") items))
+let packed items = Align (fill (interleave (Break " ") items))
 
 (** The document of a run of a statement's nodes that holds no block of its
     own, its top-level commas separating a packed list. *)
@@ -1319,10 +1371,10 @@ let sort_includes ~stem items =
 (** Whether [d] holds a block laid out on more than one line. *)
 let rec multiline_body = function
   | Body (b, _) -> multiline_block b
-  | Cat ds | Fill ds -> List.exists multiline_body ds
+  | Cat ds | Fill (ds, _) -> List.exists multiline_body ds
   | Fill_next (s, ds, _) -> List.exists multiline_body (s :: ds)
   | Choose (a, _) -> multiline_body a
-  | Args (ds, _, _) -> List.exists multiline_body ds
+  | Args (ds, _, _, _) -> List.exists multiline_body ds
   | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Flatten d -> multiline_body d
   | Ternary (a, b) -> multiline_body a || multiline_body b
   | Text _ | Lit _ | Break _ | Hard | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ | Last_space _
@@ -1338,7 +1390,7 @@ let rec literal_text = function
 (** Whether [d] holds a chain of member calls. *)
 let rec has_chain = function
   | Member_break _ -> true
-  | Cat ds | Fill ds -> List.exists has_chain ds
+  | Cat ds | Fill (ds, _) -> List.exists has_chain ds
   | Fill_next (s, ds, _) -> List.exists has_chain (s :: ds)
   | Choose (a, _) -> has_chain a
   | Group d | Nest (_, d) | Align d | Anchor d | Flatten d -> has_chain d
@@ -1373,8 +1425,8 @@ let nests_deeper d k =
     k < 0
     ||
     match d with
-    | Args (ds, _, _) -> List.exists (go (k - 1)) ds
-    | Cat ds | Fill ds -> List.exists (go k) ds
+    | Args (ds, _, _, _) -> List.exists (go (k - 1)) ds
+    | Cat ds | Fill (ds, _) -> List.exists (go k) ds
     | Fill_next (x, ds, _) -> List.exists (go k) (x :: ds)
     | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Choose (d, _) | Flatten d -> go k d
     | Ternary (a, b) -> go k a || go k b
@@ -1405,7 +1457,7 @@ let smaller_than limit d =
     List.iter (function Stmt es -> elems es | Pp t | Comment t -> add (String.length t.text) | _ -> ()) b.items
   and go = function
     | Text s | Lit s | Break s -> add (String.length s)
-    | Cat ds | Fill ds | Args (ds, _, _) -> List.iter go ds
+    | Cat ds | Fill (ds, _) | Args (ds, _, _, _) -> List.iter go ds
     | Fill_next (x, ds, _) -> List.iter go (x :: ds)
     | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Choose (d, _) | Flatten d -> go d
     | Ternary (a, b) ->
@@ -1444,7 +1496,7 @@ let rec run o (cmds : (int * mode * doc) list) =
             more
         | [] -> () );
       run o rest
-    | Cat ds -> run o (List.map (fun d -> (ind, m, d)) ds @ rest)
+    | Cat ds -> run o (List.fold_right (fun d acc -> (ind, m, d) :: acc) ds rest)
     | Break s ->
       if m = Flat then emit o s else newline o ind;
       run o rest
@@ -1457,8 +1509,8 @@ let rec run o (cmds : (int * mode * doc) list) =
     | Group d ->
       let m = if m = Flat || fits_line o [(Flat, d)] rest then Flat else Broken in
       run o ((ind, m, d) :: rest)
-    | Fill [] -> run o rest
-    | Fill (c :: more) ->
+    | Fill ([], _) -> run o rest
+    | Fill (c :: more, _) ->
       let cm = if m = Flat || fits_line o [(Flat, c)] (if more = [] then rest else []) then Flat else Broken in
       let rest =
         match more with
@@ -1478,15 +1530,15 @@ let rec run o (cmds : (int * mode * doc) list) =
           && fits_line ~head:true o [(Flat, s); (Broken, next)] []
         then
           (* the next item breaks either way: on this line or the next *)
-          if may_try o (Fill more) then
+          if may_try o (Fill (more, None)) then
             let tail = closers rest in
-            let trial sm = (ind, sm, s) :: (ind, m, Operand) :: (ind, m, Fill more) :: tail in
+            let trial sm = (ind, sm, s) :: (ind, m, Operand) :: (ind, m, Fill (more, None)) :: tail in
             if first_better o (trial Flat) (trial Broken) then Flat else Broken
           else Flat
         else Broken
       in
-      run o ((ind, sm, s) :: (ind, m, Operand) :: (ind, m, Fill more) :: rest)
-    | Args (items, close, anonymous) ->
+      run o ((ind, sm, s) :: (ind, m, Operand) :: (ind, m, Fill (more, None)) :: rest)
+    | Args (items, close, anonymous, _) ->
       let rec but_last = function [_] | [] -> [] | x :: xs -> x :: but_last xs in
       let lambda_inside = List.exists multiline_body (but_last items) in
       if (not lambda_inside) && (m = Flat || fits_line o [(Flat, d)] rest) then
@@ -1496,7 +1548,7 @@ let rec run o (cmds : (int * mode * doc) list) =
         o.depth <- (o.depth + if close = ">" then 3 else 1);
         if close = ">" then o.angles <- o.angles + 1;
         let ni = o.last_space + continuation_width in
-        let fill items = Cat [Fill (interleave (Break " ") items); Text close] in
+        let fill items = Cat [Fill (interleave (Break " ") items, None); Text close] in
         let one_per_line items = Cat (interleave (Break " ") (List.map (fun i -> Anchor i) items) @ [Text close]) in
         let aligned d = run o ((o.col, Broken, d) :: rest) in
         (* lists nested deeper than the room left could hold, a level a
@@ -1647,7 +1699,7 @@ and render_block o b ~space ~rest =
     | (Lambda | Compound), _ -> min o.last_space o.line_indent
     | _ -> o.stmt_indent
   in
-  let items = List.filter (fun it -> it <> Blank) b.items in
+  let items = List.filter not_blank b.items in
   let simple = function
     | Stmt elems -> List.for_all (function Tok t -> t.kind <> Line_comment | Block _ -> false) elems
     | _ -> false
