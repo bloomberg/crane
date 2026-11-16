@@ -231,7 +231,7 @@ let () =
                                occurrence = Core.Occurrence.fresh ()};
                    occurrence = Core.Occurrence.fresh ()}
   in
-  Local_types.structure (Translation_calls.local_types_lowering (Translation_state.create ()))
+  Local_types.structure (Translation_calls.local_types_lowering (Translation_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Cpp_print.pp_cpp_type u plans lead tvars ty) ()))
     [(mp "M",
         [term "f" body
           (Core.Type.Arrow

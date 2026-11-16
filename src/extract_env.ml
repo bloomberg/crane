@@ -1373,8 +1373,13 @@ let core_passes cx to_appear : Core.Program.extracted Pipeline_trace.pass list =
     effect_ "local_types" (Local_types.structure (Translation_calls.local_types_lowering cx));
     effect_ "ir_check" Core_check.structure ]
 
+(** A translation context nothing has been lowered in yet, quoting finished
+    types in its reports as the printer spells them. *)
+let translation_context () =
+  Translation_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Cpp_print.pp_cpp_type u plans lead tvars ty) ()
+
 let core_pass_names =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   Pipeline_trace.names (core_passes cx ([], []))
 
 (** {!Normalize}, on the frozen program ({!Core_phase.normalize}), before it is
@@ -1402,7 +1407,7 @@ let normalize_passes cx : Core_phase.normalizing Pipeline_trace.pass list =
       effect_ "canonical" (fun (p : Core_phase.normalizing) -> Core_normalize.check p.structure) ]
 
 let normalize_pass_names =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   Pipeline_trace.names (normalize_passes cx)
 
 (** Under [CRANE_TRACE_PIPELINE], report the fingerprint of [struc]; under
@@ -2074,12 +2079,12 @@ let full_extr cx opaque_access f refs =
     took; trusted callers that supply an already-vetted or internal path
     (e.g. a temporary file) pass [~validate:false]. *)
 let full_extraction ?(validate = true) ~opaque_access f lr =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   if validate then Option.iter Table.claim_output_target f;
   full_extr cx opaque_access f (locate_ref lr)
 
 let full_extraction_exports ?(validate = true) ~opaque_access f lr =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   if validate then Option.iter Table.claim_output_target f;
   full_extr_reading cx opaque_access f (locate_ref lr) exports
 
@@ -2330,7 +2335,7 @@ let print_per_library cx ~dry loops (core : Core_phase.normalized Core_phase.pro
 (** Entry point for extracting specific references to separate files. Each Rocq
     .v file gets its own C++ output file. *)
 let separate_extraction ~opaque_access lr =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   init true false;
   Fun.protect ~finally:reset @@ fun () ->
   let refs, mps = locate_ref lr in
@@ -2351,7 +2356,7 @@ let separate_extraction ~opaque_access lr =
 
 (** Extracts a single reference or module to the Rocq toplevel output. *)
 let simple_extraction ~opaque_access r =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   match locate_ref [r] with
   | ([], [mp]) as p -> full_extr cx opaque_access None p
   | [r], [] ->
@@ -2372,7 +2377,7 @@ let simple_extraction ~opaque_access r =
 (** Extracts an entire Rocq library module to separate C++ files. When
     [is_rec] is true, recursively extracts all dependencies. *)
 let extraction_library ~opaque_access is_rec CAst.{loc; v = m} =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   init true true;
   Fun.protect ~finally:reset @@ fun () ->
   let dir_m =
@@ -2617,7 +2622,7 @@ let print_one_decl cx loops struc mp decl =
 
 (* Show the extraction of the current ongoing proof *)
 let show_extraction ~pstate =
-  let cx = Translation_state.create () in
+  let cx = translation_context () in
   init ~inner:true false false;
   let prf = Declare.Proof.get pstate in
   let sigma, env = Declare.Proof.get_current_context pstate in

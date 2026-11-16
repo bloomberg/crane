@@ -1392,7 +1392,7 @@ let call_type_args cx ~caller ~lex ?(expected_ty : Cpp_ir.Lowered.Type.t option)
              [ Printf.sprintf "variable %d, of which nothing is known, is written as %s"
                  (Scheme.Var.ordinal v)
                  (Pp.string_of_ppcmds
-                    (Cpp_print.pp_cpp_type (Translation_state.unit_context cx) (Translation_state.plans cx) false []
+                    (cx.Translation_state.pp_cpp_type (Translation_state.unit_context cx) (Translation_state.plans cx) false []
                        (Cpp_pipeline.spell_type a))) ]
            | _ -> [] )
          (Callable_abi.template_head abi) )

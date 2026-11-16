@@ -348,12 +348,17 @@ type translation_ctx = {
 type t = {
   mutable ctx : translation_ctx;
   mutable lifted : Cpp_ir.Lowered.Decl.t list option;
+  pp_cpp_type : Unit_context.t -> Cpp_state.plans -> bool -> Names.Id.t list -> Cpp_ir.Resolved.Type.t -> Pp.t;
+      (** The printer's spelling of a finished type ({!Cpp_print.pp_cpp_type}),
+          for a [CRANE_CHECK_IR] report to quote.  The printer comes after
+          lowering, so the driver hands it in when it creates the context. *)
 }
 
 (** The context of an extraction nothing has been lowered in yet: every
     field at the value no declaration, unit or program has set. *)
-let create () =
-  { ctx =
+let create ~pp_cpp_type () =
+  { pp_cpp_type;
+    ctx =
     { input =
         { current_template_head = [];
           current_parameters = [];
