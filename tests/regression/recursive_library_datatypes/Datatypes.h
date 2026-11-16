@@ -18,6 +18,7 @@ namespace Datatypes {
 struct Empty_set;
 enum class Reflect;
 template <typename A, typename B> struct Sum;
+template <typename A, typename E> struct Result;
 template <typename A> struct List;
 enum class Comparison;
 enum class CompareSpecT;
@@ -205,6 +206,88 @@ public:
   template <typename T1, typename F0, typename F1>
   T1 sum_rec(F0 &&f, F1 &&f0) const {
     return this->template sum_rect<T1>(f, f0);
+  }
+};
+
+template <typename A, typename E> struct Result {
+  // TYPES
+  struct Ok {
+    A a0;
+  };
+
+  struct Error {
+    E a0;
+  };
+
+  using variant_t = std::variant<Ok, Error>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Result() {}
+
+  explicit Result(Ok _v) : v_(std::move(_v)) {}
+
+  explicit Result(Error _v) : v_(std::move(_v)) {}
+
+  template <typename CraneU0, typename CraneU1>
+  Result(const Result<CraneU0, CraneU1> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Result<CraneU0, CraneU1>::Ok>(
+                  _other.v())) {
+            const auto &[a0] =
+                std::get<typename Result<CraneU0, CraneU1>::Ok>(_other.v());
+            return Ok{[&]() -> A {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
+                return crane_convert<A>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          } else {
+            const auto &[a0] =
+                std::get<typename Result<CraneU0, CraneU1>::Error>(_other.v());
+            return Error{[&]() -> E {
+              if constexpr (crane_convertible<E, const CraneU1 &>) {
+                return crane_convert<E>(a0);
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          }
+        }()) {}
+
+  static Result<A, E> ok(A a0) { return Result<A, E>(Ok{std::move(a0)}); }
+
+  static Result<A, E> error(E a0) { return Result<A, E>(Error{std::move(a0)}); }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+
+  template <typename T1, typename F0, typename F1>
+    requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+             std::is_invocable_r_v<T1, F1 &, const E &>
+  T1 result_rect(F0 &&f, F1 &&f0) const {
+    if (std::holds_alternative<typename Result<A, E>::Ok>(this->v())) {
+      const auto &[a0] = std::get<typename Result<A, E>::Ok>(this->v());
+      return f(a0);
+    } else {
+      const auto &[a0] = std::get<typename Result<A, E>::Error>(this->v());
+      return f0(a0);
+    }
+  }
+
+  template <typename T1, typename F0, typename F1>
+  T1 result_rec(F0 &&f, F1 &&f0) const {
+    return this->template result_rect<T1>(f, f0);
   }
 };
 
