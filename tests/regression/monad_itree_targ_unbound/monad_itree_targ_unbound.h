@@ -26,8 +26,8 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(), std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<typename I::template m<crane::obj>>(),
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 template <typename I>
@@ -161,16 +161,17 @@ struct Monads {
 
     template <typename CraneA0, typename CraneA1>
     static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>
-    bind(crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)> t,
-         crane::fn<
-             crane::fn<typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(
-                 CraneA0)> k) {
+    bind(
+        crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)> t,
+        crane::fn<crane::fn<
+            typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)> k) {
       return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
         return _tcI0::template bind<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
-            t(s), [=](const std::pair<T1, CraneA0> &sa) {
-              return crane::apply2(k, sa.second, sa.first);
-            });
+            t(s), [=](const std::pair<T1,
+                                      CraneA0> &sa) {
+                    return crane::apply2(k, sa.second, sa.first);
+                  });
       };
     }
   };
@@ -205,7 +206,8 @@ Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> handle(Ev) {
     if (s.eqb(Nat::o())) {
       return itree_vis(
           FailE::Throw_(std::monostate{}),
-          [](crane::obj) -> std::shared_ptr<ITree<std::pair<Nat, T2>>> {
+          [](crane::obj) -> std::shared_ptr<ITree<std::pair<Nat,
+                                                            T2>>> {
             throw std::logic_error("absurd case");
           });
     } else {

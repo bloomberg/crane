@@ -269,9 +269,10 @@ struct FixSharedPtrField {
   static inline const uint64_t test1 = []() -> uint64_t {
     auto _cs =
         mylist::mycons(
-            UINT64_C(10), mylist::mycons(
-                UINT64_C(20),
-                mylist::mycons(UINT64_C(30), mylist::mynil())))
+            UINT64_C(10),
+            mylist::mycons(UINT64_C(20),
+                           mylist::mycons(UINT64_C(30),
+                                          mylist::mynil())))
             .make_list_fn();
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
@@ -291,9 +292,10 @@ struct FixSharedPtrField {
             .make_list_fn();
     uint64_t noise =
         mylist::mycons(
-            UINT64_C(1), mylist::mycons(
-                UINT64_C(2),
-                mylist::mycons(UINT64_C(3), mylist::mynil())))
+            UINT64_C(1),
+            mylist::mycons(UINT64_C(2),
+                           mylist::mycons(UINT64_C(3),
+                                          mylist::mynil())))
             .mylist_sum();
     if (opt.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *opt;
@@ -308,12 +310,13 @@ struct FixSharedPtrField {
   static inline const uint64_t test3 = []() -> uint64_t {
     auto _cs =
         mylist::mycons(
-            UINT64_C(5), mylist::mycons(
-                UINT64_C(10), mylist::mycons(
-                    UINT64_C(15), mylist::mycons(
-                        UINT64_C(20),
-                        mylist::mycons(UINT64_C(25),
-                                       mylist::mynil())))))
+            UINT64_C(5),
+            mylist::mycons(UINT64_C(10),
+                           mylist::mycons(UINT64_C(15),
+                                          mylist::mycons(
+                                              UINT64_C(20),
+                                              mylist::mycons(UINT64_C(25),
+                                                             mylist::mynil())))))
             .make_list_fn();
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;

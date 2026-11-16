@@ -44,8 +44,9 @@ LoopifyOptionMaybe::lookup(uint64_t key,
             typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
       return std::optional<uint64_t>();
     } else {
-      const auto &[a0, a1] = std::get<
-          typename List<std::pair<uint64_t, uint64_t>>::Cons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+              _loop_l->v());
       const auto &[k, v] = a0;
       if (key == k) {
         return std::make_optional<uint64_t>(v);
@@ -70,8 +71,9 @@ LoopifyOptionMaybe::lookup_all(uint64_t key,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename List<std::pair<uint64_t, uint64_t>>::Cons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+              _loop_l->v());
       const auto &[k, v] = a0;
       if (key == k) {
         auto _cell = typename List<uint64_t>::Cons(v, nullptr);

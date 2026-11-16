@@ -171,22 +171,18 @@ struct MemSafetyProbe23 {
   /// Loopifier must handle: owned param + pointer-safe children.
   static std::pair<tree, uint64_t> sum_with_original(const tree &t);
   static inline const uint64_t test_sum_with_original = []() {
-    std::pair<tree, uint64_t> r =
-        sum_with_original(
-            tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                       UINT64_C(7),
-                       tree::node(tree::leaf(), UINT64_C(11), tree::leaf())));
+    std::pair<tree, uint64_t> r = sum_with_original(tree::node(
+        tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(7),
+        tree::node(tree::leaf(), UINT64_C(11), tree::leaf())));
     return (std::move(r).second + tree_sum(std::move(r).first));
   }();
   /// TEST 2: Return a PAIR of the original tree and a transformed copy.
   /// Forces tree to be owned; two recursive calls on children.
   static std::pair<tree, tree> dup_and_double(const tree &t);
   static inline const uint64_t test_dup_and_double = []() {
-    std::pair<tree, tree> r =
-        dup_and_double(
-            tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                       UINT64_C(5),
-                       tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
+    std::pair<tree, tree> r = dup_and_double(tree::node(
+        tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(5),
+        tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
     return (tree_sum(std::move(r).first) + tree_sum(std::move(r).second));
   }();
   /// TEST 3: Store children in result alongside recursive processing.
@@ -196,26 +192,24 @@ struct MemSafetyProbe23 {
   static std::pair<std::pair<tree, tree>, uint64_t>
   collect_children(const tree &t);
   static inline const uint64_t test_collect_children = []() {
-    std::pair<std::pair<tree, tree>, uint64_t> r =
-        collect_children(
-            tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
-                       UINT64_C(5),
-                       tree::node(tree::leaf(), UINT64_C(8), tree::leaf())));
+    std::pair<std::pair<tree, tree>, uint64_t> r = collect_children(tree::node(
+        tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
+        tree::node(tree::leaf(), UINT64_C(8), tree::leaf())));
     auto [p, s] = std::move(r);
     auto [left_child, right_child] = std::move(p);
-    return ((tree_sum(std::move(left_child)) +
-             tree_sum(std::move(right_child))) + s);
+    return (
+        (tree_sum(std::move(left_child)) + tree_sum(std::move(right_child))) +
+        s);
   }();
   /// TEST 4: Recursive function that rebuilds tree with an
   /// ACCUMULATOR that captures the original tree. The accumulator
   /// forces the tree to be owned. Two recursive calls on children.
   static std::pair<tree, uint64_t> sum_with_acc(const tree &t, uint64_t acc);
   static inline const uint64_t test_sum_with_acc = []() {
-    std::pair<tree, uint64_t> r = sum_with_acc(
-        tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                   UINT64_C(2),
-                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-        UINT64_C(0));
+    std::pair<tree, uint64_t> r = sum_with_acc(tree::node(
+        tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
+        tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+                                               UINT64_C(0));
     return (std::move(r).second + tree_sum(std::move(r).first));
   }();
   /// TEST 5: Function using tree_sum on children INSIDE the same
@@ -223,11 +217,9 @@ struct MemSafetyProbe23 {
   /// valid when other operations happen on the same tree.
   static std::pair<uint64_t, uint64_t> interleaved_ops(const tree &t);
   static inline const uint64_t test_interleaved_ops = []() {
-    std::pair<uint64_t, uint64_t> r =
-        interleaved_ops(
-            tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
-                       UINT64_C(5),
-                       tree::node(tree::leaf(), UINT64_C(3), tree::leaf())));
+    std::pair<uint64_t, uint64_t> r = interleaved_ops(tree::node(
+        tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
+        tree::node(tree::leaf(), UINT64_C(3), tree::leaf())));
     return (r.first + r.second);
   }();
   /// TEST 6: Nested tree type — tree of trees. Tests clone correctness
@@ -252,11 +244,9 @@ struct MemSafetyProbe23 {
   /// continuation frames.
   static std::pair<tree, uint64_t> annotate_sizes(const tree &t);
   static inline const uint64_t test_annotate_sizes = []() {
-    std::pair<tree, uint64_t> r =
-        annotate_sizes(
-            tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                       UINT64_C(20),
-                       tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+    std::pair<tree, uint64_t> r = annotate_sizes(tree::node(
+        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+        tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
     return (tree_sum(std::move(r).first) + std::move(r).second);
   }();
 };

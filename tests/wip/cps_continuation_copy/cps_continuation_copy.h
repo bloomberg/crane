@@ -116,9 +116,8 @@ struct CpsContinuationCopy {
   }
 
   static inline const uint64_t run =
-      sumk(ListDef::seq(UINT64_C(0), UINT64_C(100000)), [](uint64_t x) {
-        return x;
-      });
+      sumk(ListDef::seq(UINT64_C(0), UINT64_C(100000)),
+           [](uint64_t x) { return x; });
 };
 
 #endif // INCLUDED_CPS_CONTINUATION_COPY

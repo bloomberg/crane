@@ -9,10 +9,10 @@ ReusePerFunctionOff::incr_reused(ReusePerFunctionOff::lst l) {
           std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut()).a0);
       ReusePerFunctionOff::lst xs = std::move(
           *std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut()).a1);
-      return lst::cons_crane_reuse(
-          std::move(
-              std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut()).a1),
-          (std::move(x) + 1), incr_reused(std::move(xs)));
+      return lst::cons_crane_reuse(std::move(
+          std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut()).a1),
+                                   (std::move(x) + 1),
+                                   incr_reused(std::move(xs)));
     } else {
       if (std::holds_alternative<typename ReusePerFunctionOff::lst::Nil>(
               l.v_mut())) {

@@ -251,9 +251,9 @@ struct FoldClosureAccum {
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
     tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
     return compose_adders(List<tree>::cons(
-                              std::move(t1), List<tree>::cons(
-                                  std::move(t2), List<tree>::cons(
-                                      std::move(t3), List<tree>::nil()))),
+        std::move(t1),
+        List<tree>::cons(std::move(t2),
+                         List<tree>::cons(std::move(t3), List<tree>::nil()))),
                           UINT64_C(0));
   }();
   /// Test with non-zero starting value.
@@ -263,9 +263,9 @@ struct FoldClosureAccum {
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
     tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
     return compose_adders(List<tree>::cons(
-                              std::move(t1), List<tree>::cons(
-                                  std::move(t2), List<tree>::cons(
-                                      std::move(t3), List<tree>::nil()))),
+        std::move(t1),
+        List<tree>::cons(std::move(t2),
+                         List<tree>::cons(std::move(t3), List<tree>::nil()))),
                           UINT64_C(7));
   }();
   /// Invoke the composed function twice — tests if closures survive

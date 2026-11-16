@@ -39,7 +39,7 @@ struct TypeApp {
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T2> &&
-    std::is_invocable_r_v<T2, F1 &, const T1 &>
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
@@ -155,25 +155,28 @@ struct TypeApp {
     }
   }
 
-  static inline const list<uint64_t> test_map =
-      map<uint64_t, uint64_t>([](uint64_t x) {
-        return (x + UINT64_C(1));
-      }, list<uint64_t>::cons(UINT64_C(1), list<uint64_t>::cons(UINT64_C(2), list<uint64_t>::cons(UINT64_C(3), list<uint64_t>::nil()))));
+  static inline const list<uint64_t> test_map = map<uint64_t, uint64_t>(
+      [](uint64_t x) { return (x + UINT64_C(1)); },
+      list<uint64_t>::cons(
+          UINT64_C(1),
+          list<uint64_t>::cons(
+              UINT64_C(2),
+              list<uint64_t>::cons(UINT64_C(3), list<uint64_t>::nil()))));
   static list<uint64_t> map_succ(const list<uint64_t> &x0_);
   static inline const list<uint64_t> test_map_succ =
-      map_succ(list<uint64_t>::cons(UINT64_C(5), list<uint64_t>::cons(
-                                        UINT64_C(6), list<uint64_t>::nil())));
+      map_succ(list<uint64_t>::cons(
+          UINT64_C(5),
+          list<uint64_t>::cons(UINT64_C(6), list<uint64_t>::nil())));
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1> &&
-    std::is_invocable_r_v<T1, F0 &, const T1 &>
+             std::is_invocable_r_v<T1, F0 &, const T1 &>
   static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }
 
-  static inline const uint64_t test_twice = twice<uint64_t>([](uint64_t x) {
-    return (x + UINT64_C(1));
-  }, UINT64_C(10));
+  static inline const uint64_t test_twice = twice<uint64_t>(
+      [](uint64_t x) { return (x + UINT64_C(1)); }, UINT64_C(10));
 
   struct NatMonoid {
     using T = uint64_t;

@@ -77,9 +77,8 @@ template <typename A> struct Sig {
   }
 
   template <typename T1> T1 eq_sig_rect_uncurried(const Sig<A> &v, T1 f) const {
-    return this->template eq_sig_rect<T1>(v, [=, f = std::move(f)]() {
-      return f;
-    }());
+    return this->template eq_sig_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -148,9 +147,8 @@ template <typename A> struct Sig2 {
 
   template <typename T1>
   T1 eq_sig2_rect_uncurried(const Sig2<A> &v, T1 f) const {
-    return this->template eq_sig2_rect<T1>(v, [=, f = std::move(f)]() {
-      return f;
-    }());
+    return this->template eq_sig2_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -239,9 +237,8 @@ template <typename A, typename P> struct SigT {
 
   template <typename T1>
   T1 eq_sigT_rect_uncurried(const SigT<A, P> &v, T1 f) const {
-    return this->template eq_sigT_rect<T1>(v, [=, f = std::move(f)]() {
-      return f;
-    }());
+    return this->template eq_sigT_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -350,9 +347,8 @@ template <typename A, typename P, typename Q> struct SigT2 {
 
   template <typename T1>
   T1 eq_sigT2_rect_uncurried(const SigT2<A, P, Q> &v, T1 f) const {
-    return this->template eq_sigT2_rect<T1>(v, [=, f = std::move(f)]() {
-      return f;
-    }());
+    return this->template eq_sigT2_rect<T1>(
+        v, [=, f = std::move(f)]() { return f; }());
   }
 
   template <typename T1>
@@ -504,13 +500,12 @@ Sig<crane::fn<T2(T1)>> Choice(std::type_identity_t<crane::fn<Sig<T2>(T1)>> h) {
 template <typename T1, typename T2, typename T3>
 SigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>
 Choice2(std::type_identity_t<crane::fn<SigT<T2, T3>(T1)>> h) {
-  return SigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>::existt([=](const T1 &z) {
-    return h(z).projT1();
-  }, [=](const T1 &z) {
-    SigT<T2, T3> s = h(z);
-    auto &[x, a1] = s;
-    return std::move(a1);
-  });
+  return SigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>::existt(
+      [=](const T1 &z) { return h(z).projT1(); }, [=](const T1 &z) {
+        SigT<T2, T3> s = h(z);
+        auto &[x, a1] = s;
+        return std::move(a1);
+      });
 }
 
 template <typename T1>
@@ -532,18 +527,19 @@ dependent_choice(std::type_identity_t<crane::fn<Sig<T1>(T1)>> h, T1 x0) {
       [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
                                                 uint64_t n)
            -> T1 {
-            if (n <= 0) {
-              return x0;
-            } else {
-              uint64_t n_ = n - 1;
-              const auto &_sv = h(_self_f(_self_f, n_));
-              const auto &[x] = _sv;
-              return x;
-            }
-          };
-  auto f = [=, f_impl = std::move(f_impl)](uint64_t n) -> T1 {
-    return f_impl(f_impl, n);
-  };
+        if (n <= 0) {
+          return x0;
+        } else {
+          uint64_t n_ = n - 1;
+          const auto &_sv = h(_self_f(_self_f, n_));
+          const auto &[x] = _sv;
+          return x;
+        }
+      };
+  auto f =
+      [=, f_impl = std::move(f_impl)](uint64_t n) -> T1 {
+        return f_impl(f_impl, n);
+      };
   return Sig<crane::fn<T1(uint64_t)>>::exist(std::move(f));
 }
 
@@ -557,9 +553,8 @@ template <typename T1> const std::optional<T1> error = std::optional<T1>();
 
 template <typename T1> T1 except() { throw std::logic_error("absurd case"); }
 
-template <typename T1> const T1 absurd_set = [](crane::obj) {
-  return except<T1>();
-};
+template <typename T1>
+const T1 absurd_set = [](crane::obj) { return except<T1>(); };
 } // namespace Specif
 
 #endif // INCLUDED_SPECIF

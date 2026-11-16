@@ -79,17 +79,18 @@ bool LoopifyListAccess::member(uint64_t x, const List<uint64_t> &l) {
   }
 }
 
-uint64_t LoopifyListAccess::lookup(uint64_t key,
-                                   const List<std::pair<uint64_t,
-                                                        uint64_t>> &l) {
+uint64_t
+LoopifyListAccess::lookup(uint64_t key,
+                          const List<std::pair<uint64_t, uint64_t>> &l) {
   const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename List<std::pair<uint64_t, uint64_t>>::Nil>(_loop_l->v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<
-          typename List<std::pair<uint64_t, uint64_t>>::Cons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+              _loop_l->v());
       const auto &[k, v] = a0;
       if (k == key) {
         return std::move(v);
@@ -114,8 +115,9 @@ LoopifyListAccess::lookup_all(uint64_t key,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename List<std::pair<uint64_t, uint64_t>>::Cons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+              _loop_l->v());
       const auto &[k, v] = a0;
       if (k == key) {
         auto _cell = typename List<uint64_t>::Cons(v, nullptr);
@@ -191,10 +193,10 @@ bool LoopifyListAccess::elem_at_eq(uint64_t idx, uint64_t val,
         return a0 == val;
       } else {
         _loop_l = crane_raw(a1);
-        _loop_idx = (
-            ((_loop_idx - UINT64_C(1)) > _loop_idx ? 0
-                                                   : (_loop_idx -
-                                                      UINT64_C(1))));
+        _loop_idx =
+            (((_loop_idx - UINT64_C(1)) > _loop_idx ? 0
+                                                    : (_loop_idx -
+                                                       UINT64_C(1))));
       }
     }
   }

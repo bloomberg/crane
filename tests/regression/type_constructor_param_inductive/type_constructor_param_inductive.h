@@ -178,8 +178,9 @@ struct TypeConstructorParamInductive {
                 }
               }()};
             } else {
-              const auto &[a0, a1] = std::get<
-                  typename wrapped<CraneU0, CraneU1>::Pair2>(_other.v());
+              const auto &[a0, a1] =
+                  std::get<typename wrapped<CraneU0, CraneU1>::Pair2>(
+                      _other.v());
               return Pair2{
                   [&]() -> F {
                     if constexpr (crane_convertible<F, const CraneU0 &>) {
@@ -220,8 +221,8 @@ struct TypeConstructorParamInductive {
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, const crane::rebind_t<T1, T2> &> &&
-    std::is_invocable_r_v<T3, F1 &, const crane::rebind_t<T1, T2> &,
-                          const crane::rebind_t<T1, T2> &>
+             std::is_invocable_r_v<T3, F1 &, const crane::rebind_t<T1, T2> &,
+                                   const crane::rebind_t<T1, T2> &>
   static T3 wrapped_rect(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
     if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
       const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
@@ -240,23 +241,36 @@ struct TypeConstructorParamInductive {
   static uint64_t size_list(const wrapped<List<crane::obj>, uint64_t> &w);
   static uint64_t
   size_opt(const wrapped<std::optional<crane::obj>, uint64_t> &w);
-  static inline const uint64_t total =
-      (((size_list(
-             wrapped<List<crane::obj>, uint64_t>::wrap(
-                 List<uint64_t>::cons(
-                     UINT64_C(1), List<uint64_t>::cons(
-                         UINT64_C(2), List<uint64_t>::cons(
-                             UINT64_C(3), List<uint64_t>::nil()))))) +
-         size_list(wrapped<List<crane::obj>, uint64_t>::pair2(
-                       List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
-                       List<uint64_t>::cons(
-                           UINT64_C(2), List<uint64_t>::cons(
-                               UINT64_C(3), List<uint64_t>::nil()))))) +
-        size_opt(wrapped<std::optional<crane::obj>, uint64_t>::wrap(
-                     std::make_optional<uint64_t>(UINT64_C(1))))) + size_opt(
-           wrapped<std::optional<crane::obj>, uint64_t>::pair2(
-               std::make_optional<uint64_t>(UINT64_C(1)),
-               std::optional<uint64_t>())));
+  static inline const uint64_t total = (((size_list(wrapped<List<crane::obj>,
+                                                            uint64_t>::wrap(List<
+                                              uint64_t>::cons(
+                                              UINT64_C(1),
+                                              List<uint64_t>::cons(
+                                                  UINT64_C(2),
+                                                  List<uint64_t>::cons(
+                                                      UINT64_C(3),
+                                                      List<uint64_t>::nil()))))) +
+                                          size_list(wrapped<List<crane::obj>,
+                                                            uint64_t>::pair2(
+                                              List<uint64_t>::cons(
+                                                  UINT64_C(1),
+                                                  List<uint64_t>::nil()),
+                                              List<uint64_t>::cons(
+                                                  UINT64_C(2),
+                                                  List<uint64_t>::cons(
+                                                      UINT64_C(3),
+                                                      List<uint64_t>::nil()))))) +
+                                         size_opt(
+                                             wrapped<std::optional<crane::obj>,
+                                                     uint64_t>::wrap(
+                                                 std::make_optional<uint64_t>(
+                                                     UINT64_C(1))))) +
+                                        size_opt(
+                                            wrapped<std::optional<crane::obj>,
+                                                    uint64_t>::pair2(
+                                                std::make_optional<uint64_t>(
+                                                    UINT64_C(1)),
+                                                std::optional<uint64_t>())));
 };
 
 #endif // INCLUDED_TYPE_CONSTRUCTOR_PARAM_INDUCTIVE

@@ -125,7 +125,8 @@ struct NumeralEdge {
   static inline const uint64_t test_arg = take_nat(UINT64_C(42));
   /// 7. Numeral in list
   static inline const List<uint64_t> nat_list = List<uint64_t>::cons(
-      UINT64_C(1), List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
           UINT64_C(2),
           List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
   /// 8. Numeral in option
@@ -139,12 +140,11 @@ struct NumeralEdge {
   /// 11. Comparison with numeral
   static bool is_big(uint64_t n);
   /// 12. Multiple Z values in one function
-  static inline const int64_t z_arith =
-      static_cast<int64_t>(static_cast<uint64_t>(INT64_C(10)) + static_cast<
-                               uint64_t>(
-                               static_cast<int64_t>(
-                                   static_cast<uint64_t>(INT64_C(3)) *
-                                   static_cast<uint64_t>(INT64_C(7)))));
+  static inline const int64_t z_arith = static_cast<int64_t>(
+      static_cast<uint64_t>(INT64_C(10)) +
+      static_cast<uint64_t>(
+          static_cast<int64_t>(static_cast<uint64_t>(INT64_C(3)) *
+                               static_cast<uint64_t>(INT64_C(7)))));
   /// 13. Negative Z in a pair
   static inline const std::pair<int64_t, int64_t> z_pair =
       std::make_pair(INT64_C(-42), INT64_C(42));

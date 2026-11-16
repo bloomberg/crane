@@ -136,10 +136,11 @@ struct ListDepTypeErasure {
   };
 
   using carrier = crane::obj;
-  static inline const dyn d = dyn{
-      List<crane::obj>::cons(UINT64_C(1), List<crane::obj>::cons(
-                                 UINT64_C(2), List<crane::obj>::cons(
-                                     UINT64_C(3), List<crane::obj>::nil())))};
+  static inline const dyn d = dyn{List<crane::obj>::cons(
+      UINT64_C(1), List<crane::obj>::cons(
+                       UINT64_C(2), List<crane::obj>::cons(
+                                        UINT64_C(3),
+                                        List<crane::obj>::nil())))};
   static uint64_t dlen(const dyn &x);
 };
 

@@ -19,15 +19,11 @@ bool PeanoNat::ltb(const Nat &n, const Nat &m) {
 }
 
 bool small_dec(const Nat &n) {
-  return Bool::bool_dec(
-      PeanoNat::ltb(
-          n, Nat::s(
-              Nat::s(
-                  Nat::s(
-                      Nat::s(
-                          Nat::s(
-                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))),
-      true);
+  return Bool::bool_dec(PeanoNat::ltb(
+      n,
+      Nat::s(Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))),
+                        true);
 }
 
 /// The call site that fails: a lambda passed where deduction runs.

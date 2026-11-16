@@ -32,7 +32,8 @@ bool MacroNamedConstructor::is_normal(double f) {
             ? 8
             : (_c == FP_INFINITE
                    ? 6
-                   : _c == FP_ZERO ? 4 : _c == FP_SUBNORMAL ? 2 : 0) + _n);
+                   : _c == FP_ZERO ? 4 : _c == FP_SUBNORMAL ? 2 : 0) +
+              _n);
   }(f)) {
     case Float_class::PNORMAL: {return true;} default: {return false;}
   }

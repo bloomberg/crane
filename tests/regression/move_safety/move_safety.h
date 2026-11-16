@@ -247,12 +247,10 @@ struct MoveSafety {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return t.sum_values(_x0);
-      };
-      crane::fn<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
-        return t.sum_values(_x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
+      crane::fn<uint64_t(uint64_t)> g =
+          [&](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
       return (f(UINT64_C(1)) + g(UINT64_C(2)));
     }();
   }();
@@ -261,9 +259,8 @@ struct MoveSafety {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return t.sum_values(_x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
       tree t2 = t.tree_id();
       if (std::holds_alternative<typename tree::Leaf>(t2.v_mut())) {
         return f(UINT64_C(0));

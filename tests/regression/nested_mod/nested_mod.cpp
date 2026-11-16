@@ -7,8 +7,9 @@ NestedMod::Outer::Inner::area(const NestedMod::Outer::Inner::shape &s) {
     const auto &[a0] =
         std::get<typename NestedMod::Outer::Inner::shape::Circle>(s.v());
     return ((a0 * a0) * UINT64_C(3));
-  } else if (std::holds_alternative<
-                 typename NestedMod::Outer::Inner::shape::Square>(s.v())) {
+  } else if (
+      std::holds_alternative<typename NestedMod::Outer::Inner::shape::Square>(
+          s.v())) {
     const auto &[a0] =
         std::get<typename NestedMod::Outer::Inner::shape::Square>(s.v());
     return (a0 * a0);

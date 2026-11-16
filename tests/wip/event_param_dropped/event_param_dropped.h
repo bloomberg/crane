@@ -122,38 +122,38 @@ struct Denotation {
     return itree_iter(
         [](const std::shared_ptr<ITree<T1>> &u) -> std::shared_ptr<
             ITree<Sum<std::shared_ptr<ITree<T1>>, Sum<exc, T1>>>> {
-              auto _cs = u->observe();
-              if (std::holds_alternative<typename ITree<T1>::Ret>(_cs)) {
-                const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&_cs);
-                auto a = _itf.value;
+          auto _cs = u->observe();
+          if (std::holds_alternative<typename ITree<T1>::Ret>(_cs)) {
+            const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&_cs);
+            auto a = _itf.value;
+            return itree_ret(
+                Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inr(
+                    Sum<crane::obj, T1>::inr(a)));
+          } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
+            const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
+            auto u_ = _itf.next;
+            return itree_ret(
+                Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inl(u_));
+          } else {
+            const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
+            auto e =
+                crane_event_as<Sum1<TickE, FailE, crane::obj>>(_itf.effect);
+            auto k = _itf.cont;
+            auto _cs1 = exc_of_event<_tcI0, void>(e);
+            if (_cs1.has_value()) {
+              const auto &x = *_cs1;
+              return itree_ret(
+                  Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inr(
+                      Sum<crane::obj, T1>::inl(x)));
+            } else {
+              return itree_vis(e, [=](const auto &y) {
                 return itree_ret(
-                    Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inr(
-                        Sum<crane::obj, T1>::inr(a)));
-              } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
-                const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
-                auto u_ = _itf.next;
-                return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
-                                     Sum<crane::obj, T1>>::inl(u_));
-              } else {
-                const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
-                auto e =
-                    crane_event_as<Sum1<TickE, FailE, crane::obj>>(_itf.effect);
-                auto k = _itf.cont;
-                auto _cs1 = exc_of_event<_tcI0, void>(e);
-                if (_cs1.has_value()) {
-                  const auto &x = *_cs1;
-                  return itree_ret(
-                      Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inr(
-                          Sum<crane::obj, T1>::inl(x)));
-                } else {
-                  return itree_vis(e, [=](const auto &y) {
-                    return itree_ret(
-                        Sum<std::shared_ptr<ITree<T1>>,
-                            Sum<crane::obj, T1>>::inl(crane_call_erased(k, y)));
-                  });
-                }
-              }
-            },
+                    Sum<std::shared_ptr<ITree<T1>>, Sum<crane::obj, T1>>::inl(
+                        crane_call_erased(k, y)));
+              });
+            }
+          }
+        },
         t);
   }
 };

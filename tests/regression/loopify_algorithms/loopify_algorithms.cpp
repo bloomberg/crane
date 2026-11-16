@@ -171,17 +171,18 @@ List<std::pair<uint64_t, uint64_t>> LoopifyAlgorithms::run_length_encode(
             std::make_pair(a0, UINT64_C(1)),
             List<std::pair<uint64_t, uint64_t>>::nil());
       } else {
-        auto &[a00, a10] = std::get<
-            typename List<std::pair<uint64_t, uint64_t>>::Cons>(_tmp1.v_mut());
+        auto &[a00, a10] =
+            std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+                _tmp1.v_mut());
         auto [y, n] = std::move(a00);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(y, (n + 1)), *a10);
         } else {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(a0, UINT64_C(1)), List<
-                  std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
-                                                       *a10));
+              std::make_pair(a0, UINT64_C(1)),
+              List<std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
+                                                        *a10));
         }
       }
     }
@@ -206,9 +207,10 @@ List<uint64_t> LoopifyAlgorithms::prefix_sums(uint64_t acc,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _cell = typename List<uint64_t>::Cons(_loop_acc, nullptr);
-      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
-                                              List<uint64_t>>(std::move(_cell)))
-                                      : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node =
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       _loop_acc = (_loop_acc + a0);
@@ -473,8 +475,9 @@ List<uint64_t> LoopifyAlgorithms::take_impl(uint64_t k,
   return std::move(*_root);
 }
 
-List<List<uint64_t>> LoopifyAlgorithms::windows_aux(
-    uint64_t n, const List<uint64_t> &l, uint64_t fuel) {
+List<List<uint64_t>>
+LoopifyAlgorithms::windows_aux(uint64_t n, const List<uint64_t> &l,
+                               uint64_t fuel) {
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   uint64_t _loop_fuel = fuel;
@@ -536,8 +539,9 @@ LoopifyAlgorithms::sliding_pairs(const List<uint64_t> &l) {
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write ? *(*_write = std::make_shared<
-                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+      (_write ? *(*_write =
+                      std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                          std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
@@ -546,8 +550,9 @@ LoopifyAlgorithms::sliding_pairs(const List<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-        (_write ? *(*_write = std::make_shared<
-                        List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+        (_write ? *(*_write =
+                        std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                            std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {

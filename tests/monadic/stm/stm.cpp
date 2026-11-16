@@ -71,7 +71,6 @@ uint64_t stmtest::stm_orElse_retry_example(std::monostate) {
 }
 
 uint64_t stmtest::io_orElse_retry_example() {
-  return stm::atomically([&] {
-    return stm_orElse_retry_example(std::monostate{});
-  });
+  return stm::atomically(
+      [&] { return stm_orElse_retry_example(std::monostate{}); });
 }

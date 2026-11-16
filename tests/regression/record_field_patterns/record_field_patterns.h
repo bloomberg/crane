@@ -248,18 +248,16 @@ struct RecordFieldPatterns {
   static inline const uint64_t test_seg =
       segment_length_sq(Segment{Point{UINT64_C(1), UINT64_C(2)},
                                 Point{UINT64_C(4), UINT64_C(6)}});
-  static inline const uint64_t test_sum =
-      sum_px(
-          List<Point>::cons(
-              Point{UINT64_C(10), UINT64_C(0)}, List<Point>::cons(
-                  Point{UINT64_C(20), UINT64_C(0)}, List<Point>::cons(
-                      Point{UINT64_C(30), UINT64_C(0)}, List<Point>::nil()))));
-  static inline const List<uint64_t> test_map =
-      map_py(List<Point>::cons(
-                 Point{UINT64_C(0), UINT64_C(1)}, List<Point>::cons(
-                     Point{UINT64_C(0), UINT64_C(2)}, List<Point>::cons(
-                         Point{UINT64_C(0), UINT64_C(3)},
-                         List<Point>::nil()))));
+  static inline const uint64_t test_sum = sum_px(List<Point>::cons(
+      Point{UINT64_C(10), UINT64_C(0)},
+      List<Point>::cons(Point{UINT64_C(20), UINT64_C(0)},
+                        List<Point>::cons(Point{UINT64_C(30), UINT64_C(0)},
+                                          List<Point>::nil()))));
+  static inline const List<uint64_t> test_map = map_py(List<Point>::cons(
+      Point{UINT64_C(0), UINT64_C(1)},
+      List<Point>::cons(Point{UINT64_C(0), UINT64_C(2)},
+                        List<Point>::cons(Point{UINT64_C(0), UINT64_C(3)},
+                                          List<Point>::nil()))));
   static inline const Point test_swap = swap(Point{UINT64_C(3), UINT64_C(7)});
 };
 

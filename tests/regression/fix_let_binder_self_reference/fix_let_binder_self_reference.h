@@ -105,7 +105,8 @@ struct FixLetBinderSelfReference {
             crane::fn<uint64_t(List<uint64_t>)> h0 = [=](List<uint64_t> _pa0) {
               return h([=](List<uint64_t> _ec0) {
                 return _self_f(_self_f, std::move(_ec0));
-              }, _pa0);
+              },
+                       _pa0);
             };
             if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
               return UINT64_C(0);
@@ -119,16 +120,18 @@ struct FixLetBinderSelfReference {
               [=, f_impl = std::move(f_impl)](List<uint64_t> l) -> uint64_t {
                 return f_impl(f_impl, std::move(l));
               };
-          return std::make_pair(f, [=](List<uint64_t> _pa0) {
-            return h(f, _pa0);
-          });
+          return std::make_pair(f,
+                                [=](List<uint64_t> _pa0) {
+                                  return h(f, _pa0);
+                                });
         }();
       }();
   static inline const uint64_t result =
       (both.first(List<uint64_t>::cons(
-                      UINT64_C(4), List<uint64_t>::cons(
-                          UINT64_C(5), List<uint64_t>::cons(
-                              UINT64_C(6), List<uint64_t>::nil())))) +
+           UINT64_C(4),
+           List<uint64_t>::cons(
+               UINT64_C(5),
+               List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil())))) +
        both.second(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil())));
 };
 

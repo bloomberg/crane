@@ -145,16 +145,15 @@ struct HofParamAsValue {
     return f(x0_);
   }
 
-  static inline const List<crane::fn<uint64_t(uint64_t)>> fs =
-      List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x + 1);
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x * UINT64_C(2));
-      }, List<crane::fn<uint64_t(uint64_t)>>::nil()));
+  static inline const List<crane::fn<uint64_t(uint64_t)>> fs = List<
+      crane::fn<uint64_t(uint64_t)>>::cons(
+      [](uint64_t x) { return (x + 1); },
+      List<crane::fn<uint64_t(uint64_t)>>::cons(
+          [](uint64_t x) { return (x * UINT64_C(2)); },
+          List<crane::fn<uint64_t(uint64_t)>>::nil()));
   static inline const uint64_t run = fs.template fold_right<uint64_t>(
-      [](crane::fn<uint64_t(uint64_t)> _ec0, uint64_t _ec1) {
-        return ap(_ec0, _ec1);
-      },
+      [](crane::fn<uint64_t(uint64_t)> _ec0,
+         uint64_t _ec1) { return ap(_ec0, _ec1); },
       UINT64_C(1));
 };
 

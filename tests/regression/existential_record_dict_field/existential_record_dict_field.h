@@ -16,9 +16,8 @@ struct ExistentialRecordDictField {
     }
   };
 
-  static inline const ShR<uint64_t> shN = ShR<uint64_t>{[](uint64_t n) {
-    return n;
-  }};
+  static inline const ShR<uint64_t> shN =
+      ShR<uint64_t>{[](uint64_t n) { return n; }};
 
   struct packed {
     ShR<crane::obj> dict;

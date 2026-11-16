@@ -23,7 +23,8 @@ concept Monad = requires {
     I::template ret<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
-    I::bind(std::declval<typename I::template m<crane::obj>>(), std::declval<
+    I::bind(std::declval<typename I::template m<crane::obj>>(),
+            std::declval<
                 crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -213,10 +214,10 @@ template <typename I> struct Arith {
 };
 
 struct Ops {
-  [[gnu::used]] static inline const Arith<Nat> Arith_nat =
-      Arith<Nat>{[](const Nat &x, Nat y) {
-        return EOU_monad::template ret<Nat>(x.add(std::move(y)));
-      }, Nat::o()};
+  [[gnu::used]] static inline const Arith<Nat> Arith_nat = Arith<Nat>{
+      [](const Nat &x,
+         Nat y) { return EOU_monad::template ret<Nat>(x.add(std::move(y))); },
+      Nat::o()};
 };
 
 template <Monad _tcI0, typename T2>

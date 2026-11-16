@@ -42,18 +42,21 @@ uint64_t LoopifyPartnerSelfInClosure::sum_e(
         } else if (
             std::holds_alternative<
                 typename LoopifyPartnerSelfInClosure::md::MNode>(m0_value.v())) {
-          const auto &[l0] = std::get<
-              typename LoopifyPartnerSelfInClosure::md::MNode>(m0_value.v());
+          const auto &[l0] =
+              std::get<typename LoopifyPartnerSelfInClosure::md::MNode>(
+                  m0_value.v());
           const List<LoopifyPartnerSelfInClosure::md> &l0_value = *l0;
-          _result = (UINT64_C(1) + l0_value.template fold_left<uint64_t>(
-                         [](uint64_t acc,
-                            const LoopifyPartnerSelfInClosure::md &m1) {
-                              return (acc + sum_md(m1));
-                            },
-                         UINT64_C(0)));
+          _result =
+              (UINT64_C(1) + l0_value.template fold_left<uint64_t>(
+                                 [](uint64_t acc,
+                                    const LoopifyPartnerSelfInClosure::md &m1) {
+                                   return (acc + sum_md(m1));
+                                 },
+                                 UINT64_C(0)));
         } else {
-          const auto &[x1] = std::get<
-              typename LoopifyPartnerSelfInClosure::md::MConst>(m0_value.v());
+          const auto &[x1] =
+              std::get<typename LoopifyPartnerSelfInClosure::md::MConst>(
+                  m0_value.v());
           _stack.emplace_back(CraneCont_MConst{});
           _stack.emplace_back(CraneEnter{crane_raw(x1)});
         }
@@ -97,7 +100,8 @@ uint64_t LoopifyPartnerSelfInClosure::sum_md(
             std::get<typename LoopifyPartnerSelfInClosure::md::MNode>(m.v());
         const List<LoopifyPartnerSelfInClosure::md> &l0_value = *l0;
         _result = l0_value.template fold_left<uint64_t>(
-            [](uint64_t acc, const LoopifyPartnerSelfInClosure::md &m0) {
+            [](uint64_t acc,
+               const LoopifyPartnerSelfInClosure::md &m0) {
               return (acc + sum_md(m0));
             },
             UINT64_C(0));
@@ -127,16 +131,14 @@ uint64_t LoopifyPartnerSelfInClosure::sum_md(
 
 /// 1 + (2 + (1 + 3))
 bool LoopifyPartnerSelfInClosure::check(std::monostate) {
-  return sum_e(
-             e::meta(
-                 md::mnode(
-                     List<LoopifyPartnerSelfInClosure::md>::cons(
-                         md::mconst(e::leaf(UINT64_C(2))), List<
-                             LoopifyPartnerSelfInClosure::md>::cons(
-                             md::mconst(
-                                 e::meta(md::mconst(e::leaf(UINT64_C(3))))),
-                             List<LoopifyPartnerSelfInClosure::md>::cons(
-                                 md::mnil(),
-                                 List<LoopifyPartnerSelfInClosure::md>::nil())))))) ==
+  return sum_e(e::meta(md::mnode(List<LoopifyPartnerSelfInClosure::md>::cons(
+      md::mconst(e::leaf(UINT64_C(2))), List<LoopifyPartnerSelfInClosure::md>::cons(
+                                            md::mconst(e::meta(md::mconst(
+                                                e::leaf(UINT64_C(3))))),
+                                            List<
+                                                LoopifyPartnerSelfInClosure::md>::cons(
+                                                md::mnil(),
+                                                List<
+                                                    LoopifyPartnerSelfInClosure::md>::nil())))))) ==
          UINT64_C(7);
 }

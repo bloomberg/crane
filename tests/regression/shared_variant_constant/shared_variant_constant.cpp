@@ -121,81 +121,12 @@ Positive SharedVariantConstant::sum_tens(uint64_t n, Positive acc) {
 Positive SharedVariantConstant::huge(std::monostate) {
   static const auto pos = []() {
     auto _lit0 =
-        Positive::xo(
-            Positive::xo(
-                Positive::xo(
-                    Positive::xo(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xo(
-                                    Positive::xo(
-                                        Positive::xo(
-                                            Positive::xo(
-                                                Positive::xo(
-                                                    Positive::xo(
-                                                        Positive::xo(
-                                                            Positive::xo(
-                                                                Positive::xo(
-                                                                    Positive::xo(
-                                                                        Positive::xo(
-                                                                            Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))))))))))))))))))))))))));
+        Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))))))))))))))))))))))))));
     auto _lit1 =
-        Positive::xo(
-            Positive::xo(
-                Positive::xo(
-                    Positive::xo(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xo(
-                                    Positive::xo(
-                                        Positive::xo(
-                                            Positive::xo(
-                                                Positive::xo(
-                                                    Positive::xo(
-                                                        Positive::xo(
-                                                            Positive::xo(
-                                                                Positive::xo(
-                                                                    Positive::xo(
-                                                                        Positive::xo(
-                                                                            Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(std::move(_lit0)))))))))))))))))))))))))))))));
+        Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(std::move(_lit0)))))))))))))))))))))))))))))));
     auto _lit2 =
-        Positive::xo(
-            Positive::xo(
-                Positive::xo(
-                    Positive::xo(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xo(
-                                    Positive::xo(
-                                        Positive::xo(
-                                            Positive::xo(
-                                                Positive::xo(
-                                                    Positive::xo(
-                                                        Positive::xo(
-                                                            Positive::xo(
-                                                                Positive::xo(
-                                                                    Positive::xo(
-                                                                        Positive::xo(
-                                                                            Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(std::move(_lit1)))))))))))))))))))))))))))))));
-    return crane::immortal(
-        Positive::xo(
-            Positive::xo(
-                Positive::xo(
-                    Positive::xo(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xo(
-                                    Positive::xo(
-                                        Positive::xo(
-                                            Positive::xo(
-                                                Positive::xo(
-                                                    Positive::xo(
-                                                        Positive::xo(
-                                                            Positive::xo(
-                                                                Positive::xo(
-                                                                    Positive::xo(
-                                                                        Positive::xo(
-                                                                            Positive::xo(Positive::xo(Positive::xo(std::move(_lit2))))))))))))))))))))));
+        Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(std::move(_lit1)))))))))))))))))))))))))))))));
+    return crane::immortal(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(std::move(_lit2))))))))))))))))))))));
   }();
   return pos;
 }
@@ -204,10 +135,9 @@ Positive SharedVariantConstant::huge(std::monostate) {
 /// last -- and so moved -- where the constant is built.
 std::pair<List<Positive>, List<Positive>>
 SharedVariantConstant::with_k(const List<Positive> &k) {
-  static const auto k_1 =
-      crane::immortal(List<Positive>::cons(
-                          Positive::xi(Positive::xh()), List<Positive>::cons(
-                              Positive::xi(Positive::xo(Positive::xh())),
-                              List<Positive>::nil())));
+  static const auto k_1 = crane::immortal(List<Positive>::cons(
+      Positive::xi(Positive::xh()),
+      List<Positive>::cons(Positive::xi(Positive::xo(Positive::xh())),
+                           List<Positive>::nil())));
   return std::make_pair(k, k_1);
 }

@@ -129,25 +129,7 @@ template <IPtr _tcI0> struct ParamsV {
   using iptr = typename _tcI0::iptr;
 
   static Nat width() {
-    return Nat::s(
-        Nat::s(
-            Nat::s(
-                Nat::s(
-                    Nat::s(
-                        Nat::s(
-                            Nat::s(
-                                Nat::s(
-                                    Nat::s(
-                                        Nat::s(
-                                            Nat::s(
-                                                Nat::s(
-                                                    Nat::s(
-                                                        Nat::s(
-                                                            Nat::s(
-                                                                Nat::s(
-                                                                    Nat::s(
-                                                                        Nat::s(
-                                                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+    return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
   }
 };
 

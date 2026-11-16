@@ -76,24 +76,23 @@ struct BoxedElementBlockTemplate {
             []() -> crane::list<crane::box<rose>> {
               crane::list<crane::box<rose>> _r;
               _r = crane::cons(
-                  rose::node(UINT64_C(3),
-                             []() -> crane::list<crane::box<rose>> {
-                               crane::list<crane::box<rose>> _r;
-                               _r = crane::cons(
-                                   rose::node(
-                                       UINT64_C(4),
+                  rose::node(
+                      UINT64_C(3), []() -> crane::list<crane::box<rose>> {
+                        crane::list<crane::box<rose>> _r;
+                        _r = crane::cons(
+                            rose::node(UINT64_C(4),
                                        []() -> crane::list<crane::box<rose>> {
                                          crane::list<crane::box<rose>> _r;
                                          _r = crane::list<crane::box<rose>>{};
                                          return _r;
                                        }()),
-                                   []() -> crane::list<crane::box<rose>> {
-                                     crane::list<crane::box<rose>> _r;
-                                     _r = crane::list<crane::box<rose>>{};
-                                     return _r;
-                                   }());
-                               return _r;
-                             }()),
+                            []() -> crane::list<crane::box<rose>> {
+                              crane::list<crane::box<rose>> _r;
+                              _r = crane::list<crane::box<rose>>{};
+                              return _r;
+                            }());
+                        return _r;
+                      }()),
                   []() -> crane::list<crane::box<rose>> {
                     crane::list<crane::box<rose>> _r;
                     _r = crane::cons(

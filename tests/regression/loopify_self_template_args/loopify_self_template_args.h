@@ -46,8 +46,9 @@ struct List {
                     typename List::template list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
-              const auto &[a, l] = std::get<
-                  typename List::template list<CraneU>::Cons>(_other.v());
+              const auto &[a, l] =
+                  std::get<typename List::template list<CraneU>::Cons>(
+                      _other.v());
               return Cons{
                   [&]() -> A {
                     if constexpr (crane_convertible<A, const CraneU &>) {
@@ -59,7 +60,7 @@ struct List {
                     }
                   }(),
                   (l ? std::make_shared<typename List::template list<A>>(
-                         crane_convert<typename List::template list<A>>(*l))
+                           crane_convert<typename List::template list<A>>(*l))
                      : nullptr)};
             }
           }()) {}
@@ -151,7 +152,7 @@ struct LoopifySelfTemplateArgs {
   static List::list<uint64_t> rm(const List::list<uint64_t> &l);
   static inline const uint64_t test =
       rm(List::template list<uint64_t>::cons(
-             UINT64_C(1), List::template list<uint64_t>::nil()))
+          UINT64_C(1), List::template list<uint64_t>::nil()))
           .length();
 };
 

@@ -224,19 +224,18 @@ LoopifyGrouping::partition3(uint64_t pivot,
       auto [p, greater] = std::move(_result);
       auto [less, equal] = std::move(p);
       if (a0 < pivot) {
-        _result = std::make_pair(
-            std::make_pair(List<uint64_t>::cons(a0, std::move(less)),
-                           std::move(equal)), std::move(greater));
+        _result = std::make_pair(std::make_pair(
+            List<uint64_t>::cons(a0, std::move(less)), std::move(equal)),
+                                 std::move(greater));
       } else {
         if (pivot < a0) {
           _result =
               std::make_pair(std::make_pair(std::move(less), std::move(equal)),
                              List<uint64_t>::cons(a0, std::move(greater)));
         } else {
-          _result = std::make_pair(
-              std::make_pair(std::move(less),
-                             List<uint64_t>::cons(a0, std::move(equal))),
-              std::move(greater));
+          _result = std::make_pair(std::make_pair(
+              std::move(less), List<uint64_t>::cons(a0, std::move(equal))),
+                                   std::move(greater));
         }
       }
     }
@@ -295,8 +294,9 @@ LoopifyGrouping::group_pairs(const List<uint64_t> &l) {
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write ? *(*_write = std::make_shared<
-                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+      (_write ? *(*_write =
+                      std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                          std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
@@ -305,8 +305,9 @@ LoopifyGrouping::group_pairs(const List<uint64_t> &l) {
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-        (_write ? *(*_write = std::make_shared<
-                        List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+        (_write ? *(*_write =
+                        std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                            std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {

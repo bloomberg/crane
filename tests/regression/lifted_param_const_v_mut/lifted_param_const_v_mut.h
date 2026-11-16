@@ -301,8 +301,9 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename Dvalue_base<CraneU>::DVALUE_Pointer>(_other.v())) {
-            const auto &[a0] = std::get<
-                typename Dvalue_base<CraneU>::DVALUE_Pointer>(_other.v());
+            const auto &[a0] =
+                std::get<typename Dvalue_base<CraneU>::DVALUE_Pointer>(
+                    _other.v());
             return DVALUE_Pointer{[&]() -> ptr {
               if constexpr (crane_convertible<ptr, const CraneU &>) {
                 return crane_convert<ptr>(a0);
@@ -368,9 +369,10 @@ public:
           } else {
             const auto &[a0] =
                 std::get<typename Dvalue<CraneU>::DVALUE_Struct>(_other.v());
-            return DVALUE_Struct{(a0 ? std::make_shared<List<Dvalue<ptr>>>(
-                                         crane_convert<List<Dvalue<ptr>>>(*a0))
-                                     : nullptr)};
+            return DVALUE_Struct{
+                (a0 ? std::make_shared<List<Dvalue<ptr>>>(
+                          crane_convert<List<Dvalue<ptr>>>(*a0))
+                    : nullptr)};
           }
         }()) {}
 
@@ -407,34 +409,14 @@ den_crane_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
     } else {
       const auto &[a00, a10] =
           std::get<typename Dvalue_base<typename _tcI0::ptr>::DVALUE_I>(a0.v());
-      if (a00.eqb(
-              Nat::s(
-                  Nat::s(
-                      Nat::s(
-                          Nat::s(
-                              Nat::s(
-                                  Nat::s(
-                                      Nat::s(
-                                          Nat::s(
-                                              Nat::s(
-                                                  Nat::s(
-                                                      Nat::s(
-                                                          Nat::s(
-                                                              Nat::s(
-                                                                  Nat::s(
-                                                                      Nat::s(
-                                                                          Nat::s(
-                                                                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))) {
+      if (a00.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))) {
         return std::make_optional<std::pair<T1, Dvalue<typename _tcI0::ptr>>>(
             std::make_pair(
                 tag, Dvalue<typename _tcI0::ptr>::DVALUE_Base_(
-                    Dvalue_base<typename _tcI0::ptr>::dvalue_i(
-                        Nat::s(
-                            Nat::s(
-                                Nat::s(
-                                    Nat::s(
-                                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
-                        a10))));
+                         Dvalue_base<typename _tcI0::ptr>::dvalue_i(
+                             Nat::s(Nat::s(Nat::s(Nat::s(
+                                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+                             a10))));
       } else {
         return std::optional<std::pair<T1, Dvalue<typename _tcI0::ptr>>>();
       }
@@ -464,7 +446,8 @@ den(const List<Dvalue<typename _tcI0::ptr>> &x0_) {
       return Datatypes::template option_map<
           std::pair<Nat, Dvalue<typename _tcI0::ptr>>,
           Sum<Nat, Dvalue<typename _tcI0::ptr>>>(
-          [](const std::pair<Nat, Dvalue<typename _tcI0::ptr>> &p) {
+          [](const std::pair<Nat,
+                             Dvalue<typename _tcI0::ptr>> &p) {
             return Sum<Nat, Dvalue<typename _tcI0::ptr>>::inr(p.second);
           },
           den_crane_body<_tcI0>(Nat::o(), a0));
@@ -487,29 +470,8 @@ static_assert(Params<natParams>);
 
 struct LiftedParamConstVMut {
   static inline const std::optional<Sum<Nat,
-                                        Dvalue<typename natParams::ptr>>> run = den<
-      natParams>(
-      List<Dvalue<Nat>>::cons(
-          Dvalue<Nat>::DVALUE_Base_(
-              Dvalue_base<Nat>::dvalue_i(
-                  Nat::s(
-                      Nat::s(
-                          Nat::s(
-                              Nat::s(
-                                  Nat::s(
-                                      Nat::s(
-                                          Nat::s(
-                                              Nat::s(
-                                                  Nat::s(
-                                                      Nat::s(
-                                                          Nat::s(
-                                                              Nat::s(
-                                                                  Nat::s(
-                                                                      Nat::s(
-                                                                          Nat::s(
-                                                                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))),
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
-          List<Dvalue<Nat>>::nil()));
+                                        Dvalue<typename natParams::ptr>>> run =
+      den<natParams>(List<Dvalue<Nat>>::cons(Dvalue<Nat>::DVALUE_Base_(Dvalue_base<Nat>::dvalue_i(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))), List<Dvalue<Nat>>::nil()));
 };
 
 template <typename T1, typename T2, typename F0>

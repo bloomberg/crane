@@ -213,23 +213,13 @@ struct PolyRank2RecordField {
     return m0.run(crane_erase_fn<crane::obj>(x), x0);
   }
 
-  [[gnu::used]] static inline const mapper m = mapper{[]<typename CraneT1>(
-                                                          auto &&a0, const List<
-                                                              CraneT1> &a1)
-                                                           -> List<
-                                                          std::invoke_result_t<
-                                                              decltype(a0)&,
-                                                              CraneT1 &>> {
-                                                                return a1.template map<
-                                                                    std::invoke_result_t<
-                                                                        decltype(
-                                                                            a0)&,
-                                                                        CraneT1 &>>(
-                                                                    std::forward<
-                                                                        decltype(
-                                                                            a0)>(
-                                                                        a0));
-                                                              }};
+  [[gnu::used]] static inline const mapper m =
+      mapper{[]<typename CraneT1>(auto &&a0, const List<CraneT1> &a1) -> List<
+          std::invoke_result_t<decltype(a0)&,
+                               CraneT1 &>> {
+        return a1.template map<std::invoke_result_t<decltype(a0)&, CraneT1 &>>(
+            std::forward<decltype(a0)>(a0));
+      }};
   static List<Bool0> test1(const List<Nat> &l);
   static List<Nat> test2(const List<Bool0> &l);
 };

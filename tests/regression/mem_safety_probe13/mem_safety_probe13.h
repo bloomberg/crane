@@ -294,7 +294,7 @@ struct MemSafetyProbe13 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -489,9 +489,7 @@ struct MemSafetyProbe13 {
     auto [vals, fns] = tree_vals_and_fns(std::move(t));
     uint64_t val_sum = sum_list(std::move(vals));
     uint64_t fn_sum = sum_list(fns.template map_list<uint64_t>(
-                                   [](const crane::fn<uint64_t(uint64_t)> &f) {
-                                     return f(UINT64_C(0));
-                                   }));
+        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
     return (val_sum + fn_sum);
   }();
   static inline const uint64_t test_double_match = []() {
@@ -513,9 +511,7 @@ struct MemSafetyProbe13 {
     mylist<crane::fn<uint64_t(uint64_t)>> fns =
         depth_fns(std::move(t), UINT64_C(0));
     return sum_list(fns.template map_list<uint64_t>(
-                        [](const crane::fn<uint64_t(uint64_t)> &f) {
-                          return f(UINT64_C(0));
-                        }));
+        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(0)); }));
   }();
 
   /// TEST 5: Transform a tree by replacing each value with a
@@ -741,9 +737,7 @@ struct MemSafetyProbe13 {
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = flatten_tree_fns(std::move(t));
     return sum_list(fns.template map_list<uint64_t>(
-                        [](const crane::fn<uint64_t(uint64_t)> &f) {
-                          return f(UINT64_C(1));
-                        }));
+        [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(1)); }));
   }();
 };
 

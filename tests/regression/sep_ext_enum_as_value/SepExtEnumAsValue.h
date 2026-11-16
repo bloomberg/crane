@@ -36,8 +36,10 @@ template <ColorParam P> struct UseColor {
   static const typename Datatypes::template List<Color> &color_list() {
     static const typename Datatypes::template List<Color> v =
         Datatypes::template List<Color>::cons(
-            Color::RED, Datatypes::template List<Color>::cons(
-                Color::GREEN, Datatypes::template List<Color>::cons(
+            Color::RED,
+            Datatypes::template List<Color>::cons(
+                Color::GREEN,
+                Datatypes::template List<Color>::cons(
                     Color::BLUE, Datatypes::template List<Color>::nil())));
     return v;
   }

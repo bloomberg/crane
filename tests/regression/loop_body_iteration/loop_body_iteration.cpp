@@ -8,8 +8,7 @@ LoopBodyIteration::state
 LoopBodyIteration::count_loop_body(const LoopBodyIteration::state &s) {
   auto &&_once1 = (get_reg0(s) + UINT64_C(1));
   return state{update_nth<uint64_t>(
-                   UINT64_C(0), (UINT64_C(16) ? _once1 % UINT64_C(16) : _once1),
-                   s.regs_)};
+      UINT64_C(0), (UINT64_C(16) ? _once1 % UINT64_C(16) : _once1), s.regs_)};
 }
 
 LoopBodyIteration::state

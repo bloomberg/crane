@@ -51,8 +51,7 @@ uint64_t LoopifyMutualInlineTemp::hd(const LoopifyMutualInlineTemp::lst &l) {
   }
 }
 
-uint64_t
-LoopifyMutualInlineTemp::even_step(
+uint64_t LoopifyMutualInlineTemp::even_step(
     uint64_t n, const LoopifyMutualInlineTemp::lst &l,
     const LoopifyMutualInlineTemp::lst &keep, uint64_t s) {
   uint64_t _loop_s = s;
@@ -81,8 +80,9 @@ LoopifyMutualInlineTemp::even_step(
                   l0.v_mut())) {
             return s0;
           } else {
-            auto &[a00, a10] = std::get<
-                typename LoopifyMutualInlineTemp::lst::Cons>(l0.v_mut());
+            auto &[a00, a10] =
+                std::get<typename LoopifyMutualInlineTemp::lst::Cons>(
+                    l0.v_mut());
             _loop_s = (s0 + hd(*a1));
             _loop_keep = LoopifyMutualInlineTemp::lst(*a10);
             _loop_l = lst::cons((std::move(a00) + UINT64_C(1)), lst::nil());
@@ -94,8 +94,7 @@ LoopifyMutualInlineTemp::even_step(
   }
 }
 
-uint64_t
-LoopifyMutualInlineTemp::odd_step(
+uint64_t LoopifyMutualInlineTemp::odd_step(
     uint64_t n, const LoopifyMutualInlineTemp::lst &l,
     const LoopifyMutualInlineTemp::lst &keep, uint64_t s) {
   uint64_t _loop_s = s;
@@ -124,8 +123,9 @@ LoopifyMutualInlineTemp::odd_step(
                   l0.v_mut())) {
             return s0;
           } else {
-            auto &[a00, a10] = std::get<
-                typename LoopifyMutualInlineTemp::lst::Cons>(l0.v_mut());
+            auto &[a00, a10] =
+                std::get<typename LoopifyMutualInlineTemp::lst::Cons>(
+                    l0.v_mut());
             _loop_s = (s0 + a00);
             _loop_keep = LoopifyMutualInlineTemp::lst(*a10);
             _loop_l = lst::cons(a00, lst::cons(a00, lst::nil()));

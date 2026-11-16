@@ -131,9 +131,8 @@ struct LoopifyMethodVaryingFnArg {
             const tree &a0_value = *a0;
             const tree &a2_value = *a2;
             _stack.emplace_back(CraneCont_Node{f, crane_raw(a2)});
-            _stack.emplace_back(CraneEnter{&a0_value, [=](uint64_t y) {
-              return f((y + a1));
-            }});
+            _stack.emplace_back(
+                CraneEnter{&a0_value, [=](uint64_t y) { return f((y + a1)); }});
           }
         } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
           auto _f = std::move(std::get<CraneCont_Node>(_frame));

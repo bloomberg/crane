@@ -96,17 +96,15 @@ RecordFieldPatterns::bounded_range(const RecordFieldPatterns::Bounded &b) {
 uint64_t
 RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
   return points.template fold_left<uint64_t>(
-      [](uint64_t acc, const RecordFieldPatterns::Point &p) {
-        return (acc + p.px);
-      },
+      [](uint64_t acc,
+         const RecordFieldPatterns::Point &p) { return (acc + p.px); },
       UINT64_C(0));
 }
 
 List<uint64_t>
 RecordFieldPatterns::map_py(const List<RecordFieldPatterns::Point> &points) {
-  return points.template map<uint64_t>([](const RecordFieldPatterns::Point &p) {
-    return p.py;
-  });
+  return points.template map<uint64_t>(
+      [](const RecordFieldPatterns::Point &p) { return p.py; });
 }
 
 RecordFieldPatterns::Point

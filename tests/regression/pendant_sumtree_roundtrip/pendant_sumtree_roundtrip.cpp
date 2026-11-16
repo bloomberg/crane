@@ -47,13 +47,12 @@ PendantSumtreeRoundtripCase::list_to_vector_opt(uint64_t n, const List<T> &xs) {
 
 List<List<PendantSumtreeRoundtripCase::digit>>
 PendantSumtreeRoundtripCase::encode_multi(uint64_t n, const List<T0<T>> &nums) {
-  return nums.template map<List<PendantSumtreeRoundtripCase::digit>>([=](T0<PendantSumtreeRoundtripCase::digit> _x0) -> List<
-                                                                         PendantSumtreeRoundtripCase::digit> {
-                                                                           return Vector::template to_list<
-                                                                               PendantSumtreeRoundtripCase::digit>(
-                                                                               n,
-                                                                               _x0);
-                                                                         });
+  return nums.template map<List<PendantSumtreeRoundtripCase::digit>>(
+      [=](T0<PendantSumtreeRoundtripCase::digit> _x0) -> List<
+          PendantSumtreeRoundtripCase::digit> {
+        return Vector::template to_list<PendantSumtreeRoundtripCase::digit>(n,
+                                                                            _x0);
+      });
 }
 
 std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>>
@@ -61,32 +60,28 @@ PendantSumtreeRoundtripCase::decode_multi(uint64_t n,
                                           const List<List<T>> &segments) {
   List<std::optional<T0<PendantSumtreeRoundtripCase::digit>>> decoded =
       segments.template map<
-          std::optional<T0<PendantSumtreeRoundtripCase::digit>>>([=](List<
-                                                                         PendantSumtreeRoundtripCase::digit> _x0)
-                                                                      -> std::optional<
-                                                                     T0<PendantSumtreeRoundtripCase::digit>> {
-                                                                       return list_to_vector_opt(
-                                                                           n,
-                                                                           _x0);
-                                                                     });
+          std::optional<T0<PendantSumtreeRoundtripCase::digit>>>(
+          [=](List<PendantSumtreeRoundtripCase::digit> _x0) -> std::optional<
+              T0<PendantSumtreeRoundtripCase::digit>> {
+            return list_to_vector_opt(n, _x0);
+          });
   return decoded.template fold_right<
       std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>>>(
       [](const std::optional<T0<T>> &ov,
          const std::optional<List<T0<T>>> &acc)
            -> std::optional<List<T0<PendantSumtreeRoundtripCase::digit>>> {
-            if (ov.has_value()) {
-              const T0<T> &v = *ov;
-              if (acc.has_value()) {
-                const List<T0<T>> &vs = *acc;
-                return std::make_optional<List<T0<T>>>(List<T0<T>>::cons(v,
-                                                                         vs));
-              } else {
-                return std::optional<List<T0<T>>>();
-              }
-            } else {
-              return std::optional<List<T0<T>>>();
-            }
-          },
+        if (ov.has_value()) {
+          const T0<T> &v = *ov;
+          if (acc.has_value()) {
+            const List<T0<T>> &vs = *acc;
+            return std::make_optional<List<T0<T>>>(List<T0<T>>::cons(v, vs));
+          } else {
+            return std::optional<List<T0<T>>>();
+          }
+        } else {
+          return std::optional<List<T0<T>>>();
+        }
+      },
       std::make_optional<List<T0<T>>>(List<T0<T>>::nil()));
 }
 
@@ -123,22 +118,17 @@ std::optional<uint64_t> PendantSumtreeRoundtripCase::pendant_value(
       pendant_digits(n, p));
 }
 
-List<std::optional<uint64_t>>
-PendantSumtreeRoundtripCase::ledger_values(
+List<std::optional<uint64_t>> PendantSumtreeRoundtripCase::ledger_values(
     const List<SigT<uint64_t,
                     PendantSumtreeRoundtripCase::CertifiedPendant>> &l) {
-  if (std::holds_alternative<
-          typename List<
-              SigT<uint64_t,
-                   PendantSumtreeRoundtripCase::CertifiedPendant>>::Nil>(l.v())) {
+  if (std::holds_alternative<typename List<
+          SigT<uint64_t, PendantSumtreeRoundtripCase::CertifiedPendant>>::Nil>(
+          l.v())) {
     return List<std::optional<uint64_t>>::nil();
   } else {
-    const auto &[a0, a1] =
-        std::get<
-            typename List<
-                SigT<uint64_t,
-                     PendantSumtreeRoundtripCase::CertifiedPendant>>::Cons>(
-            l.v());
+    const auto &[a0, a1] = std::get<typename List<
+        SigT<uint64_t, PendantSumtreeRoundtripCase::CertifiedPendant>>::Cons>(
+        l.v());
     const auto &[x0, a10] = a0;
     return List<std::optional<uint64_t>>::cons(pendant_value(x0, a10),
                                                ledger_values(*a1));
@@ -151,15 +141,16 @@ bool PendantSumtreeRoundtripCase::group_sums_validb(
   if (_cs.has_value()) {
     const uint64_t &top_val = *_cs;
     List<std::optional<uint64_t>> pendant_vals = g.pg_pendants.template map<
-        std::optional<uint64_t>>([=](PendantSumtreeRoundtripCase::CertifiedPendant _x0) -> std::optional<
-                                     uint64_t> {
-                                       return pendant_value(n, _x0);
-                                     });
-    std::optional<uint64_t> sum_opt = pendant_vals.template fold_right<
-        std::optional<uint64_t>>(
-        [](const std::optional<uint64_t> &ov,
-           const std::optional<uint64_t> &acc)
-             -> std::optional<uint64_t> {
+        std::optional<uint64_t>>([=](
+        PendantSumtreeRoundtripCase::CertifiedPendant _x0)
+                                      -> std::optional<uint64_t> {
+      return pendant_value(n, _x0);
+    });
+    std::optional<uint64_t> sum_opt =
+        pendant_vals.template fold_right<std::optional<uint64_t>>(
+            [](const std::optional<uint64_t> &ov,
+               const std::optional<uint64_t> &acc)
+                 -> std::optional<uint64_t> {
               if (ov.has_value()) {
                 const uint64_t &v = *ov;
                 if (acc.has_value()) {
@@ -172,7 +163,7 @@ bool PendantSumtreeRoundtripCase::group_sums_validb(
                 return std::optional<uint64_t>();
               }
             },
-        std::make_optional<uint64_t>(UINT64_C(0)));
+            std::make_optional<uint64_t>(UINT64_C(0)));
     if (sum_opt.has_value()) {
       const uint64_t &s = *sum_opt;
       return top_val == s;
@@ -213,11 +204,11 @@ PendantSumtreeRoundtripCase::sumtree_leaves(
         typename PendantSumtreeRoundtripCase::SumTree::SumNode>(st.v());
     const List<PendantSumtreeRoundtripCase::SumTree> &a1_value = *a1;
     return a1_value.template map<
-        List<PendantSumtreeRoundtripCase::CertifiedPendant>>([=](PendantSumtreeRoundtripCase::SumTree _x0) -> List<
-                                                                 PendantSumtreeRoundtripCase::CertifiedPendant> {
-                                                                   return sumtree_leaves(
-                                                                       n, _x0);
-                                                                 })
+        List<PendantSumtreeRoundtripCase::CertifiedPendant>>(
+        [=](PendantSumtreeRoundtripCase::SumTree _x0) -> List<
+            PendantSumtreeRoundtripCase::CertifiedPendant> {
+          return sumtree_leaves(n, _x0);
+        })
                .template concat<PendantSumtreeRoundtripCase::CertifiedPendant>();
   }
 }
@@ -236,9 +227,9 @@ uint64_t PendantSumtreeRoundtripCase::sumtree_depth(
                   return sumtree_depth(n, _x0);
                 })
                 .template fold_right<uint64_t>(
-                [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                  return std::max(_x0, _x1);
-                },
+                [](uint64_t _x0,
+                   uint64_t _x1)
+                     -> uint64_t { return std::max(_x0, _x1); },
                 UINT64_C(0)) +
             1);
   }
@@ -254,16 +245,19 @@ bool PendantSumtreeRoundtripCase::sumtree_validb_aux(
             typename PendantSumtreeRoundtripCase::SumTree::SumLeaf>(st.v())) {
       return true;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename PendantSumtreeRoundtripCase::SumTree::SumNode>(st.v());
+      const auto &[a0, a1] =
+          std::get<typename PendantSumtreeRoundtripCase::SumTree::SumNode>(
+              st.v());
       const List<PendantSumtreeRoundtripCase::SumTree> &a1_value = *a1;
       List<PendantSumtreeRoundtripCase::CertifiedPendant> child_tops =
-          a1_value.template map<PendantSumtreeRoundtripCase::CertifiedPendant>([=](PendantSumtreeRoundtripCase::SumTree _x0) -> PendantSumtreeRoundtripCase::CertifiedPendant {
+          a1_value.template map<PendantSumtreeRoundtripCase::CertifiedPendant>([
+              =](PendantSumtreeRoundtripCase::SumTree _x0) -> PendantSumtreeRoundtripCase::CertifiedPendant {
             return sumtree_top(n, _x0);
           });
       PendantSumtreeRoundtripCase::PendantGroup g =
           PendantGroup{a0, std::move(child_tops)};
-      return (group_sums_validb(n, std::move(g)) && a1_value.forallb(
+      return (group_sums_validb(n, std::move(g)) &&
+              a1_value.forallb(
                   [=](PendantSumtreeRoundtripCase::SumTree _x0) -> bool {
                     return sumtree_validb_aux(n, fuel_, _x0);
                   }));
@@ -279,28 +273,25 @@ bool PendantSumtreeRoundtripCase::sumtree_validb(
 std::optional<uint64_t> PendantSumtreeRoundtripCase::sumtree_leaf_total(
     uint64_t n, const PendantSumtreeRoundtripCase::SumTree &st) {
   List<std::optional<uint64_t>> vals =
-      sumtree_leaves(n, st).template map<std::optional<uint64_t>>([=](PendantSumtreeRoundtripCase::CertifiedPendant _x0) -> std::optional<
-                                                                      uint64_t> {
-                                                                        return pendant_value(
-                                                                            n,
-                                                                            _x0);
-                                                                      });
+      sumtree_leaves(n, st).template map<std::optional<uint64_t>>(
+          [=](PendantSumtreeRoundtripCase::CertifiedPendant _x0) -> std::optional<
+              uint64_t> { return pendant_value(n, _x0); });
   return vals.template fold_right<std::optional<uint64_t>>(
       [](const std::optional<uint64_t> &ov,
          const std::optional<uint64_t> &acc)
            -> std::optional<uint64_t> {
-            if (ov.has_value()) {
-              const uint64_t &v = *ov;
-              if (acc.has_value()) {
-                const uint64_t &a = *acc;
-                return std::make_optional<uint64_t>((v + a));
-              } else {
-                return std::optional<uint64_t>();
-              }
-            } else {
-              return std::optional<uint64_t>();
-            }
-          },
+        if (ov.has_value()) {
+          const uint64_t &v = *ov;
+          if (acc.has_value()) {
+            const uint64_t &a = *acc;
+            return std::make_optional<uint64_t>((v + a));
+          } else {
+            return std::optional<uint64_t>();
+          }
+        } else {
+          return std::optional<uint64_t>();
+        }
+      },
       std::make_optional<uint64_t>(UINT64_C(0)));
 }
 
@@ -363,8 +354,10 @@ PendantSumtreeRoundtripCase::digit_vec1(const T &a) {
 T0<PendantSumtreeRoundtripCase::digit>
 PendantSumtreeRoundtripCase::digit_vec3(const T &a, const T &b, const T &c) {
   return T0<PendantSumtreeRoundtripCase::digit>::cons0(
-      a, UINT64_C(2), T0<PendantSumtreeRoundtripCase::digit>::cons0(
-          b, UINT64_C(1), T0<PendantSumtreeRoundtripCase::digit>::cons0(
+      a, UINT64_C(2),
+      T0<PendantSumtreeRoundtripCase::digit>::cons0(
+          b, UINT64_C(1),
+          T0<PendantSumtreeRoundtripCase::digit>::cons0(
               c, UINT64_C(0), T0<PendantSumtreeRoundtripCase::digit>::nil0())));
 }
 

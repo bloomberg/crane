@@ -221,18 +221,17 @@ struct UniversePoly {
   }
 
   static inline const poption<uint64_t> test_map_some =
-      poption_map<uint64_t, uint64_t>([](uint64_t n) {
-        return (n + UINT64_C(1));
-      }, poption<uint64_t>::psome(UINT64_C(5)));
+      poption_map<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          poption<uint64_t>::psome(UINT64_C(5)));
   static inline const poption<uint64_t> test_map_none =
-      poption_map<uint64_t, uint64_t>([](uint64_t n) {
-        return (n + UINT64_C(1));
-      }, poption<uint64_t>::pnone());
-  static inline const poption<uint64_t> test_bind = poption_bind<uint64_t,
-                                                                 uint64_t>(
-      poption<uint64_t>::psome(UINT64_C(3)), [](uint64_t n) {
-        return poption<uint64_t>::psome((n + n));
-      });
+      poption_map<uint64_t, uint64_t>(
+          [](uint64_t n) { return (n + UINT64_C(1)); },
+          poption<uint64_t>::pnone());
+  static inline const poption<uint64_t> test_bind =
+      poption_bind<uint64_t, uint64_t>(
+          poption<uint64_t>::psome(UINT64_C(3)),
+          [](uint64_t n) { return poption<uint64_t>::psome((n + n)); });
 
   template <typename T1> static uint64_t poly_length(const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -245,9 +244,10 @@ struct UniversePoly {
 
   static inline const uint64_t test_length =
       poly_length<uint64_t>(List<uint64_t>::cons(
-                                UINT64_C(1), List<uint64_t>::cons(
-                                    UINT64_C(2), List<uint64_t>::cons(
-                                        UINT64_C(3), List<uint64_t>::nil()))));
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
 
 #endif // INCLUDED_UNIVERSE_POLY

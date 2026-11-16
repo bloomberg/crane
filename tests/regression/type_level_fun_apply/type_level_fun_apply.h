@@ -159,10 +159,9 @@ struct TypeLevelFunApply {
 
   using sem = crane::obj;
   static sem app(const ty &_x, const ty &_x0, sem f, sem x);
-  static inline const Nat test = crane::any_cast<Nat>(
-      app(ty::tnat(), ty::tnat(), crane_erase_fn([](const auto &n) {
-        return n;
-      }), Nat::s(Nat::s(Nat::s(Nat::o())))));
+  static inline const Nat test = crane::any_cast<Nat>(app(
+      ty::tnat(), ty::tnat(), crane_erase_fn([](const auto &n) { return n; }),
+      Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
 
 #endif // INCLUDED_TYPE_LEVEL_FUN_APPLY

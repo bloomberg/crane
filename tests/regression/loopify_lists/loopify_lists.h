@@ -1086,14 +1086,13 @@ struct LoopifyLists {
         auto [p0, cs] = std::move(_result);
         auto [as_, bs] = std::move(p0);
         if (p(a0)) {
-          _result = std::make_pair(
-              std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
-                             std::move(bs)), std::move(cs));
+          _result = std::make_pair(std::make_pair(
+              list<uint64_t>::cons(a0, std::move(as_)), std::move(bs)),
+                                   std::move(cs));
         } else {
           if (q(a0)) {
             _result = std::make_pair(std::make_pair(
-                                         std::move(as_), list<uint64_t>::cons(
-                                             a0, std::move(bs))),
+                std::move(as_), list<uint64_t>::cons(a0, std::move(bs))),
                                      std::move(cs));
           } else {
             _result =

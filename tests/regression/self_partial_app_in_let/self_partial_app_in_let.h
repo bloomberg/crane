@@ -145,9 +145,12 @@ struct Pos {
                        const Positive &p) {
     auto _lc1_pa0 = f(Positive::xh(), a);
     crane::fn<T1(Positive)> f2 = [=](Positive _x0) -> T1 {
-      return peano_rect<T1>(_lc1_pa0, [=](const Positive &p0, const T1 &x) {
-        return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
-      }, _x0);
+      return peano_rect<T1>(
+          _lc1_pa0, [=](const Positive &p0,
+                        const T1 &x) {
+                      return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
+                    },
+          _x0);
     };
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -162,10 +165,9 @@ struct Pos {
 };
 
 struct SelfPartialAppInLet {
-  static inline const Nat run =
-      Pos::template peano_rect<Nat>(Nat::o(), [](Positive, const Nat &n) {
-        return Nat::s(n);
-      }, Positive::xi(Positive::xo(Positive::xh())));
+  static inline const Nat run = Pos::template peano_rect<Nat>(
+      Nat::o(), [](Positive, const Nat &n) { return Nat::s(n); },
+      Positive::xi(Positive::xo(Positive::xh())));
 };
 
 #endif // INCLUDED_SELF_PARTIAL_APP_IN_LET

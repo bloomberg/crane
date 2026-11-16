@@ -9,8 +9,9 @@ crane::obj Function::Cat_IFun(IFun<crane::obj, crane::obj> f1,
 
 crane::obj Function::Case_sum1(IFun<crane::obj, crane::obj> x,
                                IFun<crane::obj, crane::obj> x0, crane::obj x1) {
-  return Function::case_sum1(std::move(x), std::move(x0), crane::any_cast<
-                                 Sum1<crane::obj, crane::obj, crane::obj>>(x1));
+  return Function::case_sum1(
+      std::move(x), std::move(x0),
+      crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
 }
 
 crane::obj Function::Inl_sum1(crane::obj x) {

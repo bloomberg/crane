@@ -760,9 +760,10 @@ struct PendantSumtreeRoundtripCase {
   static inline const CertifiedPendant pendant_5 =
       CertifiedPendant{sample_meta_a, digits_5};
   static inline const List<T0<digit>> sample_multi_digits =
-      List<T0<digit>>::cons(digits_731, List<T0<digit>>::cons(
-                                digits_462, List<T0<digit>>::cons(
-                                    digits_269, List<T0<digit>>::nil())));
+      List<T0<digit>>::cons(
+          digits_731, List<T0<digit>>::cons(
+                          digits_462, List<T0<digit>>::cons(
+                                          digits_269, List<T0<digit>>::nil())));
   static inline const bool sample_multi_roundtrip_ok = []() -> bool {
     auto _cs = decode_multi(UINT64_C(3),
                             encode_multi(UINT64_C(3), sample_multi_digits));
@@ -772,33 +773,40 @@ struct PendantSumtreeRoundtripCase {
           decoded.template map<uint64_t>([](T0<digit> _x0) -> uint64_t {
             return value_digits(UINT64_C(3), _x0);
           }),
-          List<uint64_t>::cons(UINT64_C(731), List<uint64_t>::cons(
-                                   UINT64_C(462), List<uint64_t>::cons(
-                                       UINT64_C(269), List<uint64_t>::nil()))));
+          List<uint64_t>::cons(
+              UINT64_C(731),
+              List<uint64_t>::cons(
+                  UINT64_C(462),
+                  List<uint64_t>::cons(UINT64_C(269), List<uint64_t>::nil()))));
     } else {
       return false;
     }
   }();
   static inline const PendantGroup sample_group = PendantGroup{
-      pendant_731, List<CertifiedPendant>::cons(
+      pendant_731,
+      List<CertifiedPendant>::cons(
           pendant_462, List<CertifiedPendant>::cons(
-              pendant_269, List<CertifiedPendant>::nil()))};
+                           pendant_269, List<CertifiedPendant>::nil()))};
   static inline const SumTree sample_subtree = SumTree::sumnode(
       pendant_269, List<SumTree>::cons(
-          SumTree::sumleaf(pendant_200), List<SumTree>::cons(
-              SumTree::sumleaf(pendant_069), List<SumTree>::nil())));
+                       SumTree::sumleaf(pendant_200),
+                       List<SumTree>::cons(SumTree::sumleaf(pendant_069),
+                                           List<SumTree>::nil())));
   static inline const SumTree sample_tree = SumTree::sumnode(
-      pendant_731, List<SumTree>::cons(
+      pendant_731,
+      List<SumTree>::cons(
           SumTree::sumleaf(pendant_462),
           List<SumTree>::cons(sample_subtree, List<SumTree>::nil())));
-  static inline const Ledger sample_ledger = List<
-      SigT<uint64_t, CertifiedPendant>>::cons(
-      SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_731), List<
-          SigT<uint64_t, CertifiedPendant>>::cons(
-          SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_462),
+  static inline const Ledger sample_ledger =
+      List<SigT<uint64_t, CertifiedPendant>>::cons(
+          SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_731),
           List<SigT<uint64_t, CertifiedPendant>>::cons(
-              SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(1), pendant_5),
-              List<SigT<uint64_t, CertifiedPendant>>::nil())));
+              SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3),
+                                                       pendant_462),
+              List<SigT<uint64_t, CertifiedPendant>>::cons(
+                  SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(1),
+                                                           pendant_5),
+                  List<SigT<uint64_t, CertifiedPendant>>::nil())));
   static inline const bool sample_group_valid =
       group_sums_validb(UINT64_C(3), sample_group);
   static inline const bool sample_subtree_valid =
@@ -831,16 +839,14 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
       [](auto &_self_fold_right_fix, uint64_t, const T0<T1> &v0,
          List<T1> b)
            -> List<T1> {
-            if (std::holds_alternative<typename T0<T1>::Nil0>(v0.v())) {
-              return b;
-            } else {
-              const auto &[h, n1, a2] =
-                  std::get<typename T0<T1>::Cons0>(v0.v());
-              return List<T1>::cons(
-                  h, _self_fold_right_fix(_self_fold_right_fix, n1, *a2,
-                                          std::move(b)));
-            }
-          };
+        if (std::holds_alternative<typename T0<T1>::Nil0>(v0.v())) {
+          return b;
+        } else {
+          const auto &[h, n1, a2] = std::get<typename T0<T1>::Cons0>(v0.v());
+          return List<T1>::cons(h, _self_fold_right_fix(_self_fold_right_fix,
+                                                        n1, *a2, std::move(b)));
+        }
+      };
   {
     uint64_t _lc1_x = n;
     const T0<T1> &_lc1_v0 = v;

@@ -40,9 +40,8 @@ QuicksortFun::quicksort_fun(const List<uint64_t> &x) { /// CraneEnter: captures
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(x.v());
         const List<uint64_t> &a1_value = *a1;
         _stack.emplace_back(CraneCont_Cons{a0, a1});
-        _stack.emplace_back(CraneEnter{a1_value.filter([=](uint64_t x0) {
-          return x0 < a0;
-        })});
+        _stack.emplace_back(
+            CraneEnter{a1_value.filter([=](uint64_t x0) { return x0 < a0; })});
       }
     } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
@@ -50,15 +49,14 @@ QuicksortFun::quicksort_fun(const List<uint64_t> &x) { /// CraneEnter: captures
       std::shared_ptr<List<uint64_t>> a1 = std::move(_f.a1);
       const List<uint64_t> &a1_value = *a1;
       _stack.emplace_back(CraneCont_Cons_1{a0, std::move(_result)});
-      _stack.emplace_back(CraneEnter{a1_value.filter([=](uint64_t x0) {
-        return a0 <= x0;
-      })});
+      _stack.emplace_back(
+          CraneEnter{a1_value.filter([=](uint64_t x0) { return a0 <= x0; })});
     } else {
       auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
       uint64_t a0 = _f.a0;
       _result =
           _f._tmp2.app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
-                           std::move(_result)));
+              std::move(_result)));
     }
   }
   return _result;

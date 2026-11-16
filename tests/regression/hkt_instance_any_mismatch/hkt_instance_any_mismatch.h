@@ -128,8 +128,8 @@ concept Mon = requires {
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(), std::declval<
-            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+        std::declval<typename I::template M<crane::obj>>(),
+        std::declval<crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
@@ -166,9 +166,8 @@ struct HktInstanceAnyMismatch {
 
   static_assert(Mon<optMon>);
   static inline const Option<Nat> test = optMon::template bind<Nat, Nat>(
-      optMon::template ret<Nat>(Nat::s(Nat::o())), [](const Nat &n) {
-        return optMon::template ret<Nat>(Nat::s(n));
-      });
+      optMon::template ret<Nat>(Nat::s(Nat::o())),
+      [](const Nat &n) { return optMon::template ret<Nat>(Nat::s(n)); });
 };
 
 #endif // INCLUDED_HKT_INSTANCE_ANY_MISMATCH

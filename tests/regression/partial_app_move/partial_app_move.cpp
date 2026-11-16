@@ -38,9 +38,8 @@ PartialAppMove::tree PartialAppMove::wrap(const PartialAppMove::tree &t) {
 /// then t is passed to a constructor (actually moved via rvalue ref),
 /// then the lambda accesses the moved-from t.
 uint64_t PartialAppMove::trigger_bug(PartialAppMove::tree t) {
-  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-    return sum_values(t, _x0);
-  };
+  crane::fn<uint64_t(uint64_t)> f =
+      [=](uint64_t _x0) -> uint64_t { return sum_values(t, _x0); };
   PartialAppMove::tree w = wrap(std::move(t));
   if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(w.v_mut())) {
     return f(UINT64_C(0));

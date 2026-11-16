@@ -72,11 +72,10 @@ uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    int64_t _x =
-        static_cast<int64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
+    int64_t _x = static_cast<int64_t>(
+        std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count());
     std::cout << msg << '\n';
     uint64_t r = repeat_log(n_, std::move(msg));
     return (r + 1);

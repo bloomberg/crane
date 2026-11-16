@@ -125,17 +125,13 @@ struct TypeFieldRecordConcreteLambda {
           return UINT64_C(0);
         }
       })};
-  static inline const alg nat_alg =
-      alg{UINT64_C(2), crane_erase_fn<uint64_t>([](const auto &n) {
-        return n;
-      })};
+  static inline const alg nat_alg = alg{
+      UINT64_C(2), crane_erase_fn<uint64_t>([](const auto &n) { return n; })};
   static uint64_t run(const alg &a);
   static inline const List<alg> algs =
       List<alg>::cons(nat_alg, List<alg>::cons(bool_alg, List<alg>::nil()));
-  static inline const uint64_t result =
-      algs.template fold_left<uint64_t>([](uint64_t acc, const alg &a) {
-        return (acc + run(a));
-      }, UINT64_C(0));
+  static inline const uint64_t result = algs.template fold_left<uint64_t>(
+      [](uint64_t acc, const alg &a) { return (acc + run(a)); }, UINT64_C(0));
 };
 
 #endif // INCLUDED_TYPE_FIELD_RECORD_CONCRETE_LAMBDA

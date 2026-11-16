@@ -127,23 +127,27 @@ struct WpmOps {
   };
 
   static state1 execute_wpm1(const state1 &s);
-  static inline const state1 sample1 = state1{
-      List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                               UINT64_C(11), List<uint64_t>::cons(
-                                   UINT64_C(12), List<uint64_t>::cons(
-                                       UINT64_C(13), List<uint64_t>::nil())))),
-      UINT64_C(2), UINT64_C(99), false};
+  static inline const state1 sample1 =
+      state1{List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(11),
+              List<uint64_t>::cons(
+                  UINT64_C(12),
+                  List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
+             UINT64_C(2), UINT64_C(99), false};
   static inline const state1 after1 = execute_wpm1(sample1);
-  static inline const bool test_wpm_disabled_is_nop =
-      (ListDef::template nth<uint64_t>(UINT64_C(0), after1.rom1, UINT64_C(0)) ==
-       UINT64_C(10) && (ListDef::template nth<uint64_t>(
-                            UINT64_C(1), after1.rom1, UINT64_C(0)) ==
-                        UINT64_C(11) && (ListDef::template nth<uint64_t>(
-                                             UINT64_C(2), after1.rom1,
-                                             UINT64_C(0)) == UINT64_C(12) &&
-                                         ListDef::template nth<uint64_t>(
-                                             UINT64_C(3), after1.rom1,
-                                             UINT64_C(0)) == UINT64_C(13))));
+  static inline const bool test_wpm_disabled_is_nop = (
+      ListDef::template nth<uint64_t>(UINT64_C(0), after1.rom1, UINT64_C(0)) ==
+      UINT64_C(10) &&
+      (ListDef::template nth<uint64_t>(UINT64_C(1), after1.rom1, UINT64_C(0)) ==
+       UINT64_C(11) &&
+       (ListDef::template nth<uint64_t>(UINT64_C(2), after1.rom1,
+                                        UINT64_C(0)) ==
+        UINT64_C(12) &&
+        ListDef::template nth<uint64_t>(UINT64_C(3), after1.rom1,
+                                        UINT64_C(0)) ==
+        UINT64_C(13))));
 
   struct state2 {
     List<uint64_t> ram_sys2;
@@ -155,12 +159,16 @@ struct WpmOps {
 
   static state2 execute_wpm2(const state2 &s);
   static inline const state2 sample2 = state2{
-      List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::cons(
-                               UINT64_C(6), List<uint64_t>::cons(
-                                   UINT64_C(7), List<uint64_t>::nil()))), List<
-          uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                              UINT64_C(11), List<uint64_t>::cons(
-                                  UINT64_C(12), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(5),
+          List<uint64_t>::cons(
+              UINT64_C(6),
+              List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(11),
+              List<uint64_t>::cons(UINT64_C(12), List<uint64_t>::nil()))),
       UINT64_C(1), UINT64_C(99), true};
   static inline const bool test_wpm_enabled_preserves_ram =
       nat_list_eqb(execute_wpm2(sample2).ram_sys2, sample2.ram_sys2);
@@ -175,12 +183,16 @@ struct WpmOps {
 
   static state3 execute_wpm3(const state3 &s);
   static inline const state3 sample3 = state3{
-      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                               UINT64_C(2), List<uint64_t>::cons(
-                                   UINT64_C(3), List<uint64_t>::nil()))), List<
-          uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                              UINT64_C(11), List<uint64_t>::cons(
-                                  UINT64_C(12), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+      List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(11),
+              List<uint64_t>::cons(UINT64_C(12), List<uint64_t>::nil()))),
       UINT64_C(1), UINT64_C(99), true};
   static inline const bool test_wpm_enabled_preserves_regs =
       nat_list_eqb(execute_wpm3(sample3).regs3, sample3.regs3);
@@ -195,9 +207,10 @@ struct WpmOps {
   static state4 execute_wpm4(const state4 &s);
   static inline const uint64_t test_wpm_update_gate = []() {
     state4 s = state4{List<uint64_t>::cons(
-                          UINT64_C(10), List<uint64_t>::cons(
-                              UINT64_C(11), List<uint64_t>::cons(
-                                  UINT64_C(12), List<uint64_t>::nil()))),
+        UINT64_C(10),
+        List<uint64_t>::cons(
+            UINT64_C(11),
+            List<uint64_t>::cons(UINT64_C(12), List<uint64_t>::nil()))),
                       UINT64_C(1), UINT64_C(99), true};
     state4 s_ = execute_wpm4(std::move(s));
     return ListDef::template nth<uint64_t>(UINT64_C(1), std::move(s_).rom4,
@@ -212,15 +225,19 @@ struct WpmOps {
   };
 
   static state5 execute_wpm5(const state5 &s);
-  static inline const state5 sample5 = state5{
-      List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                               UINT64_C(11), List<uint64_t>::cons(
-                                   UINT64_C(12), List<uint64_t>::cons(
-                                       UINT64_C(13), List<uint64_t>::nil())))),
-      UINT64_C(2), UINT64_C(99), true};
+  static inline const state5 sample5 =
+      state5{List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(11),
+              List<uint64_t>::cons(
+                  UINT64_C(12),
+                  List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
+             UINT64_C(2), UINT64_C(99), true};
   static inline const bool test_wpm_updates_rom_at_addr =
       ListDef::template nth<uint64_t>(UINT64_C(2), execute_wpm5(sample5).rom5,
-                                      UINT64_C(0)) == UINT64_C(99);
+                                      UINT64_C(0)) ==
+      UINT64_C(99);
 
   struct state6 {
     List<uint64_t> rom6;
@@ -230,33 +247,37 @@ struct WpmOps {
   };
 
   static state6 execute_wpm6(const state6 &s);
-  static inline const state6 sample6 = state6{
-      List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                               UINT64_C(11), List<uint64_t>::cons(
-                                   UINT64_C(12), List<uint64_t>::cons(
-                                       UINT64_C(13), List<uint64_t>::nil())))),
-      UINT64_C(2), UINT64_C(99), true};
+  static inline const state6 sample6 =
+      state6{List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(11),
+              List<uint64_t>::cons(
+                  UINT64_C(12),
+                  List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
+             UINT64_C(2), UINT64_C(99), true};
   static inline const state6 after6 = execute_wpm6(sample6);
-  static inline const bool test_wpm_writes_exactly_once =
-      (ListDef::template nth<uint64_t>(UINT64_C(2), after6.rom6, UINT64_C(0)) ==
-       UINT64_C(99) && (ListDef::template nth<uint64_t>(
-                            UINT64_C(0), after6.rom6, UINT64_C(0)) ==
-                        UINT64_C(10) && (ListDef::template nth<uint64_t>(
-                                             UINT64_C(1), after6.rom6,
-                                             UINT64_C(0)) == UINT64_C(11) &&
-                                         ListDef::template nth<uint64_t>(
-                                             UINT64_C(3), after6.rom6,
-                                             UINT64_C(0)) == UINT64_C(13))));
-  static inline const std::pair<
-      std::pair<std::pair<std::pair<std::pair<bool, bool>, bool>, uint64_t>,
-                bool>, bool> t = std::make_pair(
+  static inline const bool test_wpm_writes_exactly_once = (
+      ListDef::template nth<uint64_t>(UINT64_C(2), after6.rom6, UINT64_C(0)) ==
+      UINT64_C(99) &&
+      (ListDef::template nth<uint64_t>(UINT64_C(0), after6.rom6, UINT64_C(0)) ==
+       UINT64_C(10) &&
+       (ListDef::template nth<uint64_t>(UINT64_C(1), after6.rom6,
+                                        UINT64_C(0)) ==
+        UINT64_C(11) &&
+        ListDef::template nth<uint64_t>(UINT64_C(3), after6.rom6,
+                                        UINT64_C(0)) ==
+        UINT64_C(13))));
+  static inline const std::pair<std::pair<
+      std::pair<std::pair<std::pair<bool, bool>, bool>, uint64_t>, bool>,
+                                bool> t =
       std::make_pair(std::make_pair(
-                         std::make_pair(
-                             std::make_pair(test_wpm_disabled_is_nop,
-                                            test_wpm_enabled_preserves_ram),
-                             test_wpm_enabled_preserves_regs),
-                         test_wpm_update_gate), test_wpm_updates_rom_at_addr),
-      test_wpm_writes_exactly_once);
+          std::make_pair(std::make_pair(std::make_pair(
+              test_wpm_disabled_is_nop, test_wpm_enabled_preserves_ram),
+                                        test_wpm_enabled_preserves_regs),
+                         test_wpm_update_gate),
+          test_wpm_updates_rom_at_addr),
+                     test_wpm_writes_exactly_once);
 };
 
 template <typename T1>

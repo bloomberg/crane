@@ -88,25 +88,24 @@ struct FreeMonad {
   };
 
   template <typename T1, typename T2 = void>
-  static T1 IO_rect(
-      const std::type_identity_t<crane::fn<T1(crane::obj)>> &f,
-      const std::type_identity_t<crane::fn<T1(IO, T1, crane::fn<IO(crane::obj)>,
-                                              crane::fn<T1(crane::obj)>)>> &f0,
-      T1 f1, const std::type_identity_t<crane::fn<T1(std::string)>> &f2,
-      const IO &i) {
+  static T1
+  IO_rect(const std::type_identity_t<crane::fn<T1(crane::obj)>> &f,
+          const std::type_identity_t<crane::fn<
+              T1(IO, T1, crane::fn<IO(crane::obj)>,
+                 crane::fn<T1(crane::obj)>)>> &f0,
+          T1 f1, const std::type_identity_t<crane::fn<T1(std::string)>> &f2,
+          const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[a0] = std::get<typename IO::Pure>(i.v());
       return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
-      return crane_any_cast<T1>(f0(
-                                    *a, IO_rect<T1, crane::obj>(
-                                        crane_erase_fn<T1>(f), f0, f1, f2, *a),
-                                    b, [=](const auto &a0) {
-                                      return IO_rect<T1, crane::obj>(
-                                          crane_erase_fn<T1>(f), f0, f1, f2,
-                                          b(a0));
-                                    }));
+      return crane_any_cast<T1>(
+          f0(*a, IO_rect<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2, *a),
+             b, [=](const auto &a0) {
+               return IO_rect<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2,
+                                              b(a0));
+             }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;
     } else {
@@ -116,25 +115,24 @@ struct FreeMonad {
   }
 
   template <typename T1, typename T2 = void>
-  static T1 IO_rec(
-      const std::type_identity_t<crane::fn<T1(crane::obj)>> &f,
-      const std::type_identity_t<crane::fn<T1(IO, T1, crane::fn<IO(crane::obj)>,
-                                              crane::fn<T1(crane::obj)>)>> &f0,
-      T1 f1, const std::type_identity_t<crane::fn<T1(std::string)>> &f2,
-      const IO &i) {
+  static T1
+  IO_rec(const std::type_identity_t<crane::fn<T1(crane::obj)>> &f,
+         const std::type_identity_t<crane::fn<
+             T1(IO, T1, crane::fn<IO(crane::obj)>,
+                crane::fn<T1(crane::obj)>)>> &f0,
+         T1 f1, const std::type_identity_t<crane::fn<T1(std::string)>> &f2,
+         const IO &i) {
     if (std::holds_alternative<typename IO::Pure>(i.v())) {
       const auto &[a0] = std::get<typename IO::Pure>(i.v());
       return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(a0)));
     } else if (std::holds_alternative<typename IO::Bind>(i.v())) {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
-      return crane_any_cast<T1>(f0(
-                                    *a, IO_rec<T1, crane::obj>(
-                                        crane_erase_fn<T1>(f), f0, f1, f2, *a),
-                                    b, [=](const auto &a0) {
-                                      return IO_rec<T1, crane::obj>(
-                                          crane_erase_fn<T1>(f), f0, f1, f2,
-                                          b(a0));
-                                    }));
+      return crane_any_cast<T1>(
+          f0(*a, IO_rec<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2, *a),
+             b, [=](const auto &a0) {
+               return IO_rec<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2,
+                                             b(a0));
+             }));
     } else if (std::holds_alternative<typename IO::Get_line>(i.v())) {
       return f1;
     } else {

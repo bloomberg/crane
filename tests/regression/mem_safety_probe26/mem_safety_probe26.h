@@ -107,53 +107,49 @@ struct MemSafetyProbe26 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         if (n <= a1) {
-          return std::make_pair([=](uint64_t x) {
-            return (x + a0_value.tree_sum());
-          }, a1);
+          return std::make_pair(
+              [=](uint64_t x) { return (x + a0_value.tree_sum()); }, a1);
         } else {
-          return std::make_pair([=](uint64_t x) {
-            return (x + a2_value.tree_sum());
-          }, a1);
+          return std::make_pair(
+              [=](uint64_t x) { return (x + a2_value.tree_sum()); }, a1);
         }
       }
     }
 
     /// TEST 7: Closure captures tree child and also uses it immediately
     /// in an expression — tests clone independence under shared access.
-    std::pair<crane::fn<uint64_t(uint64_t)>,
-              tree> shared_child_closure() const {
+    std::pair<crane::fn<uint64_t(uint64_t)>, tree>
+    shared_child_closure() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return std::make_pair([](uint64_t x) { return x; }, tree::leaf());
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
-        return std::make_pair([=](uint64_t x) {
-          return (x + a0_value.tree_sum());
-        }, a0_value);
+        return std::make_pair(
+            [=](uint64_t x) { return (x + a0_value.tree_sum()); }, a0_value);
       }
     }
 
     /// TEST 6: Closure captures grandchild — two levels of deref.
     /// ll is accessed via l which is accessed via t.
-    std::pair<crane::fn<uint64_t(uint64_t)>,
-              uint64_t> deep_closure_pair() const {
+    std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
+    deep_closure_pair() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return std::make_pair([](uint64_t x) { return x; }, UINT64_C(0));
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         if (std::holds_alternative<typename tree::Leaf>(a0_value.v())) {
-          return std::make_pair([=](uint64_t x) {
-            return (x + a1);
-          }, UINT64_C(0));
+          return std::make_pair([=](uint64_t x) { return (x + a1); },
+                                UINT64_C(0));
         } else {
           const auto &[a00, a10, a20] =
               std::get<typename tree::Node>(a0_value.v());
           const tree &a00_value = *a00;
           const tree &a20_value = *a20;
-          return std::make_pair([=](uint64_t x) {
-            return ((x + a00_value.tree_sum()) + a10);
-          }, (a1 + a20_value.tree_sum()));
+          return std::make_pair(
+              [=](uint64_t x) { return ((x + a00_value.tree_sum()) + a10); },
+              (a1 + a20_value.tree_sum()));
         }
       }
     }
@@ -168,9 +164,9 @@ struct MemSafetyProbe26 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        return std::make_pair([=](uint64_t x) {
-          return (x + a0_value.tree_sum());
-        }, ((a0_value.tree_sum() + a1) + a2_value.tree_sum()));
+        return std::make_pair(
+            [=](uint64_t x) { return (x + a0_value.tree_sum()); },
+            ((a0_value.tree_sum() + a1) + a2_value.tree_sum()));
       }
     }
 
@@ -193,19 +189,18 @@ struct MemSafetyProbe26 {
     /// TEST 2: Two closures in a pair, each captures a different child.
     /// Tests that both children are correctly cloned into their
     /// respective closures.
-    std::pair<crane::fn<uint64_t(uint64_t)>,
-              crane::fn<uint64_t(uint64_t)>> split_closures() const {
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
+    split_closures() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return std::make_pair([](uint64_t x) { return x; }, [](uint64_t x) {
-          return x;
-        });
+        return std::make_pair([](uint64_t x) { return x; },
+                              [](uint64_t x) { return x; });
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        return std::make_pair([=](uint64_t x) {
-          return ((x + a0_value.tree_sum()) + a1);
-        }, [=](uint64_t x) { return ((x + a1) + a2_value.tree_sum()); });
+        return std::make_pair(
+            [=](uint64_t x) { return ((x + a0_value.tree_sum()) + a1); },
+            [=](uint64_t x) { return ((x + a1) + a2_value.tree_sum()); });
       }
     }
 
@@ -222,7 +217,8 @@ struct MemSafetyProbe26 {
         const tree &a2_value = *a2;
         return std::make_pair([=](uint64_t x) {
           return ((x + a0_value.tree_sum()) + a2_value.tree_sum());
-        }, a1);
+        },
+                              a1);
       }
     }
 
@@ -430,7 +426,7 @@ struct MemSafetyProbe26 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -526,10 +522,9 @@ struct MemSafetyProbe26 {
                       uint64_t x);
   static inline const uint64_t test_build_tree_closures = []() {
     mylist<crane::fn<uint64_t(uint64_t)>> closures =
-        build_tree_closures(
-            tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
-                       UINT64_C(6),
-                       tree::node(tree::leaf(), UINT64_C(9), tree::leaf())));
+        build_tree_closures(tree::node(
+            tree::node(tree::leaf(), UINT64_C(4), tree::leaf()), UINT64_C(6),
+            tree::node(tree::leaf(), UINT64_C(9), tree::leaf())));
     return apply_first_closure(std::move(closures), UINT64_C(100));
   }();
   static inline const uint64_t test_closure_and_sum = []() {
@@ -543,11 +538,10 @@ struct MemSafetyProbe26 {
   }();
   static inline const uint64_t test_deep_closure_pair = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
-        tree::node(
-            tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                       UINT64_C(2),
-                       tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-            UINT64_C(10), tree::leaf())
+        tree::node(tree::node(
+            tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
+            tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+                   UINT64_C(10), tree::leaf())
             .deep_closure_pair();
     return (p.first(UINT64_C(100)) + p.second);
   }();

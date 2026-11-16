@@ -103,16 +103,23 @@ uint64_t of_uint_acc(const Decimal::Uint &d, uint64_t acc) {
         *a0, ((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Decimal::Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Decimal::Uint::D7>(d.v());
-    return of_uint_acc(*a0, (((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) +
-                                1) + 1) + 1) + 1));
+    return of_uint_acc(
+        *a0,
+        (((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Decimal::Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Decimal::Uint::D8>(d.v());
-    return of_uint_acc(*a0, ((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) +
-                                 1) + 1) + 1) + 1) + 1));
+    return of_uint_acc(
+        *a0,
+        ((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+         1));
   } else {
     const auto &[a0] = std::get<typename Decimal::Uint::D9>(d.v());
-    return of_uint_acc(*a0, (((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) +
-                                   1) + 1) + 1) + 1) + 1) + 1) + 1));
+    return of_uint_acc(
+        *a0,
+        (((((((((tail_mul(UINT64_C(10), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+           1) +
+          1) +
+         1));
   }
 }
 
@@ -147,46 +154,94 @@ uint64_t of_hex_uint_acc(const Hexadecimal::Uint &d, uint64_t acc) {
         *a0, ((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::D7>(d.v());
-    return of_hex_uint_acc(*a0, (((((((tail_mul(UINT64_C(16), acc) + 1) + 1) +
-                                     1) + 1) + 1) + 1) + 1));
+    return of_hex_uint_acc(
+        *a0,
+        (((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::D8>(d.v());
-    return of_hex_uint_acc(*a0, ((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) +
-                                      1) + 1) + 1) + 1) + 1) + 1));
+    return of_hex_uint_acc(
+        *a0,
+        ((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) + 1) +
+         1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::D9>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::D9>(d.v());
-    return of_hex_uint_acc(*a0, (((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) +
-                                       1) + 1) + 1) + 1) + 1) + 1) + 1));
+    return of_hex_uint_acc(
+        *a0,
+        (((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+           1) +
+          1) +
+         1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::Da>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::Da>(d.v());
     return of_hex_uint_acc(
-        *a0, ((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
-                  1) + 1) + 1) + 1) + 1));
+        *a0,
+        ((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+            1) +
+           1) +
+          1) +
+         1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::Db>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::Db>(d.v());
     return of_hex_uint_acc(
-        *a0, (((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
-                   1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        (((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+             1) +
+            1) +
+           1) +
+          1) +
+         1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::Dc>(d.v());
     return of_hex_uint_acc(
-        *a0, ((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
-                    1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        ((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+              1) +
+             1) +
+            1) +
+           1) +
+          1) +
+         1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::Dd>(d.v());
     return of_hex_uint_acc(
-        *a0, (((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
-                     1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        (((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) + 1) +
+               1) +
+              1) +
+             1) +
+            1) +
+           1) +
+          1) +
+         1));
   } else if (std::holds_alternative<typename Hexadecimal::Uint::De>(d.v())) {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::De>(d.v());
     return of_hex_uint_acc(
-        *a0, ((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
-                       1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        ((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                 1) +
+                1) +
+               1) +
+              1) +
+             1) +
+            1) +
+           1) +
+          1) +
+         1));
   } else {
     const auto &[a0] = std::get<typename Hexadecimal::Uint::Df>(d.v());
     return of_hex_uint_acc(
-        *a0, (((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) +
-                        1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1) + 1));
+        *a0,
+        (((((((((((((((tail_mul(UINT64_C(16), acc) + 1) + 1) + 1) + 1) + 1) +
+                  1) +
+                 1) +
+                1) +
+               1) +
+              1) +
+             1) +
+            1) +
+           1) +
+          1) +
+         1));
   }
 }
 
@@ -389,15 +444,13 @@ uint64_t shiftr(uint64_t a, uint64_t n) {
 }
 
 uint64_t land(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool {
-    return (_x0 && _x1);
-  }, a, a, b);
+  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 && _x1); }, a, a,
+                 b);
 }
 
 uint64_t lor(uint64_t a, uint64_t b) {
-  return bitwise([](bool _x0, bool _x1) -> bool {
-    return (_x0 || _x1);
-  }, std::max(a, b), a, b);
+  return bitwise([](bool _x0, bool _x1) -> bool { return (_x0 || _x1); },
+                 std::max(a, b), a, b);
 }
 
 uint64_t ldiff(uint64_t a, uint64_t b) {

@@ -195,16 +195,17 @@ struct StringUtil {
 
 struct showN {
   static String show(Nat) {
-    return String::string0(Ascii::ascii0(false, true, true, true, false, true,
-                                         true, false), String::emptystring());
+    return String::string0(
+        Ascii::ascii0(false, true, true, true, false, true, true, false),
+        String::emptystring());
   }
 
   static String name() {
     return String::string0(
         Ascii::ascii0(false, true, true, true, false, true, true, false),
-        String::string0(Ascii::ascii0(true, false, false, false, false, true,
-                                      true, false), String::string0(
-                            Ascii::ascii0(false, false, true, false, true, true,
+        String::string0(
+            Ascii::ascii0(true, false, false, false, false, true, true, false),
+            String::string0(Ascii::ascii0(false, false, true, false, true, true,
                                           true, false),
                             String::emptystring())));
   }

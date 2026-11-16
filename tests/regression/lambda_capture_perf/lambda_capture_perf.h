@@ -176,9 +176,8 @@ template <Params P> struct Worker {
 
   static List<uint64_t> process_with_context(const List<typename P::A> &ctx,
                                              const List<uint64_t> &xs) {
-    return xs.template map<uint64_t>([=](uint64_t x) {
-      return (x + ctx.length());
-    });
+    return xs.template map<uint64_t>(
+        [=](uint64_t x) { return (x + ctx.length()); });
   }
 };
 

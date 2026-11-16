@@ -91,9 +91,9 @@ Dim10TowerProofChainCase::D_n_measure_eventually_zero(uint64_t x0_) {
 
 Dim10TowerProofChainCase::GradedGoodwillieTower
 Dim10TowerProofChainCase::make_graded_goodwillie_tower(uint64_t base_dim) {
-  return GradedGoodwillieTower{[=](uint64_t n) {
-    return P_n_obj(n, GradedObj{base_dim});
-  }, [=](uint64_t n) { return D_n_obj(base_dim, n); }};
+  return GradedGoodwillieTower{
+      [=](uint64_t n) { return P_n_obj(n, GradedObj{base_dim}); },
+      [=](uint64_t n) { return D_n_obj(base_dim, n); }};
 }
 
 SigT<uint64_t,
@@ -111,7 +111,8 @@ Dim10TowerProofChainCase::graded_goodwillie_P_stabilizes(uint64_t base_dim) {
 
 std::pair<std::pair<std::pair<Dim10TowerProofChainCase::IsIntegerValued,
                               Dim10TowerProofChainCase::EventuallyZero>,
-                    SigT<uint64_t, crane::obj>>, SigT<uint64_t, crane::obj>>
+                    SigT<uint64_t, crane::obj>>,
+          SigT<uint64_t, crane::obj>>
 Dim10TowerProofChainCase::graded_complete_proof_chain(uint64_t base_dim) {
   return std::make_pair(
       std::make_pair(std::make_pair(crane::obj(crane::obj()),

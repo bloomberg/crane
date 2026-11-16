@@ -217,46 +217,28 @@ struct FnValueProjections {
   static List<uint64_t> firsts(const List<std::pair<uint64_t, uint64_t>> &l);
   static List<std::optional<uint64_t>> somes(const List<uint64_t> &l);
   static List<uint64_t> ids(const List<uint64_t> &l);
-  static inline const uint64_t run = (((xs(List<point>::cons(
-                                               point{UINT64_C(1), UINT64_C(2)},
-                                               List<point>::nil()))
-                                            .template fold_right<uint64_t>(
-                                            [](uint64_t _x0,
-                                               uint64_t _x1)
-                                                 -> uint64_t {
-                                                  return (_x0 + _x1);
-                                                },
-                                            UINT64_C(0)) +
-                                        firsts(
-                                            List<std::pair<uint64_t,
-                                                           uint64_t>>::cons(
-                                                std::make_pair(UINT64_C(3),
-                                                               UINT64_C(4)),
-                                                List<std::pair<uint64_t,
-                                                               uint64_t>>::nil()))
-                                            .template fold_right<uint64_t>(
-                                            [](uint64_t _x0,
-                                               uint64_t _x1)
-                                                 -> uint64_t {
-                                                  return (_x0 + _x1);
-                                                },
-                                            UINT64_C(0))) +
-                                       somes(
-                                           List<uint64_t>::cons(
-                                               UINT64_C(1), List<uint64_t>::cons(
-                                                   UINT64_C(2),
-                                                   List<uint64_t>::nil())))
-                                           .length()) +
-                                      ids(List<uint64_t>::cons(
-                                              UINT64_C(5),
-                                              List<uint64_t>::nil()))
-                                          .template fold_right<uint64_t>(
-                                          [](uint64_t _x0,
-                                             uint64_t _x1)
-                                               -> uint64_t {
-                                                return (_x0 + _x1);
-                                              },
-                                          UINT64_C(0)));
+  static inline const uint64_t run =
+      (((xs(List<point>::cons(point{UINT64_C(1), UINT64_C(2)},
+                              List<point>::nil()))
+             .template fold_right<uint64_t>(
+             [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+             UINT64_C(0)) +
+         firsts(List<std::pair<uint64_t, uint64_t>>::cons(
+             std::make_pair(UINT64_C(3), UINT64_C(4)),
+             List<std::pair<uint64_t, uint64_t>>::nil()))
+             .template fold_right<uint64_t>(
+             [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+             UINT64_C(0))) +
+        somes(List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(UINT64_C(2),
+                                 List<uint64_t>::nil())))
+            .length()) +
+       ids(List<uint64_t>::cons(UINT64_C(5),
+                                List<uint64_t>::nil()))
+           .template fold_right<uint64_t>(
+           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+           UINT64_C(0)));
 };
 
 #endif // INCLUDED_FN_VALUE_PROJECTIONS

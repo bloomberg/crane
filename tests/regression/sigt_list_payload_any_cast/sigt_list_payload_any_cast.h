@@ -167,12 +167,14 @@ template <typename A, typename P> struct SigT {
 /// branch) is erased to `std::any`.  The producer must store it in the
 /// canonical element-erased shape the consumer reads back.
 struct SigtListPayloadAnyCast {
-  static inline const SigT<bool, crane::obj> pack = SigT<bool,
-                                                         crane::obj>::existt(
-      false, List<crane::obj>::cons(
-          UINT64_C(1), List<crane::obj>::cons(
-              UINT64_C(2),
-              List<crane::obj>::cons(UINT64_C(3), List<crane::obj>::nil()))));
+  static inline const SigT<bool, crane::obj> pack =
+      SigT<bool, crane::obj>::existt(
+          false, List<crane::obj>::cons(
+                     UINT64_C(1),
+                     List<crane::obj>::cons(
+                         UINT64_C(2), List<crane::obj>::cons(
+                                          UINT64_C(3),
+                                          List<crane::obj>::nil()))));
   static inline const uint64_t go = []() {
     const auto &_sv = pack;
     const auto &[x0, a1] = _sv;

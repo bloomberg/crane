@@ -30,9 +30,9 @@ ReuseLambdaCapture::add_length_to_each(const ReuseLambdaCapture::mylist &l,
       const auto &[a0, a1] =
           std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
       const ReuseLambdaCapture::mylist &a1_value = *a1;
-      return mylist::mycons((a0 + UINT64_C(1)), map([=](uint64_t x) {
-        return (x + length(l));
-      }, a1_value));
+      return mylist::mycons(
+          (a0 + UINT64_C(1)),
+          map([=](uint64_t x) { return (x + length(l)); }, a1_value));
     } else {
       return mylist::mynil();
     }

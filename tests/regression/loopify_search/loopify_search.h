@@ -366,8 +366,9 @@ struct LoopifySearch {
   /// perms_choices_fuel fuel choices orig generates permutations by iterating
   /// over choices.  Single self-recursive function for full loopification.
   /// Match on remaining is hoisted out of let-binding.
-  static List<List<uint64_t>> perms_choices_fuel(
-      uint64_t fuel, const List<uint64_t> &choices, const List<uint64_t> &orig);
+  static List<List<uint64_t>>
+  perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
+                     const List<uint64_t> &orig);
   /// permutations_fuel fuel l generates all permutations of list.
   static List<List<uint64_t>> permutations_fuel(uint64_t fuel,
                                                 const List<uint64_t> &l);

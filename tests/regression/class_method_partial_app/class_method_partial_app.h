@@ -158,15 +158,14 @@ struct ClassMethodPartialApp {
 
   static_assert(Sz<SzNat, uint64_t>);
   static inline const uint64_t test =
-      List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t _sat0) {
-        return SzNat::sz(UINT64_C(2), _sat0);
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t _sat0) {
-        return SzNat::sz(UINT64_C(3), _sat0);
-      }, List<crane::fn<uint64_t(uint64_t)>>::nil()))
+      List<crane::fn<uint64_t(uint64_t)>>::cons(
+          [](uint64_t _sat0) { return SzNat::sz(UINT64_C(2), _sat0); },
+          List<crane::fn<uint64_t(uint64_t)>>::cons(
+              [](uint64_t _sat0) { return SzNat::sz(UINT64_C(3), _sat0); },
+              List<crane::fn<uint64_t(uint64_t)>>::nil()))
           .template fold_right<uint64_t>(
-          [](const crane::fn<uint64_t(uint64_t)> &f, uint64_t n) {
-            return (f(UINT64_C(1)) + n);
-          },
+          [](const crane::fn<uint64_t(uint64_t)> &f,
+             uint64_t n) { return (f(UINT64_C(1)) + n); },
           UINT64_C(0));
 };
 

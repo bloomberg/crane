@@ -428,12 +428,11 @@ public:
       std::shared_ptr<Uint> a0;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_D0, CraneCont_D1, CraneCont_D2,
-                     CraneCont_D3, CraneCont_D4, CraneCont_D5, CraneCont_D6,
-                     CraneCont_D7, CraneCont_D8, CraneCont_D9, CraneCont_Da,
-                     CraneCont_Db, CraneCont_Dc, CraneCont_Dd, CraneCont_De,
-                     CraneCont_Df>;
+    using CraneFrame = std::variant<
+        CraneEnter, CraneCont_D0, CraneCont_D1, CraneCont_D2, CraneCont_D3,
+        CraneCont_D4, CraneCont_D5, CraneCont_D6, CraneCont_D7, CraneCont_D8,
+        CraneCont_D9, CraneCont_Da, CraneCont_Db, CraneCont_Dc, CraneCont_Dd,
+        CraneCont_De, CraneCont_Df>;
     T1 _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{_self});
@@ -827,12 +826,11 @@ public:
     /// CraneCont_Df: resumes after recursive call, then processes rest.
     struct CraneCont_Df {};
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_D0, CraneCont_D1, CraneCont_D2,
-                     CraneCont_D3, CraneCont_D4, CraneCont_D5, CraneCont_D6,
-                     CraneCont_D7, CraneCont_D8, CraneCont_D9, CraneCont_Da,
-                     CraneCont_Db, CraneCont_Dc, CraneCont_Dd, CraneCont_De,
-                     CraneCont_Df>;
+    using CraneFrame = std::variant<
+        CraneEnter, CraneCont_D0, CraneCont_D1, CraneCont_D2, CraneCont_D3,
+        CraneCont_D4, CraneCont_D5, CraneCont_D6, CraneCont_D7, CraneCont_D8,
+        CraneCont_D9, CraneCont_Da, CraneCont_Db, CraneCont_Dc, CraneCont_Dd,
+        CraneCont_De, CraneCont_Df>;
     uint64_t _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{_self});
@@ -1126,9 +1124,11 @@ public:
             return std::make_pair(d_rev, UINT64_C(0));
           }
         };
-    auto aux = [&](const Uint &d_rev) -> std::pair<Uint, uint64_t> {
-      return aux_impl(aux_impl, d_rev);
-    };
+    auto aux =
+        [&](const Uint &d_rev) -> std::pair<Uint,
+                                            uint64_t> {
+          return aux_impl(aux_impl, d_rev);
+        };
     auto [r, n] = aux(this->rev());
     return std::make_pair(r.rev(), n);
   }

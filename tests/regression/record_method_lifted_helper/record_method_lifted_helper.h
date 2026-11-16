@@ -110,11 +110,11 @@ struct RecordMethodLiftedHelper {
     }
   };
 
-  static inline const uint64_t use = Bag{
-      List<uint64_t>::cons(
+  static inline const uint64_t use =
+      Bag{List<uint64_t>::cons(
           UINT64_C(1),
           List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-      List<bool>::cons(true, List<bool>::nil())}.total();
+          List<bool>::cons(true, List<bool>::nil())}.total();
 };
 
 #endif // INCLUDED_RECORD_METHOD_LIFTED_HELPER

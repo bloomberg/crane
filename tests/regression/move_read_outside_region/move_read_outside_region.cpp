@@ -49,7 +49,7 @@ uint64_t MoveReadOutsideRegion::match_beside(List<uint64_t> l) {
   List<uint64_t> s = l.app(l);
   return (
       std::holds_alternative<typename List<uint64_t>::Nil>(l.v()) ? List<
-                                                                      uint64_t>::nil()
+                                                                        uint64_t>::nil()
                                                                   : grow(s))
              .app(s).length();
 }

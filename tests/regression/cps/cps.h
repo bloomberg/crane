@@ -269,9 +269,8 @@ struct CPS {
       const tree &a0_value = *a0;
       const tree &a1_value = *a1;
       return tree_sum_cps(a0_value, [=](uint64_t sl) {
-        return tree_sum_cps(a1_value, [=](uint64_t sr) {
-          return k((sl + sr));
-        });
+        return tree_sum_cps(a1_value,
+                            [=](uint64_t sr) { return k((sl + sr)); });
       });
     }
   }
@@ -299,10 +298,10 @@ struct CPS {
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       const List<uint64_t> &a1_value = *a1;
-      return partition_cps(
-          p, a1_value, [=, k = std::move(k)](const List<uint64_t> &yes,
-                                             const List<uint64_t> &no)
-                            -> uint64_t {
+      return partition_cps(p, a1_value,
+                           [=, k = std::move(k)](const List<uint64_t> &yes,
+                                                 const List<uint64_t> &no)
+                                -> uint64_t {
                              if (p(a0)) {
                                return k(List<uint64_t>::cons(a0, yes), no);
                              } else {
@@ -315,24 +314,26 @@ struct CPS {
   static uint64_t count_evens(const List<uint64_t> &l);
   static inline const uint64_t test_fact_5 = factorial(UINT64_C(5));
   static inline const uint64_t test_fib_7 = fibonacci(UINT64_C(7));
-  static inline const uint64_t test_tree =
-      tree_sum(tree::node(
-                   tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))),
-                   tree::leaf(UINT64_C(3))));
-  static inline const uint64_t test_list_sum =
-      list_sum(
-          List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                                   UINT64_C(20), List<uint64_t>::cons(
-                                       UINT64_C(30), List<uint64_t>::nil()))));
-  static inline const uint64_t test_evens =
-      count_evens(
+  static inline const uint64_t test_tree = tree_sum(
+      tree::node(tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))),
+                 tree::leaf(UINT64_C(3))));
+  static inline const uint64_t test_list_sum = list_sum(List<uint64_t>::cons(
+      UINT64_C(10), List<uint64_t>::cons(
+                        UINT64_C(20), List<uint64_t>::cons(
+                                          UINT64_C(30),
+                                          List<uint64_t>::nil()))));
+  static inline const uint64_t test_evens = count_evens(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
           List<uint64_t>::cons(
-              UINT64_C(1), List<uint64_t>::cons(
-                  UINT64_C(2), List<uint64_t>::cons(
-                      UINT64_C(3), List<uint64_t>::cons(
-                          UINT64_C(4), List<uint64_t>::cons(
-                              UINT64_C(5), List<uint64_t>::cons(
-                                  UINT64_C(6), List<uint64_t>::nil())))))));
+              UINT64_C(3),
+              List<uint64_t>::cons(
+                  UINT64_C(4),
+                  List<uint64_t>::cons(
+                      UINT64_C(5),
+                      List<uint64_t>::cons(UINT64_C(6),
+                                           List<uint64_t>::nil())))))));
 };
 
 #endif // INCLUDED_CPS

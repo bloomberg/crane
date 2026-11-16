@@ -7,28 +7,28 @@ LocalTailLoopCallsBack::find(const LocalTailLoopCallsBack::tree &t,
       [](const List<LocalTailLoopCallsBack::tree> &ts,
          uint64_t k0)
            -> std::optional<uint64_t> {
-            uint64_t _loop_k0 = k0;
-            const List<LocalTailLoopCallsBack::tree> *_loop_ts = &ts;
-            while (true) {
-              if (std::holds_alternative<
-                      typename List<LocalTailLoopCallsBack::tree>::Nil>(
-                      _loop_ts->v())) {
-                return std::optional<uint64_t>();
-              } else {
-                const auto &[a0, a1] =
-                    std::get<typename List<LocalTailLoopCallsBack::tree>::Cons>(
-                        _loop_ts->v());
-                if (_loop_k0 == UINT64_C(0)) {
-                  return find(a0, _loop_k0);
-                } else {
-                  _loop_k0 = (((_loop_k0 - UINT64_C(1)) > _loop_k0
-                                   ? 0
-                                   : (_loop_k0 - UINT64_C(1))));
-                  _loop_ts = crane_raw(a1);
-                }
-              }
+        uint64_t _loop_k0 = k0;
+        const List<LocalTailLoopCallsBack::tree> *_loop_ts = &ts;
+        while (true) {
+          if (std::holds_alternative<
+                  typename List<LocalTailLoopCallsBack::tree>::Nil>(
+                  _loop_ts->v())) {
+            return std::optional<uint64_t>();
+          } else {
+            const auto &[a0, a1] =
+                std::get<typename List<LocalTailLoopCallsBack::tree>::Cons>(
+                    _loop_ts->v());
+            if (_loop_k0 == UINT64_C(0)) {
+              return find(a0, _loop_k0);
+            } else {
+              _loop_k0 = (((_loop_k0 - UINT64_C(1)) > _loop_k0
+                               ? 0
+                               : (_loop_k0 - UINT64_C(1))));
+              _loop_ts = crane_raw(a1);
             }
-          };
+          }
+        }
+      };
   if (std::holds_alternative<typename LocalTailLoopCallsBack::tree::Leaf>(t.v())) {
     const auto &[n0] =
         std::get<typename LocalTailLoopCallsBack::tree::Leaf>(t.v());

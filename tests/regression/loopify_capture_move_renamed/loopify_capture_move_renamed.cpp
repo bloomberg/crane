@@ -10,17 +10,15 @@
 /// already moved into _loop_k on entry: a read of a moved-from value, and
 /// the continuation it did read copied.
 uint64_t LoopifyCaptureMoveRenamed::count_evens(const List<uint64_t> &l) {
-  return partition_cps(Nat::even, l,
-                       [](const List<uint64_t> &yes, List<uint64_t>) {
-                         return yes.length();
-                       });
+  return partition_cps(
+      Nat::even, l,
+      [](const List<uint64_t> &yes, List<uint64_t>) { return yes.length(); });
 }
 
 uint64_t LoopifyCaptureMoveRenamed::count_odds(const List<uint64_t> &l) {
-  return partition_cps(Nat::even, l,
-                       [](List<uint64_t>, const List<uint64_t> &eta0_) {
-                         return eta0_.length();
-                       });
+  return partition_cps(
+      Nat::even, l, [](List<uint64_t>,
+                       const List<uint64_t> &eta0_) { return eta0_.length(); });
 }
 
 bool Nat::even(uint64_t n) {

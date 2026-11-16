@@ -153,8 +153,9 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
-            const auto &[r] = std::get<
-                typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
+            const auto &[r] =
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                    _other.v());
             return RetF{[&]() -> R {
               if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
@@ -167,8 +168,9 @@ public:
             if (std::holds_alternative<
                     typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
-              const auto &[t] = std::get<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v());
+              const auto &[t] =
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                      _other.v());
               return TauF{[&]() -> itree {
                 if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
@@ -178,8 +180,9 @@ public:
                 }
               }()};
             } else {
-              const auto &[x, e] = std::get<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(_other.v());
+              const auto &[x, e] =
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                      _other.v());
               return VisF{
                   [&]() -> E {
                     if constexpr (crane_convertible<E, const CraneU0 &>) {
@@ -237,30 +240,19 @@ public:
 
   template <typename CraneU0, typename CraneU1>
   Itree(const Itree<CraneU0, CraneU1> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                       [=]() -> variant_t {
-                                                         const auto &[_observe] =
-                                                             std::get<
-                                                                 typename Itree<
-                                                                     CraneU0,
-                                                                     CraneU1>::Go>(
-                                                                 _other.v());
-                                                         return Go{
-                                                             crane_convert<
-                                                                 ItreeF<
-                                                                     E, R,
-                                                                     Itree<E,
-                                                                           R>>>(
-                                                                 _observe)};
-                                                       })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(
+      _other.lazy_cell(), [=]() -> variant_t {
+        const auto &[_observe] =
+            std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
+        return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
+      })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                               std::move(_observe)));
+    return Itree<E, R>(crane::lazy<variant_t>(
+        std::in_place, std::in_place_index<0>, std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -305,8 +297,9 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
-            const auto &[a0] = std::get<
-                typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v());
+            const auto &[a0] =
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
+                    _other.v());
             return Inl1{[&]() -> E1 {
               if constexpr (crane_convertible<E1, const CraneU0 &>) {
                 return crane_convert<E1>(a0);
@@ -316,8 +309,9 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] = std::get<
-                typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(_other.v());
+            const auto &[a0] =
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
+                    _other.v());
             return Inr1{[&]() -> E2 {
               if constexpr (crane_convertible<E2, const CraneU1 &>) {
                 return crane_convert<E2>(a0);
@@ -369,8 +363,8 @@ template <typename CraneP0> struct crane_carrier_tch_39cd911840c5c5a4 {
 
 struct HoStack {
   template <Params _tcI0>
-  static stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c,
-                Nat> get_st(Nat n);
+  static stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c, Nat>
+  get_st(Nat n);
 };
 
 struct natParams {
@@ -382,20 +376,19 @@ struct natParams {
 static_assert(Params<natParams>);
 
 struct CarrierHolderFileOrder {
-  static Itree<AllE<typename natParams::ptr, crane::obj>,
-               std::pair<Nat, Nat>> first(std::monostate _x);
+  static Itree<AllE<typename natParams::ptr, crane::obj>, std::pair<Nat, Nat>>
+  first(std::monostate _x);
 };
 
 template <Params _tcI0>
-stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c,
-       Nat> HoStack::get_st(Nat n) {
+stateT<Nat, crane_carrier_tch_39cd911840c5c5a4<_tcI0>::template c, Nat>
+HoStack::get_st(Nat n) {
   return [=, n = std::move(n)](const Nat &s) {
     return Itree<AllE<typename _tcI0::ptr, crane::obj>,
-                 std::pair<Nat, Nat>>::go(
-        ItreeF<
-            AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>,
-            Itree<AllE<typename _tcI0::ptr, crane::obj>,
-                  std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n), s)));
+                 std::pair<Nat, Nat>>::go(ItreeF<
+        AllE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>,
+        Itree<AllE<typename _tcI0::ptr, crane::obj>,
+              std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n), s)));
   };
 }
 

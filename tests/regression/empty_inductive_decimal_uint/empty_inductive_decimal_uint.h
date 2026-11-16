@@ -448,25 +448,7 @@ public:
 struct EmptyInductiveDecimalUint {
   static String s(const Nat::nat &n);
   static inline const Nat::nat test =
-      s(Nat::nat::s(
-            Nat::nat::s(
-                Nat::nat::s(
-                    Nat::nat::s(
-                        Nat::nat::s(
-                            Nat::nat::s(
-                                Nat::nat::s(
-                                    Nat::nat::s(
-                                        Nat::nat::s(
-                                            Nat::nat::s(
-                                                Nat::nat::s(
-                                                    Nat::nat::s(
-                                                        Nat::nat::s(
-                                                            Nat::nat::s(
-                                                                Nat::nat::s(
-                                                                    Nat::nat::s(
-                                                                        Nat::nat::s(
-                                                                            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o())))))))))))))))))))))))))))))))))))))))))))
-          .length();
+      s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))))))))))))))))))))))))))))))))))))))).length();
 };
 
 #endif // INCLUDED_EMPTY_INDUCTIVE_DECIMAL_UINT

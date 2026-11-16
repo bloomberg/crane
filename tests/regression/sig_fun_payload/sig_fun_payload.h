@@ -35,9 +35,8 @@ template <typename A> struct Sig {
 
 struct SigFunPayload {
   static inline const Sig<crane::fn<uint64_t(uint64_t)>> mk =
-      Sig<crane::fn<uint64_t(uint64_t)>>::exist([](uint64_t x) {
-        return (x + UINT64_C(1));
-      });
+      Sig<crane::fn<uint64_t(uint64_t)>>::exist(
+          [](uint64_t x) { return (x + UINT64_C(1)); });
   static inline const uint64_t go = []() {
     const auto &_sv = mk;
     const auto &[x] = _sv;

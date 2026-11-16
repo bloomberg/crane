@@ -15,9 +15,10 @@ List<uint64_t> LoopifyListCombining::append(const List<uint64_t> &a,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_a->v());
       auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
-      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
-                                              List<uint64_t>>(std::move(_cell)))
-                                      : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node =
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_a = crane_raw(a1);
       continue;
@@ -56,8 +57,8 @@ List<uint64_t> LoopifyListCombining::intersperse(uint64_t sep,
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename List<uint64_t>::Cons>(
-                std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
+            &std::get<typename List<uint64_t>::Cons>(std::get<
+                typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
                 .l;
         _loop_l = crane_raw(a1);
         continue;
@@ -202,7 +203,7 @@ LoopifyListCombining::mapcat(const List<uint64_t> &l) { /// CraneEnter: captures
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       _result = append(List<uint64_t>::cons(
-                           a0, List<uint64_t>::cons(a0, List<uint64_t>::nil())),
+          a0, List<uint64_t>::cons(a0, List<uint64_t>::nil())),
                        std::move(_result));
     }
   }
@@ -241,8 +242,8 @@ List<uint64_t> LoopifyListCombining::interleave_two(const List<uint64_t> &l1,
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename List<uint64_t>::Cons>(
-                std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
+            &std::get<typename List<uint64_t>::Cons>(std::get<
+                typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
                 .l;
         _loop_l2 = crane_raw(a10);
         _loop_l1 = crane_raw(a1);

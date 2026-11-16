@@ -2,9 +2,8 @@
 
 List<uint64_t>
 FnValueProjections::xs(const List<FnValueProjections::point> &l) {
-  return l.template map<uint64_t>([](const FnValueProjections::point &p) {
-    return p.px;
-  });
+  return l.template map<uint64_t>(
+      [](const FnValueProjections::point &p) { return p.px; });
 }
 
 List<uint64_t>
@@ -15,9 +14,8 @@ FnValueProjections::firsts(const List<std::pair<uint64_t, uint64_t>> &l) {
 
 List<std::optional<uint64_t>>
 FnValueProjections::somes(const List<uint64_t> &l) {
-  return l.template map<std::optional<uint64_t>>([](uint64_t x) {
-    return std::make_optional<uint64_t>(x);
-  });
+  return l.template map<std::optional<uint64_t>>(
+      [](uint64_t x) { return std::make_optional<uint64_t>(x); });
 }
 
 List<uint64_t> FnValueProjections::ids(const List<uint64_t> &l) {

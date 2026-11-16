@@ -739,39 +739,37 @@ template <OrderedType X> struct Coq_Raw {
           [&](auto &_self_map2_aux,
               const List<std::pair<typename X::t, T2>> &m_)
                -> List<std::pair<typename X::t, T3>> {
-                if (std::holds_alternative<
-                        typename List<std::pair<typename X::t, T2>>::Nil>(
-                        m_.v())) {
-                  return map2_l<T1, T2, T3>(f, m);
-                } else {
-                  const auto &[a00, a10] =
-                      std::get<
-                          typename List<std::pair<typename X::t, T2>>::Cons>(
-                          m_.v());
-                  const auto &[k_, e_] = a00;
-                  auto &&_sv = X::compare(k, k_);
-                  if (std::holds_alternative<
-                          typename Compare<typename X::t>::LT>(_sv.v())) {
-                    return option_cons<T3>(
-                        k, f(std::make_optional<T1>(e), std::optional<T2>()),
-                        map2<T1, T2, T3>(f, *a1, m_));
-                  } else if (std::holds_alternative<
-                                 typename Compare<typename X::t>::EQ>(_sv.v())) {
-                    return option_cons<T3>(k, f(std::make_optional<T1>(e),
-                                                std::make_optional<T2>(e_)),
-                                           map2<T1, T2, T3>(f, *a1, *a10));
-                  } else {
-                    return option_cons<T3>(
-                        k_, f(std::optional<T1>(), std::make_optional<T2>(e_)),
-                        _self_map2_aux(_self_map2_aux, *a10));
-                  }
-                }
-              };
+            if (std::holds_alternative<
+                    typename List<std::pair<typename X::t, T2>>::Nil>(m_.v())) {
+              return map2_l<T1, T2, T3>(f, m);
+            } else {
+              const auto &[a00, a10] =
+                  std::get<typename List<std::pair<typename X::t, T2>>::Cons>(
+                      m_.v());
+              const auto &[k_, e_] = a00;
+              auto &&_sv = X::compare(k, k_);
+              if (std::holds_alternative<typename Compare<typename X::t>::LT>(
+                      _sv.v())) {
+                return option_cons<T3>(
+                    k, f(std::make_optional<T1>(e), std::optional<T2>()),
+                    map2<T1, T2, T3>(f, *a1, m_));
+              } else if (
+                  std::holds_alternative<typename Compare<typename X::t>::EQ>(
+                      _sv.v())) {
+                return option_cons<T3>(
+                    k, f(std::make_optional<T1>(e), std::make_optional<T2>(e_)),
+                    map2<T1, T2, T3>(f, *a1, *a10));
+              } else {
+                return option_cons<T3>(
+                    k_, f(std::optional<T1>(), std::make_optional<T2>(e_)),
+                    _self_map2_aux(_self_map2_aux, *a10));
+              }
+            }
+          };
       auto map2_aux =
           [&](const List<std::pair<typename X::t, T2>> &m_) -> List<
-              std::pair<typename X::t, T3>> {
-                return map2_aux_impl(map2_aux_impl, m_);
-              };
+              std::pair<typename X::t,
+                        T3>> { return map2_aux_impl(map2_aux_impl, m_); };
       return map2_aux(x0_);
     }
   }
@@ -781,12 +779,11 @@ template <OrderedType X> struct Coq_Raw {
   combine(List<std::pair<typename X::t, T1>> m, const t<T2> &x0_) {
     if (std::holds_alternative<typename List<std::pair<typename X::t,
                                                        T1>>::Nil>(m.v_mut())) {
-      return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>(
-          [](const T2 &e_) {
-            return std::make_pair(std::optional<T1>(),
-                                  std::make_optional<T2>(e_));
-          },
-          x0_);
+      return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>([](
+          const T2 &e_) {
+        return std::make_pair(std::optional<T1>(), std::make_optional<T2>(e_));
+      },
+                                                                      x0_);
     } else {
       auto &[a0, a1] = std::get<
           typename List<std::pair<typename X::t, T1>>::Cons>(m.v_mut());
@@ -795,66 +792,61 @@ template <OrderedType X> struct Coq_Raw {
       auto combine_aux_impl =
           [&](auto &_self_combine_aux,
               const List<std::pair<typename X::t, T2>> &m_)
-               -> List<
-              std::pair<typename X::t,
-                        std::pair<std::optional<T1>, std::optional<T2>>>> {
-                          if (std::holds_alternative<
-                                  typename List<std::pair<typename X::t,
-                                                          T2>>::Nil>(m_.v())) {
-                            return map<T1, std::pair<std::optional<T1>,
-                                                     std::optional<T2>>>(
-                                [](const T1 &e0) {
-                                  return std::make_pair(
-                                      std::make_optional<T1>(e0),
-                                      std::optional<T2>());
-                                },
-                                m);
-                          } else {
-                            const auto &[a00, a10] =
-                                std::get<
-                                    typename List<std::pair<typename X::t,
-                                                            T2>>::Cons>(m_.v());
-                            const auto &[k_, e_] = a00;
-                            auto &&_sv = X::compare(k, k_);
-                            if (std::holds_alternative<
-                                    typename Compare<typename X::t>::LT>(
-                                    _sv.v())) {
-                              return List<std::pair<typename X::t, std::pair<
-                                                        std::optional<T1>,
-                                                        std::optional<T2>>>>::cons(
-                                  std::make_pair(k, std::make_pair(
-                                                     std::make_optional<T1>(e),
+               -> List<std::pair<
+              typename X::t, std::pair<std::optional<T1>, std::optional<T2>>>> {
+            if (std::holds_alternative<
+                    typename List<std::pair<typename X::t, T2>>::Nil>(m_.v())) {
+              return map<T1, std::pair<std::optional<T1>, std::optional<T2>>>(
+                  [](const T1 &e0) {
+                    return std::make_pair(std::make_optional<T1>(e0),
+                                          std::optional<T2>());
+                  },
+                  m);
+            } else {
+              const auto &[a00, a10] =
+                  std::get<typename List<std::pair<typename X::t, T2>>::Cons>(
+                      m_.v());
+              const auto &[k_, e_] = a00;
+              auto &&_sv = X::compare(k, k_);
+              if (std::holds_alternative<typename Compare<typename X::t>::LT>(
+                      _sv.v())) {
+                return List<
+                    std::pair<typename X::t,
+                              std::pair<std::optional<T1>,
+                                        std::optional<T2>>>>::cons(
+                    std::make_pair(k, std::make_pair(std::make_optional<T1>(e),
                                                      std::optional<T2>())),
-                                  combine<T1, T2>(a1_value, m_));
-                            } else if (std::holds_alternative<
-                                           typename Compare<typename X::t>::EQ>(
-                                           _sv.v())) {
-                              return List<std::pair<typename X::t, std::pair<
-                                                        std::optional<T1>,
-                                                        std::optional<T2>>>>::cons(
-                                  std::make_pair(
-                                      k, std::make_pair(
-                                          std::make_optional<T1>(e),
-                                          std::make_optional<T2>(e_))),
-                                  combine<T1, T2>(a1_value, *a10));
-                            } else {
-                              return List<std::pair<typename X::t, std::pair<
-                                                        std::optional<T1>,
-                                                        std::optional<T2>>>>::cons(
-                                  std::make_pair(
-                                      k_, std::make_pair(
-                                          std::optional<T1>(),
-                                          std::make_optional<T2>(e_))),
-                                  _self_combine_aux(_self_combine_aux, *a10));
-                            }
-                          }
-                        };
+                    combine<T1, T2>(a1_value, m_));
+              } else if (
+                  std::holds_alternative<typename Compare<typename X::t>::EQ>(
+                      _sv.v())) {
+                return List<
+                    std::pair<typename X::t,
+                              std::pair<std::optional<T1>,
+                                        std::optional<T2>>>>::cons(
+                    std::make_pair(k,
+                                   std::make_pair(std::make_optional<T1>(e),
+                                                  std::make_optional<T2>(e_))),
+                    combine<T1, T2>(a1_value, *a10));
+              } else {
+                return List<
+                    std::pair<typename X::t,
+                              std::pair<std::optional<T1>,
+                                        std::optional<T2>>>>::cons(
+                    std::make_pair(k_,
+                                   std::make_pair(std::optional<T1>(),
+                                                  std::make_optional<T2>(e_))),
+                    _self_combine_aux(_self_combine_aux, *a10));
+              }
+            }
+          };
       auto combine_aux =
-          [&](const List<std::pair<typename X::t, T2>> &m_) -> List<
-              std::pair<typename X::t,
-                        std::pair<std::optional<T1>, std::optional<T2>>>> {
-                          return combine_aux_impl(combine_aux_impl, m_);
-                        };
+          [&](const List<std::pair<typename X::t, T2>> &m_) -> List<std::pair<
+              typename X::t,
+              std::pair<std::optional<T1>,
+                        std::optional<T2>>>> {
+            return combine_aux_impl(combine_aux_impl, m_);
+          };
       return combine_aux(x0_);
     }
   }
@@ -871,21 +863,21 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static List<std::pair<key, T3>> map2_alt(
-      const std::type_identity_t<
-          crane::fn<std::optional<T3>(std::optional<T1>,
-                                      std::optional<T2>)>> &f,
-      List<std::pair<typename X::t, T1>> m,
-      const List<std::pair<typename X::t, T2>> &m_) {
+  static List<std::pair<key, T3>>
+  map2_alt(const std::type_identity_t<
+      crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>> &f,
+           List<std::pair<typename X::t, T1>> m,
+           const List<std::pair<typename X::t, T2>> &m_) {
     List<std::pair<typename X::t,
                    std::pair<std::optional<T1>, std::optional<T2>>>> m0 =
         combine<T1, T2>(std::move(m), m_);
-    List<std::pair<typename X::t, std::optional<T3>>> m1 = map<
-        std::pair<std::optional<T1>, std::optional<T2>>, std::optional<T3>>(
-        [=](const std::pair<std::optional<T1>, std::optional<T2>> &p) {
-          return f(p.first, p.second);
-        },
-        std::move(m0));
+    List<std::pair<typename X::t, std::optional<T3>>> m1 =
+        map<std::pair<std::optional<T1>, std::optional<T2>>, std::optional<T3>>(
+            [=](const std::pair<std::optional<T1>,
+                                std::optional<T2>> &p) {
+              return f(p.first, p.second);
+            },
+            std::move(m0));
     return fold_right_pair<key, std::optional<T3>, List<std::pair<key, T3>>>(
         option_cons<T3>, std::move(m1), List<std::pair<key, T3>>::nil());
   }
@@ -911,8 +903,9 @@ template <OrderedType X> struct Coq_Raw {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-  static std::optional<T3> at_least_one_then_f(
-      F0 &&f, const std::optional<T1> &o, const std::optional<T2> &o_) {
+  static std::optional<T3>
+  at_least_one_then_f(F0 &&f, const std::optional<T1> &o,
+                      const std::optional<T2> &o_) {
     if (o.has_value()) {
       const T1 &_x = *o;
       return f(o, o_);
@@ -1073,7 +1066,7 @@ template <Int I, OrderedType X> struct Raw {
                   std::get<typename tree<CraneU>::Node>(_other.v());
               return Node{
                   (a0 ? std::make_shared<tree<elt>>(
-                          crane_convert<tree<elt>>(*a0))
+                            crane_convert<tree<elt>>(*a0))
                       : nullptr),
                   a1,
                   [&]() -> elt {
@@ -1086,7 +1079,7 @@ template <Int I, OrderedType X> struct Raw {
                     }
                   }(),
                   (a3 ? std::make_shared<tree<elt>>(
-                          crane_convert<tree<elt>>(*a3))
+                            crane_convert<tree<elt>>(*a3))
                       : nullptr),
                   a4};
             }
@@ -1395,9 +1388,10 @@ template <Int I, OrderedType X> struct Raw {
               }
             }
           };
-      auto join_aux = [&](const tree<T1> &r) -> tree<T1> {
-        return join_aux_impl(join_aux_impl, r);
-      };
+      auto join_aux =
+          [&](const tree<T1> &r) -> tree<T1> {
+            return join_aux_impl(join_aux_impl, r);
+          };
       return join_aux(x2_);
     }
   }
@@ -1470,8 +1464,8 @@ template <Int I, OrderedType X> struct Raw {
       const auto &[a0, a1, a2, a3, a4] =
           std::get<typename tree<T1>::Node>(m.v());
       return elements_aux<T1>(List<std::pair<typename X::t, T1>>::cons(
-                                  std::make_pair(a1, a2),
-                                  elements_aux<T1>(std::move(acc), *a3)), *a0);
+          std::make_pair(a1, a2), elements_aux<T1>(std::move(acc), *a3)),
+                              *a0);
     }
   }
 
@@ -1541,7 +1535,7 @@ template <Int I, OrderedType X> struct Raw {
                   }(),
                   crane_convert<tree<elt>>(a2),
                   (a3 ? std::make_shared<enumeration<elt>>(
-                          crane_convert<enumeration<elt>>(*a3))
+                            crane_convert<enumeration<elt>>(*a3))
                       : nullptr)};
             }
           }()) {}
@@ -1648,12 +1642,11 @@ template <Int I, OrderedType X> struct Raw {
           cmp,
           a0_value,
           [=](enumeration<T1> _x0) -> bool {
-            return equal_more<T1>(cmp, a1, a2,
-                                  [=](enumeration<T1> _x0) -> bool {
-                                    return equal_cont<T1>(cmp, a3_value, cont,
-                                                          _x0);
-                                  },
-                                  _x0);
+            return equal_more<T1>(
+                cmp, a1, a2, [=](enumeration<T1> _x0) -> bool {
+                  return equal_cont<T1>(cmp, a3_value, cont, _x0);
+                },
+                _x0);
           },
           e2);
     }
@@ -1750,23 +1743,27 @@ template <Int I, OrderedType X> struct Raw {
   }
 
   template <typename T1, typename T2, typename T3>
-  static tree<T3> map2(
-      std::type_identity_t<
-          crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>> f,
-      const tree<T1> &x0_, const tree<T2> &x1_) {
+  static tree<T3> map2(std::type_identity_t<
+      crane::fn<std::optional<T3>(std::optional<T1>, std::optional<T2>)>> f,
+                       const tree<T1> &x0_, const tree<T2> &x1_) {
     return map2_opt<T1, T2, T3>(
-        [=](key, const T1 &d, const std::optional<T2> &o) {
+        [=](key, const T1 &d,
+            const std::optional<T2> &o) {
           return f(std::make_optional<T1>(d), o);
         },
         [=](tree<T1> _x0) -> tree<T3> {
-          return map_option<T1, T3>([=](key, const T1 &d) {
+          return map_option<T1, T3>([=](key,
+                                        const T1 &d) {
             return f(std::make_optional<T1>(d), std::optional<T2>());
-          }, _x0);
+          },
+                                    _x0);
         },
         [=](tree<T2> _x0) -> tree<T3> {
-          return map_option<T2, T3>([=](key, const T2 &d_) {
+          return map_option<T2, T3>([=](key,
+                                        const T2 &d_) {
             return f(std::optional<T1>(), std::make_optional<T2>(d_));
-          }, _x0);
+          },
+                                    _x0);
         },
         x0_,
         x1_);

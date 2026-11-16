@@ -105,11 +105,11 @@ struct ThreadHandleSemantics {
   static inline const uint64_t r1 = never_joined(UINT64_C(3));
   static inline const uint64_t r2 = joined_twice(UINT64_C(4));
   static inline const uint64_t r3 = []() {
-    List<crane::thread> hs =
-        spawn_all(List<uint64_t>::cons(
-                      UINT64_C(1), List<uint64_t>::cons(
-                          UINT64_C(2), List<uint64_t>::cons(
-                              UINT64_C(3), List<uint64_t>::nil()))));
+    List<crane::thread> hs = spawn_all(List<uint64_t>::cons(
+        UINT64_C(1), List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3),
+                                          List<uint64_t>::nil()))));
     join_all(std::move(hs));
     return UINT64_C(7);
   }();

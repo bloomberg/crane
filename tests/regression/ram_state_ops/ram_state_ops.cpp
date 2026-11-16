@@ -17,14 +17,16 @@ RamStateOps::ram_reg
 RamStateOps::upd_main_in_reg(const RamStateOps::ram_reg &rg, uint64_t i,
                              uint64_t v) {
   return ram_reg{update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
-                                      rg.reg_main), rg.reg_status};
+                                      rg.reg_main),
+                 rg.reg_status};
 }
 
 RamStateOps::ram_reg
 RamStateOps::upd_stat_in_reg(const RamStateOps::ram_reg &rg, uint64_t i,
                              uint64_t v) {
-  return ram_reg{rg.reg_main, update_nth<uint64_t>(
-                     i, (UINT64_C(16) ? v % UINT64_C(16) : v), rg.reg_status)};
+  return ram_reg{rg.reg_main,
+                 update_nth<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
+                                      rg.reg_status)};
 }
 
 RamStateOps::ram_reg RamStateOps::get_regRAM(const RamStateOps::ram_chip &ch,
@@ -121,8 +123,8 @@ RamStateOps::pop_stack(const RamStateOps::state &s) {
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
     return std::make_pair(
-        std::make_optional<uint64_t>(a0), state{
-            s.state_regs, s.state_acc, s.state_carry, s.state_pc, *a1,
-            s.state_ram, s.state_sel, s.state_rom});
+        std::make_optional<uint64_t>(a0),
+        state{s.state_regs, s.state_acc, s.state_carry, s.state_pc, *a1,
+              s.state_ram, s.state_sel, s.state_rom});
   }
 }

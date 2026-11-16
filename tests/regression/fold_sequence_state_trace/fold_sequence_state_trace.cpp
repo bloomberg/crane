@@ -67,9 +67,9 @@ FoldSequenceStateTraceCase::add_fold_to_state(
     const FoldSequenceStateTraceCase::ConstructionState &st,
     const FoldSequenceStateTraceCase::FoldStep &step) {
   FoldSequenceStateTraceCase::Line new_line = step.execute_fold_step();
-  return ConstructionState{
-      st.state_points, List<FoldSequenceStateTraceCase::Line>::cons(
-          std::move(new_line), st.state_lines)};
+  return ConstructionState{st.state_points,
+                           List<FoldSequenceStateTraceCase::Line>::cons(
+                               std::move(new_line), st.state_lines)};
 }
 
 FoldSequenceStateTraceCase::ConstructionState
@@ -80,8 +80,9 @@ FoldSequenceStateTraceCase::execute_sequence(
           typename List<FoldSequenceStateTraceCase::FoldStep>::Nil>(seq.v())) {
     return st;
   } else {
-    const auto &[a0, a1] = std::get<
-        typename List<FoldSequenceStateTraceCase::FoldStep>::Cons>(seq.v());
+    const auto &[a0, a1] =
+        std::get<typename List<FoldSequenceStateTraceCase::FoldStep>::Cons>(
+            seq.v());
     return execute_sequence(add_fold_to_state(std::move(st), a0), *a1);
   }
 }

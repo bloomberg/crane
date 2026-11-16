@@ -166,9 +166,9 @@ struct QuicksortFun {
         return x < a0;
       }))
                  .app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
-                          quicksort_fun0(a1_value.filter([=](uint64_t x) {
-                            return a0 <= x;
-                          }))));
+          quicksort_fun0(a1_value.filter([=](uint64_t x) {
+            return a0 <= x;
+          }))));
     }
   }
 
@@ -177,15 +177,24 @@ struct QuicksortFun {
   static std::string list_to_string(const List<uint64_t> &l);
   [[gnu::used]] static inline const List<uint64_t> input_lst1 =
       List<uint64_t>::cons(
-          UINT64_C(212498), List<uint64_t>::cons(
-              UINT64_C(127), List<uint64_t>::cons(
-                  UINT64_C(5981), List<uint64_t>::cons(
-                      UINT64_C(2749812), List<uint64_t>::cons(
-                          UINT64_C(74879), List<uint64_t>::cons(
-                              UINT64_C(126), List<uint64_t>::cons(
-                                  UINT64_C(4), List<uint64_t>::cons(
-                                      UINT64_C(51), List<uint64_t>::cons(
-                                          UINT64_C(2412), List<uint64_t>::cons(
+          UINT64_C(212498),
+          List<uint64_t>::cons(
+              UINT64_C(127),
+              List<uint64_t>::cons(
+                  UINT64_C(5981),
+                  List<uint64_t>::cons(
+                      UINT64_C(2749812),
+                      List<uint64_t>::cons(
+                          UINT64_C(74879),
+                          List<uint64_t>::cons(
+                              UINT64_C(126),
+                              List<uint64_t>::cons(
+                                  UINT64_C(4),
+                                  List<uint64_t>::cons(
+                                      UINT64_C(51),
+                                      List<uint64_t>::cons(
+                                          UINT64_C(2412),
+                                          List<uint64_t>::cons(
                                               UINT64_C(10645),
                                               List<uint64_t>::nil()))))))))));
   static std::string test_quicksort_fun(std::monostate _x);

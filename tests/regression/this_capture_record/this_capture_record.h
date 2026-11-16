@@ -265,11 +265,10 @@ struct ThisCaptureRecord {
   /// flag=0, tree_sum = 60. cr_add(0) = 60, cr_mul(1) = 60.
   /// Total = 120.
   static inline const uint64_t test2 = []() {
-    callback_rec cb = tree_callbacks(
-        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                   UINT64_C(20),
-                   tree::node(tree::leaf(), UINT64_C(30), tree::leaf())),
-        UINT64_C(0));
+    callback_rec cb = tree_callbacks(tree::node(
+        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+        tree::node(tree::leaf(), UINT64_C(30), tree::leaf())),
+                                     UINT64_C(0));
     return (cb.cr_add(UINT64_C(0)) + cb.cr_mul(UINT64_C(1)));
   }();
   /// test3: flag=1, tree_sum=100. cr_mul(7) = tree_sum = 100.

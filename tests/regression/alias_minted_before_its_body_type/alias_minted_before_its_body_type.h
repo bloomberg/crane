@@ -249,9 +249,9 @@ public:
                 std::get<typename Exp<CraneU>::E_node>(_other.v());
             return E_node{
                 (a0 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a0))
-                    : nullptr), (
-                    a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
-                       : nullptr)};
+                    : nullptr),
+                (a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
+                    : nullptr)};
           }
         }()) {}
 

@@ -57,7 +57,7 @@ struct TailrecReorderProbe {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -226,30 +226,39 @@ struct TailrecReorderProbe {
     return _result;
   }
 
-  static inline const uint64_t test_rev = mylist_sum<uint64_t>([](uint64_t x) {
-    return x;
-  }, my_reverse<uint64_t>(mylist<uint64_t>::mycons(UINT64_C(1), mylist<uint64_t>::mycons(UINT64_C(2), mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())))));
+  static inline const uint64_t test_rev =
+      mylist_sum<uint64_t>(
+          [](uint64_t x) { return x; },
+          my_reverse<uint64_t>(mylist<uint64_t>::mycons(
+              UINT64_C(1),
+              mylist<uint64_t>::mycons(
+                  UINT64_C(2), mylist<uint64_t>::mycons(
+                                   UINT64_C(3), mylist<uint64_t>::mynil())))));
   static inline const uint64_t test_dual = []() -> uint64_t {
-    auto [a, b] = dual_accum(
+    auto [a, b] = dual_accum(mylist<uint64_t>::mycons(
+        UINT64_C(10),
         mylist<uint64_t>::mycons(
-            UINT64_C(10), mylist<uint64_t>::mycons(
-                UINT64_C(20), mylist<uint64_t>::mycons(
-                    UINT64_C(30), mylist<uint64_t>::mynil()))),
-        mylist<uint64_t>::mynil(), mylist<uint64_t>::mynil());
-    return (mylist_sum<uint64_t>([](uint64_t x) {
-      return x;
-    }, std::move(a)) + mylist_sum<uint64_t>([](uint64_t x) {
-      return x;
-    }, std::move(b)));
+            UINT64_C(20),
+            mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil()))),
+                             mylist<uint64_t>::mynil(),
+                             mylist<uint64_t>::mynil());
+    return (mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(a)) +
+            mylist_sum<uint64_t>([](uint64_t x) { return x; }, std::move(b)));
   }();
   /// Tail-recursive function where the recursive argument is a COMPLEX
   /// expression involving multiple pattern variables.
   static mylist<uint64_t> weave(mylist<uint64_t> l1, mylist<uint64_t> l2,
                                 const mylist<uint64_t> &acc);
   static inline const uint64_t test_weave =
-      mylist_sum<uint64_t>([](uint64_t x) {
-        return x;
-      }, weave(mylist<uint64_t>::mycons(UINT64_C(1), mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())), mylist<uint64_t>::mycons(UINT64_C(2), mylist<uint64_t>::mycons(UINT64_C(4), mylist<uint64_t>::mynil())), mylist<uint64_t>::mynil()));
+      mylist_sum<uint64_t>(
+          [](uint64_t x) { return x; },
+          weave(mylist<uint64_t>::mycons(
+              UINT64_C(1),
+              mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())),
+                mylist<uint64_t>::mycons(
+                    UINT64_C(2), mylist<uint64_t>::mycons(
+                                     UINT64_C(4), mylist<uint64_t>::mynil())),
+                mylist<uint64_t>::mynil()));
 };
 
 #endif // INCLUDED_TAILREC_REORDER_PROBE

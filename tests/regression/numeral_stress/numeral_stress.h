@@ -106,7 +106,8 @@ struct NumeralStress {
   /// 3. Numeral in a list
   static inline const List<int64_t> z_list = List<int64_t>::cons(
       INT64_C(1), List<int64_t>::cons(
-          INT64_C(-2), List<int64_t>::cons(INT64_C(3), List<int64_t>::nil())));
+                      INT64_C(-2),
+                      List<int64_t>::cons(INT64_C(3), List<int64_t>::nil())));
   /// 4. Numeral as argument to Nat.add
   static inline const uint64_t add_big = (UINT64_C(1000) + UINT64_C(2000));
   /// 5. Numeral in match scrutinee
@@ -116,14 +117,13 @@ struct NumeralStress {
   static inline const uint64_t test_count =
       count_from(UINT64_C(100), UINT64_C(50));
   /// 7. Z arithmetic with literals
-  static inline const int64_t z_complex =
-      static_cast<int64_t>(
-          static_cast<uint64_t>(
-              static_cast<int64_t>(static_cast<uint64_t>(INT64_C(100)) *
-                                   static_cast<uint64_t>(INT64_C(200)))) +
-          static_cast<uint64_t>(
-              static_cast<int64_t>(static_cast<uint64_t>(INT64_C(50)) -
-                                   static_cast<uint64_t>(INT64_C(25)))));
+  static inline const int64_t z_complex = static_cast<int64_t>(
+      static_cast<uint64_t>(
+          static_cast<int64_t>(static_cast<uint64_t>(INT64_C(100)) *
+                               static_cast<uint64_t>(INT64_C(200)))) +
+      static_cast<uint64_t>(
+          static_cast<int64_t>(static_cast<uint64_t>(INT64_C(50)) -
+                               static_cast<uint64_t>(INT64_C(25)))));
 
   /// 8. Multiple numerals in one record
   struct point {

@@ -193,10 +193,9 @@ struct OptionRecursiveMatch {
   }
 
   static Nat len(const chain &c);
-  static inline const Nat test =
-      len(chain::c(
-              Nat::s(Nat::o()), Option<chain>::some(
-                  chain::c(Nat::s(Nat::s(Nat::o())), Option<chain>::none()))));
+  static inline const Nat test = len(chain::c(
+      Nat::s(Nat::o()), Option<chain>::some(chain::c(Nat::s(Nat::s(Nat::o())),
+                                                     Option<chain>::none()))));
 };
 
 #endif // INCLUDED_OPTION_RECURSIVE_MATCH

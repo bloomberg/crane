@@ -654,8 +654,8 @@ struct Comp {
     }
 
     avl mk(const Nat &k, const expr &v, const avl &r) const {
-      return avl::node(*this, k, v, r, Nat::s(Nat::o()).add(
-                           PeanoNat::max(this->height(), r.height())));
+      return avl::node(*this, k, v, r, Nat::s(Nat::o()).add(PeanoNat::max(
+                                           this->height(), r.height())));
     }
 
     Nat height() const {

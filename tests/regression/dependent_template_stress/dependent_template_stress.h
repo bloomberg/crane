@@ -49,9 +49,9 @@ struct DependentTemplateStress {
 
   template <NestedContainer N> struct UseNested {
     static const typename N::template outer<uint64_t> &make_outer_nat() {
-      static const typename N::template outer<uint64_t> v = N::template mk_outer<
-          uint64_t>(N::template mk_middle<uint64_t>(
-                        N::template mk_inner<uint64_t>(UINT64_C(0))));
+      static const typename N::template outer<uint64_t> v =
+          N::template mk_outer<uint64_t>(N::template mk_middle<uint64_t>(
+              N::template mk_inner<uint64_t>(UINT64_C(0))));
       return v;
     }
 

@@ -40,9 +40,9 @@ AxiomTypes::MysteryType AxiomTypes::nested_axiom(std::monostate) {
 AxiomTypes::list<AxiomTypes::MysteryType>
 AxiomTypes::axiom_list(std::monostate) {
   return list<AxiomTypes::MysteryType>::cons(
-      mystery_value(), list<AxiomTypes::MysteryType>::cons(
-          mystery_function(mystery_value()),
-          list<AxiomTypes::MysteryType>::nil()));
+      mystery_value(),
+      list<AxiomTypes::MysteryType>::cons(mystery_function(mystery_value()),
+                                          list<AxiomTypes::MysteryType>::nil()));
 }
 
 AxiomTypes::MysteryType AxiomTypes::use_poly_axiom(std::monostate) {

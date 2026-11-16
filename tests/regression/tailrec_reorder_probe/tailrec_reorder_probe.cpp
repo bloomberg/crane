@@ -17,8 +17,9 @@ TailrecReorderProbe::dual_accum(
             typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(_loop_l->v())) {
       return std::make_pair(_loop_acc1, _loop_acc2);
     } else {
-      const auto &[a0, a1] = std::get<
-          typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(
+              _loop_l->v());
       _loop_acc2 =
           mylist<uint64_t>::mycons((a0 + UINT64_C(1)), std::move(_loop_acc2));
       _loop_acc1 = mylist<uint64_t>::mycons(a0, std::move(_loop_acc1));

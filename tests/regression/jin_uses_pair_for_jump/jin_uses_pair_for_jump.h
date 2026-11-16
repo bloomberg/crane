@@ -106,15 +106,19 @@ struct JinUsesPairForJump {
   static uint64_t get_reg_pair(const state &s, uint64_t r);
   static uint64_t page_of(uint64_t addr);
   static state execute_jin(const state &s, uint64_t r);
-  static inline const state sample = state{
+  static inline const state sample = state{List<uint64_t>::cons(
+      UINT64_C(0),
       List<uint64_t>::cons(
-          UINT64_C(0), List<uint64_t>::cons(
-              UINT64_C(0), List<uint64_t>::cons(
-                  UINT64_C(2), List<uint64_t>::cons(
-                      UINT64_C(11), List<uint64_t>::cons(
-                          UINT64_C(0), List<uint64_t>::cons(
-                              UINT64_C(0), List<uint64_t>::nil())))))),
-      UINT64_C(300)};
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(11),
+                  List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(UINT64_C(0),
+                                           List<uint64_t>::nil())))))),
+                                           UINT64_C(300)};
   static inline const bool t =
       execute_jin(sample, UINT64_C(3)).pc == UINT64_C(555);
 };

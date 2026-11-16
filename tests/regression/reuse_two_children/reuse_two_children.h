@@ -236,11 +236,14 @@ struct ReuseTwoChildren {
   }
 
   static inline const tree<uint64_t> t0 = insert<uint64_t>(
-      UINT64_C(5), UINT64_C(50), insert<uint64_t>(
-          UINT64_C(3), UINT64_C(30), insert<uint64_t>(
-              UINT64_C(8), UINT64_C(80), insert<uint64_t>(
-                  UINT64_C(1), UINT64_C(10), insert<uint64_t>(
-                      UINT64_C(4), UINT64_C(40), tree<uint64_t>::leaf())))));
+      UINT64_C(5), UINT64_C(50),
+      insert<uint64_t>(UINT64_C(3), UINT64_C(30),
+                       insert<uint64_t>(
+                           UINT64_C(8), UINT64_C(80),
+                           insert<uint64_t>(
+                               UINT64_C(1), UINT64_C(10),
+                               insert<uint64_t>(UINT64_C(4), UINT64_C(40),
+                                                tree<uint64_t>::leaf())))));
   static inline const tree<uint64_t> t1 =
       insert<uint64_t>(UINT64_C(3), UINT64_C(33),
                        insert<uint64_t>(UINT64_C(8), UINT64_C(88), t0));

@@ -5,24 +5,20 @@ int64_t BindTypeInference::test1() {
 }
 
 int64_t BindTypeInference::test2() {
-  return transform<std::monostate, int64_t>(std::monostate{},
-                                            [](std::monostate) {
-                                              return INT64_C(42);
-                                            });
+  return transform<std::monostate, int64_t>(
+      std::monostate{}, [](std::monostate) { return INT64_C(42); });
 }
 
 int64_t BindTypeInference::test3() {
-  return nested<std::monostate, bool, int64_t>(std::monostate{},
-                                               [](std::monostate) {
-                                                 return true;
-                                               },
-                                               [](bool b) -> int64_t {
-                                                 if (b) {
-                                                   return INT64_C(1);
-                                                 } else {
-                                                   return INT64_C(0);
-                                                 }
-                                               });
+  return nested<std::monostate, bool, int64_t>(
+      std::monostate{}, [](std::monostate) { return true; },
+      [](bool b) -> int64_t {
+        if (b) {
+          return INT64_C(1);
+        } else {
+          return INT64_C(0);
+        }
+      });
 }
 
 int64_t BindTypeInference::test4() {

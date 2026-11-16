@@ -51,8 +51,9 @@ LoopifyMutualResultTypes::e LoopifyMutualResultTypes::dbl_e(
         const auto &[n0] =
             std::get<typename LoopifyMutualResultTypes::e::Leaf>(x.v());
         _result = e::leaf((UINT64_C(2) * n0));
-      } else if (std::holds_alternative<
-                     typename LoopifyMutualResultTypes::e::Add>(x.v())) {
+      } else if (
+          std::holds_alternative<typename LoopifyMutualResultTypes::e::Add>(
+              x.v())) {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualResultTypes::e::Add>(x.v());
         _stack.emplace_back(CraneCont_Add{crane_raw(b0)});
@@ -131,8 +132,9 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
       if (std::holds_alternative<typename LoopifyMutualResultTypes::md::MNull>(
               m.v())) {
         _result = md::mnull();
-      } else if (std::holds_alternative<
-                     typename LoopifyMutualResultTypes::md::MConst>(m.v())) {
+      } else if (
+          std::holds_alternative<typename LoopifyMutualResultTypes::md::MConst>(
+              m.v())) {
         const auto &[x0] =
             std::get<typename LoopifyMutualResultTypes::md::MConst>(m.v());
         auto &&_sv0 = *x0;
@@ -141,8 +143,9 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
           const auto &[n0] =
               std::get<typename LoopifyMutualResultTypes::e::Leaf>(_sv0.v());
           _result = md::mconst(e::leaf((UINT64_C(2) * n0)));
-        } else if (std::holds_alternative<
-                       typename LoopifyMutualResultTypes::e::Add>(_sv0.v())) {
+        } else if (
+            std::holds_alternative<typename LoopifyMutualResultTypes::e::Add>(
+                _sv0.v())) {
           const auto &[a0, b0] =
               std::get<typename LoopifyMutualResultTypes::e::Add>(_sv0.v());
           _result = md::mconst(e::add(dbl_e(*a0), dbl_e(*b0)));
@@ -229,10 +232,9 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) { /// Cran
     uint64_t _tmp2;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneEnter_sum_md_entry, CraneCont_Add,
-                   CraneCont_Add_1, CraneCont_MPair, CraneCont_MPair_1,
-                   CraneCont_MPair_2, CraneCont_MPair_3>;
+  using CraneFrame = std::variant<
+      CraneEnter, CraneEnter_sum_md_entry, CraneCont_Add, CraneCont_Add_1,
+      CraneCont_MPair, CraneCont_MPair_1, CraneCont_MPair_2, CraneCont_MPair_3>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&x});
@@ -250,8 +252,9 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) { /// Cran
         const auto &[n0] =
             std::get<typename LoopifyMutualResultTypes::e::Leaf>(x.v());
         _result = std::move(n0);
-      } else if (std::holds_alternative<
-                     typename LoopifyMutualResultTypes::e::Add>(x.v())) {
+      } else if (
+          std::holds_alternative<typename LoopifyMutualResultTypes::e::Add>(
+              x.v())) {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualResultTypes::e::Add>(x.v());
         _stack.emplace_back(CraneCont_Add{crane_raw(b0)});
@@ -281,8 +284,9 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) { /// Cran
       if (std::holds_alternative<typename LoopifyMutualResultTypes::md::MNull>(
               m.v())) {
         _result = UINT64_C(0);
-      } else if (std::holds_alternative<
-                     typename LoopifyMutualResultTypes::md::MConst>(m.v())) {
+      } else if (
+          std::holds_alternative<typename LoopifyMutualResultTypes::md::MConst>(
+              m.v())) {
         const auto &[x1] =
             std::get<typename LoopifyMutualResultTypes::md::MConst>(m.v());
         _stack.emplace_back(CraneEnter{crane_raw(x1)});
@@ -376,10 +380,9 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) { /// Cr
     uint64_t _tmp6;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneEnter_sum_e_entry, CraneCont_Add,
-                   CraneCont_Add_1, CraneCont_Add_2, CraneCont_Add_3,
-                   CraneCont_MPair, CraneCont_MPair_1>;
+  using CraneFrame = std::variant<
+      CraneEnter, CraneEnter_sum_e_entry, CraneCont_Add, CraneCont_Add_1,
+      CraneCont_Add_2, CraneCont_Add_3, CraneCont_MPair, CraneCont_MPair_1>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&m});
@@ -395,8 +398,9 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) { /// Cr
       if (std::holds_alternative<typename LoopifyMutualResultTypes::md::MNull>(
               m.v())) {
         _result = UINT64_C(0);
-      } else if (std::holds_alternative<
-                     typename LoopifyMutualResultTypes::md::MConst>(m.v())) {
+      } else if (
+          std::holds_alternative<typename LoopifyMutualResultTypes::md::MConst>(
+              m.v())) {
         const auto &[x0] =
             std::get<typename LoopifyMutualResultTypes::md::MConst>(m.v());
         auto &&_sv1 = *x0;
@@ -405,8 +409,9 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) { /// Cr
           const auto &[n1] =
               std::get<typename LoopifyMutualResultTypes::e::Leaf>(_sv1.v());
           _result = std::move(n1);
-        } else if (std::holds_alternative<
-                       typename LoopifyMutualResultTypes::e::Add>(_sv1.v())) {
+        } else if (
+            std::holds_alternative<typename LoopifyMutualResultTypes::e::Add>(
+                _sv1.v())) {
           const auto &[a1, b1] =
               std::get<typename LoopifyMutualResultTypes::e::Add>(_sv1.v());
           _stack.emplace_back(CraneCont_Add{crane_raw(b1)});
@@ -430,8 +435,9 @@ LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) { /// Cr
         const auto &[n0] =
             std::get<typename LoopifyMutualResultTypes::e::Leaf>(x.v());
         _result = std::move(n0);
-      } else if (std::holds_alternative<
-                     typename LoopifyMutualResultTypes::e::Add>(x.v())) {
+      } else if (
+          std::holds_alternative<typename LoopifyMutualResultTypes::e::Add>(
+              x.v())) {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualResultTypes::e::Add>(x.v());
         _stack.emplace_back(CraneCont_Add_2{crane_raw(b0)});

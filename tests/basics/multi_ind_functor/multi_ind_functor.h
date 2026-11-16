@@ -185,7 +185,7 @@ template <Elem E> struct Container {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const maybe &> &&
-    std::is_invocable_r_v<T1, F1 &, const mlist &>
+             std::is_invocable_r_v<T1, F1 &, const mlist &>
   static T1 mtree_rect(F0 &&f, F1 &&f0, const mtree &m) {
     if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
       const auto &[a0] = std::get<typename mtree::Leaf>(m.v());

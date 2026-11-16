@@ -93,28 +93,24 @@ struct MemSafetyProbe3 {
     std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, tree>
     opt_pair(bool b) const {
       tree _self_val = *this;
-      return std::make_pair(
-          (b ? std::make_optional<crane::fn<uint64_t(uint64_t)>>([=, _self_val =
-                                                                      std::move(
-                                                                          _self_val)](
-                                                                     uint64_t _x0)
-                                                                      -> uint64_t {
-                                                                       return _self_val.sum_values(
-                                                                           _x0);
-                                                                     })
-             : std::optional<crane::fn<uint64_t(uint64_t)>>()),
-          *this);
+      return std::make_pair((b ? std::make_optional<
+                                     crane::fn<uint64_t(uint64_t)>>(
+                                     [=, _self_val = std::move(_self_val)](
+                                         uint64_t _x0)
+                                          -> uint64_t {
+                                       return _self_val.sum_values(_x0);
+                                     })
+                               : std::optional<crane::fn<uint64_t(uint64_t)>>()),
+                            *this);
     }
 
     /// TEST 8: Three closures, each capturing different tree,
     /// applied in a specific order with results feeding forward.
     uint64_t chain_three(tree t2, const tree &t3) const {
-      crane::fn<uint64_t(uint64_t)> f1 = [&](uint64_t _x0) -> uint64_t {
-        return this->sum_values(_x0);
-      };
-      crane::fn<uint64_t(uint64_t)> f2 = [&](uint64_t _x0) -> uint64_t {
-        return t2.sum_values(_x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f1 =
+          [&](uint64_t _x0) -> uint64_t { return this->sum_values(_x0); };
+      crane::fn<uint64_t(uint64_t)> f2 =
+          [&](uint64_t _x0) -> uint64_t { return t2.sum_values(_x0); };
       return t3.sum_values(f2(f1(UINT64_C(0))));
     }
 
@@ -180,17 +176,16 @@ struct MemSafetyProbe3 {
     }
 
     /// TEST 6: Nested pair: pair of pairs of closures.
-    std::pair<std::pair<crane::fn<uint64_t(uint64_t)>,
-                        crane::fn<uint64_t(uint64_t)>>,
-              uint64_t> nested_pair() const {
+    std::pair<
+        std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
+        uint64_t> nested_pair() const {
       tree _self_val = *this;
-      return std::make_pair(
-          std::make_pair(
-              [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
-                return _self_val.sum_values(_x0);
-              },
-              [](uint64_t x) { return x; }),
-          this->sum_values(UINT64_C(0)));
+      return std::make_pair(std::make_pair(
+          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+            return _self_val.sum_values(_x0);
+          },
+          [](uint64_t x) { return x; }),
+                            this->sum_values(UINT64_C(0)));
     }
 
     /// TEST 5: Mutual use: tree used BOTH as partial application arg
@@ -274,8 +269,8 @@ struct MemSafetyProbe3 {
     /// TEST 3: Partial application result stored in a pair, then both
     /// elements of the pair are applied. The pair construction must
     /// properly clone the closures.
-    std::pair<crane::fn<uint64_t(uint64_t)>,
-              crane::fn<uint64_t(uint64_t)>> paired_closures(tree t2) const {
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
+    paired_closures(tree t2) const {
       tree _self_val = *this;
       return std::make_pair(
           [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
@@ -420,7 +415,7 @@ struct MemSafetyProbe3 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -522,9 +517,8 @@ struct MemSafetyProbe3 {
           return (t.sum_values(UINT64_C(1)) + _self_helper(_self_helper, n_));
         }
       };
-      auto helper = [&](uint64_t n) -> uint64_t {
-        return helper_impl(helper_impl, n);
-      };
+      auto helper =
+          [&](uint64_t n) -> uint64_t { return helper_impl(helper_impl, n); };
       return helper(UINT64_C(3));
     }();
   }();
@@ -539,13 +533,11 @@ struct MemSafetyProbe3 {
         return UINT64_C(0);
       } else {
         auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v_mut());
-        crane::fn<uint64_t(uint64_t)> fl = [&](uint64_t _x0) -> uint64_t {
-          return a0->sum_values(_x0);
-        };
+        crane::fn<uint64_t(uint64_t)> fl =
+            [&](uint64_t _x0) -> uint64_t { return a0->sum_values(_x0); };
         uint64_t vl = fl(a1);
-        crane::fn<uint64_t(uint64_t)> fr = [&](uint64_t _x0) -> uint64_t {
-          return a2->sum_values(_x0);
-        };
+        crane::fn<uint64_t(uint64_t)> fr =
+            [&](uint64_t _x0) -> uint64_t { return a2->sum_values(_x0); };
         uint64_t vr = fr(std::move(a1));
         return (vl + vr);
       }
@@ -574,9 +566,9 @@ struct MemSafetyProbe3 {
           .mutual_use();
   static inline const uint64_t test_nested_pair = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
-    std::pair<std::pair<crane::fn<uint64_t(uint64_t)>,
-                        crane::fn<uint64_t(uint64_t)>>, uint64_t> p =
-        t.nested_pair();
+    std::pair<
+        std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
+        uint64_t> p = t.nested_pair();
     return (((p.first).first(UINT64_C(10)) + (p.first).second(UINT64_C(10))) +
             std::move(p).second);
   }();
@@ -662,7 +654,8 @@ struct MemSafetyProbe3 {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       return apply_n_times([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return t.sum_values(_x0);
-      }, UINT64_C(5), UINT64_C(0));
+      },
+                           UINT64_C(5), UINT64_C(0));
     }();
   }();
   /// TEST 12: Closure that partially applies a fixpoint.

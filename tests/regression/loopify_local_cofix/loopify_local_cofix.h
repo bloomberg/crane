@@ -179,9 +179,8 @@ struct LoopifyLocalCofix {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(uint64_t a0, stream a1) {
-      return stream(
-          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>, a0,
-                                 std::move(a1)));
+      return stream(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, a0, std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -199,10 +198,11 @@ struct LoopifyLocalCofix {
   static List<uint64_t> take(uint64_t n, const stream &s);
   static stream from_list(List<uint64_t> l);
   static inline const uint64_t result =
-      take(UINT64_C(3), from_list(List<uint64_t>::cons(
-                                      UINT64_C(7), List<uint64_t>::cons(
-                                          UINT64_C(7),
-                                          List<uint64_t>::nil()))))
+      take(UINT64_C(3),
+           from_list(List<uint64_t>::cons(
+               UINT64_C(7),
+               List<uint64_t>::cons(UINT64_C(7),
+                                    List<uint64_t>::nil()))))
           .template fold_left<uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));

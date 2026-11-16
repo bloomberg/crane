@@ -16,9 +16,8 @@ template <typename T1> T1 False_rect() {
   throw std::logic_error("absurd case");
 }
 
-template <typename T1> const T1 False_rec = [](crane::obj) {
-  return False_rect<T1>();
-};
+template <typename T1>
+const T1 False_rec = [](crane::obj) { return False_rect<T1>(); };
 
 template <typename T1> T1 and_rect(const T1 &f) { return f; }
 

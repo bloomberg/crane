@@ -305,7 +305,7 @@ struct MemSafetyProbe18 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -463,7 +463,7 @@ struct MemSafetyProbe18 {
   /// to a closure that captures a tree.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
-    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t apply_twice(F0 &&f, uint64_t x) {
     return f(f(x));
   }
@@ -471,9 +471,8 @@ struct MemSafetyProbe18 {
   static inline const uint64_t test_apply_twice = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(7), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=, t = std::move(t)](uint64_t n) {
-        return (t.tree_sum() + n);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t n) { return (t.tree_sum() + n); };
       return apply_twice(std::move(f), UINT64_C(0));
     }();
   }();
@@ -485,7 +484,8 @@ struct MemSafetyProbe18 {
   static tree fold_left_tree(const mylist<uint64_t> &l, tree acc);
   static inline const uint64_t test_fold_tree = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(1), mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(
             UINT64_C(2),
             mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
     return fold_left_tree(std::move(l), tree::leaf()).tree_sum();
@@ -545,10 +545,13 @@ struct MemSafetyProbe18 {
     mylist<uint64_t> l3 = mylist<uint64_t>::mycons(
         UINT64_C(5),
         mylist<uint64_t>::mycons(UINT64_C(6), mylist<uint64_t>::mynil()));
-    mylist<mylist<uint64_t>> ls = mylist<mylist<uint64_t>>::mycons(
-        std::move(l1), mylist<mylist<uint64_t>>::mycons(
-            std::move(l2), mylist<mylist<uint64_t>>::mycons(
-                std::move(l3), mylist<mylist<uint64_t>>::mynil())));
+    mylist<mylist<uint64_t>> ls =
+        mylist<mylist<uint64_t>>::mycons(
+            std::move(l1),
+            mylist<mylist<uint64_t>>::mycons(
+                std::move(l2),
+                mylist<mylist<uint64_t>>::mycons(
+                    std::move(l3), mylist<mylist<uint64_t>>::mynil())));
     return sum_list(concat_flat<uint64_t>(std::move(ls)));
   }();
   static inline const uint64_t test_chain = []() {

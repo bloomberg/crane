@@ -130,10 +130,11 @@ struct BoxedElementContainerCast {
 
     template <typename T1, typename F0, typename F1, typename F3>
       requires std::is_invocable_r_v<
-          T1, F0 &,
-          const crane::list<crane::box<std::pair<std::string, val>>> &> &&
-      std::is_invocable_r_v<T1, F1 &, const crane::list<crane::box<val>> &> &&
-      std::is_invocable_r_v<T1, F3 &, const std::string &>
+        T1, F0 &,
+        const crane::list<crane::box<std::pair<std::string, val>>> &> &&
+               std::is_invocable_r_v<T1, F1 &,
+                                     const crane::list<crane::box<val>> &> &&
+               std::is_invocable_r_v<T1, F3 &, const std::string &>
     T1 val_rect(F0 &&f, F1 &&f0, T1 f1, F3 &&f2) const {
       if (std::holds_alternative<typename val::VAssoc>(this->v())) {
         const auto &[a0] = std::get<typename val::VAssoc>(this->v());
@@ -256,39 +257,37 @@ struct BoxedElementContainerCast {
               crane::obj(crane_erase_fn([](const auto &tup) {
                 const auto &[prs, _x] =
                     crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                return nodupKeys<val>(
-                    crane_container_cast<
-                        crane::list<std::pair<std::string, val>>>(
-                        crane::any_cast<crane::list<crane::obj>>(prs)));
+                return nodupKeys<val>(crane_container_cast<
+                    crane::list<std::pair<std::string, val>>>(
+                    crane::any_cast<crane::list<crane::obj>>(prs)));
               })),
               crane::obj(crane_erase_fn([](const auto &tup) {
                 const auto &[prs, _x] =
                     crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                return val::vassoc(
-                    crane_container_cast<
-                        crane::list<crane::box<std::pair<std::string, val>>>>(
-                        crane::any_cast<crane::list<crane::obj>>(prs)));
+                return val::vassoc(crane_container_cast<
+                    crane::list<crane::box<std::pair<std::string, val>>>>(
+                    crane::any_cast<crane::list<crane::obj>>(prs)));
               })))),
       crane::cons(
           SigT<std::pair<Nonterminal, crane::list<symbol>>,
                std::pair<crane::obj, crane::obj>>::existt(
               std::make_pair(Nonterminal::VALUE,
                              crane::cons(symbol::t(), crane::list<symbol>{})),
-              std::make_pair(crane::obj(crane_erase_fn([](const auto &) {
-                return true;
-              })), crane::obj(crane_erase_fn([](const auto &tup) {
-                const auto &[s, _x] =
-                    crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                return val::vstr(crane::any_cast<std::string>(s));
-              })))),
+              std::make_pair(
+                  crane::obj(crane_erase_fn([](const auto &) { return true; })),
+                  crane::obj(crane_erase_fn([](const auto &tup) {
+                    const auto &[s, _x] =
+                        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                    return val::vstr(crane::any_cast<std::string>(s));
+                  })))),
           crane::list<SigT<std::pair<Nonterminal, crane::list<symbol>>,
                            std::pair<crane::obj, crane::obj>>>{}));
   [[gnu::used]] static inline const t_semty sample_t = []() {
     return std::string(
-               1, (static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
-                                     (false ? 4 : 0) | (false ? 8 : 0) |
-                                     (true ? 16 : 0) | (true ? 32 : 0) |
-                                     (true ? 64 : 0) | (false ? 128 : 0)))) +
+        1,
+        (static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) | (false ? 4 : 0) |
+                           (false ? 8 : 0) | (true ? 16 : 0) | (true ? 32 : 0) |
+                           (true ? 64 : 0) | (false ? 128 : 0)))) +
            std::string();
   }();
   static nt_semty sample_nt(Nonterminal x);

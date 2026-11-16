@@ -307,17 +307,14 @@ template <TFunctor _tcI0> struct TFunctor_phi {
   static Phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Phi<CraneA0> p) {
     auto &[es0] = p;
     return Phi<CraneA1>::phi0(TFunctor_list::template tfmap<
-                                  std::pair<Nat, Exp0<CraneA0>>,
-                                  std::pair<Nat, Exp0<CraneA1>>>(
-                                  [=, f = std::move(f)](
-                                      std::pair<Nat, Exp0<CraneA0>> ie) {
-                                        auto [i, e] = std::move(ie);
-                                        return std::make_pair(
-                                            std::move(i), _tcI0::template tfmap<
-                                                CraneA0, CraneA1>(f,
-                                                                  std::move(e)));
-                                      },
-                                  std::move(es0)));
+        std::pair<Nat, Exp0<CraneA0>>, std::pair<Nat, Exp0<CraneA1>>>(
+        [=, f = std::move(f)](std::pair<Nat, Exp0<CraneA0>> ie) {
+          auto [i, e] = std::move(ie);
+          return std::make_pair(
+              std::move(i),
+              _tcI0::template tfmap<CraneA0, CraneA1>(f, std::move(e)));
+        },
+        std::move(es0)));
   }
 };
 

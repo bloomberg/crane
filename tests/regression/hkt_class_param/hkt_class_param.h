@@ -187,8 +187,9 @@ concept Container = requires {
     I::template empty<crane::obj>()
   } -> std::convertible_to<typename I::template C<crane::obj>>;
   {
-    I::template insert<crane::obj>(std::declval<crane::obj>(), std::declval<
-                                       typename I::template C<crane::obj>>())
+    I::template insert<crane::obj>(
+        std::declval<crane::obj>(),
+        std::declval<typename I::template C<crane::obj>>())
   } -> std::convertible_to<typename I::template C<crane::obj>>;
   {
     I::template toList<crane::obj>(
@@ -235,7 +236,8 @@ struct HktClassParam {
   template <Container _tcI0>
   static typename _tcI0::template C<uint64_t> build(const List<uint64_t> &l) {
     return l.template fold_right<typename _tcI0::template C<uint64_t>>(
-        [](uint64_t n, typename _tcI0::template C<uint64_t> acc) {
+        [](uint64_t n,
+           typename _tcI0::template C<uint64_t> acc) {
           return _tcI0::template insert<uint64_t>(n, std::move(acc));
         },
         _tcI0::template empty<uint64_t>());

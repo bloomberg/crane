@@ -26,11 +26,11 @@ LocalCofixWithoutParameters::zeros_or(bool b) {
         [](auto &_self_z,
            std::monostate)
              -> LocalCofixWithoutParameters::stream {
-              return stream::lazy_(
-                  [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
-                    return {UINT64_C(0), _self_z(_self_z, std::monostate{})};
-                  });
-            };
+          return stream::lazy_(
+              [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
+                return {UINT64_C(0), _self_z(_self_z, std::monostate{})};
+              });
+        };
     auto z =
         [=, z_impl = std::move(z_impl)](std::monostate u) -> LocalCofixWithoutParameters::stream {
           return z_impl(z_impl, u);
@@ -41,11 +41,11 @@ LocalCofixWithoutParameters::zeros_or(bool b) {
         [](auto &_self_o,
            std::monostate)
              -> LocalCofixWithoutParameters::stream {
-              return stream::lazy_(
-                  [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
-                    return {UINT64_C(1), _self_o(_self_o, std::monostate{})};
-                  });
-            };
+          return stream::lazy_(
+              [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
+                return {UINT64_C(1), _self_o(_self_o, std::monostate{})};
+              });
+        };
     auto o =
         [=, o_impl = std::move(o_impl)](std::monostate u) -> LocalCofixWithoutParameters::stream {
           return o_impl(o_impl, u);
@@ -57,7 +57,8 @@ LocalCofixWithoutParameters::zeros_or(bool b) {
 LocalCofixWithoutParameters::stream
 LocalCofixWithoutParameters::ones_then(const List<uint64_t> &l) {
   return l.template fold_right<LocalCofixWithoutParameters::stream>(
-      [](uint64_t x, const LocalCofixWithoutParameters::stream &x0) {
+      [](uint64_t x,
+         const LocalCofixWithoutParameters::stream &x0) {
         return stream::cons(x, x0);
       },
       []() {
@@ -65,10 +66,11 @@ LocalCofixWithoutParameters::ones_then(const List<uint64_t> &l) {
             [](auto &_self_o,
                std::monostate)
                  -> LocalCofixWithoutParameters::stream {
-                  return stream::lazy_([=]() -> typename LocalCofixWithoutParameters::stream::Cons {
+              return stream::lazy_(
+                  [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
                     return {UINT64_C(1), _self_o(_self_o, std::monostate{})};
                   });
-                };
+            };
         auto o =
             [=, o_impl = std::move(o_impl)](std::monostate u) -> LocalCofixWithoutParameters::stream {
               return o_impl(o_impl, u);

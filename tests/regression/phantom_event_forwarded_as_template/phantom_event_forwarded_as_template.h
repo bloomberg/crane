@@ -185,20 +185,22 @@ using intrinsic_definitions = List<std::pair<Nat, semantic_function<ptr, e>>>;
 
 template <Params _tcI0, typename T1>
 semantic_function<typename _tcI0::ptr, T1> one() {
-  return [=](List<typename _tcI0::ptr>, std::optional<typename _tcI0::ptr>) {
+  return [=](List<typename _tcI0::ptr>,
+             std::optional<typename _tcI0::ptr>) {
     return itree_ret(_tcI0::width());
   };
 }
 
 template <Params _tcI0, typename T1>
 intrinsic_definitions<typename _tcI0::ptr, T1> defined_intrinsics() {
-  return List<std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
-                                           List<typename _tcI0::ptr>,
-                                           std::optional<typename _tcI0::ptr>)>>>::cons(
-      std::make_pair(Nat::o(), one<_tcI0, T1>()), List<
-          std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
-                                       List<typename _tcI0::ptr>,
-                                       std::optional<typename _tcI0::ptr>)>>>::nil());
+  return List<std::pair<
+      Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
+               List<typename _tcI0::ptr>,
+               std::optional<typename _tcI0::ptr>)>>>::cons(
+      std::make_pair(Nat::o(), one<_tcI0, T1>()),
+      List<std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
+                              List<typename _tcI0::ptr>,
+                              std::optional<typename _tcI0::ptr>)>>>::nil());
 }
 
 struct PhantomEventForwardedAsTemplate {

@@ -37,8 +37,9 @@ struct ClosureLetEscape {
   static inline const uint64_t test2 = []() {
     std::optional<crane::fn<uint64_t(uint64_t)>> opt =
         make_fn_fix(UINT64_C(50));
-    uint64_t noise = ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) +
-                       UINT64_C(4)) + UINT64_C(5));
+    uint64_t noise =
+        ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
+         UINT64_C(5));
     if (opt.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *opt;
       return f(noise);

@@ -37,9 +37,10 @@ struct LoopifyPairOptionChild {
     static tree leaf() { return tree(Leaf{}); }
 
     static tree node(tree a0, std::pair<uint64_t, std::optional<tree>> a1) {
-      return tree(
-          Node{std::make_shared<tree>(std::move(a0)), std::make_shared<
-                   std::pair<uint64_t, std::optional<tree>>>(std::move(a1))});
+      return tree(Node{
+          std::make_shared<tree>(std::move(a0)),
+          std::make_shared<std::pair<uint64_t, std::optional<tree>>>(
+              std::move(a1))});
     }
 
     // MANIPULATORS
@@ -137,10 +138,12 @@ struct LoopifyPairOptionChild {
   static uint64_t sum(const tree &t);
   static inline const uint64_t result =
       sum(tree::node(
-              tree::leaf(), std::make_pair(
-                  UINT64_C(1), std::make_optional<tree>(
-                      tree::node(tree::leaf(), std::make_pair(
-                                     UINT64_C(2), std::optional<tree>()))))));
+          tree::leaf(),
+          std::make_pair(
+              UINT64_C(1),
+              std::make_optional<tree>(tree::node(
+                  tree::leaf(),
+                  std::make_pair(UINT64_C(2), std::optional<tree>()))))));
 };
 
 #endif // INCLUDED_LOOPIFY_PAIR_OPTION_CHILD

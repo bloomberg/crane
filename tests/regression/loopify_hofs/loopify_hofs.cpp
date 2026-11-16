@@ -42,8 +42,9 @@ LoopifyHofs::lookup_all(uint64_t key,
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename List<std::pair<uint64_t, uint64_t>>::Cons>(_loop_l->v());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+              _loop_l->v());
       const auto &[k, v] = a0;
       if (k == key) {
         auto _cell = typename List<uint64_t>::Cons(v, nullptr);
@@ -169,8 +170,9 @@ LoopifyHofs::pair_with_all(uint64_t x, const List<uint64_t> &l) {
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write ? *(*_write = std::make_shared<
-                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+      (_write ? *(*_write =
+                      std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                          std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
@@ -178,12 +180,11 @@ LoopifyHofs::pair_with_all(uint64_t x, const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
           std::make_pair(x, a0), nullptr);
-      List<std::pair<uint64_t, uint64_t>> &_node =
-          (
-              _write ? *(*_write = std::make_shared<
-                             List<std::pair<uint64_t, uint64_t>>>(
+      List<std::pair<uint64_t, uint64_t>> &_node = (
+          _write ? *(*_write =
+                         std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
                              std::move(_cell)))
-                     : _root.emplace(std::move(_cell)));
+                 : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               _node.v_mut())

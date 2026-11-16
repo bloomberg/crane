@@ -177,13 +177,14 @@ struct HistoricalEventSafetyTraceCase {
 
   template <typename F0, typename F1, typename F2>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
-    std::is_invocable_r_v<uint64_t, F1 &, const State &, uint64_t &> &&
-    std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
+             std::is_invocable_r_v<uint64_t, F1 &, const State &, uint64_t &> &&
+             std::is_invocable_r_v<uint64_t, F2 &, uint64_t &>
   static State step_hist(F0 &&inflow, F1 &&ctrl, F2 &&stage_fn,
                          const PlantConfig &pconf, const State &s, uint64_t t) {
     uint64_t out = std::min(
         (UINT64_C(100) ? (pconf.gate_capacity_cm * ctrl(s, t)) / UINT64_C(100)
-                       : 0), (s.reservoir_level_cm + inflow(t)));
+                       : 0),
+        (s.reservoir_level_cm + inflow(t)));
     auto &&_once1 = (s.reservoir_level_cm + inflow(t));
     uint64_t new_level = (((_once1 - out) > _once1 ? 0 : (_once1 - out)));
     uint64_t new_stage = stage_fn(out);
@@ -238,63 +239,96 @@ struct HistoricalEventSafetyTraceCase {
 
   [[gnu::used]] static inline const HistoricalEvent flood_1983_inflows = List<
       InflowRecord>::cons(
-      InflowRecord{UINT64_C(0), UINT64_C(50)}, List<InflowRecord>::cons(
-          InflowRecord{UINT64_C(1), UINT64_C(75)}, List<InflowRecord>::cons(
-              InflowRecord{UINT64_C(2), UINT64_C(100)}, List<InflowRecord>::cons(
-                  InflowRecord{UINT64_C(3), UINT64_C(150)}, List<InflowRecord>::cons(
-                      InflowRecord{UINT64_C(4), UINT64_C(200)}, List<
-                          InflowRecord>::cons(
-                          InflowRecord{UINT64_C(5), UINT64_C(250)}, List<
-                              InflowRecord>::cons(
-                              InflowRecord{UINT64_C(6), UINT64_C(300)}, List<
-                                  InflowRecord>::cons(
-                                  InflowRecord{UINT64_C(7), UINT64_C(250)},
-                                  List<InflowRecord>::cons(
-                                      InflowRecord{UINT64_C(8), UINT64_C(200)},
-                                      List<InflowRecord>::cons(
-                                          InflowRecord{UINT64_C(9),
-                                                       UINT64_C(150)},
-                                          List<InflowRecord>::nil()))))))))));
+      InflowRecord{UINT64_C(0), UINT64_C(50)},
+      List<InflowRecord>::cons(
+          InflowRecord{UINT64_C(1), UINT64_C(75)},
+          List<InflowRecord>::cons(InflowRecord{UINT64_C(2), UINT64_C(100)},
+                                   List<InflowRecord>::cons(
+                                       InflowRecord{UINT64_C(3), UINT64_C(150)},
+                                       List<InflowRecord>::cons(
+                                           InflowRecord{UINT64_C(4),
+                                                        UINT64_C(200)},
+                                           List<InflowRecord>::cons(
+                                               InflowRecord{UINT64_C(5),
+                                                            UINT64_C(250)},
+                                               List<InflowRecord>::cons(
+                                                   InflowRecord{UINT64_C(6),
+                                                                UINT64_C(300)},
+                                                   List<InflowRecord>::cons(
+                                                       InflowRecord{
+                                                           UINT64_C(7),
+                                                           UINT64_C(250)},
+                                                       List<InflowRecord>::cons(
+                                                           InflowRecord{
+                                                               UINT64_C(8),
+                                                               UINT64_C(200)},
+                                                           List<InflowRecord>::cons(
+                                                               InflowRecord{
+                                                                   UINT64_C(9),
+                                                                   UINT64_C(150)},
+                                                               List<
+                                                                   InflowRecord>::nil()))))))))));
   [[gnu::used]] static inline const HistoricalEvent flood_2011_inflows = List<
       InflowRecord>::cons(
-      InflowRecord{UINT64_C(0), UINT64_C(100)}, List<InflowRecord>::cons(
-          InflowRecord{UINT64_C(1), UINT64_C(150)}, List<InflowRecord>::cons(
-              InflowRecord{UINT64_C(2), UINT64_C(200)}, List<InflowRecord>::cons(
-                  InflowRecord{UINT64_C(3), UINT64_C(300)}, List<InflowRecord>::cons(
-                      InflowRecord{UINT64_C(4), UINT64_C(400)}, List<
-                          InflowRecord>::cons(
-                          InflowRecord{UINT64_C(5), UINT64_C(350)}, List<
-                              InflowRecord>::cons(
-                              InflowRecord{UINT64_C(6), UINT64_C(300)}, List<
-                                  InflowRecord>::cons(
-                                  InflowRecord{UINT64_C(7), UINT64_C(250)},
-                                  List<InflowRecord>::cons(
-                                      InflowRecord{UINT64_C(8), UINT64_C(200)},
-                                      List<InflowRecord>::cons(
-                                          InflowRecord{UINT64_C(9),
-                                                       UINT64_C(150)},
-                                          List<InflowRecord>::nil()))))))))));
-  static inline const HistoricalEvent dual_peak_scenario =
+      InflowRecord{UINT64_C(0), UINT64_C(100)},
       List<InflowRecord>::cons(
-          InflowRecord{UINT64_C(0), UINT64_C(30)}, List<InflowRecord>::cons(
-              InflowRecord{UINT64_C(1), UINT64_C(60)}, List<InflowRecord>::cons(
-                  InflowRecord{UINT64_C(2), UINT64_C(120)}, List<InflowRecord>::cons(
-                      InflowRecord{UINT64_C(3), UINT64_C(200)}, List<
-                          InflowRecord>::cons(
-                          InflowRecord{UINT64_C(4), UINT64_C(300)}, List<
-                              InflowRecord>::cons(
-                              InflowRecord{UINT64_C(5), UINT64_C(380)}, List<
-                                  InflowRecord>::cons(
-                                  InflowRecord{UINT64_C(6), UINT64_C(420)},
-                                  List<InflowRecord>::cons(
-                                      InflowRecord{UINT64_C(7), UINT64_C(400)},
-                                      List<InflowRecord>::cons(
-                                          InflowRecord{UINT64_C(8),
-                                                       UINT64_C(350)}, List<
-                                              InflowRecord>::cons(
-                                              InflowRecord{UINT64_C(9),
-                                                           UINT64_C(280)},
-                                              List<InflowRecord>::nil()))))))))));
+          InflowRecord{UINT64_C(1), UINT64_C(150)},
+          List<InflowRecord>::cons(InflowRecord{UINT64_C(2), UINT64_C(200)},
+                                   List<InflowRecord>::cons(
+                                       InflowRecord{UINT64_C(3), UINT64_C(300)},
+                                       List<InflowRecord>::cons(
+                                           InflowRecord{UINT64_C(4),
+                                                        UINT64_C(400)},
+                                           List<InflowRecord>::cons(
+                                               InflowRecord{UINT64_C(5),
+                                                            UINT64_C(350)},
+                                               List<InflowRecord>::cons(
+                                                   InflowRecord{UINT64_C(6),
+                                                                UINT64_C(300)},
+                                                   List<InflowRecord>::cons(
+                                                       InflowRecord{
+                                                           UINT64_C(7),
+                                                           UINT64_C(250)},
+                                                       List<InflowRecord>::cons(
+                                                           InflowRecord{
+                                                               UINT64_C(8),
+                                                               UINT64_C(200)},
+                                                           List<InflowRecord>::cons(
+                                                               InflowRecord{
+                                                                   UINT64_C(9),
+                                                                   UINT64_C(150)},
+                                                               List<
+                                                                   InflowRecord>::nil()))))))))));
+  static inline const HistoricalEvent dual_peak_scenario = List<InflowRecord>::cons(
+      InflowRecord{UINT64_C(0), UINT64_C(30)},
+      List<InflowRecord>::cons(
+          InflowRecord{UINT64_C(1), UINT64_C(60)},
+          List<InflowRecord>::cons(InflowRecord{UINT64_C(2), UINT64_C(120)},
+                                   List<InflowRecord>::cons(
+                                       InflowRecord{UINT64_C(3), UINT64_C(200)},
+                                       List<InflowRecord>::cons(
+                                           InflowRecord{UINT64_C(4),
+                                                        UINT64_C(300)},
+                                           List<InflowRecord>::cons(
+                                               InflowRecord{UINT64_C(5),
+                                                            UINT64_C(380)},
+                                               List<InflowRecord>::cons(
+                                                   InflowRecord{UINT64_C(6),
+                                                                UINT64_C(420)},
+                                                   List<InflowRecord>::cons(
+                                                       InflowRecord{
+                                                           UINT64_C(7),
+                                                           UINT64_C(400)},
+                                                       List<InflowRecord>::cons(
+                                                           InflowRecord{
+                                                               UINT64_C(8),
+                                                               UINT64_C(350)},
+                                                           List<InflowRecord>::cons(
+                                                               InflowRecord{
+                                                                   UINT64_C(9),
+                                                                   UINT64_C(280)},
+                                                               List<
+                                                                   InflowRecord>::nil()))))))))));
   [[gnu::used]] static inline const PlantConfig hist_witness_plant =
       PlantConfig{UINT64_C(500), UINT64_C(500), UINT64_C(500), UINT64_C(1),
                   UINT64_C(5), UINT64_C(10), UINT64_C(100), UINT64_C(100),
@@ -312,26 +346,23 @@ struct HistoricalEventSafetyTraceCase {
       hist_witness_stage, hist_witness_initial, UINT64_C(10), UINT64_C(2011));
   static inline const PlantConfig hoover_dam_config = PlantConfig{
       UINT64_C(2200), UINT64_C(100), UINT64_C(500), UINT64_C(15), UINT64_C(5),
-      UINT64_C(10), UINT64_C(1000), UINT64_C(1000), [](uint64_t) {
-        return UINT64_C(1000);
-      },
-      UINT64_C(200), UINT64_C(60)};
+      UINT64_C(10), UINT64_C(1000), UINT64_C(1000),
+      [](uint64_t) { return UINT64_C(1000); }, UINT64_C(200), UINT64_C(60)};
   static inline const State hoover_initial_state =
       State{UINT64_C(1500), UINT64_C(20), UINT64_C(0)};
   static uint64_t hoover_controller(const State &s, uint64_t _x);
   [[gnu::used]] static inline const MonotoneRatingTable hoover_rating_table =
-      MonotoneRatingTable{
+      MonotoneRatingTable{List<std::pair<uint64_t, uint64_t>>::cons(
+          std::make_pair(UINT64_C(100), UINT64_C(30)),
           List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(UINT64_C(100), UINT64_C(30)), List<
-                  std::pair<uint64_t, uint64_t>>::cons(
-                  std::make_pair(UINT64_C(200), UINT64_C(45)), List<
-                      std::pair<uint64_t, uint64_t>>::cons(
-                      std::make_pair(UINT64_C(300), UINT64_C(60)), List<
-                          std::pair<uint64_t, uint64_t>>::cons(
-                          std::make_pair(UINT64_C(400), UINT64_C(75)), List<
-                              std::pair<uint64_t, uint64_t>>::cons(
-                              std::make_pair(UINT64_C(500), UINT64_C(90)),
-                              List<std::pair<uint64_t, uint64_t>>::nil())))))};
+              std::make_pair(UINT64_C(200), UINT64_C(45)),
+              List<std::pair<uint64_t, uint64_t>>::cons(
+                  std::make_pair(UINT64_C(300), UINT64_C(60)),
+                  List<std::pair<uint64_t, uint64_t>>::cons(
+                      std::make_pair(UINT64_C(400), UINT64_C(75)),
+                      List<std::pair<uint64_t, uint64_t>>::cons(
+                          std::make_pair(UINT64_C(500), UINT64_C(90)),
+                          List<std::pair<uint64_t, uint64_t>>::nil())))))};
   static uint64_t hoover_stage_from_rating(uint64_t out);
   static inline const TestResult hoover_test =
       run_historical_test(hoover_dam_config, dual_peak_scenario, UINT64_C(0),
@@ -360,22 +391,23 @@ struct HistoricalEventSafetyTraceCase {
   static uint64_t hoover_stage_sample(uint64_t x0_);
   static inline const uint64_t sample_bundle_test_count =
       List<TestResult>::cons(
-          historical_bundle.hsb_test_1983, List<TestResult>::cons(
-              historical_bundle.hsb_test_2011, List<TestResult>::cons(
-                  historical_bundle.hsb_hoover_test,
-                  List<TestResult>::nil())))
+          historical_bundle.hsb_test_1983,
+          List<TestResult>::cons(
+              historical_bundle.hsb_test_2011,
+              List<TestResult>::cons(historical_bundle.hsb_hoover_test,
+                                     List<TestResult>::nil())))
           .length();
   static inline const bool sample_bundle_initial_safe =
       historical_bundle.hsb_test_1983.tr_initial_safe;
   static inline const uint64_t sample_bundle_hist_2011_id =
       historical_bundle.hsb_test_2011.tr_event_name;
   static inline const bool sample_all_tests_pass =
-      all_tests_pass(
+      all_tests_pass(List<TestResult>::cons(
+          historical_bundle.hsb_test_1983,
           List<TestResult>::cons(
-              historical_bundle.hsb_test_1983, List<TestResult>::cons(
-                  historical_bundle.hsb_test_2011, List<TestResult>::cons(
-                      historical_bundle.hsb_hoover_test,
-                      List<TestResult>::nil()))));
+              historical_bundle.hsb_test_2011,
+              List<TestResult>::cons(historical_bundle.hsb_hoover_test,
+                                     List<TestResult>::nil()))));
 };
 
 #endif // INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE

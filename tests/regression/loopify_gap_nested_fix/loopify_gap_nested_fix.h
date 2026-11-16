@@ -164,11 +164,13 @@ struct LoopifyGapNestedFix {
   /// A fixed sample tree so the test driver need not build list rose in C++.
   /// Sum of all labels: 1 + 2 + 3 + 4 = 10.
   [[gnu::used]] static inline const rose sample_tree = rose::rose0(
-      UINT64_C(1), List<rose>::cons(
-          rose::rose0(UINT64_C(2), List<rose>::nil()), List<rose>::cons(
-              rose::rose0(UINT64_C(3), List<rose>::cons(
-                              rose::rose0(UINT64_C(4), List<rose>::nil()),
-                              List<rose>::nil())), List<rose>::nil())));
+      UINT64_C(1), List<rose>::cons(rose::rose0(UINT64_C(2), List<rose>::nil()),
+                                    List<rose>::cons(rose::rose0(
+                                        UINT64_C(3),
+                                        List<rose>::cons(rose::rose0(
+                                            UINT64_C(4), List<rose>::nil()),
+                                                         List<rose>::nil())),
+                                                     List<rose>::nil())));
   static uint64_t rose_sum_sample(std::monostate _x);
 };
 

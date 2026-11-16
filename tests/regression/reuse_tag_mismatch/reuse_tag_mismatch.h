@@ -57,7 +57,7 @@ struct ReuseTagMismatch {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 direction_rect(F0 &&f, F1 &&f0, const direction &d) {
     if (std::holds_alternative<typename direction::GoUp>(d.v())) {
       const auto &[a0] = std::get<typename direction::GoUp>(d.v());

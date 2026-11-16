@@ -93,10 +93,11 @@ public:
 
 struct ExtractionImplicitCallSites {
   static uint64_t count(const List<uint64_t> &l);
-  static inline const uint64_t counted =
-      count(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                     UINT64_C(2), List<uint64_t>::cons(
-                                         UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const uint64_t counted = count(List<uint64_t>::cons(
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 
   template <typename T1> static uint64_t walk(const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -109,9 +110,10 @@ struct ExtractionImplicitCallSites {
 
   static inline const uint64_t walked =
       (walk<uint64_t>(List<uint64_t>::cons(
-                          UINT64_C(1), List<uint64_t>::cons(
-                              UINT64_C(2), List<uint64_t>::cons(
-                                  UINT64_C(3), List<uint64_t>::nil())))) +
+           UINT64_C(1),
+           List<uint64_t>::cons(
+               UINT64_C(2),
+               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))) +
        walk<bool>(List<bool>::cons(false, List<bool>::nil())));
 };
 

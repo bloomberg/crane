@@ -29,6 +29,25 @@
       starting a new group of members is preceded by one;
     - each run of [#include] lines is sorted and duplicates dropped.
 
+    Nested brackets are where layouts go wrong, and three rules keep them
+    in check, all after clang-format:
+
+    - a list breaking after its opening bracket indents four columns past
+      the start of the operand or list item it is in, not past the bracket:
+      brackets opened on one line share one continuation, so indentation
+      grows by four a line however many brackets the line opens
+      ({!out.last_space});
+    - a choice between layouts (aligned or broken after the bracket, the
+      right side of an assignment on its line or the next, an item on this
+      line or the next) is made by laying both out on trial, the choices
+      inside on trial too, two levels deep, and ranking them by columns past
+      the limit, then line breaks inside template arguments, then lines
+      ({!measure});
+    - lists nested deeper than the width left could hold at four columns a
+      level are laid out flat: breaking them would only add lines, so a
+      chain thousands deep takes one line, not one a level
+      ({!nests_deeper}).
+
     The layout reads tokens only, so it applies equally to text a custom
     extraction supplies.  It is pure: text in, text out. *)
 
@@ -489,11 +508,12 @@ type doc =
   | Hard  (** a line break *)
   | Group of doc  (** flat when it fits, else its own breaks broken *)
   | Fill of doc list
-      (** content, separator, content...: each separator breaks only when
-          the content after it does not fit *)
-  | Fill_next of doc * doc list * int ref * bool
+      (** content, separator, content...: each separator breaks when the
+          content after it does not fit, or when the content before it took
+          more than one line *)
+  | Fill_next of doc * doc list * int ref
       (** a {!Fill} at a separator, with the line the content before it
-          started on and whether that content holds a block *)
+          started on *)
   | Nest of int * doc  (** indented past the enclosing indentation *)
   | Align of doc  (** indented to the column it starts at *)
   | Args of doc list * string * bool
@@ -505,9 +525,14 @@ type doc =
   | Body of block * bool  (** a block, whose brace takes a space before it *)
   | Anchor of doc  (** a block inside is indented from where this starts *)
   | Unanchor
+  | Flatten of doc
+      (** laid out flat: lists nested deeper than breaking could fit in the
+          width (see {!nests_deeper}) *)
   | Choose of doc * doc
       (** the first layout, or the second when it is laid out better *)
-  | Depth of int  (** restores the bracket depth after a list *)
+  | Depth of int * int  (** restores the bracket depths after a list ({!out.depth}, {!out.angles}) *)
+  | Last_space of int  (** restores {!out.last_space} after a list *)
+  | Operand  (** an operand or a list item starts: {!out.last_space} moves here *)
   | Mark of int ref  (** records the line a call starts on *)
   | Mark_column of int ref  (** records the column a chain of calls starts at *)
   | Member_break of int ref * int ref
@@ -528,12 +553,50 @@ let interleave sep = function
   | [] -> []
   | d :: ds -> d :: List.concat_map (fun d -> [sep; d]) ds
 
+(** Whether a block is laid out on more than one line however wide the
+    line: it holds more than one item, or a block. *)
+let multiline_block b =
+  match List.filter (fun it -> it <> Blank) b.items with
+  | [] -> false
+  | [Stmt elems] -> List.exists (function Block _ -> true | Tok t -> t.kind = Line_comment) elems
+  | _ -> true
+
+(** The width of block [b] merged into one line, [{ s }], as near as the
+    tokens tell, if the style may merge it. *)
+let merged_width b =
+  let items = List.filter (fun it -> it <> Blank) b.items in
+  let toks_width elems =
+    List.fold_left
+      (fun acc e ->
+        match (acc, e) with
+        | Some w, Tok t when t.kind <> Line_comment -> Some (w + width t.text + if t.gap && w > 0 then 1 else 0)
+        | _ -> None)
+      (Some 0) elems
+  in
+  if b.lead <> None || b.bkind = Control then None
+  else
+    match items with
+    | [] -> Some 2
+    | [Stmt elems] -> Option.map (fun w -> w + 4) (toks_width elems)
+    | _ when b.bkind = Enum ->
+      List.fold_left
+        (fun acc it ->
+          match (acc, it) with
+          | Some w, Stmt elems -> Option.map (fun x -> w + x + 1) (toks_width elems)
+          | _ -> None)
+        (Some 3) items
+    | _ -> None
+
 (** Whether [cmds] fit in [rem] columns up to their first line break, and
     the commands [rest] after them up to the first place they may break.  A
     construct of [cmds] not yet decided is measured flat, or, with [head],
     as far as the first place it may break; a block as far as its opening
-    brace. *)
-let fits ?(head = false) rem (cmds : (mode * doc) list) (rest : (int * mode * doc) list) =
+    brace.  A lambda's block is measured merged into one line when the
+    style merges it; after one laid out on more than one line, the commands
+    go on from its closing brace with [after] columns left (by default
+    [rem]). *)
+let fits ?(head = false) ?after rem (cmds : (mode * doc) list) (rest : (int * mode * doc) list) =
+  let after = match after with Some a -> a | None -> rem in
   let rem = ref rem in
   let head = ref head and in_rest = ref false in
   let undecided m = if m = Flat || not !head then Flat else Broken in
@@ -564,8 +627,9 @@ let fits ?(head = false) rem (cmds : (mode * doc) list) (rest : (int * mode * do
         | Group d -> go ((undecided m, d) :: cmds) rest
         | Nest (_, d) | Align d | Anchor d -> go ((m, d) :: cmds) rest
         | Fill ds -> go (List.map (fun d -> (undecided m, d)) ds @ cmds) rest
-        | Fill_next (s, ds, _, _) -> go (List.map (fun d -> (undecided m, d)) (s :: ds) @ cmds) rest
+        | Fill_next (s, ds, _) -> go (List.map (fun d -> (undecided m, d)) (s :: ds) @ cmds) rest
         | Choose (a, _) -> go ((m, a) :: cmds) rest
+        | Flatten d -> go ((Flat, d) :: cmds) rest
         | Args (items, close, _) ->
           if undecided m = Broken then true
           else go (List.map (fun d -> (Flat, d)) (interleave (Text " ") items @ [Text close]) @ cmds) rest
@@ -573,10 +637,19 @@ let fits ?(head = false) rem (cmds : (mode * doc) list) (rest : (int * mode * do
         | Ternary (a, b) ->
           if undecided m = Broken then go ((Flat, Text " ? ") :: (Broken, a) :: cmds) rest
           else go ((Flat, Cat [Text " ? "; a; Text " : "; b]) :: cmds) rest
-        | Body (b, sp) ->
-          rem := !rem - (if sp then 2 else 1) - (match b.lead with Some c -> 1 + min 40 (width c.text) | None -> 0);
-          !rem >= 0
-        | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ -> go cmds rest )
+        | Body (b, sp) -> (
+          match if b.bkind = Lambda || b.bkind = Compound then merged_width b else None with
+          | Some w ->
+            rem := !rem - w - if sp then 1 else 0;
+            go cmds rest
+          | None ->
+            rem := !rem - (if sp then 2 else 1) - (match b.lead with Some c -> 1 + min 40 (width c.text) | None -> 0);
+            !rem >= 0
+            && ((b.bkind <> Lambda && b.bkind <> Compound)
+               ||
+               ( rem := after - 1;
+                 go cmds rest )) )
+        | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ | Last_space _ | Operand -> go cmds rest )
   in
   go cmds rest
 
@@ -587,9 +660,9 @@ let flat_text d =
     | Text s | Lit s | Break s -> Buffer.add_string b s
     | Cat ds -> List.iter go ds
     | Hard | Body _ -> raise Exit
-    | Group d | Nest (_, d) | Align d | Anchor d -> go d
+    | Group d | Nest (_, d) | Align d | Anchor d | Flatten d -> go d
     | Fill ds -> List.iter go ds
-    | Fill_next (s, ds, _, _) -> List.iter go (s :: ds)
+    | Fill_next (s, ds, _) -> List.iter go (s :: ds)
     | Choose (a, _) -> go a
     | Args (items, close, _) ->
       List.iter go (interleave (Text " ") items);
@@ -602,7 +675,7 @@ let flat_text d =
       go a;
       Buffer.add_string b " : ";
       go x
-    | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ -> ()
+    | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ | Last_space _ | Operand -> ()
   in
   match go d with
   | () -> Some (Buffer.contents b)
@@ -717,7 +790,11 @@ let is_binary (nodes : node array) k ops =
 
 let sub_list arr i j = Array.to_list (Array.sub arr i (j - i))
 
-let leading_keywords = ["return"; "throw"; "co_return"; "co_yield"; "co_await"; "else"; "delete"; "new"]
+(** Words after which a parenthesis groups or holds a condition rather than
+    calling. *)
+let grouping_keywords = control_words @ ["return"; "co_return"; "co_yield"; "co_await"; "throw"; "case"]
+
+let leading_keywords = ["return"; "throw"; "co_return"; "co_yield"; "co_await"; "else"; "delete"; "new"; "requires"]
 
 (** The document of a run of nodes.  Words and operators are joined as the
     input spaced them; the structure that may break is, loosest first: a
@@ -802,7 +879,17 @@ and atoms_doc nodes =
         let d =
           match nd with
           | Atom t -> Cat [sp; atom_doc t]
-          | Brack (o, items, cl) -> Cat [sp; brack_doc o items cl]
+          | Brack (o, items, cl) ->
+            let grouping =
+              is_punct o "("
+              &&
+              match if i > 0 then Some arr.(i - 1) else None with
+              | None -> true
+              | Some (Atom p) when p.kind = Word -> List.mem p.text grouping_keywords
+              | Some (Atom p) -> not (is_punct p ">" || is_punct p ")" || is_punct p "]")
+              | Some _ -> false
+            in
+            Cat [sp; brack_doc ~grouping o items cl]
           | Blk b -> Body (b, i > 0)
         in
         match marks.(i) with
@@ -819,12 +906,16 @@ and atom_doc t =
   | Line_comment -> if t.lines > 0 then Cat [Hard; Text t.text; Hard] else Cat [Text " "; Text t.text; Hard]
   | _ -> Text t.text
 
-(** A bracketed list: the items packed after the opening bracket. *)
-and brack_doc o items cl =
+(** A bracketed list: the items packed after the opening bracket.  The
+    contents of a [grouping] parenthesis, one that does not call, are an
+    operand ({!Operand}). *)
+and brack_doc ?(grouping = false) o items cl =
   let close = match cl with Some c -> c.text | None -> "" in
-  match items with
+  match List.map item_doc items with
   | [] -> Text (o.text ^ close)
-  | _ -> Cat [Text o.text; Args (List.map item_doc items, close, is_punct o "{" && o.gap)]
+  | first :: more ->
+    let first = if grouping then Cat [Operand; first] else first in
+    Cat [Text o.text; Args (first :: more, close, is_punct o "{" && o.gap)]
 
 (** An item of a list, ending with its comma if it has one. *)
 and item_doc part =
@@ -1025,7 +1116,7 @@ let stmt_doc (elems : elem list) : doc =
 (** {2 Rendering} *)
 
 type out = {
-  buf : Buffer.t;
+  buf : Buffer.t;  (** the text, written only outside trials *)
   mutable col : int;
   mutable line : int;  (** lines started so far *)
   mutable line_indent : int;  (** the indentation of the current line *)
@@ -1034,30 +1125,60 @@ type out = {
   mutable stmt_indent : int;  (** the indentation of the statement being laid out *)
   mutable stmt_line : int;  (** the line the statement being laid out starts on *)
   trial : int;  (** how many trial layouts this one is nested in *)
+  origin : int;  (** the line a trial started on *)
+  mutable excess : int;  (** on trial, the columns past the limit of the lines finished *)
+  bound : (int * int * int) option;
+      (** on trial, the excess, breaks inside template arguments and line
+          count past which the layout is abandoned: as each only grows, it
+          already loses to the alternative it is compared with *)
   mutable depth : int;  (** how many broken bracketed lists the position is in *)
   mutable depth_sum : int;  (** the sum of {!depth} at each line break so far *)
+  mutable angles : int;  (** how many broken template argument lists the position is in *)
+  mutable angle_breaks : int;
+      (** how many line breaks so far were inside a template argument list,
+          which reads worst: clang-format penalises them heavily too *)
   mutable opens : int;  (** how many lists broke after their opening bracket *)
+  mutable last_space : int;
+      (** the column a list breaking after its opening bracket indents from,
+          as clang-format's [LastSpace]: the start of the statement, of the
+          line a list broke onto, or of the operand or list item the position
+          is in; a bracket opened without a break keeps it, so brackets
+          opened on one line share one continuation and indentation grows
+          by four a line rather than by the width of each bracket *)
 }
 
+(** Raised by a trial layout that exceeds its {!out.bound}. *)
+exception Abandoned
+
+(** Adds the current line's columns past the limit to a trial's excess. *)
+let finish_line o = if o.col > column_limit then o.excess <- o.excess + o.col - column_limit
+
 let newline o ind =
-  if Buffer.length o.buf > 0 || o.pending = None then Buffer.add_char o.buf '\n';
+  if o.trial > 0 then (
+    finish_line o;
+    match o.bound with
+    | Some b when (o.excess, o.angle_breaks + Bool.to_int (o.angles > 0), o.line + 1 - o.origin) > b ->
+      raise Abandoned
+    | _ -> () )
+  else if Buffer.length o.buf > 0 || o.pending = None then Buffer.add_char o.buf '\n';
   o.line <- o.line + 1;
   o.depth_sum <- o.depth_sum + o.depth;
+  if o.angles > 0 then o.angle_breaks <- o.angle_breaks + 1;
   o.pending <- Some ind;
   o.col <- ind;
   o.line_indent <- ind
 
 let emit o s =
   if s <> "" then (
-    ( match o.pending with
-    | Some ind ->
-      Buffer.add_string o.buf (String.make ind ' ');
-      o.pending <- None
-    | None -> () );
-    Buffer.add_string o.buf s;
+    if o.trial = 0 then (
+      ( match o.pending with
+      | Some ind -> Buffer.add_string o.buf (String.make ind ' ')
+      | None -> () );
+      Buffer.add_string o.buf s );
+    o.pending <- None;
     o.col <- o.col + width s )
 
-let fits_line ?head o cmds rest = fits ?head (column_limit - o.col) cmds rest
+let fits_line ?head o cmds rest = fits ?head ~after:(column_limit - o.line_indent) (column_limit - o.col) cmds rest
 
 (** Splits the plain string literal [s], to start at column [col], after
     spaces into pieces that each fit the line. *)
@@ -1195,33 +1316,18 @@ let sort_includes ~stem items =
   in
   go [] items
 
-(** Whether a block is laid out on more than one line however wide the
-    line: it holds more than one item, or a block. *)
-let multiline_block b =
-  match List.filter (fun it -> it <> Blank) b.items with
-  | [] -> false
-  | [Stmt elems] -> List.exists (function Block _ -> true | Tok t -> t.kind = Line_comment) elems
-  | _ -> true
-
-(** Whether [d] holds a block. *)
-let rec has_body = function
-  | Body _ -> true
-  | Cat ds | Fill ds | Args (ds, _, _) -> List.exists has_body ds
-  | Fill_next (s, ds, _, _) -> List.exists has_body (s :: ds)
-  | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Choose (d, _) -> has_body d
-  | Ternary (a, b) -> has_body a || has_body b
-  | _ -> false
-
 (** Whether [d] holds a block laid out on more than one line. *)
 let rec multiline_body = function
   | Body (b, _) -> multiline_block b
   | Cat ds | Fill ds -> List.exists multiline_body ds
-  | Fill_next (s, ds, _, _) -> List.exists multiline_body (s :: ds)
+  | Fill_next (s, ds, _) -> List.exists multiline_body (s :: ds)
   | Choose (a, _) -> multiline_body a
   | Args (ds, _, _) -> List.exists multiline_body ds
-  | Group d | Nest (_, d) | Align d | Anchor d | Rhs d -> multiline_body d
+  | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Flatten d -> multiline_body d
   | Ternary (a, b) -> multiline_body a || multiline_body b
-  | Text _ | Lit _ | Break _ | Hard | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ -> false
+  | Text _ | Lit _ | Break _ | Hard | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ | Last_space _
+  | Operand ->
+    false
 
 (** The string literal [d] is, if it is one ({!is_literal}). *)
 let rec literal_text = function
@@ -1233,9 +1339,9 @@ let rec literal_text = function
 let rec has_chain = function
   | Member_break _ -> true
   | Cat ds | Fill ds -> List.exists has_chain ds
-  | Fill_next (s, ds, _, _) -> List.exists has_chain (s :: ds)
+  | Fill_next (s, ds, _) -> List.exists has_chain (s :: ds)
   | Choose (a, _) -> has_chain a
-  | Group d | Nest (_, d) | Align d | Anchor d -> has_chain d
+  | Group d | Nest (_, d) | Align d | Anchor d | Flatten d -> has_chain d
   | _ -> false
 
 (** Whether [d] is a string literal, with its comma: an item the layout may
@@ -1261,12 +1367,60 @@ let rec closers = function
     [(i, m, Text ((if sp then " {" else "{") ^ lead))]
   | _ -> []
 
-(** The flat width of [d], if it has no block and is small enough to be
-    laid out on trial. *)
-let trial_width d =
-  match flat_text d with
-  | Some s when String.length s <= 1500 -> Some (String.length s)
-  | _ -> None
+(** Whether bracketed lists nest more than [k] deep somewhere in [d]. *)
+let nests_deeper d k =
+  let rec go k d =
+    k < 0
+    ||
+    match d with
+    | Args (ds, _, _) -> List.exists (go (k - 1)) ds
+    | Cat ds | Fill ds -> List.exists (go k) ds
+    | Fill_next (x, ds, _) -> List.exists (go k) (x :: ds)
+    | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Choose (d, _) | Flatten d -> go k d
+    | Ternary (a, b) -> go k a || go k b
+    | _ -> false
+  in
+  go k d
+
+(** How many trial layouts may nest: a choice made on trial makes the
+    choices inside it on trial too, but no deeper. *)
+let trial_depth = 2
+
+(** The largest construct laid out on trial, in characters of its text, at
+    the outermost trial; a nested trial takes a quarter of its enclosing
+    one's, which bounds the work a choice costs. *)
+let trial_limit = 1500
+
+(** Whether the size of [d] in characters of its text, blocks included, is
+    at most [limit]. *)
+let smaller_than limit d =
+  let n = ref 0 in
+  let add k =
+    n := !n + k;
+    if !n > limit then raise Exit
+  in
+  let rec elems es = List.iter (function Tok t -> add (String.length t.text + 1) | Block b -> block b) es
+  and block b =
+    add 4;
+    List.iter (function Stmt es -> elems es | Pp t | Comment t -> add (String.length t.text) | _ -> ()) b.items
+  and go = function
+    | Text s | Lit s | Break s -> add (String.length s)
+    | Cat ds | Fill ds | Args (ds, _, _) -> List.iter go ds
+    | Fill_next (x, ds, _) -> List.iter go (x :: ds)
+    | Group d | Nest (_, d) | Align d | Anchor d | Rhs d | Choose (d, _) | Flatten d -> go d
+    | Ternary (a, b) ->
+      go a;
+      go b
+    | Body (b, _) -> block b
+    | Hard | Unanchor | Mark _ | Mark_column _ | Member_break _ | Depth _ | Last_space _ | Operand -> ()
+  in
+  match go d with
+  | () -> true
+  | exception Exit -> false
+
+(** Whether the choice of a layout for [d] at [o] may be made by laying out
+    the alternatives on trial. *)
+let may_try o d = o.trial < trial_depth && smaller_than (trial_limit lsr (2 * o.trial)) d
 
 let rec run o (cmds : (int * mode * doc) list) =
   match cmds with
@@ -1299,6 +1453,7 @@ let rec run o (cmds : (int * mode * doc) list) =
       run o rest
     | Nest (k, d) -> run o ((ind + k, m, d) :: rest)
     | Align d -> run o ((o.col, m, d) :: rest)
+    | Flatten d -> run o ((ind, Flat, d) :: rest)
     | Group d ->
       let m = if m = Flat || fits_line o [(Flat, d)] rest then Flat else Broken in
       run o ((ind, m, d) :: rest)
@@ -1306,54 +1461,74 @@ let rec run o (cmds : (int * mode * doc) list) =
     | Fill (c :: more) ->
       let cm = if m = Flat || fits_line o [(Flat, c)] (if more = [] then rest else []) then Flat else Broken in
       let rest =
-        match more with s :: more -> (ind, m, Fill_next (s, more, ref o.line, has_body c)) :: rest | [] -> rest
+        match more with
+        | s :: more -> (ind, m, Fill_next (s, more, ref o.line)) :: rest
+        | [] -> rest
       in
       run o ((ind, cm, c) :: rest)
-    | Fill_next (s, more, start, body) ->
+    | Fill_next (s, more, start) ->
       let next = match more with c :: _ -> c | [] -> Text "" in
       let last = List.length more <= 1 in
       let sm =
         if m = Flat then Flat
-        else if body && o.line <> !start then Broken
+        else if o.line <> !start then Broken
         else if fits_line o [(Flat, s); (Flat, next)] (if last then rest else []) then Flat
         else if
           (not (fits (column_limit - ind) [(Flat, next)] (if last then closers rest else [])))
           && fits_line ~head:true o [(Flat, s); (Broken, next)] []
-        then Flat
+        then
+          (* the next item breaks either way: on this line or the next *)
+          if may_try o (Fill more) then
+            let tail = closers rest in
+            let trial sm = (ind, sm, s) :: (ind, m, Operand) :: (ind, m, Fill more) :: tail in
+            if first_better o (trial Flat) (trial Broken) then Flat else Broken
+          else Flat
         else Broken
       in
-      run o ((ind, sm, s) :: (ind, m, Fill more) :: rest)
+      run o ((ind, sm, s) :: (ind, m, Operand) :: (ind, m, Fill more) :: rest)
     | Args (items, close, anonymous) ->
       let rec but_last = function [_] | [] -> [] | x :: xs -> x :: but_last xs in
       let lambda_inside = List.exists multiline_body (but_last items) in
       if (not lambda_inside) && (m = Flat || fits_line o [(Flat, d)] rest) then
         run o ((ind, Flat, Cat (interleave (Text " ") items @ [Text close])) :: rest)
       else
-        let rest = (ind, m, Depth o.depth) :: rest in
+        let rest = (ind, m, Depth (o.depth, o.angles)) :: (ind, m, Last_space o.last_space) :: rest in
         o.depth <- (o.depth + if close = ">" then 3 else 1);
-        let fill = Cat [Fill (interleave (Break " ") items); Text close] in
-        let ni = ind + continuation_width in
-        let one_per_line = Cat (interleave (Break " ") (List.map (fun i -> Anchor i) items) @ [Text close]) in
-        if lambda_inside && anonymous then run o ((o.col, Broken, one_per_line) :: rest)
-        else if lambda_inside then (
+        if close = ">" then o.angles <- o.angles + 1;
+        let ni = o.last_space + continuation_width in
+        let fill items = Cat [Fill (interleave (Break " ") items); Text close] in
+        let one_per_line items = Cat (interleave (Break " ") (List.map (fun i -> Anchor i) items) @ [Text close]) in
+        let aligned d = run o ((o.col, Broken, d) :: rest) in
+        (* lists nested deeper than the room left could hold, a level a
+           line, are laid out flat: breaking them would only add lines.  A
+           list of one such item is itself a chain too deep; in a longer
+           list, the items too deep are *)
+        let budget = (column_limit - ni) / continuation_width in
+        let too_deep item = (not lambda_inside) && nests_deeper item (budget - 1) in
+        let hopeless = match items with [item] -> too_deep item | _ -> false in
+        let items = List.map (fun item -> if too_deep item then Flatten item else item) items in
+        let broken d =
           o.opens <- o.opens + 1;
           newline o ni;
-          run o ((ni, Broken, one_per_line) :: rest) )
-        else if o.trial = 0 && trial_width fill <> None then
+          o.last_space <- ni;
+          run o ((ni, Broken, d) :: rest)
+        in
+        if hopeless then run o ((ind, Flat, Cat (interleave (Text " ") items @ [Text close])) :: rest)
+        else if lambda_inside && anonymous then aligned (one_per_line items)
+        else if lambda_inside then broken (one_per_line items)
+        else if may_try o (fill items) then
           let tail = closers rest in
-          let aligned = measure o ((o.col, Broken, fill) :: tail)
-          and broken = measure o ((ni, Broken, Cat [Hard; fill]) :: tail) in
-          if aligned <= broken then run o ((o.col, Broken, fill) :: rest)
-          else (
-            o.opens <- o.opens + 1;
-            newline o ni;
-            run o ((ni, Broken, fill) :: rest) )
+          if
+            first_better o
+              ((o.col, Broken, fill items) :: tail)
+              ((ni, Broken, Cat [Hard; Last_space ni; fill items]) :: tail)
+          then aligned (fill items) else broken (fill items)
         else
           let n = List.length items in
           let fits_aligned i item =
             is_literal item || fits_line o [(Flat, item)] (if i = n - 1 then [(ind, Flat, Text close)] else [])
           in
-          let aligned =
+          let is_aligned =
             match items with
             | [item] when is_literal item -> (
               match literal_text item with
@@ -1364,11 +1539,7 @@ let rec run o (cmds : (int * mode * doc) list) =
               || not (fits (column_limit - ni) [(Flat, item)] [(ind, Flat, Text close)])
             | _ -> List.for_all Fun.id (List.mapi fits_aligned items)
           in
-          if aligned then run o ((o.col, Broken, fill) :: rest)
-          else (
-            o.opens <- o.opens + 1;
-            newline o ni;
-            run o ((ni, Broken, fill) :: rest) )
+          if is_aligned then aligned (fill items) else broken (fill items)
     | Rhs r ->
       if m = Flat || fits_line o [(Flat, Text " "); (Flat, r)] rest then (
         emit o " ";
@@ -1377,14 +1548,16 @@ let rec run o (cmds : (int * mode * doc) list) =
         let ni = ind + continuation_width in
         let own_line =
           if fits (column_limit - ni) [(Flat, r)] rest || has_chain r then true
-          else if o.trial = 0 && trial_width r <> None then
+          else if may_try o r then
             let tail = closers rest in
-            measure o ((ni, Broken, Cat [Hard; r]) :: tail)
-            <= measure o ((ind, Flat, Text " ") :: (ind, Broken, r) :: tail)
+            first_better o
+              ((ni, Broken, Cat [Hard; Last_space ni; r]) :: tail)
+              ((ind, Flat, Text " ") :: (ind, Broken, r) :: tail)
           else not (fits_line ~head:true o [(Flat, Text " "); (Broken, r)] [])
         in
         if own_line then (
           newline o ni;
+          o.last_space <- ni;
           run o ((ni, Broken, r) :: rest) )
         else (
           emit o " ";
@@ -1393,7 +1566,7 @@ let rec run o (cmds : (int * mode * doc) list) =
       let flat = Cat [Text " ? "; a; Text " : "; b] in
       if m = Flat || fits_line o [(Flat, flat)] rest then run o ((ind, Flat, flat) :: rest)
       else
-        let broken = Cat [Text "? "; a; Break " "; Text ": "; b] in
+        let broken = Cat [Text "? "; Operand; a; Break " "; Text ": "; Operand; b] in
         let col = o.col + 1 in
         if
           fits_line ~head:true o [(Flat, Text " ? "); (Broken, a)] []
@@ -1417,17 +1590,24 @@ let rec run o (cmds : (int * mode * doc) list) =
     | Mark r ->
       r := o.line;
       run o rest
-    | Depth k ->
+    | Depth (k, a) ->
       o.depth <- k;
+      o.angles <- a;
+      run o rest
+    | Last_space c ->
+      o.last_space <- c;
+      run o rest
+    | Operand ->
+      o.last_space <- o.col;
       run o rest
     | Choose (a, b) ->
       let pick =
-        if m = Flat || o.trial > 0 || trial_width a = None then a
+        if m = Flat || not (may_try o a) then a
         else
           let tail = closers rest in
-          let excess_lines (e, l, _, k) = (e, k, l) in
-          if excess_lines (measure o ((ind, m, b) :: tail)) < excess_lines (measure o ((ind, m, a) :: tail)) then b
-          else a
+          let ea, ta, la, _, ka = measure o ((ind, m, a) :: tail) in
+          let eb, tb, lb, _, kb = measure ~bound:(ea, max_int, max_int) o ((ind, m, b) :: tail) in
+          if (eb, tb, kb, lb) < (ea, ta, ka, la) then b else a
       in
       run o ((ind, m, pick) :: rest)
     | Mark_column r ->
@@ -1437,18 +1617,26 @@ let rec run o (cmds : (int * mode * doc) list) =
       if o.line <> !r && m = Broken then newline o (!c + continuation_width);
       run o rest )
 
-(** Lays [cmds] out on trial from where [o] stands: the columns its lines
-    run past the limit, and how many lines it starts. *)
-and measure o cmds =
-  let t = {o with buf = Buffer.create 256; pending = None; trial = o.trial + 1; depth_sum = 0; opens = 0} in
-  run t cmds;
-  let excess = ref 0 in
-  List.iteri
-    (fun k l ->
-      let w = width l + if k = 0 then o.col else 0 in
-      if w > column_limit then excess := !excess + w - column_limit)
-    (String.split_on_char '\n' (Buffer.contents t.buf));
-  (!excess, t.line - o.line, t.depth_sum, t.opens)
+(** Lays [cmds] out on trial from where [o] stands, giving up past
+    [bound]: the columns its lines run past the limit, its line breaks
+    inside template argument lists, how many lines it starts, the sum of
+    the bracket depths of its breaks and how many lists it breaks after
+    their opening bracket, compared in that order. *)
+and measure ?bound o cmds =
+  let t =
+    {o with trial = o.trial + 1; origin = o.line; excess = 0; bound; depth_sum = 0; opens = 0; angle_breaks = 0}
+  in
+  match run t cmds with
+  | () ->
+    finish_line t;
+    (t.excess, t.angle_breaks, t.line - o.line, t.depth_sum, t.opens)
+  | exception Abandoned -> (max_int, max_int, max_int, max_int, max_int)
+
+(** Whether the layout [a] is no worse than [b], both laid out on trial
+    from where [o] stands; [b] is abandoned once it is worse. *)
+and first_better o a b =
+  let ((e, t, l, _, _) as x) = measure o a in
+  x <= measure ~bound:(e, t, l) o b
 
 (** Lays out block [b] at the current position, merged into the line when
     the style allows and it fits before [rest]. *)
@@ -1456,7 +1644,7 @@ and render_block o b ~space ~rest =
   let base =
     match (b.bkind, o.anchors) with
     | (Lambda | Compound), (c, l) :: _ when l = o.line -> c
-    | (Lambda | Compound), _ -> o.line_indent
+    | (Lambda | Compound), _ -> min o.last_space o.line_indent
     | _ -> o.stmt_indent
   in
   let items = List.filter (fun it -> it <> Blank) b.items in
@@ -1508,7 +1696,7 @@ and render_items o ind ~kind ~stem items =
   let i = ref 0 in
   while !i < n do
     ( match items.(!i) with
-    | Blank -> if Buffer.length o.buf > 0 then Buffer.add_char o.buf '\n'
+    | Blank -> if o.trial = 0 && Buffer.length o.buf > 0 then Buffer.add_char o.buf '\n'
     | Pp t ->
       newline o 0;
       emit o t.text
@@ -1524,11 +1712,13 @@ and render_items o ind ~kind ~stem items =
       | _ -> () )
     | Stmt elems ->
       newline o ind;
-      let saved = o.stmt_indent in
+      let saved = o.stmt_indent and saved_space = o.last_space in
       o.stmt_indent <- ind;
       o.stmt_line <- o.line;
+      o.last_space <- ind;
       run o [(ind, Broken, stmt_doc elems)];
-      o.stmt_indent <- saved );
+      o.stmt_indent <- saved;
+      o.last_space <- saved_space );
     incr i
   done
 
@@ -1547,7 +1737,7 @@ and render_comment o ind t =
           let trimmed = String.trim l in
           let lead = ref 0 in
           while !lead < String.length l && (l.[!lead] = ' ' || l.[!lead] = '\t') do incr lead done;
-          if trimmed = "" then Buffer.add_char o.buf '\n'
+          if trimmed = "" then (if o.trial = 0 then Buffer.add_char o.buf '\n')
           else if trimmed.[0] = '*' then (
             newline o (ind + 1);
             emit o trimmed )
@@ -1578,9 +1768,15 @@ let layout ?(file = "") text =
       stmt_indent = 0;
       stmt_line = 0;
       trial = 0;
+      origin = 0;
+      excess = 0;
+      bound = None;
       depth = 0;
       depth_sum = 0;
-      opens = 0 }
+      angles = 0;
+      angle_breaks = 0;
+      opens = 0;
+      last_space = 0 }
   in
   o.pending <- Some 0;
   render_items o 0 ~kind:Namespace ~stem items;

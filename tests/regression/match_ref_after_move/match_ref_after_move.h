@@ -59,7 +59,7 @@ struct MatchRefAfterMove {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -260,37 +260,37 @@ struct MatchRefAfterMove {
   /// test1: head_and_tail_length 10,20,30 = (10, 2)
   static inline const uint64_t test1 = []() {
     const auto &_sv =
-        head_and_tail_length(
+        head_and_tail_length(mylist<uint64_t>::mycons(
+            UINT64_C(10),
             mylist<uint64_t>::mycons(
-                UINT64_C(10), mylist<uint64_t>::mycons(
-                    UINT64_C(20), mylist<uint64_t>::mycons(
-                        UINT64_C(30), mylist<uint64_t>::mynil()))));
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))));
     const auto &[a0, a1] = _sv;
     return (a0 + a1);
   }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
   static inline const uint64_t test2 =
-      nested_match_probe(mylist<uint64_t>::mycons(
-                             UINT64_C(10), mylist<uint64_t>::mycons(
-                                 UINT64_C(20), mylist<uint64_t>::mycons(
-                                     UINT64_C(30),
-                                     mylist<uint64_t>::mynil()))));
+      nested_match_probe(
+          mylist<uint64_t>::mycons(
+              UINT64_C(10),
+              mylist<uint64_t>::mycons(
+                  UINT64_C(20), mylist<uint64_t>::mycons(
+                                    UINT64_C(30), mylist<uint64_t>::mynil()))));
   /// test3: match_into_pair 5,10 = (5, 6,10)
   static inline const uint64_t test3 = []() {
-    const auto &_sv =
-        match_into_pair(mylist<uint64_t>::mycons(
-                            UINT64_C(5), mylist<uint64_t>::mycons(
-                                UINT64_C(10), mylist<uint64_t>::mynil())));
+    const auto &_sv = match_into_pair(mylist<uint64_t>::mycons(
+        UINT64_C(5),
+        mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil())));
     const auto &[a0, a1] = _sv;
     return (a0 + mylist_sum(a1));
   }();
   /// test4: double_match 7,8,9 = (7, 8,9)
   static inline const uint64_t test4 = []() {
-    const auto &_sv =
-        double_match(mylist<uint64_t>::mycons(
-                         UINT64_C(7), mylist<uint64_t>::mycons(
-                             UINT64_C(8), mylist<uint64_t>::mycons(
-                                 UINT64_C(9), mylist<uint64_t>::mynil()))));
+    const auto &_sv = double_match(mylist<uint64_t>::mycons(
+        UINT64_C(7),
+        mylist<uint64_t>::mycons(
+            UINT64_C(8),
+            mylist<uint64_t>::mycons(UINT64_C(9), mylist<uint64_t>::mynil()))));
     const auto &[a0, a1] = _sv;
     return (a0 + mylist_sum(a1));
   }();
@@ -309,10 +309,11 @@ struct MatchRefAfterMove {
 
   /// test5: match_with_cont 100, 200, 300 (+) = 100 + 2 = 102
   static inline const uint64_t test5 = match_with_cont(
-      mylist<uint64_t>::mycons(UINT64_C(100), mylist<uint64_t>::mycons(
-                                   UINT64_C(200), mylist<uint64_t>::mycons(
-                                       UINT64_C(300),
-                                       mylist<uint64_t>::mynil()))),
+      mylist<uint64_t>::mycons(
+          UINT64_C(100), mylist<uint64_t>::mycons(
+                             UINT64_C(200), mylist<uint64_t>::mycons(
+                                                UINT64_C(300),
+                                                mylist<uint64_t>::mynil()))),
       [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
 
   /// Pattern 6: Deep nesting of matches with multiple constructors.
@@ -388,7 +389,7 @@ struct MatchRefAfterMove {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, const A &> &&
-      std::is_invocable_r_v<T1, F1 &, const B &>
+               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -408,7 +409,7 @@ struct MatchRefAfterMove {
           either<mylist<uint64_t>, mylist<uint64_t>>::right(
               mylist<uint64_t>::mycons(
                   UINT64_C(50), mylist<uint64_t>::mycons(
-                      UINT64_C(60), mylist<uint64_t>::mynil()))));
+                                    UINT64_C(60), mylist<uint64_t>::mynil()))));
 };
 
 #endif // INCLUDED_MATCH_REF_AFTER_MOVE

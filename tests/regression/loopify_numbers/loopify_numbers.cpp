@@ -1206,9 +1206,8 @@ LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
     uint64_t a00;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneEnter_sum_even_indices_fuel_entry,
-                   CraneCont_Cons>;
+  using CraneFrame = std::variant<
+      CraneEnter, CraneEnter_sum_even_indices_fuel_entry, CraneCont_Cons>;
   uint64_t _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&l, fuel});
@@ -1234,8 +1233,8 @@ LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
               CraneEnter_sum_even_indices_fuel_entry{crane_raw(a10), f});
         }
       }
-    } else if (
-        std::holds_alternative<CraneEnter_sum_even_indices_fuel_entry>(_frame)) {
+    } else if (std::holds_alternative<CraneEnter_sum_even_indices_fuel_entry>(
+                   _frame)) {
       auto _f =
           std::move(std::get<CraneEnter_sum_even_indices_fuel_entry>(_frame));
       const List<uint64_t> &l0 = *_f.l0;

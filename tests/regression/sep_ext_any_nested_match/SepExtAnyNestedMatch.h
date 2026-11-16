@@ -21,8 +21,8 @@ template <SymTypes Ty> struct Destruct {
   get_second(typename Ty::sym, typename Ty::sym,
              const typename Datatypes::template List<typename Ty::sym> &,
              symbols_semty vs) {
-    return crane::any_cast<std::pair<crane::obj, crane::obj>>(
-        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs)).second)
+    return crane::any_cast<std::pair<crane::obj, crane::obj>>(crane::any_cast<
+        std::pair<crane::obj, crane::obj>>(std::move(vs)).second)
                .first;
   }
 };

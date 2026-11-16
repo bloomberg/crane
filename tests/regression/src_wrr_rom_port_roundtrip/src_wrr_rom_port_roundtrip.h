@@ -130,23 +130,31 @@ struct SrcWrrRomPortRoundtrip {
   static state execute_wrr(const state &s);
   static inline const state sample = state{
       List<uint64_t>::cons(
-          UINT64_C(0), List<uint64_t>::cons(
-              UINT64_C(0), List<uint64_t>::cons(
-                  UINT64_C(2), List<uint64_t>::cons(
-                      UINT64_C(11), List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(2),
+                  List<uint64_t>::cons(
+                      UINT64_C(11),
+                      List<uint64_t>::cons(
                           UINT64_C(0), List<uint64_t>::cons(
-                              UINT64_C(0), List<uint64_t>::nil())))))),
-      UINT64_C(13), List<uint64_t>::cons(
-          UINT64_C(1), List<uint64_t>::cons(
-              UINT64_C(2), List<uint64_t>::cons(
+                                           UINT64_C(0),
+                                           List<uint64_t>::nil())))))),
+      UINT64_C(13),
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(
                   UINT64_C(7),
                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))),
       UINT64_C(0)};
   static inline const state after_src = execute_src(sample, UINT64_C(3));
   static inline const state after_wrr = execute_wrr(after_src);
-  static inline const bool t =
-      ListDef::template nth<uint64_t>(after_src.sel_rom, after_wrr.rom_ports,
-                                      UINT64_C(0)) == UINT64_C(13);
+  static inline const bool t = ListDef::template nth<uint64_t>(
+      after_src.sel_rom, after_wrr.rom_ports, UINT64_C(0)) ==
+                               UINT64_C(13);
 };
 
 template <typename T1>

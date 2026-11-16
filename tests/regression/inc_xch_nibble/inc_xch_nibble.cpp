@@ -16,9 +16,9 @@ uint64_t IncXchNibble::get_reg_pair(const IncXchNibble::state &s, uint64_t r) {
 
 IncXchNibble::state IncXchNibble::execute_inc(const IncXchNibble::state &s,
                                               uint64_t r) {
-  return state{
-      update_nth<uint64_t>(r, nibble_of_nat((get_reg(s, r) + UINT64_C(1))),
-                           s.regs), s.acc};
+  return state{update_nth<uint64_t>(
+      r, nibble_of_nat((get_reg(s, r) + UINT64_C(1))), s.regs),
+               s.acc};
 }
 
 IncXchNibble::state IncXchNibble::execute_xch(const IncXchNibble::state &s,

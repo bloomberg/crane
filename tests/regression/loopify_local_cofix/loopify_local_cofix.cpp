@@ -17,9 +17,10 @@ List<uint64_t> LoopifyLocalCofix::take(uint64_t n,
       const auto &[a0, a1] =
           std::get<typename LoopifyLocalCofix::stream::Cons>(_loop_s.v());
       auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
-      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
-                                              List<uint64_t>>(std::move(_cell)))
-                                      : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node =
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_s = a1;
       _loop_n = m;
@@ -34,11 +35,10 @@ LoopifyLocalCofix::stream LoopifyLocalCofix::from_list(List<uint64_t> l) {
       [=, l = std::move(l)](auto &_self_go,
                             uint64_t n)
            -> LoopifyLocalCofix::stream {
-            return stream::lazy_(
-                [=]() -> typename LoopifyLocalCofix::stream::Cons {
-                  return {(l.length() + n), _self_go(_self_go, (n + 1))};
-                });
-          };
+        return stream::lazy_([=]() -> typename LoopifyLocalCofix::stream::Cons {
+          return {(l.length() + n), _self_go(_self_go, (n + 1))};
+        });
+      };
   {
     uint64_t _lc1_n = UINT64_C(0);
     return go_impl(go_impl, _lc1_n);

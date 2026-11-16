@@ -22,9 +22,8 @@ uint64_t EffectCompose::par_add(uint64_t a, uint64_t b) {
 
 /// Parallel computation with IO: compute then print.
 uint64_t EffectCompose::par_compute_and_greet(uint64_t n) {
-  crane::fn<uint64_t(uint64_t)> succ = [](uint64_t x) {
-    return (x + UINT64_C(1));
-  };
+  crane::fn<uint64_t(uint64_t)> succ =
+      [](uint64_t x) { return (x + UINT64_C(1)); };
   std::cout << std::string("computing...") << '\n';
   std::shared_future<uint64_t> t =
       std::async(std::launch::async, std::move(succ), n).share();

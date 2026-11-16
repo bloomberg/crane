@@ -151,14 +151,19 @@ public:
 
   static const List<uint64_t> &mytest() {
     static const List<uint64_t> v =
-        List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::cons(
-                                 UINT64_C(1), List<uint64_t>::cons(
-                                     UINT64_C(2), List<uint64_t>::nil())))
+        List<uint64_t>::cons(
+            UINT64_C(3),
+            List<uint64_t>::cons(
+                UINT64_C(1),
+                List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))
             .app(List<uint64_t>::cons(
-                     UINT64_C(8), List<uint64_t>::cons(
-                         UINT64_C(3), List<uint64_t>::cons(
-                             UINT64_C(7), List<uint64_t>::cons(
-                                 UINT64_C(9), List<uint64_t>::nil())))));
+            UINT64_C(8),
+            List<uint64_t>::cons(
+                UINT64_C(3),
+                List<uint64_t>::cons(
+                    UINT64_C(7),
+                    List<uint64_t>::cons(UINT64_C(9),
+                                         List<uint64_t>::nil())))));
     return v;
   }
 };

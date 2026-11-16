@@ -25,9 +25,8 @@ template <Sig S> struct Worker {
 
   static typename Datatypes::template List<uint64_t>
   all_labels(const typename Datatypes::template List<item> &xs) {
-    return ListDef::template map<item, uint64_t>([](const item &i) {
-      return i.label;
-    }, xs);
+    return ListDef::template map<item, uint64_t>(
+        [](const item &i) { return i.label; }, xs);
   }
 
   static std::optional<typename S::A>

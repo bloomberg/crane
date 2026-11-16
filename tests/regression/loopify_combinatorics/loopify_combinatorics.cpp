@@ -359,8 +359,9 @@ LoopifyCombinatorics::map_pairs(uint64_t y, const List<uint64_t> &l) {
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write ? *(*_write = std::make_shared<
-                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+      (_write ? *(*_write =
+                      std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
+                          std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
@@ -368,12 +369,11 @@ LoopifyCombinatorics::map_pairs(uint64_t y, const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
           std::make_pair(a0, y), nullptr);
-      List<std::pair<uint64_t, uint64_t>> &_node =
-          (
-              _write ? *(*_write = std::make_shared<
-                             List<std::pair<uint64_t, uint64_t>>>(
+      List<std::pair<uint64_t, uint64_t>> &_node = (
+          _write ? *(*_write =
+                         std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
                              std::move(_cell)))
-                     : _root.emplace(std::move(_cell)));
+                 : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
               _node.v_mut())

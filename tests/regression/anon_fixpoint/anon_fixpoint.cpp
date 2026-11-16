@@ -41,9 +41,8 @@ uint64_t AnonFixpoint::double_sum(uint64_t m) {
         return (UINT64_C(1) + _self_inner(_self_inner, q));
       }
     };
-    auto inner = [&](uint64_t k) -> uint64_t {
-      return inner_impl(inner_impl, k);
-    };
+    auto inner =
+        [&](uint64_t k) -> uint64_t { return inner_impl(inner_impl, k); };
     return (inner(m) + double_sum(p));
   }
 }

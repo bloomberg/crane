@@ -42,9 +42,10 @@ List<uint64_t> LoopifySearchOpt::lis(const List<uint64_t> &l) {
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifySearchOpt::longest_run_fuel(
-    uint64_t fuel, const List<uint64_t> &current, List<uint64_t> best,
-    const List<uint64_t> &l) {
+List<uint64_t>
+LoopifySearchOpt::longest_run_fuel(uint64_t fuel, const List<uint64_t> &current,
+                                   List<uint64_t> best,
+                                   const List<uint64_t> &l) {
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_best = std::move(best);
   List<uint64_t> _loop_current = current;
@@ -152,8 +153,9 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
                 typename List<std::pair<uint64_t, uint64_t>>::Nil>(items.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<
-              typename List<std::pair<uint64_t, uint64_t>>::Cons>(items.v());
+          const auto &[a0, a1] =
+              std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
+                  items.v());
           const auto &[weight, value] = a0;
           if (capacity < weight) {
             _stack.emplace_back(CraneEnter{crane_raw(a1), capacity, fuel_});
@@ -172,10 +174,9 @@ uint64_t LoopifySearchOpt::knapsack_fuel(
       uint64_t weight = _f.weight;
       uint64_t value = _f.value;
       _stack.emplace_back(CraneCont2{value, std::move(_result)});
-      _stack.emplace_back(
-          CraneEnter{
-              &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-              fuel_});
+      _stack.emplace_back(CraneEnter{
+          &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
+          fuel_});
     } else {
       auto _f = std::move(std::get<CraneCont2>(_frame));
       uint64_t value = _f.value;
@@ -256,9 +257,8 @@ LoopifySearchOpt::subset_sum_fuel(uint64_t fuel, uint64_t target,
       uint64_t a0 = _f.a0;
       const List<uint64_t> &a1 = *_f.a1;
       _stack.emplace_back(CraneCont2{std::move(_result)});
-      _stack.emplace_back(
-          CraneEnter{&a1, (((target - a0) > target ? 0 : (target - a0))),
-                     fuel_});
+      _stack.emplace_back(CraneEnter{
+          &a1, (((target - a0) > target ? 0 : (target - a0))), fuel_});
     } else {
       auto _f = std::move(std::get<CraneCont2>(_frame));
       _result = (_f._tmp2 || std::move(_result));

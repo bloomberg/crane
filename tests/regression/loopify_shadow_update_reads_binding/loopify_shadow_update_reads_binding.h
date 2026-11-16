@@ -103,15 +103,22 @@ public:
 struct LoopifyShadowUpdateReadsBinding {
   static uint64_t apply_n(uint64_t n, uint64_t v,
                           const List<crane::fn<uint64_t(uint64_t)>> &fs);
-  static inline const uint64_t result = apply_n(
-      UINT64_C(4), UINT64_C(2),
-      List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x + UINT64_C(1));
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x * UINT64_C(10));
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x + UINT64_C(3));
-      }, List<crane::fn<uint64_t(uint64_t)>>::nil()))));
+  static inline const uint64_t result =
+      apply_n(
+          UINT64_C(4), UINT64_C(2), List<crane::fn<uint64_t(uint64_t)>>::cons(
+                                        [](uint64_t x) {
+                                          return (x + UINT64_C(1));
+                                        },
+                                        List<crane::fn<uint64_t(uint64_t)>>::cons(
+                                            [](uint64_t x) {
+                                              return (x * UINT64_C(10));
+                                            },
+                                            List<crane::fn<uint64_t(uint64_t)>>::cons(
+                                                [](uint64_t x) {
+                                                  return (x + UINT64_C(3));
+                                                },
+                                                List<crane::fn<
+                                                    uint64_t(uint64_t)>>::nil()))));
 };
 
 #endif // INCLUDED_LOOPIFY_SHADOW_UPDATE_READS_BINDING

@@ -377,9 +377,8 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig_rect_uncurried(const sig<A> &v, T1 f) const {
-        return this->template eq_sig_rect<T1>(v, [=, f = std::move(f)]() {
-          return f;
-        }());
+        return this->template eq_sig_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
@@ -446,9 +445,8 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig2_rect_uncurried(const sig2<A> &v, T1 f) const {
-        return this->template eq_sig2_rect<T1>(v, [=, f = std::move(f)]() {
-          return f;
-        }());
+        return this->template eq_sig2_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
@@ -530,9 +528,8 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sigT_rect_uncurried(const sigT<A, P> &v, T1 f) const {
-        return this->template eq_sigT_rect<T1>(v, [=, f = std::move(f)]() {
-          return f;
-        }());
+        return this->template eq_sigT_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
@@ -630,9 +627,8 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sigT2_rect_uncurried(const sigT2<A, P, Q> &v, T1 f) const {
-        return this->template eq_sigT2_rect<T1>(v, [=, f = std::move(f)]() {
-          return f;
-        }());
+        return this->template eq_sigT2_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
@@ -837,9 +833,8 @@ struct RocqBug14174 {
     template <typename T1, typename T2>
     static sig<crane::fn<T2(T1)>>
     Choice(std::type_identity_t<crane::fn<sig<T2>(T1)>> h) {
-      return sig<crane::fn<T2(T1)>>::exist([=, h = std::move(h)](const T1 &z) {
-        return h(z).proj1_sig();
-      });
+      return sig<crane::fn<T2(T1)>>::exist(
+          [=, h = std::move(h)](const T1 &z) { return h(z).proj1_sig(); });
     }
 
     template <typename T1, typename T2, typename T3>
@@ -878,16 +873,17 @@ struct RocqBug14174 {
           [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
                                                     Nat n)
                -> T1 {
-                if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
-                  return x0;
-                } else {
-                  auto &[a0] = std::get<typename Nat::S>(n.v_mut());
-                  return h(_self_f(_self_f, *a0)).proj1_sig();
-                }
-              };
-      auto f = [=, f_impl = std::move(f_impl)](Nat n) -> T1 {
-        return f_impl(f_impl, std::move(n));
-      };
+            if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
+              return x0;
+            } else {
+              auto &[a0] = std::get<typename Nat::S>(n.v_mut());
+              return h(_self_f(_self_f, *a0)).proj1_sig();
+            }
+          };
+      auto f =
+          [=, f_impl = std::move(f_impl)](Nat n) -> T1 {
+            return f_impl(f_impl, std::move(n));
+          };
       return sig<crane::fn<T1(Nat)>>::exist(std::move(f));
     }
 

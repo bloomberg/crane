@@ -232,7 +232,7 @@ struct Pos {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
-    std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -391,40 +391,21 @@ struct EpochCellGlyphTraceCase {
       MechanismState{Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(),
                      Z::z0()};
   [[gnu::used]] static inline const Z metonic_modulus =
-      Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xi(Positive::xi(Positive::xh()))))))));
+      Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xi(Positive::xi(Positive::xh()))))))));
   [[gnu::used]] static inline const Z saros_modulus =
-      Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xi(
-                      Positive::xi(
-                          Positive::xi(
-                              Positive::xo(Positive::xi(Positive::xh()))))))));
+      Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))))));
   [[gnu::used]] static inline const Z callippic_modulus =
-      Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(
-                      Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
+      Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
   [[gnu::used]] static inline const Z exeligmos_modulus =
       Z::zpos(Positive::xi(Positive::xh()));
   [[gnu::used]] static inline const Z games_modulus =
       Z::zpos(Positive::xo(Positive::xo(Positive::xh())));
   [[gnu::used]] static inline const Z zodiac_modulus =
-      Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xi(
-                                  Positive::xi(Positive::xo(Positive::xh())))))))));
+      Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static MechanismState step(const MechanismState &s);
   static MechanismState step_reverse(const MechanismState &s);
   static MechanismState step_n(uint64_t n, MechanismState s);
@@ -525,188 +506,109 @@ struct EpochCellGlyphTraceCase {
   static bool category_matches_glyph(EclipseCategory cat, DialGlyph g);
   static DialGlyph glyph_at_cell(const Z &cell);
   static inline const HistoricalEclipse eclipse_may_205_bc = HistoricalEclipse{
-      Z::zneg(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xo(Positive::xi(Positive::xh())))))))),
+      Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
       Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xh())))),
-      EclipseCategory::EC_TOTALLUNAR, Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
-      Z::zpos(
-          Positive::xo(
-              Positive::xi(
-                  Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(
-            Positive::xi(
-                Positive::xo(
-                    Positive::xi(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xi(Positive::xo(Positive::xh())))))))),
-        Positive::xo(
-            Positive::xo(
-                Positive::xi(
-                    Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
+      EclipseCategory::EC_TOTALLUNAR,
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
+      Z::zpos(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+      Q{Z::zpos(Positive::xi(Positive::xo(Positive::xi(Positive::xo(
+          Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
+        Positive::xo(Positive::xo(Positive::xi(
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
   static inline const HistoricalEclipse eclipse_nov_205_bc = HistoricalEclipse{
-      Z::zneg(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xo(Positive::xi(Positive::xh())))))))),
+      Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xh())))),
       Z::zpos(Positive::xi(
-                  Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))),
-      EclipseCategory::EC_TOTALLUNAR, Z::zpos(
-          Positive::xi(
-              Positive::xo(
-                  Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))),
-      Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(
-            Positive::xo(
-                Positive::xi(
-                    Positive::xi(
-                        Positive::xi(
-                            Positive::xo(
-                                Positive::xo(Positive::xo(Positive::xh())))))))),
-        Positive::xo(
-            Positive::xo(
-                Positive::xi(
-                    Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh()))))),
+      EclipseCategory::EC_TOTALLUNAR,
+      Z::zpos(Positive::xi(Positive::xo(
+          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))),
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+      Q{Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
+        Positive::xo(Positive::xo(Positive::xi(
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
   static inline const HistoricalEclipse eclipse_may_204_bc = HistoricalEclipse{
-      Z::zneg(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xo(Positive::xi(Positive::xh())))))))),
+      Z::zneg(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
-      Z::zpos(Positive::xh()), EclipseCategory::EC_PARTIALSOLAR, Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
-      Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(
-            Positive::xo(
-                Positive::xi(
-                    Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-        Positive::xo(
-            Positive::xo(
-                Positive::xi(
-                    Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
+      Z::zpos(Positive::xh()), EclipseCategory::EC_PARTIALSOLAR,
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
+      Z::zpos(Positive::xi(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+      Q{Z::zpos(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+        Positive::xo(Positive::xo(Positive::xi(
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
   static inline const HistoricalEclipse eclipse_oct_204_bc = HistoricalEclipse{
-      Z::zneg(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xo(Positive::xi(Positive::xh())))))))),
+      Z::zneg(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xo(Positive::xi(Positive::xo(Positive::xh())))),
       Z::zpos(Positive::xo(
-                  Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
-      EclipseCategory::EC_TOTALLUNAR, Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
+      EclipseCategory::EC_TOTALLUNAR,
+      Z::zpos(Positive::xi(Positive::xi(
+          Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
       Z::zpos(Positive::xi(
-                  Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))), Q{
-          Z::zpos(
-              Positive::xo(
-                  Positive::xo(
-                      Positive::xo(
-                          Positive::xi(
-                              Positive::xo(
-                                  Positive::xo(Positive::xo(Positive::xh())))))))),
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(
-                      Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
+          Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
+      Q{Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
+        Positive::xo(Positive::xo(Positive::xi(
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
   static inline const HistoricalEclipse eclipse_mar_187_bc = HistoricalEclipse{
-      Z::zneg(
-          Positive::xo(
-              Positive::xi(
-                  Positive::xo(
-                      Positive::xi(
-                          Positive::xi(
-                              Positive::xi(Positive::xo(Positive::xh())))))))),
+      Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xi(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xh())),
       Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xh())))),
-      EclipseCategory::EC_TOTALLUNAR, Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
-      Z::zpos(
-          Positive::xi(
-              Positive::xi(
-                  Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(
-            Positive::xi(
-                Positive::xo(
-                    Positive::xo(
-                        Positive::xo(
-                            Positive::xo(
-                                Positive::xi(Positive::xo(Positive::xh())))))))),
-        Positive::xo(
-            Positive::xo(
-                Positive::xi(
-                    Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
+      EclipseCategory::EC_TOTALLUNAR,
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
+      Z::zpos(Positive::xi(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+      Q{Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
+          Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
+        Positive::xo(Positive::xo(Positive::xi(
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
   static inline const HistoricalEclipse eclipse_jun_178_bc = HistoricalEclipse{
-      Z::zneg(
-          Positive::xi(
-              Positive::xo(
-                  Positive::xo(
-                      Positive::xo(
-                          Positive::xi(
-                              Positive::xi(Positive::xo(Positive::xh())))))))),
-      Z::zpos(Positive::xo(Positive::xi(Positive::xh()))), Z::zpos(
-          Positive::xi(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))),
-      EclipseCategory::EC_TOTALLUNAR, Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
-      Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))),
-      Q{Z::zpos(
-            Positive::xo(
-                Positive::xo(
-                    Positive::xi(
-                        Positive::xi(
-                            Positive::xi(
-                                Positive::xo(Positive::xo(Positive::xh())))))))),
-        Positive::xo(
-            Positive::xo(
-                Positive::xi(
-                    Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
+      Z::zneg(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))),
+      Z::zpos(Positive::xo(Positive::xi(Positive::xh()))),
+      Z::zpos(Positive::xi(
+          Positive::xo(Positive::xi(Positive::xo(Positive::xh()))))),
+      EclipseCategory::EC_TOTALLUNAR,
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xo(Positive::xi(Positive::xi(Positive::xh())))))),
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))),
+      Q{Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))))),
+        Positive::xo(Positive::xo(Positive::xi(
+            Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
   static inline const List<HistoricalEclipse> eclipse_database =
       List<HistoricalEclipse>::cons(
-          eclipse_may_205_bc, List<HistoricalEclipse>::cons(
-              eclipse_nov_205_bc, List<HistoricalEclipse>::cons(
-                  eclipse_may_204_bc, List<HistoricalEclipse>::cons(
-                      eclipse_oct_204_bc, List<HistoricalEclipse>::cons(
-                          eclipse_mar_187_bc, List<HistoricalEclipse>::cons(
+          eclipse_may_205_bc,
+          List<HistoricalEclipse>::cons(
+              eclipse_nov_205_bc,
+              List<HistoricalEclipse>::cons(
+                  eclipse_may_204_bc,
+                  List<HistoricalEclipse>::cons(
+                      eclipse_oct_204_bc,
+                      List<HistoricalEclipse>::cons(
+                          eclipse_mar_187_bc,
+                          List<HistoricalEclipse>::cons(
                               eclipse_jun_178_bc,
                               List<HistoricalEclipse>::nil()))))));
   static uint64_t count_total_lunar(const List<HistoricalEclipse> &es);
@@ -725,8 +627,9 @@ struct EpochCellGlyphTraceCase {
     DialGlyph reading_glyph;
   };
 
-  static EpochReading build_epoch_reading(
-      const Z &epoch_year, const Z &epoch_month, const HistoricalEclipse &e);
+  static EpochReading
+  build_epoch_reading(const Z &epoch_year, const Z &epoch_month,
+                      const HistoricalEclipse &e);
   static bool reading_matches(const EpochReading &reading);
   static uint64_t reading_phase_code(const EpochReading &reading);
   static uint64_t reading_zodiac_code(const EpochReading &reading);
@@ -738,13 +641,8 @@ struct EpochCellGlyphTraceCase {
   };
 
   static inline const ValidEpoch epoch_205_bc_valid = ValidEpoch{
-      Z::zneg(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(
-                      Positive::xi(
-                          Positive::xo(
-                              Positive::xo(Positive::xi(Positive::xh())))))))),
+      Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))), eclipse_may_205_bc};
   static inline const EpochReading sample_epoch_reading = build_epoch_reading(
       epoch_205_bc_valid.ve_year, epoch_205_bc_valid.ve_month,
@@ -768,10 +666,9 @@ struct EpochCellGlyphTraceCase {
   static inline const bool sample_valid_epoch_visible =
       epoch_205_bc_valid.ve_eclipse.he_visible_mediterranean;
   static inline const bool sample_valid_epoch_series_44 = BinInt::eqb(
-      epoch_205_bc_valid.ve_eclipse.he_saros_series, Z::zpos(
-          Positive::xo(
-              Positive::xo(
-                  Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))));
+      epoch_205_bc_valid.ve_eclipse.he_saros_series,
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))));
   static inline const bool sample_valid_epoch_magnitude_ge_one =
       QArith_base::Qle_bool(Q{Z::zpos(Positive::xh()), Positive::xh()},
                             epoch_205_bc_valid.ve_eclipse.he_magnitude);
@@ -783,18 +680,12 @@ struct EpochCellGlyphTraceCase {
   static inline const bool sample_eclipse_possible_after_6 =
       eclipse_possible_at_dial(step_n(UINT64_C(6), initial_state).saros_dial);
   static inline const bool sample_epoch_178_misaligned =
-      !(BinInt::eqb(
-            saros_cell(
-                Z::zneg(
-                    Positive::xo(
-                        Positive::xo(
-                            Positive::xi(
-                                Positive::xi(
-                                    Positive::xo(
-                                        Positive::xo(
-                                            Positive::xi(Positive::xh())))))))),
-                Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
-                eclipse_jun_178_bc), Z::z0()));
+      !(BinInt::eqb(saros_cell(
+            Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+                Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+            Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
+            eclipse_jun_178_bc),
+                    Z::z0()));
 };
 
 #endif // INCLUDED_EPOCH_CELL_GLYPH_TRACE

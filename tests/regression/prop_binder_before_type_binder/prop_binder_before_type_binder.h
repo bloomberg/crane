@@ -204,9 +204,9 @@ struct PropBinderBeforeTypeBinder {
     }
   }
 
-  static inline const uint64_t selected = sel<uint64_t>([](uint64_t n) {
-    return Nat::eq_dec(n, UINT64_C(2));
-  }, UINT64_C(0), UINT64_C(2), UINT64_C(6));
+  static inline const uint64_t selected =
+      sel<uint64_t>([](uint64_t n) { return Nat::eq_dec(n, UINT64_C(2)); },
+                    UINT64_C(0), UINT64_C(2), UINT64_C(6));
 };
 
 #endif // INCLUDED_PROP_BINDER_BEFORE_TYPE_BINDER

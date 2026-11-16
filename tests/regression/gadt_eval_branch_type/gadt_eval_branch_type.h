@@ -209,11 +209,10 @@ struct GadtEvalBranchType {
     }
   }
 
-  static inline const std::pair<Nat, bool> run = crane_any_cast<
-      std::pair<Nat, bool>>(
-      eval<std::pair<Nat, bool>>(
-          expr::paire(expr::lit(Nat::s(Nat::s(Nat::s(Nat::o())))),
-                      expr::bl(true))));
+  static inline const std::pair<Nat, bool> run =
+      crane_any_cast<std::pair<Nat, bool>>(
+          eval<std::pair<Nat, bool>>(expr::paire(
+              expr::lit(Nat::s(Nat::s(Nat::s(Nat::o())))), expr::bl(true))));
 };
 
 #endif // INCLUDED_GADT_EVAL_BRANCH_TYPE

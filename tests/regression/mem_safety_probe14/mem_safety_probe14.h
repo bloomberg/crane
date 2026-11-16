@@ -108,9 +108,8 @@ struct MemSafetyProbe14 {
     /// have independent copies.
     uint64_t two_closures() const {
       tree _self_val = *this;
-      crane::fn<uint64_t(uint64_t)> f1 = [=](uint64_t n) {
-        return (_self_val.tree_sum() + n);
-      };
+      crane::fn<uint64_t(uint64_t)> f1 =
+          [=](uint64_t n) { return (_self_val.tree_sum() + n); };
       crane::fn<uint64_t(uint64_t)> f2 =
           [=, _self_val = std::move(_self_val)](uint64_t n) {
             return (_self_val.tree_sum() * n);
@@ -328,7 +327,7 @@ struct MemSafetyProbe14 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -475,10 +474,9 @@ struct MemSafetyProbe14 {
   /// The closure must still hold the original tree.
   static uint64_t capture_then_match(tree t);
   static inline const uint64_t test_capture_match =
-      capture_then_match(
-          tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                     UINT64_C(10),
-                     tree::node(tree::leaf(), UINT64_C(15), tree::leaf())));
+      capture_then_match(tree::node(
+          tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
+          tree::node(tree::leaf(), UINT64_C(15), tree::leaf())));
   static mylist<crane::fn<uint64_t(uint64_t)>> tree_level_fns(const tree &t,
                                                               uint64_t depth);
   static inline const uint64_t test_level_fns = []() {

@@ -39,8 +39,9 @@ uint64_t LoopifyVariantSelfAssign::drain(
       if (std::holds_alternative<typename LoopifyVariantSelfAssign::lst::Nil>(
               _loop_l.v())) {
         return _loop_s;
-      } else if (std::holds_alternative<
-                     typename LoopifyVariantSelfAssign::lst::One>(_loop_l.v())) {
+      } else if (
+          std::holds_alternative<typename LoopifyVariantSelfAssign::lst::One>(
+              _loop_l.v())) {
         const auto &[a0] =
             std::get<typename LoopifyVariantSelfAssign::lst::One>(_loop_l.v());
         _loop_s = (_loop_s + a0);

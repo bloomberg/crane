@@ -168,11 +168,10 @@ using fused = std::pair<state<provenance, allocationId, ptr>, frame<ptr>>;
 /// Reads the expanded product, so the caller's parameter is inferred at it
 /// rather than at the alias.
 template <ParamsV _tcI0>
-typename _tcI0::PTR::ptr top(
-    const std::pair<
-        state<typename _tcI0::PROV::provenance,
-              typename _tcI0::PROV::allocationId, typename _tcI0::PTR::ptr>,
-        List<typename _tcI0::PTR::ptr>> &p) {
+typename _tcI0::PTR::ptr top(const std::pair<
+    state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
+          typename _tcI0::PTR::ptr>,
+    List<typename _tcI0::PTR::ptr>> &p) {
   return p.first.st_ptr;
 }
 
@@ -180,11 +179,10 @@ typename _tcI0::PTR::ptr top(
 /// still names fused.
 template <ParamsV _tcI0>
 fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
-      typename _tcI0::PTR::ptr>
-step(const std::pair<
-         state<typename _tcI0::PROV::provenance,
-               typename _tcI0::PROV::allocationId, typename _tcI0::PTR::ptr>,
-         List<typename _tcI0::PTR::ptr>> &s) {
+      typename _tcI0::PTR::ptr> step(const std::pair<
+    state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
+          typename _tcI0::PTR::ptr>,
+    List<typename _tcI0::PTR::ptr>> &s) {
   return std::make_pair(s.first, s.second);
 }
 
@@ -195,7 +193,8 @@ fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
       state<typename _tcI0::PROV::provenance,
             typename _tcI0::PROV::allocationId, typename _tcI0::PTR::ptr>{
           _tcI0::PROV::a_provenance(), _tcI0::PROV::an_allocationId(),
-          _tcI0::PTR::zero_ptr()}, List<typename _tcI0::PTR::ptr>::nil());
+          _tcI0::PTR::zero_ptr()},
+      List<typename _tcI0::PTR::ptr>::nil());
 }
 
 struct ExpandedProductWrongClassField {

@@ -97,29 +97,33 @@ struct LetFixNestedClone {
   static inline const uint64_t test_sum =
       sum_nested(
           List<List<uint64_t>>::cons(
-              List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                       UINT64_C(2), List<uint64_t>::nil())),
+              List<uint64_t>::cons(
+                  UINT64_C(1),
+                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
               List<List<uint64_t>>::cons(
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
-                  List<List<uint64_t>>::cons(
+                  List<List<uint64_t>>::cons(List<uint64_t>::cons(
+                      UINT64_C(4),
                       List<uint64_t>::cons(
-                          UINT64_C(4), List<uint64_t>::cons(
-                              UINT64_C(5), List<uint64_t>::cons(
-                                  UINT64_C(6), List<uint64_t>::nil()))),
-                      List<List<uint64_t>>::nil()))));
+                          UINT64_C(5), List<uint64_t>::cons(
+                                           UINT64_C(6),
+                                           List<uint64_t>::nil()))),
+                                             List<List<uint64_t>>::nil()))));
   static inline const uint64_t test_count =
       count_nested(
           List<List<uint64_t>>::cons(
-              List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
-                                       UINT64_C(2), List<uint64_t>::nil())),
+              List<uint64_t>::cons(
+                  UINT64_C(1),
+                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
               List<List<uint64_t>>::cons(
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
-                  List<List<uint64_t>>::cons(
+                  List<List<uint64_t>>::cons(List<uint64_t>::cons(
+                      UINT64_C(4),
                       List<uint64_t>::cons(
-                          UINT64_C(4), List<uint64_t>::cons(
-                              UINT64_C(5), List<uint64_t>::cons(
-                                  UINT64_C(6), List<uint64_t>::nil()))),
-                      List<List<uint64_t>>::nil()))));
+                          UINT64_C(5), List<uint64_t>::cons(
+                                           UINT64_C(6),
+                                           List<uint64_t>::nil()))),
+                                             List<List<uint64_t>>::nil()))));
 };
 
 #endif // INCLUDED_LET_FIX_NESTED_CLONE

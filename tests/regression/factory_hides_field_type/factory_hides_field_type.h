@@ -49,7 +49,7 @@ struct FactoryHidesFieldType {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const pt &> &&
-    std::is_invocable_r_v<T1, F1 &, const pt &>
+             std::is_invocable_r_v<T1, F1 &, const pt &>
   static T1 shape_rect(F0 &&f, F1 &&f0, const shape &s) {
     if (std::holds_alternative<typename shape::Pt>(s.v())) {
       const auto &[a0] = std::get<typename shape::Pt>(s.v());

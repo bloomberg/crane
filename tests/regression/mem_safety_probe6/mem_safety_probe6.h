@@ -66,7 +66,7 @@ struct MemSafetyProbe6 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -248,7 +248,8 @@ struct MemSafetyProbe6 {
 
   static inline const uint64_t test_tail_adder = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(1), mylist<uint64_t>::mycons(
+        UINT64_C(1),
+        mylist<uint64_t>::mycons(
             UINT64_C(2),
             mylist<uint64_t>::mycons(UINT64_C(3), mylist<uint64_t>::mynil())));
     return l.tail_adder(UINT64_C(0), UINT64_C(100));
@@ -498,9 +499,10 @@ struct MemSafetyProbe6 {
     return []() {
       mylist<uint64_t> l =
           mylist<uint64_t>::mycons(
-              UINT64_C(1), mylist<uint64_t>::mycons(
+              UINT64_C(1),
+              mylist<uint64_t>::mycons(
                   UINT64_C(2), mylist<uint64_t>::mycons(
-                      UINT64_C(3), mylist<uint64_t>::mynil())));
+                                   UINT64_C(3), mylist<uint64_t>::mynil())));
       crane::fn<mylist<uint64_t>(crane::fn<uint64_t(uint64_t)>)> f =
           [&](crane::fn<uint64_t(uint64_t)> _x0) -> mylist<uint64_t> {
             return tail_mapper(UINT64_C(0), std::move(l), _x0);
@@ -514,9 +516,10 @@ struct MemSafetyProbe6 {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<tree(bool)> sel = [=, t = std::move(t)](bool _x0) -> tree {
-        return t.both_subtrees(UINT64_C(0), _x0);
-      };
+      crane::fn<tree(bool)> sel =
+          [=, t = std::move(t)](bool _x0) -> tree {
+            return t.both_subtrees(UINT64_C(0), _x0);
+          };
       return (sel(true).tree_sum() + sel(false).tree_sum());
     }();
   }();
@@ -527,7 +530,8 @@ struct MemSafetyProbe6 {
                               uint64_t x);
   static inline const uint64_t test_chain = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10), mylist<uint64_t>::mycons(
+        UINT64_C(10),
+        mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_chain(std::move(l));
@@ -537,10 +541,13 @@ struct MemSafetyProbe6 {
   /// after the closure is created — tests double use.
   static uint64_t capture_and_reuse(uint64_t _x, const mylist<uint64_t> &l);
   static inline const uint64_t test_capture_reuse =
-      capture_and_reuse(UINT64_C(0), mylist<uint64_t>::mycons(
-                            UINT64_C(5), mylist<uint64_t>::mycons(
-                                UINT64_C(1), mylist<uint64_t>::mycons(
-                                    UINT64_C(2), mylist<uint64_t>::mynil()))));
+      capture_and_reuse(
+          UINT64_C(0),
+          mylist<uint64_t>::mycons(
+              UINT64_C(5),
+              mylist<uint64_t>::mycons(
+                  UINT64_C(1), mylist<uint64_t>::mycons(
+                                   UINT64_C(2), mylist<uint64_t>::mynil()))));
 };
 
 #endif // INCLUDED_MEM_SAFETY_PROBE6

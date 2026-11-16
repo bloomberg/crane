@@ -54,8 +54,9 @@ template <SymTypes Ty> struct ListCollect {
             typename Datatypes::template List<symbols_semty>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<
-          typename Datatypes::template List<symbols_semty>::Cons>(l.v());
+      const auto &[a0, a1] =
+          std::get<typename Datatypes::template List<symbols_semty>::Cons>(
+              l.v());
       return crane::any_cast<std::pair<crane::obj, crane::obj>>(a0).first;
     }
   }

@@ -13,8 +13,8 @@ RamInitReset::pop_stack(const RamInitReset::state &s) {
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(_sv.v());
     return std::make_pair(
-        std::make_optional<uint64_t>(a0), state{
-            s.state_regs, s.state_acc, s.state_carry, s.state_pc, *a1,
-            s.state_ram, s.state_sel, s.state_rom});
+        std::make_optional<uint64_t>(a0),
+        state{s.state_regs, s.state_acc, s.state_carry, s.state_pc, *a1,
+              s.state_ram, s.state_sel, s.state_rom});
   }
 }

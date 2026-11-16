@@ -88,7 +88,7 @@ struct RecursorMethodHeadSibling {
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F1 &, const bool &>
+               std::is_invocable_r_v<T1, F1 &, const bool &>
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const expr *_self = this;
 
@@ -137,7 +137,7 @@ struct RecursorMethodHeadSibling {
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-      std::is_invocable_r_v<T1, F1 &, const bool &>
+               std::is_invocable_r_v<T1, F1 &, const bool &>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const expr *_self = this;
 

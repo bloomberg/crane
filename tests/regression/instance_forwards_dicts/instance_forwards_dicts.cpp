@@ -32,8 +32,9 @@ InstanceForwardsDicts::sum_exp(const InstanceForwardsDicts::exp<uint64_t> &e) {
             typename InstanceForwardsDicts::meta<uint64_t>::MNull>(_sv0.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00] = std::get<
-          typename InstanceForwardsDicts::meta<uint64_t>::MExp>(_sv0.v());
+      const auto &[a00] =
+          std::get<typename InstanceForwardsDicts::meta<uint64_t>::MExp>(
+              _sv0.v());
       return sum_exp(*a00);
     }
   }

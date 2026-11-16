@@ -203,12 +203,13 @@ struct PulseParseCertificateCase {
   static bool
   pulse_parse_certificate_self_consistent(const PulseCertificate &cert);
   static PulseCertificate certify_trace(const List<bool> &xs);
-  static inline const Trace sample_trace =
+  static inline const Trace sample_trace = List<bool>::cons(
+      false,
       List<bool>::cons(
-          false, List<bool>::cons(
-              true, List<bool>::cons(
-                  true, List<bool>::cons(
-                      false, List<bool>::cons(true, List<bool>::nil())))));
+          true, List<bool>::cons(
+                    true, List<bool>::cons(
+                              false,
+                              List<bool>::cons(true, List<bool>::nil())))));
   static inline const PulseCertificate sample_certificate =
       certify_trace(sample_trace);
   static inline const bool sample_certificate_consistent =

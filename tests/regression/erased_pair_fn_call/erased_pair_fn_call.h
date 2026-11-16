@@ -191,29 +191,26 @@ struct ErasedPairFnCall {
 
   template <typename T1> static boxed mk(const List<T1> &l) {
     return SigT<crane::obj, std::pair<List<crane::obj>, crane::obj>>::existt(
-        crane::obj(), std::make_pair(
-            l, crane::obj(crane_erase_fn([](const List<crane::obj> &_x) {
-              return _x.length();
-            }))));
+        crane::obj(),
+        std::make_pair(
+            l, crane::obj(crane_erase_fn(
+                   [](const List<crane::obj> &_x) { return _x.length(); }))));
   }
 
   static uint64_t
   size(const SigT<crane::obj, std::pair<List<crane::obj>, crane::obj>> &b);
-  static inline const List<boxed> items =
-      List<boxed>::cons(
-          mk<uint64_t>(List<uint64_t>::cons(
-                           UINT64_C(1), List<uint64_t>::cons(
-                               UINT64_C(2), List<uint64_t>::cons(
-                                   UINT64_C(3), List<uint64_t>::nil())))), List<
-              boxed>::cons(
-              mk<bool>(List<bool>::cons(
-                           true, List<bool>::cons(false, List<bool>::nil()))),
-              List<boxed>::cons(mk<uint64_t>(List<uint64_t>::nil()),
-                                List<boxed>::nil())));
-  static inline const uint64_t total =
-      items.template fold_left<uint64_t>([](uint64_t acc, const auto &b) {
-        return (acc + size(b));
-      }, UINT64_C(0));
+  static inline const List<boxed> items = List<boxed>::cons(
+      mk<uint64_t>(List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
+      List<boxed>::cons(mk<bool>(
+          List<bool>::cons(true, List<bool>::cons(false, List<bool>::nil()))),
+                        List<boxed>::cons(mk<uint64_t>(List<uint64_t>::nil()),
+                                          List<boxed>::nil())));
+  static inline const uint64_t total = items.template fold_left<uint64_t>(
+      [](uint64_t acc, const auto &b) { return (acc + size(b)); }, UINT64_C(0));
 };
 
 #endif // INCLUDED_ERASED_PAIR_FN_CALL

@@ -158,10 +158,13 @@ struct StepFetchDecodeExec {
   static state execute(const state &s, const instruction &i);
   static state step(const state &s);
   static inline const uint64_t t = []() {
-    state s1 = step(state{UINT64_C(3), UINT64_C(0), List<uint64_t>::cons(
-                              UINT64_C(1), List<uint64_t>::cons(
-                                  UINT64_C(6), List<uint64_t>::cons(
-                                      UINT64_C(0), List<uint64_t>::nil())))});
+    state s1 = step(state{
+        UINT64_C(3), UINT64_C(0),
+        List<uint64_t>::cons(
+            UINT64_C(1),
+            List<uint64_t>::cons(
+                UINT64_C(6),
+                List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil())))});
     return (s1.acc + s1.pc);
   }();
 };

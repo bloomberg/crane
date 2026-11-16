@@ -136,6 +136,6 @@ uint64_t RecordCaseBody::list_in_body(const RecordCaseBody::Rec &r) {
   uint64_t b = r.f2;
   uint64_t c = r.f3;
   return sum_list(list<uint64_t>::cons(
-                      a, list<uint64_t>::cons(
-                          b, list<uint64_t>::cons(c, list<uint64_t>::nil()))));
+      a,
+      list<uint64_t>::cons(b, list<uint64_t>::cons(c, list<uint64_t>::nil()))));
 }

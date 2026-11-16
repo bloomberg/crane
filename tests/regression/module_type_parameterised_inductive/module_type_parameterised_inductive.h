@@ -171,10 +171,9 @@ struct ModuleTypeParameterisedInductive {
 
   using U = Use<Impl>;
   static inline const uint64_t result =
-      (U::template size<uint64_t>(
-           Impl::template tr<uint64_t>::n(Impl::template tr<uint64_t>::l(),
-                                          UINT64_C(1),
-                                          Impl::template tr<uint64_t>::l())) +
+      (U::template size<uint64_t>(Impl::template tr<uint64_t>::n(
+           Impl::template tr<uint64_t>::l(), UINT64_C(1),
+           Impl::template tr<uint64_t>::l())) +
        U::get(Impl::box<uint64_t>{UINT64_C(4)}));
 };
 

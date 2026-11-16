@@ -75,10 +75,11 @@ struct TodoIotaComplexPattern {
 
   static inline const uint64_t test1 =
       sum_triple(Triple<uint64_t, uint64_t, uint64_t>::mktriple(
-                     UINT64_C(1), UINT64_C(2), UINT64_C(3)));
-  static inline const Triple<bool, uint64_t, uint64_t> test2 = rotate_triple<
-      uint64_t, bool, uint64_t>(Triple<uint64_t, bool, uint64_t>::mktriple(
-                                    UINT64_C(10), true, UINT64_C(20)));
+          UINT64_C(1), UINT64_C(2), UINT64_C(3)));
+  static inline const Triple<bool, uint64_t, uint64_t> test2 =
+      rotate_triple<uint64_t, bool, uint64_t>(
+          Triple<uint64_t, bool, uint64_t>::mktriple(UINT64_C(10), true,
+                                                     UINT64_C(20)));
 };
 
 #endif // INCLUDED_TODO_IOTA_COMPLEX_PATTERN

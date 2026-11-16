@@ -106,12 +106,9 @@ struct NestedTreePairLiteral {
     }
   }
 
-  static inline const tree sample =
-      tree::nd(
-          tree::nd(tree::lf(
-                       std::make_pair(std::make_pair(UINT64_C(1), UINT64_C(2)),
-                                      std::make_pair(UINT64_C(3),
-                                                     UINT64_C(4))))));
+  static inline const tree sample = tree::nd(tree::nd(
+      tree::lf(std::make_pair(std::make_pair(UINT64_C(1), UINT64_C(2)),
+                              std::make_pair(UINT64_C(3), UINT64_C(4))))));
   static inline const uint64_t go = size<uint64_t>(sample);
 };
 

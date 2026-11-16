@@ -51,85 +51,56 @@ struct SharedArrayVec {
 
   static uint64_t vec_sum(const crane::shared_array<uint64_t> &v);
   static inline const crane::shared_array<crane::shared_array<uint64_t>> table =
-      crane::shared_array<crane::shared_array<uint64_t>>::of_range(ListDef::template map<
-                                                                       crane::list<
-                                                                           uint64_t>,
-                                                                       crane::shared_array<
-                                                                           uint64_t>>(
-                                                                       [](crane::list<
-                                                                              uint64_t> _x0)
-                                                                            -> crane::shared_array<
-                                                                           uint64_t> {
-                                                                             return crane::shared_array<uint64_t>::of_range(_x0);
-                                                                           },
-                                                                       crane::cons(
-                                                                           crane::cons(
-                                                                               UINT64_C(1),
-                                                                               crane::cons(
-                                                                                   UINT64_C(2),
-                                                                                   crane::cons(
-                                                                                       UINT64_C(3),
-                                                                                       crane::list<uint64_t>{}))),
-                                                                           crane::cons(
-                                                                               crane::cons(
-                                                                                   UINT64_C(4),
-                                                                                   crane::cons(
-                                                                                       UINT64_C(5),
-                                                                                       crane::list<uint64_t>{})),
-                                                                               crane::cons(
-                                                                                   crane::list<uint64_t>{},
-                                                                                   crane::cons(
-                                                                                       crane::cons(UINT64_C(6),
-                                                                                                   crane::list<uint64_t>{}),
-                                                                                       crane::list<crane::list<uint64_t>>{}))))));
+      crane::shared_array<crane::shared_array<uint64_t>>::of_range(
+          ListDef::template map<crane::list<uint64_t>,
+                                crane::shared_array<uint64_t>>(
+              [](crane::list<uint64_t> _x0) -> crane::shared_array<uint64_t> {
+                return crane::shared_array<uint64_t>::of_range(_x0);
+              },
+              crane::cons(
+                  crane::cons(
+                      UINT64_C(1),
+                      crane::cons(
+                          UINT64_C(2),
+                          crane::cons(UINT64_C(3), crane::list<uint64_t>{}))),
+                  crane::cons(
+                      crane::cons(
+                          UINT64_C(4),
+                          crane::cons(UINT64_C(5), crane::list<uint64_t>{})),
+                      crane::cons(
+                          crane::list<uint64_t>{},
+                          crane::cons(
+                              crane::cons(UINT64_C(6), crane::list<uint64_t>{}),
+                              crane::list<crane::list<uint64_t>>{}))))));
   static inline const crane::list<
-      crane::shared_array<crane::shared_array<uint64_t>>> copies = crane::cons(
-      table, crane::cons(
-          table, crane::cons(
-              table.push_front(
-                  crane::shared_array<uint64_t>::of_range(
+      crane::shared_array<crane::shared_array<uint64_t>>> copies =
+      crane::cons(
+          table,
+          crane::cons(
+              table,
+              crane::cons(
+                  table.push_front(crane::shared_array<uint64_t>::of_range(
                       crane::cons(UINT64_C(7), crane::list<uint64_t>{}))),
-              crane::list<crane::shared_array<crane::shared_array<uint64_t>>>{})));
-  static inline const uint64_t result = ((
-                                             (vec_nth<uint64_t>(
-                                                  vec_nth<crane::shared_array<
-                                                              uint64_t>>(
-                                                      table, UINT64_C(1),
-                                                      crane::shared_array<
-                                                          uint64_t>{}),
-                                                  UINT64_C(1), UINT64_C(0)) +
-                                              vec_nth<uint64_t>(
-                                                  vec_nth<crane::shared_array<
-                                                              uint64_t>>(
-                                                      table, UINT64_C(2),
-                                                      crane::shared_array<
-                                                          uint64_t>{}),
-                                                  UINT64_C(0), UINT64_C(100))) +
-                                             vec_sum(
-                                                 vec_nth<crane::shared_array<
-                                                             uint64_t>>(
-                                                     table, UINT64_C(0),
-                                                     crane::shared_array<
-                                                         uint64_t>{}))) +
-                                         List::template fold_left<
-                                             uint64_t, crane::shared_array<
-                                                 crane::shared_array<uint64_t>>>(
-                                             [](uint64_t acc,
-                                                const crane::shared_array<
-                                                    crane::shared_array<
-                                                        uint64_t>> &t) {
-                                                          return (
-                                                              acc + vec_sum(
-                                                                  vec_nth<
-                                                                      crane::shared_array<
-                                                                          uint64_t>>(
-                                                                      t,
-                                                                      UINT64_C(
-                                                                          0),
-                                                                      crane::shared_array<
-                                                                          uint64_t>{})));
-                                                        },
-                                             copies, UINT64_C(0)));
+                  crane::list<
+                      crane::shared_array<crane::shared_array<uint64_t>>>{})));
+  static inline const uint64_t result =
+      (((vec_nth<uint64_t>(vec_nth<crane::shared_array<uint64_t>>(
+             table, UINT64_C(1), crane::shared_array<uint64_t>{}),
+                           UINT64_C(1), UINT64_C(0)) +
+         vec_nth<uint64_t>(vec_nth<crane::shared_array<uint64_t>>(
+             table, UINT64_C(2), crane::shared_array<uint64_t>{}),
+                           UINT64_C(0), UINT64_C(100))) +
+        vec_sum(vec_nth<crane::shared_array<uint64_t>>(
+            table, UINT64_C(0), crane::shared_array<uint64_t>{}))) +
+       List::template fold_left<
+           uint64_t, crane::shared_array<crane::shared_array<uint64_t>>>(
+           [](uint64_t acc,
+              const crane::shared_array<crane::shared_array<uint64_t>> &t) {
+             return (acc +
+                     vec_sum(vec_nth<crane::shared_array<uint64_t>>(
+                         t, UINT64_C(0), crane::shared_array<uint64_t>{})));
+           },
+           copies, UINT64_C(0)));
 };
 
 template <typename T1, typename T2, typename F0>

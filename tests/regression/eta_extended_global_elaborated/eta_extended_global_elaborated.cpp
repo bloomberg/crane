@@ -9,15 +9,14 @@
 /// built: one Core elaboration did not reach with that many arguments, which
 /// CRANE_CHECK_IR reported as a call Core elaboration never saw.
 uint64_t EtaExtendedGlobalElaborated::count_odds(const List<uint64_t> &l) {
-  return both(l, [](List<uint64_t>, const List<uint64_t> &eta0_) {
-    return eta0_.length();
-  });
+  return both(l, [](List<uint64_t>,
+                    const List<uint64_t> &eta0_) { return eta0_.length(); });
 }
 
 uint64_t EtaExtendedGlobalElaborated::count_evens(const List<uint64_t> &l) {
-  return both(l, [](const List<uint64_t> &yes, List<uint64_t>) {
-    return yes.length();
-  });
+  return both(
+      l,
+      [](const List<uint64_t> &yes, List<uint64_t>) { return yes.length(); });
 }
 
 bool Nat::even(uint64_t n) {

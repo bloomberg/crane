@@ -182,10 +182,9 @@ struct RecordWithTypeField {
   };
 
   using ty = crane::obj;
-  static inline const alg natalg =
-      alg{crane_erase_fn<crane::obj>([](const Nat &_x0, const Nat &_x1) {
-        return _x0.add(_x1);
-      }), Nat::o()};
+  static inline const alg natalg = alg{crane_erase_fn<crane::obj>(
+      [](const Nat &_x0, const Nat &_x1) { return _x0.add(_x1); }),
+                                       Nat::o()};
   static ty fold3(const alg &a, ty x);
   static inline const Nat ex =
       crane::any_cast<Nat>(fold3(natalg, Nat::s(Nat::s(Nat::o()))));

@@ -154,9 +154,8 @@ template <typename X> struct ReqA {
 /// Rank 2: applies its handler at two types, so a monomorphic argument could
 /// not stand in for it.
 template <typename F0> Option<Nat> useTwice(F0 &&f) {
-  auto &&_sv =
-      f(ReqA<Nat>::mka(
-            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))));
+  auto &&_sv = f(ReqA<Nat>::mka(
+      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))));
   if (std::holds_alternative<typename Option<Nat>::Some>(_sv.v())) {
     const auto &[a0] = std::get<typename Option<Nat>::Some>(_sv.v());
     auto &&_sv0 = f(ReqA<Bool0>::mka(Bool0::TRUE_));

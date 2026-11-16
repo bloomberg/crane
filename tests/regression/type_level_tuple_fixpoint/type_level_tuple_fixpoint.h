@@ -76,17 +76,11 @@ struct TypeLevelTupleFixpoint {
   using tup = crane::obj;
   static inline const tup mk3 = std::make_pair(
       crane::obj(Nat::s(Nat::o())), crane::obj(std::make_pair(
-                                                   crane::obj(
-                                                       Nat::s(Nat::s(Nat::o()))),
-                                                   crane::obj(
-                                                       std::make_pair(
-                                                           crane::obj(
-                                                               Nat::s(
-                                                                   Nat::s(
-                                                                       Nat::s(
-                                                                           Nat::o())))),
-                                                           crane::obj(
-                                                               std::monostate{}))))));
+                                        crane::obj(Nat::s(Nat::s(Nat::o()))),
+                                        crane::obj(std::make_pair(
+                                            crane::obj(Nat::s(
+                                                Nat::s(Nat::s(Nat::o())))),
+                                            crane::obj(std::monostate{}))))));
   static Nat fst3(tup t);
   static inline const Nat run = fst3(mk3);
 };

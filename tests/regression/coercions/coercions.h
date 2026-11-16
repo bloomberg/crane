@@ -30,9 +30,8 @@ struct Coercions {
     crane::fn<uint64_t(uint64_t)> apply_transform;
   };
 
-  static inline const Transform double_transform = Transform{[](uint64_t n) {
-    return (n + n);
-  }};
+  static inline const Transform double_transform =
+      Transform{[](uint64_t n) { return (n + n); }};
   static inline const uint64_t test_fun_coercion =
       double_transform.apply_transform(UINT64_C(5));
 };

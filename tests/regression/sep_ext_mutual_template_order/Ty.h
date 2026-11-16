@@ -100,9 +100,9 @@ public:
                 std::get<typename Forest<CraneU>::Cons>(_other.v());
             return Cons{
                 (a0 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a0))
-                    : nullptr), (a1 ? std::make_shared<Forest<A>>(
-                                        crane_convert<Forest<A>>(*a1))
-                                    : nullptr)};
+                    : nullptr),
+                (a1 ? std::make_shared<Forest<A>>(crane_convert<Forest<A>>(*a1))
+                    : nullptr)};
           }
         }()) {}
 

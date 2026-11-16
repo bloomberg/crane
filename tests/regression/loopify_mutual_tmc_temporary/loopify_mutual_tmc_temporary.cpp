@@ -53,8 +53,9 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::ea(
                       typename LoopifyMutualTmcTemporary::num::Z>(_sv1.v())) {
                 return num::z();
               } else {
-                const auto &[n1] = std::get<
-                    typename LoopifyMutualTmcTemporary::num::Su>(_sv1.v());
+                const auto &[n1] =
+                    std::get<typename LoopifyMutualTmcTemporary::num::Su>(
+                        _sv1.v());
                 return *n1;
               }
             }(),
@@ -111,8 +112,9 @@ LoopifyMutualTmcTemporary::eb(const LoopifyMutualTmcTemporary::num &n,
             std::get<typename LoopifyMutualTmcTemporary::num::Su>(_sv0.v());
         auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
         LoopifyMutualTmcTemporary::num &_node =
-            (_write ? *(*_write = std::make_shared<
-                            LoopifyMutualTmcTemporary::num>(std::move(_cell)))
+            (_write ? *(*_write =
+                            std::make_shared<LoopifyMutualTmcTemporary::num>(
+                                std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyMutualTmcTemporary::num::Su>(
@@ -205,8 +207,9 @@ LoopifyMutualTmcTemporary::db(const LoopifyMutualTmcTemporary::num &n) {
         case Color::GREEN: {
           auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
           LoopifyMutualTmcTemporary::num &_node =
-              (_write ? *(*_write = std::make_shared<
-                              LoopifyMutualTmcTemporary::num>(std::move(_cell)))
+              (_write ? *(*_write =
+                              std::make_shared<LoopifyMutualTmcTemporary::num>(
+                                  std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename LoopifyMutualTmcTemporary::num::Su>(
@@ -219,8 +222,9 @@ LoopifyMutualTmcTemporary::db(const LoopifyMutualTmcTemporary::num &n) {
         case Color::BLUE: {
           auto _value = da(Color::RED, *n1);
           (
-              _write ? *(*_write = std::make_shared<
-                             LoopifyMutualTmcTemporary::num>(std::move(_value)))
+              _write ? *(*_write =
+                             std::make_shared<LoopifyMutualTmcTemporary::num>(
+                                 std::move(_value)))
                      : _root.emplace(std::move(_value)));
           return std::move(*_root);
         }
@@ -247,11 +251,10 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::of_nat(uint64_t n) {
     } else {
       uint64_t m = _loop_n - 1;
       auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
-      LoopifyMutualTmcTemporary::num &_node =
-          (
-              _write ? *(*_write = std::make_shared<
-                             LoopifyMutualTmcTemporary::num>(std::move(_cell)))
-                     : _root.emplace(std::move(_cell)));
+      LoopifyMutualTmcTemporary::num &_node = (
+          _write ? *(*_write = std::make_shared<LoopifyMutualTmcTemporary::num>(
+                         std::move(_cell)))
+                 : _root.emplace(std::move(_cell)));
       _write =
           &std::get<typename LoopifyMutualTmcTemporary::num::Su>(_node.v_mut()).n;
       _loop_n = m;

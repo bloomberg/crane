@@ -20,9 +20,11 @@ concept Mon = requires {
     I::template mret<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
-    I::template mbind<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(), std::declval<
-            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+    I::template mbind<crane::obj, crane::obj>(std::declval<
+        typename I::template M<crane::obj>>(),
+                                              std::declval<crane::fn<
+                                                  typename I::template M<
+                                                      crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
@@ -61,11 +63,11 @@ struct MonadClassTypeConstructor {
   };
 
   static_assert(Mon<MOpt>);
-  static inline const Opt<uint64_t> prog = MOpt::template mbind<uint64_t,
-                                                                uint64_t>(
-      MOpt::template mret<uint64_t>(UINT64_C(20)), [](uint64_t a) {
-        return MOpt::template mret<uint64_t>((a + UINT64_C(22)));
-      });
+  static inline const Opt<uint64_t> prog =
+      MOpt::template mbind<uint64_t, uint64_t>(
+          MOpt::template mret<uint64_t>(UINT64_C(20)), [](uint64_t a) {
+            return MOpt::template mret<uint64_t>((a + UINT64_C(22)));
+          });
   static inline const uint64_t go = []() -> uint64_t {
     if (prog.has_value()) {
       const uint64_t &n = *prog;

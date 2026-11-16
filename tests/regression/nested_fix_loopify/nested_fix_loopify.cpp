@@ -50,8 +50,9 @@ NestedFixLoopify::outer(const NestedFixLoopify::lst &l) { /// CraneEnter:
                         _loop_m->v())) {
                   return _loop_a;
                 } else {
-                  const auto &[a2, a3] = std::get<
-                      typename NestedFixLoopify::lst::Cons>(_loop_m->v());
+                  const auto &[a2, a3] =
+                      std::get<typename NestedFixLoopify::lst::Cons>(
+                          _loop_m->v());
                   _loop_a = (_loop_a + (a2 * a0));
                   _loop_m = crane_raw(a3);
                 }

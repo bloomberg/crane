@@ -100,11 +100,11 @@ struct ReuseFnInBody {
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
   static mylist prefix_sum(const mylist &l, bool b);
-  static inline const uint64_t test1 =
-      sum(prefix_sum(mylist::mycons(UINT64_C(1), mylist::mycons(
-                                        UINT64_C(2), mylist::mycons(
-                                            UINT64_C(3), mylist::mynil()))),
-                     true));
+  static inline const uint64_t test1 = sum(prefix_sum(mylist::mycons(
+      UINT64_C(1),
+      mylist::mycons(UINT64_C(2),
+                     mylist::mycons(UINT64_C(3), mylist::mynil()))),
+                                                      true));
   /// Original list: 1, 2, 3. sum = 6.
   /// prefix_sum: head becomes sum(1,2,3) + 1 = 6 + 1 = 7, tail = 2, 3.
   /// Result: 7, 2, 3. sum = 12.

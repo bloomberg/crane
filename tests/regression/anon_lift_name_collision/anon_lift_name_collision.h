@@ -125,9 +125,10 @@ struct AnonLiftNameCollision {
           return (_self_f(_self_f, *a1) + 1);
         }
       };
-      auto f = [&](const List<uint64_t> &l) -> uint64_t {
-        return f_impl(f_impl, l);
-      };
+      auto f =
+          [&](const List<uint64_t> &l) -> uint64_t {
+            return f_impl(f_impl, l);
+          };
       return f(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()));
     }());
   }();

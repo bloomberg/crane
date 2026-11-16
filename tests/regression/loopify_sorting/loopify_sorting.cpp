@@ -78,8 +78,9 @@ LoopifySorting::insertion_sort(const List<uint64_t> &l) { /// CraneEnter:
   return _result;
 }
 
-List<uint64_t> LoopifySorting::merge_fuel(
-    uint64_t fuel, const List<uint64_t> &l1, const List<uint64_t> &l2) {
+List<uint64_t>
+LoopifySorting::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
+                           const List<uint64_t> &l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;

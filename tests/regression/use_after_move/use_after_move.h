@@ -19,8 +19,8 @@ struct UseAfterMove {
   static std::pair<State, uint64_t> pattern4(const State &s1);
   static std::pair<State, uint64_t> pattern5(const State &s1);
   static std::pair<State, uint64_t> pattern6(const State &s);
-  static std::pair<std::pair<std::pair<State, uint64_t>, uint64_t>,
-                   uint64_t> pattern7(const State &s);
+  static std::pair<std::pair<std::pair<State, uint64_t>, uint64_t>, uint64_t>
+  pattern7(const State &s);
 };
 
 #endif // INCLUDED_USE_AFTER_MOVE

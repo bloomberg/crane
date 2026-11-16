@@ -9,9 +9,8 @@ Nat FunctionReturnBranchProbe::make_adder(const Nat &n, Nat x0_) {
     return x0_;
   } else {
     const auto &[a0] = std::get<typename Nat::S>(n.v());
-    crane::fn<Nat(Nat)> f = [&](Nat _x0) -> Nat {
-      return make_adder(*a0, _x0);
-    };
+    crane::fn<Nat(Nat)> f =
+        [&](Nat _x0) -> Nat { return make_adder(*a0, _x0); };
     return Nat::s(f(std::move(x0_)));
   }
 }

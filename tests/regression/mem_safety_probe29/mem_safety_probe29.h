@@ -1305,10 +1305,10 @@ struct MemSafetyProbe29 {
     outer o = outer::onode(
         outer::onode(outer::oleaf(),
                      inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
-                     outer::oleaf()), inner::inode(
-            inner::inode(inner::ileaf(), UINT64_C(1), inner::ileaf()),
-            UINT64_C(2),
-            inner::inode(inner::ileaf(), UINT64_C(3), inner::ileaf())),
+                     outer::oleaf()),
+        inner::inode(inner::inode(inner::ileaf(), UINT64_C(1), inner::ileaf()),
+                     UINT64_C(2),
+                     inner::inode(inner::ileaf(), UINT64_C(3), inner::ileaf())),
         outer::onode(outer::oleaf(),
                      inner::inode(inner::ileaf(), UINT64_C(20), inner::ileaf()),
                      outer::oleaf()));
@@ -1323,12 +1323,13 @@ struct MemSafetyProbe29 {
     return dup_inner(std::move(i)).outer_sum();
   }();
   static inline const uint64_t test_transform = []() {
-    outer o = outer::onode(
-        outer::oleaf(),
-        inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()), outer::onode(
-            outer::oleaf(),
-            inner::inode(inner::ileaf(), UINT64_C(10), inner::ileaf()),
-            outer::oleaf()));
+    outer o =
+        outer::onode(outer::oleaf(),
+                     inner::inode(inner::ileaf(), UINT64_C(5), inner::ileaf()),
+                     outer::onode(outer::oleaf(),
+                                  inner::inode(inner::ileaf(), UINT64_C(10),
+                                               inner::ileaf()),
+                                  outer::oleaf()));
     return o.transform_outer().outer_sum();
   }();
   /// TEST 4: Build and evaluate a complex expression tree.

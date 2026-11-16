@@ -103,16 +103,10 @@ std::pair<uint64_t,
   return _result;
 }
 
-uint64_t
-LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
-                                         uint64_t hi,
-                                         const List<uint64_t> &l) { /// CraneEnter:
-                                                                    /// captures
-                                                                    /// varying
-                                                                    /// parameters
-                                                                    /// for each
-                                                                    /// recursive
-                                                                    /// call.
+uint64_t LoopifyConditionalRecursion::nested_cond(
+    uint64_t threshold, uint64_t lo, uint64_t hi,
+    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
+                               /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -215,20 +209,21 @@ LoopifyConditionalRecursion::multi_return(
             if (payload.has_value()) {
               const std::pair<uint64_t, uint64_t> &p = *payload;
               const auto &[a, b] = p;
-              _result = std::make_pair((count + UINT64_C(1)),
-                                       std::make_optional<
-                                           std::pair<uint64_t, uint64_t>>(
-                                           std::make_pair((a + a0), b)));
+              _result =
+                  std::make_pair(
+                      (count + UINT64_C(1)),
+                      std::make_optional<std::pair<uint64_t, uint64_t>>(
+                          std::make_pair((a + a0), b)));
             } else {
-              _result = std::make_pair((count + UINT64_C(1)), std::optional<
-                                           std::pair<uint64_t, uint64_t>>());
+              _result = std::make_pair(
+                  (count + UINT64_C(1)),
+                  std::optional<std::pair<uint64_t, uint64_t>>());
             }
           }
         } else {
           _stack.emplace_back(CraneCont1{a0});
-          _stack.emplace_back(
-              CraneEnter{crane_raw(a1),
-                         std::optional<std::pair<uint64_t, uint64_t>>()});
+          _stack.emplace_back(CraneEnter{
+              crane_raw(a1), std::optional<std::pair<uint64_t, uint64_t>>()});
         }
       }
     } else {
@@ -241,8 +236,9 @@ LoopifyConditionalRecursion::multi_return(
         const std::pair<uint64_t, uint64_t> &p = *payload;
         const auto &[a, b] = p;
         _result = std::make_pair(
-            (count + UINT64_C(1)), std::make_optional<
-                std::pair<uint64_t, uint64_t>>(std::make_pair((a + a0), b)));
+            (count + UINT64_C(1)),
+            std::make_optional<std::pair<uint64_t, uint64_t>>(
+                std::make_pair((a + a0), b)));
       } else {
         _result =
             std::make_pair((count + UINT64_C(1)),

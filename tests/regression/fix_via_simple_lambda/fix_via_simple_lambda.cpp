@@ -40,17 +40,9 @@ FixViaSimpleLambda::make_combined(uint64_t n) {
       [=, triple_add_impl = std::move(triple_add_impl)](uint64_t x) -> uint64_t {
         return triple_add_impl(triple_add_impl, x);
       };
-  return std::make_optional<crane::fn<uint64_t(uint64_t)>>([=, double_add =
-                                                                std::move(
-                                                                    double_add),
-                                                            triple_add =
-                                                                std::move(
-                                                                    triple_add)](
-                                                               uint64_t x) {
-                                                                 return (
-                                                                     double_add(
-                                                                         x) +
-                                                                     triple_add(
-                                                                         x));
-                                                               });
+  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+      [=, double_add = std::move(double_add),
+       triple_add = std::move(triple_add)](uint64_t x) {
+        return (double_add(x) + triple_add(x));
+      });
 }

@@ -72,9 +72,8 @@ public:
   }
 
   static List<A> cons_crane_reuse(crane::rc<List<A>> _tok, A a, List<A> l) {
-    return List<A>(
-        Cons{std::move(a),
-             crane::make_rc_reusing<List<A>>(std::move(_tok), std::move(l))});
+    return List<A>(Cons{std::move(a), crane::make_rc_reusing<List<A>>(
+                                          std::move(_tok), std::move(l))});
   }
 
   // MANIPULATORS

@@ -7,7 +7,7 @@ using crane_carrier_tc_3d272b5b88d953e4 =
 AliasHomeSiblingModules::stateT<Nat, crane_carrier_tc_3d272b5b88d953e4, Nat>
 AliasHomeSiblingModules::A::a_id(
     std::type_identity_t<AliasHomeSiblingModules::stateT<
-                             Nat, crane_carrier_tc_3d272b5b88d953e4, Nat>> m) {
+        Nat, crane_carrier_tc_3d272b5b88d953e4, Nat>> m) {
   return m;
 }
 
@@ -18,6 +18,6 @@ using crane_carrier_tc_9540e08bcf9c9f2f =
 AliasHomeSiblingModules::stateT<Nat, crane_carrier_tc_9540e08bcf9c9f2f, Nat>
 AliasHomeSiblingModules::B::b_id(
     std::type_identity_t<AliasHomeSiblingModules::stateT<
-                             Nat, crane_carrier_tc_9540e08bcf9c9f2f, Nat>> m) {
+        Nat, crane_carrier_tc_9540e08bcf9c9f2f, Nat>> m) {
   return m;
 }

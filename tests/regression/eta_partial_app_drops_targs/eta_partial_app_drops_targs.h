@@ -22,9 +22,11 @@ concept Mon = requires {
     I::template mret<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
-    I::template mbind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(), std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+    I::template mbind<crane::obj, crane::obj>(std::declval<
+        typename I::template m<crane::obj>>(),
+                                              std::declval<crane::fn<
+                                                  typename I::template m<
+                                                      crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 template <typename I>
@@ -189,9 +191,9 @@ template <Mon _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3>
 liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
       typename _tcI0::template m<T2> x) {
-  return _tcI0::template mbind<T2, T3>(std::move(x), [=](const T2 &a) {
-    return _tcI0::template mret<T3>(f(a));
-  });
+  return _tcI0::template mbind<T2, T3>(
+      std::move(x),
+      [=](const T2 &a) { return _tcI0::template mret<T3>(f(a)); });
 }
 
 template <Fun _tcI0, typename T2, typename T3, typename F0>
@@ -235,9 +237,9 @@ template <Mon _tcI0> struct Fun_Mon {
 
   static typename _tcI0::template m<crane::obj> fconst(crane::obj a,
                                                        crane::obj x) {
-    return liftM<_tcI0, crane::obj, crane::obj>([=](const auto &) {
-      return a;
-    }, crane_any_cast<typename _tcI0::template m<crane::obj>>(std::move(x)));
+    return liftM<_tcI0, crane::obj, crane::obj>(
+        [=](const auto &) { return a; },
+        crane_any_cast<typename _tcI0::template m<crane::obj>>(std::move(x)));
   }
 };
 

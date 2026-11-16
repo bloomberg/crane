@@ -251,18 +251,18 @@ struct NestedTree {
   }
 
   static inline const tree example1 = tree::node(
-      Nat::s(Nat::o()), tree::node(
+      Nat::s(Nat::o()),
+      tree::node(
           std::make_pair(Nat::s(Nat::s(Nat::o())),
-                         Nat::s(Nat::s(Nat::s(Nat::o())))), tree::node(
-              std::make_pair(
-                  std::make_pair(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                  std::make_pair(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                      Nat::s(
-                          Nat::s(
-                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))),
+                         Nat::s(Nat::s(Nat::s(Nat::o())))),
+          tree::node(
+              std::make_pair(std::make_pair(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                             std::make_pair(Nat::s(Nat::s(
+                                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                                                Nat::s(Nat::s(Nat::o()))))))))),
               tree::leaf())));
 
   template <typename T1, typename T2, typename F0>
@@ -278,18 +278,18 @@ struct NestedTree {
       return List<List<T2>>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
-      return List<List<T2>>::cons(
-          f(a0),
-          flatten_tree_crane_go<T1, T2>([=](std::pair<T1, T1> _x0) -> List<T2> {
-            return lift<T1, T2>(f, _x0);
-          }, *a1));
+      return List<List<T2>>::cons(f(a0),
+                                  flatten_tree_crane_go<T1, T2>(
+                                      [=](std::pair<T1, T1> _x0) -> List<T2> {
+                                        return lift<T1, T2>(f, _x0);
+                                      },
+                                      *a1));
     }
   }
 
   template <typename T1> static List<List<T1>> flatten_tree(const tree &t) {
-    return flatten_tree_crane_go([](const T1 &x) {
-      return List<T1>::cons(x, List<T1>::nil());
-    }, t);
+    return flatten_tree_crane_go(
+        [](const T1 &x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };
 

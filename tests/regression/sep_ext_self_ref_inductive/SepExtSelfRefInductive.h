@@ -62,10 +62,10 @@ template <S X> struct HashTrie {
                     }
                   }(),
                   (left ? std::make_shared<Trie<V>>(
-                            crane_convert<Trie<V>>(*left))
+                              crane_convert<Trie<V>>(*left))
                         : nullptr),
                   (right ? std::make_shared<Trie<V>>(
-                             crane_convert<Trie<V>>(*right))
+                               crane_convert<Trie<V>>(*right))
                          : nullptr)};
             }
           }()) {}

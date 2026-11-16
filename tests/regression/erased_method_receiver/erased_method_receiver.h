@@ -215,9 +215,9 @@ public:
 struct ErasedMethodReceiver {
   static inline const SigT<crane::obj, crane::obj> s =
       SigT<crane::obj, crane::obj>::existt(
-          crane::obj(), String::string0(
-              Ascii::ascii0(true, false, false, false, true, true, true, false),
-              String::emptystring()));
+          crane::obj(), String::string0(Ascii::ascii0(true, false, false, false,
+                                                      true, true, true, false),
+                                        String::emptystring()));
   static inline const Nat run = crane::any_cast<String>(s.projT2()).length();
 };
 

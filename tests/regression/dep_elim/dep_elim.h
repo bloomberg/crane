@@ -332,9 +332,8 @@ struct DepElim {
 
     vec<A> vec_tail(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
-        return crane::any_cast<vec<crane::obj>>(([]() -> crane::obj {
-          throw std::logic_error("unreachable");
-        })());
+        return crane::any_cast<vec<crane::obj>>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
         return *a2;
@@ -343,9 +342,8 @@ struct DepElim {
 
     A vec_head(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
-        return crane_any_cast<A>(([]() -> crane::obj {
-          throw std::logic_error("unreachable");
-        })());
+        return crane_any_cast<A>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
         const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
         return a1;
@@ -497,9 +495,8 @@ struct DepElim {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
         return a0;
       } else {
-        return crane::any_cast<uint64_t>(([]() -> crane::obj {
-          throw std::logic_error("unreachable");
-        })());
+        return crane::any_cast<uint64_t>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       }
     }
 
@@ -526,20 +523,20 @@ struct DepElim {
       fin::fs(UINT64_C(2),
               fin::fs(UINT64_C(1), fin::fz(UINT64_C(0))))
           .fin_to_nat(UINT64_C(3));
-  static inline const vec<uint64_t> my_vec =
-      vec<uint64_t>::vcons(
-          UINT64_C(2), UINT64_C(10), vec<uint64_t>::vcons(
-              UINT64_C(1), UINT64_C(20), vec<uint64_t>::vcons(
-                  UINT64_C(0), UINT64_C(30), vec<uint64_t>::vnil())));
+  static inline const vec<uint64_t> my_vec = vec<uint64_t>::vcons(
+      UINT64_C(2), UINT64_C(10),
+      vec<uint64_t>::vcons(UINT64_C(1), UINT64_C(20),
+                           vec<uint64_t>::vcons(UINT64_C(0), UINT64_C(30),
+                                                vec<uint64_t>::vnil())));
   static inline const List<uint64_t> test_vec_list =
       my_vec.vec_to_list(UINT64_C(3));
   static inline const uint64_t test_vec_head = my_vec.vec_head(UINT64_C(2));
   static inline const List<uint64_t> test_vec_tail_list =
       my_vec.vec_tail(UINT64_C(2)).vec_to_list(UINT64_C(2));
   static inline const List<uint64_t> test_vec_map =
-      my_vec.template vec_map<uint64_t>(UINT64_C(3), [](uint64_t n) {
-        return (n + UINT64_C(1));
-      })
+      my_vec.template vec_map<uint64_t>(
+          UINT64_C(3),
+          [](uint64_t n) { return (n + UINT64_C(1)); })
           .vec_to_list(UINT64_C(3));
   static inline const uint64_t test_present =
       avail::present(UINT64_C(42)).get_present();

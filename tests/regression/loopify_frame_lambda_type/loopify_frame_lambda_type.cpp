@@ -19,30 +19,28 @@ bool LoopifyFrameLambdaType::check(std::monostate) {
   auto &&_sv = comb<uint64_t, uint64_t>(
       List<uint64_t>::cons(
           UINT64_C(1),
-          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())), List<
-          uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
-                              UINT64_C(20), List<uint64_t>::cons(
-                                  UINT64_C(30), List<uint64_t>::cons(
-                                      UINT64_C(40), List<uint64_t>::nil())))));
-  if (std::holds_alternative<
-          typename LoopifyFrameLambdaType::res<
-              std::pair<List<std::pair<uint64_t, uint64_t>>,
-                        List<uint64_t>>>::Err>(_sv.v())) {
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+      List<uint64_t>::cons(
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(
+                  UINT64_C(30),
+                  List<uint64_t>::cons(UINT64_C(40), List<uint64_t>::nil())))));
+  if (std::holds_alternative<typename LoopifyFrameLambdaType::res<
+          std::pair<List<std::pair<uint64_t, uint64_t>>, List<uint64_t>>>::Err>(
+          _sv.v())) {
     return false;
   } else {
-    const auto &[x0] =
-        std::get<
-            typename LoopifyFrameLambdaType::res<
-                std::pair<List<std::pair<uint64_t, uint64_t>>,
-                          List<uint64_t>>>::Ok>(_sv.v());
+    const auto &[x0] = std::get<typename LoopifyFrameLambdaType::res<
+        std::pair<List<std::pair<uint64_t, uint64_t>>, List<uint64_t>>>::Ok>(
+        _sv.v());
     const auto &[pairs, rest] = x0;
-    return (pairs.length() == UINT64_C(2) && rest.template fold_left<uint64_t>(
-                                                 [](uint64_t _x0,
-                                                    uint64_t _x1)
-                                                      -> uint64_t {
-                                                       return (_x0 + _x1);
-                                                     },
-                                                 UINT64_C(0)) ==
-                                             UINT64_C(70));
+    return (
+        pairs.length() == UINT64_C(2) &&
+        rest.template fold_left<uint64_t>(
+            [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+            UINT64_C(0)) ==
+        UINT64_C(70));
   }
 }

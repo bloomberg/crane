@@ -350,9 +350,10 @@ struct MemSafetyProbe19 {
   }
 
   static uint64_t choice_fn(const tree &t, Choice c, uint64_t n);
-  static inline const uint64_t test_choice_left = choice_fn(
-      tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
-                 UINT64_C(7), tree::leaf()), Choice::CLEFT, UINT64_C(0));
+  static inline const uint64_t test_choice_left =
+      choice_fn(tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                           UINT64_C(7), tree::leaf()),
+                Choice::CLEFT, UINT64_C(0));
   /// tree_sum = 3 + 7 = 10. f(0) = 10
   static inline const uint64_t test_choice_both =
       choice_fn(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
@@ -405,13 +406,13 @@ struct MemSafetyProbe19 {
   /// TEST 8: Closure from match, used across let-bindings.
   /// Maximum distance between closure creation and use.
   static inline const uint64_t test_delayed_use = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return choice_fn(
-          tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                     UINT64_C(2),
-                     tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-          Choice::CLEFT, _x0);
-    };
+    crane::fn<uint64_t(uint64_t)> f =
+        [](uint64_t _x0) -> uint64_t {
+          return choice_fn(tree::node(
+              tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
+              tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+                           Choice::CLEFT, _x0);
+        };
     uint64_t a = UINT64_C(100);
     uint64_t b = (a + UINT64_C(200));
     uint64_t c = (b + UINT64_C(300));

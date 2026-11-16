@@ -272,9 +272,10 @@ inline Nat Tree::tree_size() const {
               _self_branches_size(_self_branches_size, *a10));
         }
       };
-  auto branches_size = [&](const List<Branch> &l) -> Nat {
-    return branches_size_impl(branches_size_impl, l);
-  };
+  auto branches_size =
+      [&](const List<Branch> &l) -> Nat {
+        return branches_size_impl(branches_size_impl, l);
+      };
   _tmp3 = branches_size(*a0);
   return Nat::s(std::move(_tmp3));
 }

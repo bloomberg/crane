@@ -6,15 +6,13 @@ List<uint64_t> PartialApply::inc_all(const List<uint64_t> &l) {
 
 List<std::pair<uint64_t, uint64_t>>
 PartialApply::tag_all(const List<uint64_t> &l) {
-  return l.template map<std::pair<uint64_t, uint64_t>>([](uint64_t x) {
-    return std::make_pair(UINT64_C(1), x);
-  });
+  return l.template map<std::pair<uint64_t, uint64_t>>(
+      [](uint64_t x) { return std::make_pair(UINT64_C(1), x); });
 }
 
 List<std::optional<uint64_t>> PartialApply::wrap_all(const List<uint64_t> &l) {
-  return l.template map<std::optional<uint64_t>>([](uint64_t x) {
-    return std::make_optional<uint64_t>(x);
-  });
+  return l.template map<std::optional<uint64_t>>(
+      [](uint64_t x) { return std::make_optional<uint64_t>(x); });
 }
 
 List<crane::fn<List<uint64_t>(List<uint64_t>)>>
@@ -29,9 +27,8 @@ PartialApply::prepend_each(const List<uint64_t> &l) {
 
 List<PartialApply::tagged<bool>> PartialApply::tag_with(uint64_t n,
                                                         const List<bool> &l) {
-  return l.template map<PartialApply::tagged<bool>>([=](bool x) {
-    return tagged<bool>::tag(n, x);
-  });
+  return l.template map<PartialApply::tagged<bool>>(
+      [=](bool x) { return tagged<bool>::tag(n, x); });
 }
 
 List<std::pair<uint64_t, std::pair<uint64_t, uint64_t>>>

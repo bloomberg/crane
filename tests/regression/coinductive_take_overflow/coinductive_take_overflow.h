@@ -140,39 +140,30 @@ struct CoinductiveTakeOverflow {
 
     template <typename CraneU>
     stream(const stream<CraneU> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                         [=]() -> variant_t {
-                                                           const auto &[a0,
-                                                                        a1] =
-                                                               std::get<
-                                                                   typename stream<
-                                                                       CraneU>::Cons>(
-                                                                   _other.v());
-                                                           return Cons{
-                                                               [&]() -> A {
-                                                                 if constexpr (
-                                                                     crane_convertible<
-                                                                         A,
-                                                                         const CraneU &>) {
-                                                                   return crane_convert<
-                                                                       A>(a0);
-                                                                 } else {
-                                                                   throw std::logic_error(
-                                                                       "unreachable: inactive constructor field at this instantiation");
-                                                                 }
-                                                               }(),
-                                                               crane_convert<
-                                                                   stream<A>>(
-                                                                   a1)};
-                                                         })) {}
+        : lazy_v_(
+        crane::lazy<variant_t>::converted_from(
+            _other.lazy_cell(), [=]() -> variant_t {
+              const auto &[a0, a1] =
+                  std::get<typename stream<CraneU>::Cons>(_other.v());
+              return Cons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  crane_convert<stream<A>>(a1)};
+            })) {}
 
     explicit stream(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream<A> cons(A a0, stream<A> a1) {
-      return stream<A>(
-          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                                 std::move(a0), std::move(a1)));
+      return stream<A>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(a0), std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -226,9 +217,10 @@ struct CoinductiveTakeOverflow {
   }
 
   static inline const uint64_t total =
-      take<uint64_t>(UINT64_C(50000), smap<uint64_t, uint64_t>([](uint64_t n) {
-        return (n * UINT64_C(2));
-      }, from(UINT64_C(0))))
+      take<uint64_t>(
+          UINT64_C(50000),
+          smap<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
+                                   from(UINT64_C(0))))
           .template fold_left<uint64_t>(
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));

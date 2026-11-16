@@ -49,12 +49,12 @@ template <typename A, typename P> struct SigT {
 /// must be called through the canonical erased-callable adapter and its
 /// result unboxed.
 struct SigtBranchTypeMismatch {
-  static inline const SigT<bool, crane::obj> pack = SigT<bool,
-                                                         crane::obj>::existt(
-      false, crane_erase_fn([](const crane::obj &_any_n) {
-        uint64_t n = crane::any_cast<uint64_t>(_any_n);
-        return (n + UINT64_C(7));
-      }));
+  static inline const SigT<bool, crane::obj> pack =
+      SigT<bool, crane::obj>::existt(
+          false, crane_erase_fn([](const crane::obj &_any_n) {
+            uint64_t n = crane::any_cast<uint64_t>(_any_n);
+            return (n + UINT64_C(7));
+          }));
   static inline const uint64_t go = []() {
     const auto &_sv = pack;
     const auto &[x0, a1] = _sv;

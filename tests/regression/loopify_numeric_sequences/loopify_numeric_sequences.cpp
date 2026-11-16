@@ -176,9 +176,8 @@ LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel,
               _result = UINT64_C(1);
             } else {
               _stack.emplace_back(CraneCont1{n, fuel_});
-              _stack.emplace_back(
-                  CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
-                             fuel_});
+              _stack.emplace_back(CraneEnter{
+                  (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
             }
           }
         }
@@ -266,9 +265,8 @@ LoopifyNumericSequences::staircase_fuel(uint64_t fuel,
             _result = UINT64_C(1);
           } else {
             _stack.emplace_back(CraneCont1{n, fuel_});
-            _stack.emplace_back(
-                CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
-                           fuel_});
+            _stack.emplace_back(CraneEnter{
+                (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
           }
         }
       }

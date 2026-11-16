@@ -30,13 +30,11 @@ LoopifyAdoptedFixAliasResult::add_opt(const std::optional<uint64_t> &a,
   }
 }
 
-uint64_t
-LoopifyAdoptedFixAliasResult::sum(const List<std::pair<uint64_t,
-                                                       uint64_t>> &m) {
+uint64_t LoopifyAdoptedFixAliasResult::sum(
+    const List<std::pair<uint64_t, uint64_t>> &m) {
   return m.template fold_left<uint64_t>(
-      [](uint64_t acc, const std::pair<uint64_t, uint64_t> &p) {
-        return (acc + p.second);
-      },
+      [](uint64_t acc,
+         const std::pair<uint64_t, uint64_t> &p) { return (acc + p.second); },
       UINT64_C(0));
 }
 

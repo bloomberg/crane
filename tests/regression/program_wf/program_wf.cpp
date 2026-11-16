@@ -6,7 +6,7 @@ ProgramWf::jump_target(const ProgramWf::instruction &i) {
     const auto &[a0] = std::get<typename ProgramWf::instruction::JUN>(i.v());
     return std::make_optional<uint64_t>(a0);
   } else if (
-      std::holds_alternative<typename ProgramWf::instruction::JMS>(i.v())) {
+          std::holds_alternative<typename ProgramWf::instruction::JMS>(i.v())) {
     const auto &[a0] = std::get<typename ProgramWf::instruction::JMS>(i.v());
     return std::make_optional<uint64_t>(a0);
   } else {

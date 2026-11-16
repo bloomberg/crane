@@ -26,27 +26,25 @@ std::optional<uint64_t> Monadic::div_then_sub(uint64_t a, uint64_t b,
   });
 }
 
-Monadic::State<std::pair<uint64_t, uint64_t>,
-               std::monostate> Monadic::fib_state(uint64_t n) {
+Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>
+Monadic::fib_state(uint64_t n) {
   return ListDef::seq(UINT64_C(0), n).template fold_left<
       Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>>(
       [](crane::fn<std::pair<std::monostate, std::pair<uint64_t, uint64_t>>(
-                       std::pair<uint64_t, uint64_t>)> acc, uint64_t) {
-                         return state_bind<std::pair<uint64_t, uint64_t>,
-                                           std::monostate, std::monostate>(
-                             std::move(acc), [](std::monostate) {
-                               return state_bind<std::pair<uint64_t, uint64_t>,
-                                                 std::pair<uint64_t, uint64_t>,
-                                                 std::monostate>(
-                                   state_get<std::pair<uint64_t, uint64_t>>(),
-                                   [](std::pair<uint64_t, uint64_t> pat) {
-                                     const auto &[a, b] = pat;
-                                     return state_put<
-                                         std::pair<uint64_t, uint64_t>>(
-                                         std::make_pair(b, (a + b)));
-                                   });
-                             });
-                       },
+          std::pair<uint64_t, uint64_t>)> acc,
+         uint64_t) {
+        return state_bind<std::pair<uint64_t, uint64_t>, std::monostate,
+                          std::monostate>(std::move(acc), [](std::monostate) {
+          return state_bind<std::pair<uint64_t, uint64_t>,
+                            std::pair<uint64_t, uint64_t>, std::monostate>(
+              state_get<std::pair<uint64_t, uint64_t>>(),
+              [](std::pair<uint64_t, uint64_t> pat) {
+                const auto &[a, b] = pat;
+                return state_put<std::pair<uint64_t, uint64_t>>(
+                    std::make_pair(b, (a + b)));
+              });
+        });
+      },
       state_return<std::pair<uint64_t, uint64_t>, std::monostate>(
           std::monostate{}));
 }

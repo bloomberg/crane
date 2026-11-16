@@ -107,17 +107,16 @@ struct FixMoveCapture {
   /// - l is now null in caller scope
   /// - g(3) calls fixpoint, which accesses l via & → null → CRASH
   static uint64_t f(mylist l);
-  static inline const uint64_t test1 =
-      f(mylist::mycons(
-            UINT64_C(10), mylist::mycons(
-                UINT64_C(20), mylist::mycons(UINT64_C(30), mylist::mynil()))));
+  static inline const uint64_t test1 = f(mylist::mycons(
+      UINT64_C(10),
+      mylist::mycons(UINT64_C(20),
+                     mylist::mycons(UINT64_C(30), mylist::mynil()))));
   /// Even simpler: use the fixpoint, then pass l to a consuming
   /// function. The addition's evaluation order is unspecified in C++,
   /// so we use a let-binding to force the order.
   static uint64_t f2(mylist l);
-  static inline const uint64_t test2 =
-      f2(mylist::mycons(UINT64_C(5),
-                        mylist::mycons(UINT64_C(15), mylist::mynil())));
+  static inline const uint64_t test2 = f2(mylist::mycons(
+      UINT64_C(5), mylist::mycons(UINT64_C(15), mylist::mynil())));
 };
 
 #endif // INCLUDED_FIX_MOVE_CAPTURE

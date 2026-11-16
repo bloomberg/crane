@@ -140,14 +140,14 @@ public:
 
 struct ClosuresInData {
   /// A list of functions: successor, doubling, and squaring.
-  static inline const List<crane::fn<uint64_t(uint64_t)>> fn_list =
-      List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x + 1);
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x + x);
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x * x);
-      }, List<crane::fn<uint64_t(uint64_t)>>::nil())));
+  static inline const List<crane::fn<uint64_t(uint64_t)>> fn_list = List<
+      crane::fn<uint64_t(uint64_t)>>::cons(
+      [](uint64_t x) { return (x + 1); },
+      List<crane::fn<uint64_t(uint64_t)>>::cons(
+          [](uint64_t x) { return (x + x); },
+          List<crane::fn<uint64_t(uint64_t)>>::cons(
+              [](uint64_t x) { return (x * x); },
+              List<crane::fn<uint64_t(uint64_t)>>::nil())));
   /// apply_all fns x applies every function in fns to x,
   /// returning the list of results.
   static List<uint64_t>
@@ -160,9 +160,9 @@ struct ClosuresInData {
   };
 
   /// A transform that doubles via addition and halves via division.
-  static inline const transform double_transform = transform{[](uint64_t x) {
-    return (x + x);
-  }, [](uint64_t x) { return (UINT64_C(2) ? x / UINT64_C(2) : 0); }};
+  static inline const transform double_transform =
+      transform{[](uint64_t x) { return (x + x); },
+                [](uint64_t x) { return (UINT64_C(2) ? x / UINT64_C(2) : 0); }};
   static uint64_t apply_forward(const transform &t, uint64_t x);
   static uint64_t apply_backward(const transform &t, uint64_t x);
   /// compose_all fns x folds fns left, threading x through each
@@ -170,14 +170,14 @@ struct ClosuresInData {
   static uint64_t compose_all(const List<crane::fn<uint64_t(uint64_t)>> &fns,
                               uint64_t x);
   /// A pipeline of transformations: increment, double, then add 10.
-  static inline const List<crane::fn<uint64_t(uint64_t)>> pipeline =
-      List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x + UINT64_C(1));
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x * UINT64_C(2));
-      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
-        return (x + UINT64_C(10));
-      }, List<crane::fn<uint64_t(uint64_t)>>::nil())));
+  static inline const List<crane::fn<uint64_t(uint64_t)>> pipeline = List<
+      crane::fn<uint64_t(uint64_t)>>::cons(
+      [](uint64_t x) { return (x + UINT64_C(1)); },
+      List<crane::fn<uint64_t(uint64_t)>>::cons(
+          [](uint64_t x) { return (x * UINT64_C(2)); },
+          List<crane::fn<uint64_t(uint64_t)>>::cons(
+              [](uint64_t x) { return (x + UINT64_C(10)); },
+              List<crane::fn<uint64_t(uint64_t)>>::nil())));
   /// maybe_apply mf x applies function mf to x if present,
   /// otherwise returns x unchanged.
   static uint64_t
@@ -191,11 +191,10 @@ struct ClosuresInData {
       apply_backward(double_transform, UINT64_C(14));
   static inline const uint64_t test_compose =
       compose_all(pipeline, UINT64_C(3));
-  static inline const uint64_t test_maybe_some = maybe_apply(
-      std::make_optional<crane::fn<uint64_t(uint64_t)>>([](uint64_t x) {
-        return (x + 1);
-      }),
-      UINT64_C(41));
+  static inline const uint64_t test_maybe_some =
+      maybe_apply(std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+          [](uint64_t x) { return (x + 1); }),
+                  UINT64_C(41));
   static inline const uint64_t test_maybe_none =
       maybe_apply(std::optional<crane::fn<uint64_t(uint64_t)>>(), UINT64_C(42));
 };

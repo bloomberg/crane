@@ -23,8 +23,8 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(), std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<typename I::template m<crane::obj>>(),
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -250,17 +250,17 @@ EOU<std::pair<List<std::pair<T1, T2>>, List<T2>>> go(const T1 &a, const T2 &b,
       combine<T1, T2>(l), [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x) {
         auto [p, vargs] = std::move(x);
         return EOU_monad::template ret<
-            std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-            std::make_pair(List<std::pair<T1, T2>>::cons(std::make_pair(a, b),
-                                                         std::move(p)),
-                           std::move(vargs)));
+            std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
+            List<std::pair<T1, T2>>::cons(std::make_pair(a, b), std::move(p)),
+            std::move(vargs)));
       });
 }
 
 struct PairComponentErasedInDestructuringBinder {
   static inline const EOU<std::pair<List<std::pair<Nat, Nat>>, List<Nat>>> run =
-      go<Nat, Nat>(Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())), List<Nat>::cons(
-                       Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil()));
+      go<Nat, Nat>(
+          Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())),
+          List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil()));
 };
 
 #endif // INCLUDED_PAIR_COMPONENT_ERASED_IN_DESTRUCTURING_BINDER

@@ -239,9 +239,9 @@ struct PolyInductive {
                   std::get<typename ptree<CraneU>::PNode>(_other.v());
               return PNode{
                   (a0 ? std::make_shared<ptree<A>>(crane_convert<ptree<A>>(*a0))
-                      : nullptr), (a1 ? std::make_shared<ptree<A>>(
-                                          crane_convert<ptree<A>>(*a1))
-                                      : nullptr)};
+                      : nullptr),
+                  (a1 ? std::make_shared<ptree<A>>(crane_convert<ptree<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -435,9 +435,9 @@ struct PolyInductive {
           .pmaybe_default(UINT64_C(0));
   static inline const uint64_t test_ptree =
       ptree<uint64_t>::pnode(
-          ptree<uint64_t>::pleaf(UINT64_C(1)), ptree<uint64_t>::pnode(
-              ptree<uint64_t>::pleaf(UINT64_C(2)),
-              ptree<uint64_t>::pleaf(UINT64_C(3))))
+          ptree<uint64_t>::pleaf(UINT64_C(1)),
+          ptree<uint64_t>::pnode(ptree<uint64_t>::pleaf(UINT64_C(2)),
+                                 ptree<uint64_t>::pleaf(UINT64_C(3))))
           .ptree_size();
 };
 

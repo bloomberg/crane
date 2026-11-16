@@ -197,8 +197,9 @@ LoopifyLists::four_elem(const LoopifyLists::list<uint64_t> &l) { /// CraneEnter:
                     typename LoopifyLists::list<uint64_t>::Nil>(_sv2.v())) {
               _result = UINT64_C(3);
             } else {
-              const auto &[a02, a12] = std::get<
-                  typename LoopifyLists::list<uint64_t>::Cons>(_sv2.v());
+              const auto &[a02, a12] =
+                  std::get<typename LoopifyLists::list<uint64_t>::Cons>(
+                      _sv2.v());
               _stack.emplace_back(CraneCont_Cons{a0, a00, a01, a02});
               _stack.emplace_back(CraneEnter{crane_raw(a12)});
             }
@@ -237,11 +238,10 @@ LoopifyLists::between(uint64_t lo, uint64_t hi,
           std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
       if ((lo <= a0 && a0 <= hi)) {
         auto _cell = typename LoopifyLists::list<uint64_t>::Cons(a0, nullptr);
-        LoopifyLists::list<uint64_t> &_node =
-            (
-                _write ? *(*_write = std::make_shared<
-                               LoopifyLists::list<uint64_t>>(std::move(_cell)))
-                       : _root.emplace(std::move(_cell)));
+        LoopifyLists::list<uint64_t> &_node = (
+            _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
+                           std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _node.v_mut())
@@ -401,11 +401,10 @@ LoopifyLists::pairwise_sum(const LoopifyLists::list<uint64_t> &l) {
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_sv0.v());
         auto _cell =
             typename LoopifyLists::list<uint64_t>::Cons((a0 + a00), nullptr);
-        LoopifyLists::list<uint64_t> &_node =
-            (
-                _write ? *(*_write = std::make_shared<
-                               LoopifyLists::list<uint64_t>>(std::move(_cell)))
-                       : _root.emplace(std::move(_cell)));
+        LoopifyLists::list<uint64_t> &_node = (
+            _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
+                           std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _node.v_mut())
@@ -539,8 +538,9 @@ LoopifyLists::uniq_sorted(const LoopifyLists::list<uint64_t> &l) {
         } else {
           auto _cell = typename LoopifyLists::list<uint64_t>::Cons(a0, nullptr);
           LoopifyLists::list<uint64_t> &_node =
-              (_write ? *(*_write = std::make_shared<
-                              LoopifyLists::list<uint64_t>>(std::move(_cell)))
+              (_write ? *(*_write =
+                              std::make_shared<LoopifyLists::list<uint64_t>>(
+                                  std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
@@ -582,11 +582,10 @@ LoopifyLists::take_n(uint64_t n, const LoopifyLists::list<uint64_t> &l) {
         const auto &[a0, a1] =
             std::get<typename LoopifyLists::list<uint64_t>::Cons>(_loop_l->v());
         auto _cell = typename LoopifyLists::list<uint64_t>::Cons(a0, nullptr);
-        LoopifyLists::list<uint64_t> &_node =
-            (
-                _write ? *(*_write = std::make_shared<
-                               LoopifyLists::list<uint64_t>>(std::move(_cell)))
-                       : _root.emplace(std::move(_cell)));
+        LoopifyLists::list<uint64_t> &_node = (
+            _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
+                           std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _node.v_mut())
@@ -692,20 +691,18 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
                     : _root.emplace(std::move(_value)));
             break;
           } else {
-            auto _cell = typename LoopifyLists::list<
-                LoopifyLists::list<uint64_t>>::Cons(window, nullptr);
+            auto _cell =
+                typename LoopifyLists::list<LoopifyLists::list<uint64_t>>::Cons(
+                    window, nullptr);
             LoopifyLists::list<LoopifyLists::list<uint64_t>> &_node =
-                (_write ? *(*_write =
-                                std::make_shared<
-                                    LoopifyLists::list<
-                                        LoopifyLists::list<uint64_t>>>(
-                                    std::move(_cell)))
-                        : _root.emplace(std::move(_cell)));
+                (
+                    _write ? *(*_write = std::make_shared<LoopifyLists::list<
+                                   LoopifyLists::list<uint64_t>>>(
+                                   std::move(_cell)))
+                           : _root.emplace(std::move(_cell)));
             _write =
                 &std::get<typename LoopifyLists::list<
-                              LoopifyLists::list<uint64_t>>::Cons>(
-                    _node.v_mut())
-                    .l;
+                    LoopifyLists::list<uint64_t>>::Cons>(_node.v_mut()).l;
             _loop_l = crane_raw(a1);
             _loop_fuel = f;
             continue;
@@ -773,11 +770,10 @@ LoopifyLists::list<uint64_t> LoopifyLists::lookup_all(
       const auto &[k, v] = a0;
       if (k == key) {
         auto _cell = typename LoopifyLists::list<uint64_t>::Cons(v, nullptr);
-        LoopifyLists::list<uint64_t> &_node =
-            (
-                _write ? *(*_write = std::make_shared<
-                               LoopifyLists::list<uint64_t>>(std::move(_cell)))
-                       : _root.emplace(std::move(_cell)));
+        LoopifyLists::list<uint64_t> &_node = (
+            _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
+                           std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _node.v_mut())
@@ -950,8 +946,9 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
           auto _cell =
               typename LoopifyLists::list<uint64_t>::Cons(a00, nullptr);
           LoopifyLists::list<uint64_t> &_node =
-              (_write ? *(*_write = std::make_shared<
-                              LoopifyLists::list<uint64_t>>(std::move(_cell)))
+              (_write ? *(*_write =
+                              std::make_shared<LoopifyLists::list<uint64_t>>(
+                                  std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
@@ -1129,8 +1126,9 @@ std::pair<LoopifyLists::list<uint64_t>,
 }
 
 /// index_of_aux x l i finds first index of x in l starting from i.
-uint64_t LoopifyLists::index_of_aux(
-    uint64_t x, const LoopifyLists::list<uint64_t> &l, uint64_t i) {
+uint64_t
+LoopifyLists::index_of_aux(uint64_t x, const LoopifyLists::list<uint64_t> &l,
+                           uint64_t i) {
   uint64_t _loop_i = i;
   const LoopifyLists::list<uint64_t> *_loop_l = &l;
   while (true) {
@@ -1188,11 +1186,10 @@ LoopifyLists::interleave(const LoopifyLists::list<uint64_t> &l1,
             typename LoopifyLists::list<uint64_t>::Cons(a00, nullptr));
         auto _cell =
             typename LoopifyLists::list<uint64_t>::Cons(a0, std::move(_cell1));
-        LoopifyLists::list<uint64_t> &_node =
-            (
-                _write ? *(*_write = std::make_shared<
-                               LoopifyLists::list<uint64_t>>(std::move(_cell)))
-                       : _root.emplace(std::move(_cell)));
+        LoopifyLists::list<uint64_t> &_node = (
+            _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
+                           std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 std::get<typename LoopifyLists::list<uint64_t>::Cons>(
@@ -1209,10 +1206,8 @@ LoopifyLists::interleave(const LoopifyLists::list<uint64_t> &l1,
 }
 
 /// lookup key l finds value for key in association list.
-uint64_t
-LoopifyLists::lookup(uint64_t key,
-                     const LoopifyLists::list<std::pair<uint64_t,
-                                                        uint64_t>> &l) {
+uint64_t LoopifyLists::lookup(
+    uint64_t key, const LoopifyLists::list<std::pair<uint64_t, uint64_t>> &l) {
   const LoopifyLists::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
@@ -1505,8 +1500,9 @@ LoopifyLists::remove_if_sum_even(const LoopifyLists::list<uint64_t> &l) {
         } else {
           auto _cell = typename LoopifyLists::list<uint64_t>::Cons(a0, nullptr);
           LoopifyLists::list<uint64_t> &_node =
-              (_write ? *(*_write = std::make_shared<
-                              LoopifyLists::list<uint64_t>>(std::move(_cell)))
+              (_write ? *(*_write =
+                              std::make_shared<LoopifyLists::list<uint64_t>>(
+                                  std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
@@ -1561,9 +1557,9 @@ std::pair<LoopifyLists::list<uint64_t>,
           _result = std::make_pair(list<uint64_t>::nil(), l);
         } else {
           _stack.emplace_back(CraneCont1{a0});
-          _stack.emplace_back(
-              CraneEnter{crane_raw(a1),
-                         (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
+          _stack.emplace_back(CraneEnter{
+              crane_raw(a1),
+              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))});
         }
       }
     } else {
@@ -1727,11 +1723,10 @@ LoopifyLists::init(const LoopifyLists::list<uint64_t> &l) {
         break;
       } else {
         auto _cell = typename LoopifyLists::list<uint64_t>::Cons(a0, nullptr);
-        LoopifyLists::list<uint64_t> &_node =
-            (
-                _write ? *(*_write = std::make_shared<
-                               LoopifyLists::list<uint64_t>>(std::move(_cell)))
-                       : _root.emplace(std::move(_cell)));
+        LoopifyLists::list<uint64_t> &_node = (
+            _write ? *(*_write = std::make_shared<LoopifyLists::list<uint64_t>>(
+                           std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                 _node.v_mut())
@@ -2084,11 +2079,9 @@ LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
             _loop_l1->v())) {
       auto _value =
           list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::nil();
-      (_write ? *(*_write =
-                      std::make_shared<
-                          LoopifyLists::list<
-                              std::pair<std::pair<uint64_t, uint64_t>,
-                                        uint64_t>>>(std::move(_value)))
+      (_write ? *(*_write = std::make_shared<LoopifyLists::list<
+                      std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>(
+                      std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
@@ -2098,11 +2091,9 @@ LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
               _loop_l2->v())) {
         auto _value =
             list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::nil();
-        (_write ? *(*_write =
-                        std::make_shared<
-                            LoopifyLists::list<
-                                std::pair<std::pair<uint64_t, uint64_t>,
-                                          uint64_t>>>(std::move(_value)))
+        (_write ? *(*_write = std::make_shared<LoopifyLists::list<
+                        std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>(
+                        std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
@@ -2112,32 +2103,30 @@ LoopifyLists::zip3(const LoopifyLists::list<uint64_t> &l1,
                 _loop_l3->v())) {
           auto _value =
               list<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::nil();
-          (_write ? *(*_write =
-                          std::make_shared<
-                              LoopifyLists::list<
-                                  std::pair<std::pair<uint64_t, uint64_t>,
-                                            uint64_t>>>(std::move(_value)))
+          (_write ? *(*_write = std::make_shared<LoopifyLists::list<
+                          std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>>(
+                          std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[a01, a11] = std::get<
-              typename LoopifyLists::list<uint64_t>::Cons>(_loop_l3->v());
+          const auto &[a01, a11] =
+              std::get<typename LoopifyLists::list<uint64_t>::Cons>(
+                  _loop_l3->v());
           auto _cell = typename LoopifyLists::list<
               std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons(
               std::make_pair(std::make_pair(a0, a00), a01), nullptr);
           LoopifyLists::list<std::pair<std::pair<uint64_t, uint64_t>,
                                        uint64_t>> &_node =
               (_write ? *(*_write =
-                              std::make_shared<
-                                  LoopifyLists::list<
-                                      std::pair<std::pair<uint64_t, uint64_t>,
-                                                uint64_t>>>(std::move(_cell)))
+                              std::make_shared<LoopifyLists::list<std::pair<
+                                  std::pair<uint64_t, uint64_t>, uint64_t>>>(
+                                  std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
-              &std::get<
-                  typename LoopifyLists::list<
-                      std::pair<std::pair<uint64_t, uint64_t>,
-                                uint64_t>>::Cons>(_node.v_mut()).l;
+              &std::get<typename LoopifyLists::list<
+                  std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Cons>(
+                  _node.v_mut())
+                  .l;
           _loop_l3 = crane_raw(a11);
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);

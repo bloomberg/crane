@@ -126,17 +126,21 @@ struct FimOperatesOnPairs {
   static uint64_t get_reg_pair(const state &s, uint64_t r);
   static state set_reg_pair(const state &s, uint64_t r, uint64_t v);
   static state execute_fim(const state &x0_, uint64_t x1_, uint64_t x2_);
-  static inline const state sample =
-      state{List<uint64_t>::cons(
-                UINT64_C(0), List<uint64_t>::cons(
-                    UINT64_C(0), List<uint64_t>::cons(
-                        UINT64_C(0), List<uint64_t>::cons(
-                            UINT64_C(0), List<uint64_t>::cons(
-                                UINT64_C(0), List<uint64_t>::cons(
-                                    UINT64_C(0), List<uint64_t>::nil()))))))};
-  static inline const bool t =
-      get_reg_pair(execute_fim(sample, UINT64_C(2), UINT64_C(171)),
-                   UINT64_C(2)) == UINT64_C(171);
+  static inline const state sample = state{List<uint64_t>::cons(
+      UINT64_C(0),
+      List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(
+              UINT64_C(0),
+              List<uint64_t>::cons(
+                  UINT64_C(0),
+                  List<uint64_t>::cons(
+                      UINT64_C(0),
+                      List<uint64_t>::cons(UINT64_C(0),
+                                           List<uint64_t>::nil()))))))};
+  static inline const bool t = get_reg_pair(
+      execute_fim(sample, UINT64_C(2), UINT64_C(171)), UINT64_C(2)) ==
+                               UINT64_C(171);
 };
 
 template <typename T1>

@@ -365,10 +365,9 @@ struct TFunctor_ann {
     } else {
       auto &[a0] = std::get<typename Ann<CraneA0>::ANN_prefix>(a.v_mut());
       auto [t, e] = std::move(a0);
-      return Ann<CraneA1>::ann_prefix(
-          std::make_pair(
-              f(std::move(t)),
-              TFunctor_exp::template tfmap<CraneA0, CraneA1>(f, std::move(e))));
+      return Ann<CraneA1>::ann_prefix(std::make_pair(
+          f(std::move(t)),
+          TFunctor_exp::template tfmap<CraneA0, CraneA1>(f, std::move(e))));
     }
   }
 };

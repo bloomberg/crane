@@ -123,20 +123,20 @@ struct ErasedEnumSwitch {
                  crane::fn<Nat(crane::obj)>([](const crane::obj &n) -> Nat {
                    return crane::any_cast<Nat>(n);
                  })))
-          .add(run(dep::d(
-                       Bool0::TRUE_, crane::fn<Nat(crane::obj)>(
-                           [](const crane::obj &b) -> Nat {
-                             switch (crane::any_cast<Bool0>(b)) {
-                             case Bool0::TRUE_: {
-                               return Nat::s(Nat::o());
-                             }
-                             case Bool0::FALSE_: {
-                               return Nat::o();
-                             }
-                             default:
-                               std::unreachable();
-                             }
-                           }))));
+          .add(
+          run(dep::d(Bool0::TRUE_,
+                     crane::fn<Nat(crane::obj)>([](const crane::obj &b) -> Nat {
+                       switch (crane::any_cast<Bool0>(b)) {
+                       case Bool0::TRUE_: {
+                         return Nat::s(Nat::o());
+                       }
+                       case Bool0::FALSE_: {
+                         return Nat::o();
+                       }
+                       default:
+                         std::unreachable();
+                       }
+                     }))));
 };
 
 #endif // INCLUDED_ERASED_ENUM_SWITCH

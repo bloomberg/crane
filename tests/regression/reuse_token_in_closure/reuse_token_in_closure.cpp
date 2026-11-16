@@ -21,9 +21,8 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
       return lst::cons_crane_reuse(
           std::move(
               std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a1),
-          twice([=](uint64_t y) {
-            return suml(lst::cons(y, t));
-          }, std::move(x)),
+          twice([=](uint64_t y) { return suml(lst::cons(y, t)); },
+                std::move(x)),
           g(t));
     } else {
       if (std::holds_alternative<typename ReuseTokenInClosure::lst::Nil>(
@@ -33,9 +32,10 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
         auto &[a0, a1] =
             std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut());
         const ReuseTokenInClosure::lst &a1_value = *a1;
-        return lst::cons(twice([=](uint64_t y) {
-          return suml(lst::cons(y, a1_value));
-        }, std::move(a0)), g(a1_value));
+        return lst::cons(
+            twice([=](uint64_t y) { return suml(lst::cons(y, a1_value)); },
+                  std::move(a0)),
+            g(a1_value));
       }
     }
   } else {
@@ -46,9 +46,10 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
       auto &[a0, a1] =
           std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut());
       const ReuseTokenInClosure::lst &a1_value = *a1;
-      return lst::cons(twice([=](uint64_t y) {
-        return suml(lst::cons(y, a1_value));
-      }, std::move(a0)), g(a1_value));
+      return lst::cons(
+          twice([=](uint64_t y) { return suml(lst::cons(y, a1_value)); },
+                std::move(a0)),
+          g(a1_value));
     }
   }
 }
@@ -61,10 +62,10 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::h(ReuseTokenInClosure::lst l) {
           std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a0);
       ReuseTokenInClosure::lst t = std::move(
           *std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a1);
-      return lst::cons_crane_reuse(
-          std::move(
-              std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a1),
-          suml(lst::cons(x, lst::cons(x, lst::nil()))), h(std::move(t)));
+      return lst::cons_crane_reuse(std::move(
+          std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a1),
+                                   suml(lst::cons(x, lst::cons(x, lst::nil()))),
+                                   h(std::move(t)));
     } else {
       if (std::holds_alternative<typename ReuseTokenInClosure::lst::Nil>(
               l.v_mut())) {

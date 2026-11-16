@@ -130,8 +130,9 @@ struct CoindFamilyParam {
         : v_([&]() -> variant_t {
             if (std::holds_alternative<
                     typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
-              const auto &[r] = std::get<
-                  typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
+              const auto &[r] =
+                  std::get<typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                      _other.v());
               return RetF{[&]() -> R {
                 if constexpr (crane_convertible<R, const CraneU1 &>) {
                   return crane_convert<R>(r);
@@ -216,30 +217,19 @@ struct CoindFamilyParam {
 
     template <typename CraneU0, typename CraneU1>
     tree(const tree<CraneU0, CraneU1> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
-                                                         [=]() -> variant_t {
-                                                           const auto &[observe] =
-                                                               std::get<
-                                                                   typename tree<
-                                                                       CraneU0,
-                                                                       CraneU1>::Go>(
-                                                                   _other.v());
-                                                           return Go{
-                                                               crane_convert<
-                                                                   treeF<
-                                                                       E, R,
-                                                                       tree<E,
-                                                                            R>>>(
-                                                                   observe)};
-                                                         })) {}
+        : lazy_v_(crane::lazy<variant_t>::converted_from(
+        _other.lazy_cell(), [=]() -> variant_t {
+          const auto &[observe] =
+              std::get<typename tree<CraneU0, CraneU1>::Go>(_other.v());
+          return Go{crane_convert<treeF<E, R, tree<E, R>>>(observe)};
+        })) {}
 
     explicit tree(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static tree<E, R> go(treeF<E, R, tree<E, R>> observe) {
-      return tree<E, R>(
-          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
-                                 std::move(observe)));
+      return tree<E, R>(crane::lazy<variant_t>(
+          std::in_place, std::in_place_index<0>, std::move(observe)));
     }
 
     explicit tree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -269,87 +259,22 @@ struct CoindFamilyParam {
   static std::optional<Nat> run(const Nat &fuel, const tree<voidE, Nat> &t);
   static inline const std::optional<Nat> result = []() {
     auto _lit0 =
-        Nat::s(
-            Nat::s(
-                Nat::s(
-                    Nat::s(
-                        Nat::s(
-                            Nat::s(
-                                Nat::s(
-                                    Nat::s(
-                                        Nat::s(
-                                            Nat::s(
-                                                Nat::s(
-                                                    Nat::s(
-                                                        Nat::s(
-                                                            Nat::s(
-                                                                Nat::s(
-                                                                    Nat::s(
-                                                                        Nat::s(
-                                                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
+        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
     auto _lit1 =
-        Nat::s(
-            Nat::s(
-                Nat::s(
-                    Nat::s(
-                        Nat::s(
-                            Nat::s(
-                                Nat::s(
-                                    Nat::s(
-                                        Nat::s(
-                                            Nat::s(
-                                                Nat::s(
-                                                    Nat::s(
-                                                        Nat::s(
-                                                            Nat::s(
-                                                                Nat::s(
-                                                                    Nat::s(
-                                                                        Nat::s(
-                                                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
+        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
     auto _lit2 =
-        Nat::s(
-            Nat::s(
-                Nat::s(
-                    Nat::s(
-                        Nat::s(
-                            Nat::s(
-                                Nat::s(
-                                    Nat::s(
-                                        Nat::s(
-                                            Nat::s(
-                                                Nat::s(
-                                                    Nat::s(
-                                                        Nat::s(
-                                                            Nat::s(
-                                                                Nat::s(
-                                                                    Nat::s(
-                                                                        Nat::s(
-                                                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
-    return run(
-        Nat::s(
-            Nat::s(
-                Nat::s(
-                    Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(
-                                                                         _lit2))))))))))),
-        count(
-            Nat::s(
-                Nat::s(
-                    Nat::s(
-                        Nat::s(
-                            Nat::s(
-                                Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
-            Nat::o()));
+        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
+    return run(Nat::s(Nat::s(Nat::s(Nat::s(
+        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit2))))))))))),
+               count(Nat::s(Nat::s(Nat::s(Nat::s(
+                   Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
+                     Nat::o()));
   }();
   static inline const bool is_ten = []() -> bool {
     if (result.has_value()) {
       const Nat &n = *result;
-      return n.eqb(
-          Nat::s(
-              Nat::s(
-                  Nat::s(
-                      Nat::s(
-                          Nat::s(
-                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))));
+      return n.eqb(Nat::s(Nat::s(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))));
     } else {
       return false;
     }

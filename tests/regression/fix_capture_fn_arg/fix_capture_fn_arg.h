@@ -25,26 +25,25 @@ struct FixCaptureFnArg {
         return (_self_go(_self_go, x_) + 1);
       }
     };
-    auto go = [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
-      return go_impl(go_impl, x);
-    };
+    auto go =
+        [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
+          return go_impl(go_impl, x);
+        };
     return std::make_pair(f(base), std::move(go));
   }
 
   /// test1: make_transform(x=>x*2, 5) = (10, go).
   /// go(3) = (5*2) + 3 = 13. Total = 10 + 13 = 23.
   static inline const uint64_t test1 = []() -> uint64_t {
-    auto [n, g] = make_transform([](uint64_t x) {
-      return (x * UINT64_C(2));
-    }, UINT64_C(5));
+    auto [n, g] = make_transform([](uint64_t x) { return (x * UINT64_C(2)); },
+                                 UINT64_C(5));
     return (n + g(UINT64_C(3)));
   }();
   /// test2: make_transform(S, 10) = (11, go).
   /// go(5) = S(10) + 5 = 16. Total = 11 + 16 = 27.
   static inline const uint64_t test2 = []() -> uint64_t {
-    auto [n, g] = make_transform([](uint64_t x) {
-      return (x + 1);
-    }, UINT64_C(10));
+    auto [n, g] =
+        make_transform([](uint64_t x) { return (x + 1); }, UINT64_C(10));
     return (n + g(UINT64_C(5)));
   }();
 };

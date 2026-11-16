@@ -75,8 +75,9 @@ std::pair<LoopifyPairs::list<uint64_t>,
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-  std::pair<LoopifyPairs::list<uint64_t>, std::pair<
-                LoopifyPairs::list<uint64_t>,
+  std::pair<
+      LoopifyPairs::list<uint64_t>,
+      std::pair<LoopifyPairs::list<uint64_t>,
                 LoopifyPairs::list<uint64_t>>> _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&l});
@@ -109,12 +110,14 @@ std::pair<LoopifyPairs::list<uint64_t>,
       } else {
         if (a0 == pivot) {
           _result = std::make_pair(
-              std::move(lt), std::make_pair(
-                  list<uint64_t>::cons(a0, std::move(eq)), std::move(gt)));
+              std::move(lt),
+              std::make_pair(list<uint64_t>::cons(a0, std::move(eq)),
+                             std::move(gt)));
         } else {
           _result = std::make_pair(
-              std::move(lt), std::make_pair(
-                  std::move(eq), list<uint64_t>::cons(a0, std::move(gt))));
+              std::move(lt),
+              std::make_pair(std::move(eq),
+                             list<uint64_t>::cons(a0, std::move(gt))));
         }
       }
     }
@@ -291,11 +294,10 @@ LoopifyPairs::list<uint64_t> LoopifyPairs::lookup_all(
       const auto &[k, v] = a0;
       if (k == key) {
         auto _cell = typename LoopifyPairs::list<uint64_t>::Cons(v, nullptr);
-        LoopifyPairs::list<uint64_t> &_node =
-            (
-                _write ? *(*_write = std::make_shared<
-                               LoopifyPairs::list<uint64_t>>(std::move(_cell)))
-                       : _root.emplace(std::move(_cell)));
+        LoopifyPairs::list<uint64_t> &_node = (
+            _write ? *(*_write = std::make_shared<LoopifyPairs::list<uint64_t>>(
+                           std::move(_cell)))
+                   : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename LoopifyPairs::list<uint64_t>::Cons>(
                 _node.v_mut())

@@ -170,19 +170,18 @@ struct MemSafetyProbe25 {
 
     /// TEST 3: Return PAIR of closures from match.
     /// Each closure captures different match-bound children.
-    std::pair<crane::fn<uint64_t(uint64_t)>,
-              crane::fn<uint64_t(uint64_t)>> pair_closures() const {
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
+    pair_closures() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return std::make_pair([](uint64_t x) { return x; }, [](uint64_t x) {
-          return x;
-        });
+        return std::make_pair([](uint64_t x) { return x; },
+                              [](uint64_t x) { return x; });
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        return std::make_pair([=](uint64_t x) {
-          return (x + a0_value.tree_sum());
-        }, [=](uint64_t x) { return (x + a2_value.tree_sum()); });
+        return std::make_pair(
+            [=](uint64_t x) { return (x + a0_value.tree_sum()); },
+            [=](uint64_t x) { return (x + a2_value.tree_sum()); });
       }
     }
 
@@ -356,11 +355,10 @@ struct MemSafetyProbe25 {
                  UINT64_C(7),
                  tree::node(tree::leaf(), UINT64_C(11),
                             tree::leaf()))
-          .nested_match_closure(
-          tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
-                     UINT64_C(5),
-                     tree::node(tree::leaf(), UINT64_C(8), tree::leaf())),
-          UINT64_C(100));
+          .nested_match_closure(tree::node(
+          tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(5),
+          tree::node(tree::leaf(), UINT64_C(8), tree::leaf())),
+                                UINT64_C(100));
   static inline const uint64_t test_deep_match_closure =
       tree::node(
           tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
@@ -415,7 +413,7 @@ struct MemSafetyProbe25 {
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                          crane_convert<mylist<A>>(*a1))
+                            crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}

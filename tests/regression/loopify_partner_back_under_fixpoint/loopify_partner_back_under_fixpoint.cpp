@@ -55,8 +55,9 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
       const auto &[n0, kids0] =
           std::get<typename LoopifyPartnerBackUnderFixpoint::tree::Node>(t.v());
       auto &&_sv0 = *kids0;
-      const auto &[ts0] = std::get<
-          typename LoopifyPartnerBackUnderFixpoint::forest::Forest0>(_sv0.v());
+      const auto &[ts0] =
+          std::get<typename LoopifyPartnerBackUnderFixpoint::forest::Forest0>(
+              _sv0.v());
       _stack.emplace_back(CraneCont_Forest0{n0});
       _stack.emplace_back(CraneEnter_sizes{crane_raw(ts0)});
     } else if (std::holds_alternative<CraneEnter_sizes>(_frame)) {
@@ -147,14 +148,15 @@ LoopifyPartnerBackUnderFixpoint::tree LoopifyPartnerBackUnderFixpoint::chain(
     } else {
       uint64_t k_ = _loop_k - 1;
       _loop_t = tree::node(
-          UINT64_C(1), forest::forest0(
+          UINT64_C(1),
+          forest::forest0(List<LoopifyPartnerBackUnderFixpoint::tree>::cons(
+              std::move(_loop_t),
               List<LoopifyPartnerBackUnderFixpoint::tree>::cons(
-                  std::move(_loop_t), List<
-                      LoopifyPartnerBackUnderFixpoint::tree>::cons(
-                      tree::node(
-                          UINT64_C(1), forest::forest0(
-                              List<LoopifyPartnerBackUnderFixpoint::tree>::nil())),
-                      List<LoopifyPartnerBackUnderFixpoint::tree>::nil()))));
+                  tree::node(
+                      UINT64_C(1),
+                      forest::forest0(
+                          List<LoopifyPartnerBackUnderFixpoint::tree>::nil())),
+                  List<LoopifyPartnerBackUnderFixpoint::tree>::nil()))));
       _loop_k = k_;
     }
   }

@@ -92,13 +92,13 @@ struct ClosurePairThis {
     /// are evaluated and stored while this is still valid.
     /// But after get_fn_pair returns, the temporary tree may be
     /// destroyed — calling either closure is then use-after-free.
-    std::pair<crane::fn<uint64_t(uint64_t)>,
-              crane::fn<uint64_t(uint64_t)>> get_fn_pair(uint64_t flag) const {
+    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
+    get_fn_pair(uint64_t flag) const {
       tree _self_val = *this;
       if (flag <= 0) {
-        return std::make_pair([=](uint64_t x) {
-          return (x + _self_val.tree_sum());
-        }, [=](uint64_t x) { return (_self_val.tree_sum() * x); });
+        return std::make_pair(
+            [=](uint64_t x) { return (x + _self_val.tree_sum()); },
+            [=](uint64_t x) { return (_self_val.tree_sum() * x); });
       } else {
         uint64_t _x = flag - 1;
         return std::make_pair(

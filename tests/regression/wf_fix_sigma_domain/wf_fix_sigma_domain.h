@@ -101,7 +101,7 @@ struct WfFixSigmaDomain {
 
     static sw_graph sw_graph_equation_2(uint64_t a, uint64_t b, sw_graph hind) {
       return sw_graph(Sw_graph_equation_2{
-                          a, b, std::make_shared<sw_graph>(std::move(hind))});
+          a, b, std::make_shared<sw_graph>(std::move(hind))});
     }
 
     // MANIPULATORS
@@ -152,24 +152,24 @@ struct WfFixSigmaDomain {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-    std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &, T1>
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &,
+                                   T1>
   static T1 sw_elim(F0 &&f, F1 &&f0, uint64_t a, uint64_t b) {
     auto f1_impl =
         [&](auto &_self_f1, uint64_t, uint64_t, uint64_t,
             const sw_graph &s)
              -> T1 {
-              if (std::holds_alternative<typename sw_graph::Sw_graph_equation_1>(
-                      s.v())) {
-                const auto &[b1] =
-                    std::get<typename sw_graph::Sw_graph_equation_1>(s.v());
-                return f(b1);
-              } else {
-                const auto &[a1, b1, hind0] =
-                    std::get<typename sw_graph::Sw_graph_equation_2>(s.v());
-                return f0(a1, b1,
-                          _self_f1(_self_f1, b1, a1, sw(b1, a1), *hind0));
-              }
-            };
+          if (std::holds_alternative<typename sw_graph::Sw_graph_equation_1>(
+                  s.v())) {
+            const auto &[b1] =
+                std::get<typename sw_graph::Sw_graph_equation_1>(s.v());
+            return f(b1);
+          } else {
+            const auto &[a1, b1, hind0] =
+                std::get<typename sw_graph::Sw_graph_equation_2>(s.v());
+            return f0(a1, b1, _self_f1(_self_f1, b1, a1, sw(b1, a1), *hind0));
+          }
+        };
     {
       uint64_t _lc1_x = a;
       uint64_t _lc1_x0 = b;

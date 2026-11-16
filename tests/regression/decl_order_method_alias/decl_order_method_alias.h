@@ -136,11 +136,11 @@ struct RegFile {
                                       const Rv &x2_);
 };
 
-const std::optional<rfile> written = RegFile::write_r(
-    List<Rv>::cons(
+const std::optional<rfile> written =
+    RegFile::write_r(List<Rv>::cons(
         Rv::ru(), List<Rv>::cons(Rv::rs(UINT64_C(1)),
                                  List<Rv>::cons(Rv::ru(), List<Rv>::nil()))),
-    UINT64_C(1), Rv::rs(UINT64_C(7)));
+                     UINT64_C(1), Rv::rs(UINT64_C(7)));
 const uint64_t written_second = []() -> uint64_t {
   if (written.has_value()) {
     const List<Rv> &r = *written;

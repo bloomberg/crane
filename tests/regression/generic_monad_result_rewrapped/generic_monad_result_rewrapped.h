@@ -24,8 +24,8 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(), std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<typename I::template m<crane::obj>>(),
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -193,9 +193,10 @@ struct GenericMonadResultRewrapped {
   /// Generic over Monad m: the result type is an application of a type
   /// variable, which is what the reification gate cannot read.
   template <Monad _tcI0, typename T2, typename T3>
-  static typename _tcI0::template m<List<T3>> map_monad(
-      const std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
-      const List<T2> &l) {
+  static typename _tcI0::template m<List<T3>>
+  map_monad(const std::type_identity_t<
+      crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
+            const List<T2> &l) {
     if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
       return _tcI0::template ret<List<T3>>(List<T3>::nil());
     } else {
