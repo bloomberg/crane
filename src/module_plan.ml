@@ -111,36 +111,17 @@ let extend l f =
 
 let for_next_unit l = {l with namespace_scope = Ref.User.Set.empty; prerequisites = Label.Set.empty}
 
-(* The layout read, for the extent {!with_layout} binds it for. *)
-let current = ref no_layout
-
-let with_layout l f = State.bind current l f
-
-let () =
-  List.iter
-    (fun (name, size) -> Table.register_census name (fun () -> size !current))
-    [ ("global_scope_enum_table", fun l -> Ref.User.Set.cardinal l.enums);
-      ("concept_name_table", fun l -> Ref.User.Map.cardinal l.concepts);
-      ("modtype_concept_name_table", fun l -> MPmap.cardinal l.modtype_concepts);
-      ("functor_app_sources", fun l -> MPmap.cardinal l.app_sources);
-      ("global_eponymous_record_registry", fun l -> Ref.User.Set.cardinal l.eponymous);
-      ("eponymous_record_by_modpath", fun l -> MPmap.cardinal l.eponymous_by_modpath);
-      ("namespace_scope_refs", fun l -> Ref.User.Set.cardinal l.namespace_scope);
-      ("wrapper_table", fun l -> MPmap.cardinal l.wrapper_table);
-      ("global_scope_type_table", fun l -> Ref.User.Set.cardinal l.global_types);
-      ("concept_prerequisite_table", fun l -> Label.Set.cardinal l.prerequisites) ]
-
-let is_global_scope_enum r = Ref.User.Set.mem r !current.enums
-let concept_name r = Ref.User.Map.find_opt r !current.concepts
-let modtype_concept_name mp = MPmap.find_opt mp !current.modtype_concepts
-let functor_app_source mp = MPmap.find_opt mp !current.app_sources
-let is_eponymous_record r = Ref.User.Set.mem r !current.eponymous
-let eponymous_record_containing = function
-  | GlobRef.ConstRef kn -> MPmap.find_opt (Constant.modpath kn) !current.eponymous_by_modpath
+let is_global_scope_enum l r = Ref.User.Set.mem r l.enums
+let concept_name l r = Ref.User.Map.find_opt r l.concepts
+let modtype_concept_name l mp = MPmap.find_opt mp l.modtype_concepts
+let functor_app_source l mp = MPmap.find_opt mp l.app_sources
+let is_eponymous_record l r = Ref.User.Set.mem r l.eponymous
+let eponymous_record_containing l = function
+  | GlobRef.ConstRef kn -> MPmap.find_opt (Constant.modpath kn) l.eponymous_by_modpath
   | _ -> None
-let is_namespace_scope_ref r = Ref.User.Set.mem r !current.namespace_scope
-let wrapper mp = MPmap.find_opt mp !current.wrapper_table
-let wrapper_struct mp = Option.map fst (wrapper mp)
-let wrapper_role mp = Option.map snd (wrapper mp)
-let is_global_scope_type r = Ref.User.Set.mem r !current.global_types
-let is_concept_prerequisite l = Label.Set.mem l !current.prerequisites
+let is_namespace_scope_ref l r = Ref.User.Set.mem r l.namespace_scope
+let wrapper l mp = MPmap.find_opt mp l.wrapper_table
+let wrapper_struct l mp = Option.map fst (wrapper l mp)
+let wrapper_role l mp = Option.map snd (wrapper l mp)
+let is_global_scope_type l r = Ref.User.Set.mem r l.global_types
+let is_concept_prerequisite layout l = Label.Set.mem l layout.prerequisites

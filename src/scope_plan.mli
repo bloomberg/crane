@@ -79,9 +79,9 @@ val templated : bound -> ModPath.t -> bool
 (** The scope of a definition of [r] written outside every struct body:
     the one its module is emitted as, if any.  A helper lifted out of a
     declaration takes that declaration's, unless the declaration was itself
-    lifted to namespace scope ({!Module_plan.is_namespace_scope_ref}), in
-    which case so is the helper. *)
-val of_declaration : bound -> GlobRef.t -> scope option
+    lifted to namespace scope ({!Module_plan.is_namespace_scope_ref} of
+    [layout]), in which case so is the helper. *)
+val of_declaration : Module_plan.layout -> bound -> GlobRef.t -> scope option
 
 (** The visibility the body of the module [mp] is written in: the scopes
     enclosing it and its own, innermost first, each with the names it

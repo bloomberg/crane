@@ -25,8 +25,9 @@ let start ~accessors =
     nested_structs = CString.Map.empty;
     instance_promoted_types = GlobRef.Map.empty }
 
+let context t (u : Unit_context.t) = {u with modules = t.modules}
+
 let bind t f =
-  Module_plan.with_layout t.modules @@ fun () ->
   Loopify_analysis.with_pointer_fields t.pointer_fields @@ fun () ->
   Cpp_state.with_unmerged_wrappers t.unmerged_wrappers @@ fun () ->
   Table.with_promoted_inductives t.promoted_inductives @@ fun () ->

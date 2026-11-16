@@ -111,9 +111,9 @@ let method_candidates epon_ref sel ~enclosing =
 
 (* The names compared are the ones planned, not the ones a reference
    spells: those depend on where the reference is written from. *)
-let concept_collision mp sel =
+let concept_collision layout mp sel =
   let concept_name r =
-    match Module_plan.concept_name r with Some name -> Some name | None -> Common.decided_global_name r
+    match Module_plan.concept_name layout r with Some name -> Some name | None -> Common.decided_global_name r
   in
   List.exists
     (fun (_, se) ->
@@ -156,7 +156,7 @@ let promoted scopes mp sel eponymous_type =
       sel
   | _ -> None
 
-let of_module scopes mp ~name sel ~enclosing =
+let of_module (u : Unit_context.t) mp ~name sel ~enclosing =
   let eponymous_type, eponymous_record = eponymous ~name sel in
   let method_candidates =
     match (eponymous_type, eponymous_record) with
@@ -168,8 +168,8 @@ let of_module scopes mp ~name sel ~enclosing =
   { eponymous_type;
     eponymous_record;
     method_candidates;
-    concept_collision = concept_collision mp sel;
-    promoted = promoted scopes mp sel eponymous_type }
+    concept_collision = concept_collision u.modules mp sel;
+    promoted = promoted u.scopes mp sel eponymous_type }
 
 let equal a b =
   let ref_equal = Option.equal GlobRef.UserOrd.equal in

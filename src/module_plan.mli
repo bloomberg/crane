@@ -8,8 +8,8 @@
     {!Cpp.prepare_structure} and completed by
     {!Cpp.plan_concept_prerequisites}; each decision is folded into the
     layout the extraction has accumulated ({!extend}, the [modules] field of
-    {!Accumulated_plan.t}) and bound ({!with_layout}, through
-    {!Accumulated_plan.bind}) before anything is rendered, read-only
+    {!Accumulated_plan.t}) and handed to the unit's stages in its context
+    ({!Unit_context.t.modules}) before anything is rendered, read-only
     afterwards -- which is what makes it safe to read from a [.cpp] body
     printed before the [.h] that declares the names. *)
 
@@ -94,52 +94,49 @@ val extend : layout -> t -> layout
     prerequisites. *)
 val for_next_unit : layout -> layout
 
-(** [with_layout l f] is [f ()] with the queries below answering from [l]:
-    a unit binds the layout it is planned and rendered with. *)
-val with_layout : layout -> (unit -> 'a) -> 'a
-
 (** {1 Queries}
 
-    Each reads the layout {!with_layout} binds; none outside it. *)
+    Each reads the layout it is handed: the one a unit is planned and
+    rendered with is in its context ({!Unit_context.t.modules}). *)
 
 (** Whether an enum inductive is written at global scope
     ([global_scope_enums] of the current unit). *)
-val is_global_scope_enum : GlobRef.t -> bool
+val is_global_scope_enum : layout -> GlobRef.t -> bool
 
 (** The name a type class's concept is emitted under, if planned. *)
-val concept_name : GlobRef.t -> string option
+val concept_name : layout -> GlobRef.t -> string option
 
 (** The name a module type's concept is emitted under, if planned. *)
-val modtype_concept_name : ModPath.t -> string option
+val modtype_concept_name : layout -> ModPath.t -> string option
 
 (** The functor body a functor application's declarations are copies of. *)
-val functor_app_source : ModPath.t -> ModPath.t option
+val functor_app_source : layout -> ModPath.t -> ModPath.t option
 
 (** Whether an inductive is a record merged into its module's struct. *)
-val is_eponymous_record : GlobRef.t -> bool
+val is_eponymous_record : layout -> GlobRef.t -> bool
 
 (** The eponymous record of the module a constant is declared in, if any: at
     most one record shares its module's name.  A function there is spelled
     [Record<Args>::f()]. *)
-val eponymous_record_containing : GlobRef.t -> eponymous_record option
+val eponymous_record_containing : layout -> GlobRef.t -> eponymous_record option
 
 (** Whether a declaration is lifted out of its wrapper to namespace scope in
     the current unit. *)
-val is_namespace_scope_ref : GlobRef.t -> bool
+val is_namespace_scope_ref : layout -> GlobRef.t -> bool
 
 (** The wrapper struct a module is emitted in, and its role there. *)
-val wrapper : ModPath.t -> (string * wrapper_role) option
+val wrapper : layout -> ModPath.t -> (string * wrapper_role) option
 
 (** The name of {!wrapper}. *)
-val wrapper_struct : ModPath.t -> string option
+val wrapper_struct : layout -> ModPath.t -> string option
 
 (** The role of {!wrapper}. *)
-val wrapper_role : ModPath.t -> wrapper_role option
+val wrapper_role : layout -> ModPath.t -> wrapper_role option
 
 (** Whether a type name goes to global scope rather than its wrapper's
     struct. *)
-val is_global_scope_type : GlobRef.t -> bool
+val is_global_scope_type : layout -> GlobRef.t -> bool
 
 (** Whether a top-level element of the current unit moves ahead of the
     header's concepts. *)
-val is_concept_prerequisite : Label.t -> bool
+val is_concept_prerequisite : layout -> Label.t -> bool

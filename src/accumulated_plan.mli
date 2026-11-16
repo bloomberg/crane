@@ -38,8 +38,12 @@ type t = {
     a pre-scan of the whole program found, and nothing else. *)
 val start : accessors:Cpp_state.accessors -> t
 
-(** [bind t f] is [f ()] with each fact of [t] the one its readers answer
-    from ({!Module_plan.with_layout}, {!Loopify_analysis.with_pointer_fields},
+(** [context t u] is the unit's context [u] holding the facts of [t] its
+    readers read off it: the layout. *)
+val context : t -> Unit_context.t -> Unit_context.t
+
+(** [bind t f] is [f ()] with each other fact of [t] the one its readers
+    answer from ({!Loopify_analysis.with_pointer_fields},
     {!Cpp_state.with_unmerged_wrappers}, {!Table.with_promoted_inductives},
     {!Cpp_state.with_accessors}, {!Cpp_state.with_nested_struct_names},
     {!Table.with_instance_promoted_types}). *)

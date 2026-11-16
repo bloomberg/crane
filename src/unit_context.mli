@@ -18,6 +18,10 @@ type t = {
       (** The callable plans decided so far: none until the unit's are
           ({!Callable_abi.decide}), then its own, its foreign and its
           projection plans as they are planned. *)
+  modules : Module_plan.layout;
+      (** Where each declaration lives and what it is called: the layout
+          the earlier units of the extraction decided, and the unit's own
+          as its planning extends it ({!Accumulated_plan.context}). *)
   scopes : Scope_plan.bound;
       (** How a definition written outside its struct's body names the
           struct, and the other facts of the unit's scope plan: none until

@@ -1082,13 +1082,13 @@ let bystander_struct_name mp =
       wrapping [N]); a bystander's stays, the wrapper's name going in front of
       it unless already there.  Under an ordinary wrapper ([List] wrapping
       [list]) the qualification is already complete. *)
-let wrapper_qualify (r : GlobRef.t) (name : Cpp_name.t) : Cpp_name.t =
+let wrapper_qualify layout (r : GlobRef.t) (name : Cpp_name.t) : Cpp_name.t =
   match r with
   | GlobRef.VarRef _ -> name
-  | _ when Module_plan.is_namespace_scope_ref r -> name
+  | _ when Module_plan.is_namespace_scope_ref layout r -> name
   | _ -> (
     let mp = modpath_of_r r in
-    match (Module_plan.wrapper mp, name) with
+    match (Module_plan.wrapper layout mp, name) with
     | None, _ | _, Cpp_name.Foreign _ -> name
     | Some (struct_name, role), Cpp_name.Name {scopes = []; base} ->
       let through_child =

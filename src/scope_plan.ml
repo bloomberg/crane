@@ -65,12 +65,12 @@ let visibility b mp = MPmap.find_opt mp b.visibility_of
 let local_inductives b mp = MPmap.find_opt mp b.local_inductives_of
 let frames b mp = MPmap.find_opt mp b.frames_of
 
-let of_declaration b r =
+let of_declaration layout b r =
   let origin =
     match Lifted.of_ref r with
     | Some helper -> (
       match Lifted.origin helper with
-      | Some o when Module_plan.is_namespace_scope_ref o -> None
+      | Some o when Module_plan.is_namespace_scope_ref layout o -> None
       | origin -> origin )
     | None -> Some r
   in

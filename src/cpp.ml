@@ -212,6 +212,9 @@ let spec_is_hoistable ~module_ (spec : Cpp_ir.Resolved.Decl.t) : bool =
 
 (* Whether the module [mp] is rendered outside every struct, as planned
    ({!Scope_plan.nested}). *)
+(* The layout of the unit being generated ({!Unit_context.t.modules}). *)
+let layout () = (Translation_state.unit_context ()).modules
+
 let outside_every_struct scopes mp = not (Scope_plan.nested scopes mp)
 
 (** Whether the declaration of each lifted helper the header places at
@@ -502,7 +505,7 @@ let declared_classes sel =
 (** Whether a name collision puts the module [mp] inside a wrapper struct,
     flattened or as a bystander. *)
 let is_wrapped_child mp =
-  match Module_plan.wrapper_role mp with
+  match Module_plan.wrapper_role (layout ()) mp with
   | Some (Flattened | Bystander) -> true
   | Some Own | None -> false
 
@@ -814,7 +817,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
           Probe.checking ()
           && not
                (Module_frame.equal frame
-                  (Module_frame.of_module ctx.unit.scopes mp ~name sel
+                  (Module_frame.of_module ctx.unit mp ~name sel
                      ~enclosing:!current_structure_decls ) )
         then
           Probe.violation "module frames"
@@ -1416,7 +1419,7 @@ let method_registry_of s =
     rendered: the tables it fills are read by both the header and the
     implementation, so they must hold one answer, decided before anything
     renders, which is what lets the layout be planned ahead. *)
-let prepare_structure s =
+let prepare_structure (u : Unit_context.t) s =
   let analysis =
     Common.detect_sibling_module_inductive_collisions s;
   method_registry :=
@@ -1450,7 +1453,7 @@ let prepare_structure s =
     (fun _ -> ())
     (fun _ -> ())
     s;
-    name_cache := Some (Name_resolution.create s);
+    name_cache := Some (Name_resolution.create u.modules s);
     analysis
   in
   structure_analysis := Some analysis;
@@ -1538,7 +1541,7 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
   let in_module_frame ~module_ mp sel k =
     let name = Cpp_names.module_declared_name mp in
     let frame =
-      Module_frame.of_module (Translation_state.unit_context ()).scopes mp ~name sel
+      Module_frame.of_module (Translation_state.unit_context ()) mp ~name sel
         ~enclosing:!current_structure_decls
     in
     Module_frame.plan mp frame;
@@ -1772,7 +1775,7 @@ let structure_module_names s =
     | Core.Module.Expr.Functor {parameter_type = param; body; _} -> concept param @ functor_body mp body
     | Core.Module.Expr.Apply _ as me -> application me @ concept mt
     | Core.Module.Expr.Structure {path = body_mp; items = sel} ->
-      (if Module_frame.concept_collision mp sel then [] else concept mt) @ elems ~in_struct:true body_mp sel
+      (if Module_frame.concept_collision (layout ()) mp sel then [] else concept mt) @ elems ~in_struct:true body_mp sel
     | Core.Module.Expr.Path target -> (
       match functor_params mt with [] when is_modfile target && in_struct -> []
         | ps -> Cpp_resolution.Module target :: ps )
@@ -1806,9 +1809,9 @@ let files_named_ahead s =
     the installed finished program's declarations, the types of the
     eponymous record fields generated with it, and the module-type concepts
     generated with it ({!Cpp_concepts.concept_body_names}). *)
-let customs_written_ahead () =
+let customs_written_ahead u =
   let globals =
-    List.concat_map Cpp_leaf_plan.declaration_globals (Unit_program.installed_finished ())
+    List.concat_map (Cpp_leaf_plan.declaration_globals u) (Unit_program.installed_finished ())
     @ List.concat_map Cpp_leaf_plan.type_globals (Cpp_ind.generated_record_field_types ())
   in
   let keys =
@@ -2564,7 +2567,7 @@ let plan_visibility s =
           match se with
           | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = inner;
                                                                                               items = sel'}; _}
-            when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
+            when Module_plan.wrapper_role (layout ()) (MPdot (mp, l)) = Some Module_plan.Flattened ->
             body (inside inner [] v) inner sel' acc
           | se -> elems v [(l, se)] acc )
         ((mp, v) :: acc) sel
@@ -2600,7 +2603,8 @@ let declared_at s mp =
   in
   match struct_at mp with
   | Some (params, body_mp, sel) when ModPath.equal body_mp mp ->
-    if is_modfile mp || Module_plan.wrapper_role mp = Some Module_plan.Flattened then Some ([], Id.Set.empty)
+    if is_modfile mp || Module_plan.wrapper_role (layout ()) mp = Some Module_plan.Flattened then
+      Some ([], Id.Set.empty)
     else Some (params, member_names_of_sel sel)
   | Some _ | None -> None
 
@@ -2674,7 +2678,7 @@ let plan_bodies ~start ~enter s =
           match se with
           | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = inner;
                                                                                               items = sel'}; _}
-            when Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened ->
+            when Module_plan.wrapper_role (layout ()) (MPdot (mp, l)) = Some Module_plan.Flattened ->
             body state inner sel' acc
           | se -> elems state mp [(l, se)] acc )
         ((mp, state) :: acc) sel
@@ -2715,7 +2719,7 @@ let plan_scopes s =
   let own mp = Table.escape_reserved_struct_name (Common.emitted_module_name mp) in
   let child mp l = MPdot (mp, l) in
   let is_wrapped_child mp l =
-    match Module_plan.wrapper_role (child mp l) with
+    match Module_plan.wrapper_role (layout ()) (child mp l) with
     | Some (Module_plan.Flattened | Module_plan.Bystander) -> true
     | Some Module_plan.Own | None -> false
   in
@@ -2726,7 +2730,7 @@ let plan_scopes s =
     if List.exists (fun (l, _) -> is_wrapped_child mp l) (modules sel) then
       Some
         ( List.find_map
-            (fun (l, _) -> if is_wrapped_child mp l then Module_plan.wrapper_struct (child mp l) else None)
+            (fun (l, _) -> if is_wrapped_child mp l then Module_plan.wrapper_struct (layout ()) (child mp l) else None)
             (modules sel)
         |> Option.default
              (Table.escape_reserved_struct_name (String.capitalize_ascii (string_of_modfile mp))) )
@@ -2734,7 +2738,7 @@ let plan_scopes s =
   in
   let scope_of ~parent mp sel =
     let at module_ qualifier = Some {Scope_plan.module_; qualifier} in
-    match Module_plan.wrapper mp with
+    match Module_plan.wrapper (layout ()) mp with
     | Some (w, Module_plan.Own) -> at mp [w]
     | Some (w, Module_plan.Flattened) ->
       at (match mp with MPdot (p, _) -> p | _ -> mp) [w]
@@ -2743,7 +2747,7 @@ let plan_scopes s =
       match collision_wrapper mp sel with
       | Some w -> at mp [w]
       | None ->
-        if Common.is_struct_module mp && not (Module_frame.concept_collision mp sel) then
+        if Common.is_struct_module mp && not (Module_frame.concept_collision (layout ()) mp sel) then
           at mp (Option.cata (fun (p : Scope_plan.scope) -> p.qualifier) [] parent @ [own mp])
         else None )
   in
@@ -2833,13 +2837,13 @@ let plan_nested_structs s =
            else
              match ind.kind with
              | Core.Inductive.Kind.Type_class _ -> []
-             | Core.Inductive.Kind.Record _ when Module_plan.is_eponymous_record r -> []
+             | Core.Inductive.Kind.Record _ when Module_plan.is_eponymous_record (layout ()) r -> []
              | _ when Table.is_enum_inductive r ->
                [(enum_declaration_name r, Global r)]
              (* Moved out of the collision struct holding it to namespace
                 scope, where it is generated ({!plan_concept_prerequisites}). *)
-             | _ when Module_plan.is_namespace_scope_ref r -> []
-             | _ -> [(struct_declaration_name ~merged ~promoted ~local r, Global r)] )
+             | _ when Module_plan.is_namespace_scope_ref (layout ()) r -> []
+             | _ -> [(struct_declaration_name (layout ()) ~merged ~promoted ~local r, Global r)] )
          (Array.to_list ind.packets) )
   in
   let rec elems ~in_struct ~local ?(role = fun _ -> None) parent sel =
@@ -2852,7 +2856,7 @@ let plan_nested_structs s =
            lifted out to namespace scope. *)
         | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = a; type_ = t})
           when in_struct && is_typeclass_instance t && instance_has_struct a t
-               && not (Module_plan.is_namespace_scope_ref r) ->
+               && not (Module_plan.is_namespace_scope_ref (layout ()) r) ->
           [(Common.pp_global_name Type r, Global r)]
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> []
         | Core.Module.Structure_item.Module m -> (
@@ -2879,7 +2883,7 @@ let plan_nested_structs s =
     (fun (mp, sel) ->
       let role l =
         if List.exists (ModPath.equal mp) wrapper_files then None
-        else Module_plan.wrapper_role (MPdot (mp, l))
+        else Module_plan.wrapper_role (layout ()) (MPdot (mp, l))
       in
       let collision =
         List.exists
@@ -3426,7 +3430,9 @@ let do_struct_with_decl_tracking u ~is_header f s =
     (* A struct's member is not a chunk at namespace scope: the struct is. *)
     let p = if ctx.in_struct then p else Cpp_ast.top_level p in
     if hoists then (Cpp_ast.empty, {nothing_moved with hoisted = [p]; concepts = c})
-    else if is_header && Module_plan.is_concept_prerequisite l && is_modfile source && not (Cpp_ast.is_empty p) then (
+    else if
+      is_header && Module_plan.is_concept_prerequisite u.modules l && is_modfile source && not (Cpp_ast.is_empty p)
+    then (
       (* The prerequisites are asked for by label, of the files' top-level
          elements: a flattened child's element sharing the label is not one.
          A top-level element of a file a collision struct holds is a member
@@ -3438,7 +3444,7 @@ let do_struct_with_decl_tracking u ~is_header f s =
       let moved = {nothing_moved with prereqs = [p]; concepts = c} in
       if not ctx.in_struct then (Cpp_ast.empty, moved)
       else
-        let stand_ins = Cpp_leaf_plan.stand_ins p in
+        let stand_ins = Cpp_leaf_plan.stand_ins u.modules p in
         if Probe.checking () && stand_ins = [] then
           Probe.violation "concept prerequisites"
             Pp.(
@@ -3554,7 +3560,7 @@ let do_struct_with_decl_tracking u ~is_header f s =
              layout, decided by {!Structure_analysis} before any rendering began;
              here we only read the answer back. *)
           let is_colliding_child l _se =
-            Module_plan.wrapper_role (MPdot (mp, l)) = Some Module_plan.Flattened
+            Module_plan.wrapper_role u.modules (MPdot (mp, l)) = Some Module_plan.Flattened
           in
           (* Whether a wrapper formed is not the same question as which children
              it flattens: a bystander is recorded only when one did, so a child
@@ -3569,7 +3575,7 @@ let do_struct_with_decl_tracking u ~is_header f s =
                 (fun (l, se) ->
                   match se with
                   | Core.Module.Structure_item.Module _ when is_wrapped_child l ->
-                    Module_plan.wrapper_struct (MPdot (mp, l))
+                    Module_plan.wrapper_struct u.modules (MPdot (mp, l))
                   | _ -> None )
                 sel
               |> Option.default

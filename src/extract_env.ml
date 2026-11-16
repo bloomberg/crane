@@ -1005,6 +1005,11 @@ let module_filename mp =
 let with_context (u : Unit_context.t) f =
   Translation_state.with_unit_facts {(Translation_state.unit_facts ()) with context = u} (fun () -> f u)
 
+(** [bind_plan u acc f] is [f u] with the facts [acc] holds bound for their
+    readers ({!Accumulated_plan.bind}), and [u] holding those read off the
+    unit's context ({!Accumulated_plan.context}). *)
+let bind_plan u acc f = Accumulated_plan.bind acc @@ fun () -> with_context (Accumulated_plan.context acc u) f
+
 (** The steps of {!plan_layout}, in order. *)
 let prepare_layout = "prepare"
 let plan_names = "plan_names"
@@ -1070,9 +1075,9 @@ let layout_pass_names =
     in it. *)
 let plan_layout u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" prepare_layout;
-  let modules = Cpp.prepare_structure struc in
+  let modules = Cpp.prepare_structure u struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_names;
   let module_names = Cpp.plan_module_names struc in
   let names = Cpp.plan_names struc in
@@ -1083,7 +1088,7 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
   Pipeline_trace.event "layout" plan_pointer_fields;
   let pointer_fields = Cpp.plan_pointer_fields struc in
   let acc = {acc with pointer_fields = Loopify_analysis.add_pointer_fields acc.pointer_fields pointer_fields} in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_unmerged_wrappers;
   let unmerged_wrappers = Cpp.plan_unmerged_wrappers () in
   let acc =
@@ -1091,11 +1096,11 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
       unmerged_wrappers =
         List.fold_left (fun m (name, mp) -> CString.Map.add name mp m) acc.unmerged_wrappers unmerged_wrappers }
   in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_concept_prerequisites;
   let modules = Cpp.plan_concept_prerequisites modules struc in
   let acc = {acc with modules = Module_plan.extend acc.modules modules} in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_scopes;
   let scopes = Cpp.plan_scopes struc in
   with_context {u with scopes = Scope_plan.bound_of scopes} @@ fun u ->
@@ -1106,16 +1111,16 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
       promoted_inductives =
         List.fold_left (fun s r -> Ref.User.Set.add r s) acc.promoted_inductives promoted_inductives }
   in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_accessors;
   let accessors = Cpp.plan_accessors u struc in
   let acc = {acc with accessors = List.fold_left Cpp_state.add_accessor_ref acc.accessors accessors} in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_nested_structs;
   let nested_structs = Cpp.plan_nested_structs struc in
   let acc =
     {acc with nested_structs = List.fold_left Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" plan_instance_promoted_types;
   let instance_promoted_types = Cpp.plan_instance_promoted_types struc in
   let acc =
@@ -1125,7 +1130,7 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
           (fun m (r, bindings) -> GlobRef.Map.add r bindings m)
           acc.instance_promoted_types instance_promoted_types }
   in
-  Accumulated_plan.bind acc @@ fun () ->
+  bind_plan u acc @@ fun u ->
   Pipeline_trace.event "layout" elaborate_calls;
   let elaborations =
     Translation_state.generating_outside_modules @@ fun () ->
@@ -1648,9 +1653,11 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
       magic = false;
     }
   in
-  Accumulated_plan.bind earlier @@ fun () ->
+  (* The unit's context holds what the earlier units decided from the
+     start; its configuration is its plan's. *)
+  bind_plan Unit_context.detached earlier @@ fun u ->
   let facts, plan = analyze_and_plan struc in
-  let u = Unit_context.make ~config:plan.config in
+  let u = {u with config = plan.config} in
   Translation_state.with_unit_facts
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
@@ -1693,7 +1700,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Pipeline_trace.event "emit" "generate_ahead";
   Cpp.generate_ahead u struc;
   Common.plan_written_files (Cpp.files_named_ahead struc);
-  Table.plan_written_customs (Cpp.customs_written_ahead ());
+  Table.plan_written_customs (Cpp.customs_written_ahead u);
   Table.check_written_mapping_headers ();
   Cpp.plan_function_reads ();
   Pipeline_trace.event "emit" "plan_file_layout";

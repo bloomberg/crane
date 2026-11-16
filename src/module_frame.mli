@@ -29,11 +29,11 @@ type t = {
           module's struct is that inductive promoted. *)
 }
 
-(** [of_module scopes mp ~name sel ~enclosing] is the frame of the module
-    [mp], printed [name], of elements [sel], declared among [enclosing], in
-    the unit whose scope plan is [scopes]. *)
+(** [of_module u mp ~name sel ~enclosing] is the frame of the module [mp],
+    printed [name], of elements [sel], declared among [enclosing], in the
+    unit [u]. *)
 val of_module :
-  Scope_plan.bound ->
+  Unit_context.t ->
   ModPath.t ->
   name:string ->
   (Label.t * Core.Module.Structure_item.t) list ->
@@ -41,8 +41,8 @@ val of_module :
   t
 
 (** Whether a class [sel] declares has a concept named as the module [mp]
-    is, by the names both are planned under. *)
-val concept_collision : ModPath.t -> (Label.t * Core.Module.Structure_item.t) list -> bool
+    is, by the names both are planned under in [layout]. *)
+val concept_collision : Module_plan.layout -> ModPath.t -> (Label.t * Core.Module.Structure_item.t) list -> bool
 
 (** Whether two frames say the same of a module: the same eponymous
     inductive and record, the same candidates at the same receiver

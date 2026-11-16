@@ -46,7 +46,7 @@ module Ir = struct
       argument, the primitive integer type, through whose mapping each of its
       literals is spelled, the eponymous record a global is a member of, and
       the custom whose template a custom match writes. *)
-  let globals_written_beside (d : decl) =
+  let globals_written_beside (u : Unit_context.t) (d : decl) =
     let found = ref [] in
     let rec visitor = {Children.expr = (fun e -> expr e); stmt = (fun s -> stmt s); type_ = (fun t -> ty t)}
     and ty (t : ty) =
@@ -60,7 +60,7 @@ module Ir = struct
       ( match e with
       | Literal (Uint63 _) -> found := Option.cata (fun r -> [r]) [] (uint63_type ()) @ !found
       | Entity (x, _, _) -> (
-        match Module_plan.eponymous_record_containing x with
+        match Module_plan.eponymous_record_containing u.modules x with
         | Some {Module_plan.record; _} -> found := record :: !found
         | None -> () )
       | _ -> () );
@@ -107,14 +107,14 @@ module Ir = struct
 
   (** The globals printing [d] names: those it holds, those written beside
       them, and those it declares. *)
-  let declaration_globals (d : decl) =
+  let declaration_globals u (d : decl) =
     let globals = ref [] in
     Globrefs.iter (fun r -> globals := r :: !globals) d;
-    !globals @ globals_written_beside d @ declared_globals d
+    !globals @ globals_written_beside u d @ declared_globals d
 
   (** The frames printing [d] enters names at: the scopes the declaration
       printer ({!Cpp_print.read_cpp_decl}) enters, read without printing. *)
-  let declaration_frames scopes (d : decl) =
+  let declaration_frames (u : Unit_context.t) (d : decl) =
     let entered frame l = List.rev_append l frame in
     let template_body tps = if tps = [] then [] else [Cpp_resolution.In_template] in
     let rec decl frame (d : decl) =
@@ -129,7 +129,7 @@ module Ir = struct
       | Function f ->
         let defines = match f.shape with Definition _ -> true | Declaration _ -> false in
         let owner = fst f.path.outer in
-        [Cpp_resolution.Function {owner; defines; scope = Scope_plan.of_declaration scopes owner} :: frame]
+        [Cpp_resolution.Function {owner; defines; scope = Scope_plan.of_declaration u.modules u.scopes owner} :: frame]
       | Struct s -> [frame; entered frame (Cpp_resolution.Inductive_struct s.ref_ :: template_body s.type_params)]
       | Member_definition m ->
         [frame; entered frame (template_body m.type_params @ [Cpp_resolution.Inductive_struct m.owner])]
@@ -419,7 +419,7 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
   let names_through n = head_names_into_a_struct (unqualified_head n) in
   match d with
   | Function {path = {outer; inner}; return_type; shape = Declaration params; _} ->
-    let scope = Scope_plan.of_declaration ctx.unit.scopes (fst outer) in
+    let scope = Scope_plan.of_declaration ctx.unit.modules ctx.unit.scopes (fst outer) in
     let ctx = next (Function {owner = fst outer; defines = false; scope}) ctx in
     let path = outer :: inner in
     if List.exists (fun (n, _) -> names_through (global_name ctx Type n)) path then Some true
@@ -476,24 +476,25 @@ let rec applied_to_sentinel_alone (t : ty) =
     it is declared and the template parameters it is declared over, which an
     alias of it written elsewhere repeats: an alias, an enum, and a struct
     planned at namespace scope. *)
-let rec declared_types ?(outer = []) (d : Cpp_ir.Resolved.Decl.t) =
+let rec declared_types layout ?(outer = []) (d : Cpp_ir.Resolved.Decl.t) =
   match d with
-  | Template (tparams, _, inner) -> declared_types ~outer:(outer @ tparams) inner
+  | Template (tparams, _, inner) -> declared_types layout ~outer:(outer @ tparams) inner
   | Type_alias u -> [(u.name, Cpp_ast.Alias_definition, outer @ u.type_params)]
   | Enum {ref_; _} -> [(ref_, Cpp_ast.Enum_definition, outer)]
-  | Struct {ref_; type_params; _} when Module_plan.is_namespace_scope_ref ref_ ->
+  | Struct {ref_; type_params; _} when Module_plan.is_namespace_scope_ref layout ref_ ->
     [(ref_, Cpp_ast.Struct_definition, outer @ type_params)]
-  | Namespace (Some w, ds) when Module_plan.is_namespace_scope_ref w.ref_ -> List.concat_map (declared_types ~outer) ds
+  | Namespace (Some w, ds) when Module_plan.is_namespace_scope_ref layout w.ref_ ->
+    List.concat_map (declared_types layout ~outer) ds
   | _ -> []
 
-let stand_ins t =
+let stand_ins layout t =
   List.concat_map
     (function
       | Cpp_ast.Declared (Declaration {decl; _} | Absorbed {decl; _}) ->
         List.map
           (fun (target, definition, tparams) ->
             Cpp_ast.(global_alias (Alias_of_type {target = global_ref target; definition; tparams})) )
-          (declared_types decl)
+          (declared_types layout decl)
       | Declared
           ( Fields _ | Modtype_concept _ | Global_alias _ | Assertion _ | Module_alias _ | Functor_alias _
           | Derived_functor _ | Forward_declaration _ | Synthesised_template _ ) ->
@@ -1331,14 +1332,14 @@ let constraint_globals c =
 
 (* What printing [d] names, at each frame it enters: its globals, and the
    definitions it makes. *)
-let declaration_names scopes d =
-  let frames = Ir.declaration_frames scopes d and defined = Ir.defined_types d in
-  global_names frames (Ir.declaration_globals d)
+let declaration_names u d =
+  let frames = Ir.declaration_frames u d and defined = Ir.defined_types d in
+  global_names frames (Ir.declaration_globals u d)
   @ List.concat_map (fun frame -> List.map (fun key -> (frame, key)) defined) frames
   @ Ir.function_scopes d
 
-let unprinted_names scopes : Cpp_ast.declaration -> _ = function
-  | Declaration {decl; _} | Absorbed {decl; _} -> declaration_names scopes decl
+let unprinted_names u : Cpp_ast.declaration -> _ = function
+  | Declaration {decl; _} | Absorbed {decl; _} -> declaration_names u decl
   | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> type_globals ty) fields)
   | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map type_globals args)
   | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
@@ -1360,7 +1361,7 @@ let writing ctx d =
   let names =
     Cpp_resolution.resolve
       (fun frame key -> at_frame ctx frame (fun c -> live_value c key))
-      (declaration_names ctx.unit.scopes d)
+      (declaration_names ctx.unit d)
   in
   let ctx = {ctx with names = Names_resolved names} in
   if not (alias_plan_made ()) then deciding ctx (ref [])

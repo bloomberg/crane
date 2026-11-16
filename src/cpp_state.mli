@@ -592,9 +592,9 @@ val is_shadowed_global_name : string -> Names.GlobRef.t -> bool
     is a wrapper module. [VarRef] references (lifted declarations) are never
     qualified, and already-qualified names are only rewritten for
     collision-wrapped modules, whose child qualifier is replaced by the wrapper
-    struct name.
+    struct name.  The wrappers are those [layout] plans.
     @return the possibly-qualified name *)
-val wrapper_qualify : Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
+val wrapper_qualify : Module_plan.layout -> Names.GlobRef.t -> Cpp_name.t -> Cpp_name.t
 
 (** {2 Method registration} *)
 

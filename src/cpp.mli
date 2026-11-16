@@ -40,9 +40,9 @@ val method_registry_of : Core.Program.t -> Method_registry.t
 
 (** Decide the unit's layout before either file is rendered: analyse the
     structure ({!Structure_analysis}), record what rendering reads of the
-    analysis, and return the {!Module_plan} it decides, which is not yet
-    installed. *)
-val prepare_structure : Core.Program.t -> Module_plan.t
+    analysis, and return the {!Module_plan} it decides, which the unit's
+    context [u] does not hold yet. *)
+val prepare_structure : Unit_context.t -> Core.Program.t -> Module_plan.t
 
 (** [registered_methods kn ind] -- each function registered as a method of
     one of [ind]'s inductives, generated with it: the inductive, the
@@ -82,8 +82,8 @@ val generate_decl_ahead : Unit_context.t -> module_:Names.ModPath.t -> Core.Decl
 val files_named_ahead : Core.Program.t -> Names.ModPath.t list
 
 (** The customs the unit's files write, read off what {!generate_ahead}
-    generated: whose imports its files include. *)
-val customs_written_ahead : unit -> Ref.User.Set.t
+    generated in the unit given: whose imports its files include. *)
+val customs_written_ahead : Unit_context.t -> Ref.User.Set.t
 
 (** Plan, from what {!generate_ahead} finished, which globals the unit's
     function bodies read ({!Cpp_state.read_by_a_function}): every installed

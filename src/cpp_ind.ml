@@ -60,7 +60,7 @@ let pp_decls ctx (ds : rendered) =
     members are spelled.  Both kinds are emitted after every datatype, so a
     datatype's member naming either one is naming something still to come. *)
 let module_struct_name (mp : ModPath.t) : string option =
-  match Module_plan.wrapper_struct mp with
+  match Module_plan.wrapper_struct (Translation_state.unit_context ()).modules mp with
   | Some name -> Some name
   | None -> (
     match mp with
@@ -184,7 +184,8 @@ let ind_header_decls scope kn (ind : Core.Inductive.t) =
      collision struct holding it ahead of the concepts
      ({!Cpp.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
-    (not scope.in_struct) || Array.for_all Module_plan.is_namespace_scope_ref names
+    (not scope.in_struct)
+    || Array.for_all (Module_plan.is_namespace_scope_ref (Translation_state.unit_context ()).modules) names
   in
   let cnames =
     Array.mapi
@@ -1369,7 +1370,7 @@ let resolver_at ~file spelling frame key =
 (* The names a declaration asks resolution for: those its leaves print and
    those its concepts name. *)
 let requested d =
-  Cpp_leaf_plan.unprinted_names (Translation_state.unit_context ()).scopes d @ Cpp_concepts.names_requested d
+  Cpp_leaf_plan.unprinted_names (Translation_state.unit_context ()) d @ Cpp_concepts.names_requested d
 
 let resolve_tree ~file t =
   Common.without_noting_written_files (fun () ->
