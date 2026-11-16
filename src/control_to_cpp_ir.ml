@@ -36,7 +36,7 @@ let lowering_of (strategy : Core_plan.Recursion.strategy option) =
 let shaped_loop ~unit ~lowerings r planned target =
   match planned with
   | Some lowering when List.mem lowering lowerings -> (
-    match (Lower_control.loop (Unit_context.control unit)) target with
+    match (Core_to_control.Lower_control.loop (Unit_context.control unit)) target with
     | Some (Loop l) when Control_ir.Term.continues l.body <> []
       && (Control_ir.Term.entries l.body = [] || lowering = Frames) ->
       let builds = Control_ir.Term.continues_into l.body <> [] in
@@ -152,7 +152,7 @@ let function_machine ~unit r =
          ~pointer_fields:(Loopify_analysis.constructor_pointer_fields unit) r
        = Some Core_plan.Recursion.Frame_stack
   in
-  match if frames then (Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Function r) else None with
+  match if frames then (Core_to_control.Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Function r) else None with
   | Some (Control_ir.Term.Loop l) when List.compare_length_with (Control_ir.Term.entries l.body) 1 <= 0 -> Some l
   | Some _ | None -> None
 
@@ -559,7 +559,7 @@ let local_resumes ~unit ~owner ~function_ ~lifted ~member ~depth ~arity =
           ~parameters:(depth - arity, entered) (),
         true )
   | Some origin, None, Some certain -> (
-    match (Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Member (fst member, snd member)) with
+    match (Core_to_control.Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Member (fst member, snd member)) with
     | Some (Loop l) when Control_ir.Term.continues l.body <> [] ->
       (* What the body reads from outside the fixpoint is bound before the
          loop and in scope for all of it, as an invariant parameter is. *)
@@ -584,7 +584,7 @@ let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lam
     Loopify_analysis.record_outcome (Id.to_string name) (Declined Loopify_analysis.survived_generically);
     unlowered Loopify_analysis.survived_generically
   in
-  match ((Lower_control.loop (Unit_context.control unit)) member_loop, lowering) with
+  match ((Core_to_control.Lower_control.loop (Unit_context.control unit)) member_loop, lowering) with
   | Some (Loop l), Some lowering when Control_ir.Term.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (List.rev lam.params) in
     match Loopify.member_plan ~unit ~frames:(lowering = Frames) member params with
@@ -934,9 +934,9 @@ let check_lowered ~unit (decl : Ir.Decl.t) =
     if not (recorded (Loop_verdicts.find l)) then violation l "a loop was emitted that control lowering did not lower";
     if makes_statement_call (loop_calls ~unit l) body then
       violation l "a lowered loop still makes a call of its own where it would be a turn";
-    match (Lower_control.loop (Unit_context.control unit)) l with
+    match (Core_to_control.Lower_control.loop (Unit_context.control unit)) l with
     | Some t ->
-      if keeps_call (Lower_control.taken_continues t) body then violation l "a lowered loop still makes a call it takes"
+      if keeps_call (Core_to_control.Lower_control.taken_continues t) body then violation l "a lowered loop still makes a call it takes"
     | None -> violation l "a lowered loop has no ControlIR"
   in
   (* The definition of the loop [l], emitted as generated: not lowered, and

@@ -190,7 +190,7 @@ val lower_group : unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t list -> Cpp_ir.Lo
     the program's Core and ControlIR, never left by a lowering that could
     not make the loop; and no loop emitted still making a call of an
     occurrence one of its turns alone is made of
-    ({!Lower_control.taken_continues}).  It checks the constructor structs'
+    ({!Core_to_control.Lower_control.taken_continues}).  It checks the constructor structs'
     pointer fields against those planned before rendering, which the
     recursion plan's tail-modulo-cons chains were read with. *)
 val check_lowered : unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit

@@ -10,7 +10,7 @@
     ({!Core_plan.Recursion.strategy}): a [while] loop, a loop tail modulo cons,
     or a machine with an explicit stack of frames, which keeps deep inputs
     from overflowing the C++ stack.  Each loop must agree with its ControlIR
-    ({!Lower_control.loop}); under [CRANE_CHECK_IR] a disagreement is a
+    ({!Core_to_control.Lower_control.loop}); under [CRANE_CHECK_IR] a disagreement is a
     violation.  Every entry is handed the unit it lowers in ([~unit]), whose
     configuration decides which parameters a loop holds by pointer. *)
 

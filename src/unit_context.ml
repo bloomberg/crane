@@ -54,7 +54,7 @@ type t = {
   instance_promoted_types : (Names.Id.t * Core.Type.t) list Names.GlobRef.Map.t;
   scopes : Core_plan.Scope_plan.bound;
   names : Core_plan.Name_resolution.t option;
-  loops : Loop_facts.t;
+  loops : Core_to_control.Loop_facts.t;
   std_names : std_names;
 }
 
@@ -70,7 +70,7 @@ let make ~config =
     instance_promoted_types = Names.GlobRef.Map.empty;
     scopes = Core_plan.Scope_plan.none;
     names = None;
-    loops = Loop_facts.none;
+    loops = Core_to_control.Loop_facts.none;
     std_names = default_std_names }
 let detached = make ~config:{Base.Table.concurrent = false}
 let non_atomic_rc u = Base.Table.non_atomic_rc_for u.config

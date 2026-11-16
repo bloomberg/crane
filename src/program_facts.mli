@@ -38,7 +38,7 @@ type program = {
           passes a closure for ({!Translation_callable_params.partner_closure_params}). *)
   recursion : Core_plan.Recursion.t;
       (** How each function recurses through itself. *)
-  control : Lower_control.t;
+  control : Core_to_control.Lower_control.t;
       (** The control the recursion plan lowers to ({!Control_ir}). *)
 }
 

@@ -2020,7 +2020,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
             Adopted.captures = List.filter (fun id -> not (is_tparam id)) ad.Adopted.captures }
         in
         (* The body yields what the function does: ControlIR enters no other
-           ({!Lower_control.lower}).  A parameter only a generic lambda
+           ({!Core_to_control.Lower_control.lower}).  A parameter only a generic lambda
            can declare ([auto &&]), or a capture of a type the function
            cannot name, is not one a frame can store, which no entry in the
            corpus has: under [CRANE_CHECK_IR] a violation. *)
@@ -2190,7 +2190,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
                entered = entered;
                points_into = points_into;
                entering = Option.bind loop
-                 (fun l -> Option.map Control_ir.Term.continues ((Lower_control.loop (Unit_context.control unit)) l));
+                 (fun l -> Option.map Control_ir.Term.continues ((Core_to_control.Lower_control.loop (Unit_context.control unit)) l));
                aliased = aliased_params ~pointer_safe:pointer_safe_varying own_entry }
   in
   (* The body is a sequence like any other: a recursive call bound at its top

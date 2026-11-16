@@ -17,7 +17,7 @@
     into the function -- a partner's copy spliced into its body among them
     ({!Core_plan.Recursion.splice_partners}) -- is an [Entry] of the function's
     machine rather than a machine of its own, for two machines cannot unwind
-    each other's stack.  {!Lower_control} produces them from a recursive
+    each other's stack.  {!Core_to_control.Lower_control} produces them from a recursive
     Core body, and {!Control_to_cpp_ir} lowers them to CppIR. *)
 
 (** A function's control. *)

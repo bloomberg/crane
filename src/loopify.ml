@@ -119,11 +119,11 @@ include Loopify_frame
 let no_control_ir = "the loop has no ControlIR"
 
 (** [check], narrowed to the calls the tail loop of [loop] jumps at, as its
-    ControlIR has them ({!Lower_control.loop}): a call made of one of its
+    ControlIR has them ({!Core_to_control.Lower_control.loop}): a call made of one of its
     Continues.  [check] still reads the call's arguments and receiver.  A
     loop with no ControlIR is a violation, and the transform declines. *)
 let planned_jumps ~unit loop check =
-  match Option.bind loop (Lower_control.loop (Unit_context.control unit)) with
+  match Option.bind loop (Core_to_control.Lower_control.loop (Unit_context.control unit)) with
   | None ->
     Base.Probe.violation "control IR" (Pp.str no_control_ir);
     raise (Not_linearisable no_control_ir)
@@ -138,7 +138,7 @@ let planned_jumps ~unit loop check =
     [jumped] each call it rewrites into a jump, or, tail modulo cons, builds
     a branch's cells around.  Under [CRANE_CHECK_IR] those calls must be the
     [Continue]s and [Continue_into]s of the loop's ControlIR
-    ({!Lower_control.loop}), which every such loop has. *)
+    ({!Core_to_control.Lower_control.loop}), which every such loop has. *)
 let checked_tail_loop ~unit loop transform =
   let jumps = ref [] in
   let body = transform (fun e -> jumps := made_of e :: !jumps) in
@@ -149,7 +149,7 @@ let checked_tail_loop ~unit loop transform =
       | Control_ir.Loop.Function r -> Pp.str (Base.Table.kername_of_global r)
       | Control_ir.Loop.Member _ -> Pp.str "a local fixpoint"
     in
-    match (Lower_control.loop (Unit_context.control unit)) l with
+    match (Core_to_control.Lower_control.loop (Unit_context.control unit)) l with
     | None -> Base.Probe.violation "control IR" Pp.(str "no ControlIR for the loop of " ++ what ())
     | Some t when not (made_as_planned (Control_ir.Term.continues t) (List.rev !jumps)) ->
       Base.Probe.violation "control IR"
@@ -160,7 +160,7 @@ let checked_tail_loop ~unit loop transform =
 
 (** How the calls the machine of the loop [l] is entered by, [entries],
     each with whether it resumes after it, disagree with its ControlIR, if
-    they do ({!Lower_control.loop}): they must be its [Continue]s, and,
+    they do ({!Core_to_control.Lower_control.loop}): they must be its [Continue]s, and,
     where it builds nothing tail modulo cons, those resumed after the
     [Continue]s in a [Resume]'s value.  A call is entered from every branch
     a continuation is merged into, so they are compared as sets. *)
@@ -173,7 +173,7 @@ let machine_disagreement ~unit l entries =
   let within a b = List.for_all (fun o -> List.exists (Core.Occurrence.equal o) b) a in
   let same a b = within a b && within b a in
   let made resumed = List.filter_map (fun (r, o) -> if resumed r then o else None) entries in
-  match (Lower_control.loop (Unit_context.control unit)) l with
+  match (Core_to_control.Lower_control.loop (Unit_context.control unit)) l with
   | None -> Some Pp.(str "no ControlIR for the machine of " ++ what ())
   | Some _ when List.exists (fun (_, o) -> not (Option.has_some o)) entries ->
     Some Pp.(str "the machine of " ++ what () ++ str " is entered by a call made of no Core call")
@@ -287,7 +287,7 @@ type member_plan = {
 }
 
 let member_plan ~unit ~frames member params =
-  match (Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Member (fst member, snd member)) with
+  match (Core_to_control.Lower_control.loop (Unit_context.control unit)) (Control_ir.Loop.Member (fst member, snd member)) with
   | Some (Loop l) ->
     let kept = kept_positions l in
     if List.compare_lengths kept params <> 0 then None
@@ -1023,7 +1023,7 @@ let transform_method_own ~unit ?cursor ?moves ~varying ~parts ~park ~tparams ~se
           let check = planned_jumps ~unit loop self_check in
           let shapes =
             Option.map (fun t -> Loopify_tmc.control_shapes (Control_ir.Term.continues_into t))
-              (Option.bind loop (Lower_control.loop (Unit_context.control unit)))
+              (Option.bind loop (Core_to_control.Lower_control.loop (Unit_context.control unit)))
           in
           let r =
             apply_nontail_loopification ~unit

@@ -17,7 +17,7 @@ type program = {
   recursive_groups : Core_plan.Recursive_groups.t;
   partner_closure_params : (Names.GlobRef.t * int list) list;
   recursion : Core_plan.Recursion.t;
-  control : Lower_control.t;
+  control : Core_to_control.Lower_control.t;
 }
 
 let analyze_program cx normalized =
@@ -33,7 +33,7 @@ let analyze_program cx normalized =
     partner_closure_params = Translation_callable_params.partner_closure_params recursive_groups struc;
     recursion;
     control =
-      Lower_control.lower
+      Core_to_control.Lower_control.lower
         ~methods:(fun r -> Option.has_some (Core_plan.Method_registry.is_registered_method methods r))
         recursion normalized }
 

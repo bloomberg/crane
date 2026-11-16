@@ -79,7 +79,7 @@ type t = {
           eponymous record ({!Core_plan.Name_resolution}) --, decided where the
           structure is analysed ([Cpp.prepare_structure]); none before
           that, where readers fall back on the table. *)
-  loops : Loop_facts.t;
+  loops : Core_to_control.Loop_facts.t;
       (** What loop lowering reads of the analysis of the program and of
           the unit: how each function recurses, the loops it lowers to, and
           the unit's effect operations; those of a program that defines
@@ -117,7 +117,7 @@ val instance_promoted_types_of : t -> Names.GlobRef.t -> (Names.Id.t * Core.Type
 val recursion : t -> Core_plan.Recursion.t
 
 (** The program's loops ({!t.loops}). *)
-val control : t -> Lower_control.t
+val control : t -> Core_to_control.Lower_control.t
 
 (** The unit's effect operations, as loop lowering reads them ({!t.loops}). *)
 val loop_effects : t -> Core_plan.Effects.t

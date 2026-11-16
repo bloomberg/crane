@@ -1450,7 +1450,7 @@ let check_structure_unchanged planned struc =
     it is analysed for -- which definitions only throw, which parameters
     are owned, settled across calls, how each function recurses
     ({!Program_facts.analyze_program}), and handed with what loop lowering
-    reads of that analysis ({!Loop_facts}). *)
+    reads of that analysis ({!Core_to_control.Loop_facts}). *)
 let freeze cx core f =
   let normalized, program =
     Translation_state.generating_outside_modules cx @@ fun () ->
@@ -1461,7 +1461,7 @@ let freeze cx core f =
     (normalized, Program_facts.analyze_program cx normalized)
   in
   Translation_state.with_program_facts cx (Program_facts.lowering program) @@ fun () ->
-  f {Loop_facts.none with recursion = program.recursion; control = program.control} normalized
+  f {Core_to_control.Loop_facts.none with recursion = program.recursion; control = program.control} normalized
 
 (** The extracted structure [struc] through the Core passes
     ({!core_pass_names}), keeping what [to_appear] names. *)
@@ -1660,7 +1660,7 @@ let declares struc =
     a separate extraction starts from ({!Accumulated_plan.for_next_unit}). *)
 let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   ?(earlier = Accumulated_plan.start ~accessors:Cpp_state.no_accessors)
-    (fn, si, mo) dry (loops : Loop_facts.t) (core : Core_passes.Phase.normalized Core_passes.Phase.program) =
+    (fn, si, mo) dry (loops : Core_to_control.Loop_facts.t) (core : Core_passes.Phase.normalized Core_passes.Phase.program) =
   let dry = dry || Base.Probe.census_dry () in
   Base.Probe.census_unit ();
   let struc = Core_passes.Phase.structure core in
