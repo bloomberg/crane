@@ -5,7 +5,7 @@
     part of the {!Target_plan}: for each module the unit emits as a struct, how
     a definition of one of its members, written out of line, names that struct.
     Planned from the layout and the names before anything is rendered
-    ({!Cpp.plan_scopes}), held by the unit's context ({!Unit_plan.Context.t.scopes}), and read by
+    ({!Emit.Files.plan_scopes}), held by the unit's context ({!Unit_plan.Context.t.scopes}), and read by
     declaration: where a definition goes is a question about the definition, not
     about where a printer happens to be. *)
 
@@ -89,9 +89,9 @@ val of_declaration : Module_plan.layout -> bound -> GlobRef.t -> scope option
 val visibility : bound -> ModPath.t -> Base.Common.visibility option
 
 (** The inductives the body of the module [mp] spells bare: those it and
-    each module body enclosing it declare, as [Cpp.inductives_declared_in]
+    each module body enclosing it declare, as [Emit.Files.inductives_declared_in]
     says, and, in a file module that is not a library's, those
-    [Cpp.file_local_inductives] says every such module does. *)
+    [Emit.Files.file_local_inductives] says every such module does. *)
 val local_inductives : bound -> ModPath.t -> GlobRef.t list option
 
 (** The modules whose frames ({!Unit_plan.Module_frame}) are around the body of the

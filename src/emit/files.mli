@@ -24,10 +24,10 @@
     {ul
     {- {!Unit_plan.Cpp_state}: per-unit render state and plans;}
     {- {!Unit_plan.Cpp_names}: name resolution and qualification;}
-    {- {!Cpp_ind}: which C++ declarations a Core declaration becomes;}
-    {- {!Cpp_leaf_plan} and {!Cpp_print}: what a CppIR leaf asks of
+    {- {!Entities}: which C++ declarations a Core declaration becomes;}
+    {- {!Leaf_plan} and {!Print}: what a CppIR leaf asks of
        resolution and scheduling, and its printing;}
-    {- {!Cpp_concepts}: module-type concepts as text.}} *)
+    {- {!Concepts}: module-type concepts as text.}} *)
 
 (** Language descriptor for C++. Provides the preamble, file suffix,
     pretty-printers, and other hooks that {!Extract_env} needs to drive a full
@@ -74,7 +74,7 @@ val plan_callables :
 
 (** Generate every function the renders write, and every instance's struct,
     before either file is rendered, for both files
-    ({!Cpp_ind.generating_ahead}), in the unit given. *)
+    ({!Entities.generating_ahead}), in the unit given. *)
 val generate_ahead : Core_to_cpp.Lowering_state.t -> Unit_plan.Context.t -> Core.Program.t -> unit
 
 (** Generate what one declaration, an element of the module [module_], is
@@ -108,7 +108,7 @@ val plan_function_reads : unit -> unit
 val plan_file_layout : Core_to_cpp.Lowering_state.t -> Unit_plan.Context.t -> Core.Program.t -> unit
 
 (** The plan of the synthesised templates each file writes, before either
-    is rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
+    is rendered ({!Leaf_plan.plan_ctor_aliases}). *)
 val plan_ctor_aliases : Core_to_cpp.Lowering_state.t -> Core.Program.t -> Unit_plan.Cpp_state.ctor_alias_plan
 
 (** The C++ name of each global the unit declares, a functor's body

@@ -50,7 +50,7 @@ val concept_collision : Core_plan.Module_plan.layout -> ModPath.t -> (Label.t * 
 val equal : t -> t -> bool
 
 (** The frame [plans] has for a module, which the walk ahead of the files
-    works out ({!Cpp.walk_as_rendered}); an anomaly where none was
+    works out ({!Emit.Files.walk_as_rendered}); an anomaly where none was
     planned. *)
 val planned : Cpp_state.plans -> ModPath.t -> t
 

@@ -9,7 +9,7 @@
     and their forward-declaration specs for header emission.
 
     It sits above the expression-level codegen in {!Lower_expr} (which it uses
-    to lower function bodies) and below {!Cpp}, which drives the whole pipeline
+    to lower function bodies) and below {!Emit.Files}, which drives the whole pipeline
     and consumes the declarations produced here. *)
 
 open Base.Common
@@ -35,7 +35,7 @@ val gen_spec : Lowering_state.t -> GlobRef.t -> Core.Expr.t -> Core.Type.t -> Cp
 type definition_file = Header | Implementation
 
 (** What one generation produced, independent of the file being written: a
-    definition, finalized into its views by {!Function_entity}, or a
+    definition, finalized into its views by {!Emit.Function_entity}, or a
     declaration with no definition anywhere. *)
 type generated_entity =
   | Defined of Cpp_ir.Lowered.Decl.t * definition_file
@@ -157,7 +157,7 @@ val gen_record_methods :
 
 (** Generate a C++ struct for a type class instance. Type class instances become
     structs with static methods. Returns (struct_decl option, class_ref option,
-    concept arguments). The last two are used by {!Cpp_ind} to generate the
+    concept arguments). The last two are used by {!Emit.Entities} to generate the
     [static_assert] verifying the instance satisfies the concept; the arguments
     come back already converted and resolved, because they are only correct in
     the promoted-variable scope of the instance they were read in.  Last,

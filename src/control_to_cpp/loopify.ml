@@ -361,7 +361,7 @@ let loopify_inner_lambdas ~unit ?(tail_only = false) ~tparams ?(outer_env = []) 
      self-forward argument so the remaining args, the last first, align
      positionally with the non-self loop params, kept the last first too
      ([lparams] here is the lambda's parameters, in source order).  After transformation the self-parameter
-     is unreferenced; the {!Cpp_print} lambda printer emits unreferenced
+     is unreferenced; the {!Emit.Print} lambda printer emits unreferenced
      params without a name, so there is no [-Wunused-parameter].  Only single
      (non-mutual) fixpoints are handled; a mutual group's lambda (one
      self-parameter per member) is left unchanged, and so is every non-tail

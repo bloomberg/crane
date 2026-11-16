@@ -6,7 +6,7 @@
     needs placed ahead of it, and the synthesised templates it writes.
 
     These are planning's questions about a declaration, not the printer's:
-    {!Cpp_print} prints a leaf from what this module decided.  Planning the
+    {!Print} prints a leaf from what this module decided.  Planning the
     templates walks the type constructors a declaration writes and decides
     each, without rendering it; a template's body is rendered once its own
     type constructors are decided, for the text its name digests.  Under
@@ -16,7 +16,7 @@
 open Names
 open Unit_plan.Cpp_state
 open Unit_plan.Cpp_names
-open Cpp_print
+open Print
 
 (** What planning a leaf reads off a finished declaration. *)
 module Ir = struct
@@ -113,7 +113,7 @@ module Ir = struct
     !globals @ globals_written_beside u d @ declared_globals d
 
   (** The frames printing [d] enters names at: the scopes the declaration
-      printer ({!Cpp_print.read_cpp_decl}) enters, read without printing. *)
+      printer ({!Print.read_cpp_decl}) enters, read without printing. *)
   let declaration_frames (u : Unit_plan.Context.t) (d : decl) =
     let entered frame l = List.rev_append l frame in
     let template_body tps = if tps = [] then [] else [Unit_plan.Cpp_resolution.In_template] in
@@ -362,10 +362,10 @@ let head_names_into_a_struct h =
 
 (** Whether the type [t] writes a qualifier into a struct or a template
     parameter, asked of the type rather than of its rendering: each name is
-    the one {!Cpp_print.pp_cpp_type_at} writes, from the same heads, at the position
+    the one {!Print.pp_cpp_type_at} writes, from the same heads, at the position
     [ctx].  [None] where only the rendering can tell -- an
     expression's type, and a type constructor named as a template argument,
-    which may be written through a synthesised alias ({!Cpp_leaf_plan.ctor_alias_at}). *)
+    which may be written through a synthesised alias ({!Leaf_plan.ctor_alias_at}). *)
 let type_names_into_a_struct ctx (t : ty) =
   let rec names_into (t : ty) =
   let any ts =
@@ -409,7 +409,7 @@ let is_static_member_declaration (d : Cpp_ir.Resolved.Decl.t) =
     parameter, a type a parameter defaults to or a callable one is invoked
     with.  [None] for anything else, a declaration under a [requires]
     clause, or where only its rendering can tell.  Each name is asked at
-    the frame the printer writes it at ({!Cpp_print.read_cpp_decl}). *)
+    the frame the printer writes it at ({!Print.read_cpp_decl}). *)
 let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
   let any_type ctx ts =
     List.fold_left
@@ -458,7 +458,7 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
    is then not that shape.  Any other shape is not a template name applied
    to anything, and is written through a synthesised template, which can
    abbreviate any type: the printer writes a template name only for the
-   shapes answered here ({!Cpp_print.pp_cpp_type_at}'s [template_name]). *)
+   shapes answered here ({!Print.pp_cpp_type_at}'s [template_name]). *)
 let rec applied_to_sentinel_alone (t : ty) =
   match t with
   | Named (_, args) | External (_, args) | Entity_application (_, args, _) | Variant (_, args) ->
@@ -732,7 +732,7 @@ let defined_ref : Cpp_ast.defined -> _ = function Defined_struct {struct_ = r; _
     concept-kinded parameter -- names its concept, which need not be declared
     by that prologue, nor anywhere above the struct's first use; its
     declaration goes in front of the first chunk of the file that names the
-    struct before defining it ({!Cpp.do_struct_with_decl_tracking}): a
+    struct before defining it ({!Files.do_struct_with_decl_tracking}): a
     section-local instance's struct and the file module's struct can each
     name the other, [typename StateV<_tcI0>::state] in a member's signature
     against a call to that member in the instance's body.
@@ -781,13 +781,13 @@ let forward_declarations ctx ~module_ env (d : Cpp_ir.Resolved.Decl.t) =
 
 (* What writing the type constructor [x] -- a template template argument,
    naming the variables [vl] by index -- at [ctx] decides, without writing
-   it: how it is written, decided there and noted ({!Cpp_print.tyctor_written}),
+   it: how it is written, decided there and noted ({!Print.tyctor_written}),
    the template synthesised for it collected where [ctx] collects them
-   ({!Cpp_print.note_ctor_alias_spelled}); and, where it is written through
+   ({!Print.note_ctor_alias_spelled}); and, where it is written through
    its own head instead, the same for each type constructor that head
    writes.  A dependent member is written through its qualifier; any other
    head as its template name, which writes no type constructor
-   ({!Cpp_print.pp_cpp_type_at}'s [template_name]). *)
+   ({!Print.pp_cpp_type_at}'s [template_name]). *)
 let rec tyctor_spelled ctx vl x =
   let c = tyctor_constructor x in
   match tyctor_written ctx vl c with
@@ -1334,7 +1334,7 @@ let writing ctx d =
     | None -> deciding ctx (ref [])
 
 (** The types [d], written at namespace scope, introduces there, by the
-    entity each declares ({!Cpp_print.decl_type_ref}): the aliases and
+    entity each declares ({!Print.decl_type_ref}): the aliases and
     wrappers it declares and the structs it defines. *)
 let file_scope_types = Ir.file_scope_types
 
@@ -1372,7 +1372,7 @@ let read_decl ctx env d = read_cpp_decl (writing ctx d) env d
    wrapper's own members its fields, each printed where the tree puts it
    ({!Cpp_ast.Absorbed}).  Only a wrapper absorbs, and only its own home: a
    wrapper is built around one inductive's declaration, at namespace scope
-   and never inside a template or another wrapper ({!Cpp_ind}), so the
+   and never inside a template or another wrapper ({!Entities}), so the
    wrappers [d] writes are [d] alone. *)
 let absorbing ctx ~homed ?tyctors env (d : Cpp_ir.Resolved.Decl.t) =
   note_file_scope_type ctx d;
@@ -1432,12 +1432,12 @@ let unprinted_fields ctx ~module_ ~vl r fields =
     ~record:r ~vars:vl fields
 
 
-(** [u] printed as {!Cpp_print.print_unprinted} prints it; under
+(** [u] printed as {!Print.print_unprinted} prints it; under
     [CRANE_CHECK_IR], what a declaration, a record's fields or a synthesised
     template need, and how they write their type constructors, read again
     where they are printed, must be what was planned where they were made. *)
 let print_unprinted ctx ~modtype_concept ~assertion (u : Cpp_ast.unprinted) =
-  let text = Cpp_print.print_unprinted ctx ~modtype_concept ~assertion u in
+  let text = Print.print_unprinted ctx ~modtype_concept ~assertion u in
   ( if Base.Probe.checking () then
       let tyctors =
         match u.declaration with

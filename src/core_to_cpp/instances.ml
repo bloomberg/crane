@@ -1034,7 +1034,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
     type [ty] -- by the method's name, as generating its struct declares it,
     without generating a body: the struct's head is planned with the other
     callables, before anything is rendered.  [finish] is what becomes of the
-    struct before it is written ([finish_instance_struct] in {!Cpp_ind}). *)
+    struct before it is written ([finish_instance_struct] in {!Emit.Entities}). *)
 let plan_instance_methods cx ~finish name body ty =
   let rec methods : Cpp_ir.Lowered.Decl.t -> _ = function
     | Struct s ->

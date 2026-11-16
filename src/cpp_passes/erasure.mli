@@ -14,7 +14,7 @@ open Names
 
     A Rocq axiom has no computational content, so its type extracts to
     [std::any].  The registry is populated from each unit's declarations
-    before any of them is generated ({!Cpp.prepare_structure}). *)
+    before any of them is generated ({!Emit.Files.prepare_structure}). *)
 
 (** Register a GlobRef as an axiom type. *)
 val register_axiom_type : GlobRef.t -> unit

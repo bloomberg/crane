@@ -7,7 +7,7 @@
     resolution reads (collision wrappers, alias sources, eponymous records,
     concept names and scopes, lifted instances).
 
-    It runs once per unit from [Cpp.prepare_structure], after the method
+    It runs once per unit from [Emit.Files.prepare_structure], after the method
     registry is obtained and before anything renders. The {!t} record it
     returns is turned into the unit's {!Module_plan}.
 
@@ -940,7 +940,7 @@ let collect_eponymous_records (s : Core.Program.t) : GlobRef.t list =
        s [])
 
 (** The template parameter every module-type concept is written over:
-    {!Cpp_concepts} spells the modelled module by it in the
+    {!Emit.Concepts} spells the modelled module by it in the
     [template<typename M>] head and throughout the requirement bodies. *)
 let concept_self_param = "M"
 
@@ -1029,7 +1029,7 @@ let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
 
 (** Perform all structure analysis in a single call.
 
-    This is called once per unit from [Cpp.prepare_structure], once the method
+    This is called once per unit from [Emit.Files.prepare_structure], once the method
     registry is obtained. The steps are:
     {ol
     {- Register enum inductives across all modules (side-effect on Table).}

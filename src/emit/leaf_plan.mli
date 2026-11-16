@@ -6,7 +6,7 @@
     declarations are finished: the names it is resolved for ({!unprinted_names}),
     the declarations it needs placed ahead of it ({!Cpp_ast.Needs}), and the
     synthesised templates it writes, with how it writes each type
-    constructor a template template argument writes.  {!Cpp_print} prints a
+    constructor a template template argument writes.  {!Print} prints a
     leaf from what was decided here. *)
 
 open Names
@@ -22,7 +22,7 @@ type written = Unit_plan.Cpp_state.written = Written_declaration of Cpp_ir.Resol
 module Ctor_aliases_read : sig
   type t = {
     written : ModPath.t * written;
-    aliases : Cpp_print.ctor_alias list;
+    aliases : Print.ctor_alias list;
     uses : Unit_plan.Cpp_state.tyctor_use list;
   }
 end
@@ -45,8 +45,8 @@ val is_held_back_assertion : Unit_plan.Cpp_state.render_ctx -> Cpp_ir.Resolved.D
 (** Whether a function declaration writes a qualifier into a struct or a
     template parameter, in its name, result or parameters, asked of the
     declaration rather than of its rendering: each name is the one
-    {!Cpp_print.pp_cpp_type_at} writes, from the same heads, at the position
-    given, of the names [names] as {!Cpp_print.print_unprinted} reads them.
+    {!Print.pp_cpp_type_at} writes, from the same heads, at the position
+    given, of the names [names] as {!Print.print_unprinted} reads them.
     [None] for anything but a function declaration, and where only the
     rendering can tell -- an expression's type, a type constructor named as
     a template argument. *)
@@ -156,7 +156,7 @@ val ctor_aliases_written : Unit_plan.Cpp_state.render_ctx -> Cpp_ir.Resolved.Dec
 val ctor_aliases_of_fields :
   Unit_plan.Cpp_state.render_ctx -> vl:Id.t list -> GlobRef.t -> Cpp_ir.Resolved.Type.t list -> Ctor_aliases_read.t
 
-(** {!Cpp_print.print_unprinted}; under [CRANE_CHECK_IR] a declaration, a
+(** {!Print.print_unprinted}; under [CRANE_CHECK_IR] a declaration, a
     record's fields or a synthesised template must need, and write their
     type constructors, printed there, as was planned for them where they
     were made. *)
@@ -213,12 +213,12 @@ val plan_ctor_aliases : (Base.Common.file -> Ctor_aliases_read.t list) -> Unit_p
 
 (** The declaration of a template, written where the tree puts it as
     declared where it is ({!Cpp_ast.Template_in}). *)
-val ctor_alias_declaration : Cpp_print.ctor_alias -> Cpp_ast.t
+val ctor_alias_declaration : Print.ctor_alias -> Cpp_ast.t
 
 (** The templates the file [file] declares, each once, in the order
     planned in [plans]: the aliases it writes, and, in the header, every
     holder the unit writes. *)
-val ctor_aliases_declared_in : Unit_plan.Cpp_state.plans -> file:Base.Common.file -> Cpp_print.ctor_alias list
+val ctor_aliases_declared_in : Unit_plan.Cpp_state.plans -> file:Base.Common.file -> Print.ctor_alias list
 
 (** Under [CRANE_CHECK_IR], check what the file [file] spelled against the
     plan [plans] has. *)

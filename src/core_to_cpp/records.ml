@@ -3,7 +3,7 @@
 
 (** Records and type classes: a record's struct, a class's concept and the
     constraint a class-typed parameter states.  Part of declaration
-    generation (Core to CppIR), re-exported by {!Lower_decl}: {!Cpp_ind}
+    generation (Core to CppIR), re-exported by {!Lower_decl}: {!Emit.Entities}
     asks it for a record's struct and a class's concept, {!Functions}
     and {!Instances} for the constraint on a class-typed parameter.
     The declarations it returns are {!Cpp_ir.Lowered.Decl.t}. *)
@@ -330,7 +330,7 @@ let gen_typeclass_cpp cx name fields =
            across methods (e.g. [g : T -> T] would reuse [a0 : pair<T,T>]
            left over from [f : T*T -> T]).  Using [declval] gives each method
            its own correctly-typed arguments, matching the module-type concept
-           idiom ({!Cpp_concepts.pp_requirement}). *)
+           idiom ({!Emit.Concepts.pp_requirement}). *)
         let arg_declvals =
           List.map (fun arg_ty : Cpp_ir.Lowered.Expr.t -> Declval (converted arg_ty)) args
         in

@@ -439,11 +439,11 @@ type holder_argument = Captured_variable of int * Names.Id.t option | Captured_i
 
 (** A template synthesised for a type constructor with no template name of
     its own, where it is spelled as a template template argument
-    ({!Cpp_leaf_plan.ctor_alias_at}). *)
+    ({!Emit.Leaf_plan.ctor_alias_at}). *)
 type ctor_alias = {
   base : string;  (** What its name is made from. *)
   holder : holder_parameter list option;
-  declared : declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
+  declared : declared_in;  (** Where it is declared ({!Emit.Leaf_plan.ctor_alias_declared}). *)
   body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
@@ -456,7 +456,7 @@ type ctor_alias = {
     written, decided where it is planned: the constructor, the names of the
     type variables it names by index, and the template synthesised for it
     with the arguments a holder is applied to, if it has no template name
-    of its own ({!Cpp_leaf_plan.ctor_alias_at}). *)
+    of its own ({!Emit.Leaf_plan.ctor_alias_at}). *)
 and tyctor_use = {
   constructor : Cpp_ir.Resolved.Type.t;
   vars : Id.t list;
@@ -719,7 +719,7 @@ let element_position mp c =
   {c with module_ = Some mp; visibility = Core_plan.Scope_plan.visibility c.unit.scopes mp}
 
 (** The globals the unit's function bodies name, planned from the unit's
-    installed declarations before either file is rendered ({!Cpp.plan_function_reads}):
+    installed declarations before either file is rendered ({!Emit.Files.plan_function_reads}):
     [None] until planned.  Compared by the definition a name reaches, so a
     read through a module alias counts. *)
 let function_reads : Core.Ref.Can.Set.t option ref = owned_ref None

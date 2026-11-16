@@ -349,7 +349,7 @@ type t = {
   mutable ctx : translation_ctx;
   mutable lifted : Cpp_ir.Lowered.Decl.t list option;
   pp_cpp_type : Unit_plan.Context.t -> Unit_plan.Cpp_state.plans -> bool -> Names.Id.t list -> Cpp_ir.Resolved.Type.t -> Pp.t;
-      (** The printer's spelling of a finished type ({!Cpp_print.pp_cpp_type}),
+      (** The printer's spelling of a finished type ({!Emit.Print.pp_cpp_type}),
           for a [CRANE_CHECK_IR] report to quote.  The printer comes after
           lowering, so the driver hands it in when it creates the context. *)
 }

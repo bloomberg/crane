@@ -35,7 +35,7 @@ let promoted_var_binding cx var_id =
     Such a variable is a type the definition does not own: it belongs to
     whichever instance was in scope where it was declared, so it is a
     parameter there (see {!Base.Table.promoted_type_params} and its uses in
-    [Cpp_ind] and [Lower_decl.gen_type_alias]) and an argument at every use.  Inside the inductive's own
+    [Emit.Entities] and [Lower_decl.gen_type_alias]) and an argument at every use.  Inside the inductive's own
     declaration the argument is that parameter, which is what the [Tpromoted]
     fallback spells; a scope that knows no instance spells the file-scope
     alias, as it did before there was a parameter at all. *)

@@ -3,7 +3,7 @@
 open Crane_plugin
 
 let check name ~input ~expected =
-  let got = Cpp_layout.layout input in
+  let got = Emit.Layout.layout input in
   if got <> expected then (
     Printf.eprintf "cpp_layout: %s\n--- expected\n%s--- got\n%s" name expected got;
     exit 1 )

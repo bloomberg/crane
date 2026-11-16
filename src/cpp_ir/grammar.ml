@@ -7,7 +7,7 @@
     owes nothing, and restates it at the [resolved] phase ({!Resolve}, which
     no module but {!Cpp_passes.Pipeline} calls).  Names
     are resolved and declarations scheduled only after that, when
-    {!Cpp_leaf_plan} and {!Unit_plan.Cpp_resolution} turn it into {!Cpp_ast}.
+    {!Emit.Leaf_plan} and {!Unit_plan.Cpp_resolution} turn it into {!Cpp_ast}.
 
     Every family is phase-indexed.  A [lowered] program may still owe
     decisions that resolution makes -- a type with no C++ spelling yet, a

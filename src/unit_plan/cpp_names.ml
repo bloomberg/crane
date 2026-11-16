@@ -752,7 +752,7 @@ let live_value_reference ctx x : Cpp_resolution.reference =
     Named_value {name; type_arguments = Option.is_empty containing}
 
 (* {!access} as the resolver answers it: the accessors planned before
-   rendering ({!Cpp.plan_accessors}), recorded by module and label, and by
+   rendering ({!Emit.Files.plan_accessors}), recorded by module and label, and by
    canonical name. *)
 let live_access (u : Context.t) x : Cpp_resolution.access =
   let x_mp = modpath_of_r x in

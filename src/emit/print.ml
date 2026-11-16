@@ -241,7 +241,7 @@ let ctor_alias_tvar = Base.Generated_name.role "TcArg"
 type ctor_alias = Unit_plan.Cpp_state.ctor_alias = {
   base : string;  (** What its name is made from. *)
   holder : Unit_plan.Cpp_state.holder_parameter list option;  (** A holder's parameters, where it is one. *)
-  declared : Cpp_ast.declared_in;  (** Where it is declared ({!Cpp_leaf_plan.ctor_alias_declared}). *)
+  declared : Cpp_ast.declared_in;  (** Where it is declared ({!Leaf_plan.ctor_alias_declared}). *)
   body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
@@ -251,7 +251,7 @@ type ctor_alias = Unit_plan.Cpp_state.ctor_alias = {
 }
 
 (** Under [CRANE_CHECK_IR], the templates the file being written spells
-    where nothing collects them: what {!Cpp_leaf_plan.check_ctor_alias_plan} compares with
+    where nothing collects them: what {!Leaf_plan.check_ctor_alias_plan} compares with
     the plan. *)
 let ctor_aliases_spelled : ctor_alias list ref = ref []
 
@@ -668,7 +668,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
      its wrapper struct its head, the [template] disambiguator kept, as the
      applied type writes it; a pointer or variant the library template; a
      variable its name.  Any other shape has no template name, and planning
-     synthesises a template for it ({!Cpp_leaf_plan.ctor_alias_at}). *)
+     synthesises a template for it ({!Leaf_plan.ctor_alias_at}). *)
   and template_name (t : ty) =
     match t with
     | (Variable _ | Entity_application (_, [], _) | Named (_, []) | External (_, []) | Foreign {types = []; _})
@@ -821,7 +821,7 @@ and pp_cpp_expr ctx env args (t : expr) =
            known here: the argument module may define this value as a static
            data member or -- when it is itself inside a template, as a Meyers
            singleton -- as a nullary accessor.  The generated concept accepts
-           both spellings (see [Cpp_concepts.pp_requirement]), so the use
+           both spellings (see [Concepts.pp_requirement]), so the use
            site must accept both too. *)
         let n = string_of_ppcmds full_name in
         str ("[]{ if constexpr (requires { " ^ n ^ "(); }) return " ^ n
@@ -2328,7 +2328,7 @@ and pp_cpp_fields_with_vis ~(struct_name : Pp.t) ctx env fields =
     fiasco for template static inline members whose initialization order
     relative to other inline variables is unspecified.
 
-    The accessor was planned before rendering ({!Cpp.plan_accessors}), so that
+    The accessor was planned before rendering ({!Files.plan_accessors}), so that
     call sites append [()] after the template arguments (see {!pp_cpp_expr}).
 
     @param env      name environment (passed through for sub-expression use)
@@ -2370,7 +2370,7 @@ let pp_meyers_singleton ctx env id (ty : ty) expr_pp =
 let nspace_wrapper_name ctx id = wrapper_name_from (declared_name ctx) id
 
 (** Whether the wrapper [w] of the declaration [members] and the struct
-    inside it are written as one struct, as {!Cpp_ind} decided where it built
+    inside it are written as one struct, as {!Entities} decided where it built
     the wrapper ({!Cpp_ir.Decl.Namespace.wrapper}).  Under [CRANE_CHECK_IR] the
     decision is asked again of what is printed: a sole struct, and a wrapper
     no other declaration of its module was planned into. *)
@@ -2832,7 +2832,7 @@ and pp_leaf_decl ctx env (d : decl) =
   | Static_assert (Concept_application (class_ref, _, _), None) when Unit_plan.Cpp_names.held_back_concept ctx class_ref ->
     (* The concept is declared after the struct being rendered, because its
        requirements name the struct's own types.  The assertion goes with it
-       ({!Cpp_leaf_plan.held_back_assertions}). *)
+       ({!Leaf_plan.held_back_assertions}). *)
     mt ()
   | Static_assert (e, so) ->
     ( match so with

@@ -17,7 +17,7 @@
     A callee has one plan, wherever it is generated: a function rendered
     inside a struct and the same function at namespace scope take one head.
     Every plan is decided before anything is rendered, by planning the
-    unit's callables ({!Cpp.plan_callables}), and handed to the unit's
+    unit's callables ({!Emit.Files.plan_callables}), and handed to the unit's
     stages in its context ({!Unit_plan.Context.t.callables}); generating a
     declaration only checks it ({!check}).
     Generating a declaration must reproduce its plan exactly, and a

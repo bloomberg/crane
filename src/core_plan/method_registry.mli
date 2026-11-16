@@ -23,7 +23,7 @@
 
     This module performs the full method detection scan {i once} over the entire
     [Core.Program.t] before code generation begins (from {!Program_facts} and
-    {!Cpp.prepare_structure}), storing the results in an opaque registry.
+    {!Emit.Files.prepare_structure}), storing the results in an opaque registry.
     During rendering, the backend queries the registry instead of re-scanning
     the AST.
 
@@ -113,7 +113,7 @@ val create :
 (** Tell the naming layer which functions the registry emits inside their
     inductive's struct ({!Base.Common.reserve_methodified}).  {!create} does not:
     the unit being named reserves the methods of the registry it renders with
-    ({!Cpp.prepare_structure}), after the unit's renaming tables are emptied. *)
+    ({!Emit.Files.prepare_structure}), after the unit's renaming tables are emptied. *)
 val reserve_names : t -> unit
 
 (** Look up full method info for a function reference. Returns [None] if the
@@ -276,7 +276,7 @@ val collect_module_type_aliases :
     A top-level inductive is rendered at C++ global scope and its file's other
     functions in the file's module struct, emitted after every global-scope
     type, so an inline method body cannot call a function of its own file
-    that is a method of nothing.  The pre-scan and [Cpp_ind] both use these
+    that is a method of nothing.  The pre-scan and [Emit.Entities] both use these
     to keep such functions out. *)
 
 (** [file_calls modpath decls body]: the functions defined by the file

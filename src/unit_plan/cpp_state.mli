@@ -2,8 +2,8 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The mutable, per-extraction state and registries shared by the C++
-   printing modules ({!Cpp}, {!Cpp_print}, {!Cpp_ind}, {!Cpp_names},
-   {!Cpp_leaf_plan}), which print the finished CppIR program.  It defines the
+   printing modules ({!Emit.Files}, {!Emit.Print}, {!Emit.Entities}, {!Cpp_names},
+   {!Emit.Leaf_plan}), which print the finished CppIR program.  It defines the
    position type every writer is handed ({!render_ctx}), and owns the method
    and name-resolution registries, the [std::]-namespace name configuration
    ({!std_names}), eponymous-record tracking, and the wrapper, nested-struct
@@ -135,13 +135,13 @@ type holder_argument = Captured_variable of int * Names.Id.t option | Captured_i
 
 (** A template synthesised for a type constructor with no template name of
     its own, where it is spelled as a template template argument
-    ([Cpp_leaf_plan.ctor_alias_at]). *)
+    ([Emit.Leaf_plan.ctor_alias_at]). *)
 type ctor_alias = {
   base : string;  (** What its name is made from. *)
   holder : holder_parameter list option;
       (** A holder's parameters, in order, where it is one; none where it is
           a plain alias. *)
-  declared : declared_in;  (** Where it is declared ([Cpp_leaf_plan.ctor_alias_declared]). *)
+  declared : declared_in;  (** Where it is declared ([Emit.Leaf_plan.ctor_alias_declared]). *)
   body : string;
       (** The type it abbreviates, as written where it is declared, with the
           sentinel where the template's own parameter goes. *)
@@ -153,11 +153,11 @@ type ctor_alias = {
 }
 
 (** How a type constructor written as a template template argument is
-    written, decided where it is planned ([Cpp_leaf_plan.ctor_alias_at]). *)
+    written, decided where it is planned ([Emit.Leaf_plan.ctor_alias_at]). *)
 and tyctor_use = {
   constructor : Cpp_ir.Resolved.Type.t;
       (** The constructor: the type with its arguments stripped
-          ([Cpp_print.tyctor_constructor]). *)
+          ([Emit.Print.tyctor_constructor]). *)
   vars : Names.Id.t list;  (** The names of the type variables it names by index. *)
   alias : (ctor_alias * holder_argument list) option;
       (** The template synthesised for it, with the arguments a holder is
@@ -228,7 +228,7 @@ type written = Written_declaration of Cpp_ir.Resolved.Decl.t | Written_fields of
 module Written : Hashtbl.S with type key = Names.ModPath.t * written
 
 (** The synthesised templates each file writes, planned before either is
-    rendered ([Cpp.plan_ctor_aliases]): each file's, in the order it first
+    rendered ([Emit.Files.plan_ctor_aliases]): each file's, in the order it first
     writes them, and those each declaration it writes writes, with how it
     writes its type constructors. *)
 type ctor_alias_plan = {
@@ -244,15 +244,15 @@ type ctor_alias_plan = {
     on each position ({!render_ctx}). *)
 type plans = {
   analysis : Core_plan.Structure.t option;
-      (** What analysing the structure concluded ([Cpp.prepare_structure]). *)
+      (** What analysing the structure concluded ([Emit.Files.prepare_structure]). *)
   frames : module_frame Names.MPmap.t;
       (** Each module's frame, as the walk that plans the unit's callables
-          entered it ([Cpp.plan_callables]). *)
+          entered it ([Emit.Files.plan_callables]). *)
   concepts : concept_plan Names.MPmap.t;
       (** Each module's concepts, planned by the same walk. *)
   ctor_aliases : ctor_alias_plan option;
       (** The synthesised templates each file writes; none until planned
-          ([Cpp.plan_ctor_aliases]): a declaration rendered before then, for
+          ([Emit.Files.plan_ctor_aliases]): a declaration rendered before then, for
           its text, or on its own, places none. *)
 }
 
@@ -300,7 +300,7 @@ and tyctor_plan =
     first spelled: the printer decides none. *)
 and tyctor_decision = {
   decide : render_ctx -> Names.Id.t list -> Cpp_ir.Resolved.Type.t -> (ctor_alias * holder_argument list) option;
-      (** The decision ([Cpp_leaf_plan.ctor_alias_at]). *)
+      (** The decision ([Emit.Leaf_plan.ctor_alias_at]). *)
   noted : tyctor_use list ref;  (** The uses decided so far, in the order first spelled. *)
 }
 
@@ -324,7 +324,7 @@ and render_ctx = {
   module_ : Names.ModPath.t option;
       (** The module whose element is being written, if one is: the one
           whose struct a synthesised template it writes may be declared in
-          ([Cpp_leaf_plan.ctor_alias_home]). *)
+          ([Emit.Leaf_plan.ctor_alias_home]). *)
   frame : Cpp_resolution.frame;
       (** The scopes printing the declaration being written has entered
           inside the one it is written in, innermost first
@@ -342,7 +342,7 @@ and render_ctx = {
   aliases : ctor_alias list ref option;
       (** Where the synthesised templates spelled from here are collected,
           in the order first spelled, by what asked which ones its text
-          spells ([Cpp_leaf_plan.ctor_aliases_found]); none where nothing
+          spells ([Emit.Leaf_plan.ctor_aliases_found]); none where nothing
           collects them.  Every position derived from this one collects into
           the same list, a template's body written where it is declared
           included. *)
@@ -368,7 +368,7 @@ module File_scope : sig
 end
 
 (** What the header declares at file scope, planned with its layout
-    ({!Cpp_leaf_plan.file_scope_types}); [None] until planned, which file
+    ({!Emit.Leaf_plan.file_scope_types}); [None] until planned, which file
     layout planning's own questions are asked before.  The implementation
     declares no type of its own. *)
 val header_file_scope : File_scope.t option ref
@@ -444,7 +444,7 @@ val note_program_reads : Core.Ref.Can.Set.t -> unit
 (** Whether a function body of the unit names [r] (as planned by
     {!plan_function_reads}; nothing does before it is planned).  A header's
     [static inline] variable such a body reads is written [[[gnu::used]]]:
-    see the CppIR [Variable] case of {!Cpp_print}'s declaration printer. *)
+    see the CppIR [Variable] case of {!Emit.Print}'s declaration printer. *)
 val read_by_a_function : Names.GlobRef.t -> bool
 
 (** {2 Template static accessors} *)
@@ -467,7 +467,7 @@ val add_accessor : accessors -> Names.ModPath.t -> Names.Label.t -> accessors
 val add_accessor_ref : accessors -> Names.GlobRef.t -> accessors
 
 (** The module paths and labels of the accessors of the unit given: those
-    its plan decided ([Cpp.plan_accessors]), every earlier unit's of a
+    its plan decided ([Emit.Files.plan_accessors]), every earlier unit's of a
     separate extraction, and those its pre-scan of the whole program
     found ({!Context.t.accessors}). *)
 val template_static_accessor_names : Context.t -> (Names.ModPath.t * Names.Label.t) list
@@ -577,7 +577,7 @@ val with_std_names : Context.t -> Context.t
 (** The module the wrapper struct of this name wraps, where it holds
     declarations and therefore cannot be merged with the module's
     inductive, among the unit's: its own, planned
-    ([Cpp.plan_unmerged_wrappers]), and every earlier unit's of a separate
+    ([Emit.Files.plan_unmerged_wrappers]), and every earlier unit's of a separate
     extraction ({!Context.t.unmerged_wrappers}). *)
 val unmerged_wrapper : Context.t -> string -> Names.ModPath.t option
 
@@ -620,7 +620,7 @@ val add_nested_struct_name :
 
 (** Whether the reference is itself emitted as a struct nested in another,
     among the nested structs of the unit given: its own, planned
-    ([Cpp.plan_nested_structs]), and every earlier unit's of a separate
+    ([Emit.Files.plan_nested_structs]), and every earlier unit's of a separate
     extraction ({!Context.t.nested_structs}). *)
 val is_nested_struct_ref : Context.t -> Names.GlobRef.t -> bool
 

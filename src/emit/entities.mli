@@ -5,7 +5,7 @@
 
    This module turns Core inductives ([Core.Inductive.t]) and declarations
    ([Core.Decl.t]) into {!Cpp_ir.Lowered} declarations, between translation
-   ({!Core_to_cpp.Lower_expr}, {!Core_to_cpp.Lower_decl}) and the printer ({!Cpp}).  Everything a
+   ({!Core_to_cpp.Lower_expr}, {!Core_to_cpp.Lower_decl}) and the printer ({!Files}).  Everything a
    declaration becomes is generated once, ahead of both files
    ({!generate_ahead}), finished in the unit's program
    ({!Cpp_passes.Unit_program}), and taken from there by each file's pass:
@@ -214,7 +214,7 @@ val render_section : Unit_plan.Cpp_state.render_ctx -> section -> Cpp_ast.t list
 val resolver_at : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.spelling -> Cpp_ast.resolver
 
 (** {!Cpp_ast.resolve_tree} by {!resolver_at}, a declaration naming what
-    {!Cpp_leaf_plan.unprinted_names} and {!Cpp_concepts.names_requested} say,
+    {!Leaf_plan.unprinted_names} and {!Concepts.names_requested} say,
     for a question about [t] rather than to write it: nothing it names is
     noted as written ({!Base.Common.check_written_files}). *)
 val resolve_tree : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.t -> Cpp_ast.t
@@ -223,7 +223,7 @@ val resolve_tree : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_
     it: what a struct's head names is noted as written. *)
 val resolve : Core_to_cpp.Lowering_state.t -> file:Base.Common.file -> Cpp_ast.scheduled -> Cpp_ast.scheduled
 
-(** {!Cpp_leaf_plan.resolved_names_into_a_struct} of a declaration as [file]
+(** {!Leaf_plan.resolved_names_into_a_struct} of a declaration as [file]
     writes it spelled [spelling]: at the position printing it is at, and of
     the names resolution settles there ({!resolver_at}), which are the ones
     printing it reads. *)

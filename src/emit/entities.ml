@@ -48,7 +48,7 @@ type rendered = (Base.Common.env * Cpp_ir.Resolved.Decl.t) list
 
 (** Print the declarations an entry point answered with. *)
 let pp_decls ctx (ds : rendered) =
-  Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Cpp_leaf_plan.write_decl ctx env d) ds)
+  Cpp_ast.concat Pp.fnl (List.map (fun (env, d) -> Leaf_plan.write_decl ctx env d) ds)
 
 (** The struct a module's declarations are written inside of, when the module is
     written as a struct at all.
@@ -134,7 +134,7 @@ let declarations_only decls = {decls; member_defs = []; promoted_sft = None}
 (** How the header writes a module's body: inside a struct or not, and with
     the module's class concepts already declared ahead of its struct or not,
     which is all generating a declaration asks of where it is written
-    ({!Cpp.walk_as_rendered} works both out from the module's frame).
+    ({!Files.walk_as_rendered} works both out from the module's frame).
     Planned for every module ahead of the files, by the module. *)
 type header_scope = {
   in_struct : bool;
@@ -182,7 +182,7 @@ let ind_header_decls cx scope kn (ind : Core.Inductive.t) =
   let names = Array.mapi (fun i p -> GlobRef.IndRef (kn, i)) ind.packets in
   (* Written at namespace scope: outside every struct, or moved out of the
      collision struct holding it ahead of the concepts
-     ({!Cpp.plan_concept_prerequisites}), which is planned. *)
+     ({!Files.plan_concept_prerequisites}), which is planned. *)
   let at_namespace_scope =
     (not scope.in_struct)
     || Array.for_all (Core_plan.Module_plan.is_namespace_scope_ref (Core_to_cpp.Lowering_state.unit_context cx).modules) names
@@ -1352,7 +1352,7 @@ let spelling_position cx ~file spelling =
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
   | _, Template_in declared ->
-    Cpp_leaf_plan.ctor_alias_render_ctx (file_start u (Core_to_cpp.Lowering_state.plans cx) file) declared
+    Leaf_plan.ctor_alias_render_ctx (file_start u (Core_to_cpp.Lowering_state.plans cx) file) declared
 
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling cx ~file spelling k = k (spelling_position cx ~file spelling)
@@ -1372,7 +1372,7 @@ let resolver_at cx ~file spelling frame key =
    those its concepts name. *)
 let requested cx d =
   let u = Core_to_cpp.Lowering_state.unit_context cx in
-  Cpp_leaf_plan.unprinted_names u d @ Cpp_concepts.names_requested cx u d
+  Leaf_plan.unprinted_names u d @ Concepts.names_requested cx u d
 
 let resolve_tree cx ~file t =
   Base.Common.without_noting_written_files (fun () ->
@@ -1385,12 +1385,12 @@ let resolve cx ~file = Cpp_ast.resolve ~requested:(requested cx) ~resolve:(resol
 let names_into_a_struct_as_written cx ~file spelling decl =
   let names = Unit_plan.Cpp_resolution.resolve (resolver_at cx ~file spelling) (requested cx (Declaration {env = empty_env ();
                                                                                            decl})) in
-  at_spelling cx ~file spelling (fun ctx -> Cpp_leaf_plan.resolved_names_into_a_struct ctx names decl)
+  at_spelling cx ~file spelling (fun ctx -> Leaf_plan.resolved_names_into_a_struct ctx names decl)
 
 let write_unprinted cx ~file spelling u =
   at_spelling cx ~file spelling (fun ctx ->
-      Cpp_leaf_plan.print_unprinted ctx ~modtype_concept:(Cpp_concepts.pp_modtype_concept cx)
-        ~assertion:Cpp_concepts.pp_assertion u )
+      Leaf_plan.print_unprinted ctx ~modtype_concept:(Concepts.pp_modtype_concept cx)
+        ~assertion:Concepts.pp_assertion u )
 
 type group = {source : ModPath.t; declarations : rendered}
 type section = group list
@@ -1400,7 +1400,7 @@ let render_section ctx (groups : section) =
     (fun {source; declarations} ->
       Cpp_ast.elements ~source
         (Cpp_ast.concat Pp.fnl
-          (List.map (fun (env, d) -> Cpp_leaf_plan.unprinted ctx ~module_:source env d) declarations)) )
+          (List.map (fun (env, d) -> Leaf_plan.unprinted ctx ~module_:source env d) declarations)) )
     groups
 
 (** The concept of each class, generated ahead of the files in the module

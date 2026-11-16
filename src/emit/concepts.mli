@@ -29,7 +29,7 @@ val pp_assertion : Unit_plan.Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t
     beyond the references the tree holds itself: what
     {!Cpp_ast.resolve_tree} resolves into its table.  Of a module type's
     concept, every name its declaration writes, the globals of the types it
-    writes included ({!Cpp_leaf_plan.global_names}); of any other
+    writes included ({!Leaf_plan.global_names}); of any other
     declaration, nothing. *)
 val names_requested :
   Core_to_cpp.Lowering_state.t -> Unit_plan.Context.t -> Cpp_ast.declaration -> (Unit_plan.Cpp_resolution.frame * Unit_plan.Cpp_resolution.key) list

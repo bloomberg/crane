@@ -638,7 +638,7 @@ let mono_environment ~opaque_access refs mpl =
 (** Returns the language descriptor for the current extraction target. *)
 let descr () =
   match lang () with
-  | Cpp -> Cpp.cpp_descr
+  | Cpp -> Emit.Files.cpp_descr
 
 (* From a filename string "foo.cpp" or "foo", builds "foo.cpp" and "foo.h" Works
    similarly for the other languages. *)
@@ -1052,16 +1052,16 @@ let layout_pass_names =
 
 (** Settle the unit's layout -- where each declaration lives and what it is
     called ({!Core_plan.Module_plan}) -- then the names of the modules and the globals
-    it declares, in declaration order ({!Cpp.plan_module_names},
-    {!Cpp.plan_names}), and those it refers to
-    ({!Cpp.plan_referenced_names}), and of its constructors' fields
-    ({!Cpp.plan_field_names}), which of those fields are stored behind the
-    pointer ({!Cpp.plan_pointer_fields}), which wrapper structs hold
-    declarations ({!Cpp.plan_unmerged_wrappers}), which elements the
+    it declares, in declaration order ({!Emit.Files.plan_module_names},
+    {!Emit.Files.plan_names}), and those it refers to
+    ({!Emit.Files.plan_referenced_names}), and of its constructors' fields
+    ({!Emit.Files.plan_field_names}), which of those fields are stored behind the
+    pointer ({!Emit.Files.plan_pointer_fields}), which wrapper structs hold
+    declarations ({!Emit.Files.plan_unmerged_wrappers}), which elements the
     concepts cannot be read without, the module plan's last fact
-    ({!Cpp.plan_concept_prerequisites}), which constants are
-    accessor functions ({!Cpp.plan_accessors}), and how a definition written
-    outside its struct's body names the struct ({!Cpp.plan_scopes}), then
+    ({!Emit.Files.plan_concept_prerequisites}), which constants are
+    accessor functions ({!Emit.Files.plan_accessors}), and how a definition written
+    outside its struct's body names the struct ({!Emit.Files.plan_scopes}), then
     elaborate every call of the unit and bind the elaborations
     ({!Core_plan.Elaborate.structure}), so that planning the callables reads
     them as emission does, then plan the callable of each
@@ -1081,23 +1081,23 @@ let layout_pass_names =
     in it. *)
 let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   Base.Pipeline_trace.event "layout" prepare_layout;
-  let modules, names, analysis = Cpp.prepare_structure cx u struc in
+  let modules, names, analysis = Emit.Files.prepare_structure cx u struc in
   let acc = {acc with modules = Core_plan.Module_plan.extend acc.modules modules} in
   with_plans cx {Unit_plan.Cpp_state.no_plans with analysis = Some analysis} @@ fun () ->
   with_plan cx {u with names = Some names} acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_names;
-  let module_names = Cpp.plan_module_names struc in
-  let names = Cpp.plan_names struc in
+  let module_names = Emit.Files.plan_module_names struc in
+  let names = Emit.Files.plan_names struc in
   Base.Pipeline_trace.event "layout" plan_referenced_names;
-  let referenced_names = Cpp.plan_referenced_names struc in
+  let referenced_names = Emit.Files.plan_referenced_names struc in
   Base.Pipeline_trace.event "layout" plan_field_names;
-  let field_names = Cpp.plan_field_names struc in
+  let field_names = Emit.Files.plan_field_names struc in
   Base.Pipeline_trace.event "layout" plan_pointer_fields;
-  let pointer_fields = Cpp.plan_pointer_fields cx struc in
+  let pointer_fields = Emit.Files.plan_pointer_fields cx struc in
   let acc = {acc with pointer_fields = Core_plan.Pointer_fields.add acc.pointer_fields pointer_fields} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_unmerged_wrappers;
-  let unmerged_wrappers = Cpp.plan_unmerged_wrappers cx () in
+  let unmerged_wrappers = Emit.Files.plan_unmerged_wrappers cx () in
   let acc =
     { acc with
       unmerged_wrappers =
@@ -1105,14 +1105,14 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_concept_prerequisites;
-  let modules = Cpp.plan_concept_prerequisites cx modules struc in
+  let modules = Emit.Files.plan_concept_prerequisites cx modules struc in
   let acc = {acc with modules = Core_plan.Module_plan.extend acc.modules modules} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_scopes;
-  let scopes = Cpp.plan_scopes cx struc in
+  let scopes = Emit.Files.plan_scopes cx struc in
   with_context cx {u with scopes = Core_plan.Scope_plan.bound_of scopes} @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_promoted_inductives;
-  let promoted_inductives = Cpp.plan_promoted_inductives u struc in
+  let promoted_inductives = Emit.Files.plan_promoted_inductives u struc in
   let acc =
     { acc with
       promoted_inductives =
@@ -1120,16 +1120,16 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_accessors;
-  let accessors = Cpp.plan_accessors cx u struc in
+  let accessors = Emit.Files.plan_accessors cx u struc in
   let acc = {acc with accessors = List.fold_left Unit_plan.Cpp_state.add_accessor_ref acc.accessors accessors} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_nested_structs;
-  let nested_structs = Cpp.plan_nested_structs cx struc in
+  let nested_structs = Emit.Files.plan_nested_structs cx struc in
   let acc =
     {acc with nested_structs = List.fold_left Unit_plan.Cpp_state.add_nested_struct_name acc.nested_structs nested_structs} in
   with_plan cx u acc @@ fun u ->
   Base.Pipeline_trace.event "layout" plan_instance_promoted_types;
-  let instance_promoted_types = Cpp.plan_instance_promoted_types cx struc in
+  let instance_promoted_types = Emit.Files.plan_instance_promoted_types cx struc in
   let acc =
     { acc with
       instance_promoted_types =
@@ -1142,18 +1142,18 @@ let plan_layout cx u (acc : Accumulated_plan.t) struc k =
   let elaborations =
     Core_to_cpp.Lowering_state.generating_outside_modules cx @@ fun () ->
     Core_plan.Elaborate.structure
-      ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Cpp.registered_methods
+      ~methods:(fun kn ind -> List.map (fun (_, vars, candidate) -> (vars, candidate)) (Emit.Files.registered_methods
         cx kn ind))
       struc
   in
   Core_to_cpp.Lowering_state.with_unit_facts cx { (Core_to_cpp.Lowering_state.unit_facts cx) with elaborations = Some elaborations }
   @@ fun () ->
   Base.Pipeline_trace.event "layout" plan_callables;
-  let ((callables, instance_methods) as planned), (frames, concepts) = Cpp.plan_callables cx struc in
+  let ((callables, instance_methods) as planned), (frames, concepts) = Emit.Files.plan_callables cx struc in
   if
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
     &&
-    let (callables', instance_methods'), _ = Cpp.plan_callables cx ~reversed:true struc in
+    let (callables', instance_methods'), _ = Emit.Files.plan_callables cx ~reversed:true struc in
     not
       ( Target_plan.same_callables callables callables'
       && Target_plan.same_instance_methods instance_methods instance_methods' )
@@ -1306,14 +1306,14 @@ let get_comment () =
   if String.is_empty s then None else Some s
 
 (** The printer's text [raw], for the file [file] if any, laid out
-    ({!Cpp_layout.layout}), or kept as written under
+    ({!Emit.Layout.layout}), or kept as written under
     [Set Crane Format Style "None"].  Text the layout fails on is kept as
     written, with a warning: it is still the C++ the printer meant. *)
 let laid_out ?(file = "") raw =
   if Base.Table.format_style () = "None" then
     raw
   else
-    match Cpp_layout.layout ~file raw with
+    match Emit.Layout.layout ~file raw with
     | text -> text
     | exception (Sys.Break as e) -> raise e
     | exception e ->
@@ -1376,7 +1376,7 @@ let core_passes cx to_appear : Core.Program.extracted Base.Pipeline_trace.pass l
 (** A translation context nothing has been lowered in yet, quoting finished
     types in its reports as the printer spells them. *)
 let translation_context () =
-  Core_to_cpp.Lowering_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Cpp_print.pp_cpp_type u plans lead tvars ty) ()
+  Core_to_cpp.Lowering_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Emit.Print.pp_cpp_type u plans lead tvars ty) ()
 
 let core_pass_names =
   let cx = translation_context () in
@@ -1553,15 +1553,15 @@ let elaborate_unit cx (u : Unit_plan.Context.t) elaborations =
     type aliases, into [plan].  They are decided from the inductive kinds
     {!analyze_and_plan} recorded, so after it.  Deciding records each as it
     goes, which is what the readers of {!Cpp_ir.Tparam_kinds} take (see
-    {!Cpp_ind.template_kinds}); under [CRANE_CHECK_IR] they are decided a
+    {!Emit.Entities.template_kinds}); under [CRANE_CHECK_IR] they are decided a
     second time, against the first's, and the two must agree. *)
 let plan_representation cx plan struc =
   Base.Pipeline_trace.event "represent" template_kinds;
-  let kinds = Cpp_ind.template_kinds cx struc in
+  let kinds = Emit.Entities.template_kinds cx struc in
   let plan = Target_plan.with_template_kinds plan kinds in
   if
     Sys.getenv_opt "CRANE_CHECK_IR" <> None
-    && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Cpp_ind.template_kinds cx struc)))
+    && not (Target_plan.equal plan (Target_plan.with_template_kinds plan (Emit.Entities.template_kinds cx struc)))
   then CErrors.anomaly Pp.(str "Crane: planning the same structure twice decided differently.");
   plan
 
@@ -1672,7 +1672,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
   reset_renaming_tables ();
   let unsafe_needs =
     {
-      Backend.erased_values = struct_ast_search Base.Core_util.is_erased_value struc;
+      Emit.Backend.erased_values = struct_ast_search Base.Core_util.is_erased_value struc;
       erased_types = struct_type_search Base.Core_util.is_erased_type struc;
       unknown_types = struct_type_search (( == ) Core.Type.Unknown) struc;
       magic = false;
@@ -1723,15 +1723,15 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
      emission reads, and each pass is handed the position it plans for. *)
   end_planning ();
   Base.Pipeline_trace.event "emit" "generate_ahead";
-  Cpp.generate_ahead cx u struc;
-  Base.Common.plan_written_files (Cpp.files_named_ahead cx u struc);
-  Base.Table.plan_written_customs (Cpp.customs_written_ahead cx u);
+  Emit.Files.generate_ahead cx u struc;
+  Base.Common.plan_written_files (Emit.Files.files_named_ahead cx u struc);
+  Base.Table.plan_written_customs (Emit.Files.customs_written_ahead cx u);
   Base.Table.check_written_mapping_headers ();
-  Cpp.plan_function_reads ();
+  Emit.Files.plan_function_reads ();
   Base.Pipeline_trace.event "emit" "plan_file_layout";
-  Cpp.plan_file_layout cx u struc;
+  Emit.Files.plan_file_layout cx u struc;
   Base.Pipeline_trace.event "emit" "plan_ctor_aliases";
-  let ctor_aliases = Cpp.plan_ctor_aliases cx struc in
+  let ctor_aliases = Emit.Files.plan_ctor_aliases cx struc in
   with_plans cx {(Core_to_cpp.Lowering_state.plans cx) with ctor_aliases = Some ctor_aliases} @@ fun () ->
   let generated_checkpoint = checkpoint () in
   let body_impl, body_hstruct =
@@ -2272,7 +2272,7 @@ let print_per_library cx ~dry loops (core : Core_passes.Phase.normalized Core_pa
   in
   (* Pre-build the method registry from the full structure so that
      cross-module method calls are recognized during per-module rendering. *)
-  Unit_plan.Cpp_state.set_global_method_registry (Cpp.method_registry_of cx struc);
+  Unit_plan.Cpp_state.set_global_method_registry (Emit.Files.method_registry_of cx struc);
   (* Which values another declaration names, any unit's: a function of a
      later unit may read a value of an earlier one, which then has to be
      initialised wherever its header is included
@@ -2612,12 +2612,12 @@ let print_one_decl cx loops struc mp decl =
   with_context cx (elaborate_unit cx u elaborations) @@ fun u ->
   end_planning ();
   let ans =
-    Cpp.generate_decl_ahead cx u ~module_:mp decl;
+    Emit.Files.generate_decl_ahead cx u ~module_:mp decl;
     d.pp_decl cx ~module_:mp decl
   in
   (* The one box the printers rely on: inside it every break is a newline,
-     which is what turns {!Cpp_print.cut2} into the blank line between two
-     declaration groups.  Everything else is {!Cpp_layout}'s to lay out. *)
+     which is what turns {!Emit.Print.cut2} into the blank line between two
+     declaration groups.  Everything else is {!Emit.Layout}'s to lay out. *)
   v 0 ans
 
 (* Show the extraction of the current ongoing proof *)

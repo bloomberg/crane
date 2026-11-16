@@ -30,20 +30,20 @@
       hands to every later stage ({!Unit_plan.Context}), the inductive kinds, recorded in the
       structure ({!Target_plan.record_kinds}), then, once the unit's
       preparation has run, the template-parameter kinds.
-    + {b Layout} ([Base.Common.Plan]): {!Cpp.prepare_structure} runs
+    + {b Layout} ([Base.Common.Plan]): {!Emit.Files.prepare_structure} runs
       {!Core_plan.Structure.analyze} and decides the layout ({!Core_plan.Module_plan});
       then the names of every global and module the unit declares and refers
-      to are decided ({!Cpp.plan_names}, {!Cpp.plan_referenced_names}), the
+      to are decided ({!Emit.Files.plan_names}, {!Emit.Files.plan_referenced_names}), the
       constructor structs' fields and storage, and every generated
-      function's callable plan ({!Cpp.plan_callables}).  All go into the
+      function's callable plan ({!Emit.Files.plan_callables}).  All go into the
       target plan; each decision a reader asks about is bound for the rest
       of the unit as it is taken, over what the earlier units of a separate
       extraction decided ({!Accumulated_plan}).
     + {b Emission} ([Base.Common.Emit]): every declaration is generated and
-      finished ahead of the files ({!Cpp.generate_ahead}), what the files
-      write of it is planned ({!Cpp.plan_file_layout},
-      {!Cpp.plan_ctor_aliases}), and then each file is rendered once, taking
-      what was generated ({!Cpp_ind.generated_once}).  Emission decides
+      finished ahead of the files ({!Emit.Files.generate_ahead}), what the files
+      write of it is planned ({!Emit.Files.plan_file_layout},
+      {!Emit.Files.plan_ctor_aliases}), and then each file is rendered once, taking
+      what was generated ({!Emit.Entities.generated_once}).  Emission decides
       nothing but the names of the helpers it lifts out of bodies; the table
       census taken after planning is compared after emission
       ([check_no_late_decisions]), what it generated against what the unit
@@ -56,12 +56,12 @@
       with the preamble its body demanded, then formatted.
 
     Each Core declaration is generated ahead of the files
-    ({!Cpp_ind.generate_ahead}, {!Core_to_cpp.Lower_decl}, which translate bodies through
+    ({!Emit.Entities.generate_ahead}, {!Core_to_cpp.Lower_decl}, which translate bodies through
     {!Core_to_cpp.Lower_expr}, lowering control as they go), finished
     ({!Cpp_passes.Pipeline.finish}: local closures, constants, temporaries,
     simplification, depth flattening, constraint settling, and the
     {!Cpp_passes.Erasure} seam's casts, free type variables, projections and
-    captures), and printed ({!Cpp_print.read_cpp_decl}, which accepts only a
+    captures), and printed ({!Emit.Print.read_cpp_decl}, which accepts only a
     {!Cpp_passes.Erasure.settled} declaration).
 
     Mutable state is registered with {!Base.State} under one of two scopes:

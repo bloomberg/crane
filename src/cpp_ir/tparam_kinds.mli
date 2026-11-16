@@ -4,9 +4,9 @@
 (** What the template parameters of a generated inductive or alias are, by
     0-based position in its C++ template parameter list.  Planned before
     anything is rendered ({!Target_plan.template_kinds}), recorded as each
-    is decided ({!Cpp_ind.template_kinds}), and recorded again when
+    is decided ({!Emit.Entities.template_kinds}), and recorded again when
     the declaration's header is generated
-    ({!Core_plan.Plan_templates.hkt_templates}, [Cpp_ind]); emptied by
+    ({!Core_plan.Plan_templates.hkt_templates}, [Emit.Entities]); emptied by
     [Base.Table.reset_tables]. *)
 
 open Names

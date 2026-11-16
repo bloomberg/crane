@@ -262,7 +262,7 @@ let make_subst_extra_tvars num_ind_vars extra_tvar_map =
 
 (** [abstract_cpp_type ~over ty] is [ty] with every occurrence of [over]
     -- a type variable compared by its index -- replaced by the carrier
-    parameter (printed as the {!Cpp_print.ctor_alias_tvar} sentinel): the type
+    parameter (printed as the {!Emit.Print.ctor_alias_tvar} sentinel): the type
     constructor whose application to [over] is [ty], or [None] where [over]
     does not occur, so that there is no such constructor to name. *)
 let abstract_cpp_type ~(over : Cpp_ir.Lowered.Type.t) (ty : Cpp_ir.Lowered.Type.t) =

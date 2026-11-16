@@ -24,7 +24,7 @@ open Names
     A Rocq axiom has no computational content, so its type extracts to
     [std::any].  The classification is global to a session — the registry is
     populated from each unit's declarations before anything about the unit
-    is planned ({!Cpp.prepare_structure}) and read here: a function whose
+    is planned ({!Emit.Files.prepare_structure}) and read here: a function whose
     type mentions one is never [constexpr], since it may call a throwing
     axiom stub ({!decide_constexpr}). *)
 

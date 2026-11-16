@@ -7,7 +7,7 @@
     its module types, the types of its eponymous records' fields) at the
     places the printer writes it, rather than raised by the pass that built
     each construct or by the printer as it spells it.  The driver demands
-    them all before either file is rendered ([Cpp.finish_ahead], via
+    them all before either file is rendered ([Emit.Files.finish_ahead], via
     {!Unit_program.demands}); the printer demands nothing, and under
     [CRANE_CHECK_IR] what it writes is checked against them
     ({!Base.Table.written_needs_header}).

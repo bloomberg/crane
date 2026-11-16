@@ -5,8 +5,8 @@
     before anything is rendered -- where declarations live and what they are
     called.  These are backend decisions, part of a unit's target plan
     ({!Target_plan.t.modules}), not observations about the program.  Decided by
-    {!Cpp.prepare_structure} and completed by
-    {!Cpp.plan_concept_prerequisites}; each decision is folded into the
+    {!Emit.Files.prepare_structure} and completed by
+    {!Emit.Files.plan_concept_prerequisites}; each decision is folded into the
     layout the extraction has accumulated ({!extend}, the [modules] field of
     {!Accumulated_plan.t}) and handed to the unit's stages in its context
     ({!Unit_plan.Context.t.modules}) before anything is rendered, read-only
@@ -67,7 +67,7 @@ type t = {
   concept_prerequisites : Label.t list;
       (** The labels of the files' top-level elements the concepts at the top
           of the header cannot be read without, which move ahead of them
-          ({!Cpp.plan_concept_prerequisites}). *)
+          ({!Emit.Files.plan_concept_prerequisites}). *)
 }
 
 (** The plan of a unit that decides nothing. *)

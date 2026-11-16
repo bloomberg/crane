@@ -8,7 +8,7 @@
     types and signature, before anything is rendered -- the target plan's
     template-parameter kinds and callable plans -- and again as the
     declaration is generated, which must agree; {!Core_to_cpp.Functions},
-    {!Core_to_cpp.Inductives} and {!Cpp_ind} ask, and the printer writes what the
+    {!Core_to_cpp.Inductives} and {!Emit.Entities} ask, and the printer writes what the
     head says.  The rewrites a relaxation makes of the declaration under its
     head are {!Head_relaxation}'s. *)
 

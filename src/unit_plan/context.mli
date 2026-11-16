@@ -62,22 +62,22 @@ type t = {
   promoted_inductives : Core.Ref.User.Set.t;
       (** The inductives promoted into their own namespace struct (e.g.
           String.string -> [namespace String { struct String }]): the
-          unit's, planned ([Cpp.plan_promoted_inductives]), and every
+          unit's, planned ([Emit.Files.plan_promoted_inductives]), and every
           earlier unit's of a separate extraction, since a promotion
           outlives the unit that decided it. *)
   instance_promoted_types : (Names.Id.t * Core.Type.t) list Names.GlobRef.Map.t;
       (** The concrete types each instance gives its class's promoted
           variables: those of the unit's instances, planned
-          ([Cpp.plan_instance_promoted_types]), and of every earlier
+          ([Emit.Files.plan_instance_promoted_types]), and of every earlier
           unit's. *)
   scopes : Core_plan.Scope_plan.bound;
       (** How a definition written outside its struct's body names the
           struct, and the other facts of the unit's scope plan: none until
-          the plan is decided ({!Cpp.plan_scopes}). *)
+          the plan is decided ({!Emit.Files.plan_scopes}). *)
   names : Core_plan.Name_resolution.t option;
       (** How each inductive of the unit is classified -- enum, record,
           eponymous record ({!Core_plan.Name_resolution}) --, decided where the
-          structure is analysed ([Cpp.prepare_structure]); none before
+          structure is analysed ([Emit.Files.prepare_structure]); none before
           that, where readers fall back on the table. *)
   loops : Core_to_control.Loop_facts.t;
       (** What loop lowering reads of the analysis of the program and of

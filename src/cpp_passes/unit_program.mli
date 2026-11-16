@@ -3,7 +3,7 @@
 
 (** A unit's program: what it generated and what that finished as, one
     value keyed by one kind of id.  It sits at CppIR finishing: lowering
-    (the Translation_* modules, driven by {!Cpp_ind}) fills it, the
+    (the Translation_* modules, driven by {!Emit.Entities}) fills it, the
     finishing passes ({!Pipeline}) turn its declarations into resolved
     CppIR, and the printer's renders read it.
 
@@ -12,7 +12,7 @@
     ({!record_ahead}), with the helpers lifted out of its bodies
     ({!record_lifted_ahead}); nothing records a helper as it is lifted.  An
     entity names the declarations its generation gives to finish by their
-    {!id}.  {!Cpp.generate_ahead} then finishes all of them at once
+    {!id}.  {!Emit.Files.generate_ahead} then finishes all of them at once
     ({!finish}), each {!Pipeline.finish}ed once under its id, and
     installs the program ({!install}); nothing else finishes a declaration.
     A file's render finds what it writes by id ({!find}): it takes the

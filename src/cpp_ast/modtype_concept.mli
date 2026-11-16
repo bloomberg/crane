@@ -6,7 +6,7 @@
     decided here: which types are [M]'s own members (spelled
     [typename M::x]), which belong to a functor parameter, which come from a
     custom mapping.  The printer only spells those answers
-    ({!Cpp_concepts}).  The concept is built from the Core module type
+    ({!Emit.Concepts}).  The concept is built from the Core module type
     ({!Core_to_cpp.Concept}): each type is converted through
     translation's type conversion and lowered to CppIR, which the concept
     holds.  This module is the value, which the printer reads without

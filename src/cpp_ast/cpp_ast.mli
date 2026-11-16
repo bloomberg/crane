@@ -2,12 +2,12 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** CppAST: the C++ a file writes, as a tree, between rendering and
-    printing.  {!Cpp_leaf_plan} builds its leaves from the finished CppIR
-    declarations ({!Cpp_ir.Resolved.Decl.t}), the driver ({!Cpp}) assembles
+    printing.  {!Emit.Leaf_plan} builds its leaves from the finished CppIR
+    declarations ({!Cpp_ir.Resolved.Decl.t}), the driver ({!Emit.Files}) assembles
     them into a {!translation_unit}, {!schedule} places the declarations
     that are due only once the file is assembled, {!resolve} resolves the
     names each declaration is written with (with the resolvers
-    {!Cpp_ind.resolve} supplies), and {!print} writes the file.
+    {!Emit.Entities.resolve} supplies), and {!print} writes the file.
 
     A file is assembled out of chunks the driver moves around -- a module's
     struct to the top, a concept ahead of everything, a member definition to
@@ -512,7 +512,7 @@ val print_tree : write:(spelling -> unprinted -> Pp.t) -> t -> Pp.t
 
 (** The break between two declaration groups.  It is a break hint, not a
     forced newline, so the vertical box the whole file is printed in
-    ([Extract_env]) decides where it falls; the layout ({!Cpp_layout})
+    ([Extract_env]) decides where it falls; the layout ({!Emit.Layout})
     keeps the blank lines it leaves. *)
 val cut2 : unit -> Pp.t
 

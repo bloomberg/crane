@@ -231,7 +231,7 @@ let () =
                                occurrence = Core.Occurrence.fresh ()};
                    occurrence = Core.Occurrence.fresh ()}
   in
-  Core_passes.Local_types.structure (Core_to_cpp.Calls.local_types_lowering (Core_to_cpp.Lowering_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Cpp_print.pp_cpp_type u plans lead tvars ty) ()))
+  Core_passes.Local_types.structure (Core_to_cpp.Calls.local_types_lowering (Core_to_cpp.Lowering_state.create ~pp_cpp_type:(fun u plans lead tvars ty -> Emit.Print.pp_cpp_type u plans lead tvars ty) ()))
     [(mp "M",
         [term "f" body
           (Core.Type.Arrow

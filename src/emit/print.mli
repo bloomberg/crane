@@ -104,7 +104,7 @@ val cut2 : unit -> Pp.t
 (** {2 The printer's spelling, as planning asks it}
 
     Planning's questions about what a declaration writes
-    ({!Cpp_leaf_plan.resolved_names_into_a_struct}) are asked of the same
+    ({!Leaf_plan.resolved_names_into_a_struct}) are asked of the same
     heads and names the printer writes, not of a rendering. *)
 
 (** A type's name as the type printer writes it: the qualifiers in front of

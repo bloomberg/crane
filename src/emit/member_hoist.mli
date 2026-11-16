@@ -12,7 +12,7 @@
 
     Works on lowered CppIR declarations ({!Cpp_ir.Lowered.Decl.t}): a member
     that crosses the cycle becomes an [Out_of_line_declaration] in its struct
-    and a [Member_definition] after the group.  {!Cpp_ind} calls it while
+    and a [Member_definition] after the group.  {!Entities} calls it while
     laying out the declarations of an inductive group, before the finish
     pipeline runs. *)
 

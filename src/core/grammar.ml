@@ -15,7 +15,7 @@
 
     {[ Rocq PCUIC --[extraction.ml]--> Core --[Core passes]--> Core
        --[Translation and the Translation_* modules]--> CppIR
-       --[resolution]--> CppAST --[Cpp_print]--> C++ ]}
+       --[resolution]--> CppAST --[Emit.Print]--> C++ ]}
 
     Extraction from Rocq's PCUIC first erases everything with no
     computational content -- types, logical ([Prop]) subterms, and

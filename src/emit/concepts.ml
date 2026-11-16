@@ -11,8 +11,8 @@ open Names
 open Base.Common
 open Unit_plan.Cpp_state
 open Unit_plan.Cpp_names
-open Cpp_print
-open Cpp_leaf_plan
+open Print
+open Leaf_plan
 
 (** The modelled module, the parameter every concept is written over
     ({!Core_plan.Structure.concept_self_param}), followed by [::]. *)
@@ -68,7 +68,7 @@ let pp_member_type ~enum name r args =
 
 (* What printing a module type's concept names, at the frames it names them
    in: {!pp_modtype_concept}, read without printing it.  The type printer
-   names the globals of the types it writes ({!Cpp_leaf_plan.global_names}). *)
+   names the globals of the types it writes ({!Leaf_plan.global_names}). *)
 
 let type_names u frame ty = global_names u [frame] (type_globals ty)
 

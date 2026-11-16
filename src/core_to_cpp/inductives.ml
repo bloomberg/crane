@@ -6,7 +6,7 @@
     iterative destructor.
 
     Part of declaration generation: {!Lower_decl} includes this module after
-    {!Functions}, and {!Cpp_ind} calls {!gen_ind_header_v2} and
+    {!Functions}, and {!Emit.Entities} calls {!gen_ind_header_v2} and
     {!gen_record_methods} to turn an inductive or an eponymous record into a
     CppIR struct (or enum).  Methods are generated ahead of the files
     ({!generate_method_ahead}) and taken from {!methods_ahead} when the struct
@@ -1428,7 +1428,7 @@ let gen_ind_header_v2 cx
         let clone_field = accessor ~no_pure:true "clone" self_ty clone_body in
         let conversion_field =
           (* An inductive's [vars] already begin with its promoted variables
-             (see [Cpp_ind]), so nothing is left to keep. *)
+             (see [Emit.Entities]), so nothing is left to keep. *)
           conversion_to_other_instantiation cx ~leading:[] ~name ~templates ~vars
             ~fields:
               (List.mapi

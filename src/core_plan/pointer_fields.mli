@@ -2,7 +2,7 @@
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
 
 (** The fields each generated constructor struct stores behind the smart
-    pointer, as planned before rendering ({!Cpp.plan_pointer_fields}) and
+    pointer, as planned before rendering ({!Emit.Files.plan_pointer_fields}) and
     accumulated over the units of an extraction (the [pointer_fields] of
     {!Accumulated_plan.t}); a unit's stages read them off its context
     ({!Unit_plan.Context.t.pointer_fields}). *)

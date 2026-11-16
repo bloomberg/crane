@@ -910,7 +910,7 @@ let (_, add_flat_inductive, is_flat_inductive_registered) =
 (** {2 Higher-kinded inductive parameters} *)
 
 (* What each template parameter of a generated inductive or alias is lives in
-   {!Cpp_ir.Tparam_kinds}, below this module so that {!Cpp_leaf_plan} can read it;
+   {!Cpp_ir.Tparam_kinds}, below this module so that {!Emit.Leaf_plan} can read it;
    these are its entry points for the rest of the plugin. *)
 let () = on_reset Cpp_ir.Tparam_kinds.reset
 
@@ -2136,7 +2136,7 @@ let () =
           | Some i -> chg_flag (max i 0) );
     }
 
-(* Whether the generated C++ is laid out ({!Cpp_layout}): ["None"] keeps
+(* Whether the generated C++ is laid out ({!Emit.Layout}): ["None"] keeps
    the printer's text as written, any other value lays it out.  The values
    clang-format styles once named are accepted and lay out alike. *)
 let {Goptions.get = format_style} =
@@ -3040,7 +3040,7 @@ let is_flat_inductive_packet kn (ind : Core.Inductive.t) i =
   with Invalid_argument _ | Failure _ -> false
 
 (** Check if [r] is a flat inductive.  First checks the flat-inductives
-    registry (populated by [Cpp.prepare_structure] before rendering).  If not found
+    registry (populated by [Emit.Files.prepare_structure] before rendering).  If not found
     there — which can happen for functor-parameterized inductives whose
     module-path kn differs across instantiation sites — falls back to
     looking up the Core inductive in the inductives cache and running the same

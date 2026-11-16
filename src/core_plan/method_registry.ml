@@ -5,7 +5,7 @@
     functions should become methods on eponymous inductive types.
 
     It runs before any C++ code is emitted, from {!Program_facts} and
-    {!Cpp.prepare_structure}, building a table that maps function [GlobRef.t]
+    {!Emit.Files.prepare_structure}, building a table that maps function [GlobRef.t]
     values to their [method_info] records.
 
     The overall flow is:
@@ -495,7 +495,7 @@ let register_into
     apply the rule about calls with these helpers: the pre-scan
     ([register_methods_for_epon ~top_level_siblings], settled in [create]
     once every inductive's methods are known) and the render-time lookup in
-    [Cpp_ind].  Functions whose types name a module type alias are kept out
+    [Emit.Entities].  Functions whose types name a module type alias are kept out
     at both places too. *)
 
 (** [file_calls modpath decls body]: the functions defined by the file
@@ -1122,7 +1122,7 @@ let reserve_names (reg : t) =
 (** Build the complete method registry from the full extraction structure.
 
     This is the main entry point, called before any C++ code is rendered:
-    by {!Program_facts.analyze_program}, by {!Cpp.prepare_structure} for the
+    by {!Program_facts.analyze_program}, by {!Emit.Files.prepare_structure} for the
     unit being rendered, and by [Normalize].
 
     The two-phase approach (register methods, then compute returns_any) is

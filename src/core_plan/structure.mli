@@ -40,7 +40,7 @@
       needs to know about method registrations to correctly model cross-module
       dependencies (a function that calls a method on a type from another module
       depends on that module).
-    - Runs {i before} any rendering: [Cpp.prepare_structure] turns the {!t}
+    - Runs {i before} any rendering: [Emit.Files.prepare_structure] turns the {!t}
       result into the unit's {!Module_plan}, which rendering iterates in the
       correct order.
     - The enum registration side-effect ([Base.Table.add_enum_inductive]) is also
@@ -166,7 +166,7 @@ type t = {
 (** Perform all structure analysis in a single pass.
 
     This is the main entry point, called once per unit from
-    [Cpp.prepare_structure] -- the pass that renders nothing -- once the
+    [Emit.Files.prepare_structure] -- the pass that renders nothing -- once the
     {!Method_registry} is obtained.
 
     Side effects:
