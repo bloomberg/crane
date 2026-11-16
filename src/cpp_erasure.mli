@@ -164,6 +164,13 @@ val lower_qualifiers : settled -> settled
     non-atomic pointers becomes its pointer's own factory. *)
 val lower_pointer_slots : Unit_context.t -> settled -> settled
 
+(** [mark_unused_bindings decl] records, for each field a match branch binds,
+    whether the branch's finished body or conditions read it; one that is not
+    read is written as the placeholder [_].  A branch that reads none of its
+    fields binds none, nor the alternative.  Before {!name_scrutinees}, which
+    holds no scrutinee for a lone exhaustive branch that binds nothing. *)
+val mark_unused_bindings : settled -> settled
+
 (** [name_scrutinees decl] declares the local each match holds a computed
     scrutinee in, in front of the match, and has the match read that local:
     a variant read through a computed object ([e->v()]) binds the object

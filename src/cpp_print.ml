@@ -1581,16 +1581,19 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
         let binding_qual =
           if scrut.owned then "auto& [" else "const auto& ["
         in
+        let pp_field_binding (fb : _ I.Stmt.Match.field_binding) =
+          if fb.used then Id.print fb.name else str "_"
+        in
         if scrut.flat then
           str binding_qual
           ++ prlist_with_sep (fun () -> str ", ")
-               (fun (fb : _ I.Stmt.Match.field_binding) -> Id.print fb.name)
+               pp_field_binding
                br.field_bindings
           ++ str "] = " ++ Lazy.force scrut_var_pp ++ str ";"
         else
           str binding_qual
           ++ prlist_with_sep (fun () -> str ", ")
-               (fun (fb : _ I.Stmt.Match.field_binding) -> Id.print fb.name)
+               pp_field_binding
                br.field_bindings
           ++ str "] = " ++ str (sn ()).get ++ str "<"
           ++ pp_cpp_type ctx false [] br.ctor_type ++ str ">("
