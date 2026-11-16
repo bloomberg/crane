@@ -6,9 +6,10 @@
 type t = {
   config : Table.unit_config;
   callables : Callable_abi.decided;
+  scopes : Scope_plan.bound;
 }
 
-let make ~config = {config; callables = Callable_abi.undecided}
+let make ~config = {config; callables = Callable_abi.undecided; scopes = Scope_plan.none}
 let detached = make ~config:{Table.concurrent = false}
 let non_atomic_rc u = Table.non_atomic_rc_for u.config
 let count_rc u = Table.count_rc_for u.config

@@ -114,7 +114,7 @@ module Ir = struct
 
   (** The frames printing [d] enters names at: the scopes the declaration
       printer ({!Cpp_print.read_cpp_decl}) enters, read without printing. *)
-  let declaration_frames (d : decl) =
+  let declaration_frames scopes (d : decl) =
     let entered frame l = List.rev_append l frame in
     let template_body tps = if tps = [] then [] else [Cpp_resolution.In_template] in
     let rec decl frame (d : decl) =
@@ -129,7 +129,7 @@ module Ir = struct
       | Function f ->
         let defines = match f.shape with Definition _ -> true | Declaration _ -> false in
         let owner = fst f.path.outer in
-        [Cpp_resolution.Function {owner; defines; scope = Scope_plan.of_declaration owner} :: frame]
+        [Cpp_resolution.Function {owner; defines; scope = Scope_plan.of_declaration scopes owner} :: frame]
       | Struct s -> [frame; entered frame (Cpp_resolution.Inductive_struct s.ref_ :: template_body s.type_params)]
       | Member_definition m ->
         [frame; entered frame (template_body m.type_params @ [Cpp_resolution.Inductive_struct m.owner])]
@@ -419,7 +419,8 @@ let rec declaration_names_into_a_struct ctx (d : Cpp_ir.Resolved.Decl.t) =
   let names_through n = head_names_into_a_struct (unqualified_head n) in
   match d with
   | Function {path = {outer; inner}; return_type; shape = Declaration params; _} ->
-    let ctx = next (Function {owner = fst outer; defines = false; scope = Scope_plan.of_declaration (fst outer)}) ctx in
+    let scope = Scope_plan.of_declaration ctx.unit.scopes (fst outer) in
+    let ctx = next (Function {owner = fst outer; defines = false; scope}) ctx in
     let path = outer :: inner in
     if List.exists (fun (n, _) -> names_through (global_name ctx Type n)) path then Some true
     else any_type ctx ((return_type :: List.map snd params) @ List.concat_map snd path)
@@ -905,9 +906,9 @@ let ctor_alias_declared ctx body : Cpp_ast.declared_in =
 
 (** The visibility a template is declared, and so its body written, in: the
     body of its home module, as planned, or outside every module body. *)
-let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
+let ctor_alias_visibility scopes : Cpp_ast.declared_in -> _ = function
   | In_struct_of home -> (
-    match Scope_plan.visibility home with
+    match Scope_plan.visibility scopes home with
     | Some v -> v
     | None ->
       CErrors.anomaly
@@ -924,16 +925,16 @@ let ctor_alias_visibility : Cpp_ast.declared_in -> _ = function
 let ctor_alias_render_ctx ctx (declared : Cpp_ast.declared_in) =
   let start =
     { (file_start ctx.unit ctx.file) with
-      visibility = Some (ctor_alias_visibility declared);
+      visibility = Some (ctor_alias_visibility ctx.unit.scopes declared);
       aliases = ctx.aliases }
   in
   match (declared, ctx.file) with
   | At_namespace_scope _, _ -> start
   | In_struct_of home, Common.Intf ->
-    {start with in_struct = true; in_template = Scope_plan.templated home; module_ = Some home}
+    {start with in_struct = true; in_template = Scope_plan.templated ctx.unit.scopes home; module_ = Some home}
   | In_struct_of home, Common.Impl ->
     let out_of_line scope = {scope; Cpp_state.Out_of_line.file_scope_aliases = file_scope_aliases_of Common.Impl} in
-    {start with scope = Option.map out_of_line (Scope_plan.of_module home); module_ = Some home}
+    {start with scope = Option.map out_of_line (Scope_plan.of_module ctx.unit.scopes home); module_ = Some home}
 
 (* The indices of the type variables writing [t], naming the variables [vl]
    by index, writes, its type constructors written as [uses] says, read off
@@ -1330,14 +1331,14 @@ let constraint_globals c =
 
 (* What printing [d] names, at each frame it enters: its globals, and the
    definitions it makes. *)
-let declaration_names d =
-  let frames = Ir.declaration_frames d and defined = Ir.defined_types d in
+let declaration_names scopes d =
+  let frames = Ir.declaration_frames scopes d and defined = Ir.defined_types d in
   global_names frames (Ir.declaration_globals d)
   @ List.concat_map (fun frame -> List.map (fun key -> (frame, key)) defined) frames
   @ Ir.function_scopes d
 
-let unprinted_names : Cpp_ast.declaration -> _ = function
-  | Declaration {decl; _} | Absorbed {decl; _} -> declaration_names decl
+let unprinted_names scopes : Cpp_ast.declaration -> _ = function
+  | Declaration {decl; _} | Absorbed {decl; _} -> declaration_names scopes decl
   | Fields {fields; _} -> global_names [[]] (List.concat_map (fun (_, ty) -> type_globals ty) fields)
   | Assertion {subject = Instance {args; _}; _} -> global_names [[]] (List.concat_map type_globals args)
   | Global_alias (Alias_of_type {tparams; _}) -> global_names [[]] (template_param_globals tparams)
@@ -1357,7 +1358,9 @@ let unprinted_names : Cpp_ast.declaration -> _ = function
    planned yet, as decided. *)
 let writing ctx d =
   let names =
-    Cpp_resolution.resolve (fun frame key -> at_frame ctx frame (fun c -> live_value c key)) (declaration_names d)
+    Cpp_resolution.resolve
+      (fun frame key -> at_frame ctx frame (fun c -> live_value c key))
+      (declaration_names ctx.unit.scopes d)
   in
   let ctx = {ctx with names = Names_resolved names} in
   if not (alias_plan_made ()) then deciding ctx (ref [])

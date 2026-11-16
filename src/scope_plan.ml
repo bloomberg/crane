@@ -36,7 +36,6 @@ let equal_plans a b =
        (fun (mp, l) (mp', l') -> ModPath.equal mp mp' && List.equal ModPath.equal l l')
        a.frames b.frames
 
-(* A plan as its queries read it. *)
 type bound = {
   scope_of : scope MPmap.t;
   nested_in : MPset.t;
@@ -57,19 +56,16 @@ let bound_of t =
     local_inductives_of = map_of t.local_inductives;
     frames_of = map_of t.frames }
 
-(* The unit's plan, for the extent {!with_plan} binds it for. *)
-let current = ref (bound_of empty)
+let none = bound_of empty
 
-let with_plan t f = State.bind current (bound_of t) f
+let of_module b mp = MPmap.find_opt mp b.scope_of
+let nested b mp = MPset.mem mp b.nested_in
+let templated b mp = MPset.mem mp b.templated_in
+let visibility b mp = MPmap.find_opt mp b.visibility_of
+let local_inductives b mp = MPmap.find_opt mp b.local_inductives_of
+let frames b mp = MPmap.find_opt mp b.frames_of
 
-let of_module mp = MPmap.find_opt mp !current.scope_of
-let nested mp = MPset.mem mp !current.nested_in
-let templated mp = MPset.mem mp !current.templated_in
-let visibility mp = MPmap.find_opt mp !current.visibility_of
-let local_inductives mp = MPmap.find_opt mp !current.local_inductives_of
-let frames mp = MPmap.find_opt mp !current.frames_of
-
-let of_declaration r =
+let of_declaration b r =
   let origin =
     match Lifted.of_ref r with
     | Some helper -> (
@@ -78,4 +74,4 @@ let of_declaration r =
       | origin -> origin )
     | None -> Some r
   in
-  Option.bind origin (fun o -> of_module (Table.modpath_of_r o))
+  Option.bind origin (fun o -> of_module b (Table.modpath_of_r o))

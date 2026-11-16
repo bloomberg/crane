@@ -648,10 +648,10 @@ let concept_plan mp =
     CErrors.anomaly
       Pp.(str "Crane: the module " ++ str (Names.ModPath.to_string mp) ++ str " has no planned concepts.")
 
-let planned_held_back ~file mp =
+let planned_held_back scopes ~file mp =
   match (file : Common.file) with
   | Intf -> (
-    match Scope_plan.frames mp with
+    match Scope_plan.frames scopes mp with
     | Some frames -> List.concat_map (fun m -> (concept_plan m).held_back) frames
     | None ->
       CErrors.anomaly
@@ -660,14 +660,17 @@ let planned_held_back ~file mp =
 
 let concept_held_back ctx c =
   ctx.in_struct
-  && match ctx.module_ with Some mp -> is_held_back_in (planned_held_back ~file:ctx.file mp) c | None -> false
+  &&
+  match ctx.module_ with
+  | Some mp -> is_held_back_in (planned_held_back ctx.unit.scopes ~file:ctx.file mp) c
+  | None -> false
 
 let class_concept_held_back ctx r = concept_held_back ctx (Class r)
 
 let element_position mp c =
   if c.frame <> [] then
     CErrors.anomaly (Pp.str "Crane: a module's element is written inside a scope a declaration entered.");
-  {c with module_ = Some mp; visibility = Scope_plan.visibility mp}
+  {c with module_ = Some mp; visibility = Scope_plan.visibility c.unit.scopes mp}
 
 (** The globals the unit's function bodies name, planned from the unit's
     installed declarations before either file is rendered ({!Cpp.plan_function_reads}):

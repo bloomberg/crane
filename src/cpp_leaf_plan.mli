@@ -140,7 +140,7 @@ val declaration_globals : Cpp_ir.Resolved.Decl.t -> GlobRef.t list
     {!Cpp_ast.resolve} to resolve before it is printed: of a declaration of
     the program, every global it holds, at every frame its printing
     enters. *)
-val unprinted_names : Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
+val unprinted_names : Scope_plan.bound -> Cpp_ast.declaration -> (Cpp_resolution.frame * Cpp_resolution.key) list
 
 (** What the finished declaration written at the position given, in the
     file it is in, writes; the render of the declaration there reads it back

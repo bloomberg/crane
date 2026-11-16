@@ -97,8 +97,9 @@ val plan_function_reads : unit -> unit
     top, the member definitions a datatype gave up at the end -- and which
     modules' structs it declares ahead of the file: a struct of nothing but
     static function declarations whose types are declared by the file's
-    forward declarations and name nothing inside another struct. *)
-val plan_file_layout : Core.Program.t -> unit
+    forward declarations and name nothing inside another struct.  [u] is
+    the unit's context. *)
+val plan_file_layout : Unit_context.t -> Core.Program.t -> unit
 
 (** Plan the synthesised templates each file writes, before either is
     rendered ({!Cpp_leaf_plan.plan_ctor_aliases}). *)
@@ -138,16 +139,17 @@ val plan_field_names : Core.Program.t -> (Names.GlobRef.t * Names.Id.t list) lis
 (** The inductives promoted to their eponymous module's struct, which the
     module's struct then is ({!Table.with_promoted_inductives}): those of the
     modules outside a functor's body, which the implementation renders
-    outside every struct. *)
-val plan_promoted_inductives : Core.Program.t -> Names.GlobRef.t list
+    outside every struct, as the unit's context [u] plans its scopes. *)
+val plan_promoted_inductives : Unit_context.t -> Core.Program.t -> Names.GlobRef.t list
 
 (** The constants emitted as an accessor function returning a function-local
     static (a Meyers singleton), which a use spells as a call: one written in
     a template -- a functor's body, or a module promoted to its eponymous
     inductive's struct where that has parameters -- and, inside a module's
     struct, one that is a template itself, or any under separate extraction;
-    each a constant its generation does not make a function. *)
-val plan_accessors : Core.Program.t -> Names.GlobRef.t list
+    each a constant its generation does not make a function.  [u] is the
+    unit's context. *)
+val plan_accessors : Unit_context.t -> Core.Program.t -> Names.GlobRef.t list
 
 (** The scope of each module the unit emits as a struct: how a definition of
     one of its members, written outside the struct's body, names the

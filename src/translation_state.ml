@@ -573,7 +573,7 @@ let generating_at (site : generation_site) (f : unit -> 'a) : 'a =
 (** [generating_in mp f] runs [f] generating an element of the body of the
     module [mp], whose planned local inductives it spells bare. *)
 let generating_in (mp : ModPath.t) (f : unit -> 'a) : 'a =
-  match Scope_plan.local_inductives mp with
+  match Scope_plan.local_inductives (unit_context ()).scopes mp with
   | Some _ -> generating_at (In_module mp) f
   | None ->
     CErrors.anomaly
@@ -592,7 +592,7 @@ let generating_outside_modules (f : unit -> 'a) : 'a = generating_at Outside_mod
 let local_inductives_in_scope () =
   match (!tctx).input.generating with
   | Some (In_module mp) -> (
-    match Scope_plan.local_inductives mp with
+    match Scope_plan.local_inductives (unit_context ()).scopes mp with
     | Some local -> local
     | None ->
       CErrors.anomaly

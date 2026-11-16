@@ -212,7 +212,7 @@ let spec_is_hoistable ~module_ (spec : Cpp_ir.Resolved.Decl.t) : bool =
 
 (* Whether the module [mp] is rendered outside every struct, as planned
    ({!Scope_plan.nested}). *)
-let outside_every_struct mp = not (Scope_plan.nested mp)
+let outside_every_struct scopes mp = not (Scope_plan.nested scopes mp)
 
 (** Whether the declaration of each lifted helper the header places at
     namespace scope is hoisted ahead of every definition, by the helper:
@@ -814,7 +814,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
           Probe.checking ()
           && not
                (Module_frame.equal frame
-                  (Module_frame.of_module mp ~name sel
+                  (Module_frame.of_module ctx.unit.scopes mp ~name sel
                      ~enclosing:!current_structure_decls ) )
         then
           Probe.violation "module frames"
@@ -889,7 +889,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
            the module, not about the file: the implementation writes no
            struct around a nested module, but the header does, and promotes
            it only where none encloses it. *)
-        if is_header && Probe.checking () && old_context = outside_every_struct mp then
+        if is_header && Probe.checking () && old_context = outside_every_struct ctx.unit.scopes mp then
           Probe.violation "promoted inductives"
             Pp.(
               str "the module " ++ str (ModPath.to_string mp)
@@ -1120,7 +1120,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
     it, each written in the visibility planned for the module
     ({!Cpp_state.element_position}). *)
 and pp_module_body ~is_header f ctx mp sel =
-  if is_header && Probe.checking () && ctx.in_template <> Scope_plan.templated mp then
+  if is_header && Probe.checking () && ctx.in_template <> Scope_plan.templated ctx.unit.scopes mp then
     Probe.violation "templated modules"
       Pp.(
         str "the module " ++ str (ModPath.to_string mp)
@@ -1537,7 +1537,10 @@ let walk_as_rendered ?(reversed = false) ?(after_wrapper = ignore) ?(classes = f
      class concepts name its members. *)
   let in_module_frame ~module_ mp sel k =
     let name = Cpp_names.module_declared_name mp in
-    let frame = Module_frame.of_module mp ~name sel ~enclosing:!current_structure_decls in
+    let frame =
+      Module_frame.of_module (Translation_state.unit_context ()).scopes mp ~name sel
+        ~enclosing:!current_structure_decls
+    in
     Module_frame.plan mp frame;
     let outer = !header in
     let class_concepts =
@@ -2007,11 +2010,11 @@ let promoted_alias_import files id =
     Asked of what was generated ahead of the files, in the context the
     header writes each struct in ({!walk_as_rendered}), before either file is
     rendered. *)
-let plan_file_layout s =
+let plan_file_layout (u : Unit_context.t) s =
   let hoists ~wrapper mp sel =
     (wrapper
     || (match mp with MPdot (parent, _) -> is_modfile parent | MPfile _ | MPbound _ -> false)
-       && outside_every_struct mp && not (Scope_plan.templated mp))
+       && outside_every_struct u.scopes mp && not (Scope_plan.templated u.scopes mp))
     && module_members_name_only_inductives sel
     && Option.cata
          (List.for_all (fun d ->
@@ -2457,7 +2460,7 @@ let promoted_template mp sel =
 
 (* A module outside every struct is promoted where {!promoted_inductive}
    says.  A promotion outlives the rendering that decided it. *)
-let plan_promoted_inductives s =
+let plan_promoted_inductives (u : Unit_context.t) s =
   let rec elems parent sel =
     List.concat_map
       (fun (l, se) ->
@@ -2465,7 +2468,7 @@ let plan_promoted_inductives s =
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = sel'; _}; _} ->
           let mp = MPdot (parent, l) in
           let own =
-            if outside_every_struct mp then Option.cata (fun (r, _) -> [r]) [] (promoted_inductive mp sel')
+            if outside_every_struct u.scopes mp then Option.cata (fun (r, _) -> [r]) [] (promoted_inductive mp sel')
             else []
           in
           own @ elems mp sel'
@@ -2482,7 +2485,7 @@ let wrapped_files () =
     (fun (mi : Structure_analysis.module_info) -> if mi.wrapper_name <> None then Some mi.modpath else None)
     (get_structure_analysis ()).sorted_modules
 
-let plan_accessors s =
+let plan_accessors (u : Unit_context.t) s =
   Translation_state.generating_outside_modules @@ fun () ->
   let accessor ~in_struct ~in_template r ty =
     if is_any_inline_custom r || Table.is_projection r || is_registered_method r <> None
@@ -2508,7 +2511,7 @@ let plan_accessors s =
           when accessor ~in_struct ~in_template r ty -> [r]
         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = mp;
                                                                                             items = sel}; _} ->
-          elems ~in_struct:true ~in_template:(Scope_plan.templated mp) sel
+          elems ~in_struct:true ~in_template:(Scope_plan.templated u.scopes mp) sel
         | Core.Module.Structure_item.Module {Core.Module.expr = core_mod_expr; _} -> module_expr core_mod_expr
         | Core.Module.Structure_item.Declaration _ | Core.Module.Structure_item.Module_type _ -> [] )
       sel

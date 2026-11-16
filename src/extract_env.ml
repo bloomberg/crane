@@ -1057,8 +1057,9 @@ let layout_pass_names =
     function and method a render will generate.  Each decision a later one
     or a reader asks about is bound for the rest of the unit as soon as it
     is taken: added to [acc], what the unit and the earlier units of its
-    extraction decided ({!Accumulated_plan.bind}), or, for the scopes, the
-    unit's own ({!Scope_plan.with_plan}).  Hands all of them, with the
+    extraction decided ({!Accumulated_plan.bind}), or, for the scopes and
+    the callables, the unit's own, in its context ([u], bound for lowering
+    by {!with_context}).  Hands all of them, with the
     callables assumed of the functions that have no plan, the elaborations,
     and [acc] with the unit's decisions, to [k], which runs lowering with
     the elaborations.  Under [CRANE_CHECK_IR] the callables are
@@ -1097,9 +1098,9 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
   Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_scopes;
   let scopes = Cpp.plan_scopes struc in
-  Scope_plan.with_plan scopes @@ fun () ->
+  with_context {u with scopes = Scope_plan.bound_of scopes} @@ fun u ->
   Pipeline_trace.event "layout" plan_promoted_inductives;
-  let promoted_inductives = Cpp.plan_promoted_inductives struc in
+  let promoted_inductives = Cpp.plan_promoted_inductives u struc in
   let acc =
     { acc with
       promoted_inductives =
@@ -1107,7 +1108,7 @@ let plan_layout u (acc : Accumulated_plan.t) struc k =
   in
   Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_accessors;
-  let accessors = Cpp.plan_accessors struc in
+  let accessors = Cpp.plan_accessors u struc in
   let acc = {acc with accessors = List.fold_left Cpp_state.add_accessor_ref acc.accessors accessors} in
   Accumulated_plan.bind acc @@ fun () ->
   Pipeline_trace.event "layout" plan_nested_structs;
@@ -1696,7 +1697,7 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   Table.check_written_mapping_headers ();
   Cpp.plan_function_reads ();
   Pipeline_trace.event "emit" "plan_file_layout";
-  Cpp.plan_file_layout struc;
+  Cpp.plan_file_layout u struc;
   Pipeline_trace.event "emit" "plan_ctor_aliases";
   Cpp.plan_ctor_aliases struc;
   let generated_checkpoint = checkpoint () in

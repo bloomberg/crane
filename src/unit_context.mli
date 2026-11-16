@@ -18,6 +18,10 @@ type t = {
       (** The callable plans decided so far: none until the unit's are
           ({!Callable_abi.decide}), then its own, its foreign and its
           projection plans as they are planned. *)
+  scopes : Scope_plan.bound;
+      (** How a definition written outside its struct's body names the
+          struct, and the other facts of the unit's scope plan: none until
+          the plan is decided ({!Cpp.plan_scopes}). *)
 }
 
 (** [make ~config] is the context of a unit configured as [config], with

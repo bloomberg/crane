@@ -701,7 +701,7 @@ and lifted_placement =
     in a class template ({!Scope_plan.templated}).  Asked of the
     plan, not of the render context: the implementation writes no template,
     and generates what the header does all the same. *)
-let in_template ~module_ = Scope_plan.templated module_
+let in_template ~module_ = Scope_plan.templated (Translation_state.unit_context ()).scopes module_
 
 (** [functions ~module_ ~lifted funs], generated in [module_], with every
     definition filed in the header inside a template struct, which has no
@@ -1288,12 +1288,12 @@ let planned_header_scope mp =
 
 (* The position at file scope of the header from which an element of the
    module [mp] is written, as planned. *)
-let header_element_position mp =
+let header_element_position u mp =
   let {in_struct; concepts_hoisted} = planned_header_scope mp in
-  { (file_start (Translation_state.unit_context ()) Intf) with
+  { (file_start u Intf) with
     in_struct = in_struct;
     concepts_hoisted = concepts_hoisted;
-    in_template = Scope_plan.templated mp }
+    in_template = Scope_plan.templated u.Unit_context.scopes mp }
 
 type concept_placement = Cpp_state.concept_placement = Ahead_of_struct | After_struct | At_file_scope
 
@@ -1325,8 +1325,8 @@ let concept_placement plan c =
   | None -> CErrors.anomaly Pp.(str "Crane: a concept was written whose placement was not planned.")
 
 (* The visibility planned for the body of [mp]; an anomaly if none was. *)
-let planned_visibility mp =
-  match Scope_plan.visibility mp with
+let planned_visibility (u : Unit_context.t) mp =
+  match Scope_plan.visibility u.scopes mp with
   | Some v -> v
   | None ->
     CErrors.anomaly Pp.(str "Crane: the module " ++ str (ModPath.to_string mp) ++ str " has no planned visibility.")
@@ -1334,14 +1334,15 @@ let planned_visibility mp =
 (* The position a declaration spelled [spelling] is written at in [file],
    a function of the plan alone: nothing installed around it reaches it. *)
 let spelling_position ~file spelling =
-  let element mp c = {c with module_ = Some mp; visibility = Some (planned_visibility mp)} in
+  let u = Translation_state.unit_context () in
+  let element mp c = {c with module_ = Some mp; visibility = Some (planned_visibility u mp)} in
   match ((file : Common.file), (spelling : Cpp_ast.spelling)) with
-  | Intf, Element_of mp -> element mp (header_element_position mp)
-  | Intf, Member_of mp -> element mp {(header_element_position mp) with in_struct = true}
+  | Intf, Element_of mp -> element mp (header_element_position u mp)
+  | Intf, Member_of mp -> element mp {(header_element_position u mp) with in_struct = true}
   (* The implementation writes every element of a module at file scope:
      what it defines out of line is qualified by the scope its plan gives
      it ({!Scope_plan.of_declaration}). *)
-  | Impl, Element_of mp -> element mp (file_start (Translation_state.unit_context ()) Impl)
+  | Impl, Element_of mp -> element mp (file_start u Impl)
   | Impl, Member_of mp ->
     CErrors.anomaly
       Pp.(str "Crane: the implementation writes a member of the struct of " ++ str (ModPath.to_string mp)
@@ -1349,7 +1350,7 @@ let spelling_position ~file spelling =
   (* A synthesised template is written where it is declared, whatever is
      around it. *)
   | _, Template_in declared ->
-    Cpp_leaf_plan.ctor_alias_render_ctx (file_start (Translation_state.unit_context ()) file) declared
+    Cpp_leaf_plan.ctor_alias_render_ctx (file_start u file) declared
 
 (* [k] of the position of [spelling] in [file]. *)
 let at_spelling ~file spelling k = k (spelling_position ~file spelling)
@@ -1367,7 +1368,8 @@ let resolver_at ~file spelling frame key =
 
 (* The names a declaration asks resolution for: those its leaves print and
    those its concepts name. *)
-let requested d = Cpp_leaf_plan.unprinted_names d @ Cpp_concepts.names_requested d
+let requested d =
+  Cpp_leaf_plan.unprinted_names (Translation_state.unit_context ()).scopes d @ Cpp_concepts.names_requested d
 
 let resolve_tree ~file t =
   Common.without_noting_written_files (fun () ->

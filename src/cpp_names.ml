@@ -274,7 +274,7 @@ let promoted_at (c : render_ctx) r =
   is_promoted_inductive r
   &&
   match c.module_ with
-  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around mp))
+  | Some mp -> not (List.exists (globref_equal r) (Module_frame.demoted_around c.unit.scopes mp))
   | None -> true
 
 (** Whether the inductive [r]'s namespace wrapper is merged with its struct
@@ -326,7 +326,7 @@ let local_at (c : render_ctx) r =
   match c.module_ with
   | None -> false
   | Some mp -> (
-    match Scope_plan.local_inductives mp with
+    match Scope_plan.local_inductives c.unit.scopes mp with
     | Some local -> List.exists (globref_equal r) local
     | None ->
       CErrors.anomaly
@@ -593,7 +593,7 @@ let struct_scopes_for (ctx : render_ctx) r n =
          module that is a struct is named as its plan qualifies its
          out-of-line members ({!Scope_plan.qualifier}). *)
       | Ancestor -> (
-        match Scope_plan.of_module (modpath_of_r r) with
+        match Scope_plan.of_module ctx.unit.scopes (modpath_of_r r) with
         | Some sc when Common.is_struct_module (modpath_of_r r) -> classes sc.Scope_plan.qualifier
         | _ -> [] ) )
   | _ -> []
@@ -1214,7 +1214,7 @@ and live_value c (key : Cpp_resolution.key) : Cpp_resolution.value =
   | Value_access r -> Access (live_access r)
   | Read_by_a_function r -> Holds (Cpp_state.read_by_a_function r)
   | Held_back_concept r -> Holds (class_concept_held_back c r)
-  | Out_of_line_scope r -> Scope (Scope_plan.of_declaration r)
+  | Out_of_line_scope r -> Scope (Scope_plan.of_declaration c.unit.scopes r)
   | _ -> Name (live_name c key)
 
 let () =

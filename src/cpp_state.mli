@@ -357,12 +357,13 @@ val plan_module_concepts : Names.ModPath.t -> concept_plan -> unit
 (** The concepts planned for the module [mp]; an anomaly if none were. *)
 val concept_plan : Names.ModPath.t -> concept_plan
 
-(** [planned_held_back ~file mp] is what the concepts held back around the
-    body of the module [mp] are in [file], innermost first: in the header,
-    those each module frame around it ({!Scope_plan.frames}) holds back,
+(** [planned_held_back scopes ~file mp] is what the concepts held back
+    around the body of the module [mp] are in [file], innermost first: in
+    the header, those each module frame around it ({!Scope_plan.frames} of
+    [scopes]) holds back,
     as planned ({!concept_plan}); in the implementation, which declares no
     concept, none. *)
-val planned_held_back : file:Common.file -> Names.ModPath.t -> held_concept list
+val planned_held_back : Scope_plan.bound -> file:Common.file -> Names.ModPath.t -> held_concept list
 
 (** Whether the struct the position is in holds concept [c] back: declared
     after it, so a constraint inside it cannot name [c] yet.  What is held
