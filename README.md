@@ -73,7 +73,7 @@ Or using dune directly:
 dune build -p rocq-crane && dune install
 ```
 
-You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated code is C++26, `-std=c++2c`) to run the tests, and [clang-format](https://clang.llvm.org/docs/ClangFormat.html) for standard formatting.
+You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated code is C++26, `-std=c++2c`) to run the tests.
 
 ### Building and Testing
 

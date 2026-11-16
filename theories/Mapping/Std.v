@@ -6,12 +6,11 @@
     C++ standard library equivalents ([std::optional], [std::pair],
     [std::string], [int64_t], [double]).
 
-    Sets the stdlib flavor to ["std"] and the clang-format style. *)
+    Sets the stdlib flavor to ["std"]. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Shared.
 
 #[export] Set Crane StdLib "std".
-#[export] Set Crane Format Style "{BasedOnStyle: LLVM, SeparateDefinitionBlocks: Always}".
 
 Crane Extract Inductive option =>
   "std::optional<%t0>"
