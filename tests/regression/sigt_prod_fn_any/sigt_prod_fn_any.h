@@ -161,8 +161,7 @@ template <SEM S> struct Make {
   /// shape.
   template <typename F1>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
-                             std::pair<crane::obj, crane::obj>> &e,
-                  F1 &&arg) {
+                             std::pair<crane::obj, crane::obj>> &e, F1 &&arg) {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
     const auto &[f, _x0] = a1;
@@ -182,9 +181,9 @@ struct Inst {
 
 using M = Make<Inst>;
 [[gnu::used]] inline const M::entry my_entry =
-    M::mk(std::monostate{},
-          crane_erase_fn<bool>([](uint64_t n) { return n == UINT64_C(0); }),
-          crane_erase_fn<uint64_t>([](uint64_t n) { return (n + 1); }));
+    M::mk(std::monostate{}, crane_erase_fn<bool>([](uint64_t n) {
+      return n == UINT64_C(0);
+    }), crane_erase_fn<uint64_t>([](uint64_t n) { return (n + 1); }));
 Inst::sem my_arg(std::monostate _x);
 /// In Rocq this is true (predicate 0 =? 0 holds), and the extracted C++ now
 /// returns true as well (before the fix it threw std::bad_any_cast).

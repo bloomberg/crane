@@ -40,8 +40,7 @@ struct LoopifyPairs {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
@@ -51,9 +50,9 @@ struct LoopifyPairs {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
@@ -101,7 +100,6 @@ struct LoopifyPairs {
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -149,9 +147,9 @@ struct LoopifyPairs {
   /// partition p l splits into (satisfies p, doesn't satisfy p).
   template <typename T1, typename F0>
   static std::pair<list<T1>, list<T1>>
-  partition(F0 &&p, const list<T1> &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+  partition(F0 &&p,
+            const list<T1> &l) { /// CraneEnter: captures varying parameters for
+                                 /// each recursive call.
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -188,8 +186,9 @@ struct LoopifyPairs {
           _result = std::make_pair(
               list<T1>::cons(std::move(a0), std::move(yes)), std::move(no));
         } else {
-          _result = std::make_pair(
-              std::move(yes), list<T1>::cons(std::move(a0), std::move(no)));
+          _result =
+              std::make_pair(std::move(yes),
+                             list<T1>::cons(std::move(a0), std::move(no)));
         }
       }
     }
@@ -232,8 +231,7 @@ struct LoopifyPairs {
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
-              &std::get<typename list<std::pair<T1, T2>>::Cons>(_node.v_mut())
-                   .l;
+              &std::get<typename list<std::pair<T1, T2>>::Cons>(_node.v_mut()).l;
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);
           continue;
@@ -255,21 +253,19 @@ struct LoopifyPairs {
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
         auto _value = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-        (_write
-             ? *(*_write =
-                     std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
-                         std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write = std::make_shared<
+                        list<std::pair<T1, std::pair<T2, T3>>>>(
+                        std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
           auto _value = list<std::pair<T1, std::pair<T2, T3>>>::nil();
-          (_write
-               ? *(*_write =
-                       std::make_shared<list<std::pair<T1, std::pair<T2, T3>>>>(
-                           std::move(_value)))
-               : _root.emplace(std::move(_value)));
+          (_write ? *(*_write = std::make_shared<
+                          list<std::pair<T1, std::pair<T2, T3>>>>(
+                          std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a00, a10] =
@@ -292,10 +288,10 @@ struct LoopifyPairs {
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write =
-                &std::get<
-                     typename list<std::pair<T1, std::pair<T2, T3>>>::Cons>(
-                     _node.v_mut())
-                     .l;
+                &std::get<typename list<std::pair<T1,
+                                                  std::pair<T2, T3>>>::Cons>(
+                    _node.v_mut())
+                    .l;
             _loop_l3 = crane_raw(a11);
             _loop_l2 = crane_raw(a10);
             _loop_l1 = crane_raw(a1);
@@ -313,7 +309,6 @@ struct LoopifyPairs {
   split_at(uint64_t n,
            const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                 /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
       uint64_t n;
@@ -365,7 +360,6 @@ struct LoopifyPairs {
   static std::pair<list<T1>, list<T1>>
   swizzle(const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -421,7 +415,6 @@ struct LoopifyPairs {
   static std::pair<list<T1>, list<T1>>
   span(F0 &&p, const list<T1> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -482,7 +475,6 @@ struct LoopifyPairs {
   mapAccumL(F0 &&f, uint64_t acc,
             const list<uint64_t> &l) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const list<uint64_t> *l;
       uint64_t acc;

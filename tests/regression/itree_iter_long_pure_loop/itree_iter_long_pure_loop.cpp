@@ -15,6 +15,7 @@ std::shared_ptr<ITree<uint64_t>> ItreeIterLongPureLoop::count_down(uint64_t n) {
 }
 
 std::shared_ptr<ITree<uint64_t>> ItreeIterLongPureLoop::after_taus(uint64_t n) {
-  return itree_bind(count_down(n),
-                    [](uint64_t r) { return itree_ret((r + 1)); });
+  return itree_bind(count_down(n), [](uint64_t r) {
+    return itree_ret((r + 1));
+  });
 }

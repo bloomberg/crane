@@ -163,11 +163,7 @@ struct RamAccessor {
       ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state init_state =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(0),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(0), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static uint64_t get_main(const ram_reg &rg, uint64_t i);

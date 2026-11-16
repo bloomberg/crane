@@ -184,8 +184,9 @@ struct LocalCofixWithoutParameters {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(uint64_t a0, stream a1) {
-      return stream(crane::lazy<variant_t>(
-          std::in_place, std::in_place_index<0>, a0, std::move(a1)));
+      return stream(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>, a0,
+                                 std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -204,17 +205,21 @@ struct LocalCofixWithoutParameters {
   static List<uint64_t> take(uint64_t k, const stream &s);
   static stream zeros_or(bool b);
   static stream ones_then(const List<uint64_t> &l);
-  static inline const uint64_t result =
-      ((hd(zeros_or(true)) + hd(zeros_or(false))) +
-       take(UINT64_C(4),
-            ones_then(List<uint64_t>::cons(
-                UINT64_C(5),
-                List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()))))
-           .template fold_left<uint64_t>(
-               [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                 return (_x0 + _x1);
-               },
-               UINT64_C(0)));
+  static inline const uint64_t result = ((hd(zeros_or(true)) +
+                                          hd(zeros_or(false))) + take(
+                                             UINT64_C(4), ones_then(
+                                                 List<uint64_t>::cons(
+                                                     UINT64_C(5), List<uint64_t>::cons(
+                                                         UINT64_C(6),
+                                                         List<uint64_t>::nil()))))
+                                                                     .template fold_left<
+                                             uint64_t>(
+                                             [](uint64_t _x0,
+                                                uint64_t _x1)
+                                                  -> uint64_t {
+                                                   return (_x0 + _x1);
+                                                 },
+                                             UINT64_C(0)));
 };
 
 #endif // INCLUDED_LOCAL_COFIX_WITHOUT_PARAMETERS

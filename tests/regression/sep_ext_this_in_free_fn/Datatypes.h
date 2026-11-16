@@ -11,7 +11,6 @@
 #include <variant>
 
 namespace Datatypes {
-
 struct Nat;
 template <typename A> struct List;
 
@@ -172,7 +171,6 @@ public:
     return std::move(*_root);
   }
 };
-
 } // namespace Datatypes
 
 #endif // INCLUDED_DATATYPES

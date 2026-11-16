@@ -1,9 +1,11 @@
 #include "loopify_comparators.h"
 
-uint64_t LoopifyComparators::maximum_by(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyComparators::maximum_by(const List<uint64_t> &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -51,10 +53,12 @@ uint64_t LoopifyComparators::maximum_by(
   return _result;
 }
 
-uint64_t LoopifyComparators::minimum_by(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyComparators::minimum_by(const List<uint64_t> &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -102,9 +106,8 @@ uint64_t LoopifyComparators::minimum_by(
   return _result;
 }
 
-List<uint64_t> LoopifyComparators::merge_by_fuel(uint64_t fuel,
-                                                 const List<uint64_t> &l1,
-                                                 const List<uint64_t> &l2) {
+List<uint64_t> LoopifyComparators::merge_by_fuel(
+    uint64_t fuel, const List<uint64_t> &l1, const List<uint64_t> &l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -120,15 +123,14 @@ List<uint64_t> LoopifyComparators::merge_by_fuel(uint64_t fuel,
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = *_loop_l2;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
           auto _value = *_loop_l1;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -190,9 +192,9 @@ List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
         auto _value = List<uint64_t>::cons(x, *_loop_l);
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -209,10 +211,13 @@ List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyComparators::insertion_sort(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifyComparators::insertion_sort(const List<uint64_t> &l) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };

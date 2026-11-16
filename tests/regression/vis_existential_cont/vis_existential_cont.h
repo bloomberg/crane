@@ -129,11 +129,9 @@ struct VisExistentialCont {
     treeF(const treeF<CraneU0, CraneU1, CraneU2> &_other)
         : v_([&]() -> variant_t {
             if (std::holds_alternative<
-                    typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                    _other.v())) {
-              const auto &[r] =
-                  std::get<typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                      _other.v());
+                    typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
+              const auto &[r] = std::get<
+                  typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
               return RetF{[&]() -> R {
                 if constexpr (crane_convertible<R, const CraneU1 &>) {
                   return crane_convert<R>(r);
@@ -166,9 +164,9 @@ struct VisExistentialCont {
                       if constexpr (crane_convertible<E, const CraneU0 &>) {
                         return crane_convert<E>(x);
                       } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
+                        throw std::logic_error("unreachable: inactive "
+                                               "constructor field at this "
+                                               "instantiation");
                       }
                     }(),
                     crane_convert<crane::fn<T(crane::obj)>>(e)};
@@ -218,19 +216,30 @@ struct VisExistentialCont {
 
     template <typename CraneU0, typename CraneU1>
     tree(const tree<CraneU0, CraneU1> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(
-              _other.lazy_cell(), [=]() -> variant_t {
-                const auto &[observe] =
-                    std::get<typename tree<CraneU0, CraneU1>::Go>(_other.v());
-                return Go{crane_convert<treeF<E, R, tree<E, R>>>(observe)};
-              })) {}
+        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                         [=]() -> variant_t {
+                                                           const auto &[observe] =
+                                                               std::get<
+                                                                   typename tree<
+                                                                       CraneU0,
+                                                                       CraneU1>::Go>(
+                                                                   _other.v());
+                                                           return Go{
+                                                               crane_convert<
+                                                                   treeF<
+                                                                       E, R,
+                                                                       tree<E,
+                                                                            R>>>(
+                                                                   observe)};
+                                                         })) {}
 
     explicit tree(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static tree<E, R> go(treeF<E, R, tree<E, R>> observe) {
-      return tree<E, R>(crane::lazy<variant_t>(
-          std::in_place, std::in_place_index<0>, std::move(observe)));
+      return tree<E, R>(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
+                                 std::move(observe)));
     }
 
     explicit tree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -263,15 +272,26 @@ struct VisExistentialCont {
     static askE ask(Nat a0) { return {std::move(a0)}; }
   };
 
-  static inline const tree<askE, Nat> t =
-      tree<askE, Nat>::go(treeF<askE, Nat, tree<askE, Nat>>::visf(
-          askE::ask(Nat::s(Nat::s(Nat::o()))),
-          crane::fn<tree<askE, Nat>(crane::obj)>(
-              [](const crane::obj &n) -> tree<askE, Nat> {
-                return tree<askE, Nat>::go(
-                    treeF<askE, Nat, tree<askE, Nat>>::retf(
-                        Nat::s(crane::any_cast<Nat>(n))));
-              })));
+  static inline const tree<askE, Nat> t = tree<askE, Nat>::go(treeF<askE, Nat,
+                                                                    tree<askE,
+                                                                         Nat>>::visf(
+                                                                  askE::ask(
+                                                                      Nat::s(
+                                                                          Nat::s(
+                                                                              Nat::o()))),
+                                                                  crane::fn<
+                                                                      tree<askE,
+                                                                           Nat>(
+                                                                          crane::obj)>([](const crane::obj &n) -> tree<
+                                                                                           askE,
+                                                                                           Nat> {
+                                                                                             return tree<askE,
+                                                                                                         Nat>::go(
+                                                                                                 treeF<askE,
+                                                                                                       Nat,
+                                                                                                       tree<askE,
+                                                                                                            Nat>>::retf(Nat::s(crane::any_cast<Nat>(n))));
+                                                                                           })));
   static std::optional<Nat> answer(const Nat &_x, const tree<askE, Nat> &t0);
   static inline const bool is_three = []() -> bool {
     auto _cs = answer(Nat::s(Nat::o()), t);

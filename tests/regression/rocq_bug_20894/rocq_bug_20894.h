@@ -97,13 +97,17 @@ public:
 template <typename M>
 concept S = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::fold } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::fold() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::fold
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::fold()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct RocqBug20894 {

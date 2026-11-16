@@ -5,7 +5,6 @@
 #include <utility>
 
 namespace Ord {
-
 template <typename M>
 concept Ordered = requires {
   typename M::t;
@@ -21,7 +20,6 @@ template <Ordered O> struct Full {
     return O::leb(std::move(y), std::move(x));
   }
 };
-
 } // namespace Ord
 
 #endif // INCLUDED_ORD

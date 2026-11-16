@@ -13,9 +13,9 @@
 #include <utility>
 #include <variant>
 
-template <typename A> struct List;
+template <typename A>
+struct List; /// The local version of mutual_lambda_other_instance: f calls its
 
-/// The local version of mutual_lambda_other_instance: f calls its
 /// partner g at bool, not at the list nat it is entered at, and g
 /// passes the lambda back to f.  Extraction types a local group's bodies
 /// at one instance, which would type f's callable over List and g's

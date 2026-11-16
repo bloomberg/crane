@@ -16,10 +16,14 @@ struct Rank1PolymorphicDefinition {
                           crane::obj x);
   static uint64_t to_nat(church c);
   static bool to_bool(church c);
-  static inline const uint64_t total =
-      (to_nat(crane_erase_global<three, crane::obj>()) +
-       (to_bool(crane_erase_global<three, crane::obj>()) ? UINT64_C(10)
-                                                         : UINT64_C(20)));
+  static inline const uint64_t total = (to_nat(crane_erase_global<three,
+                                                                  crane::obj>()) +
+                                        (
+                                            to_bool(crane_erase_global<
+                                                        three,
+                                                        crane::obj>())
+                                                ? UINT64_C(10)
+                                                : UINT64_C(20)));
 };
 
 #endif // INCLUDED_RANK1_POLYMORPHIC_DEFINITION

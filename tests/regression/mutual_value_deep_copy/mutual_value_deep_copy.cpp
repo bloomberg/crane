@@ -23,8 +23,7 @@ bool MutualValueDeepCopy::reaches_end_b(const MutualValueDeepCopy::b &y) {
     const auto &[a0] =
         std::get<typename MutualValueDeepCopy::b::BNode>(_loop_y->v());
     auto &&_sv0 = *a0;
-    if (std::holds_alternative<typename MutualValueDeepCopy::a::AEnd>(
-            _sv0.v())) {
+    if (std::holds_alternative<typename MutualValueDeepCopy::a::AEnd>(_sv0.v())) {
       return true;
     } else {
       const auto &[a00, a10] =

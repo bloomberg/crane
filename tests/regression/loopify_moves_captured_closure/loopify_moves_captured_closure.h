@@ -173,7 +173,6 @@ struct LoopifyMovesCapturedClosure {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -239,25 +238,21 @@ struct LoopifyMovesCapturedClosure {
   }
 
   static uint64_t sumw(uint64_t w, const tree &t);
-  static inline const uint64_t in_tree =
-      sumw(UINT64_C(2),
-           tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                      UINT64_C(1),
-                      tree::node(tree::leaf(), UINT64_C(1), tree::leaf())));
+  static inline const uint64_t in_tree = sumw(
+      UINT64_C(2), tree::node(
+          tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(1),
+          tree::node(tree::leaf(), UINT64_C(1), tree::leaf())));
   static uint64_t sumw_list(uint64_t w, const List<uint64_t> &l);
   static inline const uint64_t in_list = sumw_list(
-      UINT64_C(2),
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
+      UINT64_C(2), List<uint64_t>::cons(
+          UINT64_C(1), List<uint64_t>::cons(
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
   static uint64_t sumw_acc(uint64_t w, const List<uint64_t> &l);
-  static inline const uint64_t in_acc =
-      sumw_acc(UINT64_C(3),
-               List<uint64_t>::cons(
-                   UINT64_C(1),
-                   List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
+  static inline const uint64_t in_acc = sumw_acc(
+      UINT64_C(3), List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
 };
 
 #endif // INCLUDED_LOOPIFY_MOVES_CAPTURED_CLOSURE

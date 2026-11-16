@@ -7,9 +7,8 @@
 #include <utility>
 #include <variant>
 
-struct Positive;
+struct Positive; /// A local fixpoint of two arguments that is not lifted to a helper, because
 
-/// A local fixpoint of two arguments that is not lifted to a helper, because
 /// its return type is recovered from its body.  Every other de-lifted
 /// fixpoint in the suite is unary, and a unary one cannot show whether the
 /// self-call passes all of its arguments: _self_go(_self_go, p)(x) and

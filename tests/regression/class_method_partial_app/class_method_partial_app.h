@@ -140,10 +140,9 @@ public:
 };
 
 /// A class method is emitted as a static member function of the instance
-/// struct, so it has a fixed arity.  Supplying fewer arguments than that --
-/// here storing sz 2 in a list of nat -> nat -- is emitted as a call rather
-/// than eta-expanded into a closure, giving "too few arguments to function
-/// call".
+/// struct, so it has a fixed arity. Supplying fewer arguments than that -- here
+/// storing sz 2 in a list of nat -> nat -- is emitted as a call rather than
+/// eta-expanded into a closure, giving "too few arguments to function call".
 
 template <typename I, typename A>
 concept Sz = requires {
@@ -159,16 +158,16 @@ struct ClassMethodPartialApp {
 
   static_assert(Sz<SzNat, uint64_t>);
   static inline const uint64_t test =
-      List<crane::fn<uint64_t(uint64_t)>>::cons(
-          [](uint64_t _sat0) { return SzNat::sz(UINT64_C(2), _sat0); },
-          List<crane::fn<uint64_t(uint64_t)>>::cons(
-              [](uint64_t _sat0) { return SzNat::sz(UINT64_C(3), _sat0); },
-              List<crane::fn<uint64_t(uint64_t)>>::nil()))
+      List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t _sat0) {
+        return SzNat::sz(UINT64_C(2), _sat0);
+      }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t _sat0) {
+        return SzNat::sz(UINT64_C(3), _sat0);
+      }, List<crane::fn<uint64_t(uint64_t)>>::nil()))
           .template fold_right<uint64_t>(
-              [](const crane::fn<uint64_t(uint64_t)> &f, uint64_t n) {
-                return (f(UINT64_C(1)) + n);
-              },
-              UINT64_C(0));
+          [](const crane::fn<uint64_t(uint64_t)> &f, uint64_t n) {
+            return (f(UINT64_C(1)) + n);
+          },
+          UINT64_C(0));
 };
 
 #endif // INCLUDED_CLASS_METHOD_PARTIAL_APP

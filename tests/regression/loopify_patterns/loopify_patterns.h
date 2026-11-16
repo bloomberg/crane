@@ -42,8 +42,7 @@ struct LoopifyPatterns {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
@@ -53,9 +52,9 @@ struct LoopifyPatterns {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
@@ -103,7 +102,6 @@ struct LoopifyPatterns {
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -185,12 +183,11 @@ struct LoopifyPatterns {
   /// max_by f l recursive max with function application.
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t
   max_by(F0 &&f,
          const list<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                     /// for each recursive call.
-
     struct CraneEnter {
       const list<uint64_t> *l;
     };
@@ -254,7 +251,6 @@ struct LoopifyPatterns {
   insert_everywhere(const T1 &x,
                     const list<T1> &l) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -289,11 +285,13 @@ struct LoopifyPatterns {
             struct CraneEnter {
               list<list<T1>> lsts;
             };
+
             /// CraneCont_Cons: saves [a00], resumes after recursive call, then
             /// processes rest.
             struct CraneCont_Cons {
               list<T1> a00;
             };
+
             using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
             list<list<T1>> _result{};
             crane::small_vector<CraneFrame> _stack;
@@ -357,14 +355,13 @@ struct LoopifyPatterns {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = *_loop_l1;
-        (_write
-             ? *(*_write = std::make_shared<list<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
-        if (std::holds_alternative<typename list<uint64_t>::Nil>(
-                _loop_l1->v())) {
+        if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l1->v())) {
           auto _value = *_loop_l2;
           (_write ? *(*_write =
                           std::make_shared<list<uint64_t>>(std::move(_value)))
@@ -454,9 +451,9 @@ struct LoopifyPatterns {
     while (true) {
       if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = list<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<list<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -485,11 +482,10 @@ struct LoopifyPatterns {
   /// partition_by p q l partitions into 3 categories based on two predicates.
   template <typename F0, typename F1>
   static std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-  partition_by(
-      F0 &&p, F1 &&q,
-      const list<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+  partition_by(F0 &&p, F1 &&q,
+               const list<uint64_t> &l) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
     struct CraneEnter {
       const list<uint64_t> *l;
     };
@@ -501,8 +497,8 @@ struct LoopifyPatterns {
     };
 
     using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-    std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-        _result{};
+    std::pair<std::pair<list<uint64_t>, list<uint64_t>>,
+              list<uint64_t>> _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&l});
     /// Loopified partition_by: CraneEnter -> CraneCont_Cons.
@@ -529,14 +525,13 @@ struct LoopifyPatterns {
         if (p(a0)) {
           _result = std::make_pair(
               std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
-                             std::move(bs)),
-              std::move(cs));
+                             std::move(bs)), std::move(cs));
         } else {
           if (q(a0)) {
-            _result = std::make_pair(
-                std::make_pair(std::move(as_),
-                               list<uint64_t>::cons(a0, std::move(bs))),
-                std::move(cs));
+            _result = std::make_pair(std::make_pair(
+                                         std::move(as_), list<uint64_t>::cons(
+                                             a0, std::move(bs))),
+                                     std::move(cs));
           } else {
             _result =
                 std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
@@ -554,9 +549,8 @@ struct LoopifyPatterns {
 
   /// filter_map_indexed p f l filters and maps with index.
   template <typename F0, typename F1>
-  static list<uint64_t> filter_map_indexed_aux(F0 &&p, F1 &&f,
-                                               const list<uint64_t> &l,
-                                               uint64_t idx) {
+  static list<uint64_t> filter_map_indexed_aux(
+      F0 &&p, F1 &&f, const list<uint64_t> &l, uint64_t idx) {
     std::optional<list<uint64_t>> _root{};
     std::shared_ptr<list<uint64_t>> *_write = nullptr;
     uint64_t _loop_idx = idx;
@@ -564,9 +558,9 @@ struct LoopifyPatterns {
     while (true) {
       if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = list<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<list<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =

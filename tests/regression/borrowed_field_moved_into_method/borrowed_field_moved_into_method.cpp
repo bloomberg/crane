@@ -699,14 +699,15 @@ Z BorrowedFieldMovedIntoMethod::get(const std::optional<Z> &o) {
 /// Each walk is 3 * 8 = 24.
 bool BorrowedFieldMovedIntoMethod::check(std::monostate) {
   return BinInt::eqb(
-      BinInt::add(get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
-                      arr, Z::z0(),
-                      List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
-                                      List<Nat>::nil()))),
-                  get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
-                      arr, Z::z0(),
-                      List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
-                                      List<Nat>::nil())))),
-      Z::zpos(Positive::xo(Positive::xo(
-          Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))));
+      BinInt::add(
+          get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
+                  arr, Z::z0(), List<Nat>::cons(
+                      Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil()))),
+          get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
+                  arr, Z::z0(), List<Nat>::cons(
+                      Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil())))),
+      Z::zpos(
+          Positive::xo(
+              Positive::xo(
+                  Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))));
 }

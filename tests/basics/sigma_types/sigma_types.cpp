@@ -19,11 +19,10 @@ Sig<uint64_t> SigmaTypes::double_positive(uint64_t n) {
   return Sig<uint64_t>::exist(([&]() {
     auto &[x] = p;
     return x;
-  }() +
-                               [&]() {
-                                 auto &[x0] = p;
-                                 return x0;
-                               }()));
+  }() + [&]() {
+    auto &[x0] = p;
+    return x0;
+  }()));
 }
 
 uint64_t SigmaTypes::use_nat_double(uint64_t n) {

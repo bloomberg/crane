@@ -262,8 +262,8 @@ struct CpsEscape {
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
       crane::fn<uint64_t(uint64_t)> adder =
           [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
-        return t.make_adder(_x0);
-      };
+            return t.make_adder(_x0);
+          };
       box b = store_in_box(std::move(adder));
       auto &[a0] = b;
       return a0(UINT64_C(5));
@@ -287,9 +287,10 @@ struct CpsEscape {
   /// Build two adders from different trees and store both.
   static inline const uint64_t cps_escape_two = []() {
     return []() {
-      tree t1 = tree::node(
-          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
-          tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
+      tree t1 =
+          tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                     UINT64_C(20),
+                     tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
       tree t2 = tree::node(tree::leaf(), UINT64_C(100), tree::leaf());
       box b1 = store_in_box([=, t1 = std::move(t1)](uint64_t _x0) -> uint64_t {
         return t1.make_adder(_x0);

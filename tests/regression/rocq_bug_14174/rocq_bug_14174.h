@@ -23,6 +23,7 @@ enum class Sumbool;
 template <typename A> struct Sumor;
 
 struct SigTNotations {};
+
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -104,8 +105,7 @@ public:
   template <typename CraneU>
   Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<CraneU>::Some>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Option<CraneU>::Some>(_other.v())) {
             const auto &[a] =
                 std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
@@ -186,8 +186,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -208,8 +208,8 @@ template <typename A> struct Sig2 {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -292,6 +292,7 @@ template <typename A, typename P, typename Q> struct SigT2 {
     return {std::move(x), std::move(a1), std::move(a2)};
   }
 };
+
 enum class Sumbool { LEFT, RIGHT };
 
 template <typename A> struct Sumor {
@@ -319,8 +320,7 @@ public:
   template <typename CraneU>
   Sumor(const Sumor<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sumor<CraneU>::Inleft>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Sumor<CraneU>::Inleft>(_other.v())) {
             const auto &[a0] =
                 std::get<typename Sumor<CraneU>::Inleft>(_other.v());
             return Inleft{[&]() -> A {
@@ -377,8 +377,9 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig_rect_uncurried(const sig<A> &v, T1 f) const {
-        return this->template eq_sig_rect<T1>(
-            v, [=, f = std::move(f)]() { return f; }());
+        return this->template eq_sig_rect<T1>(v, [=, f = std::move(f)]() {
+          return f;
+        }());
       }
 
       template <typename T1>
@@ -445,8 +446,9 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sig2_rect_uncurried(const sig2<A> &v, T1 f) const {
-        return this->template eq_sig2_rect<T1>(
-            v, [=, f = std::move(f)]() { return f; }());
+        return this->template eq_sig2_rect<T1>(v, [=, f = std::move(f)]() {
+          return f;
+        }());
       }
 
       template <typename T1>
@@ -528,8 +530,9 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sigT_rect_uncurried(const sigT<A, P> &v, T1 f) const {
-        return this->template eq_sigT_rect<T1>(
-            v, [=, f = std::move(f)]() { return f; }());
+        return this->template eq_sigT_rect<T1>(v, [=, f = std::move(f)]() {
+          return f;
+        }());
       }
 
       template <typename T1>
@@ -627,8 +630,9 @@ struct RocqBug14174 {
 
       template <typename T1>
       T1 eq_sigT2_rect_uncurried(const sigT2<A, P, Q> &v, T1 f) const {
-        return this->template eq_sigT2_rect<T1>(
-            v, [=, f = std::move(f)]() { return f; }());
+        return this->template eq_sigT2_rect<T1>(v, [=, f = std::move(f)]() {
+          return f;
+        }());
       }
 
       template <typename T1>
@@ -641,8 +645,8 @@ struct RocqBug14174 {
       template <typename T1>
       T1 eq_sigT2_rect_existT2_l(const A &u1, const P &u2, const Q &u3,
                                  const T1 &f) const {
-        return sigT2<A, P, Q>::existt2(u1, u2, u3)
-            .template eq_sigT2_rect<T1>(*this, f);
+        return sigT2<A, P, Q>::existt2(u1, u2, u3).template eq_sigT2_rect<T1>(
+            *this, f);
       }
 
       template <typename T1>
@@ -730,9 +734,8 @@ struct RocqBug14174 {
     static T4 eq_sigT2_rect_existT2(const T1 &u1, const T2 &u2, const T3 &u3,
                                     const T1 &v1, const T2 &v2, const T3 &v3,
                                     const T4 &f) {
-      return sigT2<T1, T2, T3>::existt2(u1, u2, u3)
-          .template eq_sigT2_rect<T4>(sigT2<T1, T2, T3>::existt2(v1, v2, v3),
-                                      f);
+      return sigT2<T1, T2, T3>::existt2(u1, u2, u3).template eq_sigT2_rect<T4>(
+          sigT2<T1, T2, T3>::existt2(v1, v2, v3), f);
     }
 
     template <typename T1, typename T2>
@@ -740,6 +743,7 @@ struct RocqBug14174 {
       return sig2<T1>::exist2(u1).template eq_sig2_rect<T2>(
           sig2<T1>::exist2(v1), f);
     }
+
     enum class Sumbool { LEFT, RIGHT };
 
     template <typename T1>
@@ -833,16 +837,16 @@ struct RocqBug14174 {
     template <typename T1, typename T2>
     static sig<crane::fn<T2(T1)>>
     Choice(std::type_identity_t<crane::fn<sig<T2>(T1)>> h) {
-      return sig<crane::fn<T2(T1)>>::exist(
-          [=, h = std::move(h)](const T1 &z) { return h(z).proj1_sig(); });
+      return sig<crane::fn<T2(T1)>>::exist([=, h = std::move(h)](const T1 &z) {
+        return h(z).proj1_sig();
+      });
     }
 
     template <typename T1, typename T2, typename T3>
     static sigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>
     Choice2(std::type_identity_t<crane::fn<sigT<T2, T3>(T1)>> h) {
       return sigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>::existt(
-          [=](const T1 &z) { return h(z).projT1(); },
-          [=](const T1 &z) {
+          [=](const T1 &z) { return h(z).projT1(); }, [=](const T1 &z) {
             sigT<T2, T3> s = h(z);
             auto &[x, a1] = s;
             return std::move(a1);
@@ -870,15 +874,17 @@ struct RocqBug14174 {
     template <typename T1>
     static sig<crane::fn<T1(Nat)>>
     dependent_choice(std::type_identity_t<crane::fn<sig<T1>(T1)>> h, T1 x0) {
-      auto f_impl = [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
-                                                              Nat n) -> T1 {
-        if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
-          return x0;
-        } else {
-          auto &[a0] = std::get<typename Nat::S>(n.v_mut());
-          return h(_self_f(_self_f, *a0)).proj1_sig();
-        }
-      };
+      auto f_impl =
+          [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
+                                                    Nat n)
+               -> T1 {
+                if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
+                  return x0;
+                } else {
+                  auto &[a0] = std::get<typename Nat::S>(n.v_mut());
+                  return h(_self_f(_self_f, *a0)).proj1_sig();
+                }
+              };
       auto f = [=, f_impl = std::move(f_impl)](Nat n) -> T1 {
         return f_impl(f_impl, std::move(n));
       };

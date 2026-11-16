@@ -9,7 +9,7 @@
 struct DensityPotentialTraceCase {
   template <typename F0, typename F1>
     requires std::is_invocable_r_v<Real, F0 &, Real> &&
-             std::is_invocable_r_v<Real, F1 &, Real &&>
+    std::is_invocable_r_v<Real, F1 &, Real &&>
   static Real lapse(F0 &&f, F1 &&mu, Real x) {
     return f(mu(std::move(x)));
   }
@@ -21,11 +21,12 @@ struct DensityPotentialTraceCase {
 
   template <typename F0, typename F1, typename F2, typename F3>
     requires std::is_invocable_r_v<Real, F2 &, Real &> &&
-             std::is_invocable_r_v<Real, F3 &, Real &>
+    std::is_invocable_r_v<Real, F3 &, Real &>
   static Real proper_time_density_path(F0 &&f, F1 &&mu, F2 &&gamma, F3 &&v,
                                        Real t) {
-    return r_sqrt((r_pow(lapse(f, mu, gamma(t)), UINT64_C(2)) -
-                   r_pow(v(t), UINT64_C(2))));
+    return r_sqrt(
+        (r_pow(lapse(f, mu, gamma(t)), UINT64_C(2)) -
+         r_pow(v(t), UINT64_C(2))));
   }
 
   template <typename F0>

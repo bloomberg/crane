@@ -17,12 +17,9 @@ LoopifyResultNoDefault::sum_tree(std::monostate) {
         return Monad_itree<LoopifyResultNoDefault::Ev>::template ret<uint64_t>(
             (r + x));
       },
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))),
+      List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                               UINT64_C(2), List<uint64_t>::cons(
+                                   UINT64_C(3), List<uint64_t>::cons(
+                                       UINT64_C(4), List<uint64_t>::nil())))),
       UINT64_C(0));
 }

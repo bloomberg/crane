@@ -14,13 +14,17 @@
 template <typename M>
 concept Elem = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::dflt } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::dflt() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::dflt
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::dflt()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 template <Elem E> struct MutualTree {
@@ -284,7 +288,6 @@ static_assert(Elem<NatElem>);
 using NatTree = MutualTree<NatElem>;
 const uint64_t test_tree_size = NatTree::tree_size(NatTree::sample_tree());
 const uint64_t test_forest_size = NatTree::forest_size(NatTree::small_forest());
-
 const uint64_t test_tree_sum = NatTree::tree_sum(NatTree::sample_tree());
 
 #endif // INCLUDED_MUTUAL_FUNCTOR

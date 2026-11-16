@@ -13,15 +13,23 @@ template <typename A> struct Tagged;
 template <typename addr> struct Box;
 struct natParams;
 using addr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::addr;
-    { I::bump(std::declval<typename I::addr>()) } -> std::convertible_to<typename I::addr>;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::addr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::addr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::addr;
+  {
+    I::bump(std::declval<typename I::addr>())
+  } -> std::convertible_to<typename I::addr>;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::addr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::addr>;
+});
 template <Params _tcI0, typename T2, typename T1>
 Tagged<T2> walk_crane_mk(const T1 _x);
 

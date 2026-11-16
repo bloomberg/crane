@@ -103,6 +103,7 @@ struct Monads {
   template <typename s, template <typename> class m, typename a>
   using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 };
+
 enum class LocalE { LGET };
 using lenv = Nat;
 using Big = std::pair<Nat, Nat>;
@@ -126,8 +127,7 @@ handle_local_stack(F0 &&h, LocalE e) {
 template <typename T1, typename T2>
 Monads::template stateT<Big, itree_tc_609e8855cd7ad294, T2>
 on_ls(std::type_identity_t<
-      Monads::template stateT<lenv, itree_tc_609e8855cd7ad294, T2>>
-          c) {
+          Monads::template stateT<lenv, itree_tc_609e8855cd7ad294, T2>> c) {
   return [=, c = std::move(c)](const std::pair<Nat, Nat> &b) {
     return itree_bind(c(b.first), [=](const std::pair<Nat, T2> &sa) {
       return itree_ret(
@@ -142,9 +142,9 @@ fused_local(LocalE e) {
   return on_ls<LocalE, T1>(handle_local_stack<LocalE, T1>(
       []() {
         return [](LocalE _x0) -> Monads::template stateT<
-                                  lenv, itree_tc_609e8855cd7ad294, crane::obj> {
-          return handle_local_debug<_tcI0, LocalE, crane::obj>(_x0);
-        };
+            lenv, itree_tc_609e8855cd7ad294, crane::obj> {
+              return handle_local_debug<_tcI0, LocalE, crane::obj>(_x0);
+            };
       }(),
       e));
 }

@@ -1,10 +1,14 @@
 #include "loopify_trees.h"
 
 /// Consolidated UNIQUE tree algorithms - domain-specific tree operations.
-uint64_t LoopifyTrees::tree_sum(const LoopifyTrees::tree<uint64_t> &
-                                    t) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t
+LoopifyTrees::tree_sum(const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -59,10 +63,14 @@ uint64_t LoopifyTrees::tree_sum(const LoopifyTrees::tree<uint64_t> &
 }
 
 /// leaf_sum sums only leaf values.
-uint64_t LoopifyTrees::leaf_sum(const LoopifyTrees::tree<uint64_t> &
-                                    t) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t
+LoopifyTrees::leaf_sum(const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -148,12 +156,11 @@ uint64_t LoopifyTrees::leaf_sum(const LoopifyTrees::tree<uint64_t> &
 }
 
 /// insert_bst BST insertion.
-LoopifyTrees::tree<uint64_t>
-LoopifyTrees::insert_bst(uint64_t x,
-                         const LoopifyTrees::tree<uint64_t>
-                             &t) { /// CraneEnter: captures varying parameters
-                                   /// for each recursive call.
-
+LoopifyTrees::tree<uint64_t> LoopifyTrees::insert_bst(
+    uint64_t x,
+    const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -218,7 +225,6 @@ uint64_t
 LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
                           uint64_t n) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
     const LoopifyTrees::tree<uint64_t> *t;
@@ -309,10 +315,9 @@ LoopifyTrees::count_paths(const LoopifyTrees::tree<uint64_t> &t,
 
 /// sum_of_max_branches sums maximum values along each path.
 uint64_t LoopifyTrees::sum_of_max_branches(
-    const LoopifyTrees::tree<uint64_t>
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -372,11 +377,16 @@ uint64_t LoopifyTrees::sum_of_max_branches(
 
 /// Helper: sum all values in a list of rose trees (processes both tree and
 /// list levels in one recursive function to enable full loopification).
-uint64_t LoopifyTrees::sum_rose_list_fuel(
-    uint64_t fuel, const List<LoopifyTrees::rose>
-                       &cs) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+uint64_t
+LoopifyTrees::sum_rose_list_fuel(uint64_t fuel,
+                                 const List<LoopifyTrees::rose> &cs) { /// CraneEnter:
+                                                                       /// captures
+                                                                       /// varying
+                                                                       /// parameters
+                                                                       /// for
+                                                                       /// each
+                                                                       /// recursive
+                                                                       /// call.
   struct CraneEnter {
     const List<LoopifyTrees::rose> *cs;
     uint64_t fuel;
@@ -445,10 +455,10 @@ uint64_t LoopifyTrees::sum_rose_list_fuel(
 
 /// Helper: flatten a list of rose trees to a flat list of nats.
 List<uint64_t> LoopifyTrees::flatten_rose_list_fuel(
-    uint64_t fuel, const List<LoopifyTrees::rose>
-                       &cs) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+    uint64_t fuel,
+    const List<LoopifyTrees::rose> &cs) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     const List<LoopifyTrees::rose> *cs;
     uint64_t fuel;
@@ -516,11 +526,16 @@ List<uint64_t> LoopifyTrees::flatten_rose_list_fuel(
 }
 
 /// Helper: compute maximum depth among a list of rose trees.
-uint64_t LoopifyTrees::depth_rose_list_fuel(
-    uint64_t fuel, const List<LoopifyTrees::rose>
-                       &cs) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+uint64_t
+LoopifyTrees::depth_rose_list_fuel(uint64_t fuel,
+                                   const List<LoopifyTrees::rose> &cs) { /// CraneEnter:
+                                                                         /// captures
+                                                                         /// varying
+                                                                         /// parameters
+                                                                         /// for
+                                                                         /// each
+                                                                         /// recursive
+                                                                         /// call.
   struct CraneEnter {
     const List<LoopifyTrees::rose> *cs;
     uint64_t fuel;
@@ -591,12 +606,11 @@ uint64_t LoopifyTrees::depth_rose_list_fuel(
 }
 
 /// tree_max t1 t2 element-wise maximum of two trees.
-LoopifyTrees::tree<uint64_t>
-LoopifyTrees::tree_max(const LoopifyTrees::tree<uint64_t> &t1,
-                       const LoopifyTrees::tree<uint64_t>
-                           &t2) { /// CraneEnter: captures varying parameters
-                                  /// for each recursive call.
-
+LoopifyTrees::tree<uint64_t> LoopifyTrees::tree_max(
+    const LoopifyTrees::tree<uint64_t> &t1,
+    const LoopifyTrees::tree<uint64_t> &t2) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t2;
     const LoopifyTrees::tree<uint64_t> *t1;
@@ -681,16 +695,15 @@ List<uint64_t> LoopifyTrees::extract_tree_values(
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<LoopifyTrees::tree<uint64_t>> *_loop_ts = &ts;
   while (true) {
-    if (std::holds_alternative<
-            typename List<LoopifyTrees::tree<uint64_t>>::Nil>(_loop_ts->v())) {
+    if (std::holds_alternative<typename List<LoopifyTrees::tree<uint64_t>>::Nil>(
+            _loop_ts->v())) {
       auto _value = List<uint64_t>::nil();
       (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
               : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-              _loop_ts->v());
+      const auto &[a0, a1] = std::get<
+          typename List<LoopifyTrees::tree<uint64_t>>::Cons>(_loop_ts->v());
       if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
               a0.v())) {
         _loop_ts = crane_raw(a1);
@@ -719,18 +732,17 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
   std::shared_ptr<List<LoopifyTrees::tree<uint64_t>>> *_write = nullptr;
   const List<LoopifyTrees::tree<uint64_t>> *_loop_ts = &ts;
   while (true) {
-    if (std::holds_alternative<
-            typename List<LoopifyTrees::tree<uint64_t>>::Nil>(_loop_ts->v())) {
+    if (std::holds_alternative<typename List<LoopifyTrees::tree<uint64_t>>::Nil>(
+            _loop_ts->v())) {
       auto _value = List<LoopifyTrees::tree<uint64_t>>::nil();
-      (_write
-           ? *(*_write = std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
-                   std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (
+          _write ? *(*_write = std::make_shared<
+                         List<LoopifyTrees::tree<uint64_t>>>(std::move(_value)))
+                 : _root.emplace(std::move(_value)));
       break;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-              _loop_ts->v());
+      const auto &[a0, a1] = std::get<
+          typename List<LoopifyTrees::tree<uint64_t>>::Cons>(_loop_ts->v());
       if (std::holds_alternative<typename LoopifyTrees::tree<uint64_t>::Leaf>(
               a0.v())) {
         _loop_ts = crane_raw(a1);
@@ -743,17 +755,16 @@ List<LoopifyTrees::tree<uint64_t>> LoopifyTrees::extract_tree_children(
         auto _cell = typename List<LoopifyTrees::tree<uint64_t>>::Cons(
             *a00, std::move(_cell1));
         List<LoopifyTrees::tree<uint64_t>> &_node =
-            (_write
-                 ? *(*_write =
-                         std::make_shared<List<LoopifyTrees::tree<uint64_t>>>(
-                             std::move(_cell)))
-                 : _root.emplace(std::move(_cell)));
+            (_write ? *(*_write = std::make_shared<
+                            List<LoopifyTrees::tree<uint64_t>>>(
+                            std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-                 std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
-                     _node.v_mut())
-                     .l->v_mut())
-                 .l;
+                std::get<typename List<LoopifyTrees::tree<uint64_t>>::Cons>(
+                    _node.v_mut())
+                    .l->v_mut())
+                .l;
         _loop_ts = crane_raw(a1);
         continue;
       }
@@ -779,8 +790,7 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
     } else {
       uint64_t f = _loop_fuel - 1;
       List<uint64_t> values = extract_tree_values(_loop_trees);
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              values.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(values.v_mut())) {
         auto _value = List<List<uint64_t>>::nil();
         (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
                         std::move(_value)))
@@ -807,17 +817,16 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
 
 List<List<uint64_t>>
 LoopifyTrees::tree_levels(const LoopifyTrees::tree<uint64_t> &t) {
-  return tree_levels_fuel(UINT64_C(100),
-                          List<LoopifyTrees::tree<uint64_t>>::cons(
-                              t, List<LoopifyTrees::tree<uint64_t>>::nil()));
+  return tree_levels_fuel(
+      UINT64_C(100), List<LoopifyTrees::tree<uint64_t>>::cons(
+          t, List<LoopifyTrees::tree<uint64_t>>::nil()));
 }
 
 /// count_nodes t returns tuple (node_count, sum_of_values).
-std::pair<uint64_t, uint64_t>
-LoopifyTrees::count_nodes(const LoopifyTrees::tree<uint64_t>
-                              &t) { /// CraneEnter: captures varying parameters
-                                    /// for each recursive call.
-
+std::pair<uint64_t, uint64_t> LoopifyTrees::count_nodes(
+    const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -942,10 +951,12 @@ LoopifyTrees::map_cons_to_all(uint64_t x, const List<List<uint64_t>> &lsts) {
 
 /// paths t returns all root-to-leaf paths in tree.
 List<List<uint64_t>>
-LoopifyTrees::paths(const LoopifyTrees::tree<uint64_t>
-                        &t) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+LoopifyTrees::paths(const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -1002,11 +1013,10 @@ LoopifyTrees::paths(const LoopifyTrees::tree<uint64_t>
 }
 
 /// collect_sorted t collects and sorts all tree values.
-List<uint64_t>
-LoopifyTrees::collect_unsorted(const LoopifyTrees::tree<uint64_t>
-                                   &t) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+List<uint64_t> LoopifyTrees::collect_unsorted(
+    const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -1078,9 +1088,9 @@ List<uint64_t> LoopifyTrees::insert_sorted(uint64_t x,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
         auto _value = List<uint64_t>::cons(x, List<uint64_t>::cons(a0, *a1));
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -1097,10 +1107,10 @@ List<uint64_t> LoopifyTrees::insert_sorted(uint64_t x,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyTrees::sort_list(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifyTrees::sort_list(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                   /// varying parameters for
+                                                   /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -1196,11 +1206,10 @@ uint64_t LoopifyTrees::max3(uint64_t a, uint64_t b, uint64_t c) {
 }
 
 /// tree_min_max t finds minimum and maximum values in tree.
-std::pair<uint64_t, uint64_t>
-LoopifyTrees::tree_min_max(const LoopifyTrees::tree<uint64_t>
-                               &t) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-
+std::pair<uint64_t, uint64_t> LoopifyTrees::tree_min_max(
+    const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };
@@ -1306,9 +1315,8 @@ uint64_t LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<uint64_t> &t) {
                 _lc1_tree0.v())) {
           _lc1_result = std::move(_lc1_acc);
         } else {
-          const auto &[a0, a1, a2] =
-              std::get<typename LoopifyTrees::tree<uint64_t>::Node>(
-                  _lc1_tree0.v());
+          const auto &[a0, a1, a2] = std::get<
+              typename LoopifyTrees::tree<uint64_t>::Node>(_lc1_tree0.v());
           uint64_t new_acc = (_lc1_acc + a1);
           _lc1_stack.emplace_back(CraneCont_Node{crane_raw(a2), new_acc});
           _lc1_stack.emplace_back(CraneEnter{crane_raw(a0), new_acc});
@@ -1329,11 +1337,16 @@ uint64_t LoopifyTrees::all_paths_sum(const LoopifyTrees::tree<uint64_t> &t) {
 }
 
 /// tree_contains x t checks if value exists in tree.
-bool LoopifyTrees::tree_contains(
-    uint64_t x, const LoopifyTrees::tree<uint64_t>
-                    &t) { /// CraneEnter: captures varying parameters for each
-                          /// recursive call.
-
+bool
+LoopifyTrees::tree_contains(uint64_t x,
+                            const LoopifyTrees::tree<uint64_t> &t) { /// CraneEnter:
+                                                                     /// captures
+                                                                     /// varying
+                                                                     /// parameters
+                                                                     /// for
+                                                                     /// each
+                                                                     /// recursive
+                                                                     /// call.
   struct CraneEnter {
     const LoopifyTrees::tree<uint64_t> *t;
   };

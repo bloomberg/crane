@@ -8,9 +8,9 @@
 
 struct Nat;
 enum class Comparison;
-template <typename X> struct Compare;
+template <typename X>
+struct Compare; /// Regression test for the `Crane Guard Compare` Label-keying bug (see
 
-/// Regression test for the `Crane Guard Compare` Label-keying bug (see
 /// docs/scan/117-guard-compare-directives-are-keyed-by-final-label-and-can-affect-unrelated-functions.md).
 ///
 /// `guard_compare_table` in src/table.ml used to be keyed by `Label.t`
@@ -93,6 +93,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 template <typename X> struct Compare {

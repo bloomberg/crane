@@ -291,8 +291,8 @@ struct TfunctorRecordOptionField {
     static global<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
                                  global<CraneA0> g) {
       return global<CraneA1>{
-          f(g.g_typ),
-          TFunctor_option<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+          f(g.g_typ), TFunctor_option<TFunctor_exp>::template tfmap<CraneA0,
+                                                                    CraneA1>(
               f, g.g_exp)};
     }
   };
@@ -302,8 +302,9 @@ struct TfunctorRecordOptionField {
       Nat::s(Nat::o()),
       std::make_optional<exp<Nat>>(exp<Nat>::lit(Nat::s(Nat::s(Nat::o()))))};
   static inline const global<Nat> g1 =
-      TFunctor_global::template tfmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); }, g0);
+      TFunctor_global::template tfmap<Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, g0);
   static inline const bool is_five = []() -> bool {
     if (g1.g_exp.has_value()) {
       const exp<Nat> &e = *g1.g_exp;

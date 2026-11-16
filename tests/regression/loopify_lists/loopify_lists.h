@@ -42,8 +42,7 @@ struct LoopifyLists {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
@@ -53,9 +52,9 @@ struct LoopifyLists {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
@@ -103,7 +102,6 @@ struct LoopifyLists {
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -169,8 +167,8 @@ struct LoopifyLists {
                     : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename list<T1>::Cons>(
-                 std::get<typename list<T1>::Cons>(_node.v_mut()).l->v_mut())
-                 .l;
+                std::get<typename list<T1>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
         _loop_l = crane_raw(a1);
         continue;
       }
@@ -227,14 +225,13 @@ struct LoopifyLists {
           auto _cell1 =
               std::make_shared<list<T1>>(typename list<T1>::Cons(sep, nullptr));
           auto _cell = typename list<T1>::Cons(a0, std::move(_cell1));
-          list<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          list<T1> &_node = (
+              _write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename list<T1>::Cons>(
-                   std::get<typename list<T1>::Cons>(_node.v_mut()).l->v_mut())
-                   .l;
+                  std::get<typename list<T1>::Cons>(_node.v_mut()).l->v_mut())
+                  .l;
           _loop_l = crane_raw(a1);
           continue;
         }
@@ -274,7 +271,6 @@ struct LoopifyLists {
   replicate_list(uint64_t n,
                  const list<T1> &l) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       uint64_t n;
     };
@@ -298,11 +294,13 @@ struct LoopifyLists {
           struct CraneEnter {
             const list<T1> *l1;
           };
+
           /// CraneCont_Cons: saves [a0], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_Cons {
             T1 a0;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
           list<T1> _result{};
           crane::small_vector<CraneFrame> _stack;
@@ -344,11 +342,13 @@ struct LoopifyLists {
           struct CraneEnter {
             const list<T1> *l1;
           };
+
           /// CraneCont_Cons: saves [a0], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_Cons {
             T1 a0;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
           list<T1> _result{};
           crane::small_vector<CraneFrame> _stack;
@@ -442,9 +442,9 @@ struct LoopifyLists {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         auto _value =
             list<list<T1>>::cons(list<T1>::nil(), list<list<T1>>::nil());
-        (_write
-             ? *(*_write = std::make_shared<list<list<T1>>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<list<T1>>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -466,7 +466,6 @@ struct LoopifyLists {
   static list<list<T1>>
   inits(const list<T1> &l) { /// CraneEnter: captures varying parameters for
                              /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -506,11 +505,13 @@ struct LoopifyLists {
             struct CraneEnter {
               const list<list<T1>> *ys;
             };
+
             /// CraneCont_Cons: saves [a2], resumes after recursive call, then
             /// processes rest.
             struct CraneCont_Cons {
               list<T1> a2;
             };
+
             using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
             list<list<T1>> _result{};
             crane::small_vector<CraneFrame> _stack;
@@ -522,8 +523,7 @@ struct LoopifyLists {
               if (std::holds_alternative<CraneEnter>(_frame)) {
                 auto _f = std::move(std::get<CraneEnter>(_frame));
                 const list<list<T1>> &ys = *_f.ys;
-                if (std::holds_alternative<typename list<list<T1>>::Nil>(
-                        ys.v())) {
+                if (std::holds_alternative<typename list<list<T1>>::Nil>(ys.v())) {
                   _result = list<list<T1>>::nil();
                 } else {
                   const auto &[a2, a3] =
@@ -589,9 +589,9 @@ struct LoopifyLists {
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         auto _value = list<list<T1>>::cons(_loop_acc, list<list<T1>>::nil());
-        (_write
-             ? *(*_write = std::make_shared<list<list<T1>>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<list<T1>>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
@@ -638,9 +638,9 @@ struct LoopifyLists {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = list<list<T1>>::nil();
-        (_write
-             ? *(*_write = std::make_shared<list<list<T1>>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<list<T1>>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
@@ -650,11 +650,13 @@ struct LoopifyLists {
             const list<T1> *lst;
             uint64_t k;
           };
+
           /// CraneCont_Cons: saves [a0], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_Cons {
             T1 a0;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
           list<T1> _result{};
           crane::small_vector<CraneFrame> _stack;
@@ -696,8 +698,7 @@ struct LoopifyLists {
               return *_loop_lst;
             } else {
               uint64_t m = _loop_k - 1;
-              if (std::holds_alternative<typename list<T1>::Nil>(
-                      _loop_lst->v())) {
+              if (std::holds_alternative<typename list<T1>::Nil>(_loop_lst->v())) {
                 return list<T1>::nil();
               } else {
                 const auto &[a00, a10] =
@@ -747,8 +748,10 @@ struct LoopifyLists {
       struct CraneEnter {
         const list<T1> *l0;
       };
+
       /// CraneCont_Cons: resumes after recursive call, then processes rest.
       struct CraneCont_Cons {};
+
       using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
       uint64_t _result{};
       crane::small_vector<CraneFrame> _stack;
@@ -790,10 +793,11 @@ struct LoopifyLists {
 
   /// count_matching p l counts elements satisfying predicate.
   template <typename F0>
-  static uint64_t count_matching(
-      F0 &&p, const list<uint64_t> &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+  static uint64_t
+  count_matching(F0 &&p,
+                 const list<uint64_t> &l) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
     struct CraneEnter {
       const list<uint64_t> *l;
     };
@@ -865,10 +869,9 @@ struct LoopifyLists {
           const auto &[a00, a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
           auto _cell = typename list<T3>::Cons(f(a0, a00), nullptr);
-          list<T3> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<list<T3>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          list<T3> &_node = (
+              _write ? *(*_write = std::make_shared<list<T3>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename list<T3>::Cons>(_node.v_mut()).l;
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);
@@ -915,8 +918,7 @@ struct LoopifyLists {
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write =
-                &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut())
-                     .l;
+                &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut()).l;
             _loop_l2 = list<T1>(*a10);
             _loop_l1 = list<T1>::nil();
             _loop_fuel = f;
@@ -933,8 +935,7 @@ struct LoopifyLists {
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write =
-                &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut())
-                     .l;
+                &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut()).l;
             _loop_l2 = list<T1>::nil();
             _loop_l1 = list<T1>(*a1);
             _loop_fuel = f;
@@ -949,8 +950,7 @@ struct LoopifyLists {
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write =
-                &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut())
-                     .l;
+                &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut()).l;
             _loop_l2 = list<T1>(*a10);
             _loop_l1 = list<T1>(*a1);
             _loop_fuel = f;
@@ -970,8 +970,10 @@ struct LoopifyLists {
       struct CraneEnter {
         const list<T1> *l;
       };
+
       /// CraneCont_Cons: resumes after recursive call, then processes rest.
       struct CraneCont_Cons {};
+
       using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
       uint64_t _result{};
       crane::small_vector<CraneFrame> _stack;
@@ -1032,8 +1034,7 @@ struct LoopifyLists {
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write =
-              &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut())
-                   .l;
+              &std::get<typename list<std::pair<T1, T1>>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
         }
@@ -1048,7 +1049,6 @@ struct LoopifyLists {
   partition3(F0 &&p, F1 &&q,
              const list<uint64_t> &l) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
     struct CraneEnter {
       const list<uint64_t> *l;
     };
@@ -1060,8 +1060,8 @@ struct LoopifyLists {
     };
 
     using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-    std::pair<std::pair<list<uint64_t>, list<uint64_t>>, list<uint64_t>>
-        _result{};
+    std::pair<std::pair<list<uint64_t>, list<uint64_t>>,
+              list<uint64_t>> _result{};
     crane::small_vector<CraneFrame> _stack;
     _stack.emplace_back(CraneEnter{&l});
     /// Loopified partition3: CraneEnter -> CraneCont_Cons.
@@ -1088,14 +1088,13 @@ struct LoopifyLists {
         if (p(a0)) {
           _result = std::make_pair(
               std::make_pair(list<uint64_t>::cons(a0, std::move(as_)),
-                             std::move(bs)),
-              std::move(cs));
+                             std::move(bs)), std::move(cs));
         } else {
           if (q(a0)) {
-            _result = std::make_pair(
-                std::make_pair(std::move(as_),
-                               list<uint64_t>::cons(a0, std::move(bs))),
-                std::move(cs));
+            _result = std::make_pair(std::make_pair(
+                                         std::move(as_), list<uint64_t>::cons(
+                                             a0, std::move(bs))),
+                                     std::move(cs));
           } else {
             _result =
                 std::make_pair(std::make_pair(std::move(as_), std::move(bs)),
@@ -1117,9 +1116,9 @@ struct LoopifyLists {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = list<list<T1>>::nil();
-        (_write
-             ? *(*_write = std::make_shared<list<list<T1>>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<list<T1>>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
@@ -1128,11 +1127,13 @@ struct LoopifyLists {
           struct CraneEnter {
             const list<list<T1>> *l;
           };
+
           /// CraneCont_Cons: saves [a00], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_Cons {
             T1 a00;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
           list<T1> _result{};
           crane::small_vector<CraneFrame> _stack;
@@ -1171,11 +1172,13 @@ struct LoopifyLists {
           struct CraneEnter {
             const list<list<T1>> *l;
           };
+
           /// CraneCont_Cons: saves [a11], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_Cons {
             std::shared_ptr<list<T1>> a11;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
           list<list<T1>> _result{};
           crane::small_vector<CraneFrame> _stack;
@@ -1263,7 +1266,6 @@ struct LoopifyLists {
   map_accum_l(F0 &&f, const T3 &acc,
               const list<T1> &l) { /// CraneEnter: captures varying parameters
                                    /// for each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
       T3 acc;
@@ -1334,9 +1336,9 @@ struct LoopifyLists {
     while (true) {
       if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = list<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<list<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -1373,9 +1375,9 @@ struct LoopifyLists {
     while (true) {
       if (std::holds_alternative<typename list<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = list<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<list<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<list<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -1417,7 +1419,6 @@ struct LoopifyLists {
   static list<T1>
   flatten(const list<list<T1>> &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const list<list<T1>> *l;
     };
@@ -1455,11 +1456,13 @@ struct LoopifyLists {
           struct CraneEnter {
             const list<T1> *l1;
           };
+
           /// CraneCont_Cons: saves [a00], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_Cons {
             T1 a00;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
           list<T1> _result{};
           crane::small_vector<CraneFrame> _stack;
@@ -1494,8 +1497,9 @@ struct LoopifyLists {
   }
 
   /// flatten_nested l alternative flatten with different pattern: flattens one
-  /// level at a time. Pattern:  :: rest -> flatten rest, (x :: xs) :: rest -> x
-  /// :: flatten (xs :: rest).
+  /// level at a time.
+  /// Pattern: :: rest -> flatten rest, (x :: xs) :: rest -> x :: flatten (xs ::
+  /// rest).
   static list<uint64_t> flatten_nested_fuel(uint64_t fuel,
                                             const list<list<uint64_t>> &l);
   static uint64_t sum_list_lengths(const list<list<uint64_t>> &l);
@@ -1544,7 +1548,6 @@ struct LoopifyLists {
   span(F0 &&p,
        const list<uint64_t> &l) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
     struct CraneEnter {
       const list<uint64_t> *l;
     };

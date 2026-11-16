@@ -219,13 +219,13 @@ struct CtorArgMoveAliasRec {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}

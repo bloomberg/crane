@@ -114,16 +114,24 @@ public:
 /// embedded types must be resolved to the instance's concrete choice, or
 /// they would render as the class's template parameter T1, which is not
 /// in scope inside the instance struct.
-template <typename
-I>concept Elt = requires {
-    typename I::E;
-    { I::elist() } -> std::convertible_to<List<typename I::E>>;
-    { I::ecount(std::declval<List<typename I::E>>()) } -> std::convertible_to<uint64_t>;
-  } && (requires {
-    { I::e0() } -> std::convertible_to<typename I::E>;
-  } || requires {
-    { I::e0 } -> std::convertible_to<typename I::E>;
-  });
+template <typename I>
+concept Elt = requires {
+  typename I::E;
+  { I::elist() } -> std::convertible_to<List<typename I::E>>;
+  {
+    I::ecount(std::declval<List<typename I::E>>())
+  } -> std::convertible_to<uint64_t>;
+} && (requires {
+  {
+    I::e0()
+  }
+  -> std::convertible_to<typename I::E>;
+} || requires {
+  {
+    I::e0
+  }
+  -> std::convertible_to<typename I::E>;
+});
 
 struct AssocTypeTvarLeak {
   using E = crane::obj;
@@ -134,11 +142,9 @@ struct AssocTypeTvarLeak {
     constexpr static uint64_t e0() { return UINT64_C(0); }
 
     static List<uint64_t> elist() {
-      return List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
+      return List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                      UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3), List<uint64_t>::nil())));
     }
 
     static uint64_t ecount(List<uint64_t> l) {

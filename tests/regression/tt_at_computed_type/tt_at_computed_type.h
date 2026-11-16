@@ -102,9 +102,7 @@ struct TtAtComputedType {
   static List<crane::obj> nats(uint64_t n);
   static tuple ones(uint64_t n);
   static inline const uint64_t first =
-      crane_any_cast<std::pair<uint64_t, std::monostate>>(ones(UINT64_C(1)))
-          .first;
-
+      crane_any_cast<std::pair<uint64_t, std::monostate>>(ones(UINT64_C(1))).first;
   static inline const uint64_t second =
       crane_any_cast<std::pair<uint64_t, std::monostate>>(
           crane_any_cast<

@@ -16,10 +16,12 @@ ProdFstProjection::t ProdFstProjection::build(uint64_t n,
   }
 }
 
-uint64_t ProdFstProjection::depth(
-    const ProdFstProjection::t &x) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-
+uint64_t
+ProdFstProjection::depth(const ProdFstProjection::t &x) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     ProdFstProjection::t x;
   };

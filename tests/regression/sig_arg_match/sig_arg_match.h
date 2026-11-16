@@ -230,8 +230,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -246,19 +246,16 @@ struct SigArgMatch {
   static Nat addp(const Sig<Nat> &p, const Sig<Nat> &q);
   static inline const List<pos> ps =
       List<pos>::cons(one, List<pos>::cons(one, List<pos>::nil()));
-
   static inline const Nat run = []() {
-    return ps
-        .template fold_right<Nat>(
-            [](const Sig<Nat> &p, Nat acc) {
-              return [&]() {
-                const auto &[x] = p;
-                return x;
-              }()
-                         .add(std::move(acc));
-            },
-            Nat::o())
-        .add(addp(one, one));
+    return ps.template fold_right<Nat>(
+        [](const Sig<Nat> &p, Nat acc) {
+          return [&]() {
+            const auto &[x] = p;
+            return x;
+          }().add(std::move(acc));
+        },
+        Nat::o())
+               .add(addp(one, one));
   }();
 };
 

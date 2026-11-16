@@ -7,13 +7,17 @@
 template <typename M>
 concept T = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::z } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::z() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::z
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::z()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct ModuleAliasValueBesideAccessor {
@@ -28,10 +32,8 @@ struct ModuleAliasValueBesideAccessor {
 
       static const typename X::t &z() {
         static const typename X::t v = [] {
-          if constexpr (requires { X::z(); })
-            return X::z();
-          else
-            return X::z;
+          if constexpr (requires { X::z(); }) return X::z();
+          else return X::z;
         }();
         return v;
       }

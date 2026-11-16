@@ -10,9 +10,10 @@
 #include <variant>
 
 namespace SepExtQualifiedRaw {
-
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 
 template <OrderedType X> struct Make {
   template <typename A> struct Fmap {
@@ -42,8 +43,7 @@ template <OrderedType X> struct Make {
     template <typename CraneU>
     Fmap(const Fmap<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Fmap<CraneU>::Empty>(
-                    _other.v())) {
+            if (std::holds_alternative<typename Fmap<CraneU>::Empty>(_other.v())) {
               return Empty{};
             } else {
               const auto &[a0, a1, a2] =
@@ -54,9 +54,9 @@ template <OrderedType X> struct Make {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a2 ? std::make_shared<Fmap<A>>(crane_convert<Fmap<A>>(*a2))
@@ -122,7 +122,6 @@ template <OrderedType X> struct Make {
     }
   }
 };
-
 } // namespace SepExtQualifiedRaw
 
 #endif // INCLUDED_SEPEXTQUALIFIEDRAW

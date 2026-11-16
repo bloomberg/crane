@@ -212,21 +212,21 @@ struct AccumClosureCapture {
     /// BUG HYPOTHESIS: extract_closures is methodified on tree. The closures
     /// capture this (for tree_sum t) as a raw pointer. They are stored in
     /// fn_list. After extract_closures returns, the temporary tree is
-    /// destroyed. Calling the closures from apply_all dereferences dangling
-    /// this.
+    /// destroyed.
+    /// Calling the closures from apply_all dereferences dangling this.
     fn_list extract_closures() const {
       tree _self_val = *this;
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
         return fn_list::fnil();
       } else {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(this->v());
-        return fn_list::fcons(
-            [=](uint64_t x) { return (x + _self_val.tree_sum()); },
-            fn_list::fcons(
-                [=](uint64_t x) { return (x + a1); },
-                fn_list::fcons(
-                    [=](uint64_t x) { return (x + _self_val.tree_sum()); },
-                    fn_list::fnil())));
+        return fn_list::fcons([=](uint64_t x) {
+          return (x + _self_val.tree_sum());
+        }, fn_list::fcons([=](uint64_t x) {
+          return (x + a1);
+        }, fn_list::fcons([=](uint64_t x) {
+          return (x + _self_val.tree_sum());
+        }, fn_list::fnil())));
       }
     }
 
@@ -363,15 +363,19 @@ struct AccumClosureCapture {
     fn_list fs =
         tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                    UINT64_C(20),
-                   tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
+                   tree::node(tree::leaf(), UINT64_C(12),
+                              tree::leaf()))
             .extract_closures();
     return fs.apply_all(UINT64_C(0));
   }();
   /// test2: Allocate a noise tree between extracting closures and applying
-  /// them. Increases memory pressure on freed region.
+  /// them.
+  /// Increases memory pressure on freed region.
   static inline const uint64_t test2 = []() {
-    fn_list fs = tree::node(tree::leaf(), UINT64_C(100), tree::leaf())
-                     .extract_closures();
+    fn_list fs =
+        tree::node(tree::leaf(), UINT64_C(100),
+                   tree::leaf())
+            .extract_closures();
     uint64_t noise =
         tree::node(tree::leaf(), UINT64_C(999), tree::leaf()).tree_sum();
     return fs.apply_all(noise);

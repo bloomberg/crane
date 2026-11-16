@@ -39,8 +39,9 @@ struct ReuseArmFieldOrder {
     }
 
     static lst cons_crane_reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
-      return lst(Cons{
-          a0, crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
+      return lst(
+          Cons{a0,
+               crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS

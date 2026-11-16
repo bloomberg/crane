@@ -84,9 +84,9 @@ struct DocComments {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<mylist<A>>(crane_convert<mylist<A>>(*l))

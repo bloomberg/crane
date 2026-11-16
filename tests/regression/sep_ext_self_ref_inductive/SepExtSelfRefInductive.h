@@ -11,9 +11,10 @@
 #include <variant>
 
 namespace SepExtSelfRefInductive {
-
 template <typename M>
-concept S = requires { typename M::t; };
+concept S = requires {
+  typename M::t;
+};
 
 template <S X> struct HashTrie {
   template <typename V> struct Trie {
@@ -44,8 +45,7 @@ template <S X> struct HashTrie {
     template <typename CraneU>
     Trie(const Trie<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Trie<CraneU>::Empty>(
-                    _other.v())) {
+            if (std::holds_alternative<typename Trie<CraneU>::Empty>(_other.v())) {
               return Empty{};
             } else {
               const auto &[k, v_1, left, right] =
@@ -56,16 +56,16 @@ template <S X> struct HashTrie {
                     if constexpr (crane_convertible<V, const CraneU &>) {
                       return crane_convert<V>(v_1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (left ? std::make_shared<Trie<V>>(
-                              crane_convert<Trie<V>>(*left))
+                            crane_convert<Trie<V>>(*left))
                         : nullptr),
                   (right ? std::make_shared<Trie<V>>(
-                               crane_convert<Trie<V>>(*right))
+                             crane_convert<Trie<V>>(*right))
                          : nullptr)};
             }
           }()) {}
@@ -152,7 +152,6 @@ template <S X> struct HashTrie {
     }
   }
 };
-
 } // namespace SepExtSelfRefInductive
 
 #endif // INCLUDED_SEPEXTSELFREFINDUCTIVE

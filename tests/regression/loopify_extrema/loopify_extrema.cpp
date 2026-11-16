@@ -1,9 +1,9 @@
 #include "loopify_extrema.h"
 
-uint64_t LoopifyExtrema::maximum(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyExtrema::maximum(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                   /// varying parameters for
+                                                   /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -51,10 +51,10 @@ uint64_t LoopifyExtrema::maximum(
   return _result;
 }
 
-uint64_t LoopifyExtrema::minimum(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyExtrema::minimum(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                   /// varying parameters for
+                                                   /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -102,10 +102,10 @@ uint64_t LoopifyExtrema::minimum(
   return _result;
 }
 
-std::pair<uint64_t, uint64_t> LoopifyExtrema::minmax(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+std::pair<uint64_t, uint64_t>
+LoopifyExtrema::minmax(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                  /// varying parameters for
+                                                  /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };

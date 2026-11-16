@@ -2,9 +2,10 @@
 #define INCLUDED_SEPEXTMODULEABBREV
 
 namespace SepExtModuleAbbrev {
-
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 template <typename M>
 concept WS = requires {
   requires OrderedType<typename M::E>;
@@ -22,7 +23,6 @@ template <WS M> struct KeyFacts {
 };
 
 template <WS P> struct WFacts : OrdFacts<typename P::E, P> {};
-
 } // namespace SepExtModuleAbbrev
 
 #endif // INCLUDED_SEPEXTMODULEABBREV

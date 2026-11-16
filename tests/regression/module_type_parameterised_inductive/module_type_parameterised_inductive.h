@@ -58,9 +58,9 @@ struct ModuleTypeParameterisedInductive {
                       if constexpr (crane_convertible<A, const CraneU &>) {
                         return crane_convert<A>(a1);
                       } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
+                        throw std::logic_error("unreachable: inactive "
+                                               "constructor field at this "
+                                               "instantiation");
                       }
                     }(),
                     (a2 ? std::make_shared<tr<A>>(crane_convert<tr<A>>(*a2))
@@ -171,9 +171,10 @@ struct ModuleTypeParameterisedInductive {
 
   using U = Use<Impl>;
   static inline const uint64_t result =
-      (U::template size<uint64_t>(Impl::template tr<uint64_t>::n(
-           Impl::template tr<uint64_t>::l(), UINT64_C(1),
-           Impl::template tr<uint64_t>::l())) +
+      (U::template size<uint64_t>(
+           Impl::template tr<uint64_t>::n(Impl::template tr<uint64_t>::l(),
+                                          UINT64_C(1),
+                                          Impl::template tr<uint64_t>::l())) +
        U::get(Impl::box<uint64_t>{UINT64_C(4)}));
 };
 

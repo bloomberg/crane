@@ -3,7 +3,6 @@
 DequeDeepTreeStackoverflow::rose DequeDeepTreeStackoverflow::deep_tree(
     uint64_t depth) { /// CraneEnter: captures varying parameters for each
                       /// recursive call.
-
   struct CraneEnter {
     uint64_t depth;
   };

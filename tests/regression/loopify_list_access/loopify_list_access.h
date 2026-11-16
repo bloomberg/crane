@@ -125,10 +125,11 @@ struct LoopifyListAccess {
   static uint64_t count(uint64_t x, const List<uint64_t> &l);
 
   template <typename F0>
-  static uint64_t count_matching(
-      F0 &&p, const List<uint64_t> &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+  static uint64_t
+  count_matching(F0 &&p,
+                 const List<uint64_t> &l) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
     struct CraneEnter {
       const List<uint64_t> *l;
     };

@@ -6,9 +6,9 @@ Nat::EvenT Nat::EvenT_2(uint64_t,
   return Sig<uint64_t>::exist((x0 + 1));
 }
 
-Nat::EvenT Nat::even_EvenT(uint64_t n) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+Nat::EvenT
+Nat::even_EvenT(uint64_t n) { /// CraneEnter: captures varying parameters for
+                              /// each recursive call.
   struct CraneEnter {
     uint64_t n;
   };

@@ -4,7 +4,6 @@ uint64_t
 LoopifyGapAckermann::ack(uint64_t m,
                          uint64_t x0_) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t x0_;
     uint64_t m;

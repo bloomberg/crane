@@ -6,24 +6,31 @@
 #include <utility>
 
 namespace SepExtNullaryModparam {
-
 template <typename M>
 concept IntLike = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::zero } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::zero() } -> std::convertible_to<typename M::t>;
-      });
-  requires(
-      requires {
-        { M::one } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::one() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::zero
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::zero()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
+  requires (requires {
+    {
+      M::one
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::one()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
   {
     M::add(std::declval<typename M::t>(), std::declval<typename M::t>())
   } -> std::same_as<typename M::t>;
@@ -52,35 +59,28 @@ struct NatAsIntLike {
 template <IntLike I> struct Counter {
   static const typename I::t &init() {
     static const typename I::t v = [] {
-      if constexpr (requires { I::zero(); })
-        return I::zero();
-      else
-        return I::zero;
+      if constexpr (requires { I::zero(); }) return I::zero();
+      else return I::zero;
     }();
     return v;
   }
 
   static typename I::t step(typename I::t x) {
     return I::add(std::move(x), [] {
-      if constexpr (requires { I::one(); })
-        return I::one();
-      else
-        return I::one;
+      if constexpr (requires { I::one(); }) return I::one();
+      else return I::one;
     }());
   }
 
   static bool is_zero(typename I::t x) {
     return I::eqb(std::move(x), [] {
-      if constexpr (requires { I::zero(); })
-        return I::zero();
-      else
-        return I::zero;
+      if constexpr (requires { I::zero(); }) return I::zero();
+      else return I::zero;
     }());
   }
 };
 
 using NatCounter = Counter<NatAsIntLike>;
-
 } // namespace SepExtNullaryModparam
 
 #endif // INCLUDED_SEPEXTNULLARYMODPARAM

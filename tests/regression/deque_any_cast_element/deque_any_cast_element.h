@@ -46,22 +46,23 @@ template <typename A, typename P> struct SigT {
   // CREATORS
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
+
 enum class Tag { TAGA, TAGB };
 using action_entry = SigT<Tag, crane::fn<output_ty(input_ty)>>;
-const action_entry my_action =
-    SigT<Tag, crane::fn<crane::obj(crane::obj)>>::existt(
-        Tag::TAGA, crane_erase_fn([](const crane::obj &tup) -> crane::obj {
-          const auto &[x, y0] =
-              crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-          const auto &[xs, y] =
-              crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
-          return [](auto _a0, auto _a1) {
-            _a1.push_front(_a0);
-            return _a1;
-          }(std::make_pair(crane::obj(crane::any_cast<uint64_t>(x)),
-                           crane::obj(crane::any_cast<uint64_t>(y))),
-                 crane::any_cast<std::deque<crane::obj>>(xs));
-        }));
+const action_entry my_action = SigT<Tag,
+                                    crane::fn<crane::obj(crane::obj)>>::existt(
+    Tag::TAGA, crane_erase_fn([](const crane::obj &tup) -> crane::obj {
+      const auto &[x, y0] =
+          crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+      const auto &[xs, y] =
+          crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
+      return [](auto _a0, auto _a1) {
+        _a1.push_front(_a0);
+        return _a1;
+      }(std::make_pair(crane::obj(crane::any_cast<uint64_t>(x)),
+                       crane::obj(crane::any_cast<uint64_t>(y))),
+        crane::any_cast<std::deque<crane::obj>>(xs));
+    }));
 SigT<Tag, output_ty>
 apply_entry(const SigT<Tag, crane::fn<crane::obj(crane::obj)>> &e);
 uint64_t get_length(const SigT<Tag, output_ty> &r);

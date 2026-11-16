@@ -1,9 +1,12 @@
 #include "inner_fix_captures_ind.h"
 
-uint64_t InnerFixCapturesInd::len(
-    const InnerFixCapturesInd::lst &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t
+InnerFixCapturesInd::len(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const InnerFixCapturesInd::lst *l;
   };
@@ -22,8 +25,7 @@ uint64_t InnerFixCapturesInd::len(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const InnerFixCapturesInd::lst &l = *_f.l;
-      if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(
-              l.v())) {
+      if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
@@ -39,10 +41,14 @@ uint64_t InnerFixCapturesInd::len(
   return _result;
 }
 
-uint64_t InnerFixCapturesInd::outer(
-    const InnerFixCapturesInd::lst &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t
+InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const InnerFixCapturesInd::lst *l;
   };
@@ -64,8 +70,7 @@ uint64_t InnerFixCapturesInd::outer(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const InnerFixCapturesInd::lst &l = *_f.l;
-      if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(
-              l.v())) {
+      if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] =
@@ -77,23 +82,22 @@ uint64_t InnerFixCapturesInd::outer(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       std::shared_ptr<InnerFixCapturesInd::lst> a1 = std::move(_f.a1);
       _result = ([&]() {
-        auto inner = [&](const InnerFixCapturesInd::lst &m,
-                         uint64_t a) -> uint64_t {
-          uint64_t _loop_a = a;
-          const InnerFixCapturesInd::lst *_loop_m = &m;
-          while (true) {
-            if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(
-                    _loop_m->v())) {
-              return _loop_a;
-            } else {
-              const auto &[a2, a3] =
-                  std::get<typename InnerFixCapturesInd::lst::Cons>(
-                      _loop_m->v());
-              _loop_a = (_loop_a + len(*a1));
-              _loop_m = crane_raw(a3);
-            }
-          }
-        };
+        auto inner =
+            [&](const InnerFixCapturesInd::lst &m, uint64_t a) -> uint64_t {
+              uint64_t _loop_a = a;
+              const InnerFixCapturesInd::lst *_loop_m = &m;
+              while (true) {
+                if (std::holds_alternative<
+                        typename InnerFixCapturesInd::lst::Nil>(_loop_m->v())) {
+                  return _loop_a;
+                } else {
+                  const auto &[a2, a3] = std::get<
+                      typename InnerFixCapturesInd::lst::Cons>(_loop_m->v());
+                  _loop_a = (_loop_a + len(*a1));
+                  _loop_m = crane_raw(a3);
+                }
+              }
+            };
         return inner(*a1, UINT64_C(0));
       }() + std::move(_result));
     }

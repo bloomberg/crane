@@ -23,9 +23,9 @@ UnsoundAxioms::extract_proof_computation(const UnsoundAxioms::ProofRec &pr) {
 bool UnsoundAxioms::use_type_eq(uint64_t n) { return n; }
 
 UnsoundAxioms::Rec UnsoundAxioms::impossible_rec() {
-  throw std::logic_error("unrealized axiom: "
-                         "CraneTestsRegression.unsound_axioms.UnsoundAxioms."
-                         "UnsoundAxioms.impossible_rec");
+  throw std::logic_error(
+      "unrealized axiom: "
+      "CraneTestsRegression.unsound_axioms.UnsoundAxioms.UnsoundAxioms.impossible_rec");
 }
 
 uint64_t UnsoundAxioms::use_impossible(std::monostate) {
@@ -40,9 +40,9 @@ uint64_t UnsoundAxioms::from_false(const UnsoundAxioms::Rec &) {
 }
 
 uint64_t UnsoundAxioms::prop_as_type() {
-  throw std::logic_error("unrealized axiom: "
-                         "CraneTestsRegression.unsound_axioms.UnsoundAxioms."
-                         "UnsoundAxioms.prop_as_type");
+  throw std::logic_error(
+      "unrealized axiom: "
+      "CraneTestsRegression.unsound_axioms.UnsoundAxioms.UnsoundAxioms.prop_as_type");
 }
 
 uint64_t UnsoundAxioms::use_prop_as_type(const UnsoundAxioms::Rec &r) {

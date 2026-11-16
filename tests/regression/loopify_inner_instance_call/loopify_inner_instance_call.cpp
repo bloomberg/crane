@@ -14,11 +14,15 @@
 /// treated as recursion would be a wrong program, not just a slow one.
 Itree<LoopifyInnerInstanceCall::Ev, std::pair<uint64_t, uint64_t>>
 LoopifyInnerInstanceCall::bumped(std::monostate) {
-  static const auto fmap = crane::immortal(
-      Monads::template Functor_stateT<
-          Functor_itree<LoopifyInnerInstanceCall::Ev>, uint64_t>::
-          template fmap<uint64_t, uint64_t>(
-              [](uint64_t x) { return (x + UINT64_C(1)); }, st));
+  static const auto fmap = crane::immortal(Monads::template Functor_stateT<
+                                               Functor_itree<
+                                                   LoopifyInnerInstanceCall::Ev>,
+                                               uint64_t>::template fmap<
+                                               uint64_t, uint64_t>(
+                                               [](uint64_t x) {
+                                                 return (x + UINT64_C(1));
+                                               },
+                                               st));
   return crane_any_cast<
       Itree<LoopifyInnerInstanceCall::Ev, std::pair<uint64_t, uint64_t>>>(
       fmap(UINT64_C(5)));

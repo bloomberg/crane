@@ -160,9 +160,8 @@ concept Coll = requires {
     I::template emptyc<crane::obj>()
   } -> std::convertible_to<typename I::template C<crane::obj>>;
   {
-    I::template addc<crane::obj>(
-        std::declval<crane::obj>(),
-        std::declval<typename I::template C<crane::obj>>())
+    I::template addc<crane::obj>(std::declval<crane::obj>(), std::declval<
+                                     typename I::template C<crane::obj>>())
   } -> std::convertible_to<typename I::template C<crane::obj>>;
   {
     I::template sizec<crane::obj>(
@@ -216,8 +215,9 @@ struct HktNullaryMethodTyarg {
   static_assert(Coll<LC>);
 
   template <Coll _tcI0, typename T2> static Nat two(const T2 &x, const T2 &y) {
-    return _tcI0::template sizec<T2>(_tcI0::template addc<T2>(
-        x, _tcI0::template addc<T2>(y, _tcI0::template emptyc<T2>())));
+    return _tcI0::template sizec<T2>(
+        _tcI0::template addc<T2>(
+            x, _tcI0::template addc<T2>(y, _tcI0::template emptyc<T2>())));
   }
 
   static inline const Nat run =

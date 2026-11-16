@@ -20,8 +20,9 @@ RamOps::ram_reg_main RamOps::get_reg_main(const RamOps::ram_chip_main &ch,
 
 RamOps::ram_reg_main RamOps::upd_main_in_reg(const RamOps::ram_reg_main &rg,
                                              uint64_t i, uint64_t v) {
-  return ram_reg_main{update_nth_main<uint64_t>(
-      i, (UINT64_C(16) ? v % UINT64_C(16) : v), rg.reg_main)};
+  return ram_reg_main{
+      update_nth_main<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
+                                rg.reg_main)};
 }
 
 RamOps::ram_chip_main
@@ -78,9 +79,8 @@ RamOps::chip_port RamOps::upd_port_in_chip(const RamOps::chip_port &,
   return chip_port{(UINT64_C(16) ? v % UINT64_C(16) : v)};
 }
 
-RamOps::bank_port RamOps::upd_chip_in_bank_port(const RamOps::bank_port &bk,
-                                                uint64_t c,
-                                                const RamOps::chip_port &ch) {
+RamOps::bank_port RamOps::upd_chip_in_bank_port(
+    const RamOps::bank_port &bk, uint64_t c, const RamOps::chip_port &ch) {
   return bank_port{
       update_nth_port<RamOps::chip_port>(c, ch, bk.bank_chips_port)};
 }
@@ -126,8 +126,9 @@ RamOps::ram_reg_status RamOps::get_reg_status(const RamOps::ram_chip_status &ch,
 RamOps::ram_reg_status
 RamOps::upd_status_in_reg(const RamOps::ram_reg_status &rg, uint64_t i,
                           uint64_t v) {
-  return ram_reg_status{update_nth_status<uint64_t>(
-      i, (UINT64_C(16) ? v % UINT64_C(16) : v), rg.reg_status)};
+  return ram_reg_status{
+      update_nth_status<uint64_t>(i, (UINT64_C(16) ? v % UINT64_C(16) : v),
+                                  rg.reg_status)};
 }
 
 RamOps::ram_chip_status
@@ -232,9 +233,8 @@ RamOps::reg_frame RamOps::upd_main_in_reg_frame(const List<uint64_t> &rg,
   return update_nth_frame<uint64_t>(i, v, rg);
 }
 
-RamOps::chip_frame RamOps::upd_reg_in_chip_frame(const List<List<uint64_t>> &ch,
-                                                 uint64_t r,
-                                                 const List<uint64_t> &rg) {
+RamOps::chip_frame RamOps::upd_reg_in_chip_frame(
+    const List<List<uint64_t>> &ch, uint64_t r, const List<uint64_t> &rg) {
   return update_nth_frame<RamOps::reg_frame>(r, rg, ch);
 }
 
@@ -288,12 +288,12 @@ RamOps::write_status0(const RamOps::state_nested_bank &s, uint64_t v) {
       update_nth_nested_bank<uint64_t>(UINT64_C(0), v, std::move(r).status_)};
   RamOps::chip_nested_bank c_ =
       chip_nested_bank{update_nth_nested_bank<RamOps::reg_nested_bank>(
-          UINT64_C(0), std::move(r_), std::move(c).regs_)};
+                           UINT64_C(0), std::move(r_), std::move(c).regs_)};
   RamOps::bank_nested_bank b_ =
       bank_nested_bank{update_nth_nested_bank<RamOps::chip_nested_bank>(
-          UINT64_C(0), std::move(c_), std::move(b).chips_)};
+                           UINT64_C(0), std::move(c_), std::move(b).chips_)};
   return state_nested_bank{update_nth_nested_bank<RamOps::bank_nested_bank>(
-      UINT64_C(0), std::move(b_), s.banks_)};
+                               UINT64_C(0), std::move(b_), s.banks_)};
 }
 
 uint64_t RamOps::read_status0(const RamOps::state_nested_bank &s) {

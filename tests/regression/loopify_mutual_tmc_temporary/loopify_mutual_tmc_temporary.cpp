@@ -10,11 +10,10 @@
 /// put back, the transform found no constructor around the call and left it
 /// a call, and under CRANE_CHECK_IR the plan's chains were contradicted.
 /// db meets the same through da's match on an enum.
-LoopifyMutualTmcTemporary::num
-LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num
-                                  &n) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-
+LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::ea(
+    const LoopifyMutualTmcTemporary::num &n) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     const LoopifyMutualTmcTemporary::num *n;
   };
@@ -54,9 +53,8 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num
                       typename LoopifyMutualTmcTemporary::num::Z>(_sv1.v())) {
                 return num::z();
               } else {
-                const auto &[n1] =
-                    std::get<typename LoopifyMutualTmcTemporary::num::Su>(
-                        _sv1.v());
+                const auto &[n1] = std::get<
+                    typename LoopifyMutualTmcTemporary::num::Su>(_sv1.v());
                 return *n1;
               }
             }(),
@@ -113,17 +111,17 @@ LoopifyMutualTmcTemporary::eb(const LoopifyMutualTmcTemporary::num &n,
             std::get<typename LoopifyMutualTmcTemporary::num::Su>(_sv0.v());
         auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
         LoopifyMutualTmcTemporary::num &_node =
-            (_write
-                 ? *(*_write = std::make_shared<LoopifyMutualTmcTemporary::num>(
-                         std::move(_cell)))
-                 : _root.emplace(std::move(_cell)));
-        _write = &std::get<typename LoopifyMutualTmcTemporary::num::Su>(
-                      _node.v_mut())
-                      .n;
+            (_write ? *(*_write = std::make_shared<
+                            LoopifyMutualTmcTemporary::num>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write =
+            &std::get<typename LoopifyMutualTmcTemporary::num::Su>(
+                _node.v_mut())
+                .n;
         _loop_x = [&]() {
           auto &&_sv1 = *n1;
-          if (std::holds_alternative<
-                  typename LoopifyMutualTmcTemporary::num::Z>(_sv1.v())) {
+          if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
+                  _sv1.v())) {
             return num::z();
           } else {
             const auto &[n2] =
@@ -207,23 +205,23 @@ LoopifyMutualTmcTemporary::db(const LoopifyMutualTmcTemporary::num &n) {
         case Color::GREEN: {
           auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
           LoopifyMutualTmcTemporary::num &_node =
-              (_write ? *(*_write =
-                              std::make_shared<LoopifyMutualTmcTemporary::num>(
-                                  std::move(_cell)))
+              (_write ? *(*_write = std::make_shared<
+                              LoopifyMutualTmcTemporary::num>(std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
-          _write = &std::get<typename LoopifyMutualTmcTemporary::num::Su>(
-                        _node.v_mut())
-                        .n;
+          _write =
+              &std::get<typename LoopifyMutualTmcTemporary::num::Su>(
+                  _node.v_mut())
+                  .n;
           _loop_n = crane_raw(n1);
           continue;
           break;
         }
         case Color::BLUE: {
           auto _value = da(Color::RED, *n1);
-          (_write
-               ? *(*_write = std::make_shared<LoopifyMutualTmcTemporary::num>(
-                       std::move(_value)))
-               : _root.emplace(std::move(_value)));
+          (
+              _write ? *(*_write = std::make_shared<
+                             LoopifyMutualTmcTemporary::num>(std::move(_value)))
+                     : _root.emplace(std::move(_value)));
           return std::move(*_root);
         }
         default:
@@ -250,13 +248,12 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::of_nat(uint64_t n) {
       uint64_t m = _loop_n - 1;
       auto _cell = typename LoopifyMutualTmcTemporary::num::Su(nullptr);
       LoopifyMutualTmcTemporary::num &_node =
-          (_write
-               ? *(*_write = std::make_shared<LoopifyMutualTmcTemporary::num>(
-                       std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
+          (
+              _write ? *(*_write = std::make_shared<
+                             LoopifyMutualTmcTemporary::num>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
       _write =
-          &std::get<typename LoopifyMutualTmcTemporary::num::Su>(_node.v_mut())
-               .n;
+          &std::get<typename LoopifyMutualTmcTemporary::num::Su>(_node.v_mut()).n;
       _loop_n = m;
       continue;
     }
@@ -265,10 +262,9 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::of_nat(uint64_t n) {
 }
 
 uint64_t LoopifyMutualTmcTemporary::to_nat(
-    const LoopifyMutualTmcTemporary::num
-        &n) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyMutualTmcTemporary::num &n) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     const LoopifyMutualTmcTemporary::num *n;
   };

@@ -9,7 +9,6 @@
 #include "Datatypes.h"
 
 namespace CFG {
-
 template <typename T> struct cfg;
 
 template <typename T> struct cfg {
@@ -35,7 +34,6 @@ template <typename T1> T1 first(const cfg<T1> &c) { return c.init; }
 template <typename T1> std::pair<T1, T1> first_twice(const cfg<T1> &c) {
   return std::make_pair(first<T1>(c), first<T1>(c));
 }
-
 } // namespace CFG
 
 #endif // INCLUDED_CFG

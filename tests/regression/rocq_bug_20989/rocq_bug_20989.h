@@ -6,13 +6,17 @@
 
 template <typename M>
 concept S = requires {
-  requires(
-      requires {
-        { M::n } -> std::convertible_to<uint64_t>;
-      } ||
-      requires {
-        { M::n() } -> std::convertible_to<uint64_t>;
-      });
+  requires (requires {
+    {
+      M::n
+    }
+    -> std::convertible_to<uint64_t>;
+  } || requires {
+    {
+      M::n()
+    }
+    -> std::convertible_to<uint64_t>;
+  });
 };
 
 struct RocqBug20989 {

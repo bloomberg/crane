@@ -1,10 +1,10 @@
 #include "loopify_list_pairing.h"
 
-std::pair<List<uint64_t>, List<uint64_t>>
-LoopifyListPairing::unzip(const List<std::pair<uint64_t, uint64_t>>
-                              &l) { /// CraneEnter: captures varying parameters
-                                    /// for each recursive call.
-
+std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::unzip(
+    const List<std::pair<uint64_t,
+                         uint64_t>> &l) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     const List<std::pair<uint64_t, uint64_t>> *l;
   };
@@ -52,7 +52,6 @@ LoopifyListPairing::unzip(const List<std::pair<uint64_t, uint64_t>>
 std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::swizzle(
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -95,7 +94,6 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::swizzle(
 std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::partition(
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -152,16 +150,14 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
   while (true) {
     if (_loop_fuel <= 0) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write
-           ? *(*_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                   std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write = std::make_shared<
+                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t fuel_ = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1.v())) {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2.v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2.v())) {
           auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
           (_write ? *(*_write =
                           std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
@@ -180,8 +176,8 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                   _node.v_mut())
-                   .l;
+                  _node.v_mut())
+                  .l;
           _loop_l2 = List<uint64_t>(*a10);
           _loop_l1 = List<uint64_t>::nil();
           _loop_fuel = fuel_;
@@ -190,8 +186,7 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1.v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2.v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2.v())) {
           auto _cell = typename List<std::pair<uint64_t, uint64_t>>::Cons(
               std::make_pair(a0, default0), nullptr);
           List<std::pair<uint64_t, uint64_t>> &_node =
@@ -201,8 +196,8 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                   _node.v_mut())
-                   .l;
+                  _node.v_mut())
+                  .l;
           _loop_l2 = List<uint64_t>::nil();
           _loop_l1 = List<uint64_t>(*a1);
           _loop_fuel = fuel_;
@@ -219,8 +214,8 @@ LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                   _node.v_mut())
-                   .l;
+                  _node.v_mut())
+                  .l;
           _loop_l2 = List<uint64_t>(*a10);
           _loop_l1 = List<uint64_t>(*a1);
           _loop_fuel = fuel_;
@@ -263,9 +258,9 @@ List<uint64_t> LoopifyListPairing::zipWith(const List<uint64_t> &l1,
           std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =

@@ -3,7 +3,6 @@
 #include "Datatypes.h"
 
 namespace SllPairCast {
-
 bool SllPairCast::sll_final_config(const SllPairCast::sll_subparser &sp) {
   const crane::obj &_x = sp.sll_pred;
   const std::pair<SllPairCast::sll_frame,
@@ -29,5 +28,4 @@ bool SllPairCast::sll_final_config(const SllPairCast::sll_subparser &sp) {
     }
   }
 }
-
 } // namespace SllPairCast

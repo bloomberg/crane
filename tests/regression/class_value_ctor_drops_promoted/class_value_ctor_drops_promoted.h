@@ -17,18 +17,31 @@ template <typename ptr, typename iptr, typename I> struct ToDvalueBase;
 struct natParams;
 using ptr = crane::obj;
 using iptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-    typename I::iptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+  typename I::iptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+}) &&
+  (requires {
+    {
+      I::zeroi()
+    }
+    -> std::convertible_to<typename I::iptr>;
   } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  }) && (requires {
-    { I::zeroi() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zeroi } -> std::convertible_to<typename I::iptr>;
+    {
+      I::zeroi
+    }
+    -> std::convertible_to<typename I::iptr>;
   });
 
 struct Nat {
@@ -192,12 +205,10 @@ Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr> apply_to_base(
 
 struct ClassValueCtorDropsPromoted {
   static inline const Dvalue_base<typename natParams::ptr,
-                                  typename natParams::iptr>
-      run = apply_to_base<natParams, Nat>(
-          mk_to_base<natParams, Nat>([](const Nat &n) {
-            return Dvalue_base<Nat, Nat>::dvalue_iptr(n);
-          }),
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+                                  typename natParams::iptr> run = apply_to_base<
+      natParams, Nat>(mk_to_base<natParams, Nat>([](const Nat &n) {
+        return Dvalue_base<Nat, Nat>::dvalue_iptr(n);
+      }), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
 
 #endif // INCLUDED_CLASS_VALUE_CTOR_DROPS_PROMOTED

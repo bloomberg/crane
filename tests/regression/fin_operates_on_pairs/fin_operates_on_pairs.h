@@ -129,24 +129,16 @@ struct FinOperatesOnPairs {
   static state execute_fin(const state &s, uint64_t r);
   static inline const state sample = state{
       List<uint64_t>::cons(
-          UINT64_C(0),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
-                  UINT64_C(0),
-                  List<uint64_t>::cons(
-                      UINT64_C(0),
-                      List<uint64_t>::cons(
-                          UINT64_C(0),
-                          List<uint64_t>::cons(UINT64_C(0),
-                                               List<uint64_t>::nil())))))),
-      List<uint64_t>::cons(
-          UINT64_C(33),
-          List<uint64_t>::cons(
-              UINT64_C(44),
-              List<uint64_t>::cons(
-                  UINT64_C(55),
-                  List<uint64_t>::cons(UINT64_C(66), List<uint64_t>::nil()))))};
+          UINT64_C(0), List<uint64_t>::cons(
+              UINT64_C(2), List<uint64_t>::cons(
+                  UINT64_C(0), List<uint64_t>::cons(
+                      UINT64_C(0), List<uint64_t>::cons(
+                          UINT64_C(0), List<uint64_t>::cons(
+                              UINT64_C(0), List<uint64_t>::nil())))))), List<
+          uint64_t>::cons(UINT64_C(33), List<uint64_t>::cons(
+                              UINT64_C(44), List<uint64_t>::cons(
+                                  UINT64_C(55), List<uint64_t>::cons(
+                                      UINT64_C(66), List<uint64_t>::nil()))))};
   static inline const bool t = get_reg_pair(execute_fin(sample, UINT64_C(2)),
                                             UINT64_C(2)) == UINT64_C(55);
 };

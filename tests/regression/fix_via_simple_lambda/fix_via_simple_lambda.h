@@ -40,12 +40,8 @@ struct FixViaSimpleLambda {
         make_combined(UINT64_C(100));
     uint64_t noise =
         (((((((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
-              UINT64_C(5)) +
-             UINT64_C(6)) +
-            UINT64_C(7)) +
-           UINT64_C(8)) +
-          UINT64_C(9)) +
-         UINT64_C(10));
+              UINT64_C(5)) + UINT64_C(6)) + UINT64_C(7)) + UINT64_C(8)) +
+          UINT64_C(9)) + UINT64_C(10));
     if (opt.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *opt;
       return f(UINT64_C(0));

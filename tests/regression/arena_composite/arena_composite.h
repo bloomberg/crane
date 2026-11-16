@@ -385,10 +385,10 @@ struct Comp {
     static avl leaf() { return avl(Leaf{}); }
 
     static avl node(avl a0, Nat a1, expr a2, avl a3, Nat a4) {
-      return avl(Node{crane::arena_make_shared<avl>(std::move(a0)),
-                      std::move(a1), std::move(a2),
-                      crane::arena_make_shared<avl>(std::move(a3)),
-                      std::move(a4)});
+      return avl(
+          Node{crane::arena_make_shared<avl>(std::move(a0)), std::move(a1),
+               std::move(a2), crane::arena_make_shared<avl>(std::move(a3)),
+               std::move(a4)});
     }
 
     // MANIPULATORS
@@ -654,9 +654,8 @@ struct Comp {
     }
 
     avl mk(const Nat &k, const expr &v, const avl &r) const {
-      return avl::node(
-          *this, k, v, r,
-          Nat::s(Nat::o()).add(PeanoNat::max(this->height(), r.height())));
+      return avl::node(*this, k, v, r, Nat::s(Nat::o()).add(
+                           PeanoNat::max(this->height(), r.height())));
     }
 
     Nat height() const {

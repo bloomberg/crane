@@ -8,9 +8,9 @@ TmcValueRoot::lst TmcValueRoot::range(uint64_t start, uint64_t count) {
   while (true) {
     if (_loop_count <= 0) {
       auto _value = lst::nil();
-      (_write
-           ? *(*_write = std::make_shared<TmcValueRoot::lst>(std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write =
+                      std::make_shared<TmcValueRoot::lst>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t c = _loop_count - 1;
@@ -34,12 +34,11 @@ TmcValueRoot::lst TmcValueRoot::app(const TmcValueRoot::lst &xs,
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
   const TmcValueRoot::lst *_loop_xs = &xs;
   while (true) {
-    if (std::holds_alternative<typename TmcValueRoot::lst::Nil>(
-            _loop_xs->v())) {
+    if (std::holds_alternative<typename TmcValueRoot::lst::Nil>(_loop_xs->v())) {
       auto _value = std::move(ys);
-      (_write
-           ? *(*_write = std::make_shared<TmcValueRoot::lst>(std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write =
+                      std::make_shared<TmcValueRoot::lst>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[x0, l] =
@@ -63,12 +62,11 @@ TmcValueRoot::lst TmcValueRoot::stutter(const TmcValueRoot::lst &xs) {
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
   const TmcValueRoot::lst *_loop_xs = &xs;
   while (true) {
-    if (std::holds_alternative<typename TmcValueRoot::lst::Nil>(
-            _loop_xs->v())) {
+    if (std::holds_alternative<typename TmcValueRoot::lst::Nil>(_loop_xs->v())) {
       auto _value = lst::nil();
-      (_write
-           ? *(*_write = std::make_shared<TmcValueRoot::lst>(std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write =
+                      std::make_shared<TmcValueRoot::lst>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[x0, l] =
@@ -80,10 +78,10 @@ TmcValueRoot::lst TmcValueRoot::stutter(const TmcValueRoot::lst &xs) {
           (_write ? *(*_write =
                           std::make_shared<TmcValueRoot::lst>(std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename TmcValueRoot::lst::Cons>(
-                    std::get<typename TmcValueRoot::lst::Cons>(_node.v_mut())
-                        .l->v_mut())
-                    .l;
+      _write =
+          &std::get<typename TmcValueRoot::lst::Cons>(
+              std::get<typename TmcValueRoot::lst::Cons>(_node.v_mut()).l->v_mut())
+              .l;
       _loop_xs = crane_raw(l);
       continue;
     }

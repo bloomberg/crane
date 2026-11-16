@@ -171,9 +171,9 @@ struct LoopifyListGenerators {
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n_ = _loop_n - 1;
@@ -200,9 +200,9 @@ struct LoopifyListGenerators {
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n_ = _loop_n - 1;
@@ -235,11 +235,13 @@ struct LoopifyListGenerators {
           struct CraneEnter {
             uint64_t i;
           };
+
           /// CraneCont_i_: saves [i], resumes after recursive call, then
           /// processes rest.
           struct CraneCont_i_ {
             uint64_t i;
           };
+
           using CraneFrame = std::variant<CraneEnter, CraneCont_i_>;
           List<uint64_t> _result{};
           crane::small_vector<CraneFrame> _stack;
@@ -286,11 +288,13 @@ struct LoopifyListGenerators {
         struct CraneEnter {
           uint64_t idx;
         };
+
         /// CraneCont_idx_: saves [idx], resumes after recursive call, then
         /// processes rest.
         struct CraneCont_idx_ {
           uint64_t idx;
         };
+
         using CraneFrame = std::variant<CraneEnter, CraneCont_idx_>;
         List<uint64_t> _result{};
         crane::small_vector<CraneFrame> _stack;
@@ -335,15 +339,14 @@ struct LoopifyListGenerators {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
           auto _value = List<uint64_t>::nil();
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -369,7 +372,6 @@ struct LoopifyListGenerators {
 
   static List<std::pair<uint64_t, uint64_t>>
   enumerate_aux(uint64_t idx, const List<uint64_t> &l);
-
   static List<std::pair<uint64_t, uint64_t>> enumerate(const List<uint64_t> &l);
 };
 

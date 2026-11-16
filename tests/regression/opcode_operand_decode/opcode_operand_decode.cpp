@@ -156,30 +156,25 @@ OpcodeOperandDecode::Instruction OpcodeOperandDecode::decode(uint64_t b1,
                                                     } else {
                                                       uint64_t n23 = n22 - 1;
                                                       if (n23 <= 0) {
-                                                        return Instruction::
-                                                            NOP_;
+                                                        return Instruction::NOP_;
                                                       } else {
                                                         uint64_t n24 = n23 - 1;
                                                         if (n24 <= 0) {
-                                                          return Instruction::
-                                                              NOP_;
+                                                          return Instruction::NOP_;
                                                         } else {
                                                           uint64_t n25 =
                                                               n24 - 1;
                                                           if (n25 <= 0) {
-                                                            return Instruction::
-                                                                NOP_;
+                                                            return Instruction::NOP_;
                                                           } else {
                                                             uint64_t n26 =
                                                                 n25 - 1;
                                                             if (n26 <= 0) {
-                                                              return Instruction::
-                                                                  DCL_;
+                                                              return Instruction::DCL_;
                                                             } else {
                                                               uint64_t _x0 =
                                                                   n26 - 1;
-                                                              return Instruction::
-                                                                  NOP_;
+                                                              return Instruction::NOP_;
                                                             }
                                                           }
                                                         }

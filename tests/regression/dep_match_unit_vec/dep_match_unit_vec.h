@@ -38,8 +38,7 @@ struct DepMatchUnitVec {
     template <typename CraneU>
     vec(const vec<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename vec<CraneU>::Vnil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename vec<CraneU>::Vnil>(_other.v())) {
               return Vnil{};
             } else {
               const auto &[n, a1, a2] =
@@ -50,9 +49,9 @@ struct DepMatchUnitVec {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a2 ? std::make_shared<vec<A>>(crane_convert<vec<A>>(*a2))
@@ -111,9 +110,9 @@ struct DepMatchUnitVec {
   }
 
   static uint64_t head(uint64_t _x, const vec<uint64_t> &v);
-  static inline const uint64_t go =
-      head(UINT64_C(0), vec<uint64_t>::vcons(UINT64_C(0), UINT64_C(5),
-                                             vec<uint64_t>::vnil()));
+  static inline const uint64_t go = head(
+      UINT64_C(0),
+      vec<uint64_t>::vcons(UINT64_C(0), UINT64_C(5), vec<uint64_t>::vnil()));
 };
 
 #endif // INCLUDED_DEP_MATCH_UNIT_VEC

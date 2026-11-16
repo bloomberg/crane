@@ -8,7 +8,6 @@
 #include "Nat.h"
 
 namespace SepExtFunctorModtypeViaApplication {
-
 struct NatB {
   using t = Datatypes::Nat;
 };
@@ -42,7 +41,6 @@ using KK2 = K2<YY>;
 const bool res =
     Nat::eqb(Nat::add(Nat::add(H::g(true), KK::h(false)), KK2::h2(true)),
              Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())));
-
 } // namespace SepExtFunctorModtypeViaApplication
 
 #endif // INCLUDED_SEPEXTFUNCTORMODTYPEVIAAPPLICATION

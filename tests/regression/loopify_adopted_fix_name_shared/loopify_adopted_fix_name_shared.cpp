@@ -15,7 +15,6 @@ std::optional<Nat>
 LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
                                Nat i) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     Nat i;
     const LoopifyAdoptedFixNameShared::tree *t;
@@ -39,40 +38,49 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
       auto _f = std::move(std::get<CraneEnter>(_frame));
       Nat i = std::move(_f.i);
       const LoopifyAdoptedFixNameShared::tree &t = *_f.t;
-      crane::fn<std::optional<Nat>(
-          std::optional<Nat>, List<LoopifyAdoptedFixNameShared::tree>, Nat)>
-          struct_bytes = [](std::optional<Nat> pad,
-                            const List<LoopifyAdoptedFixNameShared::tree> &x,
-                            const Nat &x0) {
-            auto loop = [&](const List<LoopifyAdoptedFixNameShared::tree> &ts,
-                            Nat k) -> std::optional<Nat> {
-              Nat _loop_k = std::move(k);
-              const List<LoopifyAdoptedFixNameShared::tree> *_loop_ts = &ts;
-              while (true) {
-                if (std::holds_alternative<
-                        typename List<LoopifyAdoptedFixNameShared::tree>::Nil>(
-                        _loop_ts->v())) {
-                  if (pad.has_value()) {
-                    const Nat &p = *pad;
-                    return std::make_optional<Nat>(p.add(std::move(_loop_k)));
-                  } else {
-                    return std::optional<Nat>();
-                  }
-                } else {
-                  const auto &[a0, a1] = std::get<
-                      typename List<LoopifyAdoptedFixNameShared::tree>::Cons>(
-                      _loop_ts->v());
-                  if (_loop_k.ltb(Nat::s(Nat::s(Nat::s(Nat::o()))))) {
-                    return f(a0, std::move(_loop_k));
-                  } else {
-                    _loop_k = _loop_k.sub(Nat::s(Nat::s(Nat::s(Nat::o()))));
-                    _loop_ts = crane_raw(a1);
-                  }
-                }
-              }
-            };
-            return loop(x, x0);
-          };
+      crane::fn<
+          std::optional<Nat>(std::optional<Nat>,
+                             List<LoopifyAdoptedFixNameShared::tree>,
+                             Nat)> struct_bytes =
+          [](std::optional<Nat> pad,
+             const List<LoopifyAdoptedFixNameShared::tree> &x, const Nat &x0) {
+               auto loop =
+                   [&](const List<LoopifyAdoptedFixNameShared::tree> &ts,
+                       Nat k)
+                        -> std::optional<Nat> {
+                         Nat _loop_k = std::move(k);
+                         const List<LoopifyAdoptedFixNameShared::tree> *_loop_ts =
+                             &ts;
+                         while (true) {
+                           if (std::holds_alternative<
+                                   typename List<
+                                       LoopifyAdoptedFixNameShared::tree>::Nil>(
+                                   _loop_ts->v())) {
+                             if (pad.has_value()) {
+                               const Nat &p = *pad;
+                               return std::make_optional<Nat>(
+                                   p.add(std::move(_loop_k)));
+                             } else {
+                               return std::optional<Nat>();
+                             }
+                           } else {
+                             const auto &[a0, a1] =
+                                 std::get<
+                                     typename List<
+                                         LoopifyAdoptedFixNameShared::tree>::Cons>(
+                                     _loop_ts->v());
+                             if (_loop_k.ltb(Nat::s(Nat::s(Nat::s(Nat::o()))))) {
+                               return f(a0, std::move(_loop_k));
+                             } else {
+                               _loop_k = _loop_k.sub(
+                                   Nat::s(Nat::s(Nat::s(Nat::o()))));
+                               _loop_ts = crane_raw(a1);
+                             }
+                           }
+                         }
+                       };
+               return loop(x, x0);
+             };
       if (std::holds_alternative<
               typename LoopifyAdoptedFixNameShared::tree::Leaf>(t.v())) {
         const auto &[n0] =
@@ -97,9 +105,8 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
               typename List<LoopifyAdoptedFixNameShared::tree>::Nil>(ts.v())) {
         _result = std::optional<Nat>();
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<LoopifyAdoptedFixNameShared::tree>::Cons>(
-                ts.v());
+        const auto &[a0, a1] = std::get<
+            typename List<LoopifyAdoptedFixNameShared::tree>::Cons>(ts.v());
         if (k.ltb(Nat::s(Nat::s(Nat::o())))) {
           _stack.emplace_back(CraneEnter{std::move(k), &a0});
         } else {

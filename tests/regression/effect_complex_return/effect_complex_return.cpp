@@ -105,8 +105,8 @@ std::string EffectComplexReturn::env_or_prompt(std::string name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << std::string("Enter ") + std::move(name) + std::string(":")
-              << '\n';
+    std::cout << std::string("Enter ") + std::move(name) + std::string(":") <<
+    '\n';
     return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);

@@ -2,7 +2,8 @@
 
 /// A fixpoint function that returns a list -- when used as the second argument
 /// to (++) it becomes the %a1 function-call expression in the generated
-/// template, causing the double evaluation.
+/// template,
+/// causing the double evaluation.
 std::deque<uint64_t> AppDoublecall::gen_list(uint64_t n) {
   if (n <= 0) {
     return std::deque<uint64_t>{};

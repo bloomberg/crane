@@ -51,17 +51,17 @@ public:
           } else {
             const auto &[a, l] =
                 std::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::make_rc<List<A>>(crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::make_rc<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -72,8 +72,9 @@ public:
   }
 
   static List<A> cons_crane_reuse(crane::rc<List<A>> _tok, A a, List<A> l) {
-    return List<A>(Cons{std::move(a), crane::make_rc_reusing<List<A>>(
-                                          std::move(_tok), std::move(l))});
+    return List<A>(
+        Cons{std::move(a),
+             crane::make_rc_reusing<List<A>>(std::move(_tok), std::move(l))});
   }
 
   // MANIPULATORS

@@ -3,7 +3,6 @@
 uint64_t
 GlobalStateTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -56,9 +55,8 @@ GlobalStateTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying
 }
 
 uint64_t GlobalStateTests::counter() {
-  auto &&_once1 =
-      GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
-                                            uint64_t>();
+  auto &&_once1 = GlobalStateExamples::template ctr_idx<
+      GlobalStateTests::nat_idx, uint64_t>();
   return (_crane_globals[_once1] = UINT64_C(0), _once1);
 }
 
@@ -87,10 +85,9 @@ List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
     } else {
       uint64_t len0 = _loop_len - 1;
       auto _cell = typename List<uint64_t>::Cons(_loop_start, nullptr);
-      List<uint64_t> &_node =
-          (_write
-               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
+                                              List<uint64_t>>(std::move(_cell)))
+                                      : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_len = len0;
       _loop_start = (_loop_start + 1);

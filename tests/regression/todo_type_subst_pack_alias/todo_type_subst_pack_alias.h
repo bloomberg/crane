@@ -7,15 +7,23 @@
 #include <cstdint>
 #include <utility>
 
-template <typename
-I>concept Pack = requires {
-    typename I::carrier;
-    { I::step(std::declval<typename I::carrier>()) } -> std::convertible_to<typename I::carrier>;
-  } && (requires {
-    { I::seed() } -> std::convertible_to<typename I::carrier>;
-  } || requires {
-    { I::seed } -> std::convertible_to<typename I::carrier>;
-  });
+template <typename I>
+concept Pack = requires {
+  typename I::carrier;
+  {
+    I::step(std::declval<typename I::carrier>())
+  } -> std::convertible_to<typename I::carrier>;
+} && (requires {
+  {
+    I::seed()
+  }
+  -> std::convertible_to<typename I::carrier>;
+} || requires {
+  {
+    I::seed
+  }
+  -> std::convertible_to<typename I::carrier>;
+});
 
 struct TodoTypeSubstPackAlias {
   using carrier = crane::obj;
@@ -27,8 +35,9 @@ struct TodoTypeSubstPackAlias {
 
   template <Pack _tcI0> static typename _tcI0::carrier run_twice() {
     crane::fn<typename _tcI0::carrier(typename _tcI0::carrier)> alias =
-        [](typename _tcI0::carrier _x0) ->
-        typename _tcI0::carrier { return step_of<_tcI0>(_x0); };
+        [](typename _tcI0::carrier _x0) -> typename _tcI0::carrier {
+          return step_of<_tcI0>(_x0);
+        };
     return alias(alias(_tcI0::seed()));
   }
 

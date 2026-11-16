@@ -14,7 +14,6 @@
 #include "String_.h"
 
 namespace ParserAnyCast {
-
 struct ParserAnyCast {
   enum class Tag { A, B };
   using sem_ty = crane::obj;
@@ -28,17 +27,13 @@ struct ParserAnyCast {
 
   static const entry &entry_b() {
     static const entry v = Specif::template SigT<Tag, crane::obj>::existt(
-        Tag::B,
-        String::String::string0(
+        Tag::B, String::String::string0(
             Ascii::Ascii::ascii0(false, false, false, true, false, true, true,
-                                 false),
-            String::String::string0(
+                                 false), String::String::string0(
                 Ascii::Ascii::ascii0(true, false, true, false, false, true,
-                                     true, false),
-                String::String::string0(
+                                     true, false), String::String::string0(
                     Ascii::Ascii::ascii0(false, false, true, true, false, true,
-                                         true, false),
-                    String::String::string0(
+                                         true, false), String::String::string0(
                         Ascii::Ascii::ascii0(false, false, true, true, false,
                                              true, true, false),
                         String::String::string0(
@@ -56,7 +51,7 @@ struct ParserAnyCast {
     static const Datatypes::List<entry> v =
         Datatypes::template List<entry>::cons(
             entry_a(), Datatypes::template List<entry>::cons(
-                           entry_b(), Datatypes::template List<entry>::nil()));
+                entry_b(), Datatypes::template List<entry>::nil()));
     return v;
   }
 
@@ -73,6 +68,7 @@ struct ParserAnyCast {
     static const uint64_t v = sum_a_entries(test_entries());
     return v;
   }
+
   enum class Label { NUML, STRL, UNITL };
   using label_sem = crane::obj;
 
@@ -102,7 +98,6 @@ struct ParserAnyCast {
     return v;
   }
 };
-
 } // namespace ParserAnyCast
 
 #endif // INCLUDED_PARSERANYCAST

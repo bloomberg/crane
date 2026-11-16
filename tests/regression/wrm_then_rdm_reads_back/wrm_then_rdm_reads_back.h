@@ -129,30 +129,21 @@ struct WrmThenRdmReadsBack {
   static state execute_src(const state &s, uint64_t r);
   static state execute_wrm(const state &s);
   static state execute_rdm(const state &s);
-  static inline const state sample = state{
-      List<uint64_t>::cons(
-          UINT64_C(0),
-          List<uint64_t>::cons(
-              UINT64_C(0),
-              List<uint64_t>::cons(
-                  UINT64_C(1),
-                  List<uint64_t>::cons(
-                      UINT64_C(3),
-                      List<uint64_t>::cons(
-                          UINT64_C(0),
-                          List<uint64_t>::cons(UINT64_C(0),
-                                               List<uint64_t>::nil())))))),
-      UINT64_C(12),
-      List<uint64_t>::cons(
-          UINT64_C(0),
-          List<uint64_t>::cons(
-              UINT64_C(0),
-              List<uint64_t>::cons(
-                  UINT64_C(0),
-                  List<uint64_t>::cons(
-                      UINT64_C(5), List<uint64_t>::cons(
-                                       UINT64_C(0), List<uint64_t>::nil()))))),
-      UINT64_C(0)};
+  static inline const state sample =
+      state{List<uint64_t>::cons(
+                UINT64_C(0), List<uint64_t>::cons(
+                    UINT64_C(0), List<uint64_t>::cons(
+                        UINT64_C(1), List<uint64_t>::cons(
+                            UINT64_C(3), List<uint64_t>::cons(
+                                UINT64_C(0), List<uint64_t>::cons(
+                                    UINT64_C(0), List<uint64_t>::nil())))))),
+            UINT64_C(12), List<uint64_t>::cons(
+                UINT64_C(0), List<uint64_t>::cons(
+                    UINT64_C(0), List<uint64_t>::cons(
+                        UINT64_C(0), List<uint64_t>::cons(
+                            UINT64_C(5), List<uint64_t>::cons(
+                                UINT64_C(0), List<uint64_t>::nil()))))),
+            UINT64_C(0)};
   static inline const state roundtrip =
       execute_rdm(execute_wrm(execute_src(sample, UINT64_C(3))));
   static inline const bool t = roundtrip.acc == UINT64_C(12);

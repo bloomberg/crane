@@ -8,23 +8,28 @@ std::optional<std::pair<Nat, Nat>> InterpStateCaseHandler::run(
   } else {
     const auto &[a0] = std::get<typename Nat::S>(fuel.v());
     auto &&_sv0 = t.observe();
-    if (std::holds_alternative<typename ItreeF<
-            InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
-            Itree<InterpStateCaseHandler::noE, std::pair<Nat, Nat>>>::RetF>(
+    if (std::holds_alternative<
+            typename ItreeF<
+                InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
+                Itree<InterpStateCaseHandler::noE, std::pair<Nat, Nat>>>::RetF>(
             _sv0.v())) {
-      const auto &[r0] = std::get<typename ItreeF<
-          InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
-          Itree<InterpStateCaseHandler::noE, std::pair<Nat, Nat>>>::RetF>(
-          _sv0.v());
+      const auto &[r0] =
+          std::get<typename ItreeF<
+                       InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
+                       Itree<InterpStateCaseHandler::noE,
+                             std::pair<Nat, Nat>>>::RetF>(_sv0.v());
       return std::make_optional<std::pair<Nat, Nat>>(r0);
-    } else if (std::holds_alternative<typename ItreeF<
-                   InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
-                   Itree<InterpStateCaseHandler::noE,
-                         std::pair<Nat, Nat>>>::TauF>(_sv0.v())) {
-      const auto &[t0] = std::get<typename ItreeF<
-          InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
-          Itree<InterpStateCaseHandler::noE, std::pair<Nat, Nat>>>::TauF>(
-          _sv0.v());
+    } else if (
+        std::holds_alternative<
+            typename ItreeF<
+                InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
+                Itree<InterpStateCaseHandler::noE, std::pair<Nat, Nat>>>::TauF>(
+            _sv0.v())) {
+      const auto &[t0] =
+          std::get<typename ItreeF<
+                       InterpStateCaseHandler::noE, std::pair<Nat, Nat>,
+                       Itree<InterpStateCaseHandler::noE,
+                             std::pair<Nat, Nat>>>::TauF>(_sv0.v());
       return run(*a0, t0);
     } else {
       throw std::logic_error("absurd case");
@@ -41,9 +46,8 @@ crane::obj Function::Cat_IFun(IFun<crane::obj, crane::obj> f1,
 
 crane::obj Function::Case_sum1(IFun<crane::obj, crane::obj> x,
                                IFun<crane::obj, crane::obj> x0, crane::obj x1) {
-  return Function::case_sum1(
-      std::move(x), std::move(x0),
-      crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
+  return Function::case_sum1(std::move(x), std::move(x0), crane::any_cast<
+                                 Sum1<crane::obj, crane::obj, crane::obj>>(x1));
 }
 
 crane::obj Function::Inl_sum1(crane::obj x) {

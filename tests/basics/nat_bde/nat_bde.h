@@ -23,9 +23,11 @@ concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
 struct Nat {
   // TYPES
   struct O {};
+
   struct S {
     bsl::shared_ptr<Nat> d_n;
   };
+
   using variant_t = bsl::variant<O, S>;
 
 private:
@@ -35,10 +37,15 @@ private:
 public:
   // CREATORS
   Nat() {}
+
   explicit Nat(O _v) : d_v_(_v) {}
+
   explicit Nat(S _v) : d_v_(bsl::move(_v)) {}
+
   static Nat o() { return Nat(O{}); }
+
   static Nat s(Nat n) { return Nat(S{bsl::make_shared<Nat>(bsl::move(n))}); }
+
   // MANIPULATORS
   ~Nat() {
     auto _next = [&](variant_t &_v) -> bsl::shared_ptr<Nat> {
@@ -55,13 +62,17 @@ public:
       _cur = _next(_cur->v_mut());
     }
   }
+
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
   Nat(Nat &&) = default;
   Nat &operator=(Nat &&) = default;
+
   inline variant_t &v_mut() { return d_v_; }
+
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
+
   template <typename T1, typename F1> T1 nat_rect(T1 f, F1 &&f0) const {
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return f;
@@ -70,9 +81,11 @@ public:
       return f0(*d_n, d_n->template nat_rect<T1>(bsl::move(f), f0));
     }
   }
+
   template <typename T1, typename F1> T1 nat_rec(T1 f, F1 &&f0) const {
     return this->template nat_rect<T1>(bsl::move(f), f0);
   }
+
   Nat add(Nat n) const {
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return n;
@@ -81,6 +94,7 @@ public:
       return Nat::s(d_n->add(bsl::move(n)));
     }
   }
+
   int nat_to_int() const {
     if (bsl::holds_alternative<typename Nat::O>(this->v())) {
       return 0;

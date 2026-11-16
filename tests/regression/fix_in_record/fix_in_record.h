@@ -31,9 +31,8 @@ struct FixInRecord {
   /// n=20, base=60, fn(5) = 60+5 = 65.
   static inline const uint64_t test2 = []() {
     fn_box bx = make_box(UINT64_C(20));
-    uint64_t noise =
-        ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
-         UINT64_C(5));
+    uint64_t noise = ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) +
+                       UINT64_C(4)) + UINT64_C(5));
     return std::move(bx).fn(noise);
   }();
   /// test3: Use label too (to ensure struct is alive).

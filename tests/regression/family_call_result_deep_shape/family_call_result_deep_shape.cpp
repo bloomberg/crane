@@ -17,20 +17,20 @@ uint64_t FamilyCallResultDeepShape::sz(const FamilyCallResultDeepShape::ty &t,
         std::get<typename FamilyCallResultDeepShape::ty::TList>(t.v());
     const FamilyCallResultDeepShape::ty &a0_value = *a0;
     return List<FamilyCallResultDeepShape::den>(
-               crane::any_cast<List<crane::obj>>(std::move(n)))
-        .template fold_left<uint64_t>(
-            [=](uint64_t acc, FamilyCallResultDeepShape::den x) {
-              return (acc + sz(a0_value, std::move(x)));
-            },
-            UINT64_C(0));
+        crane::any_cast<List<crane::obj>>(std::move(n)))
+               .template fold_left<uint64_t>(
+        [=](uint64_t acc, FamilyCallResultDeepShape::den x) {
+          return (acc + sz(a0_value, std::move(x)));
+        },
+        UINT64_C(0));
   }
 }
 
 FamilyCallResultDeepShape::den FamilyCallResultDeepShape::mk(uint64_t n) {
-  return crane_deep_box(
-      ListDef::seq(UINT64_C(0), n)
-          .template map<std::pair<uint64_t, uint64_t>>(
-              [](uint64_t k) { return std::make_pair(k, k); }));
+  return crane_deep_box(ListDef::seq(UINT64_C(0), n).template map<
+                            std::pair<uint64_t, uint64_t>>([](uint64_t k) {
+                              return std::make_pair(k, k);
+                            }));
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

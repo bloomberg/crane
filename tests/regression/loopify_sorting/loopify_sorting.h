@@ -124,7 +124,6 @@ struct LoopifySorting {
   static uint64_t
   len_impl(const List<T1> &l) { /// CraneEnter: captures varying parameters for
                                 /// each recursive call.
-
     struct CraneEnter {
       const List<T1> *l;
     };
@@ -165,7 +164,6 @@ struct LoopifySorting {
   static std::pair<List<T1>, List<T1>>
   split(const List<T1> &l) { /// CraneEnter: captures varying parameters for
                              /// each recursive call.
-
     struct CraneEnter {
       const List<T1> *l;
     };
@@ -241,14 +239,13 @@ struct LoopifySorting {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t f = _loop_fuel - 1;
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l1->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
           auto _value = *_loop_l2;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -311,7 +308,6 @@ struct LoopifySorting {
   /// uniq_sorted variant that preserves order.
   static List<uint64_t> uniq_sorted_aux(uint64_t prev, bool seen,
                                         const List<uint64_t> &l);
-
   static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
 };
 

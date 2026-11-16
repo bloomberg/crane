@@ -72,7 +72,6 @@ struct InnerFixCapturesInd {
   static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const lst *l;
     };

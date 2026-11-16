@@ -9,7 +9,6 @@
 #include "Datatypes.h"
 
 namespace SepExtAnyListCollect {
-
 using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
@@ -55,9 +54,8 @@ template <SymTypes Ty> struct ListCollect {
             typename Datatypes::template List<symbols_semty>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename Datatypes::template List<symbols_semty>::Cons>(
-              l.v());
+      const auto &[a0, a1] = std::get<
+          typename Datatypes::template List<symbols_semty>::Cons>(l.v());
       return crane::any_cast<std::pair<crane::obj, crane::obj>>(a0).first;
     }
   }
@@ -71,7 +69,6 @@ template <SymTypes Ty> struct ListCollect {
                       std::move(default_val));
   }
 };
-
 } // namespace SepExtAnyListCollect
 
 #endif // INCLUDED_SEPEXTANYLISTCOLLECT

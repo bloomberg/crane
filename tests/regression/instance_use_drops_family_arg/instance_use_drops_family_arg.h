@@ -165,8 +165,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template M<crane::obj>>(), std::declval<
             crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
@@ -196,8 +195,8 @@ struct InstanceUseDropsFamilyArg {
         if constexpr (crane_convertible<CraneU1, const A &>) {
           return crane_convert<CraneU1>(a);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -245,8 +244,8 @@ struct InstanceUseDropsFamilyArg {
         if constexpr (crane_convertible<CraneU, const P &>) {
           return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -254,6 +253,7 @@ struct InstanceUseDropsFamilyArg {
     // CREATORS
     static aE<P> a(P a0) { return {std::move(a0)}; }
   };
+
   enum class BE { B };
   template <typename p, typename x = void> using AllE = Sum<aE<p>, BE>;
   template <typename p, typename x> using top = box<AllE<p, crane::obj>, x>;
@@ -269,7 +269,6 @@ struct InstanceUseDropsFamilyArg {
 
   static inline const box<AllE<Nat, crane::obj>, Nat> r =
       incr<Nat>(Nat::s(Nat::s(Nat::o())));
-
   static inline const bool is_three = []() {
     const auto &_sv = r;
     const auto &[a] = _sv;

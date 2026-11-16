@@ -19,10 +19,9 @@ syms_semty concat_tuple_nil_case(const std::deque<Sym> &_x,
                                  syms_semty vs_);
 
 template <typename F6>
-syms_semty concat_tuple_rec_case(Sym, const std::deque<Sym> &xs_,
-                                 const std::deque<Sym> &,
-                                 const std::deque<Sym> &ys, syms_semty vs,
-                                 syms_semty vs_, F6 &&f) {
+syms_semty concat_tuple_rec_case(
+    Sym, const std::deque<Sym> &xs_, const std::deque<Sym> &,
+    const std::deque<Sym> &ys, syms_semty vs, syms_semty vs_, F6 &&f) {
   auto [s, t] =
       crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs));
   return std::make_pair(

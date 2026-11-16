@@ -45,8 +45,7 @@ struct ReuseTwoChildren {
     template <typename CraneU>
     tree(const tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename tree<CraneU>::Leaf>(
-                    _other.v())) {
+            if (std::holds_alternative<typename tree<CraneU>::Leaf>(_other.v())) {
               return Leaf{};
             } else {
               const auto &[a0, a1, a2, a3] =
@@ -59,9 +58,9 @@ struct ReuseTwoChildren {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(crane::unbox(a2));
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a3 ? crane::make_rc<tree<A>>(crane_convert<tree<A>>(*a3))
@@ -237,14 +236,11 @@ struct ReuseTwoChildren {
   }
 
   static inline const tree<uint64_t> t0 = insert<uint64_t>(
-      UINT64_C(5), UINT64_C(50),
-      insert<uint64_t>(
-          UINT64_C(3), UINT64_C(30),
-          insert<uint64_t>(
-              UINT64_C(8), UINT64_C(80),
-              insert<uint64_t>(UINT64_C(1), UINT64_C(10),
-                               insert<uint64_t>(UINT64_C(4), UINT64_C(40),
-                                                tree<uint64_t>::leaf())))));
+      UINT64_C(5), UINT64_C(50), insert<uint64_t>(
+          UINT64_C(3), UINT64_C(30), insert<uint64_t>(
+              UINT64_C(8), UINT64_C(80), insert<uint64_t>(
+                  UINT64_C(1), UINT64_C(10), insert<uint64_t>(
+                      UINT64_C(4), UINT64_C(40), tree<uint64_t>::leaf())))));
   static inline const tree<uint64_t> t1 =
       insert<uint64_t>(UINT64_C(3), UINT64_C(33),
                        insert<uint64_t>(UINT64_C(8), UINT64_C(88), t0));

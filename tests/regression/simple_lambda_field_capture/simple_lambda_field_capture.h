@@ -205,11 +205,12 @@ struct SimpleLambdaFieldCapture {
   /// test1: l = 10, 20, 30, h=10, t=20,30, mylist_sum(t)=50.
   /// f(5) = 5 + 10 + 50 = 65.
   static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs = mylist::mycons(UINT64_C(10),
-                              mylist::mycons(UINT64_C(20),
-                                             mylist::mycons(UINT64_C(30),
-                                                            mylist::mynil())))
-                   .head_adder();
+    auto _cs =
+        mylist::mycons(
+            UINT64_C(10), mylist::mycons(
+                UINT64_C(20),
+                mylist::mycons(UINT64_C(30), mylist::mynil())))
+            .head_adder();
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
@@ -223,13 +224,14 @@ struct SimpleLambdaFieldCapture {
   static inline const uint64_t test2 = []() {
     std::optional<crane::fn<uint64_t(uint64_t)>> opt =
         mylist::mycons(UINT64_C(100),
-                       mylist::mycons(UINT64_C(200), mylist::mynil()))
+                       mylist::mycons(UINT64_C(200),
+                                      mylist::mynil()))
             .head_adder();
     uint64_t noise =
         mylist::mycons(
-            UINT64_C(1),
-            mylist::mycons(UINT64_C(2),
-                           mylist::mycons(UINT64_C(3), mylist::mynil())))
+            UINT64_C(1), mylist::mycons(
+                UINT64_C(2),
+                mylist::mycons(UINT64_C(3), mylist::mynil())))
             .mylist_sum();
     if (opt.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *opt;

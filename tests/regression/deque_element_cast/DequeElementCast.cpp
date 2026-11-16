@@ -3,7 +3,6 @@
 #include "Specif.h"
 
 namespace DequeElementCast {
-
 uint64_t DequeElementCast::count_items(
     const Specif::SigT<DequeElementCast::Nonterm, crane::obj> &e) {
   const auto &[x0, a1] = e;
@@ -26,8 +25,7 @@ uint64_t DequeElementCast::get_item_num(
   switch (x0) {
   case Nonterm::NT_ITEM: {
     auto &&_sv0 = crane::any_cast<DequeElementCast::Val>(a1);
-    if (std::holds_alternative<typename DequeElementCast::Val::VNum>(
-            _sv0.v())) {
+    if (std::holds_alternative<typename DequeElementCast::Val::VNum>(_sv0.v())) {
       const auto &[n0] =
           std::get<typename DequeElementCast::Val::VNum>(_sv0.v());
       return n0;
@@ -45,5 +43,4 @@ uint64_t DequeElementCast::get_item_num(
     std::unreachable();
   }
 }
-
 } // namespace DequeElementCast

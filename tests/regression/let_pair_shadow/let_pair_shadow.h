@@ -68,13 +68,13 @@ struct LetPairShadow {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -153,14 +153,10 @@ struct LetPairShadow {
   /// map_accum f 0 10,20,30 = (0,10,30, 60)
   /// sum(list) + acc = 40 + 60 = 100
   static inline const uint64_t test1 = []() -> uint64_t {
-    auto [l, acc] = map_accum<uint64_t, uint64_t, uint64_t>(
-        [](uint64_t s, uint64_t x) { return std::make_pair((s + x), s); },
-        UINT64_C(0),
-        mylist<uint64_t>::mycons(
-            UINT64_C(10),
-            mylist<uint64_t>::mycons(
-                UINT64_C(20), mylist<uint64_t>::mycons(
-                                  UINT64_C(30), mylist<uint64_t>::mynil()))));
+    auto [l, acc] =
+        map_accum<uint64_t, uint64_t, uint64_t>([](uint64_t s, uint64_t x) {
+          return std::make_pair((s + x), s);
+        }, UINT64_C(0), mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil()))));
     return (mylist_sum(std::move(l)) + acc);
   }();
   /// Helper functions that return pairs (force temporary allocation).

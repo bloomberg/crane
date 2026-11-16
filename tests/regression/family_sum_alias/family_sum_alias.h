@@ -130,11 +130,9 @@ public:
   ItreeF(const ItreeF<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                  _other.v())) {
-            const auto &[r] =
-                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                    _other.v());
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
+            const auto &[r] = std::get<
+                typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
             return RetF{[&]() -> R {
               if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
@@ -147,9 +145,8 @@ public:
             if (std::holds_alternative<
                     typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
-              const auto &[t] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                      _other.v());
+              const auto &[t] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v());
               return TauF{[&]() -> itree {
                 if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
@@ -159,17 +156,16 @@ public:
                 }
               }()};
             } else {
-              const auto &[x, e] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
-                      _other.v());
+              const auto &[x, e] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(_other.v());
               return VisF{
                   [&]() -> E {
                     if constexpr (crane_convertible<E, const CraneU0 &>) {
                       return crane_convert<E>(x);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   crane_convert<crane::fn<itree(crane::obj)>>(e)};
@@ -219,26 +215,36 @@ public:
 
   template <typename CraneU0, typename CraneU1>
   Itree(const Itree<CraneU0, CraneU1> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              const auto &[_observe] =
-                  std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
-              return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
-            })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                       [=]() -> variant_t {
+                                                         const auto &[_observe] =
+                                                             std::get<
+                                                                 typename Itree<
+                                                                     CraneU0,
+                                                                     CraneU1>::Go>(
+                                                                 _other.v());
+                                                         return Go{
+                                                             crane_convert<
+                                                                 ItreeF<
+                                                                     E, R,
+                                                                     Itree<E,
+                                                                           R>>>(
+                                                                 _observe)};
+                                                       })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(crane::lazy<variant_t>(
-        std::in_place, std::in_place_index<0>, std::move(_observe)));
+    return Itree<E, R>(
+        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
+                               std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
   template <typename F> static Itree<E, R> lazy_(F &&thunk) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+    return Itree<E, R>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
   }
 
   // ACCESSORS
@@ -277,9 +283,8 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
-            const auto &[a0] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
-                    _other.v());
+            const auto &[a0] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v());
             return Inl1{[&]() -> E1 {
               if constexpr (crane_convertible<E1, const CraneU0 &>) {
                 return crane_convert<E1>(a0);
@@ -289,9 +294,8 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
-                    _other.v());
+            const auto &[a0] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(_other.v());
             return Inr1{[&]() -> E2 {
               if constexpr (crane_convertible<E2, const CraneU1 &>) {
                 return crane_convert<E2>(a0);
@@ -331,8 +335,8 @@ struct FamilySumAlias {
         if constexpr (crane_convertible<CraneU, const P &>) {
           return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -340,42 +344,62 @@ struct FamilySumAlias {
     // CREATORS
     static aE<P> a(P a0) { return {std::move(a0)}; }
   };
+
   enum class BE { B };
   enum class CE { C };
   template <typename p, typename x>
   using AllE = Sum1<aE<p>, Sum1<BE, CE, crane::obj>, x>;
-  static inline const Itree<AllE<Nat, crane::obj>, Nat> t =
-      Itree<AllE<Nat, crane::obj>, Nat>::go(
-          ItreeF<AllE<Nat, crane::obj>, Nat,
-                 Itree<AllE<Nat, crane::obj>, Nat>>::
-              visf(Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, aE<Nat>>::inl1(
-                       aE<Nat>::a(Nat::s(Nat::s(Nat::s(Nat::o()))))),
-                   crane::fn<Itree<AllE<Nat, crane::obj>, Nat>(crane::obj)>(
-                       [](const crane::obj &n)
-                           -> Itree<AllE<Nat, crane::obj>, Nat> {
-                         return Itree<AllE<Nat, crane::obj>, Nat>::go(
-                             ItreeF<AllE<Nat, crane::obj>, Nat,
-                                    Itree<AllE<Nat, crane::obj>,
-                                          Nat>>::retf(crane::any_cast<Nat>(n)));
-                       })));
+  static inline const Itree<AllE<Nat, crane::obj>, Nat> t = Itree<
+      AllE<Nat, crane::obj>, Nat>::go(ItreeF<AllE<Nat, crane::obj>, Nat,
+                                             Itree<AllE<Nat, crane::obj>,
+                                                   Nat>>::visf(
+                                          Sum1<aE<Nat>,
+                                               Sum1<BE, CE, crane::obj>,
+                                               aE<Nat>>::inl1(
+                                              aE<Nat>::a(
+                                                  Nat::s(
+                                                      Nat::s(Nat::s(Nat::o()))))),
+                                          crane::fn<Itree<AllE<Nat, crane::obj>,
+                                                          Nat>(crane::obj)>([](const crane::obj &n) -> Itree<
+                                                                                AllE<Nat,
+                                                                                     crane::obj>,
+                                                                                Nat> {
+                                                                                  return Itree<
+                                                                                      AllE<Nat,
+                                                                                           crane::obj>,
+                                                                                      Nat>::go(
+                                                                                      ItreeF<
+                                                                                          AllE<Nat,
+                                                                                               crane::obj>,
+                                                                                          Nat,
+                                                                                          Itree<AllE<Nat,
+                                                                                                     crane::obj>,
+                                                                                                Nat>>::retf(crane::any_cast<Nat>(n)));
+                                                                                })));
   static inline const bool is_three = []() {
     auto &&_sv = []() {
       auto &&_sv0 = t;
-      const auto &[_observe0] = std::get<typename Itree<
-          Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat>::Go>(
-          _sv0.v());
+      const auto &[_observe0] =
+          std::get<
+              typename Itree<
+                  Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
+                  Nat>::Go>(_sv0.v());
       return _observe0;
     }();
-    if (std::holds_alternative<typename ItreeF<
-            Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
-            Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
-                  Nat>>::VisF>(_sv.v())) {
-      const auto &[x, e0] = std::get<typename ItreeF<
-          Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
-          Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
-                Nat>>::VisF>(_sv.v());
-      if (std::holds_alternative<typename Sum1<
-              aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>::Inl1>(x.v())) {
+    if (std::holds_alternative<
+            typename ItreeF<
+                Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
+                Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
+                      Nat>>::VisF>(_sv.v())) {
+      const auto &[x, e0] =
+          std::get<
+              typename ItreeF<
+                  Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>, Nat,
+                  Itree<Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>,
+                        Nat>>::VisF>(_sv.v());
+      if (std::holds_alternative<
+              typename Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>,
+                            crane::obj>::Inl1>(x.v())) {
         const auto &[a01] = std::get<
             typename Sum1<aE<Nat>, Sum1<BE, CE, crane::obj>, crane::obj>::Inl1>(
             x.v());

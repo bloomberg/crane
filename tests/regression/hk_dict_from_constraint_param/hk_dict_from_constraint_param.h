@@ -234,8 +234,8 @@ template <typename T> struct box {
       if constexpr (crane_convertible<CraneU, const T &>) {
         return crane_convert<CraneU>(b_payload);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -260,13 +260,13 @@ template <typename T, typename Body> struct holder {
   template <typename CraneU0, typename CraneU1>
   operator holder<CraneU0, CraneU1>() const {
     return {crane_convert<List<box<CraneU0>>>(h_boxes), [&]() -> CraneU1 {
-              if constexpr (crane_convertible<CraneU1, const Body &>) {
-                return crane_convert<CraneU1>(h_body);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }()};
+      if constexpr (crane_convertible<CraneU1, const Body &>) {
+        return crane_convert<CraneU1>(h_body);
+      } else {
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
+      }
+    }()};
   }
 };
 

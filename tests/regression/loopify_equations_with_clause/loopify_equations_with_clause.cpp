@@ -1,9 +1,12 @@
 #include "loopify_equations_with_clause.h"
 
-uint64_t LoopifyEquationsWithClause::zeros(
-    const List<uint64_t> &x) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyEquationsWithClause::zeros(const List<uint64_t> &x) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     const List<uint64_t> *x;
   };
@@ -79,10 +82,13 @@ LoopifyEquationsWithClause::zeros_graph_correct(const List<uint64_t> &x) {
   }
 }
 
-uint64_t LoopifyEquationsWithClause::plain(
-    const List<uint64_t> &x) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyEquationsWithClause::plain(const List<uint64_t> &x) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     const List<uint64_t> *x;
   };
@@ -145,16 +151,19 @@ LoopifyEquationsWithClause::plain_graph_correct(const List<uint64_t> &x) {
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_x->v());
-      auto _cell = typename LoopifyEquationsWithClause::plain_graph::
-          Plain_graph_equation_2(a0, *a1, nullptr);
+      auto _cell =
+          typename LoopifyEquationsWithClause::plain_graph::Plain_graph_equation_2(
+              a0, *a1, nullptr);
       LoopifyEquationsWithClause::plain_graph &_node =
           (_write ? *(*_write = std::make_shared<
                           LoopifyEquationsWithClause::plain_graph>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename LoopifyEquationsWithClause::plain_graph::
-                             Plain_graph_equation_2>(_node.v_mut())
-                    .hind;
+      _write =
+          &std::get<
+              typename LoopifyEquationsWithClause::plain_graph::Plain_graph_equation_2>(
+              _node.v_mut())
+              .hind;
       _loop_x = crane_raw(a1);
       continue;
     }

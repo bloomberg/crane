@@ -29,9 +29,8 @@ struct Ascii0 {
   static N N_of_digits(const List<bool> &l);
   static N N_of_ascii(char a);
   static uint64_t nat_of_ascii(char a);
-};
+}; /// With Mapping.AsciiChar, a character is a C++ char: identifier
 
-/// With Mapping.AsciiChar, a character is a C++ char: identifier
 /// comparison compares bytes instead of building a binary natural per
 /// character.  The constructor packs bits and a match unpacks them, so
 /// code that looks inside a character still works.
@@ -122,6 +121,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct Positive {
@@ -232,7 +232,7 @@ public:
 struct Pos {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
-             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());

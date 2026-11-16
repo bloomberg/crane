@@ -39,6 +39,7 @@ struct Coq_Little {
 struct Bool {
   static Reflect iff_reflect(bool b);
 };
+
 enum class Reflect { REFLECTT, REFLECTF };
 enum class Comparison { EQ, LT, GT };
 enum class CompareSpecT { COMPEQT, COMPLTT, COMPGTT };
@@ -63,8 +64,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -98,8 +99,7 @@ public:
   template <typename CraneU>
   Sumor(const Sumor<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sumor<CraneU>::Inleft>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Sumor<CraneU>::Inleft>(_other.v())) {
             const auto &[a0] =
                 std::get<typename Sumor<CraneU>::Inleft>(_other.v());
             return Inleft{[&]() -> A {
@@ -1262,12 +1262,9 @@ struct Coq_Pos {
                        unsigned int p) {
     auto _lc1_pa0 = f0(1u, a);
     crane::fn<T1(unsigned int)> f2 = [=](unsigned int _x0) -> T1 {
-      return peano_rect<T1>(
-          _lc1_pa0,
-          [=](unsigned int p0, const T1 &x) {
-            return f0(((2u * p0) + 1u), f0((2u * p0), x));
-          },
-          _x0);
+      return peano_rect<T1>(_lc1_pa0, [=](unsigned int p0, const T1 &x) {
+        return f0(((2u * p0) + 1u), f0((2u * p0), x));
+      }, _x0);
     };
     if (p == 1u) {
       return a;
@@ -1421,13 +1418,13 @@ struct N {
   measure_right_induction(std::type_identity_t<crane::fn<unsigned int(T1)>> f0,
                           unsigned int, F2 &&iH, const T1 &x) {
     unsigned int t0 = f0(x);
-    auto f1_impl = [=, f0 = std::move(f0)](auto &_self_f1, unsigned int,
-                                           T1 y) -> T2 {
-      return iH(std::move(y), [=](const T1 &y_) {
-        unsigned int y0 = f0(y_);
-        return _self_f1(_self_f1, y0, y_);
-      });
-    };
+    auto f1_impl =
+        [=, f0 = std::move(f0)](auto &_self_f1, unsigned int, T1 y) -> T2 {
+          return iH(std::move(y), [=](const T1 &y_) {
+            unsigned int y0 = f0(y_);
+            return _self_f1(_self_f1, y0, y_);
+          });
+        };
     {
       unsigned int _lc1_x0 = t0;
       T1 _lc1_y = x;
@@ -1446,10 +1443,12 @@ struct N {
       F0 &&f0, std::type_identity_t<crane::fn<T2(T1, crane::fn<T2(T1)>)>> iH,
       const T1 &x) {
     return measure_right_induction<T1, T2>(
-        f0, 0u,
+        f0,
+        0u,
         [=, iH = std::move(iH)](const T1 &y, crane::fn<T2(T1)> iH_) {
-          return iH(
-              y, [=, iH_ = std::move(iH_)](const T1 &y0) { return iH_(y0); });
+          return iH(y, [=, iH_ = std::move(iH_)](const T1 &y0) {
+            return iH_(y0);
+          });
         },
         x);
   }
@@ -1477,8 +1476,9 @@ struct N {
     template <typename T1, typename F2>
     static T1 max_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(
-          n, m, x, [=]() { return x0; }(), [=]() { return x1; }());
+      return max_case_strong<T1>(n, m, x, [=]() { return x0; }(), [=]() {
+        return x1;
+      }());
     }
 
     static bool max_dec(unsigned int n, unsigned int m);
@@ -1503,8 +1503,9 @@ struct N {
     template <typename T1, typename F2>
     static T1 min_case(unsigned int n, unsigned int m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return min_case_strong<T1>(
-          n, m, x, [=]() { return x0; }(), [=]() { return x1; }());
+      return min_case_strong<T1>(n, m, x, [=]() { return x0; }(), [=]() {
+        return x1;
+      }());
     }
 
     static bool min_dec(unsigned int n, unsigned int m);
@@ -1520,8 +1521,9 @@ struct N {
   template <typename T1>
   static T1 max_case(unsigned int n, unsigned int m, const T1 &x,
                      const T1 &x0) {
-    return max_case_strong<T1>(
-        n, m, [=]() { return x; }(), [=]() { return x0; }());
+    return max_case_strong<T1>(n, m, [=]() { return x; }(), [=]() {
+      return x0;
+    }());
   }
 
   static bool max_dec(unsigned int x0_, unsigned int x1_);
@@ -1536,8 +1538,9 @@ struct N {
   template <typename T1>
   static T1 min_case(unsigned int n, unsigned int m, const T1 &x,
                      const T1 &x0) {
-    return min_case_strong<T1>(
-        n, m, [=]() { return x; }(), [=]() { return x0; }());
+    return min_case_strong<T1>(n, m, [=]() { return x; }(), [=]() {
+      return x0;
+    }());
   }
 
   static bool min_dec(unsigned int x0_, unsigned int x1_);

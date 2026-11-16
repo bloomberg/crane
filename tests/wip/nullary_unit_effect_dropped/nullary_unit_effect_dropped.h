@@ -7,6 +7,7 @@ enum class GiveupE;
 struct NullaryUnitEffectDropped {
   static void f(Unit _x);
 };
+
 enum class Unit { TT };
 enum class GiveupE { GIVEUP };
 

@@ -5,11 +5,9 @@ std::shared_ptr<ITree<uint64_t>> TranslateAppliesHandler::t0() {
 }
 
 std::shared_ptr<ITree<uint64_t>> TranslateAppliesHandler::relabelled() {
-  return itree_translate(
-      [](const AE &a0) -> BE {
-        return relabel<crane::obj>(crane_convert<AE>(a0));
-      },
-      t0());
+  return itree_translate([](const AE &a0) -> BE {
+    return relabel<crane::obj>(crane_convert<AE>(a0));
+  }, t0());
 }
 
 std::shared_ptr<ITree<uint64_t>> TranslateAppliesHandler::injected() {

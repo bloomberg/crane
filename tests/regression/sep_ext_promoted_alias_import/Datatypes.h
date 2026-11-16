@@ -7,7 +7,6 @@
 #include <variant>
 
 namespace Datatypes {
-
 struct Nat;
 
 struct Nat {
@@ -63,7 +62,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
 } // namespace Datatypes
 
 #endif // INCLUDED_DATATYPES

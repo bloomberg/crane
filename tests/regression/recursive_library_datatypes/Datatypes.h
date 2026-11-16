@@ -15,7 +15,6 @@
 #include <variant>
 
 namespace Datatypes {
-
 struct Empty_set;
 enum class Reflect;
 template <typename A, typename B> struct Sum;
@@ -54,6 +53,7 @@ template <typename T1> T1 bool_rect(T1 f, T1 f0, bool b) {
 template <typename T1> T1 bool_rec(T1 f, T1 f0, bool b) {
   return bool_rect<T1>(std::move(f), std::move(f0), b);
 }
+
 enum class Reflect { REFLECTT, REFLECTF };
 
 template <typename T1>
@@ -193,7 +193,7 @@ public:
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const A &> &&
-             std::is_invocable_r_v<T1, F1 &, const B &>
+    std::is_invocable_r_v<T1, F1 &, const B &>
   T1 sum_rect(F0 &&f, F1 &&f0) const {
     if (std::holds_alternative<typename Sum<A, B>::Inl>(this->v())) {
       const auto &[a0] = std::get<typename Sum<A, B>::Inl>(this->v());
@@ -421,6 +421,7 @@ public:
     return std::move(*_root);
   }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 template <typename T1> T1 comparison_rect(T1 f, T1 f0, T1 f1, Comparison c) {
@@ -480,7 +481,6 @@ CompSpecT<T1> CompSpec2Type(const T1 &, const T1 &, Comparison x0_) {
 
 using ID = crane::fn<crane::obj(crane::obj)>;
 crane::obj id(crane::obj x);
-
 } // namespace Datatypes
 
 #endif // INCLUDED_DATATYPES

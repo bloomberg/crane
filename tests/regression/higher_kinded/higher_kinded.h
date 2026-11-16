@@ -48,8 +48,7 @@ struct HigherKinded {
     template <typename CraneU>
     Tree(const Tree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Tree<CraneU>::Leaf>(
-                    _other.v())) {
+            if (std::holds_alternative<typename Tree<CraneU>::Leaf>(_other.v())) {
               const auto &[a0] =
                   std::get<typename Tree<CraneU>::Leaf>(_other.v());
               return Leaf{[&]() -> A {
@@ -65,9 +64,9 @@ struct HigherKinded {
                   std::get<typename Tree<CraneU>::Branch>(_other.v());
               return Branch{
                   (a0 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a0))
-                      : nullptr),
-                  (a1 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*a1))
-                      : nullptr)};
+                      : nullptr), (a1 ? std::make_shared<Tree<A>>(
+                                          crane_convert<Tree<A>>(*a1))
+                                      : nullptr)};
             }
           }()) {}
 
@@ -155,7 +154,7 @@ struct HigherKinded {
 
   template <typename T1, typename T2, typename F0, typename F1>
     requires std::is_invocable_r_v<T2, F0 &, const T1 &> &&
-             std::is_invocable_r_v<T2, F1 &, T2, T2>
+    std::is_invocable_r_v<T2, F1 &, T2, T2>
   static T2 tree_fold(F0 &&leaf_f, F1 &&branch_f, const Tree<T1> &t) {
     if (std::holds_alternative<typename Tree<T1>::Leaf>(t.v())) {
       const auto &[a0] = std::get<typename Tree<T1>::Leaf>(t.v());
@@ -170,9 +169,9 @@ struct HigherKinded {
   static uint64_t tree_sum(const Tree<uint64_t> &t);
 
   template <typename T1> static uint64_t tree_size(const Tree<T1> &t) {
-    return tree_fold<T1, uint64_t>(
-        [](T1) { return UINT64_C(1); },
-        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, t);
+    return tree_fold<T1, uint64_t>([](T1) {
+      return UINT64_C(1);
+    }, [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }, t);
   }
 
   template <typename T1, typename T2, typename F0>
@@ -186,31 +185,33 @@ struct HigherKinded {
   }
 
   static inline const Tree<uint64_t> test_tree = Tree<uint64_t>::branch(
-      Tree<uint64_t>::leaf(UINT64_C(1)),
-      Tree<uint64_t>::branch(Tree<uint64_t>::leaf(UINT64_C(2)),
-                             Tree<uint64_t>::leaf(UINT64_C(3))));
+      Tree<uint64_t>::leaf(UINT64_C(1)), Tree<uint64_t>::branch(
+          Tree<uint64_t>::leaf(UINT64_C(2)),
+          Tree<uint64_t>::leaf(UINT64_C(3))));
   static inline const uint64_t test_tree_sum = tree_sum(test_tree);
   static inline const uint64_t test_tree_size = tree_size<uint64_t>(test_tree);
   static inline const Tree<uint64_t> test_tree_map =
-      tree_map<uint64_t, uint64_t>([](uint64_t n) { return (n * UINT64_C(2)); },
-                                   test_tree);
+      tree_map<uint64_t, uint64_t>([](uint64_t n) {
+        return (n * UINT64_C(2));
+      }, test_tree);
   static inline const std::optional<uint64_t> test_hk_option = hk_map<
       std::optional, uint64_t>(
-      []<typename CraneT1>(auto &&a0, const std::optional<CraneT1> &a1)
-          -> std::optional<std::invoke_result_t<decltype(a0) &, CraneT1 &>> {
-        return map_option<CraneT1,
-                          std::invoke_result_t<decltype(a0) &, CraneT1 &>>(
-            std::forward<decltype(a0)>(a0), a1);
-      },
+      []<typename CraneT1>(auto &&a0,
+                           const std::optional<CraneT1> &a1)
+           -> std::optional<std::invoke_result_t<decltype(a0)&, CraneT1 &>> {
+            return map_option<CraneT1,
+                              std::invoke_result_t<decltype(a0)&, CraneT1 &>>(
+                std::forward<decltype(a0)>(a0), a1);
+          },
       [](uint64_t n) { return (n + UINT64_C(1)); },
       std::make_optional<uint64_t>(UINT64_C(5)));
   static inline const Tree<uint64_t> test_hk_tree = hk_map<Tree, uint64_t>(
-      []<typename CraneT1>(auto &&a0, const Tree<CraneT1> &a1)
-          -> Tree<std::invoke_result_t<decltype(a0) &, CraneT1 &>> {
-        return tree_map<CraneT1,
-                        std::invoke_result_t<decltype(a0) &, CraneT1 &>>(
-            std::forward<decltype(a0)>(a0), a1);
-      },
+      []<typename CraneT1>(auto &&a0, const Tree<CraneT1> &a1) -> Tree<
+          std::invoke_result_t<decltype(a0)&, CraneT1 &>> {
+            return tree_map<CraneT1,
+                            std::invoke_result_t<decltype(a0)&, CraneT1 &>>(
+                std::forward<decltype(a0)>(a0), a1);
+          },
       [](uint64_t n) { return (n + UINT64_C(10)); }, test_tree);
 };
 

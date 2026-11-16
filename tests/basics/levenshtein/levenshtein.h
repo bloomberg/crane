@@ -22,6 +22,7 @@ struct String;
 struct Bool {
   static Sumbool bool_dec(Bool0 b1, Bool0 b2);
 };
+
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -134,6 +135,7 @@ template <typename A, typename P> struct SigT {
     return x0;
   }
 };
+
 enum class Sumbool { LEFT, RIGHT };
 
 struct Ascii {
@@ -305,9 +307,9 @@ struct Levenshtein {
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, const Ascii &, const String &> &&
-               std::is_invocable_r_v<T1, F1 &, const Ascii &, const String &> &&
-               std::is_invocable_r_v<T1, F2 &, const Ascii &, const Ascii &,
-                                     const String &>
+      std::is_invocable_r_v<T1, F1 &, const Ascii &, const String &> &&
+      std::is_invocable_r_v<T1, F2 &, const Ascii &, const Ascii &,
+                            const String &>
     T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                  const String &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
@@ -369,9 +371,9 @@ struct Levenshtein {
 
     static chain change(String s, String t, String u, Nat n, edit a4,
                         chain a5) {
-      return chain(Change{std::move(s), std::move(t), std::move(u),
-                          std::move(n), std::move(a4),
-                          std::make_shared<chain>(std::move(a5))});
+      return chain(
+          Change{std::move(s), std::move(t), std::move(u), std::move(n),
+                 std::move(a4), std::make_shared<chain>(std::move(a5))});
     }
 
     // MANIPULATORS

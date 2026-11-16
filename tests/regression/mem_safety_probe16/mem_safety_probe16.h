@@ -177,10 +177,7 @@ struct MemSafetyProbe16 {
             const auto &[a01, a11, a21] =
                 std::get<typename tree::Node>(_sv1.v());
             return (((((((a00->tree_sum() + a10) + a20->tree_sum()) + a1) +
-                       a01->tree_sum()) +
-                      a11) +
-                     a21->tree_sum()) +
-                    n);
+                       a01->tree_sum()) + a11) + a21->tree_sum()) + n);
           }
         }
       }
@@ -360,13 +357,13 @@ struct MemSafetyProbe16 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -458,10 +455,9 @@ struct MemSafetyProbe16 {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -526,13 +522,14 @@ struct MemSafetyProbe16 {
   static uint64_t apply_fns(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
                             uint64_t x);
   static inline const uint64_t test_store_closures = []() {
-    mylist<tree> trees = mylist<tree>::mycons(
-        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-        mylist<tree>::mycons(
-            tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
-            mylist<tree>::mycons(
-                tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
-                mylist<tree>::mynil())));
+    mylist<tree> trees =
+        mylist<tree>::mycons(tree::node(tree::leaf(), UINT64_C(10),
+                                        tree::leaf()), mylist<tree>::mycons(
+                                 tree::node(tree::leaf(), UINT64_C(20),
+                                            tree::leaf()), mylist<tree>::mycons(
+                                     tree::node(tree::leaf(), UINT64_C(30),
+                                                tree::leaf()),
+                                     mylist<tree>::mynil())));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_summers(std::move(trees));
     return apply_fns(std::move(fns), UINT64_C(0));
   }();
@@ -545,8 +542,7 @@ struct MemSafetyProbe16 {
     crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
     const mylist<tree> *_loop_trees = &trees;
     while (true) {
-      if (std::holds_alternative<typename mylist<tree>::Mynil>(
-              _loop_trees->v())) {
+      if (std::holds_alternative<typename mylist<tree>::Mynil>(_loop_trees->v())) {
         return _loop_acc(x0_);
       } else {
         const auto &[a0, a1] =
@@ -559,15 +555,17 @@ struct MemSafetyProbe16 {
   }
 
   static inline const uint64_t test_compose = []() {
-    mylist<tree> trees = mylist<tree>::mycons(
-        tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-        mylist<tree>::mycons(
-            tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-            mylist<tree>::mycons(
-                tree::node(tree::leaf(), UINT64_C(15), tree::leaf()),
-                mylist<tree>::mynil())));
-    return compose_summers(
-        std::move(trees), [](uint64_t n) { return n; }, UINT64_C(0));
+    mylist<tree> trees =
+        mylist<tree>::mycons(tree::node(tree::leaf(), UINT64_C(5),
+                                        tree::leaf()), mylist<tree>::mycons(
+                                 tree::node(tree::leaf(), UINT64_C(10),
+                                            tree::leaf()), mylist<tree>::mycons(
+                                     tree::node(tree::leaf(), UINT64_C(15),
+                                                tree::leaf()),
+                                     mylist<tree>::mynil())));
+    return compose_summers(std::move(trees), [](uint64_t n) {
+      return n;
+    }, UINT64_C(0));
   }();
   /// TEST 3: Build a list of closures where each closure captures
   /// the SAME tree at different levels.
@@ -601,10 +599,9 @@ struct MemSafetyProbe16 {
       tree t2 = tree::node(tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
                            UINT64_C(25), tree::leaf());
       crane::fn<uint64_t(uint64_t)> f =
-          [=, t1 = std::move(t1),
-           t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
-        return t1.pair_closure(std::move(t2), _x0);
-      };
+          [=, t1 = std::move(t1), t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
+            return t1.pair_closure(std::move(t2), _x0);
+          };
       return (f(UINT64_C(0)) + f(UINT64_C(0)));
     }();
   }();
@@ -613,10 +610,9 @@ struct MemSafetyProbe16 {
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                    UINT64_C(2),
                    tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-        UINT64_C(10),
-        tree::node(tree::node(tree::leaf(), UINT64_C(4), tree::leaf()),
-                   UINT64_C(5),
-                   tree::node(tree::leaf(), UINT64_C(6), tree::leaf())));
+        UINT64_C(10), tree::node(
+            tree::node(tree::leaf(), UINT64_C(4), tree::leaf()), UINT64_C(5),
+            tree::node(tree::leaf(), UINT64_C(6), tree::leaf())));
     return t.deep_nested_closure(UINT64_C(0));
   }();
   /// TEST 7: Map + apply pattern: build closures from tree children,
@@ -625,11 +621,14 @@ struct MemSafetyProbe16 {
   zip_apply(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
             const mylist<uint64_t> &vals);
   static inline const uint64_t test_zip_apply = []() {
-    mylist<tree> trees = mylist<tree>::mycons(
-        tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-        mylist<tree>::mycons(
-            tree::node(tree::leaf(), UINT64_C(20), tree::leaf()),
-            mylist<tree>::mynil()));
+    mylist<tree> trees = mylist<tree>::mycons(tree::node(tree::leaf(),
+                                                         UINT64_C(10),
+                                                         tree::leaf()), mylist<
+                                                  tree>::mycons(
+                                                  tree::node(tree::leaf(),
+                                                             UINT64_C(20),
+                                                             tree::leaf()),
+                                                  mylist<tree>::mynil()));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_summers(std::move(trees));
     mylist<uint64_t> vals = mylist<uint64_t>::mycons(
         UINT64_C(1),

@@ -6,7 +6,6 @@
 /// continuation branch: C++ compile error.
 uint64_t sum_signum(uint64_t n) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -60,7 +59,6 @@ uint64_t sum_signum(uint64_t n) { /// CraneEnter: captures varying parameters
 /// down_let 3 = [2; 1; 0].
 List<uint64_t> down_let(uint64_t n) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -112,9 +110,9 @@ List<uint64_t> down_let(uint64_t n) { /// CraneEnter: captures varying
 /// down_inline 3 equals [2; 1; 0] in Rocq, yet extracts to code that
 /// returns .  Plain cons n' (down_inline n') with the recursive call
 /// directly in argument position is handled correctly.
-List<uint64_t> down_inline(uint64_t n) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+List<uint64_t>
+down_inline(uint64_t n) { /// CraneEnter: captures varying parameters for each
+                          /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };

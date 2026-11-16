@@ -9,9 +9,8 @@ template <typename I, typename A>
 concept Show = requires {
   { I::sz(std::declval<A>()) } -> std::convertible_to<uint64_t>;
   { I::tag() } -> std::convertible_to<uint64_t>;
-};
+}; /// A typeclass becomes a C++ concept, and a module becomes a struct.  A class
 
-/// A typeclass becomes a C++ concept, and a module becomes a struct.  A class
 /// declared inside a module therefore emits a concept inside a struct, which
 /// C++ allows only at namespace scope; every later reference to the class then
 /// fails to resolve as well.

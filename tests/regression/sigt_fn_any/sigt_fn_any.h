@@ -155,8 +155,7 @@ template <SEM S> struct Make {
   /// any_cast<std::function<...>>(f)(...) — the failing cast.
   template <typename F1>
   static bool run(const SigT<std::pair<typename S::idx, List<typename S::idx>>,
-                             crane::obj> &e,
-                  F1 &&arg) {
+                             crane::obj> &e, F1 &&arg) {
     const auto &[x0, a1] = e;
     const auto &[a, _x] = x0;
     if (crane::any_cast<bool>(
@@ -176,8 +175,9 @@ struct Inst {
 
 using M = Make<Inst>;
 [[gnu::used]] inline const M::entry my_entry =
-    M::mk(std::monostate{},
-          crane_erase_fn<bool>([](uint64_t n) { return n == UINT64_C(0); }));
+    M::mk(std::monostate{}, crane_erase_fn<bool>([](uint64_t n) {
+      return n == UINT64_C(0);
+    }));
 Inst::sem my_arg(std::monostate _x);
 /// In Rocq this evaluates to true ((fun n => n =? 0) 0), and the extracted
 /// C++ now returns true as well.  Kept as a function (not a value) so the C++

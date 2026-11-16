@@ -238,8 +238,7 @@ struct UserNameHidesCraneRuntime {
       (tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                   UINT64_C(2),
                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
-           .sum() +
-       UINT64_C(1));
+           .sum() + UINT64_C(1));
 };
 
 #endif // INCLUDED_USER_NAME_HIDES_CRANE_RUNTIME

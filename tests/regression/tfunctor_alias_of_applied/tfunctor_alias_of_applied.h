@@ -286,8 +286,8 @@ struct TfunctorAliasOfApplied {
         if constexpr (crane_convertible<CraneU, const T &>) {
           return crane_convert<CraneU>(blk);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -379,20 +379,22 @@ struct TfunctorAliasOfApplied {
     template <typename CraneA0> using F = mcfg<CraneA0>;
 
     static mcfg<Nat> convert_typ(Nat k, mcfg<Nat> a0) {
-      return TFunctor_mcfg<TFunctor_cfg, TFunctor_definition<TFunctor_cfg>>::
-          template tfmap<Nat, Nat>(
-              [=, k = std::move(k)](const Nat &n) { return n.add(k); },
-              std::move(a0));
+      return TFunctor_mcfg<TFunctor_cfg,
+                           TFunctor_definition<TFunctor_cfg>>::template tfmap<
+          Nat, Nat>([=, k = std::move(k)](const Nat &n) {
+            return n.add(k);
+          }, std::move(a0));
     }
   };
 
   static_assert(ConvertTyp<ConvertTyp_mcfg>);
   static mcfg<Nat> convert(const modul<Nat, cfg<Nat>> &m);
   static inline const mcfg<Nat> m0 =
-      modul<Nat, cfg<Nat>>{List<definition<Nat, cfg<Nat>>>::cons(
-          definition<Nat, cfg<Nat>>{Nat::s(Nat::o()),
-                                    cfg<Nat>{Nat::s(Nat::s(Nat::o()))}},
-          List<definition<Nat, cfg<Nat>>>::nil())};
+      modul<Nat, cfg<Nat>>{
+          List<definition<Nat, cfg<Nat>>>::cons(
+              definition<Nat, cfg<Nat>>{Nat::s(Nat::o()),
+                                        cfg<Nat>{Nat::s(Nat::s(Nat::o()))}},
+              List<definition<Nat, cfg<Nat>>>::nil())};
   static inline const Nat total = []() {
     auto &&_sv = convert(m0).m_defs;
     if (std::holds_alternative<typename List<definition<Nat, cfg<Nat>>>::Nil>(

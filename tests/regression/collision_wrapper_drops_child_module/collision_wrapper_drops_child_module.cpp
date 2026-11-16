@@ -47,8 +47,7 @@ bool AstLike::Ord::compare(const AstLike::Raw_id &x, const AstLike::Raw_id &y) {
 std::pair<::Ident, std::pair<std::pair<bool, bool>, bool>>
 both(const AstLike::Raw_id &k) {
   return std::make_pair(
-      to_ident(k),
-      std::make_pair(
+      to_ident(k), std::make_pair(
           std::make_pair(AstLike::Ident::eq_dec(k.tag(), Nat::s(Nat::o())),
                          AstLike::RawIDOrd::eq_dec(k.tag(), Nat::s(Nat::o()))),
           AstLike::Ord::compare(k, k)));

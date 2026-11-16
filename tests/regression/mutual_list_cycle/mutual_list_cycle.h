@@ -173,6 +173,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 /// A mutual inductive group whose cycle runs through a container.
 ///
 /// tree holds its children as a list branch, and branch holds a tree
@@ -261,16 +262,16 @@ inline Tree Tree::leaf(List<Branch> a0) {
 inline Nat Tree::tree_size() const {
   const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
   Nat _tmp3;
-  auto branches_size_impl = [](auto &_self_branches_size,
-                               const List<Branch> &l) -> Nat {
-    if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
-      return Nat::o();
-    } else {
-      const auto &[a00, a10] = std::get<typename List<Branch>::Cons>(l.v());
-      return a00.branch_size().add(
-          _self_branches_size(_self_branches_size, *a10));
-    }
-  };
+  auto branches_size_impl =
+      [](auto &_self_branches_size, const List<Branch> &l) -> Nat {
+        if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
+          return Nat::o();
+        } else {
+          const auto &[a00, a10] = std::get<typename List<Branch>::Cons>(l.v());
+          return a00.branch_size().add(
+              _self_branches_size(_self_branches_size, *a10));
+        }
+      };
   auto branches_size = [&](const List<Branch> &l) -> Nat {
     return branches_size_impl(branches_size_impl, l);
   };
@@ -308,8 +309,8 @@ inline Branch::~Branch() {
             if (_alt->a0 && _alt->a0.use_count() == 1) {
               std::atomic_thread_fence(std::memory_order_acquire);
               auto _lp = _alt->a0.get();
-              while (std::holds_alternative<typename List<Branch>::Cons>(
-                  _lp->v())) {
+              while (
+                  std::holds_alternative<typename List<Branch>::Cons>(_lp->v())) {
                 auto &_lc = std::get<typename List<Branch>::Cons>(_lp->v_mut());
                 _stack.push_back(std::make_shared<Branch>(std::move(_lc.a)));
                 if (_lc.l && _lc.l.use_count() == 1) {

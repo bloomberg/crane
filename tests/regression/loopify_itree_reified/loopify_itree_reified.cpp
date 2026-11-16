@@ -3,12 +3,11 @@
 /// Consumer fixpoint: traverses an ITree with fuel. This is a regular
 /// fixpoint with recursion on fuel that processes reified ITrees. Should
 /// be loopified normally (nontail with _Enter/_Call frames).
-uint64_t
-LoopifyItreeReified::count_taus(uint64_t fuel,
-                                const std::shared_ptr<ITree<uint64_t>> &
-                                    t) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+uint64_t LoopifyItreeReified::count_taus(
+    uint64_t fuel,
+    const std::shared_ptr<ITree<uint64_t>> &t) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     std::shared_ptr<ITree<uint64_t>> t;
     uint64_t fuel;

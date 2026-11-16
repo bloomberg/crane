@@ -43,8 +43,9 @@ struct LoopifyShadowFromReference {
     }
 
     static lst cons_crane_reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
-      return lst(Cons{
-          a0, crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
+      return lst(
+          Cons{a0,
+               crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS
@@ -78,7 +79,6 @@ struct LoopifyShadowFromReference {
   static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const lst *l;
     };
@@ -127,7 +127,7 @@ struct LoopifyShadowFromReference {
 
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
-             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t twice(F0 &&f, uint64_t x) {
     return f(f(x));
   }

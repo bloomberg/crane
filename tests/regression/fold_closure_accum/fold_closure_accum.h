@@ -250,12 +250,11 @@ struct FoldClosureAccum {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
     tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
-    return compose_adders(
-        List<tree>::cons(std::move(t1),
-                         List<tree>::cons(std::move(t2),
-                                          List<tree>::cons(std::move(t3),
-                                                           List<tree>::nil()))),
-        UINT64_C(0));
+    return compose_adders(List<tree>::cons(
+                              std::move(t1), List<tree>::cons(
+                                  std::move(t2), List<tree>::cons(
+                                      std::move(t3), List<tree>::nil()))),
+                          UINT64_C(0));
   }();
   /// Test with non-zero starting value.
   /// Expected: compose_adders t1; t2; t3 7 = 67
@@ -263,12 +262,11 @@ struct FoldClosureAccum {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
     tree t3 = tree::node(tree::leaf(), UINT64_C(30), tree::leaf());
-    return compose_adders(
-        List<tree>::cons(std::move(t1),
-                         List<tree>::cons(std::move(t2),
-                                          List<tree>::cons(std::move(t3),
-                                                           List<tree>::nil()))),
-        UINT64_C(7));
+    return compose_adders(List<tree>::cons(
+                              std::move(t1), List<tree>::cons(
+                                  std::move(t2), List<tree>::cons(
+                                      std::move(t3), List<tree>::nil()))),
+                          UINT64_C(7));
   }();
   /// Invoke the composed function twice — tests if closures survive
   /// multiple invocations.
@@ -279,8 +277,9 @@ struct FoldClosureAccum {
       crane::fn<uint64_t(uint64_t)> f = [&]() {
         auto _pa0 = List<tree>::cons(
             std::move(t1), List<tree>::cons(std::move(t2), List<tree>::nil()));
-        return
-            [=](uint64_t _x0) -> uint64_t { return compose_adders(_pa0, _x0); };
+        return [=](uint64_t _x0) -> uint64_t {
+          return compose_adders(_pa0, _x0);
+        };
       }();
       return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();

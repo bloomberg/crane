@@ -4,7 +4,6 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
     const std::optional<uint64_t> &cache,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
     std::optional<uint64_t> cache;
@@ -55,12 +54,11 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::cached_sum(
   return _result;
 }
 
-std::pair<uint64_t, List<uint64_t>>
-LoopifyConditionalRecursion::find_or_recurse(
+std::pair<uint64_t,
+          List<uint64_t>> LoopifyConditionalRecursion::find_or_recurse(
     uint64_t target,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -105,11 +103,16 @@ LoopifyConditionalRecursion::find_or_recurse(
   return _result;
 }
 
-uint64_t LoopifyConditionalRecursion::nested_cond(
-    uint64_t threshold, uint64_t lo, uint64_t hi,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
+                                         uint64_t hi,
+                                         const List<uint64_t> &l) { /// CraneEnter:
+                                                                    /// captures
+                                                                    /// varying
+                                                                    /// parameters
+                                                                    /// for each
+                                                                    /// recursive
+                                                                    /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -172,7 +175,6 @@ LoopifyConditionalRecursion::multi_return(
     const std::optional<std::pair<uint64_t, uint64_t>> &memo,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
     std::optional<std::pair<uint64_t, uint64_t>> memo;
@@ -196,8 +198,9 @@ LoopifyConditionalRecursion::multi_return(
       const List<uint64_t> &l = *_f.l;
       const std::optional<std::pair<uint64_t, uint64_t>> memo = _f.memo;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-        _result = std::make_pair(
-            UINT64_C(0), std::optional<std::pair<uint64_t, uint64_t>>());
+        _result =
+            std::make_pair(UINT64_C(0),
+                           std::optional<std::pair<uint64_t, uint64_t>>());
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
         std::pair<uint64_t, std::optional<std::pair<uint64_t, uint64_t>>> sub;
@@ -212,20 +215,20 @@ LoopifyConditionalRecursion::multi_return(
             if (payload.has_value()) {
               const std::pair<uint64_t, uint64_t> &p = *payload;
               const auto &[a, b] = p;
-              _result = std::make_pair(
-                  (count + UINT64_C(1)),
-                  std::make_optional<std::pair<uint64_t, uint64_t>>(
-                      std::make_pair((a + a0), b)));
+              _result = std::make_pair((count + UINT64_C(1)),
+                                       std::make_optional<
+                                           std::pair<uint64_t, uint64_t>>(
+                                           std::make_pair((a + a0), b)));
             } else {
-              _result = std::make_pair(
-                  (count + UINT64_C(1)),
-                  std::optional<std::pair<uint64_t, uint64_t>>());
+              _result = std::make_pair((count + UINT64_C(1)), std::optional<
+                                           std::pair<uint64_t, uint64_t>>());
             }
           }
         } else {
           _stack.emplace_back(CraneCont1{a0});
-          _stack.emplace_back(CraneEnter{
-              crane_raw(a1), std::optional<std::pair<uint64_t, uint64_t>>()});
+          _stack.emplace_back(
+              CraneEnter{crane_raw(a1),
+                         std::optional<std::pair<uint64_t, uint64_t>>()});
         }
       }
     } else {
@@ -237,10 +240,9 @@ LoopifyConditionalRecursion::multi_return(
       if (payload.has_value()) {
         const std::pair<uint64_t, uint64_t> &p = *payload;
         const auto &[a, b] = p;
-        _result =
-            std::make_pair((count + UINT64_C(1)),
-                           std::make_optional<std::pair<uint64_t, uint64_t>>(
-                               std::make_pair((a + a0), b)));
+        _result = std::make_pair(
+            (count + UINT64_C(1)), std::make_optional<
+                std::pair<uint64_t, uint64_t>>(std::make_pair((a + a0), b)));
       } else {
         _result =
             std::make_pair((count + UINT64_C(1)),
@@ -255,7 +257,6 @@ std::pair<uint64_t, uint64_t> LoopifyConditionalRecursion::accum_with_cache(
     uint64_t key,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };

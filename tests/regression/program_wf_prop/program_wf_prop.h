@@ -137,7 +137,7 @@ struct ProgramWfProp {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+    std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 instruction_rect(F0 &&f, F1 &&f0, T1 f1, const instruction &i) {
     if (std::holds_alternative<typename instruction::JUN>(i.v())) {
       const auto &[a0] = std::get<typename instruction::JUN>(i.v());
@@ -163,13 +163,10 @@ struct ProgramWfProp {
   static std::optional<uint64_t> jump_target(const instruction &i);
   static inline const layout sample_layout =
       layout{UINT64_C(200), UINT64_C(20)};
-
   static inline const List<instruction> sample_prog = List<instruction>::cons(
-      instruction::nop(),
-      List<instruction>::cons(
-          instruction::jun(UINT64_C(205)),
-          List<instruction>::cons(instruction::jms(UINT64_C(218)),
-                                  List<instruction>::nil())));
+      instruction::nop(), List<instruction>::cons(
+          instruction::jun(UINT64_C(205)), List<instruction>::cons(
+              instruction::jms(UINT64_C(218)), List<instruction>::nil())));
 };
 
 #endif // INCLUDED_PROGRAM_WF_PROP

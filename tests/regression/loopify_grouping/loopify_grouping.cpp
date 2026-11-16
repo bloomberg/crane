@@ -4,8 +4,7 @@ List<List<uint64_t>>
 LoopifyGrouping::prepend_to_groups(uint64_t x, bool same,
                                    const List<List<uint64_t>> &groups) {
   if (same) {
-    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-            groups.v())) {
+    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(groups.v())) {
       return List<List<uint64_t>>::cons(
           List<uint64_t>::cons(x, List<uint64_t>::nil()),
           List<List<uint64_t>>::nil());
@@ -20,11 +19,12 @@ LoopifyGrouping::prepend_to_groups(uint64_t x, bool same,
   }
 }
 
-List<List<uint64_t>> LoopifyGrouping::group_fuel(
-    uint64_t fuel,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<List<uint64_t>>
+LoopifyGrouping::group_fuel(uint64_t fuel,
+                            const List<uint64_t> &l) { /// CraneEnter: captures
+                                                       /// varying parameters
+                                                       /// for each recursive
+                                                       /// call.
   struct CraneEnter {
     List<uint64_t> l;
     uint64_t fuel;
@@ -103,10 +103,10 @@ bool LoopifyGrouping::elem(uint64_t x, const List<uint64_t> &l) {
   }
 }
 
-List<uint64_t> LoopifyGrouping::nub(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifyGrouping::nub(const List<uint64_t> &l) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -182,11 +182,11 @@ List<uint64_t> LoopifyGrouping::remove_elem(uint64_t x,
 }
 
 std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
-LoopifyGrouping::partition3(
-    uint64_t pivot,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+LoopifyGrouping::partition3(uint64_t pivot,
+                            const List<uint64_t> &l) { /// CraneEnter: captures
+                                                       /// varying parameters
+                                                       /// for each recursive
+                                                       /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -198,8 +198,8 @@ LoopifyGrouping::partition3(
   };
 
   using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
-  std::pair<std::pair<List<uint64_t>, List<uint64_t>>, List<uint64_t>>
-      _result{};
+  std::pair<std::pair<List<uint64_t>, List<uint64_t>>,
+            List<uint64_t>> _result{};
   crane::small_vector<CraneFrame> _stack;
   _stack.emplace_back(CraneEnter{&l});
   /// Loopified partition3: CraneEnter -> CraneCont_Cons.
@@ -226,8 +226,7 @@ LoopifyGrouping::partition3(
       if (a0 < pivot) {
         _result = std::make_pair(
             std::make_pair(List<uint64_t>::cons(a0, std::move(less)),
-                           std::move(equal)),
-            std::move(greater));
+                           std::move(equal)), std::move(greater));
       } else {
         if (pivot < a0) {
           _result =
@@ -245,11 +244,12 @@ LoopifyGrouping::partition3(
   return _result;
 }
 
-uint64_t LoopifyGrouping::count_elem(
-    uint64_t x,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyGrouping::count_elem(uint64_t x,
+                            const List<uint64_t> &l) { /// CraneEnter: captures
+                                                       /// varying parameters
+                                                       /// for each recursive
+                                                       /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -295,10 +295,9 @@ LoopifyGrouping::group_pairs(const List<uint64_t> &l) {
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write
-           ? *(*_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                   std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write = std::make_shared<
+                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
@@ -306,9 +305,8 @@ LoopifyGrouping::group_pairs(const List<uint64_t> &l) {
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-        (_write ? *(*_write =
-                        std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                            std::move(_value)))
+        (_write ? *(*_write = std::make_shared<
+                        List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
@@ -332,8 +330,8 @@ LoopifyGrouping::group_pairs(const List<uint64_t> &l) {
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                   _node.v_mut())
-                   .l;
+                  _node.v_mut())
+                  .l;
           _loop_l = crane_raw(a11);
           continue;
         }

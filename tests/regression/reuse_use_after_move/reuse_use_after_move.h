@@ -109,12 +109,11 @@ struct ReuseUseAfterMove {
   /// Expected: length 1,2,3 = 3, so result = 3, 2, 3.
   /// Bug: null dereference inside length.
   static inline const uint64_t test1 = []() {
-    auto &&_sv = rewrite_head(
-        mylist::mycons(
-            UINT64_C(1),
-            mylist::mycons(UINT64_C(2),
-                           mylist::mycons(UINT64_C(3), mylist::mynil()))),
-        true);
+    auto &&_sv = rewrite_head(mylist::mycons(
+                                  UINT64_C(1), mylist::mycons(
+                                      UINT64_C(2), mylist::mycons(
+                                          UINT64_C(3), mylist::mynil()))),
+                              true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());
       return a0;
@@ -127,9 +126,8 @@ struct ReuseUseAfterMove {
   static inline const uint64_t test2 = []() {
     auto &&_sv = rewrite_head_sum(
         mylist::mycons(
-            UINT64_C(10),
-            mylist::mycons(UINT64_C(20),
-                           mylist::mycons(UINT64_C(30), mylist::mynil()))),
+            UINT64_C(10), mylist::mycons(
+                UINT64_C(20), mylist::mycons(UINT64_C(30), mylist::mynil()))),
         true);
     if (std::holds_alternative<typename mylist::Mycons>(_sv.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(_sv.v());

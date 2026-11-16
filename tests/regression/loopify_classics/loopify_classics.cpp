@@ -3,7 +3,6 @@
 uint64_t
 LoopifyClassics::factorial(uint64_t n) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -44,7 +43,6 @@ LoopifyClassics::factorial(uint64_t n) { /// CraneEnter: captures varying
 uint64_t
 LoopifyClassics::fib(uint64_t n) { /// CraneEnter: captures varying parameters
                                    /// for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -101,7 +99,6 @@ uint64_t
 LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
                           uint64_t n) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
     uint64_t m;
@@ -136,13 +133,15 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
           _result = (n + UINT64_C(1));
         } else {
           if (n == UINT64_C(0)) {
-            _stack.emplace_back(CraneEnter{
-                UINT64_C(1), (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
-                fuel_});
+            _stack.emplace_back(
+                CraneEnter{UINT64_C(1),
+                           (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
+                           fuel_});
           } else {
             _stack.emplace_back(CraneCont1{m, fuel_});
-            _stack.emplace_back(CraneEnter{
-                (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m, fuel_});
+            _stack.emplace_back(
+                CraneEnter{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m,
+                           fuel_});
           }
         }
       }
@@ -151,8 +150,9 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
       uint64_t m = _f.m;
       uint64_t fuel_ = _f.fuel_;
       uint64_t inner = std::move(_result);
-      _stack.emplace_back(CraneEnter{
-          inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
+      _stack.emplace_back(
+          CraneEnter{inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
+                     fuel_});
     }
   }
   return _result;
@@ -163,11 +163,11 @@ uint64_t LoopifyClassics::ack(uint64_t m, uint64_t n) {
                   n);
 }
 
-uint64_t LoopifyClassics::binomial_fuel(
-    uint64_t fuel, uint64_t n,
-    uint64_t k) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n,
+                               uint64_t k) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     uint64_t k;
     uint64_t n;
@@ -209,9 +209,10 @@ uint64_t LoopifyClassics::binomial_fuel(
           _result = UINT64_C(1);
         } else {
           _stack.emplace_back(CraneCont1{n, k, fuel_});
-          _stack.emplace_back(CraneEnter{
-              (((k - UINT64_C(1)) > k ? 0 : (k - UINT64_C(1)))),
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(
+              CraneEnter{(((k - UINT64_C(1)) > k ? 0 : (k - UINT64_C(1)))),
+                         (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                         fuel_});
         }
       }
     } else if (std::holds_alternative<CraneCont1>(_frame)) {
@@ -220,8 +221,9 @@ uint64_t LoopifyClassics::binomial_fuel(
       uint64_t k = _f.k;
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(CraneCont2{std::move(_result)});
-      _stack.emplace_back(CraneEnter{
-          k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+      _stack.emplace_back(
+          CraneEnter{k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                     fuel_});
     } else {
       auto _f = std::move(std::get<CraneCont2>(_frame));
       _result = (_f._tmp2 + std::move(_result));
@@ -273,7 +275,6 @@ uint64_t
 LoopifyClassics::power(uint64_t base,
                        uint64_t exp) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t exp;
   };
@@ -310,7 +311,6 @@ LoopifyClassics::power(uint64_t base,
 uint64_t
 LoopifyClassics::sum_to(uint64_t n) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };
@@ -348,10 +348,10 @@ LoopifyClassics::sum_to(uint64_t n) { /// CraneEnter: captures varying
   return _result;
 }
 
-uint64_t LoopifyClassics::sum_squares(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyClassics::sum_squares(uint64_t n) { /// CraneEnter: captures varying
+                                           /// parameters for each recursive
+                                           /// call.
   struct CraneEnter {
     uint64_t n;
   };

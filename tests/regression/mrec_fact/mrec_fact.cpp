@@ -6,10 +6,10 @@
 /// runs here.
 Itree<crane::obj, uint64_t> MrecFact::fact(uint64_t n) {
   return Recursion::template mrec<MrecFact::call, crane::obj, uint64_t>(
-      [](const MrecFact::call &a0)
-          -> Itree<Sum1<MrecFact::call, crane::obj, crane::obj>, crane::obj> {
-        return body<crane::obj>(crane_convert<MrecFact::call>(a0));
-      },
+      [](const MrecFact::call &a0) -> Itree<
+          Sum1<MrecFact::call, crane::obj, crane::obj>, crane::obj> {
+            return body<crane::obj>(crane_convert<MrecFact::call>(a0));
+          },
       call::fact(n));
 }
 

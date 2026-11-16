@@ -261,27 +261,29 @@ struct SigtHeteroPayload {
         std::make_pair(crane::obj(v), crane::obj(crane_erase_fn(f))));
   }
 
-  static inline const List<item> items =
-      List<item>::cons(mk<Nat>(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
-                               [](Nat n) { return n; }),
-                       List<item>::cons(mk<bool>(true,
-                                                 [](bool b) -> Nat {
-                                                   if (b) {
-                                                     return Nat::s(Nat::o());
-                                                   } else {
-                                                     return Nat::o();
-                                                   }
-                                                 }),
-                                        List<item>::nil()));
-  static inline const Nat run = items.template fold_right<Nat>(
-      [](const auto &i, Nat acc) {
-        const auto &[x, a1] = i;
-        const auto &[v, f] = a1;
-        return crane::any_cast<Nat>(
-                   crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(v))
-            .add(std::move(acc));
-      },
-      Nat::o());
+  static inline const List<item> items = List<item>::cons(
+      mk<Nat>(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))), [](Nat n) {
+        return n;
+      }),
+      List<item>::cons(
+          mk<bool>(true, [](bool b) -> Nat {
+            if (b) {
+              return Nat::s(Nat::o());
+            } else {
+              return Nat::o();
+            }
+          }),
+          List<item>::nil()));
+  static inline const Nat run =
+      items.template fold_right<Nat>(
+          [](const auto &i, Nat acc) {
+            const auto &[x, a1] = i;
+            const auto &[v, f] = a1;
+            return crane::any_cast<Nat>(
+                crane::any_cast<crane::fn<crane::obj(crane::obj)>>(f)(v))
+                       .add(std::move(acc));
+          },
+          Nat::o());
 };
 
 #endif // INCLUDED_SIGT_HETERO_PAYLOAD

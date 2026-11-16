@@ -5,7 +5,6 @@
 #include <concepts>
 
 namespace SepExtFunTypeQual {
-
 template <typename M>
 concept S = requires {
   typename M::elt;
@@ -27,7 +26,6 @@ concept S = requires {
 template <S M> struct MyModule {
   static typename M::t test(typename M::t x) { return x; }
 };
-
 } // namespace SepExtFunTypeQual
 
 #endif // INCLUDED_SEPEXTFUNTYPEQUAL

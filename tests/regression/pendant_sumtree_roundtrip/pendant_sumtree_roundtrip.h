@@ -343,8 +343,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -435,8 +435,8 @@ public:
   static T0<A> nil0() { return T0<A>(Nil0{}); }
 
   static T0<A> cons0(A h, uint64_t n, T0<A> a2) {
-    return T0<A>(
-        Cons0{std::move(h), n, std::make_shared<T0<A>>(std::move(a2))});
+    return T0<A>(Cons0{std::move(h), n,
+                       std::make_shared<T0<A>>(std::move(a2))});
   }
 
   // MANIPULATORS
@@ -548,6 +548,7 @@ struct PendantSumtreeRoundtripCase {
   template <typename T1> static T1 Twist_rec(T1 f, T1 f0, Twist t1) {
     return Twist_rect<T1>(std::move(f), std::move(f0), t1);
   }
+
   enum class Fiber { COTTON, CAMELID };
 
   template <typename T1> static T1 Fiber_rect(T1 f, T1 f0, Fiber f1) {
@@ -566,6 +567,7 @@ struct PendantSumtreeRoundtripCase {
   template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, Fiber f1) {
     return Fiber_rect<T1>(std::move(f), std::move(f0), f1);
   }
+
   enum class Color { WHITE, BROWN, RED, BLUE };
 
   template <typename T1>
@@ -666,8 +668,8 @@ struct PendantSumtreeRoundtripCase {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (std::holds_alternative<typename List<SumTree>::Cons>(
-                _lp->v())) {
+            while (
+                std::holds_alternative<typename List<SumTree>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<SumTree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<SumTree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -758,10 +760,9 @@ struct PendantSumtreeRoundtripCase {
   static inline const CertifiedPendant pendant_5 =
       CertifiedPendant{sample_meta_a, digits_5};
   static inline const List<T0<digit>> sample_multi_digits =
-      List<T0<digit>>::cons(
-          digits_731, List<T0<digit>>::cons(
-                          digits_462, List<T0<digit>>::cons(
-                                          digits_269, List<T0<digit>>::nil())));
+      List<T0<digit>>::cons(digits_731, List<T0<digit>>::cons(
+                                digits_462, List<T0<digit>>::cons(
+                                    digits_269, List<T0<digit>>::nil())));
   static inline const bool sample_multi_roundtrip_ok = []() -> bool {
     auto _cs = decode_multi(UINT64_C(3),
                             encode_multi(UINT64_C(3), sample_multi_digits));
@@ -771,40 +772,33 @@ struct PendantSumtreeRoundtripCase {
           decoded.template map<uint64_t>([](T0<digit> _x0) -> uint64_t {
             return value_digits(UINT64_C(3), _x0);
           }),
-          List<uint64_t>::cons(
-              UINT64_C(731),
-              List<uint64_t>::cons(
-                  UINT64_C(462),
-                  List<uint64_t>::cons(UINT64_C(269), List<uint64_t>::nil()))));
+          List<uint64_t>::cons(UINT64_C(731), List<uint64_t>::cons(
+                                   UINT64_C(462), List<uint64_t>::cons(
+                                       UINT64_C(269), List<uint64_t>::nil()))));
     } else {
       return false;
     }
   }();
   static inline const PendantGroup sample_group = PendantGroup{
-      pendant_731,
-      List<CertifiedPendant>::cons(
+      pendant_731, List<CertifiedPendant>::cons(
           pendant_462, List<CertifiedPendant>::cons(
-                           pendant_269, List<CertifiedPendant>::nil()))};
+              pendant_269, List<CertifiedPendant>::nil()))};
   static inline const SumTree sample_subtree = SumTree::sumnode(
-      pendant_269,
-      List<SumTree>::cons(SumTree::sumleaf(pendant_200),
-                          List<SumTree>::cons(SumTree::sumleaf(pendant_069),
-                                              List<SumTree>::nil())));
+      pendant_269, List<SumTree>::cons(
+          SumTree::sumleaf(pendant_200), List<SumTree>::cons(
+              SumTree::sumleaf(pendant_069), List<SumTree>::nil())));
   static inline const SumTree sample_tree = SumTree::sumnode(
-      pendant_731,
-      List<SumTree>::cons(
+      pendant_731, List<SumTree>::cons(
           SumTree::sumleaf(pendant_462),
           List<SumTree>::cons(sample_subtree, List<SumTree>::nil())));
-  static inline const Ledger sample_ledger =
-      List<SigT<uint64_t, CertifiedPendant>>::cons(
-          SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_731),
+  static inline const Ledger sample_ledger = List<
+      SigT<uint64_t, CertifiedPendant>>::cons(
+      SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_731), List<
+          SigT<uint64_t, CertifiedPendant>>::cons(
+          SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_462),
           List<SigT<uint64_t, CertifiedPendant>>::cons(
-              SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3),
-                                                       pendant_462),
-              List<SigT<uint64_t, CertifiedPendant>>::cons(
-                  SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(1),
-                                                           pendant_5),
-                  List<SigT<uint64_t, CertifiedPendant>>::nil())));
+              SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(1), pendant_5),
+              List<SigT<uint64_t, CertifiedPendant>>::nil())));
   static inline const bool sample_group_valid =
       group_sums_validb(UINT64_C(3), sample_group);
   static inline const bool sample_subtree_valid =
@@ -833,16 +827,20 @@ std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
 }
 
 template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
-  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, uint64_t,
-                                const T0<T1> &v0, List<T1> b) -> List<T1> {
-    if (std::holds_alternative<typename T0<T1>::Nil0>(v0.v())) {
-      return b;
-    } else {
-      const auto &[h, n1, a2] = std::get<typename T0<T1>::Cons0>(v0.v());
-      return List<T1>::cons(
-          h, _self_fold_right_fix(_self_fold_right_fix, n1, *a2, std::move(b)));
-    }
-  };
+  auto fold_right_fix_impl =
+      [](auto &_self_fold_right_fix, uint64_t, const T0<T1> &v0,
+         List<T1> b)
+           -> List<T1> {
+            if (std::holds_alternative<typename T0<T1>::Nil0>(v0.v())) {
+              return b;
+            } else {
+              const auto &[h, n1, a2] =
+                  std::get<typename T0<T1>::Cons0>(v0.v());
+              return List<T1>::cons(
+                  h, _self_fold_right_fix(_self_fold_right_fix, n1, *a2,
+                                          std::move(b)));
+            }
+          };
   {
     uint64_t _lc1_x = n;
     const T0<T1> &_lc1_v0 = v;

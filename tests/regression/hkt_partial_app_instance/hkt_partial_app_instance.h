@@ -98,8 +98,9 @@ struct HktPartialAppInstance {
   };
 
   static inline const std::pair<bool, Nat> ex =
-      pf<bool>::template fm<Nat, Nat>([](const Nat &x) { return Nat::s(x); },
-                                      std::make_pair(true, Nat::s(Nat::o())));
+      pf<bool>::template fm<Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, std::make_pair(true, Nat::s(Nat::o())));
 };
 
 #endif // INCLUDED_HKT_PARTIAL_APP_INSTANCE

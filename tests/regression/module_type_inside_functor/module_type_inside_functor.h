@@ -11,13 +11,17 @@ concept Make_HasF = requires {
 template <typename M>
 concept T = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::z } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::z() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::z
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::z()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct ModuleTypeInsideFunctor {

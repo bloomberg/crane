@@ -3,7 +3,6 @@
 #include "Num.h"
 
 namespace NumOps {
-
 bool leb(const Num::Num &a, const Num::Num &b) {
   if (std::holds_alternative<typename Num::Num::Zero>(a.v())) {
     return true;
@@ -17,5 +16,4 @@ bool leb(const Num::Num &a, const Num::Num &b) {
     }
   }
 }
-
 } // namespace NumOps

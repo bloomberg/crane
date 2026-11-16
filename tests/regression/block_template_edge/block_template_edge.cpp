@@ -19,8 +19,7 @@ int64_t BlockTemplateEdge::block_in_arith() {
   std::getline(std::cin, n);
   return static_cast<int64_t>(
       (static_cast<uint64_t>(static_cast<int64_t>(std::move(n).length())) +
-       static_cast<uint64_t>(INT64_C(1))) &
-      0x7FFFFFFFFFFFFFFFULL);
+       static_cast<uint64_t>(INT64_C(1))) & 0x7FFFFFFFFFFFFFFFULL);
 }
 
 /// 3. Two block templates of same type back-to-back

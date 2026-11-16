@@ -1,9 +1,10 @@
 #include "timing_preserves_wf_simple.h"
 
 bool TimingPreservesWfSimple::wf(const TimingPreservesWfSimple::state &s) {
-  return (s.regs_len == UINT64_C(4) &&
-          (s.rom_len == UINT64_C(4) &&
-           (s.pc < UINT64_C(4096) && s.stack_len <= UINT64_C(3))));
+  return (
+      s.regs_len == UINT64_C(4) && (
+          s.rom_len == UINT64_C(4) &&
+          (s.pc < UINT64_C(4096) && s.stack_len <= UINT64_C(3))));
 }
 
 uint64_t TimingPreservesWfSimple::cycles(TimingPreservesWfSimple::Instr i) {

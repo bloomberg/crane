@@ -1,7 +1,8 @@
 #include "block_template_semicolon.h"
 
 /// String argument with semicolons in expression position (monad right
-/// identity) Tests gen_block_iife semicolon splitting
+/// identity)
+/// Tests gen_block_iife semicolon splitting
 std::string BlockTemplateSemicolon::read_semicolon_expr() {
   return []() -> std::string {
     std::string _r;
@@ -14,7 +15,8 @@ std::string BlockTemplateSemicolon::read_semicolon_expr() {
 }
 
 /// String argument with semicolons in statement position (bind with
-/// computation) Tests Sblock_custom semicolon splitting
+/// computation)
+/// Tests Sblock_custom semicolon splitting
 std::string BlockTemplateSemicolon::read_semicolon_stmt() {
   std::string s;
   {

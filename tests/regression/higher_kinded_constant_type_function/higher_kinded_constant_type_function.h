@@ -138,9 +138,8 @@ struct HigherKindedConstantTypeFunction {
 
   static inline const List<uint64_t> z =
       appT<crane::constant_tc<List<uint64_t>>::template c>([]() {
-        return List<uint64_t>::cons(
-            UINT64_C(1),
-            List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()));
+        return List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                        UINT64_C(2), List<uint64_t>::nil()));
       }());
   static inline const uint64_t result = z.length();
 };

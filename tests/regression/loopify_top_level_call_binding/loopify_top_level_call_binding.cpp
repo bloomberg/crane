@@ -24,10 +24,9 @@ LoopifyTopLevelCallBinding::kids(const LoopifyTopLevelCallBinding::cell &c) {
 }
 
 uint64_t LoopifyTopLevelCallBinding::csum(
-    const LoopifyTopLevelCallBinding::cell
-        &c) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyTopLevelCallBinding::cell &c) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     LoopifyTopLevelCallBinding::cell c;
   };
@@ -76,9 +75,8 @@ uint64_t LoopifyTopLevelCallBinding::csum(
               typename List<LoopifyTopLevelCallBinding::cell>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<LoopifyTopLevelCallBinding::cell>::Cons>(
-                l.v());
+        const auto &[a0, a1] = std::get<
+            typename List<LoopifyTopLevelCallBinding::cell>::Cons>(l.v());
         _stack.emplace_back(CraneCont_Cons{a1});
         _stack.emplace_back(CraneEnter{a0});
       }
@@ -101,10 +99,11 @@ uint64_t LoopifyTopLevelCallBinding::csum(
 }
 
 /// A chain n cells deep, each holding k.
-LoopifyTopLevelCallBinding::cell LoopifyTopLevelCallBinding::chain(
-    uint64_t n, uint64_t k) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+LoopifyTopLevelCallBinding::cell
+LoopifyTopLevelCallBinding::chain(uint64_t n,
+                                  uint64_t k) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -133,10 +132,9 @@ LoopifyTopLevelCallBinding::cell LoopifyTopLevelCallBinding::chain(
       }
     } else {
       auto _f = std::move(std::get<CraneCont_m>(_frame));
-      _result =
-          cell::mkcell(k, List<LoopifyTopLevelCallBinding::cell>::cons(
-                              std::move(_result),
-                              List<LoopifyTopLevelCallBinding::cell>::nil()));
+      _result = cell::mkcell(k, List<LoopifyTopLevelCallBinding::cell>::cons(
+                                 std::move(_result),
+                                 List<LoopifyTopLevelCallBinding::cell>::nil()));
     }
   }
   return _result;

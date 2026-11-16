@@ -11,30 +11,29 @@ List<uint64_t> LoopifyDefault::merge_steps(uint64_t n, const List<uint64_t> &xs,
     if (_loop_n <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
         auto _value = *_loop_ys;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _value = *_loop_xs;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       }
     } else {
       uint64_t n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_xs->v())) {
         auto _value = *_loop_ys;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_loop_xs->v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_ys->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_ys->v())) {
           auto _value = *_loop_xs;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -77,10 +76,10 @@ List<uint64_t> LoopifyDefault::merge_steps(uint64_t n, const List<uint64_t> &xs,
   return std::move(*_root);
 }
 
-uint64_t LoopifyDefault::sum(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyDefault::sum(const List<uint64_t> &l) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -118,10 +117,10 @@ uint64_t LoopifyDefault::sum(
   return _result;
 }
 
-uint64_t LoopifyDefault::len(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyDefault::len(const List<uint64_t> &l) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };

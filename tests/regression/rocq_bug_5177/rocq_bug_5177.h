@@ -64,7 +64,9 @@ public:
 };
 
 template <typename M>
-concept T = requires { typename M::t; };
+concept T = requires {
+  typename M::t;
+};
 template <typename M>
 concept A = requires {
   typename M::t1;

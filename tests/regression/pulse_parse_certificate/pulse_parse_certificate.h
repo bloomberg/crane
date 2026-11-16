@@ -203,13 +203,12 @@ struct PulseParseCertificateCase {
   static bool
   pulse_parse_certificate_self_consistent(const PulseCertificate &cert);
   static PulseCertificate certify_trace(const List<bool> &xs);
-  static inline const Trace sample_trace = List<bool>::cons(
-      false,
+  static inline const Trace sample_trace =
       List<bool>::cons(
-          true,
-          List<bool>::cons(
+          false, List<bool>::cons(
               true, List<bool>::cons(
-                        false, List<bool>::cons(true, List<bool>::nil())))));
+                  true, List<bool>::cons(
+                      false, List<bool>::cons(true, List<bool>::nil())))));
   static inline const PulseCertificate sample_certificate =
       certify_trace(sample_trace);
   static inline const bool sample_certificate_consistent =
@@ -218,22 +217,22 @@ struct PulseParseCertificateCase {
       sample_certificate.certificate_base;
   static inline const uint64_t sample_certificate_first_active =
       []() -> uint64_t {
-    if (sample_certificate.certificate_first_active.has_value()) {
-      const uint64_t &idx = *sample_certificate.certificate_first_active;
-      return idx;
-    } else {
-      return UINT64_C(99);
-    }
-  }();
+        if (sample_certificate.certificate_first_active.has_value()) {
+          const uint64_t &idx = *sample_certificate.certificate_first_active;
+          return idx;
+        } else {
+          return UINT64_C(99);
+        }
+      }();
   static inline const uint64_t sample_certificate_last_active =
       []() -> uint64_t {
-    if (sample_certificate.certificate_last_active.has_value()) {
-      const uint64_t &idx = *sample_certificate.certificate_last_active;
-      return idx;
-    } else {
-      return UINT64_C(99);
-    }
-  }();
+        if (sample_certificate.certificate_last_active.has_value()) {
+          const uint64_t &idx = *sample_certificate.certificate_last_active;
+          return idx;
+        } else {
+          return UINT64_C(99);
+        }
+      }();
   static inline const uint64_t sample_certificate_class_count =
       sample_certificate.certificate_classes.length();
 };

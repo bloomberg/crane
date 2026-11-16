@@ -187,9 +187,8 @@ concept Container = requires {
     I::template empty<crane::obj>()
   } -> std::convertible_to<typename I::template C<crane::obj>>;
   {
-    I::template insert<crane::obj>(
-        std::declval<crane::obj>(),
-        std::declval<typename I::template C<crane::obj>>())
+    I::template insert<crane::obj>(std::declval<crane::obj>(), std::declval<
+                                       typename I::template C<crane::obj>>())
   } -> std::convertible_to<typename I::template C<crane::obj>>;
   {
     I::template toList<crane::obj>(

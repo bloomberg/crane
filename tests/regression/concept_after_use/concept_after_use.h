@@ -18,6 +18,7 @@ struct Coq_Pos {
   static Positive add_carry(const Positive &x, const Positive &y);
   static Positive mul(const Positive &x, Positive y);
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct Positive {

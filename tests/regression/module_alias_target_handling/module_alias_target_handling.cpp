@@ -339,14 +339,14 @@ std::pair<unsigned int, Pos::mask> Pos::sqrtrem(unsigned int p) {
       return std::make_pair(1u, mask::ispos((2u * 1u)));
     } else if (p0 % 2u != 0u) {
       unsigned int p1 = (p0 - 1u) / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x + 1u); },
-                          [](unsigned int x) { return (2u * x + 1u); },
-                          sqrtrem(p1));
+      return sqrtrem_step([](unsigned int x) {
+        return (2u * x + 1u);
+      }, [](unsigned int x) { return (2u * x + 1u); }, sqrtrem(p1));
     } else {
       unsigned int p1 = p0 / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x); },
-                          [](unsigned int x) { return (2u * x + 1u); },
-                          sqrtrem(p1));
+      return sqrtrem_step([](unsigned int x) {
+        return (2u * x);
+      }, [](unsigned int x) { return (2u * x + 1u); }, sqrtrem(p1));
     }
   } else {
     unsigned int p0 = p / 2u;
@@ -354,12 +354,14 @@ std::pair<unsigned int, Pos::mask> Pos::sqrtrem(unsigned int p) {
       return std::make_pair(1u, mask::ispos(1u));
     } else if (p0 % 2u != 0u) {
       unsigned int p1 = (p0 - 1u) / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x + 1u); },
-                          [](unsigned int x) { return (2u * x); }, sqrtrem(p1));
+      return sqrtrem_step([](unsigned int x) {
+        return (2u * x + 1u);
+      }, [](unsigned int x) { return (2u * x); }, sqrtrem(p1));
     } else {
       unsigned int p1 = p0 / 2u;
-      return sqrtrem_step([](unsigned int x) { return (2u * x); },
-                          [](unsigned int x) { return (2u * x); }, sqrtrem(p1));
+      return sqrtrem_step([](unsigned int x) {
+        return (2u * x);
+      }, [](unsigned int x) { return (2u * x); }, sqrtrem(p1));
     }
   }
 }
@@ -629,8 +631,9 @@ Comparison Coq_Pos::compare(unsigned int x0_, unsigned int x1_) {
 }
 
 unsigned int Coq_Pos::pow(unsigned int x, unsigned int x0_) {
-  return iter<unsigned int>(
-      [=](unsigned int _x0) -> unsigned int { return (x * _x0); }, 1u, x0_);
+  return iter<unsigned int>([=](unsigned int _x0) -> unsigned int {
+    return (x * _x0);
+  }, 1u, x0_);
 }
 
 unsigned int Coq_Pos::square(unsigned int p) {
@@ -933,8 +936,9 @@ unsigned int Coq_Pos::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     return of_hex_uint_acc(*a0, (1u + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return of_hex_uint_acc(
-        *a0, ((2u * 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0,
+                           ((2u * 1u) +
+                            ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
     return of_hex_uint_acc(
@@ -957,8 +961,9 @@ unsigned int Coq_Pos::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
                                  ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u))) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(
+        *a0,
+        ((2u * (2u * (2u * 1u))) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
     return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u)) + 1u) +
@@ -1584,7 +1589,8 @@ Reflect N::ltb_spec0(unsigned int x, unsigned int y) {
 
 bool N::Private_Dec::max_dec(unsigned int n, unsigned int m) {
   return max_case<bool>(
-      n, m,
+      n,
+      m,
       [](unsigned int, unsigned int, bool h0) -> bool {
         if (h0) {
           return true;
@@ -1592,12 +1598,14 @@ bool N::Private_Dec::max_dec(unsigned int n, unsigned int m) {
           return false;
         }
       },
-      true, false);
+      true,
+      false);
 }
 
 bool N::Private_Dec::min_dec(unsigned int n, unsigned int m) {
   return min_case<bool>(
-      n, m,
+      n,
+      m,
       [](unsigned int, unsigned int, bool h0) -> bool {
         if (h0) {
           return true;
@@ -1605,7 +1613,8 @@ bool N::Private_Dec::min_dec(unsigned int n, unsigned int m) {
           return false;
         }
       },
-      true, false);
+      true,
+      false);
 }
 
 bool N::max_dec(unsigned int x0_, unsigned int x1_) {

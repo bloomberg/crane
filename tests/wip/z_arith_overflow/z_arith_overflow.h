@@ -26,7 +26,6 @@ struct ZArithOverflow {
   /// Negation of the most negative int64_t is also UB
   static inline const int64_t neg_big = static_cast<int64_t>(
       -static_cast<uint64_t>(static_cast<int64_t>(UINT64_C(4000000000))));
-
   static inline const int64_t neg_sq = static_cast<int64_t>(
       static_cast<uint64_t>(neg_big) * static_cast<uint64_t>(neg_big));
 };

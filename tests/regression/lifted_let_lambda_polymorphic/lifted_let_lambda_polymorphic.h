@@ -115,9 +115,10 @@ public:
 struct LiftedLetLambdaPolymorphic {
   template <typename T1, typename F0>
   static List<crane::fn<T1(T1)>> all(F0 &&op) {
-    crane::fn<T1(crane::fn<T1(T1)>, crane::fn<T1(T1)>, T1)> compose =
-        [](const crane::fn<T1(T1)> &f, const crane::fn<T1(T1)> &g,
-           const T1 &x) { return f(g(x)); };
+    crane::fn<T1(crane::fn<T1(T1)>, crane::fn<T1(T1)>, T1)> compose = [](
+        const crane::fn<T1(T1)> &f, const crane::fn<T1(T1)> &g, const T1 &x) {
+          return f(g(x));
+        };
     return List<crane::fn<T1(T1)>>::cons(
         [=, compose = std::move(compose)](T1 _pa0) {
           return compose(op, op, _pa0);
@@ -126,13 +127,14 @@ struct LiftedLetLambdaPolymorphic {
   }
 
   static inline const uint64_t from_let =
-      all<uint64_t>(
-          [](uint64_t _x0) -> uint64_t { return (UINT64_C(2) * _x0); })
+      all<uint64_t>([](uint64_t _x0) -> uint64_t {
+        return (UINT64_C(2) * _x0);
+      })
           .template fold_left<uint64_t>(
-              [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) {
-                return f(a);
-              },
-              UINT64_C(1));
+          [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) {
+            return f(a);
+          },
+          UINT64_C(1));
 
   template <typename T1>
   static T1 quad(std::type_identity_t<crane::fn<T1(T1, T1)>> op,
@@ -143,9 +145,10 @@ struct LiftedLetLambdaPolymorphic {
     return twice(twice(x0_));
   }
 
-  static inline const uint64_t from_section = quad<uint64_t>(
-      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-      UINT64_C(1));
+  static inline const uint64_t from_section =
+      quad<uint64_t>([](uint64_t _x0, uint64_t _x1) -> uint64_t {
+        return (_x0 + _x1);
+      }, UINT64_C(1));
 };
 
 #endif // INCLUDED_LIFTED_LET_LAMBDA_POLYMORPHIC

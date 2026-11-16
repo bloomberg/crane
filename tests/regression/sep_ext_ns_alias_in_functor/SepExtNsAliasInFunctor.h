@@ -4,9 +4,10 @@
 #include "Datatypes.h"
 
 namespace SepExtNsAliasInFunctor {
-
 template <typename M>
-concept S = requires { typename M::t; };
+concept S = requires {
+  typename M::t;
+};
 
 struct Inner {
   static const Datatypes::Nat &val_x() {
@@ -23,7 +24,6 @@ template <S X> struct MyFunctor {
     return v;
   }
 };
-
 } // namespace SepExtNsAliasInFunctor
 
 #endif // INCLUDED_SEPEXTNSALIASINFUNCTOR

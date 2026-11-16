@@ -2,8 +2,9 @@
 
 /// Pack a closure into a type-erased wrapper.
 ExistentialClosureProbe::wrap ExistentialClosureProbe::pack_fn(uint64_t base) {
-  return wrap::wrap0(
-      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return (x + base); }));
+  return wrap::wrap0(crane::fn<uint64_t(uint64_t)>([=](uint64_t x) {
+    return (x + base);
+  }));
 }
 
 /// Unpack and apply.

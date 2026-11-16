@@ -184,7 +184,6 @@ struct LoopifyNumbers {
   nest_apply(uint64_t n, F1 &&f,
              uint64_t x) { /// CraneEnter: captures varying parameters for each
                            /// recursive call.
-
     struct CraneEnter {
       uint64_t n;
     };
@@ -224,7 +223,8 @@ struct LoopifyNumbers {
   }
 
   /// sum_while_positive n sums numbers from n down to 0, but only positive
-  /// ones. Tests conditional accumulation in recursion.
+  /// ones.
+  /// Tests conditional accumulation in recursion.
   static uint64_t sum_while_positive(uint64_t n);
   /// count_down_by k n counts down from n by steps of k.
   /// Tests recursion with non-standard step size.

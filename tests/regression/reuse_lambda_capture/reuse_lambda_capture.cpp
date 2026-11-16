@@ -1,8 +1,7 @@
 #include "reuse_lambda_capture.h"
 
 uint64_t ReuseLambdaCapture::length(const ReuseLambdaCapture::mylist &l) {
-  if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(
-          l.v())) {
+  if (std::holds_alternative<typename ReuseLambdaCapture::mylist::Mycons>(l.v())) {
     const auto &[a0, a1] =
         std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
     return (UINT64_C(1) + length(*a1));
@@ -31,9 +30,9 @@ ReuseLambdaCapture::add_length_to_each(const ReuseLambdaCapture::mylist &l,
       const auto &[a0, a1] =
           std::get<typename ReuseLambdaCapture::mylist::Mycons>(l.v());
       const ReuseLambdaCapture::mylist &a1_value = *a1;
-      return mylist::mycons(
-          (a0 + UINT64_C(1)),
-          map([=](uint64_t x) { return (x + length(l)); }, a1_value));
+      return mylist::mycons((a0 + UINT64_C(1)), map([=](uint64_t x) {
+        return (x + length(l));
+      }, a1_value));
     } else {
       return mylist::mynil();
     }

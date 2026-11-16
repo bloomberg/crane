@@ -8,9 +8,8 @@ uint64_t FinOperatesOnPairs::get_reg(const FinOperatesOnPairs::state &s,
 FinOperatesOnPairs::state
 FinOperatesOnPairs::set_reg(const FinOperatesOnPairs::state &s, uint64_t r,
                             uint64_t v) {
-  return state{
-      update_nth<uint64_t>(r, (UINT64_C(16) ? v % UINT64_C(16) : v), s.regs),
-      s.rom};
+  return state{update_nth<uint64_t>(r, (UINT64_C(16) ? v % UINT64_C(16) : v),
+                                    s.regs), s.rom};
 }
 
 uint64_t FinOperatesOnPairs::get_reg_pair(const FinOperatesOnPairs::state &s,
@@ -34,7 +33,6 @@ FinOperatesOnPairs::set_reg_pair(const FinOperatesOnPairs::state &s, uint64_t r,
 FinOperatesOnPairs::state
 FinOperatesOnPairs::execute_fin(const FinOperatesOnPairs::state &s,
                                 uint64_t r) {
-  return set_reg_pair(s, r,
-                      ListDef::template nth<uint64_t>(
+  return set_reg_pair(s, r, ListDef::template nth<uint64_t>(
                           get_reg_pair(s, UINT64_C(0)), s.rom, UINT64_C(0)));
 }

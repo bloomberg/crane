@@ -118,25 +118,27 @@ public:
 /// to a literal too.
 struct NumeralConvUnmappedNat {
   static inline const List<int64_t> xs = List<int64_t>::cons(
-      INT64_C(-5),
-      List<int64_t>::cons(
+      INT64_C(-5), List<int64_t>::cons(
           INT64_C(3), List<int64_t>::cons(
-                          INT64_C(0), List<int64_t>::cons(
-                                          INT64_C(7), List<int64_t>::nil()))));
-
-  static inline const int64_t run = static_cast<int64_t>(
-      static_cast<uint64_t>(static_cast<int64_t>(
-          static_cast<uint64_t>(xs.template fold_left<int64_t>(
-              [](int64_t _x0, int64_t _x1) -> int64_t {
-                return static_cast<int64_t>(static_cast<uint64_t>(_x0) +
-                                            static_cast<uint64_t>(_x1));
-              },
-              INT64_C(0))) +
-          static_cast<uint64_t>(
-              (INT64_C(-9) < 0
-                   ? static_cast<int64_t>(-static_cast<uint64_t>(INT64_C(-9)))
-                   : INT64_C(-9))))) +
-      static_cast<uint64_t>(static_cast<int64_t>(UINT64_C(2))));
+              INT64_C(0),
+              List<int64_t>::cons(INT64_C(7), List<int64_t>::nil()))));
+  static inline const int64_t run = static_cast<int64_t>(static_cast<uint64_t>(static_cast<int64_t>(static_cast<uint64_t>(xs.template fold_left<int64_t>(
+                                                                                                                              [](int64_t _x0,
+                                                                                                                                 int64_t _x1)
+                                                                                                                                   -> int64_t {
+                                                                                                                                    return static_cast<int64_t>(static_cast<uint64_t>(_x0) +
+                                                                                                                                                                static_cast<uint64_t>(_x1));
+                                                                                                                                  },
+                                                                                                                              INT64_C(0))) +
+                                                                                                    static_cast<uint64_t>(
+                                                                                                        (INT64_C(-9) <
+                                                                                                         0
+                                                                                                             ? static_cast<int64_t>(-static_cast<uint64_t>(INT64_C(-9)))
+                                                                                                             : INT64_C(-9))))) +
+                                                         static_cast<uint64_t>(
+                                                             static_cast<
+                                                                 int64_t>(
+                                                                 UINT64_C(2))));
 };
 
 #endif // INCLUDED_NUMERAL_CONV_UNMAPPED_NAT

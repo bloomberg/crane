@@ -27,16 +27,20 @@ template <class T, class U>
 concept same_as = bsl::is_same<T, U>::value && bsl::is_same<U, T>::value;
 
 template <typename t_A> struct List;
+
 struct ListDef {
   static List<unsigned int> seq(unsigned int start, unsigned int len);
 };
+
 template <typename t_A> struct List {
   // TYPES
   struct Nil {};
+
   struct Cons {
     t_A d_a;
     bsl::shared_ptr<List<t_A>> d_l;
   };
+
   using variant_t = bsl::variant<Nil, Cons>;
 
 private:
@@ -46,8 +50,11 @@ private:
 public:
   // CREATORS
   List() {}
+
   explicit List(Nil _v) : d_v_(_v) {}
+
   explicit List(Cons _v) : d_v_(bsl::move(_v)) {}
+
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : d_v_([&]() -> variant_t {
@@ -66,15 +73,18 @@ public:
                   }
                 }(),
                 (d_l ? bsl::make_shared<List<t_A>>(
-                           crane_convert<List<t_A>>(*d_l))
+                         crane_convert<List<t_A>>(*d_l))
                      : nullptr)};
           }
         }()) {}
+
   static List<t_A> nil() { return List<t_A>(Nil{}); }
+
   static List<t_A> cons(t_A a, List<t_A> l) {
     return List<t_A>(
         Cons{bsl::move(a), bsl::make_shared<List<t_A>>(bsl::move(l))});
   }
+
   // MANIPULATORS
   ~List() {
     auto _next = [&](variant_t &_v) -> bsl::shared_ptr<List<t_A>> {
@@ -91,13 +101,17 @@ public:
       _cur = _next(_cur->v_mut());
     }
   }
+
   List(const List &) = default;
   List &operator=(const List &) = default;
   List(List &&) = default;
   List &operator=(List &&) = default;
+
   inline variant_t &v_mut() { return d_v_; }
+
   // ACCESSORS
   const variant_t &v() const { return d_v_; }
+
   template <typename T1>
   List<bsl::pair<t_A, T1>> combine(const List<T1> &l_) const {
     bsl::optional<List<bsl::pair<t_A, T1>>> _root{};
@@ -130,8 +144,7 @@ public:
                               bsl::move(_cell)))
                       : _root.emplace(bsl::move(_cell)));
           _write =
-              &bsl::get<typename List<bsl::pair<t_A, T1>>::Cons>(_node.v_mut())
-                   .d_l;
+              &bsl::get<typename List<bsl::pair<t_A, T1>>::Cons>(_node.v_mut()).d_l;
           _loop_self = crane_raw(d_a1);
           _loop_l_ = crane_raw(d_a10);
           continue;
@@ -140,6 +153,7 @@ public:
     }
     return bsl::move(*_root);
   }
+
   template <typename F0> bsl::optional<t_A> find(F0 &&f) const {
     const List<t_A> *_loop_self = this;
     while (true) {
@@ -156,6 +170,7 @@ public:
       }
     }
   }
+
   template <typename F0> List<t_A> filter(F0 &&f) const {
     bsl::optional<List<t_A>> _root{};
     bsl::shared_ptr<List<t_A>> *_write = nullptr;
@@ -171,10 +186,9 @@ public:
         const auto &[d_a0, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
         if (f(d_a0)) {
           auto _cell = typename List<t_A>::Cons(d_a0, nullptr);
-          List<t_A> &_node =
-              (_write
-                   ? *(*_write = bsl::make_shared<List<t_A>>(bsl::move(_cell)))
-                   : _root.emplace(bsl::move(_cell)));
+          List<t_A> &_node = (_write ? *(*_write = bsl::make_shared<List<t_A>>(
+                                             bsl::move(_cell)))
+                                     : _root.emplace(bsl::move(_cell)));
           _write = &bsl::get<typename List<t_A>::Cons>(_node.v_mut()).d_l;
           _loop_self = crane_raw(d_a1);
           continue;
@@ -186,19 +200,23 @@ public:
     }
     return bsl::move(*_root);
   }
+
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, t_A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<t_A> *_self = this;
+
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
       const List<t_A> *_self;
     };
+
     /// CraneCont_Cons: saves [d_a0], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Cons {
       t_A d_a0;
     };
+
     using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
     T1 _result{};
     crane::small_vector<CraneFrame> _stack;
@@ -227,17 +245,21 @@ public:
     }
     return _result;
   }
+
   template <typename T1> List<T1> concat() const {
     const List<t_A> *_self = this;
+
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
       const List<t_A> *_self;
     };
+
     /// CraneCont_Cons: saves [d_a0], resumes after recursive call, then
     /// processes rest.
     struct CraneCont_Cons {
       List<T1> d_a0;
     };
+
     using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
     List<T1> _result{};
     crane::small_vector<CraneFrame> _stack;
@@ -266,6 +288,7 @@ public:
     }
     return _result;
   }
+
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, const t_A &>
   List<T1> map(F0 &&f) const {
@@ -292,14 +315,18 @@ public:
     }
     return bsl::move(*_root);
   }
+
   unsigned int length() const {
     const List<t_A> *_self = this;
+
     /// CraneEnter: captures varying parameters for each recursive call.
     struct CraneEnter {
       const List<t_A> *_self;
     };
+
     /// CraneCont_Cons: resumes after recursive call, then processes rest.
     struct CraneCont_Cons {};
+
     using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
     unsigned int _result{};
     crane::small_vector<CraneFrame> _stack;
@@ -327,6 +354,7 @@ public:
     }
     return _result;
   }
+
   List<t_A> app(List<t_A> m) const {
     bsl::optional<List<t_A>> _root{};
     bsl::shared_ptr<List<t_A>> *_write = nullptr;
@@ -352,6 +380,7 @@ public:
     return bsl::move(*_root);
   }
 };
+
 struct ToString {
   template <typename T1, typename T2, typename F0, typename F1>
   static bsl::string pair_to_string(F0 &&p1, F1 &&p2,
@@ -360,6 +389,7 @@ struct ToString {
     return bsl::string("(") + p1(a) + bsl::string(", ") + p2(b) +
            bsl::string(")");
   }
+
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bsl::string, F0 &, const T1 &>
   static bsl::string intersperse(F0 &&p, bsl::string sep, const List<T1> &l) {
@@ -375,6 +405,7 @@ struct ToString {
       }
     }
   }
+
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<bsl::string, F0 &, const T1 &>
   static bsl::string list_to_string(F0 &&p, const List<T1> &l) {
@@ -392,10 +423,12 @@ struct ToString {
     }
   }
 };
+
 struct TopologicalSort {
   template <typename node> using entry = bsl::pair<node, List<node>>;
   template <typename node> using graph = List<entry<node>>;
   template <typename node> using order = List<List<node>>;
+
   template <typename T1>
   static List<T1>
   get_elems(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
@@ -410,15 +443,16 @@ struct TopologicalSort {
                 _lc1_loop_l0->v())) {
           return _lc1_loop_h;
         } else {
-          const auto &[d_a0, d_a1] =
-              bsl::get<typename List<bsl::pair<T1, T1>>::Cons>(
-                  _lc1_loop_l0->v());
+          const auto &[d_a0, d_a1] = bsl::get<
+              typename List<bsl::pair<T1, T1>>::Cons>(_lc1_loop_l0->v());
           const List<bsl::pair<T1, T1>> &d_a1_value = *d_a1;
           auto [e1, e2] = d_a0;
-          bsl::optional<T1> f1 =
-              _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e1, x); });
-          bsl::optional<T1> f2 =
-              _lc1_loop_h.find([=](const T1 &x) { return eqb_node(e2, x); });
+          bsl::optional<T1> f1 = _lc1_loop_h.find([=](const T1 &x) {
+            return eqb_node(e1, x);
+          });
+          bsl::optional<T1> f2 = _lc1_loop_h.find([=](const T1 &x) {
+            return eqb_node(e2, x);
+          });
           if (f1.has_value()) {
             T1 _x = *f1;
             if (f2.has_value()) {
@@ -448,35 +482,39 @@ struct TopologicalSort {
       }
     }
   }
+
   template <typename T1>
   static entry<T1>
   make_entry(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
              const List<bsl::pair<T1, T1>> &l, T1 e) {
     return bsl::make_pair(
         e, l.template fold_right<List<T1>>(
-               [=, eqb_node = std::move(eqb_node)](const bsl::pair<T1, T1> &x,
-                                                   List<T1> ret) -> List<T1> {
-                 if (eqb_node(e, x.first)) {
-                   return List<T1>::cons(x.second, bsl::move(ret));
-                 } else {
-                   return ret;
-                 }
-               },
-               List<T1>::nil()));
+            [=, eqb_node = std::move(eqb_node)](const bsl::pair<T1, T1> &x,
+                                                List<T1> ret)
+                 -> List<T1> {
+                  if (eqb_node(e, x.first)) {
+                    return List<T1>::cons(x.second, bsl::move(ret));
+                  } else {
+                    return ret;
+                  }
+                },
+            List<T1>::nil()));
   }
+
   template <typename T1>
   static graph<T1>
   make_graph(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb_node,
              List<bsl::pair<T1, T1>> l) {
     List<T1> elems = get_elems<T1>(eqb_node, l);
     return elems.template fold_right<List<entry<T1>>>(
-        [=, eqb_node = std::move(eqb_node),
-         l = std::move(l)](T1 e, const List<bsl::pair<T1, List<T1>>> &ret) {
-          return List<entry<T1>>::cons(
-              make_entry<T1>(eqb_node, l, bsl::move(e)), ret);
-        },
+        [=, eqb_node = std::move(eqb_node), l = std::move(l)](
+            T1 e, const List<bsl::pair<T1, List<T1>>> &ret) {
+              return List<entry<T1>>::cons(
+                  make_entry<T1>(eqb_node, l, bsl::move(e)), ret);
+            },
         List<entry<T1>>::nil());
   }
+
   template <typename T1>
   static List<T1>
   graph_lookup(const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
@@ -492,6 +530,7 @@ struct TopologicalSort {
       return List<T1>::nil();
     }
   }
+
   template <typename T1>
   static bool
   contains(const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
@@ -504,6 +543,7 @@ struct TopologicalSort {
       return false;
     }
   }
+
   template <typename T1, typename F0>
   static T1
   cycle_entry_aux(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0,
@@ -527,6 +567,7 @@ struct TopologicalSort {
       }
     }
   }
+
   template <typename T1, typename F0>
   static bsl::optional<T1>
   cycle_entry(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0) {
@@ -537,10 +578,12 @@ struct TopologicalSort {
       const auto &[d_a0, d_a1] =
           bsl::get<typename List<bsl::pair<T1, List<T1>>>::Cons>(graph0.v());
       auto [e, _x0] = d_a0;
-      return bsl::make_optional<T1>(cycle_entry_aux<T1>(
-          eqb_node, graph0, List<T1>::nil(), e, graph0.length()));
+      return bsl::make_optional<T1>(
+          cycle_entry_aux<T1>(eqb_node, graph0, List<T1>::nil(), e,
+                              graph0.length()));
     }
   }
+
   template <typename T1, typename F0>
   static List<T1>
   cycle_extract_aux(F0 &&eqb_node, const List<bsl::pair<T1, List<T1>>> &graph0,
@@ -552,15 +595,14 @@ struct TopologicalSort {
       if (contains<T1>(eqb_node, elem, cycl)) {
         return cycl;
       } else {
-        return graph_lookup<T1>(eqb_node, elem, graph0)
-            .template fold_right<List<T1>>(
-                [=](T1 _x0, List<T1> _x1) -> List<T1> {
-                  return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
-                },
-                List<T1>::cons(elem, bsl::move(cycl)));
+        return graph_lookup<T1>(eqb_node, elem, graph0).template fold_right<
+            List<T1>>([=](T1 _x0, List<T1> _x1) -> List<T1> {
+              return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
+            }, List<T1>::cons(elem, bsl::move(cycl)));
       }
     }
   }
+
   template <typename T1, typename F0>
   static List<T1> cycle_extract(F0 &&eqb_node,
                                 const List<bsl::pair<T1, List<T1>>> &graph0) {
@@ -573,6 +615,7 @@ struct TopologicalSort {
       return List<T1>::nil();
     }
   }
+
   template <typename T1> static bool null(const List<T1> &xs) {
     if (bsl::holds_alternative<typename List<T1>::Nil>(xs.v())) {
       return true;
@@ -580,6 +623,7 @@ struct TopologicalSort {
       return false;
     }
   }
+
   template <typename T1>
   static order<T1> topological_sort_aux(
       const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
@@ -591,14 +635,11 @@ struct TopologicalSort {
       if (null<entry<T1>>(graph0)) {
         return List<List<T1>>::nil();
       } else {
-        List<T1> mins =
-            graph0
-                .filter([](const bsl::pair<T1, List<T1>> &p) {
-                  return null<T1>(p.second);
-                })
-                .template map<T1>([](bsl::pair<T1, List<T1>> _x0) -> T1 {
-                  return _x0.first;
-                });
+        List<T1> mins = graph0.filter([](const bsl::pair<T1, List<T1>> &p) {
+          return null<T1>(p.second);
+        }).template map<T1>([](bsl::pair<T1, List<T1>> _x0) -> T1 {
+          return _x0.first;
+        });
         List<T1> mins_;
         if (null<T1>(mins)) {
           mins_ = cycle_extract<T1>(eqb_node, graph0);
@@ -609,46 +650,50 @@ struct TopologicalSort {
             graph0.filter([=](const bsl::pair<T1, List<T1>> &entry0) {
               return !(contains<T1>(eqb_node, entry0.first, mins_));
             });
-        List<bsl::pair<T1, List<T1>>> rest_ =
-            rest.template map<bsl::pair<T1, List<T1>>>(
-                [=](const bsl::pair<T1, List<T1>> &entry0) {
-                  return bsl::make_pair(
-                      entry0.first, entry0.second.filter([=](const T1 &e) {
-                        return !(contains<T1>(eqb_node, e, mins_));
-                      }));
-                });
-        return List<List<T1>>::cons(
-            bsl::move(mins_),
-            topological_sort_aux<T1>(eqb_node, bsl::move(rest_), c));
+        List<bsl::pair<T1, List<T1>>> rest_ = rest.template map<
+            bsl::pair<T1, List<T1>>>(
+            [=](const bsl::pair<T1, List<T1>> &entry0) {
+              return bsl::make_pair(entry0.first,
+                                    entry0.second.filter([=](const T1 &e) {
+                                      return !(contains<T1>(eqb_node, e,
+                                                            mins_));
+                                    }));
+            });
+        return List<List<T1>>::cons(bsl::move(mins_), topological_sort_aux<T1>(
+                                        eqb_node, bsl::move(rest_), c));
       }
     }
   }
+
   template <typename T1, typename F0>
   static List<List<T1>> topological_sort(F0 &&eqb_node,
                                          List<bsl::pair<T1, T1>> g) {
     List<bsl::pair<T1, List<T1>>> g_ = make_graph<T1>(eqb_node, bsl::move(g));
     return topological_sort_aux<T1>(eqb_node, g_, g_.length());
   }
+
   template <typename T1, typename F0>
   static order<T1>
   topological_sort_graph(F0 &&eqb_node,
                          const List<bsl::pair<T1, List<T1>>> &graph0) {
     return topological_sort_aux<T1>(eqb_node, graph0, graph0.length());
   }
+
   template <typename T1, typename F0>
   static List<bsl::pair<T1, unsigned int>>
   topological_rank_list(F0 &&eqb_node,
                         const List<bsl::pair<T1, List<T1>>> &graph0) {
     List<List<T1>> lorder = topological_sort_graph<T1>(eqb_node, graph0);
-    return lorder
-        .template combine<unsigned int>(ListDef::seq(0u, lorder.length()))
-        .template map<List<bsl::pair<T1, unsigned int>>>(
-            [](bsl::pair<List<T1>, unsigned int> x) {
-              auto [fs, rk] = bsl::move(x);
-              return fs.template map<bsl::pair<T1, unsigned int>>(
-                  [=](const T1 &f) { return bsl::make_pair(f, rk); });
-            })
-        .template concat<bsl::pair<T1, unsigned int>>();
+    return lorder.template combine<unsigned int>(
+        ListDef::seq(0u, lorder.length()))
+               .template map<List<bsl::pair<T1, unsigned int>>>(
+        [](bsl::pair<List<T1>, unsigned int> x) {
+          auto [fs, rk] = bsl::move(x);
+          return fs.template map<bsl::pair<T1, unsigned int>>([=](const T1 &f) {
+            return bsl::make_pair(f, rk);
+          });
+        })
+               .template concat<bsl::pair<T1, unsigned int>>();
   }
 };
 

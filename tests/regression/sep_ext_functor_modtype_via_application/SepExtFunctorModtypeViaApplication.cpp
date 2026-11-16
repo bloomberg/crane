@@ -5,7 +5,6 @@
 #include "Nat.h"
 
 namespace SepExtFunctorModtypeViaApplication {
-
 Datatypes::Nat YY::f(bool b) {
   if (b) {
     return Datatypes::Nat::s(Datatypes::Nat::o());
@@ -13,5 +12,4 @@ Datatypes::Nat YY::f(bool b) {
     return Datatypes::Nat::o();
   }
 }
-
 } // namespace SepExtFunctorModtypeViaApplication

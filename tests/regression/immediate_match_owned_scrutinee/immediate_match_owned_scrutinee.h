@@ -12,9 +12,9 @@
 #include <variant>
 
 struct Nat;
-template <typename A> struct List;
+template <typename A>
+struct List; /// A match in argument position becomes an immediately invoked lambda,
 
-/// A match in argument position becomes an immediately invoked lambda,
 /// std::make_optional<Nat>([...]() { ... n.v_mut() ... }()).  The
 /// scrutinee n is an owned local, so the match destructures it through
 /// v_mut().  return_captures_by_value made that lambda a Closure

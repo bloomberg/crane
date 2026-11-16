@@ -152,8 +152,7 @@ struct AssocTypeTwoSwapped {
   static_assert(Two<TT>);
 
   template <Two _tcI0> constexpr static uint64_t go(uint64_t n) {
-    return _tcI0::ynat(
-        crane_erase_fn(_tcI0::xy(crane_erase_fn(_tcI0::mkx(n)))));
+    return _tcI0::ynat(crane_erase_fn(_tcI0::xy(crane_erase_fn(_tcI0::mkx(n)))));
   }
 
   static uint64_t run(uint64_t k);

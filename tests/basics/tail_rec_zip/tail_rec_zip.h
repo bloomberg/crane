@@ -207,8 +207,7 @@ List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
       } else {
         const auto &[a0, a1] =
             std::get<typename List<T1>::Cons>(_lc1_loop_la0->v());
-        if (std::holds_alternative<typename List<T2>::Nil>(
-                _lc1_loop_lb0->v())) {
+        if (std::holds_alternative<typename List<T2>::Nil>(_lc1_loop_lb0->v())) {
           return _lc1_loop_acc.rev();
         } else {
           const auto &[a00, a10] =

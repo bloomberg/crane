@@ -230,8 +230,7 @@ public:
   template <typename CraneU>
   Exp(const Exp<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(_other.v())) {
             const auto &[a0] =
                 std::get<typename Exp<CraneU>::E_leaf>(_other.v());
             return E_leaf{[&]() -> t {
@@ -247,9 +246,9 @@ public:
                 std::get<typename Exp<CraneU>::E_node>(_other.v());
             return E_node{
                 (a0 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a0))
-                    : nullptr),
-                (a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
-                    : nullptr)};
+                    : nullptr), (
+                    a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
+                       : nullptr)};
           }
         }()) {}
 
@@ -384,11 +383,15 @@ struct TFunctor_tagged {
   static List<std::pair<std::optional<Nat>, Exp<CraneA1>>>
   tfmap(crane::fn<CraneA1(CraneA0)> f,
         List<std::pair<std::optional<Nat>, Exp<CraneA0>>> l) {
-    return l.template map<std::pair<std::optional<Nat>, Exp<CraneA1>>>(
-        [=, f = std::move(f)](
-            const std::pair<std::optional<Nat>, Exp<CraneA0>> &p) {
-          return std::make_pair(p.first, p.second.template exp_map<CraneA1>(f));
-        });
+    return l.template map<std::pair<std::optional<Nat>, Exp<CraneA1>>>([=, f =
+                                                                            std::move(f)](
+                                                                           const std::pair<
+                                                                               std::optional<Nat>,
+                                                                               Exp<CraneA0>> &p) {
+                                                                                 return std::make_pair(
+                                                                                     p.first,
+                                                                                     p.second.template exp_map<CraneA1>(f));
+                                                                               });
   }
 };
 
@@ -400,9 +403,8 @@ template <typename t> struct blk {
 
   // ACCESSORS
   template <typename CraneU> operator blk<CraneU>() const {
-    return {b_id,
-            crane_convert<List<std::pair<std::optional<Nat>, Exp<CraneU>>>>(
-                b_code)};
+    return {b_id, crane_convert<
+                List<std::pair<std::optional<Nat>, Exp<CraneU>>>>(b_code)};
   }
 };
 

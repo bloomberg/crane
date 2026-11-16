@@ -12,9 +12,8 @@
 
 enum class Bool0;
 struct Nat;
-struct showNat;
+struct showNat; /// Named qualified by the concept, so a forward declaration will not do.
 
-/// Named qualified by the concept, so a forward declaration will not do.
 struct Coll {
   template <typename A> struct bag {
     // TYPES
@@ -52,9 +51,9 @@ struct Coll {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<bag<A>>(crane_convert<bag<A>>(*a1))
@@ -96,9 +95,8 @@ struct Coll {
     // ACCESSORS
     const variant_t &v() const { return v_; }
   };
-};
+}; /// An alias, which is the kind of declaration C++ cannot forward-declare.
 
-/// An alias, which is the kind of declaration C++ cannot forward-declare.
 using Name = Coll::bag<Nat>;
 template <typename I, typename A>
 concept Show = requires {

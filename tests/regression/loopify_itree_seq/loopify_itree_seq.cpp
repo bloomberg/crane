@@ -42,10 +42,10 @@ uint64_t LoopifyItreeSeq::sum_to(uint64_t n) {
 }
 
 /// Non-tail recursive: build a list counting down from n.
-List<uint64_t> LoopifyItreeSeq::countdown_list(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+List<uint64_t>
+LoopifyItreeSeq::countdown_list(uint64_t n) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     uint64_t n;
   };

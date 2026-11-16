@@ -71,14 +71,14 @@ void UnitVoidStress::match_nat_void(uint64_t n) {
   }
 }
 
-std::pair<std::pair<uint64_t, std::monostate>, uint64_t>
-UnitVoidStress::nested_pair_void(uint64_t n) {
-  return std::make_pair(std::make_pair(n,
-                                       [&]() {
-                                         consume(n);
-                                         return std::monostate{};
-                                       }()),
-                        UINT64_C(42));
+std::pair<std::pair<uint64_t, std::monostate>,
+          uint64_t> UnitVoidStress::nested_pair_void(uint64_t n) {
+  return std::make_pair(
+      std::make_pair(n, [&]() {
+        consume(n);
+        return std::monostate{};
+      }()),
+      UINT64_C(42));
 }
 
 std::optional<std::pair<uint64_t, std::monostate>>

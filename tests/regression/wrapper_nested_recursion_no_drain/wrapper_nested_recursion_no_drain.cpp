@@ -3,7 +3,6 @@
 WrapperNestedRecursionNoDrain::rose WrapperNestedRecursionNoDrain::deep(
     uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
                   /// call.
-
   struct CraneEnter {
     uint64_t n;
   };

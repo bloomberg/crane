@@ -66,7 +66,7 @@ template <SymbolTypes Ty> struct DefsFn {
       return UINT64_C(0);
     } else {
       const auto &f = frs.front();
-      std::deque<frame> frs_(frs.begin() + 1, frs.end());
+      std::deque<frame> frs_(frs.begin()+1, frs.end());
       const auto &[pre, sem, suf0] = f;
       return (static_cast<uint64_t>(suf0.size()) + tail_lengths(frs_));
     }
@@ -74,7 +74,9 @@ template <SymbolTypes Ty> struct DefsFn {
 };
 
 template <typename M>
-concept T = requires { requires SymbolTypes<typename M::SymTy>; };
+concept T = requires {
+  requires SymbolTypes<typename M::SymTy>;
+};
 
 template <T D> struct ParserFn {
   static uint64_t
@@ -86,18 +88,18 @@ template <T D> struct ParserFn {
   }
 
   static uint64_t parse(typename D::SymTy::symbol x) {
-    std::pair<typename D::Defs::frame, std::deque<typename D::Defs::frame>>
-        sk0 = std::make_pair(
-            D::Defs::frame::fr(
-                std::deque<typename D::SymTy::symbol>{}, std::monostate{},
-                [](auto _a0, auto _a1) {
-                  _a1.push_front(_a0);
-                  return _a1;
-                }(std::move(x), std::deque<typename D::SymTy::symbol>{})),
-            std::deque<typename D::Defs::frame>{});
+    std::pair<typename D::Defs::frame,
+              std::deque<typename D::Defs::frame>> sk0 = std::make_pair(
+        D::Defs::frame::fr(std::deque<typename D::SymTy::symbol>{},
+                           std::monostate{}, [](auto _a0, auto _a1) {
+                             _a1.push_front(_a0);
+                             return _a1;
+                           }(std::move(x), std::deque<typename D::SymTy::symbol>{})),
+        std::deque<typename D::Defs::frame>{});
     return step_stack(std::move(sk0));
   }
 };
+
 enum class Concrete_symbol { SA, SB };
 
 struct ConcreteSymTypes {

@@ -5,10 +5,10 @@
 /// Items are (weight, value) pairs.
 uint64_t LoopifySearch::knapsack_fuel(
     uint64_t fuel, uint64_t capacity,
-    const List<std::pair<uint64_t, uint64_t>>
-        &items) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+    const List<std::pair<uint64_t,
+                         uint64_t>> &items) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     const List<std::pair<uint64_t, uint64_t>> *items;
     uint64_t capacity;
@@ -65,9 +65,8 @@ uint64_t LoopifySearch::knapsack_fuel(
                 typename List<std::pair<uint64_t, uint64_t>>::Nil>(items.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] =
-              std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                  items.v());
+          const auto &[a0, a1] = std::get<
+              typename List<std::pair<uint64_t, uint64_t>>::Cons>(items.v());
           const auto &[weight, value] = a0;
           if (capacity < weight) {
             _stack.emplace_back(CraneEnter{crane_raw(a1), capacity, f});
@@ -87,9 +86,10 @@ uint64_t LoopifySearch::knapsack_fuel(
       uint64_t value = _f.value;
       _stack.emplace_back(
           CraneCont2{capacity, f, &a1, weight, value, std::move(_result)});
-      _stack.emplace_back(CraneEnter{
-          &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-          f});
+      _stack.emplace_back(
+          CraneEnter{
+              &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
+              f});
     } else if (std::holds_alternative<CraneCont2>(_frame)) {
       auto _f = std::move(std::get<CraneCont2>(_frame));
       uint64_t capacity = _f.capacity;
@@ -99,9 +99,10 @@ uint64_t LoopifySearch::knapsack_fuel(
       uint64_t value = _f.value;
       if (_f._tmp3 <= (value + std::move(_result))) {
         _stack.emplace_back(CraneCont3{value});
-        _stack.emplace_back(CraneEnter{
-            &a1, (((capacity - weight) > capacity ? 0 : (capacity - weight))),
-            f});
+        _stack.emplace_back(CraneEnter{&a1, (((capacity - weight) >
+                                              capacity ? 0
+                                                       : (capacity - weight))),
+                                       f});
       } else {
         _stack.emplace_back(CraneEnter{&a1, capacity, f});
       }
@@ -123,10 +124,10 @@ LoopifySearch::knapsack(uint64_t capacity,
 
 /// majority l finds majority element using Boyer-Moore algorithm.
 /// Returns (candidate, count).
-std::pair<uint64_t, uint64_t> LoopifySearch::majority(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+std::pair<uint64_t, uint64_t>
+LoopifySearch::majority(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                   /// varying parameters for
+                                                   /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -194,9 +195,9 @@ LoopifySearch::longest_increasing_subseq(const List<uint64_t> &l) {
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
         auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a00, a10] =
@@ -263,9 +264,9 @@ List<uint64_t> LoopifySearch::take_impl(uint64_t k, const List<uint64_t> &l) {
       uint64_t m = _loop_k - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -402,10 +403,11 @@ List<uint64_t> LoopifySearch::longest_run(const List<uint64_t> &l) {
 }
 
 /// collatz n computes Collatz sequence length (not the list).
-uint64_t LoopifySearch::collatz_fuel(
-    uint64_t fuel, uint64_t n) { /// CraneEnter: captures varying parameters for
-                                 /// each recursive call.
-
+uint64_t
+LoopifySearch::collatz_fuel(uint64_t fuel,
+                            uint64_t n) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     uint64_t n;
     uint64_t fuel;
@@ -468,11 +470,13 @@ List<uint64_t> LoopifySearch::lis(const List<uint64_t> &l) {
 }
 
 /// subset_sum target l checks if any subset sums to target.
-bool LoopifySearch::subset_sum_fuel(
-    uint64_t fuel, uint64_t target,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+bool
+LoopifySearch::subset_sum_fuel(uint64_t fuel, uint64_t target,
+                               const List<uint64_t> &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
     uint64_t target;
@@ -524,8 +528,9 @@ bool LoopifySearch::subset_sum_fuel(
         _result = true;
       } else {
         if (a0 <= target) {
-          _stack.emplace_back(CraneEnter{
-              &a1, (((target - a0) > target ? 0 : (target - a0))), f});
+          _stack.emplace_back(
+              CraneEnter{&a1, (((target - a0) > target ? 0 : (target - a0))),
+                         f});
         } else {
           _result = false;
         }
@@ -556,9 +561,9 @@ List<uint64_t> LoopifySearch::sieve_fuel(uint64_t fuel,
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -570,9 +575,9 @@ List<uint64_t> LoopifySearch::sieve_fuel(uint64_t fuel,
                             std::make_shared<List<uint64_t>>(std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-        _loop_l = filter_impl(
-            [=](uint64_t y) { return !((a0 ? y % a0 : y) == UINT64_C(0)); },
-            a1_value);
+        _loop_l = filter_impl([=](uint64_t y) {
+          return !((a0 ? y % a0 : y) == UINT64_C(0));
+        }, a1_value);
         _loop_fuel = f;
         continue;
       }
@@ -619,9 +624,9 @@ List<uint64_t> LoopifySearch::nub_fuel(uint64_t fuel, const List<uint64_t> &l) {
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -668,9 +673,9 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l.v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -687,8 +692,9 @@ List<uint64_t> LoopifySearch::remove_duplicates_fuel(uint64_t fuel,
                               std::move(_cell)))
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-          _loop_l =
-              filter_impl([=](uint64_t y) { return !(a0 == y); }, a1_value);
+          _loop_l = filter_impl([=](uint64_t y) {
+            return !(a0 == y);
+          }, a1_value);
           _loop_fuel = f;
           continue;
         }
@@ -703,11 +709,12 @@ List<uint64_t> LoopifySearch::remove_duplicates(const List<uint64_t> &l) {
 }
 
 /// quicksort l sorts list using quicksort with filter-based partitioning.
-List<uint64_t> LoopifySearch::quicksort_fuel(
-    uint64_t fuel,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifySearch::quicksort_fuel(uint64_t fuel,
+                              const List<uint64_t> &l) { /// CraneEnter:
+                                                         /// captures varying
+                                                         /// parameters for each
+                                                         /// recursive call.
   struct CraneEnter {
     List<uint64_t> l;
     uint64_t fuel;
@@ -750,10 +757,12 @@ List<uint64_t> LoopifySearch::quicksort_fuel(
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           const List<uint64_t> &a1_value = *a1;
-          List<uint64_t> smaller =
-              filter_impl([=](uint64_t y) { return y < a0; }, a1_value);
-          List<uint64_t> greater =
-              filter_impl([=](uint64_t y) { return a0 <= y; }, a1_value);
+          List<uint64_t> smaller = filter_impl([=](uint64_t y) {
+            return y < a0;
+          }, a1_value);
+          List<uint64_t> greater = filter_impl([=](uint64_t y) {
+            return a0 <= y;
+          }, a1_value);
           _stack.emplace_back(CraneCont_Cons{f, a0, std::move(greater)});
           _stack.emplace_back(CraneEnter{std::move(smaller), f});
         }
@@ -782,7 +791,6 @@ List<uint64_t> LoopifySearch::quicksort(const List<uint64_t> &l) {
 std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -834,9 +842,8 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySearch::split_list(
 }
 
 /// Helper: merge two sorted lists with fuel.
-List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
-                                                const List<uint64_t> &l1,
-                                                List<uint64_t> l2) {
+List<uint64_t> LoopifySearch::merge_sorted_fuel(
+    uint64_t fuel, const List<uint64_t> &l1, List<uint64_t> l2) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l2 = std::move(l2);
@@ -852,9 +859,9 @@ List<uint64_t> LoopifySearch::merge_sorted_fuel(uint64_t fuel,
       uint64_t f = _loop_fuel - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = std::move(_loop_l2);
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
@@ -905,11 +912,13 @@ List<uint64_t> LoopifySearch::merge_sorted(const List<uint64_t> &l1,
 }
 
 /// merge_sort l sorts list using merge sort.
-List<uint64_t> LoopifySearch::merge_sort_fuel(
-    uint64_t fuel,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<uint64_t>
+LoopifySearch::merge_sort_fuel(uint64_t fuel,
+                               const List<uint64_t> &l) { /// CraneEnter:
+                                                          /// captures varying
+                                                          /// parameters for
+                                                          /// each recursive
+                                                          /// call.
   struct CraneEnter {
     List<uint64_t> l;
     uint64_t fuel;
@@ -993,9 +1002,9 @@ List<uint64_t> LoopifySearch::remove_first(uint64_t x,
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x == a0) {
         auto _value = *a1;
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -1050,7 +1059,6 @@ List<List<uint64_t>> LoopifySearch::perms_choices_fuel(
     uint64_t fuel, const List<uint64_t> &choices,
     const List<uint64_t> &orig) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
   struct CraneEnter {
     List<uint64_t> orig;
     List<uint64_t> choices;
@@ -1181,9 +1189,8 @@ std::optional<uint64_t> LoopifySearch::linear_search(uint64_t x,
 }
 
 /// all_indices x l finds all indices where x occurs.
-List<uint64_t> LoopifySearch::all_indices_aux(uint64_t x,
-                                              const List<uint64_t> &l,
-                                              uint64_t idx) {
+List<uint64_t> LoopifySearch::all_indices_aux(
+    uint64_t x, const List<uint64_t> &l, uint64_t idx) {
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_idx = idx;
@@ -1222,10 +1229,10 @@ List<uint64_t> LoopifySearch::all_indices(uint64_t x, const List<uint64_t> &l) {
 }
 
 /// min_element l finds minimum element in list.
-uint64_t LoopifySearch::min_element(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifySearch::min_element(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                      /// varying parameters for
+                                                      /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };

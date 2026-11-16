@@ -864,7 +864,6 @@ struct NumeralConverterKind {
   static constexpr uint64_t nat_big = UINT64_C(10000);
   static inline const std::optional<uint64_t> nat_of_pos = Nat::of_num_int(
       Signed_int1::intdecimal(Signed_int::pos(Uint::d7(Uint::nil()))));
-
   static inline const std::optional<uint64_t> nat_of_neg = Nat::of_num_int(
       Signed_int1::intdecimal(Signed_int::neg(Uint::d7(Uint::nil()))));
 };

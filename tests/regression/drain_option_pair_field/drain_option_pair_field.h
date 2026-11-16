@@ -35,7 +35,7 @@ struct DrainOptionPairField {
 
     static t c(std::optional<std::pair<t, uint64_t>> a0) {
       return t(C{std::make_shared<std::optional<std::pair<t, uint64_t>>>(
-          std::move(a0))});
+                     std::move(a0))});
     }
 
     // MANIPULATORS
@@ -86,8 +86,11 @@ struct DrainOptionPairField {
 
   static uint64_t depth(const t &x);
   static inline const uint64_t test =
-      depth(t::c(std::make_optional<std::pair<t, uint64_t>>(std::make_pair(
-          t::c(std::optional<std::pair<t, uint64_t>>()), UINT64_C(1)))));
+      depth(
+          t::c(
+              std::make_optional<std::pair<t, uint64_t>>(
+                  std::make_pair(t::c(std::optional<std::pair<t, uint64_t>>()),
+                                 UINT64_C(1)))));
 };
 
 #endif // INCLUDED_DRAIN_OPTION_PAIR_FIELD

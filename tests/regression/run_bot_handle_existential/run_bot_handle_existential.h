@@ -197,11 +197,9 @@ public:
   ItreeF(const ItreeF<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                  _other.v())) {
-            const auto &[r] =
-                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                    _other.v());
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
+            const auto &[r] = std::get<
+                typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
             return RetF{[&]() -> R {
               if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
@@ -214,9 +212,8 @@ public:
             if (std::holds_alternative<
                     typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
-              const auto &[t] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                      _other.v());
+              const auto &[t] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v());
               return TauF{[&]() -> itree {
                 if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
@@ -226,17 +223,16 @@ public:
                 }
               }()};
             } else {
-              const auto &[x, e] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
-                      _other.v());
+              const auto &[x, e] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(_other.v());
               return VisF{
                   [&]() -> E {
                     if constexpr (crane_convertible<E, const CraneU0 &>) {
                       return crane_convert<E>(x);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   crane_convert<crane::fn<itree(crane::obj)>>(e)};
@@ -286,26 +282,36 @@ public:
 
   template <typename CraneU0, typename CraneU1>
   Itree(const Itree<CraneU0, CraneU1> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              const auto &[_observe] =
-                  std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
-              return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
-            })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                       [=]() -> variant_t {
+                                                         const auto &[_observe] =
+                                                             std::get<
+                                                                 typename Itree<
+                                                                     CraneU0,
+                                                                     CraneU1>::Go>(
+                                                                 _other.v());
+                                                         return Go{
+                                                             crane_convert<
+                                                                 ItreeF<
+                                                                     E, R,
+                                                                     Itree<E,
+                                                                           R>>>(
+                                                                 _observe)};
+                                                       })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(crane::lazy<variant_t>(
-        std::in_place, std::in_place_index<0>, std::move(_observe)));
+    return Itree<E, R>(
+        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
+                               std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
   template <typename F> static Itree<E, R> lazy_(F &&thunk) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+    return Itree<E, R>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
   }
 
   // ACCESSORS
@@ -354,9 +360,8 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
-            const auto &[a0] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
-                    _other.v());
+            const auto &[a0] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v());
             return Inl1{[&]() -> E1 {
               if constexpr (crane_convertible<E1, const CraneU0 &>) {
                 return crane_convert<E1>(a0);
@@ -366,9 +371,8 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
-                    _other.v());
+            const auto &[a0] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(_other.v());
             return Inr1{[&]() -> E2 {
               if constexpr (crane_convertible<E2, const CraneU1 &>) {
                 return crane_convert<E2>(a0);
@@ -395,14 +399,20 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct RunBotHandleExistential {
   using ptr = crane::obj;
@@ -420,6 +430,7 @@ struct RunBotHandleExistential {
     // CREATORS
     static outE<ptr> out(ptr a0) { return {std::move(a0)}; }
   };
+
   enum class FailE { FAIL };
   template <typename ptr, typename x> using BotE = Sum1<outE<ptr>, FailE, x>;
 
@@ -431,8 +442,8 @@ struct RunBotHandleExistential {
         if constexpr (crane_convertible<T1, const std::monostate &>) {
           return crane_convert<T1>(std::monostate{});
         } else {
-          throw std::logic_error(
-              "unreachable: impossible dependent match branch");
+          throw std::logic_error("unreachable: impossible dependent match "
+                                 "branch");
         }
       }());
     } else {
@@ -444,37 +455,43 @@ struct RunBotHandleExistential {
   static Itree<crane::obj, Sum<Run_error, T1>> run_bot(
       const Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1> &t) {
     auto &&_sv = t.observe();
-    if (std::holds_alternative<typename ItreeF<
-            Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
-            Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
-                  T1>>::RetF>(_sv.v())) {
-      const auto &[r] = std::get<typename ItreeF<
-          Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
-          Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1>>::RetF>(
-          _sv.v());
+    if (std::holds_alternative<
+            typename ItreeF<
+                Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
+                Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
+                      T1>>::RetF>(_sv.v())) {
+      const auto &[r] =
+          std::get<typename ItreeF<
+                       Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
+                       Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
+                             T1>>::RetF>(_sv.v());
       return Itree<crane::obj, Sum<Run_error, T1>>::go(
           ItreeF<crane::obj, Sum<Run_error, T1>,
-                 Itree<crane::obj, Sum<Run_error, T1>>>::retf(Sum<Run_error,
-                                                                  T1>::inr(r)));
-    } else if (std::holds_alternative<typename ItreeF<
-                   Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
-                   Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
-                         T1>>::TauF>(_sv.v())) {
-      const auto &[t0] = std::get<typename ItreeF<
-          Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
-          Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1>>::TauF>(
-          _sv.v());
+                 Itree<crane::obj, Sum<Run_error, T1>>>::retf(
+              Sum<Run_error, T1>::inr(r)));
+    } else if (
+        std::holds_alternative<
+            typename ItreeF<
+                Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
+                Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
+                      T1>>::TauF>(_sv.v())) {
+      const auto &[t0] =
+          std::get<typename ItreeF<
+                       Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
+                       Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
+                             T1>>::TauF>(_sv.v());
       return Itree<crane::obj, Sum<Run_error, T1>>::lazy_(
           [=]() -> typename Itree<crane::obj, Sum<Run_error, T1>>::Go {
             return {ItreeF<crane::obj, Sum<Run_error, T1>,
-                           Itree<crane::obj, Sum<Run_error, T1>>>::
-                        tauf(run_bot<_tcI0, T1>(t0))};
+                           Itree<crane::obj, Sum<Run_error, T1>>>::tauf(
+                        run_bot<_tcI0, T1>(t0))};
           });
     } else {
-      const auto &[x, e0] = std::get<typename ItreeF<
-          Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
-          Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1>>::VisF>(
-          _sv.v());
+      const auto &[x, e0] =
+          std::get<typename ItreeF<
+                       Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1,
+                       Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>,
+                             T1>>::VisF>(_sv.v());
       auto &&_sv0 = handle_bot<_tcI0>(x);
       if (std::holds_alternative<typename Sum<Run_error, crane::obj>::Inl>(
               _sv0.v())) {
@@ -482,16 +499,16 @@ struct RunBotHandleExistential {
             std::get<typename Sum<Run_error, crane::obj>::Inl>(_sv0.v());
         return Itree<crane::obj, Sum<Run_error, T1>>::go(
             ItreeF<crane::obj, Sum<Run_error, T1>,
-                   Itree<crane::obj, Sum<Run_error, T1>>>::
-                retf(Sum<Run_error, T1>::inl(crane::any_cast<Run_error>(a00))));
+                   Itree<crane::obj, Sum<Run_error, T1>>>::retf(
+                Sum<Run_error, T1>::inl(crane::any_cast<Run_error>(a00))));
       } else {
         const auto &[a00] =
             std::get<typename Sum<Run_error, crane::obj>::Inr>(_sv0.v());
         return Itree<crane::obj, Sum<Run_error, T1>>::lazy_(
             [=]() -> typename Itree<crane::obj, Sum<Run_error, T1>>::Go {
               return {ItreeF<crane::obj, Sum<Run_error, T1>,
-                             Itree<crane::obj, Sum<Run_error, T1>>>::
-                          tauf(run_bot<_tcI0, T1>(crane_call_erased(e0, a00)))};
+                             Itree<crane::obj, Sum<Run_error, T1>>>::tauf(
+                          run_bot<_tcI0, T1>(crane_call_erased(e0, a00)))};
             });
       }
     }
@@ -499,23 +516,44 @@ struct RunBotHandleExistential {
 
   template <Params _tcI0>
   static Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat> prog() {
-    return Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>::go(
-        ItreeF<BotE<typename _tcI0::ptr, crane::obj>, Nat,
-               Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>>::
-            visf(Sum1<outE<typename _tcI0::ptr>, FailE,
-                      outE<typename _tcI0::ptr>>::
-                     inl1(outE<typename _tcI0::ptr>::out(_tcI0::zero())),
-                 crane::fn<Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>(
-                     crane::obj)>([](const crane::obj &)
-                                      -> Itree<
-                                          BotE<typename _tcI0::ptr, crane::obj>,
-                                          Nat> {
-                   return Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>::go(
-                       ItreeF<
-                           BotE<typename _tcI0::ptr, crane::obj>, Nat,
-                           Itree<BotE<typename _tcI0::ptr, crane::obj>,
-                                 Nat>>::retf(Nat::s(Nat::s(Nat::s(Nat::o())))));
-                 })));
+    return Itree<BotE<typename _tcI0::ptr, crane::obj>, Nat>::go(ItreeF<
+                                                                     BotE<
+                                                                         typename _tcI0::ptr,
+                                                                         crane::obj>,
+                                                                     Nat, Itree<
+                                                                         BotE<
+                                                                             typename _tcI0::ptr,
+                                                                             crane::obj>,
+                                                                         Nat>>::visf(
+                                                                     Sum1<
+                                                                         outE<
+                                                                             typename _tcI0::ptr>,
+                                                                         FailE,
+                                                                         outE<
+                                                                             typename _tcI0::ptr>>::inl1(
+                                                                         outE<
+                                                                             typename _tcI0::ptr>::out(
+                                                                             _tcI0::zero())),
+                                                                     crane::fn<
+                                                                         Itree<
+                                                                             BotE<typename _tcI0::ptr,
+                                                                                  crane::obj>,
+                                                                             Nat>(
+                                                                             crane::obj)>([](const crane::obj &) -> Itree<
+                                                                                              BotE<typename _tcI0::ptr,
+                                                                                                   crane::obj>,
+                                                                                              Nat> {
+                                                                                                return Itree<
+                                                                                                    BotE<typename _tcI0::ptr,
+                                                                                                         crane::obj>,
+                                                                                                    Nat>::go(
+                                                                                                    ItreeF<BotE<typename _tcI0::ptr,
+                                                                                                                crane::obj>,
+                                                                                                           Nat,
+                                                                                                           Itree<BotE<typename _tcI0::ptr,
+                                                                                                                      crane::obj>,
+                                                                                                                 Nat>>::retf(Nat::s(Nat::s(Nat::s(Nat::o())))));
+                                                                                              })));
   }
 
   struct natParams {
@@ -527,26 +565,73 @@ struct RunBotHandleExistential {
   static_assert(Params<natParams>);
   static std::optional<Nat>
   run(const Nat &fuel, const Itree<crane::obj, Sum<Run_error, Nat>> &t);
-
   static inline const bool is_three = []() -> bool {
     auto _cs = []() {
-      auto _lit0 = Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
-      auto _lit1 = Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
-      auto _lit2 = Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
-      return run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                     Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit2))))))))))),
-                 run_bot<natParams, Nat>(prog<natParams>()));
+      auto _lit0 =
+          Nat::s(
+              Nat::s(
+                  Nat::s(
+                      Nat::s(
+                          Nat::s(
+                              Nat::s(
+                                  Nat::s(
+                                      Nat::s(
+                                          Nat::s(
+                                              Nat::s(
+                                                  Nat::s(
+                                                      Nat::s(
+                                                          Nat::s(
+                                                              Nat::s(
+                                                                  Nat::s(
+                                                                      Nat::s(
+                                                                          Nat::s(
+                                                                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))));
+      auto _lit1 =
+          Nat::s(
+              Nat::s(
+                  Nat::s(
+                      Nat::s(
+                          Nat::s(
+                              Nat::s(
+                                  Nat::s(
+                                      Nat::s(
+                                          Nat::s(
+                                              Nat::s(
+                                                  Nat::s(
+                                                      Nat::s(
+                                                          Nat::s(
+                                                              Nat::s(
+                                                                  Nat::s(
+                                                                      Nat::s(
+                                                                          Nat::s(
+                                                                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit0)))))))))))))))))))))))))))))));
+      auto _lit2 =
+          Nat::s(
+              Nat::s(
+                  Nat::s(
+                      Nat::s(
+                          Nat::s(
+                              Nat::s(
+                                  Nat::s(
+                                      Nat::s(
+                                          Nat::s(
+                                              Nat::s(
+                                                  Nat::s(
+                                                      Nat::s(
+                                                          Nat::s(
+                                                              Nat::s(
+                                                                  Nat::s(
+                                                                      Nat::s(
+                                                                          Nat::s(
+                                                                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(_lit1)))))))))))))))))))))))))))))));
+      return run(
+          Nat::s(
+              Nat::s(
+                  Nat::s(
+                      Nat::s(
+                          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(std::move(
+                                                                        _lit2))))))))))),
+          run_bot<natParams, Nat>(prog<natParams>()));
     }();
     if (_cs.has_value()) {
       const Nat &n = *_cs;

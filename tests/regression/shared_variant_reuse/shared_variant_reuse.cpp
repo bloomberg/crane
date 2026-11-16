@@ -45,8 +45,7 @@ SharedVariantReuse::insert(uint64_t k, uint64_t v, SharedVariantReuse::tree t) {
       }
     }
   } else {
-    if (crane::holds_alternative<typename SharedVariantReuse::tree::Leaf>(
-            t.v())) {
+    if (crane::holds_alternative<typename SharedVariantReuse::tree::Leaf>(t.v())) {
       return tree::node(tree::leaf(), k, v, tree::leaf());
     } else {
       const auto &[a0, a1, a2, a3] =
@@ -74,8 +73,7 @@ SharedVariantReuse::lst SharedVariantReuse::bump(SharedVariantReuse::lst l) {
       return lst::cons_crane_reuse(std::move(l), (std::move(x) + 1),
                                    bump(std::move(xs)));
     } else {
-      if (crane::holds_alternative<typename SharedVariantReuse::lst::Nil>(
-              l.v())) {
+      if (crane::holds_alternative<typename SharedVariantReuse::lst::Nil>(l.v())) {
         return lst::nil();
       } else {
         const auto &[a0, a1] =
@@ -84,8 +82,7 @@ SharedVariantReuse::lst SharedVariantReuse::bump(SharedVariantReuse::lst l) {
       }
     }
   } else {
-    if (crane::holds_alternative<typename SharedVariantReuse::lst::Nil>(
-            l.v())) {
+    if (crane::holds_alternative<typename SharedVariantReuse::lst::Nil>(l.v())) {
       return lst::nil();
     } else {
       const auto &[a0, a1] =

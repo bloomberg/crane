@@ -59,13 +59,13 @@ struct AccumClosureEscape {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -118,10 +118,9 @@ struct AccumClosureEscape {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -312,9 +311,10 @@ struct AccumClosureEscape {
         } else {
           auto _f = std::move(std::get<CraneCont_TNode_1>(_frame));
           uint64_t a1 = _f.a1;
-          _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              [=](uint64_t x) { return (a1 + x); },
-              _f._tmp2.mylist_append(std::move(_result)));
+          _result =
+              mylist<crane::fn<uint64_t(uint64_t)>>::mycons([=](uint64_t x) {
+                return (a1 + x);
+              }, _f._tmp2.mylist_append(std::move(_result)));
         }
       }
       return _result;
@@ -468,10 +468,9 @@ struct AccumClosureEscape {
   static inline const uint64_t test1 = []() {
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_adders(
         mylist<uint64_t>::mycons(
-            UINT64_C(10),
-            mylist<uint64_t>::mycons(
+            UINT64_C(10), mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
-                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
+                    UINT64_C(30), mylist<uint64_t>::mynil()))),
         mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return apply_first(std::move(fns), UINT64_C(5));
   }();
@@ -479,10 +478,9 @@ struct AccumClosureEscape {
   static inline const uint64_t test2 = []() {
     mylist<crane::fn<uint64_t(uint64_t)>> fns = build_adders(
         mylist<uint64_t>::mycons(
-            UINT64_C(10),
-            mylist<uint64_t>::mycons(
+            UINT64_C(10), mylist<uint64_t>::mycons(
                 UINT64_C(20), mylist<uint64_t>::mycons(
-                                  UINT64_C(30), mylist<uint64_t>::mynil()))),
+                    UINT64_C(30), mylist<uint64_t>::mynil()))),
         mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return apply_all_sum(std::move(fns), UINT64_C(5));
   }();
@@ -497,8 +495,9 @@ struct AccumClosureEscape {
     } else {
       const auto &[a0, a1] = std::get<typename mylist<uint64_t>::Mycons>(l.v());
       const mylist<uint64_t> &a1_value = *a1;
-      return compose_from_list(
-          a1_value, [=](uint64_t x) { return acc((a0 + x)); }, x0_);
+      return compose_from_list(a1_value, [=](uint64_t x) {
+        return acc((a0 + x));
+      }, x0_);
     }
   }
 
@@ -507,11 +506,10 @@ struct AccumClosureEscape {
   /// = fun x => 60 + x
   /// test3 = 60 + 7 = 67
   static inline const uint64_t test3 = compose_from_list(
-      mylist<uint64_t>::mycons(
-          UINT64_C(10),
-          mylist<uint64_t>::mycons(
-              UINT64_C(20), mylist<uint64_t>::mycons(
-                                UINT64_C(30), mylist<uint64_t>::mynil()))),
+      mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mycons(
+                                   UINT64_C(20), mylist<uint64_t>::mycons(
+                                       UINT64_C(30),
+                                       mylist<uint64_t>::mynil()))),
       [](uint64_t x) { return x; }, UINT64_C(7));
   /// test4: Tree (Node (Node Leaf 10 Leaf) 20 (Node Leaf 30 Leaf))
   /// Closures: 20+_, 10+_, 30+_

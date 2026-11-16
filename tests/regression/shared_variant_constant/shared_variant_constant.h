@@ -46,24 +46,23 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::shared_box<List<A>>::make(
-                                 crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::shared_box<List<A>>::make(
+                       crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 

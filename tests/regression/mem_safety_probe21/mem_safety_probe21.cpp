@@ -1,9 +1,12 @@
 #include "mem_safety_probe21.h"
 
-uint64_t MemSafetyProbe21::tree_sum(
-    const MemSafetyProbe21::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe21::tree_sum(const MemSafetyProbe21::tree &t) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const MemSafetyProbe21::tree *t;
   };
@@ -33,8 +36,7 @@ uint64_t MemSafetyProbe21::tree_sum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe21::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe21::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe21::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
@@ -78,11 +80,11 @@ uint64_t MemSafetyProbe21::grow_and_sum(const MemSafetyProbe21::tree &t,
 
 /// TEST 2: Non-tail recursive with constructed tree argument.
 /// The recursive call creates a new tree AND uses the original.
-uint64_t MemSafetyProbe21::double_grow(
-    const MemSafetyProbe21::tree &t,
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+MemSafetyProbe21::double_grow(const MemSafetyProbe21::tree &t,
+                              uint64_t n) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     uint64_t n;
     MemSafetyProbe21::tree t;
@@ -125,11 +127,11 @@ uint64_t MemSafetyProbe21::double_grow(
 
 /// TEST 3: Two recursive calls, one with original tree, one with
 /// constructed tree.
-uint64_t MemSafetyProbe21::branch_grow(
-    const MemSafetyProbe21::tree &t,
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+MemSafetyProbe21::branch_grow(const MemSafetyProbe21::tree &t,
+                              uint64_t n) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     uint64_t n;
     MemSafetyProbe21::tree t;
@@ -244,11 +246,11 @@ uint64_t MemSafetyProbe21::weave(const MemSafetyProbe21::tree &t1,
 }
 
 /// TEST 8: Deep nesting with tree_sum at each level before recursion.
-uint64_t MemSafetyProbe21::sum_and_grow(
-    const MemSafetyProbe21::tree &t,
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+MemSafetyProbe21::sum_and_grow(const MemSafetyProbe21::tree &t,
+                               uint64_t n) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     uint64_t n;
     MemSafetyProbe21::tree t;

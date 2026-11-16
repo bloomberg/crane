@@ -50,9 +50,9 @@ struct CallableConstraintCategories {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<lst<A>>(crane_convert<lst<A>>(*l))

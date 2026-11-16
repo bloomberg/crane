@@ -37,9 +37,8 @@ struct FixHigherOrder {
   /// test2: with noise between creation and use.
   static inline const uint64_t test2 = []() {
     std::optional<crane::fn<uint64_t(uint64_t)>> o = make_wrapped(UINT64_C(42));
-    uint64_t noise =
-        ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) + UINT64_C(4)) +
-         UINT64_C(5));
+    uint64_t noise = ((((UINT64_C(1) + UINT64_C(2)) + UINT64_C(3)) +
+                       UINT64_C(4)) + UINT64_C(5));
     if (o.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *o;
       return (f(UINT64_C(10)) + noise);

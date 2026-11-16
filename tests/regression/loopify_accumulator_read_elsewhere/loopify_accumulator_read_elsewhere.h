@@ -92,7 +92,6 @@ struct LoopifyAccumulatorReadElsewhere {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -175,11 +174,11 @@ struct LoopifyAccumulatorReadElsewhere {
       grow_counted(UINT64_C(3), tree::leaf(), UINT64_C(0));
   static inline const uint64_t test_counted_count = test_counted.first;
   static inline const uint64_t test_counted_size = size(test_counted.second);
-  static inline const tree test_graft =
-      graft(tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
-                       UINT64_C(2),
-                       tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-            tree::leaf());
+  static inline const tree test_graft = graft(
+      tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                 UINT64_C(2),
+                 tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
+      tree::leaf());
   static inline const uint64_t test_graft_size = size(test_graft);
   static inline const uint64_t test_graft_keys = keys(test_graft);
 };

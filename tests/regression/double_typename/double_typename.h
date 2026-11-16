@@ -93,7 +93,9 @@ public:
 };
 
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 
 struct DoubleTypename {
   template <OrderedType X> struct MakeMap {
@@ -107,13 +109,13 @@ struct DoubleTypename {
 
       template <typename CraneU> operator entry<CraneU>() const {
         return {a0, [&]() -> CraneU {
-                  if constexpr (crane_convertible<CraneU, const A &>) {
-                    return crane_convert<CraneU>(a1);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
+          if constexpr (crane_convertible<CraneU, const A &>) {
+            return crane_convert<CraneU>(a1);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
+        }()};
       }
 
       // CREATORS
@@ -153,9 +155,11 @@ struct DoubleTypename {
 
   using NatMap = MakeMap<NatOrd>;
   static inline const List<uint64_t> test =
-      NatMap::template keys<uint64_t>(List<NatMap::entry<uint64_t>>::cons(
-          NatMap::template entry<uint64_t>::entry0(UINT64_C(1), UINT64_C(2)),
-          List<NatMap::entry<uint64_t>>::nil()));
+      NatMap::template keys<uint64_t>(
+          List<NatMap::entry<uint64_t>>::cons(
+              NatMap::template entry<uint64_t>::entry0(UINT64_C(1),
+                                                       UINT64_C(2)),
+              List<NatMap::entry<uint64_t>>::nil()));
 };
 
 #endif // INCLUDED_DOUBLE_TYPENAME

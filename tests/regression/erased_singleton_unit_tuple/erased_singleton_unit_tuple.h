@@ -94,6 +94,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Sym { A, B };
 syms_semty cons_sem(Sym _x, const List<Sym> &_x0, sym_semty v, syms_semty rest);
 syms_semty head1(const List<Sym> &_x, syms_semty vs);

@@ -39,13 +39,11 @@ LoopifyMovesCapturedClosure::sumw(uint64_t w,
         auto _f = std::move(std::get<CraneEnter>(_frame));
         const LoopifyMovesCapturedClosure::tree &_lc1_t0 = *_f.t0;
         if (std::holds_alternative<
-                typename LoopifyMovesCapturedClosure::tree::Leaf>(
-                _lc1_t0.v())) {
+                typename LoopifyMovesCapturedClosure::tree::Leaf>(_lc1_t0.v())) {
           _lc1_result = UINT64_C(0);
         } else {
-          const auto &[a0, a1, a2] =
-              std::get<typename LoopifyMovesCapturedClosure::tree::Node>(
-                  _lc1_t0.v());
+          const auto &[a0, a1, a2] = std::get<
+              typename LoopifyMovesCapturedClosure::tree::Node>(_lc1_t0.v());
           _lc1_stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
           _lc1_stack.emplace_back(CraneEnter{crane_raw(a0)});
         }

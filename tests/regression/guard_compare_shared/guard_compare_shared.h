@@ -15,6 +15,7 @@ enum class Comparison;
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct GuardCompareShared {
@@ -60,7 +61,6 @@ struct GuardCompareShared {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };

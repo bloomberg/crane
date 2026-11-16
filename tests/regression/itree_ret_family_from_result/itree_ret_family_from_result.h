@@ -117,11 +117,9 @@ public:
   ItreeF(const ItreeF<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                  _other.v())) {
-            const auto &[r] =
-                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                    _other.v());
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
+            const auto &[r] = std::get<
+                typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
             return RetF{[&]() -> R {
               if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
@@ -134,9 +132,8 @@ public:
             if (std::holds_alternative<
                     typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
-              const auto &[t] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                      _other.v());
+              const auto &[t] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v());
               return TauF{[&]() -> itree {
                 if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
@@ -146,17 +143,16 @@ public:
                 }
               }()};
             } else {
-              const auto &[x, e] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
-                      _other.v());
+              const auto &[x, e] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(_other.v());
               return VisF{
                   [&]() -> E {
                     if constexpr (crane_convertible<E, const CraneU0 &>) {
                       return crane_convert<E>(x);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   crane_convert<crane::fn<itree(crane::obj)>>(e)};
@@ -206,26 +202,36 @@ public:
 
   template <typename CraneU0, typename CraneU1>
   Itree(const Itree<CraneU0, CraneU1> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              const auto &[_observe] =
-                  std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
-              return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
-            })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                       [=]() -> variant_t {
+                                                         const auto &[_observe] =
+                                                             std::get<
+                                                                 typename Itree<
+                                                                     CraneU0,
+                                                                     CraneU1>::Go>(
+                                                                 _other.v());
+                                                         return Go{
+                                                             crane_convert<
+                                                                 ItreeF<
+                                                                     E, R,
+                                                                     Itree<E,
+                                                                           R>>>(
+                                                                 _observe)};
+                                                       })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(crane::lazy<variant_t>(
-        std::in_place, std::in_place_index<0>, std::move(_observe)));
+    return Itree<E, R>(
+        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
+                               std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
   template <typename F> static Itree<E, R> lazy_(F &&thunk) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+    return Itree<E, R>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
   }
 
   // ACCESSORS
@@ -274,9 +280,8 @@ public:
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
                   typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
-            const auto &[a0] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
-                    _other.v());
+            const auto &[a0] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v());
             return Inl1{[&]() -> E1 {
               if constexpr (crane_convertible<E1, const CraneU0 &>) {
                 return crane_convert<E1>(a0);
@@ -286,9 +291,8 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] =
-                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
-                    _other.v());
+            const auto &[a0] = std::get<
+                typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(_other.v());
             return Inr1{[&]() -> E2 {
               if constexpr (crane_convertible<E2, const CraneU1 &>) {
                 return crane_convert<E2>(a0);
@@ -349,16 +353,15 @@ struct ItreeRetFamilyFromResult {
     auto &&_sv = t.observe();
     if (std::holds_alternative<
             typename ItreeF<Sum1<AE, BE, crane::obj>, T1,
-                            Itree<Sum1<AE, BE, crane::obj>, T1>>::RetF>(
-            _sv.v())) {
+                            Itree<Sum1<AE, BE, crane::obj>, T1>>::RetF>(_sv.v())) {
       const auto &[r0] =
           std::get<typename ItreeF<Sum1<AE, BE, crane::obj>, T1,
                                    Itree<Sum1<AE, BE, crane::obj>, T1>>::RetF>(
               _sv.v());
       return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::go(
           ItreeF<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>,
-                 Itree<Sum1<AE, BE, crane::obj>,
-                       Sum<uint64_t, T1>>>::retf(Sum<uint64_t, T1>::inr(r0)));
+                 Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>>::retf(
+              Sum<uint64_t, T1>::inr(r0)));
     } else if (std::holds_alternative<
                    typename ItreeF<Sum1<AE, BE, crane::obj>, T1,
                                    Itree<Sum1<AE, BE, crane::obj>, T1>>::TauF>(
@@ -367,13 +370,26 @@ struct ItreeRetFamilyFromResult {
           std::get<typename ItreeF<Sum1<AE, BE, crane::obj>, T1,
                                    Itree<Sum1<AE, BE, crane::obj>, T1>>::TauF>(
               _sv.v());
-      return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::lazy_(
-          [=]() ->
-          typename Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::Go {
-            return {ItreeF<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>,
-                           Itree<Sum1<AE, BE, crane::obj>,
-                                 Sum<uint64_t, T1>>>::tauf(run_exc<T1>(t0))};
-          });
+      return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::lazy_([=]() -> typename Itree<
+                                                                           Sum1<
+                                                                               AE,
+                                                                               BE,
+                                                                               crane::obj>,
+                                                                           Sum<uint64_t,
+                                                                               T1>>::Go {
+                                                                                 return {
+                                                                                     ItreeF<
+                                                                                         Sum1<AE,
+                                                                                              BE,
+                                                                                              crane::obj>,
+                                                                                         Sum<uint64_t,
+                                                                                             T1>,
+                                                                                         Itree<Sum1<AE,
+                                                                                                    BE,
+                                                                                                    crane::obj>,
+                                                                                               Sum<uint64_t,
+                                                                                                   T1>>>::tauf(run_exc<T1>(t0))};
+                                                                               });
     } else {
       const auto &[x, e0] =
           std::get<typename ItreeF<Sum1<AE, BE, crane::obj>, T1,
@@ -384,19 +400,38 @@ struct ItreeRetFamilyFromResult {
         const uint64_t &n = *_cs;
         return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::go(
             ItreeF<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>,
-                   Itree<Sum1<AE, BE, crane::obj>,
-                         Sum<uint64_t, T1>>>::retf(Sum<uint64_t, T1>::inl(n)));
+                   Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>>::retf(
+                Sum<uint64_t, T1>::inl(n)));
       } else {
-        return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::go(
-            ItreeF<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>,
-                   Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>>::
-                visf(x, crane::fn<Itree<Sum1<AE, BE, crane::obj>,
-                                        Sum<uint64_t, T1>>(crane::obj)>(
-                            [=](const crane::obj &x0)
-                                -> Itree<Sum1<AE, BE, crane::obj>,
-                                         Sum<uint64_t, T1>> {
-                              return run_exc<T1>(crane_call_erased(e0, x0));
-                            })));
+        return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::go(ItreeF<
+                                                                          Sum1<
+                                                                              AE,
+                                                                              BE,
+                                                                              crane::obj>,
+                                                                          Sum<uint64_t,
+                                                                              T1>,
+                                                                          Itree<
+                                                                              Sum1<AE,
+                                                                                   BE,
+                                                                                   crane::obj>,
+                                                                              Sum<uint64_t,
+                                                                                  T1>>>::visf(
+                                                                          x,
+                                                                          crane::fn<
+                                                                              Itree<
+                                                                                  Sum1<AE,
+                                                                                       BE,
+                                                                                       crane::obj>,
+                                                                                  Sum<uint64_t,
+                                                                                      T1>>(crane::obj)>([=](const crane::obj &x0) -> Itree<
+                                                                                                            Sum1<AE,
+                                                                                                                 BE,
+                                                                                                                 crane::obj>,
+                                                                                                            Sum<uint64_t,
+                                                                                                                T1>> {
+                                                                                                                  return run_exc<T1>(crane_call_erased(e0,
+                                                                                                                                                       x0));
+                                                                                                                })));
       }
     }
   }
@@ -404,32 +439,60 @@ struct ItreeRetFamilyFromResult {
   static inline const top<uint64_t> ok =
       Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
           ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
-                 Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::
-              tauf(Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
+                 Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::tauf(
+              Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
                   ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
-                         Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::
-                      tauf(Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
+                         Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::tauf(
+                      Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
                           ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
                                  Itree<Sum1<AE, BE, crane::obj>,
                                        uint64_t>>::retf(UINT64_C(3)))))));
-  static inline const top<uint64_t> raises =
-      Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
-          ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
-                 Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::
-              tauf(Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
-                  ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
-                         Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::
-                      visf(Sum1<AE, BE, BE>::inr1(BE::b(UINT64_C(7))),
-                           crane::fn<Itree<Sum1<AE, BE, crane::obj>, uint64_t>(
-                               crane::obj)>([](const crane::obj &)
-                                                -> Itree<
-                                                    Sum1<AE, BE, crane::obj>,
-                                                    uint64_t> {
-                             return Itree<Sum1<AE, BE, crane::obj>, uint64_t>::
-                                 go(ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
-                                           Itree<Sum1<AE, BE, crane::obj>,
-                                                 uint64_t>>::retf(UINT64_C(0)));
-                           })))));
+  static inline const top<uint64_t> raises = Itree<Sum1<AE, BE, crane::obj>,
+                                                   uint64_t>::go(ItreeF<
+                                                                     Sum1<
+                                                                         AE, BE,
+                                                                         crane::obj>,
+                                                                     uint64_t,
+                                                                     Itree<
+                                                                         Sum1<
+                                                                             AE,
+                                                                             BE,
+                                                                             crane::obj>,
+                                                                         uint64_t>>::tauf(Itree<Sum1<AE,
+                                                                                                     BE,
+                                                                                                     crane::obj>,
+                                                                                                uint64_t>::go(ItreeF<Sum1<AE,
+                                                                                                                          BE,
+                                                                                                                          crane::obj>,
+                                                                                                                     uint64_t,
+                                                                                                                     Itree<Sum1<AE,
+                                                                                                                                BE,
+                                                                                                                                crane::obj>,
+                                                                                                                           uint64_t>>::visf(
+                                                                                                                  Sum1<AE,
+                                                                                                                       BE,
+                                                                                                                       BE>::inr1(BE::b(UINT64_C(7))),
+                                                                                                                  crane::fn<Itree<Sum1<AE,
+                                                                                                                                       BE,
+                                                                                                                                       crane::obj>,
+                                                                                                                                  uint64_t>(crane::obj)>([](const crane::obj &) -> Itree<
+                                                                                                                                                             Sum1<AE,
+                                                                                                                                                                  BE,
+                                                                                                                                                                  crane::obj>,
+                                                                                                                                                             uint64_t> {
+                                                                                                                                                               return Itree<Sum1<AE,
+                                                                                                                                                                                 BE,
+                                                                                                                                                                                 crane::obj>,
+                                                                                                                                                                            uint64_t>::go(
+                                                                                                                                                                   ItreeF<Sum1<AE,
+                                                                                                                                                                               BE,
+                                                                                                                                                                               crane::obj>,
+                                                                                                                                                                          uint64_t,
+                                                                                                                                                                          Itree<Sum1<AE,
+                                                                                                                                                                                     BE,
+                                                                                                                                                                                     crane::obj>,
+                                                                                                                                                                                uint64_t>>::retf(UINT64_C(0)));
+                                                                                                                                                             })))));
   static uint64_t
   result(uint64_t fuel,
          const Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, uint64_t>> &t);

@@ -8,15 +8,15 @@
 
 struct UnsoundAxioms {
   template <typename T1, typename T2> static T2 unsafe_cast(const T1 &) {
-    throw std::logic_error("unrealized axiom: "
-                           "CraneTestsRegression.unsound_axioms.UnsoundAxioms."
-                           "UnsoundAxioms.unsafe_cast");
+    throw std::logic_error(
+        "unrealized axiom: "
+        "CraneTestsRegression.unsound_axioms.UnsoundAxioms.UnsoundAxioms.unsafe_cast");
   }
 
   template <typename T1> static T1 choose() {
-    throw std::logic_error("unrealized axiom: "
-                           "CraneTestsRegression.unsound_axioms.UnsoundAxioms."
-                           "UnsoundAxioms.choose");
+    throw std::logic_error(
+        "unrealized axiom: "
+        "CraneTestsRegression.unsound_axioms.UnsoundAxioms.UnsoundAxioms.choose");
   }
 
   struct Rec {

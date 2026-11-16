@@ -10,9 +10,8 @@ OptionDeepDrain::chain OptionDeepDrain::build(uint64_t n,
     } else {
       uint64_t m = _loop_n - 1;
       uint64_t _next_n = m;
-      _loop_acc = chain::link(
-          _loop_n,
-          std::make_optional<OptionDeepDrain::chain>(std::move(_loop_acc)));
+      _loop_acc = chain::link(_loop_n, std::make_optional<
+                                  OptionDeepDrain::chain>(std::move(_loop_acc)));
       _loop_n = _next_n;
     }
   }

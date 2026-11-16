@@ -284,11 +284,9 @@ public:
   ItreeF(const ItreeF<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
-                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                  _other.v())) {
-            const auto &[r] =
-                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
-                    _other.v());
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
+            const auto &[r] = std::get<
+                typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v());
             return RetF{[&]() -> R {
               if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
@@ -301,9 +299,8 @@ public:
             if (std::holds_alternative<
                     typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
-              const auto &[t] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
-                      _other.v());
+              const auto &[t] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(_other.v());
               return TauF{[&]() -> itree {
                 if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
@@ -313,17 +310,16 @@ public:
                 }
               }()};
             } else {
-              const auto &[x, e] =
-                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
-                      _other.v());
+              const auto &[x, e] = std::get<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(_other.v());
               return VisF{
                   [&]() -> E {
                     if constexpr (crane_convertible<E, const CraneU0 &>) {
                       return crane_convert<E>(x);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   crane_convert<crane::fn<itree(crane::obj)>>(e)};
@@ -373,26 +369,36 @@ public:
 
   template <typename CraneU0, typename CraneU1>
   Itree(const Itree<CraneU0, CraneU1> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              const auto &[_observe] =
-                  std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
-              return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
-            })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                       [=]() -> variant_t {
+                                                         const auto &[_observe] =
+                                                             std::get<
+                                                                 typename Itree<
+                                                                     CraneU0,
+                                                                     CraneU1>::Go>(
+                                                                 _other.v());
+                                                         return Go{
+                                                             crane_convert<
+                                                                 ItreeF<
+                                                                     E, R,
+                                                                     Itree<E,
+                                                                           R>>>(
+                                                                 _observe)};
+                                                       })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
   static Itree<E, R> go(ItreeF<E, R, Itree<E, R>> _observe) {
-    return Itree<E, R>(crane::lazy<variant_t>(
-        std::in_place, std::in_place_index<0>, std::move(_observe)));
+    return Itree<E, R>(
+        crane::lazy<variant_t>(std::in_place, std::in_place_index<0>,
+                               std::move(_observe)));
   }
 
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
   template <typename F> static Itree<E, R> lazy_(F &&thunk) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+    return Itree<E, R>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
   }
 
   // ACCESSORS
@@ -426,19 +432,30 @@ struct ITree {
                    typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=, k = std::move(k)]() ->
-                                  typename Itree<T1, T3>::Go {
-                                    return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
-                                        subst<T1, T2, T3>(std::move(k), t0))};
-                                  });
+      return Itree<T1, T3>::lazy_(
+          [=, k = std::move(k)]() -> typename Itree<T1, T3>::Go {
+            return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
+                        subst<T1, T2, T3>(std::move(k), t0))};
+          });
     } else {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
-          x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1, T3> {
-                   return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
-                 })));
+                                   x, crane::fn<Itree<T1, T3>(crane::obj)>([=,
+                                                                            k = std::move(k)](
+                                                                               const crane::obj &x0)
+                                                                                -> Itree<
+                                                                               T1,
+                                                                               T3> {
+                                                                                 return subst<
+                                                                                     T1,
+                                                                                     T2,
+                                                                                     T3>(
+                                                                                     k,
+                                                                                     crane_call_erased(
+                                                                                         e0,
+                                                                                         x0));
+                                                                               })));
     }
   }
 
@@ -452,12 +469,13 @@ struct ITree {
   template <typename T1, typename T2>
   static Itree<T1, T2> trigger(crane::rebind_t<T1, T2> e) {
     return Itree<T1, T2>::go(ItreeF<T1, T2, Itree<T1, T2>>::visf(
-        std::move(e),
-        crane::fn<Itree<T1, T2>(crane::obj)>(
-            [](const crane::obj &x) -> Itree<T1, T2> {
-              return Itree<T1, T2>::go(
-                  ItreeF<T1, T2, Itree<T1, T2>>::retf(crane_any_cast<T2>(x)));
-            })));
+                                 std::move(e), crane::fn<
+                                     Itree<T1, T2>(crane::obj)>(
+                                     [](const crane::obj &x) -> Itree<T1, T2> {
+                                       return Itree<T1, T2>::go(
+                                           ItreeF<T1, T2, Itree<T1, T2>>::retf(
+                                               crane_any_cast<T2>(x)));
+                                     })));
   }
 };
 
@@ -470,23 +488,35 @@ struct Subevent {
            crane::rebind_t<T1, T3> x);
 };
 
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::ptr>;
-  });
-template <typename
-I>concept MemState = requires {
-    typename I::state;
-    { I::sz(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::init() } -> std::convertible_to<typename I::state>;
-  } || requires {
-    { I::init } -> std::convertible_to<typename I::state>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
+template <typename I>
+concept MemState = requires {
+  typename I::state;
+  { I::sz(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
+} && (requires {
+  {
+    I::init()
+  }
+  -> std::convertible_to<typename I::state>;
+} || requires {
+  {
+    I::init
+  }
+  -> std::convertible_to<typename I::state>;
+});
 
 struct BinderTypeNamesSectionField {
   using ptr = crane::obj;
@@ -518,13 +548,15 @@ struct BinderTypeNamesSectionField {
   static Monads::template stateT<FusedS<typename _tcI0::ptr>,
                                  crane_carrier_tc_63634b67fb88739b, T1>
   fused(CntE e) {
-    static const auto resum_id = crane::immortal(
-        CategoryOps::template ReSum_id<crane::obj,
-                                       crane::fn<crane::obj(crane::obj)>>(
-            [](crane::obj) {
-              return crane_erase_global<Function::Id_IFun, crane::obj>();
-            },
-            crane::obj()));
+    static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
+                                                     crane::obj, crane::fn<
+                                                         crane::obj(crane::obj)>>(
+                                                     [](crane::obj) {
+                                                       return crane_erase_global<
+                                                           Function::Id_IFun,
+                                                           crane::obj>();
+                                                     },
+                                                     crane::obj()));
     return [=](const FusedS<typename _tcI0::ptr> &s) {
       return ITree::template bind<CntE, T1,
                                   std::pair<FusedS<typename _tcI0::ptr>, T1>>(
@@ -533,8 +565,9 @@ struct BinderTypeNamesSectionField {
           [=](const T1 &r) {
             return Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>>::go(
                 ItreeF<CntE, std::pair<FusedS<typename _tcI0::ptr>, T1>,
-                       Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>,
-                                             T1>>>::retf(std::make_pair(s, r)));
+                       Itree<CntE,
+                             std::pair<FusedS<typename _tcI0::ptr>, T1>>>::retf(
+                    std::make_pair(s, r)));
           });
     };
   }
@@ -589,8 +622,8 @@ template <typename T1, typename T2, typename T3>
 crane::rebind_t<T2, T3>
 Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h,
                    crane::rebind_t<T1, T3> x) {
-  return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
-      crane::obj(), crane::obj(), std::move(h))(std::move(x)));
+  return crane_any_cast<crane::rebind_t<T2, T3>>(
+      CategoryOps::resum(crane::obj(), crane::obj(), std::move(h))(std::move(x)));
 }
 
 #endif // INCLUDED_BINDER_TYPE_NAMES_SECTION_FIELD

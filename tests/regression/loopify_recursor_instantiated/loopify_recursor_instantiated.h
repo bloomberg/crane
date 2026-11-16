@@ -184,11 +184,10 @@ struct LoopifyRecursorInstantiated {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3, typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const bool &>
+    std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                       const expr &e) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const expr *e;
     };
@@ -303,8 +302,9 @@ struct LoopifyRecursorInstantiated {
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Ite_2{
-            std::move(a), &a1, &a2, std::move(_f._tmp4), std::move(_result)});
+        _stack.emplace_back(
+            CraneCont_Ite_2{std::move(a), &a1, &a2, std::move(_f._tmp4),
+                            std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else if (std::holds_alternative<CraneCont_Ite_2>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
@@ -339,11 +339,10 @@ struct LoopifyRecursorInstantiated {
   template <typename T1, typename T2 = void, typename F0, typename F1,
             typename F2, typename F3, typename F4, typename F5>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const bool &>
+    std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                      const expr &e) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
     struct CraneEnter {
       const expr *e;
     };
@@ -458,8 +457,9 @@ struct LoopifyRecursorInstantiated {
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Ite_2{
-            std::move(a), &a1, &a2, std::move(_f._tmp4), std::move(_result)});
+        _stack.emplace_back(
+            CraneCont_Ite_2{std::move(a), &a1, &a2, std::move(_f._tmp4),
+                            std::move(_result)});
         _stack.emplace_back(CraneEnter{&a2});
       } else if (std::holds_alternative<CraneCont_Ite_2>(_frame)) {
         auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
@@ -494,7 +494,6 @@ struct LoopifyRecursorInstantiated {
   template <typename T1 = void>
   static uint64_t size(const expr &e) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
     struct CraneEnter {
       const expr *e;
     };
@@ -608,7 +607,6 @@ struct LoopifyRecursorInstantiated {
 
   static inline const expr sample = expr::fste(
       expr::paire(expr::succe(expr::lit(UINT64_C(3))), expr::bl(true)));
-
   static inline const uint64_t run = size<uint64_t>(sample);
 };
 

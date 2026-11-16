@@ -152,9 +152,11 @@ struct BankLookupDefault {
   [[gnu::used]] static inline const ram_bank empty_bank =
       ram_bank{List<ram_chip>::nil()};
   static ram_bank get_bank(const state &s, uint64_t b);
-  static inline const state sample_state = state{List<ram_bank>::cons(
-      ram_bank{List<ram_chip>::cons(empty_chip, List<ram_chip>::nil())},
-      List<ram_bank>::nil())};
+  static inline const state sample_state =
+      state{
+          List<ram_bank>::cons(
+              ram_bank{List<ram_chip>::cons(empty_chip, List<ram_chip>::nil())},
+              List<ram_bank>::nil())};
   static inline const uint64_t t =
       get_bank(sample_state, UINT64_C(7)).bank_chips.length();
 };

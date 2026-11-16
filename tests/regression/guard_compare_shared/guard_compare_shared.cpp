@@ -24,11 +24,15 @@ Comparison Nat::compare(uint64_t n, uint64_t m) {
   }
 }
 
-Comparison GuardCompareShared::tcompare(
-    const GuardCompareShared::tree &a,
-    const GuardCompareShared::tree &b) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+Comparison
+GuardCompareShared::tcompare(const GuardCompareShared::tree &a,
+                             const GuardCompareShared::tree &b) { /// CraneEnter:
+                                                                  /// captures
+                                                                  /// varying
+                                                                  /// parameters
+                                                                  /// for each
+                                                                  /// recursive
+                                                                  /// call.
   struct CraneEnter {
     const GuardCompareShared::tree *b;
     const GuardCompareShared::tree *a;
@@ -141,13 +145,12 @@ GuardCompareShared::tree GuardCompareShared::build(uint64_t n) {
           nullptr, _loop_n,
           crane::shared_box<GuardCompareShared::tree>::make(tree::leaf()));
       GuardCompareShared::tree &_node =
-          (_write
-               ? *(*_write = crane::shared_box<GuardCompareShared::tree>::make(
-                       std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
+          (_write ? *(*_write =
+                          crane::shared_box<GuardCompareShared::tree>::make(
+                              std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write =
-          &crane::get<typename GuardCompareShared::tree::Node>(_node.v_mut())
-               .a0;
+          &crane::get<typename GuardCompareShared::tree::Node>(_node.v_mut()).a0;
       _loop_n = m;
       continue;
     }

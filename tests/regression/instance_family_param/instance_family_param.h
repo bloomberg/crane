@@ -122,8 +122,8 @@ struct InstanceFamilyParam {
         if constexpr (crane_convertible<CraneU1, const A &>) {
           return crane_convert<CraneU1>(a);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -160,9 +160,9 @@ struct InstanceFamilyParam {
   };
 
   static inline const box<noE, Nat> b =
-      Functor_box<noE>::template fmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); },
-          box<noE, Nat>::box0(Nat::s(Nat::s(Nat::o()))));
+      Functor_box<noE>::template fmap<Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, box<noE, Nat>::box0(Nat::s(Nat::s(Nat::o()))));
   static inline const bool is_three = []() {
     const auto &_sv = b;
     const auto &[a] = _sv;

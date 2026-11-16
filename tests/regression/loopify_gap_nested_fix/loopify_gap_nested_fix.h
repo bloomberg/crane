@@ -124,8 +124,7 @@ struct LoopifyGapNestedFix {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (
-                std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -165,16 +164,11 @@ struct LoopifyGapNestedFix {
   /// A fixed sample tree so the test driver need not build list rose in C++.
   /// Sum of all labels: 1 + 2 + 3 + 4 = 10.
   [[gnu::used]] static inline const rose sample_tree = rose::rose0(
-      UINT64_C(1),
-      List<rose>::cons(
-          rose::rose0(UINT64_C(2), List<rose>::nil()),
-          List<rose>::cons(
-              rose::rose0(
-                  UINT64_C(3),
-                  List<rose>::cons(rose::rose0(UINT64_C(4), List<rose>::nil()),
-                                   List<rose>::nil())),
-              List<rose>::nil())));
-
+      UINT64_C(1), List<rose>::cons(
+          rose::rose0(UINT64_C(2), List<rose>::nil()), List<rose>::cons(
+              rose::rose0(UINT64_C(3), List<rose>::cons(
+                              rose::rose0(UINT64_C(4), List<rose>::nil()),
+                              List<rose>::nil())), List<rose>::nil())));
   static uint64_t rose_sum_sample(std::monostate _x);
 };
 

@@ -71,7 +71,6 @@ public:
 struct HigherRankPoly {
   static std::pair<Nat, bool>
   apply_id(const crane::fn<crane::obj(crane::obj)> &f);
-
   static inline const std::pair<Nat, bool> ex =
       apply_id(crane_erase_fn<crane::obj>([](const auto &x) { return x; }));
 };

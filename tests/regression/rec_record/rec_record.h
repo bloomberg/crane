@@ -39,8 +39,7 @@ struct RecRecord {
     template <typename CraneU>
     rlist(const rlist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename rlist<CraneU>::Rnil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename rlist<CraneU>::Rnil>(_other.v())) {
               return Rnil{};
             } else {
               const auto &[a0, a1] =
@@ -50,9 +49,9 @@ struct RecRecord {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<rlist<A>>(crane_convert<rlist<A>>(*a1))
@@ -201,8 +200,9 @@ struct RecRecord {
     explicit RNode(MkRNode _v) : v_(std::move(_v)) {}
 
     static RNode mkrnode(uint64_t rn_value, std::optional<RNode> rn_next) {
-      return RNode(MkRNode{rn_value, std::make_shared<std::optional<RNode>>(
-                                         std::move(rn_next))});
+      return RNode(
+          MkRNode{rn_value,
+                  std::make_shared<std::optional<RNode>>(std::move(rn_next))});
     }
 
     // MANIPULATORS
@@ -288,15 +288,15 @@ struct RecRecord {
   static uint64_t rlist_sum(const rlist<uint64_t> &l);
   static inline const rlist<uint64_t> test_rlist = rlist<uint64_t>::rcons(
       UINT64_C(1), rlist<uint64_t>::rcons(
-                       UINT64_C(2), rlist<uint64_t>::rcons(
-                                        UINT64_C(3), rlist<uint64_t>::rnil())));
+          UINT64_C(2),
+          rlist<uint64_t>::rcons(UINT64_C(3), rlist<uint64_t>::rnil())));
   static inline const uint64_t test_rlist_len = test_rlist.rlist_length();
   static inline const uint64_t test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode::mkrnode(
-      UINT64_C(1),
-      std::make_optional<RNode>(RNode::mkrnode(
-          UINT64_C(2), std::make_optional<RNode>(RNode::mkrnode(
-                           UINT64_C(3), std::optional<RNode>())))));
+      UINT64_C(1), std::make_optional<RNode>(
+          RNode::mkrnode(
+              UINT64_C(2), std::make_optional<RNode>(
+                  RNode::mkrnode(UINT64_C(3), std::optional<RNode>())))));
   static inline const uint64_t test_rnode_depth = test_rnode.rnode_depth();
   static inline const Employee test_emp = Employee{UINT64_C(42), UINT64_C(7)};
   static inline const Department test_dept =

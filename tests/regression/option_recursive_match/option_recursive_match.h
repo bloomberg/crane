@@ -92,8 +92,7 @@ public:
   template <typename CraneU>
   Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<CraneU>::Some>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Option<CraneU>::Some>(_other.v())) {
             const auto &[a] =
                 std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
@@ -194,9 +193,10 @@ struct OptionRecursiveMatch {
   }
 
   static Nat len(const chain &c);
-  static inline const Nat test = len(chain::c(
-      Nat::s(Nat::o()), Option<chain>::some(chain::c(Nat::s(Nat::s(Nat::o())),
-                                                     Option<chain>::none()))));
+  static inline const Nat test =
+      len(chain::c(
+              Nat::s(Nat::o()), Option<chain>::some(
+                  chain::c(Nat::s(Nat::s(Nat::o())), Option<chain>::none()))));
 };
 
 #endif // INCLUDED_OPTION_RECURSIVE_MATCH

@@ -12,13 +12,17 @@ concept T = requires {
   {
     M::paint(std::declval<typename M::Color>(), std::declval<typename M::t>())
   } -> std::same_as<typename M::t>;
-  requires(
-      requires {
-        { M::base } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::base() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::base
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::base()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct ModuleTypeEnumInParameter {

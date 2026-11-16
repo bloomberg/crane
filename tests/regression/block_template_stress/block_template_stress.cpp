@@ -82,10 +82,8 @@ BlockTemplateStress::read_files(const List<std::string> &paths) {
     std::string content;
     {
       std::ifstream _f(a0);
-      if (_f.good())
-        std::getline(_f, content);
-      else
-        content = a0;
+      if (_f.good()) std::getline(_f, content);
+      else content = a0;
     };
     List<std::string> rest = read_files(*a1);
     return List<std::string>::cons(std::move(content), std::move(rest));

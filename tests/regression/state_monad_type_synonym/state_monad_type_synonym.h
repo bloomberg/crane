@@ -32,8 +32,9 @@ struct StateMonadTypeSynonym {
     return [](uint64_t eta0_) {
       static const auto bind_1 =
           crane::immortal(bind<uint64_t, uint64_t>(tick, [](uint64_t a) {
-            return bind<uint64_t, uint64_t>(
-                tick, [=](uint64_t b) { return ret<uint64_t>((a + b)); });
+            return bind<uint64_t, uint64_t>(tick, [=](uint64_t b) {
+              return ret<uint64_t>((a + b));
+            });
           }));
       return bind_1(eta0_);
     };

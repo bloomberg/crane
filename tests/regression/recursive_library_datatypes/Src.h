@@ -8,7 +8,6 @@
 #include "Datatypes.h"
 
 namespace Src {
-
 struct T;
 
 struct T {
@@ -39,13 +38,10 @@ struct T {
 };
 
 const uint64_t r =
-    (T::t0(UINT64_C(4)).get() +
-     Datatypes::template List<uint64_t>::cons(
-         UINT64_C(1),
-         Datatypes::template List<uint64_t>::cons(
+    (T::t0(UINT64_C(4)).get() + Datatypes::template List<uint64_t>::cons(
+         UINT64_C(1), Datatypes::template List<uint64_t>::cons(
              UINT64_C(2), Datatypes::template List<uint64_t>::nil()))
-         .length());
-
+                                    .length());
 } // namespace Src
 
 #endif // INCLUDED_SRC

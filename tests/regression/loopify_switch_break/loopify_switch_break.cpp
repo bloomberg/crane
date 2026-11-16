@@ -118,10 +118,10 @@ List<uint64_t> LoopifySwitchBreak::collect_ops(
 /// fall through to the next case and produce an incorrect count.
 uint64_t LoopifySwitchBreak::count_tag(
     LoopifySwitchBreak::Tag t,
-    const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>
-        &ops) { /// CraneEnter: captures varying parameters for each recursive
-                /// call.
-
+    const List<std::pair<LoopifySwitchBreak::Tag,
+                         uint64_t>> &ops) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> *ops;
   };

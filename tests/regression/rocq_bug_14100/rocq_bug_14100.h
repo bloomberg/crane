@@ -2,7 +2,9 @@
 #define INCLUDED_ROCQ_BUG_14100
 
 template <typename M>
-concept MinSIG = requires { typename M::template otherE<void>; };
+concept MinSIG = requires {
+  typename M::template otherE<void>;
+};
 
 struct RocqBug14100 {
   enum class NondetE { OR };

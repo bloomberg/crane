@@ -123,27 +123,38 @@ struct LoopifyCoindColist {
 
     template <typename CraneU>
     colist(const colist<CraneU> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(
-              _other.lazy_cell(), [=]() -> variant_t {
-                if (std::holds_alternative<typename colist<CraneU>::Conil>(
-                        _other.v())) {
-                  return Conil{};
-                } else {
-                  const auto &[a0, a1] =
-                      std::get<typename colist<CraneU>::Cocons>(_other.v());
-                  return Cocons{
-                      [&]() -> A {
-                        if constexpr (crane_convertible<A, const CraneU &>) {
-                          return crane_convert<A>(a0);
-                        } else {
-                          throw std::logic_error(
-                              "unreachable: inactive constructor field at this "
-                              "instantiation");
-                        }
-                      }(),
-                      crane_convert<colist<A>>(a1)};
-                }
-              })) {}
+        : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                         [=]() -> variant_t {
+                                                           if (std::holds_alternative<
+                                                                   typename colist<
+                                                                       CraneU>::Conil>(
+                                                                   _other.v())) {
+                                                             return Conil{};
+                                                           } else {
+                                                             const auto &[a0,
+                                                                          a1] =
+                                                                 std::get<
+                                                                     typename colist<
+                                                                         CraneU>::Cocons>(
+                                                                     _other.v());
+                                                             return Cocons{
+                                                                 [&]() -> A {
+                                                                   if constexpr (
+                                                                       crane_convertible<
+                                                                           A,
+                                                                           const CraneU &>) {
+                                                                     return crane_convert<
+                                                                         A>(a0);
+                                                                   } else {
+                                                                     throw std::logic_error(
+                                                                         "unreachable: inactive constructor field at this instantiation");
+                                                                   }
+                                                                 }(),
+                                                                 crane_convert<
+                                                                     colist<A>>(
+                                                                     a1)};
+                                                           }
+                                                         })) {}
 
     explicit colist(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -154,15 +165,15 @@ struct LoopifyCoindColist {
     }
 
     static colist<A> cocons(A a0, colist<A> a1) {
-      return colist<A>(crane::lazy<variant_t>(
-          std::in_place, std::in_place_index<1>, std::move(a0), std::move(a1)));
+      return colist<A>(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<1>,
+                                 std::move(a0), std::move(a1)));
     }
 
     explicit colist(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
     template <typename F> static colist<A> lazy_(F &&thunk) {
-      return colist<A>(
-          crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+      return colist<A>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS
@@ -236,10 +247,9 @@ struct LoopifyCoindColist {
           const auto &[a0, a1] =
               std::get<typename colist<T1>::Cocons>(_loop_l.v());
           auto _cell = typename List<T1>::Cons(a0, nullptr);
-          List<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          List<T1> &_node = (
+              _write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
           _loop_l = a1;
           _loop_fuel = f;
@@ -250,25 +260,17 @@ struct LoopifyCoindColist {
     return std::move(*_root);
   }
 
-  static inline const List<uint64_t> test_comap = to_list<uint64_t>(
-      UINT64_C(5),
-      comap<uint64_t, uint64_t>(
-          [](uint64_t n) { return (n * UINT64_C(2)); },
-          from_list<uint64_t>(List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))));
-
+  static inline const List<uint64_t> test_comap =
+      to_list<uint64_t>(UINT64_C(5), comap<uint64_t, uint64_t>([](uint64_t n) {
+        return (n * UINT64_C(2));
+      }, from_list<uint64_t>(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))));
   static inline const List<uint64_t> test_cotake = to_list<uint64_t>(
-      UINT64_C(10),
-      cotake<uint64_t>(
-          UINT64_C(2),
-          from_list<uint64_t>(List<uint64_t>::cons(
-              UINT64_C(10),
-              List<uint64_t>::cons(
-                  UINT64_C(20), List<uint64_t>::cons(
-                                    UINT64_C(30), List<uint64_t>::nil()))))));
+      UINT64_C(10), cotake<uint64_t>(
+          UINT64_C(2), from_list<uint64_t>(
+              List<uint64_t>::cons(UINT64_C(10), List<uint64_t>::cons(
+                                       UINT64_C(20), List<uint64_t>::cons(
+                                           UINT64_C(30),
+                                           List<uint64_t>::nil()))))));
 };
 
 #endif // INCLUDED_LOOPIFY_COIND_COLIST

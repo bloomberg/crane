@@ -24,8 +24,7 @@ LoopifyTmc::list<uint64_t> LoopifyTmc::range(uint64_t lo, uint64_t hi) {
                             std::move(_cell)))
                     : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename LoopifyTmc::list<uint64_t>::Cons>(_node.v_mut())
-                 .l;
+            &std::get<typename LoopifyTmc::list<uint64_t>::Cons>(_node.v_mut()).l;
         _loop_hi = hi_;
         continue;
       } else {

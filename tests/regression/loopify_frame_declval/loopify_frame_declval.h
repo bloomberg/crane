@@ -136,8 +136,8 @@ public:
         auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = l_.template map<std::pair<A, T1>>([=](const T1 &y) {
-                      return std::make_pair(a0, y);
-                    }).app(std::move(_result));
+          return std::make_pair(a0, y);
+        }).app(std::move(_result));
       }
     }
     return _result;

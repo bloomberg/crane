@@ -8,13 +8,17 @@
 template <typename M>
 concept T = requires {
   typename M::alg;
-  requires(
-      requires {
-        { M::a } -> std::convertible_to<typename M::alg>;
-      } ||
-      requires {
-        { M::a() } -> std::convertible_to<typename M::alg>;
-      });
+  requires (requires {
+    {
+      M::a
+    }
+    -> std::convertible_to<typename M::alg>;
+  } || requires {
+    {
+      M::a()
+    }
+    -> std::convertible_to<typename M::alg>;
+  });
 };
 
 struct AbstractProjectionOverapplied {
@@ -24,8 +28,9 @@ struct AbstractProjectionOverapplied {
       uint64_t base;
     };
 
-    static inline const alg a =
-        alg{[](uint64_t x) { return (x + 1); }, UINT64_C(3)};
+    static inline const alg a = alg{[](uint64_t x) {
+      return (x + 1);
+    }, UINT64_C(3)};
   };
 
   template <T X> struct Use {

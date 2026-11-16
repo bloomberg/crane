@@ -28,19 +28,24 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
-template <typename
-I>concept Params = requires {
-    typename I::addr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::addr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::addr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::addr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::addr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::addr>;
+});
 
 struct Nat {
   // TYPES
@@ -368,34 +373,37 @@ EOU<Dv<typename _tcI0::addr>> bytes_to_dv(const Nat &n, const List<Byte> &bs) {
       const List<Byte> &a10_value = *a10;
       const auto &[a01] = a00;
       auto go_impl =
-          [=](auto &_self_go, List<Nat> ds,
-              List<Byte> bs0) -> EOU<List<Dv<typename _tcI0::addr>>> {
-        if (std::holds_alternative<typename List<Nat>::Nil>(ds.v_mut())) {
-          return EOU_monad::template ret<List<Dv<typename _tcI0::addr>>>(
-              List<Dv<typename _tcI0::addr>>::nil());
-        } else {
-          auto &[a02, a12] = std::get<typename List<Nat>::Cons>(ds.v_mut());
-          const List<Nat> &a12_value = *a12;
-          return EOU_monad::template bind<Dv<typename _tcI0::addr>,
-                                          List<Dv<typename _tcI0::addr>>>(
-              bytes_to_dv<_tcI0>(a0_value, bs0),
-              [=](const Dv<typename _tcI0::addr> &f) {
-                return EOU_monad::template bind<List<Dv<typename _tcI0::addr>>,
-                                                List<Dv<typename _tcI0::addr>>>(
-                    _self_go(_self_go, a12_value, bs0),
-                    [=](const List<Dv<typename _tcI0::addr>> &r) {
-                      return EOU_monad::template ret<
-                          List<Dv<typename _tcI0::addr>>>(
-                          List<Dv<typename _tcI0::addr>>::cons(f, r));
-                    });
-              });
-        }
-      };
-      auto go = [=, go_impl = std::move(go_impl)](
-                    List<Nat> ds,
-                    List<Byte> bs0) -> EOU<List<Dv<typename _tcI0::addr>>> {
-        return go_impl(go_impl, std::move(ds), std::move(bs0));
-      };
+          [=](auto &_self_go, List<Nat> ds, List<Byte> bs0) -> EOU<
+              List<Dv<typename _tcI0::addr>>> {
+                if (std::holds_alternative<typename List<Nat>::Nil>(ds.v_mut())) {
+                  return EOU_monad::template ret<List<Dv<typename _tcI0::addr>>>(
+                      List<Dv<typename _tcI0::addr>>::nil());
+                } else {
+                  auto &[a02, a12] =
+                      std::get<typename List<Nat>::Cons>(ds.v_mut());
+                  const List<Nat> &a12_value = *a12;
+                  return EOU_monad::template bind<
+                      Dv<typename _tcI0::addr>, List<Dv<typename _tcI0::addr>>>(
+                      bytes_to_dv<_tcI0>(a0_value, bs0),
+                      [=](const Dv<typename _tcI0::addr> &f) {
+                        return EOU_monad::template bind<
+                            List<Dv<typename _tcI0::addr>>,
+                            List<Dv<typename _tcI0::addr>>>(
+                            _self_go(_self_go, a12_value, bs0),
+                            [=](const List<Dv<typename _tcI0::addr>> &r) {
+                              return EOU_monad::template ret<
+                                  List<Dv<typename _tcI0::addr>>>(
+                                  List<Dv<typename _tcI0::addr>>::cons(f, r));
+                            });
+                      });
+                }
+              };
+      auto go =
+          [=, go_impl = std::move(go_impl)](List<Nat> ds,
+                                            List<Byte> bs0)
+               -> EOU<List<Dv<typename _tcI0::addr>>> {
+                return go_impl(go_impl, std::move(ds), std::move(bs0));
+              };
       return EOU_monad::template bind<List<Dv<typename _tcI0::addr>>,
                                       Dv<typename _tcI0::addr>>(
           go(List<Nat>::cons(a01, List<Nat>::nil()), a10_value),
@@ -417,9 +425,8 @@ static_assert(Params<natParams>);
 
 struct BindContinuationBinderFromClassField {
   static inline const EOU<Dv<typename natParams::addr>> run =
-      bytes_to_dv<natParams>(
-          Nat::s(Nat::s(Nat::o())),
-          List<Byte>::cons(Byte::b(Nat::s(Nat::o())), List<Byte>::nil()));
+      bytes_to_dv<natParams>(Nat::s(Nat::s(Nat::o())), List<Byte>::cons(
+                                 Byte::b(Nat::s(Nat::o())), List<Byte>::nil()));
 };
 
 template <Monad _tcI0, typename T2>

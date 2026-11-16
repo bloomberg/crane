@@ -3,5 +3,4 @@
 #include "Datatypes.h"
 
 namespace PairIndexedInductiveAnyCast {
-
 } // namespace PairIndexedInductiveAnyCast

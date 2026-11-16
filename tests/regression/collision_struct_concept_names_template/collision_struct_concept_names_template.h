@@ -360,9 +360,10 @@ struct CollisionStructConceptNamesTemplate {
   };
 
   static_assert(Shaped<shaped_nat, Nat>);
-  static inline const Nat sz = CollisionStructConceptNamesTemplate::size(
-      CollisionStructConceptNamesTemplate::shaped_nat::shape_of(
-          Nat::s(Nat::s(Nat::s(Nat::o())))));
+  static inline const Nat sz =
+      CollisionStructConceptNamesTemplate::size(
+          CollisionStructConceptNamesTemplate::shaped_nat::shape_of(
+              Nat::s(Nat::s(Nat::s(Nat::o())))));
   static inline const Nat bx = []() {
     const auto &_sv = CollisionStructConceptNamesTemplate::shaped_nat::boxed(
         Nat::s(Nat::s(Nat::o())));

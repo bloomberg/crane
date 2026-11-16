@@ -311,8 +311,7 @@ struct Matcher {
   static inline const List<int64_t> s2 =
       List<int64_t>::cons(INT64_C(1), List<int64_t>::nil());
   static inline const List<int64_t> s3 = List<int64_t>::cons(
-      INT64_C(0),
-      List<int64_t>::cons(
+      INT64_C(0), List<int64_t>::cons(
           INT64_C(0), List<int64_t>::cons(INT64_C(1), List<int64_t>::nil())));
   static inline const List<int64_t> s4 =
       List<int64_t>::cons(INT64_C(0), List<int64_t>::nil());

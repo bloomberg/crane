@@ -113,7 +113,7 @@ struct PageOps {
   static uint64_t recompose(uint64_t p);
   static inline const uint64_t max_addr =
       (((Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1)) >
-                Nat::pow(UINT64_C(2), UINT64_C(12))
+        Nat::pow(UINT64_C(2), UINT64_C(12))
             ? 0
             : (Nat::pow(UINT64_C(2), UINT64_C(12)) - UINT64_C(1))));
 
@@ -211,13 +211,11 @@ struct PageOps {
   static inline const uint64_t test_pc_inc2_wrap = pc_inc2(state{max_addr});
   static inline const uint64_t test_disassemble_edge = []() -> uint64_t {
     auto _cs = disassemble(
-        List<uint64_t>::cons(
-            UINT64_C(0),
-            List<uint64_t>::cons(
-                UINT64_C(7),
-                List<uint64_t>::cons(
-                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
-                                                      List<uint64_t>::nil())))),
+        List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::cons(
+                                 UINT64_C(7), List<uint64_t>::cons(
+                                     UINT64_C(9), List<uint64_t>::cons(
+                                         UINT64_C(11),
+                                         List<uint64_t>::nil())))),
         UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
@@ -234,19 +232,13 @@ struct PageOps {
                   std::pair<
                       std::pair<
                           std::pair<
-                              std::pair<std::pair<std::pair<std::pair<uint64_t,
-                                                                      uint64_t>,
-                                                            uint64_t>,
-                                                  uint64_t>,
-                                        uint64_t>,
-                              bool>,
-                          uint64_t>,
-                      uint64_t>,
-                  uint64_t>,
-              uint64_t>,
-          uint64_t>,
-      uint64_t>
-      t = std::make_pair(
+                              std::pair<
+                                  std::pair<
+                                      std::pair<std::pair<uint64_t, uint64_t>,
+                                                uint64_t>, uint64_t>, uint64_t>,
+                              bool>, uint64_t>, uint64_t>, uint64_t>, uint64_t>,
+          uint64_t>, uint64_t> t = std::make_pair(
+      std::make_pair(
           std::make_pair(
               std::make_pair(
                   std::make_pair(
@@ -256,19 +248,15 @@ struct PageOps {
                                   std::make_pair(
                                       std::make_pair(
                                           std::make_pair(
-                                              std::make_pair(
-                                                  test_page_base_alignment,
-                                                  test_page_base_next_pc),
-                                              test_page_boundary_cross),
-                                          test_base_for_next_page_cross_1),
-                                      test_base_for_next_page_cross_2),
-                                  test_page_decomp_roundtrip),
-                              test_page_offset_recompose),
-                          test_page_recompose),
-                      test_pc_inc2_wraparound),
-                  test_pc_inc1_wrap),
-              test_pc_inc2_wrap),
-          test_disassemble_edge);
+                                              test_page_base_alignment,
+                                              test_page_base_next_pc),
+                                          test_page_boundary_cross),
+                                      test_base_for_next_page_cross_1),
+                                  test_base_for_next_page_cross_2),
+                              test_page_decomp_roundtrip),
+                          test_page_offset_recompose), test_page_recompose),
+                  test_pc_inc2_wraparound), test_pc_inc1_wrap),
+          test_pc_inc2_wrap), test_disassemble_edge);
 };
 
 #endif // INCLUDED_PAGE_OPS

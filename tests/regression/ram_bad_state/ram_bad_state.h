@@ -161,44 +161,26 @@ struct RamBadState {
       ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state bad_state_acc_overflow =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(16),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(16), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_pc_overflow =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(0),
-            false,
-            UINT64_C(4096),
-            List<uint64_t>::nil(),
-            empty_ram,
-            default_sel,
+            UINT64_C(0), false, UINT64_C(4096), List<uint64_t>::nil(),
+            empty_ram, default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_stack_overflow = state{
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-      UINT64_C(0),
-      false,
-      UINT64_C(0),
-      List<uint64_t>::cons(
-          UINT64_C(0),
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
+      UINT64_C(0), false, UINT64_C(0), List<uint64_t>::cons(
+          UINT64_C(0), List<uint64_t>::cons(
+              UINT64_C(1), List<uint64_t>::cons(
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
-      empty_ram,
-      default_sel,
+      empty_ram, default_sel,
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_wrong_reg_count =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(15)),
-            UINT64_C(0),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(0), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const uint64_t overflow_acc = bad_state_acc_overflow.state_acc;

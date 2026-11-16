@@ -49,24 +49,23 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::shared_box<List<A>>::make(
-                                 crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::shared_box<List<A>>::make(
+                       crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -110,9 +109,9 @@ public:
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
         auto _value = List<T1>::nil();
-        (_write
-             ? *(*_write = crane::shared_box<List<T1>>::make(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        crane::shared_box<List<T1>>::make(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
@@ -227,15 +226,17 @@ struct SingleThreadedHeap {
   static uint64_t size(const tree &t);
   static uint64_t adder(uint64_t x0_, uint64_t x1_);
   static inline const uint64_t result = []() {
-    tree t = ListDef::seq(UINT64_C(0), UINT64_C(200))
-                 .template fold_left<tree>(
-                     [](const tree &t0, uint64_t k) { return insert(k, t0); },
-                     tree::leaf());
-    return (size(std::move(t)) +
-            adder(UINT64_C(5), ListDef::seq(UINT64_C(0), UINT64_C(1000))
-                                   .template map<uint64_t>(
-                                       [](uint64_t x) { return (x + 1); })
-                                   .length()));
+    tree t =
+        ListDef::seq(UINT64_C(0), UINT64_C(200)).template fold_left<tree>(
+            [](const tree &t0, uint64_t k) { return insert(k, t0); },
+            tree::leaf());
+    return (size(std::move(t)) + adder(
+                UINT64_C(5), ListDef::seq(UINT64_C(0),
+                                          UINT64_C(1000))
+                                 .template map<uint64_t>([](uint64_t x) {
+                                   return (x + 1);
+                                 })
+                                 .length()));
   }();
 };
 

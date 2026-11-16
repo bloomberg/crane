@@ -142,19 +142,17 @@ struct PolymorphicValueEtaArity {
   template <typename T1> static T1 idf(T1 x) { return x; }
 
   static inline const List<crane::fn<uint64_t(uint64_t)>> fs = []() {
-    return List<crane::fn<uint64_t(uint64_t)>>::cons(
-               [](uint64_t x) { return (x + 1); },
-               List<crane::fn<uint64_t(uint64_t)>>::cons(
-                   [](uint64_t _x0) -> uint64_t {
-                     return (_x0 ? _x0 - 1 : _x0);
-                   },
-                   List<crane::fn<uint64_t(uint64_t)>>::nil()))
-        .template map<crane::fn<uint64_t(uint64_t)>>(
-            [](crane::fn<uint64_t(uint64_t)> _ec0) {
-              return [=](uint64_t _ec1) {
-                return idf<crane::fn<uint64_t(uint64_t)>>(_ec0)(_ec1);
-              };
-            });
+    return List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t x) {
+      return (x + 1);
+    }, List<crane::fn<uint64_t(uint64_t)>>::cons([](uint64_t _x0) -> uint64_t {
+      return (_x0 ? _x0 - 1 : _x0);
+    }, List<crane::fn<uint64_t(uint64_t)>>::nil()))
+               .template map<crane::fn<uint64_t(uint64_t)>>(
+        [](crane::fn<uint64_t(uint64_t)> _ec0) {
+          return [=](uint64_t _ec1) {
+            return idf<crane::fn<uint64_t(uint64_t)>>(_ec0)(_ec1);
+          };
+        });
   }();
   static inline const uint64_t through_idf = fs.template fold_left<uint64_t>(
       [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &g) { return g(a); },
@@ -166,11 +164,13 @@ struct PolymorphicValueEtaArity {
 
   static inline const List<crane::fn<uint64_t(bool)>> cs = []() {
     return List<uint64_t>::cons(
-               UINT64_C(1),
-               List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
-        .template map<crane::fn<uint64_t(bool)>>([](uint64_t _ec0) {
-          return [=](bool _ec1) { return constf<uint64_t, bool>(_ec0, _ec1); };
-        });
+        UINT64_C(1),
+        List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+               .template map<crane::fn<uint64_t(bool)>>([](uint64_t _ec0) {
+                 return [=](bool _ec1) {
+                   return constf<uint64_t, bool>(_ec0, _ec1);
+                 };
+               });
   }();
   static inline const uint64_t through_constf = cs.template fold_left<uint64_t>(
       [](uint64_t a, const crane::fn<uint64_t(bool)> &g) {

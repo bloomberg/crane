@@ -187,7 +187,6 @@ struct MemSafetyProbe28 {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -281,10 +280,9 @@ struct MemSafetyProbe28 {
   /// t2's left child is used for recursion AND returned as part of result.
   static uint64_t zip_and_sum(const tree &t1, const tree &t2);
   static inline const uint64_t test_zip_and_sum = zip_and_sum(
-      tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-      tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                 UINT64_C(20),
-                 tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+      tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), tree::node(
+          tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
+          tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// TEST 4: double_zip - Both t1 and t2 are trees, but t2 is used
   /// in a different way for each call. Makes t2 non-pointer-safe.
   static uint64_t double_zip(const tree &t1, const tree &t2);
@@ -304,9 +302,10 @@ struct MemSafetyProbe28 {
                            List<uint64_t>::nil()));
   /// TEST 6: Three-way recursion with non-pointer-safe second tree.
   static tree merge_trees(const tree &t1, const tree &t2);
-  static inline const uint64_t test_merge_trees = tree_sum(
-      merge_trees(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                  tree::node(tree::leaf(), UINT64_C(10), tree::leaf())));
+  static inline const uint64_t test_merge_trees =
+      tree_sum(
+          merge_trees(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                      tree::node(tree::leaf(), UINT64_C(10), tree::leaf())));
   /// TEST 7: Deep trees to stress the optimization.
   static tree build_balanced(uint64_t n);
   static inline const uint64_t test_deep_zip =

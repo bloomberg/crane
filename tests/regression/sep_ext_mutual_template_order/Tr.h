@@ -7,7 +7,6 @@
 #include "Ty.h"
 
 namespace Tr {
-
 template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T2, F0 &, const T1 &>
 Ty::Tree<T2> tmap(F0 &&f, const Ty::Tree<T1> &t);
@@ -31,7 +30,6 @@ Ty::Forest<T2> fmap(F0 &&f, const Ty::Forest<T1> &fs) {
                                          fmap<T1, T2>(f, *a1));
   }
 }
-
 } // namespace Tr
 
 #endif // INCLUDED_TR

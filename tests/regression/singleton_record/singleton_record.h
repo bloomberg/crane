@@ -27,8 +27,8 @@ struct SingletonRecord {
         if constexpr (crane_convertible<CraneU, const A &>) {
           return crane_convert<CraneU>(contents);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }

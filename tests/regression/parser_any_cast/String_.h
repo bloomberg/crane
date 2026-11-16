@@ -9,7 +9,6 @@
 #include "Ascii.h"
 
 namespace String {
-
 struct String;
 
 struct String {
@@ -69,7 +68,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
 } // namespace String
 
 #endif // INCLUDED_STRING_

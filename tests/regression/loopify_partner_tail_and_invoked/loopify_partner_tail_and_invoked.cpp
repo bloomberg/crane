@@ -5,10 +5,10 @@
 /// machine continues in step's body at the tail call and enters a copy of
 /// step at the other, whose calls of walk are turns of the one machine:
 /// no call between the two runs on the C++ stack, however deep.
-uint64_t LoopifyPartnerTailAndInvoked::walk(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyPartnerTailAndInvoked::walk(uint64_t n) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };
@@ -81,10 +81,10 @@ uint64_t LoopifyPartnerTailAndInvoked::walk(
   return _result;
 }
 
-uint64_t LoopifyPartnerTailAndInvoked::step(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+uint64_t
+LoopifyPartnerTailAndInvoked::step(uint64_t n) { /// CraneEnter: captures
+                                                 /// varying parameters for each
+                                                 /// recursive call.
   struct CraneEnter {
     uint64_t n;
   };

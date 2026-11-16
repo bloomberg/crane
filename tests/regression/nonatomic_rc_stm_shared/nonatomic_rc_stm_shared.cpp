@@ -11,8 +11,9 @@ uint64_t NonatomicRcStmShared::len(const NonatomicRcStmShared::lst &l) {
 }
 
 stm::TVar<NonatomicRcStmShared::lst> NonatomicRcStmShared::make() {
-  return stm::atomically(
-      [&] { return stm::newTVar<NonatomicRcStmShared::lst>(lst::nil()); });
+  return stm::atomically([&] {
+    return stm::newTVar<NonatomicRcStmShared::lst>(lst::nil());
+  });
 }
 
 void NonatomicRcStmShared::push(stm::TVar<NonatomicRcStmShared::lst> t,

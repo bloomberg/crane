@@ -12,13 +12,17 @@
 template <typename M>
 concept CARRIER = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::zero } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::zero() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::zero
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::zero()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct FunctorValueFieldCall {
@@ -31,19 +35,16 @@ struct FunctorValueFieldCall {
     using t = std::pair<typename C::t, typename C::t>;
 
     static const std::pair<typename C::t, typename C::t> &zero() {
-      static const std::pair<typename C::t, typename C::t> v = std::make_pair(
-          [] {
-            if constexpr (requires { C::zero(); })
-              return C::zero();
-            else
-              return C::zero;
-          }(),
-          [] {
-            if constexpr (requires { C::zero(); })
-              return C::zero();
-            else
-              return C::zero;
-          }());
+      static const std::pair<typename C::t, typename C::t> v =
+          std::make_pair(
+              [] {
+                if constexpr (requires { C::zero(); }) return C::zero();
+                else return C::zero;
+              }(),
+              [] {
+                if constexpr (requires { C::zero(); }) return C::zero();
+                else return C::zero;
+              }());
       return v;
     }
   };

@@ -104,13 +104,13 @@ struct Bag {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<typename Bag::template bag<A>>(
-                            crane_convert<typename Bag::template bag<A>>(*a1))
+                          crane_convert<typename Bag::template bag<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -129,14 +129,14 @@ struct Bag {
     ~bag() {
       auto _next =
           [&](variant_t &_v) -> std::shared_ptr<typename Bag::template bag<A>> {
-        if (auto *_alt = std::get_if<Add>(&_v)) {
-          if (_alt->a1 && _alt->a1.use_count() == 1) {
-            std::atomic_thread_fence(std::memory_order_acquire);
-            return std::move(_alt->a1);
-          }
-        }
-        return nullptr;
-      };
+            if (auto *_alt = std::get_if<Add>(&_v)) {
+              if (_alt->a1 && _alt->a1.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                return std::move(_alt->a1);
+              }
+            }
+            return nullptr;
+          };
       std::shared_ptr<typename Bag::template bag<A>> _cur = _next(v_mut());
       while (_cur) {
         _cur = _next(_cur->v_mut());
@@ -180,8 +180,7 @@ const Nat limit = Bag::depth_limit;
 Bag::bag<Nat> round(Bag::bag<Nat> x0_);
 
 template <typename A>
-template <typename F0>
-Nat Bag::bag<A>::countIf(F0 &&p) const {
+template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
   const typename Bag::template bag<A> *_self = this;
 
   /// CraneEnter: captures varying parameters for each recursive call.

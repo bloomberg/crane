@@ -7,7 +7,6 @@
 #include "Datatypes.h"
 
 namespace SepExtDecideEquality {
-
 template <typename M>
 concept Sigma = requires {
   typename M::Sigma;
@@ -25,8 +24,7 @@ template <Sigma Ty> struct DefsFn {
     String_dec(const typename Datatypes::template List<typename Ty::Sigma> &l,
                const typename Datatypes::template List<typename Ty::Sigma> &x) {
       if (std::holds_alternative<
-              typename Datatypes::template List<typename Ty::Sigma>::Nil>(
-              l.v())) {
+              typename Datatypes::template List<typename Ty::Sigma>::Nil>(l.v())) {
         if (std::holds_alternative<
                 typename Datatypes::template List<typename Ty::Sigma>::Nil>(
                 x.v())) {
@@ -59,7 +57,6 @@ template <Sigma Ty> struct DefsFn {
     }
   };
 };
-
 } // namespace SepExtDecideEquality
 
 #endif // INCLUDED_SEPEXTDECIDEEQUALITY

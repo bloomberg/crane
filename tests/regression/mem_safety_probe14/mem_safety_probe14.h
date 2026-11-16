@@ -322,13 +322,13 @@ struct MemSafetyProbe14 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -384,10 +384,9 @@ struct MemSafetyProbe14 {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -456,26 +455,30 @@ struct MemSafetyProbe14 {
   static inline const uint64_t test_use_twice =
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                  UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(15),
+                            tree::leaf()))
           .use_tree_twice();
   static inline const uint64_t test_closure_consume =
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                  UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(15),
+                            tree::leaf()))
           .closure_then_consume();
   static inline const uint64_t test_two_closures =
       tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
                  UINT64_C(10),
-                 tree::node(tree::leaf(), UINT64_C(15), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(15),
+                            tree::leaf()))
           .two_closures();
   /// TEST 5: Closure captures tree, tree is pattern-matched
   /// AFTER closure creation. The match destructures the tree.
   /// The closure must still hold the original tree.
   static uint64_t capture_then_match(tree t);
   static inline const uint64_t test_capture_match =
-      capture_then_match(tree::node(
-          tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
-          tree::node(tree::leaf(), UINT64_C(15), tree::leaf())));
+      capture_then_match(
+          tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
+                     UINT64_C(10),
+                     tree::node(tree::leaf(), UINT64_C(15), tree::leaf())));
   static mylist<crane::fn<uint64_t(uint64_t)>> tree_level_fns(const tree &t,
                                                               uint64_t depth);
   static inline const uint64_t test_level_fns = []() {

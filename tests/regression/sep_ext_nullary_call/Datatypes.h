@@ -12,7 +12,6 @@
 #include <variant>
 
 namespace Datatypes {
-
 template <typename A> struct List;
 
 template <typename A> struct List {
@@ -131,7 +130,6 @@ public:
     return _result;
   }
 };
-
 } // namespace Datatypes
 
 #endif // INCLUDED_DATATYPES

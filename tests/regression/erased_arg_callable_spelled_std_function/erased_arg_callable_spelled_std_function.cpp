@@ -20,8 +20,13 @@ bool PeanoNat::ltb(const Nat &n, const Nat &m) {
 
 bool small_dec(const Nat &n) {
   return Bool::bool_dec(
-      PeanoNat::ltb(n, Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                           Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))),
+      PeanoNat::ltb(
+          n, Nat::s(
+              Nat::s(
+                  Nat::s(
+                      Nat::s(
+                          Nat::s(
+                              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))),
       true);
 }
 

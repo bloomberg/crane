@@ -268,7 +268,6 @@ struct MethodTypeNamesModuleAlias {
 
   static inline const bool use =
       Bag::get(Bag{Nat::o(), Nat::s(Nat::s(Nat::s(Nat::o())))});
-
   static inline const Nat leaves =
       Tree::count(Tree::tree::node(Tree::tree::leaf(), Tree::tree::leaf()));
 };

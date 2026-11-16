@@ -24,8 +24,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };

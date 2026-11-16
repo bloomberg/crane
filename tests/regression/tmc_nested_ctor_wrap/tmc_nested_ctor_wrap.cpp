@@ -4,16 +4,15 @@ Nat TmcNestedCtorWrap::rsize(const TmcNestedCtorWrap::rose &r) {
   const auto &[a0] = std::get<typename TmcNestedCtorWrap::rose::Rnode>(r.v());
   const List<TmcNestedCtorWrap::rose> &a0_value = *a0;
   return Nat::s(a0_value.template fold_left<Nat>(
-      [](const Nat &acc, const TmcNestedCtorWrap::rose &c) {
-        return acc.add(rsize(c));
-      },
-      Nat::o()));
+                    [](const Nat &acc, const TmcNestedCtorWrap::rose &c) {
+                      return acc.add(rsize(c));
+                    },
+                    Nat::o()));
 }
 
 TmcNestedCtorWrap::rose
 TmcNestedCtorWrap::spine(const Nat &n) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
   struct CraneEnter {
     const Nat *n;
   };
@@ -41,8 +40,9 @@ TmcNestedCtorWrap::spine(const Nat &n) { /// CraneEnter: captures varying
       }
     } else {
       auto _f = std::move(std::get<CraneCont_S>(_frame));
-      _result = rose::rnode(List<TmcNestedCtorWrap::rose>::cons(
-          std::move(_result), List<TmcNestedCtorWrap::rose>::nil()));
+      _result = rose::rnode(
+          List<TmcNestedCtorWrap::rose>::cons(
+              std::move(_result), List<TmcNestedCtorWrap::rose>::nil()));
     }
   }
   return _result;

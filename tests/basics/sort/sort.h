@@ -149,8 +149,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -202,7 +202,7 @@ struct Sort {
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
     requires std::is_invocable_r_v<T2, F1 &, const T1 &> &&
-             std::is_invocable_r_v<T2, F2 &, const T1 &, const T1 &>
+    std::is_invocable_r_v<T2, F2 &, const T1 &, const T1 &>
   static T2 div_conq_pair(T2 x, F1 &&x0, F2 &&x1, F3 &&x2, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return x;
@@ -241,27 +241,24 @@ struct Sort {
       return x;
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return x0(a0, *a1,
-                div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                       split_pivot<T1>(le_dec0, a0, *a1).first),
-                div_conq_pivot<T1, T2>(
-                    le_dec0, x, x0, split_pivot<T1>(le_dec0, a0, *a1).second));
+      return x0(
+          a0, *a1, div_conq_pivot<T1, T2>(
+              le_dec0, x, x0, split_pivot<T1>(le_dec0, a0, *a1).first),
+          div_conq_pivot<T1, T2>(le_dec0, x, x0,
+                                 split_pivot<T1>(le_dec0, a0, *a1).second));
     }
   }
 
-  static Sig<List<uint64_t>> sort_cons_prog(uint64_t a,
-                                            const List<uint64_t> &_x,
-                                            const List<uint64_t> &l_);
+  static Sig<List<uint64_t>> sort_cons_prog(
+      uint64_t a, const List<uint64_t> &_x, const List<uint64_t> &l_);
   static Sig<List<uint64_t>> isort(const List<uint64_t> &l);
   static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
-  static Sig<List<uint64_t>> merge_prog(const List<uint64_t> &_x,
-                                        List<uint64_t> l1,
-                                        const List<uint64_t> &l2);
+  static Sig<List<uint64_t>> merge_prog(
+      const List<uint64_t> &_x, List<uint64_t> l1, const List<uint64_t> &l2);
   static Sig<List<uint64_t>> msort(const List<uint64_t> &x0_);
-  static Sig<List<uint64_t>> pair_merge_prog(uint64_t _x, uint64_t _x0,
-                                             const List<uint64_t> &_x1,
-                                             const List<uint64_t> &l_,
-                                             List<uint64_t> l_0);
+  static Sig<List<uint64_t>>
+  pair_merge_prog(uint64_t _x, uint64_t _x0, const List<uint64_t> &_x1,
+                  const List<uint64_t> &l_, List<uint64_t> l_0);
   static Sig<List<uint64_t>> psort(const List<uint64_t> &x0_);
   static Sig<List<uint64_t>> qsort(const List<uint64_t> &x0_);
 };

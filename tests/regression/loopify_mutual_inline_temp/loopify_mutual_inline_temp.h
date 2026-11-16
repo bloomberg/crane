@@ -96,7 +96,6 @@ struct LoopifyMutualInlineTemp {
   static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const lst *l;
     };
@@ -147,7 +146,6 @@ struct LoopifyMutualInlineTemp {
                             uint64_t s);
   static uint64_t odd_step(uint64_t n, const lst &l, const lst &keep,
                            uint64_t s);
-
   static uint64_t go(uint64_t n);
 };
 

@@ -1,10 +1,9 @@
 #include "loopify_shadow_from_reference.h"
 
 uint64_t LoopifyShadowFromReference::suml(
-    const LoopifyShadowFromReference::lst
-        &l) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyShadowFromReference::lst &l) { /// CraneEnter: captures varying
+                                                /// parameters for each
+                                                /// recursive call.
   struct CraneEnter {
     const LoopifyShadowFromReference::lst *l;
   };
@@ -58,20 +57,21 @@ LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
       *_write = crane::make_rc<LoopifyShadowFromReference::lst>(lst::nil());
       break;
     } else {
-      const auto &[a0, a1] =
-          std::get<typename LoopifyShadowFromReference::lst::Cons>(
-              _loop_l->v());
+      const auto &[a0, a1] = std::get<
+          typename LoopifyShadowFromReference::lst::Cons>(_loop_l->v());
       const LoopifyShadowFromReference::lst &a1_value = *a1;
-      auto _read =
-          twice([=](uint64_t y) { return suml(lst::cons(y, a1_value)); }, a0);
+      auto _read = twice([=](uint64_t y) {
+        return suml(lst::cons(y, a1_value));
+      }, a0);
       auto _rs = crane::reuse_step(_own, _uniq, a1);
       auto _cell = crane::make_rc_reusing_unchecked(
           std::move(_rs.token), typename LoopifyShadowFromReference::lst::Cons(
-                                    std::move(_read), nullptr));
+              std::move(_read), nullptr));
       *_write = std::move(_cell);
-      _write = &std::get<typename LoopifyShadowFromReference::lst::Cons>(
-                    (*_write)->v_mut())
-                    .a1;
+      _write =
+          &std::get<typename LoopifyShadowFromReference::lst::Cons>(
+              (*_write)->v_mut())
+              .a1;
       _own = std::move(_rs.next);
       _loop_l = _own.get();
       continue;
@@ -99,9 +99,10 @@ LoopifyShadowFromReference::lst LoopifyShadowFromReference::upto(uint64_t n) {
           (_write ? *(*_write = crane::make_rc<LoopifyShadowFromReference::lst>(
                           std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename LoopifyShadowFromReference::lst::Cons>(
-                    _node.v_mut())
-                    .a1;
+      _write =
+          &std::get<typename LoopifyShadowFromReference::lst::Cons>(
+              _node.v_mut())
+              .a1;
       _loop_n = k;
       continue;
     }

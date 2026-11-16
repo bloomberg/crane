@@ -2,8 +2,7 @@
 
 SingleThreadedHeap::tree
 SingleThreadedHeap::insert(uint64_t k, const SingleThreadedHeap::tree &t) {
-  if (crane::holds_alternative<typename SingleThreadedHeap::tree::Leaf>(
-          t.v())) {
+  if (crane::holds_alternative<typename SingleThreadedHeap::tree::Leaf>(t.v())) {
     return tree::node(tree::leaf(), k, tree::leaf());
   } else {
     const auto &[a0, a1, a2] =
@@ -17,8 +16,7 @@ SingleThreadedHeap::insert(uint64_t k, const SingleThreadedHeap::tree &t) {
 }
 
 uint64_t SingleThreadedHeap::size(const SingleThreadedHeap::tree &t) {
-  if (crane::holds_alternative<typename SingleThreadedHeap::tree::Leaf>(
-          t.v())) {
+  if (crane::holds_alternative<typename SingleThreadedHeap::tree::Leaf>(t.v())) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1, a2] =

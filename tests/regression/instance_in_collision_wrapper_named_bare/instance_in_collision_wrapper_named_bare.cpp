@@ -38,10 +38,9 @@ Ident to_ident(const AstLike::Raw_id &k) {
 
 std::pair<Nat, std::optional<Nat>>
 find(const AstLike::Raw_id &k, const List<std::pair<AstLike::Raw_id, Nat>> &l) {
-  return std::make_pair(
-      k.describe(),
-      Lookup::template assoc<AstLike::eq_dec_raw_id, AstLike::Raw_id, Nat>(k,
-                                                                           l));
+  return std::make_pair(k.describe(), Lookup::template assoc<
+                            AstLike::eq_dec_raw_id, AstLike::Raw_id, Nat>(k,
+                                                                          l));
 }
 
 std::pair<Ident, std::pair<Nat, std::optional<Nat>>>
@@ -52,8 +51,7 @@ both(const AstLike::Raw_id &k, const List<std::pair<AstLike::Raw_id, Nat>> &l) {
 std::pair<Nat, std::optional<Nat>>
 both_at_one_site(const AstLike::Raw_id &k,
                  const List<std::pair<AstLike::Raw_id, Nat>> &l) {
-  return std::make_pair(
-      AstLike::combine(k.describe(), Nat::s(Nat::o())),
-      Lookup::template assoc<AstLike::eq_dec_raw_id, AstLike::Raw_id, Nat>(k,
-                                                                           l));
+  return std::make_pair(AstLike::combine(k.describe(), Nat::s(Nat::o())),
+                        Lookup::template assoc<AstLike::eq_dec_raw_id,
+                                               AstLike::Raw_id, Nat>(k, l));
 }

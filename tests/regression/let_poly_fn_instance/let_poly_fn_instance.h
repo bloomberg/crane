@@ -13,8 +13,8 @@ struct LetPolyFnInstance {
 
   static inline const uint64_t test = []() {
     return (test_crane_f(UINT64_C(3)) + test_crane_f(crane::fn([](uint64_t y) {
-              return (y + UINT64_C(1));
-            }))(UINT64_C(4)));
+      return (y + UINT64_C(1));
+    }))(UINT64_C(4)));
   }();
 };
 

@@ -401,13 +401,13 @@ struct MemSafetyProbe15 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -464,9 +464,9 @@ struct MemSafetyProbe15 {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<T1>::Mycons(f(a0), nullptr);
           mylist<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+              (_write ? *(*_write =
+                              std::make_shared<mylist<T1>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<T1>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -545,10 +545,9 @@ struct MemSafetyProbe15 {
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
           auto _cell = typename mylist<A>::Mycons(a0, nullptr);
-          mylist<A> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<mylist<A>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
@@ -618,10 +617,9 @@ struct MemSafetyProbe15 {
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                    UINT64_C(2),
                    tree::node(tree::leaf(), UINT64_C(3), tree::leaf())),
-        UINT64_C(4),
-        tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                   UINT64_C(6),
-                   tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
+        UINT64_C(4), tree::node(
+            tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(6),
+            tree::node(tree::leaf(), UINT64_C(7), tree::leaf())));
     return sum_list(flatten(std::move(t)));
   }();
   /// TEST 2: Tree to list where each element is the sum of
@@ -655,29 +653,29 @@ struct MemSafetyProbe15 {
   static inline const uint64_t test_deep_spine =
       left_spine(UINT64_C(100)).tree_sum();
   static inline const uint64_t test_rev = []() {
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(1),
+    mylist<uint64_t> l =
         mylist<uint64_t>::mycons(
-            UINT64_C(2),
-            mylist<uint64_t>::mycons(
-                UINT64_C(3), mylist<uint64_t>::mycons(
-                                 UINT64_C(4), mylist<uint64_t>::mynil()))));
+            UINT64_C(1), mylist<uint64_t>::mycons(
+                UINT64_C(2), mylist<uint64_t>::mycons(
+                    UINT64_C(3), mylist<uint64_t>::mycons(
+                        UINT64_C(4), mylist<uint64_t>::mynil()))));
     mylist<uint64_t> r = l.rev_aux(mylist<uint64_t>::mynil());
     return sum_list(std::move(r));
   }();
   static inline const uint64_t test_two_pass =
       tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                  UINT64_C(7),
-                 tree::node(tree::leaf(), UINT64_C(11), tree::leaf()))
+                 tree::node(tree::leaf(), UINT64_C(11),
+                            tree::leaf()))
           .two_pass();
   static inline const uint64_t test_map = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
+        UINT64_C(10), mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    mylist<uint64_t> l2 = l.template map_list<uint64_t>(
-        [](uint64_t x) { return (x + UINT64_C(1)); });
+    mylist<uint64_t> l2 = l.template map_list<uint64_t>([](uint64_t x) {
+      return (x + UINT64_C(1));
+    });
     return sum_list(std::move(l2));
   }();
   /// TEST 9: Build a large tree and verify all values are preserved.

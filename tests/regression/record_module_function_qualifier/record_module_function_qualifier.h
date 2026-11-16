@@ -102,7 +102,6 @@ struct RecordModuleFunctionQualifier {
   static inline const Nat picked =
       Bag::pick(empty, Nat::s(Nat::s(Nat::s(Nat::o()))),
                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
-
   static inline const Nat large = Bag::classify(Bag::Kind::LARGE);
 };
 

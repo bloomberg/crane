@@ -99,7 +99,6 @@ struct TypeAliasAppliedCtorParam {
   static inline const holder<std::optional<crane::obj>> mk =
       holder<std::optional<crane::obj>>::hold(
           std::make_optional<Nat>(Nat::s(Nat::o())));
-
   static std::optional<Nat> get(const holder<std::optional<crane::obj>> &h);
 };
 

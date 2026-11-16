@@ -103,7 +103,6 @@ struct MemSafetyProbe27 {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -177,9 +176,10 @@ struct MemSafetyProbe27 {
   pair_with_fn(tree t);
   static inline const uint64_t test_pair_with_fn = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
-        pair_with_fn(tree::node(
-            tree::node(tree::leaf(), UINT64_C(3), tree::leaf()), UINT64_C(7),
-            tree::node(tree::leaf(), UINT64_C(11), tree::leaf())));
+        pair_with_fn(
+            tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
+                       UINT64_C(7),
+                       tree::node(tree::leaf(), UINT64_C(11), tree::leaf())));
     return (p.first(UINT64_C(100)) + p.second);
   }();
   /// TEST 2: if/else returning different closures in a pair.
@@ -191,8 +191,7 @@ struct MemSafetyProbe27 {
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p1 = cond_pair_fn(
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                    UINT64_C(7),
-                   tree::node(tree::leaf(), UINT64_C(11), tree::leaf())),
-        true);
+                   tree::node(tree::leaf(), UINT64_C(11), tree::leaf())), true);
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p2 = cond_pair_fn(
         tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                    UINT64_C(7),
@@ -233,20 +232,18 @@ struct MemSafetyProbe27 {
     return (p.first(UINT64_C(100)) + p.second);
   }();
   /// TEST 6: Three closures stored in a triple, each using tree differently.
-  static std::pair<
-      std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
-      uint64_t>
-  triple_fns(tree t);
+  static std::pair<std::pair<crane::fn<uint64_t(uint64_t)>,
+                             crane::fn<uint64_t(uint64_t)>>,
+                   uint64_t> triple_fns(tree t);
   static inline const uint64_t test_triple_fns = []() {
-    std::pair<
-        std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
-        uint64_t>
-        tr = triple_fns(tree::node(
-            tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(2),
-            tree::node(tree::leaf(), UINT64_C(3), tree::leaf())));
-    return (
-        ((tr.first).first(UINT64_C(100)) + (tr.first).second(UINT64_C(200))) +
-        std::move(tr).second);
+    std::pair<std::pair<crane::fn<uint64_t(uint64_t)>,
+                        crane::fn<uint64_t(uint64_t)>>, uint64_t> tr =
+        triple_fns(
+            tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
+                       UINT64_C(2),
+                       tree::node(tree::leaf(), UINT64_C(3), tree::leaf())));
+    return (((tr.first).first(UINT64_C(100)) +
+             (tr.first).second(UINT64_C(200))) + std::move(tr).second);
   }();
   /// TEST 7: Closure and tree value stored together in a pair.
   /// Tests whether the closure's capture and the tree return
@@ -259,9 +256,8 @@ struct MemSafetyProbe27 {
   }();
   /// TEST 8: Closure captures tree, stored in option inside a pair.
   /// Multiple levels of wrapping.
-  static std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, uint64_t>
-  wrapped_fn(tree t, bool b);
-
+  static std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>,
+                   uint64_t> wrapped_fn(tree t, bool b);
   static inline const uint64_t test_wrapped_fn = []() {
     std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, uint64_t> p =
         wrapped_fn(

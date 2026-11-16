@@ -280,10 +280,12 @@ struct ThisCaptureDangling {
   /// test2: Same pattern with a larger tree (sum = 42).
   /// Expected: 5 + 42 = 47.
   static inline const uint64_t test2 = []() -> uint64_t {
-    auto _cs = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                          UINT64_C(20),
-                          tree::node(tree::leaf(), UINT64_C(12), tree::leaf()))
-                   .get_fn();
+    auto _cs =
+        tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                   UINT64_C(20),
+                   tree::node(tree::leaf(), UINT64_C(12),
+                              tree::leaf()))
+            .get_fn();
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
@@ -300,7 +302,8 @@ struct ThisCaptureDangling {
     uint64_t noise =
         tree::node(tree::node(tree::leaf(), UINT64_C(1), tree::leaf()),
                    UINT64_C(2),
-                   tree::node(tree::leaf(), UINT64_C(3), tree::leaf()))
+                   tree::node(tree::leaf(), UINT64_C(3),
+                              tree::leaf()))
             .tree_sum();
     if (opt.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *opt;

@@ -98,10 +98,13 @@ LoopifyTmcSwitchBase::num LoopifyTmcSwitchBase::of_nat(uint64_t n) {
 }
 
 uint64_t
-LoopifyTmcSwitchBase::to_nat(const LoopifyTmcSwitchBase::num
-                                 &n) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+LoopifyTmcSwitchBase::to_nat(const LoopifyTmcSwitchBase::num &n) { /// CraneEnter:
+                                                                   /// captures
+                                                                   /// varying
+                                                                   /// parameters
+                                                                   /// for each
+                                                                   /// recursive
+                                                                   /// call.
   struct CraneEnter {
     const LoopifyTmcSwitchBase::num *n;
   };
@@ -120,8 +123,7 @@ LoopifyTmcSwitchBase::to_nat(const LoopifyTmcSwitchBase::num
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const LoopifyTmcSwitchBase::num &n = *_f.n;
-      if (std::holds_alternative<typename LoopifyTmcSwitchBase::num::Z>(
-              n.v())) {
+      if (std::holds_alternative<typename LoopifyTmcSwitchBase::num::Z>(n.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[n0] =

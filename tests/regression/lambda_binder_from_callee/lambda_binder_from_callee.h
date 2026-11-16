@@ -10,8 +10,8 @@
 #include <variant>
 
 struct Nat;
-using allocationId = crane::obj;
-/// A lambda whose binder type the enclosing declaration never mentions.  The
+using allocationId =
+    crane::obj; /// A lambda whose binder type the enclosing declaration never mentions.  The
 /// only witness is the callee's parameter type at that argument position, so
 /// the carrier guess is the one thing reaching the binder and it fills it with
 /// whichever associated type it happens to hold.

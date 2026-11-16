@@ -174,18 +174,16 @@ struct CollisionStructConceptNamesInductive {
     requires Keyed<_tcI0, T1>
   static bool same(const T1 &x, const T1 &y) {
     return PeanoNat::eqb(
-        _tcI0::key_of(x),
-        CollisionStructConceptNamesInductive::first(
+        _tcI0::key_of(x), CollisionStructConceptNamesInductive::first(
             List<Nat>::cons(_tcI0::key_of(y), List<Nat>::nil())));
   }
 
   static inline const bool check =
       CollisionStructConceptNamesInductive::template same<keyed_nat, Nat>(
           Nat::s(Nat::s(Nat::s(Nat::o()))), Nat::s(Nat::s(Nat::s(Nat::o()))));
-
   static inline const bool blue = []() {
     switch (CollisionStructConceptNamesInductive::keyed_nat::color_of(
-        Nat::s(Nat::s(Nat::s(Nat::o()))))) {
+                Nat::s(Nat::s(Nat::s(Nat::o()))))) {
     case Color::RED: {
       return false;
     }

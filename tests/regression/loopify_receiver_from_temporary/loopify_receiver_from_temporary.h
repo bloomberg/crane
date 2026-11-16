@@ -36,8 +36,8 @@ struct LoopifyReceiverFromTemporary {
         if constexpr (crane_convertible<CraneU, const A &>) {
           return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }

@@ -261,10 +261,9 @@ struct FoldSequenceStateTraceCase {
   template <typename T1, typename F0, typename F1, typename F2>
     requires std::is_invocable_r_v<T1, F0 &, const std::pair<Real, Real> &,
                                    const std::pair<Real, Real> &> &&
-             std::is_invocable_r_v<T1, F1 &, const std::pair<Real, Real> &,
-                                   const std::pair<Real, Real> &> &&
-             std::is_invocable_r_v<T1, F2 &, const std::pair<Real, Real> &,
-                                   const Line &>
+    std::is_invocable_r_v<T1, F1 &, const std::pair<Real, Real> &,
+                          const std::pair<Real, Real> &> &&
+    std::is_invocable_r_v<T1, F2 &, const std::pair<Real, Real> &, const Line &>
   static T1 FoldStep_rect(F0 &&f, F1 &&f0, F2 &&f1, const FoldStep &f2) {
     if (std::holds_alternative<typename FoldStep::FS_O1>(f2.v())) {
       const auto &[a0, a1] = std::get<typename FoldStep::FS_O1>(f2.v());
@@ -293,20 +292,17 @@ struct FoldSequenceStateTraceCase {
   static inline const ConstructionState initial_state = ConstructionState{
       List<std::pair<Real, Real>>::cons(
           point_O, List<std::pair<Real, Real>>::cons(
-                       point_X, List<std::pair<Real, Real>>::nil())),
-      List<Line>::cons(line_xaxis,
-                       List<Line>::cons(line_yaxis, List<Line>::nil()))};
+              point_X, List<std::pair<Real, Real>>::nil())), List<Line>::cons(
+          line_xaxis, List<Line>::cons(line_yaxis, List<Line>::nil()))};
   static ConstructionState add_fold_to_state(const ConstructionState &st,
                                              const FoldStep &step);
   static ConstructionState execute_sequence(ConstructionState st,
                                             const List<FoldStep> &seq);
-  [[gnu::used]] static inline const FoldSequence sample_sequence =
-      List<FoldStep>::cons(
-          FoldStep::fs_o1(point_O, point_diag),
-          List<FoldStep>::cons(
-              FoldStep::fs_o2(point_O, point_X),
-              List<FoldStep>::cons(FoldStep::fs_o4(point_diag, line_xaxis),
-                                   List<FoldStep>::nil())));
+  [[gnu::used]] static inline const FoldSequence sample_sequence = List<
+      FoldStep>::cons(
+      FoldStep::fs_o1(point_O, point_diag), List<FoldStep>::cons(
+          FoldStep::fs_o2(point_O, point_X), List<FoldStep>::cons(
+              FoldStep::fs_o4(point_diag, line_xaxis), List<FoldStep>::nil())));
   static inline const ConstructionState sample_final_state =
       execute_sequence(initial_state, sample_sequence);
   static uint64_t line_count_after_sample_sequence(ConstructionState st);

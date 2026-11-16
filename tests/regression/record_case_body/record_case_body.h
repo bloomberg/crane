@@ -63,8 +63,7 @@ struct RecordCaseBody {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
@@ -74,9 +73,9 @@ struct RecordCaseBody {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<list<A>>(crane_convert<list<A>>(*a1))

@@ -78,6 +78,7 @@ template <typename _tcI0, typename _tcI1, typename T1>
 bool is_less_or_equal(const T1 &x, const T1 &y) {
   return _tcI0::le(x, y);
 }
+
 enum class Ordering { LT, EQ, GT };
 
 template <typename _tcI0, typename _tcI1, typename T1>

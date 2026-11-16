@@ -292,10 +292,16 @@ template <TFunctor _tcI0> struct TFunctor_phi {
   template <typename CraneA0, typename CraneA1>
   static Phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Phi<CraneA0> p) {
     auto &[es0] = p;
-    return Phi<CraneA1>::phi0(es0.template map<Exp0<CraneA1>>(
-        [=, f = std::move(f)](const Exp0<CraneA0> &a0) {
-          return _tcI0::template tfmap<CraneA0, CraneA1>(f, a0);
-        }));
+    return Phi<CraneA1>::phi0(es0.template map<Exp0<CraneA1>>([=,
+                                                               f = std::move(f)](
+                                                                  const Exp0<
+                                                                      CraneA0> &a0) {
+                                                                        return _tcI0::template tfmap<
+                                                                            CraneA0,
+                                                                            CraneA1>(
+                                                                            f,
+                                                                            a0);
+                                                                      }));
   }
 };
 

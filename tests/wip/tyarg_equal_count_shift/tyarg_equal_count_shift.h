@@ -16,7 +16,6 @@ struct TyargEqualCountShift {
   static inline const bool chosen = partial_pick<bool>(UINT64_C(3), true);
   static inline const uint64_t chosen_nat =
       partial_pick<uint64_t>(UINT64_C(3), UINT64_C(9));
-
   static inline const bool full_pick =
       pick_second<uint64_t, bool>(UINT64_C(3), false);
 };

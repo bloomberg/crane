@@ -471,8 +471,7 @@ struct DeepPattern {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
@@ -482,9 +481,9 @@ struct DeepPattern {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<list<A>>(crane_convert<list<A>>(*a1))
@@ -578,7 +577,6 @@ struct DeepPattern {
   static uint64_t list_deep_match(const list<tree> &l);
   static inline const uint64_t test1 =
       tree::node(tree::leaf(UINT64_C(1)), tree::leaf(UINT64_C(2))).deep_match();
-
   static inline const uint64_t test2 =
       tree::leaf(UINT64_C(5)).multi_constructor(tree::leaf(UINT64_C(10)));
 };

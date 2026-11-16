@@ -134,9 +134,9 @@ struct LoopifyGenerators {
     while (true) {
       if (_loop_n <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t m = _loop_n - 1;
@@ -167,15 +167,14 @@ struct LoopifyGenerators {
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2->v())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
           auto _value = List<uint64_t>::nil();
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
@@ -227,9 +226,9 @@ struct LoopifyGenerators {
     while (true) {
       if (_loop_fuel <= 0) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t g = _loop_fuel - 1;
@@ -248,8 +247,9 @@ struct LoopifyGenerators {
                       : _root.emplace(std::move(_cell)));
           _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
           _loop_seed = next_seed;
-          _loop_n = ((
-              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+          _loop_n =
+              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
+                                                  : (_loop_n - UINT64_C(1))));
           _loop_fuel = g;
           continue;
         }

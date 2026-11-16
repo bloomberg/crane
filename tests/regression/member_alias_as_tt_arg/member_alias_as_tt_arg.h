@@ -20,8 +20,7 @@ concept Monad = requires {
     I::ret(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
-    I::bind(std::declval<typename I::template m<crane::obj>>(),
-            std::declval<
+    I::bind(std::declval<typename I::template m<crane::obj>>(), std::declval<
                 crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };

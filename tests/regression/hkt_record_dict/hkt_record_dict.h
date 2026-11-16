@@ -77,7 +77,8 @@ struct HktRecordDict {
     // ACCESSORS
     template <typename CraneU> operator FnD<CraneU>() const {
       return {crane_convert<
-          crane::fn<CraneU(crane::fn<crane::obj(crane::obj)>, CraneU)>>(fmd)};
+                  crane::fn<CraneU(crane::fn<crane::obj(crane::obj)>, CraneU)>>(
+                  fmd)};
     }
   };
 
@@ -89,22 +90,23 @@ struct HktRecordDict {
               crane_container_cast<T1<crane::obj>>(std::move(x0))));
   }
 
-  static inline const FnD<std::optional<crane::obj>> optd =
-      FnD<std::optional<crane::obj>>{
-          []<typename CraneX>(
-              const crane::fn<CraneX(CraneX)> &f,
-              const std::optional<CraneX> &o) -> std::optional<crane::obj> {
-            if (o.has_value()) {
-              const auto &x = *o;
-              return std::make_optional<CraneX>(
-                  CraneX(crane_call_erased(f, x)));
-            } else {
-              return std::optional<CraneX>();
-            }
-          }};
-  static inline const std::optional<Nat> ex = fmd<std::optional>(
-      optd, [](const Nat &x) { return Nat::s(x); },
-      std::make_optional<Nat>(Nat::s(Nat::o())));
+  static inline const FnD<std::optional<crane::obj>> optd = FnD<
+      std::optional<crane::obj>>{[]<typename CraneX>(
+                                     const crane::fn<CraneX(CraneX)> &f,
+                                     const std::optional<CraneX> &o)
+                                      -> std::optional<crane::obj> {
+                                       if (o.has_value()) {
+                                         const auto &x = *o;
+                                         return std::make_optional<CraneX>(
+                                             CraneX(crane_call_erased(f, x)));
+                                       } else {
+                                         return std::optional<CraneX>();
+                                       }
+                                     }};
+  static inline const std::optional<Nat> ex =
+      fmd<std::optional>(optd, [](const Nat &x) {
+        return Nat::s(x);
+      }, std::make_optional<Nat>(Nat::s(Nat::o())));
 };
 
 #endif // INCLUDED_HKT_RECORD_DICT

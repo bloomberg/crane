@@ -43,15 +43,17 @@ struct ErasedMultiIndex {
     template <typename T1, typename T2, typename T3, typename F0>
     T1 tagged_rec(F0 &&f) const {
       const auto &[k0, v_1] = *this;
-      return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(k0),
-                                                  crane_any_cast<T3>(v_1)));
+      return crane_any_cast<T1>(
+          crane_call_erased(f, crane_any_cast<T2>(k0),
+                            crane_any_cast<T3>(v_1)));
     }
 
     template <typename T1, typename T2, typename T3, typename F0>
     T1 tagged_rect(F0 &&f) const {
       const auto &[k0, v_1] = *this;
-      return crane_any_cast<T1>(crane_call_erased(f, crane_any_cast<T2>(k0),
-                                                  crane_any_cast<T3>(v_1)));
+      return crane_any_cast<T1>(
+          crane_call_erased(f, crane_any_cast<T2>(k0),
+                            crane_any_cast<T3>(v_1)));
     }
   };
 
@@ -205,9 +207,8 @@ struct ErasedMultiIndex {
   };
 
   static inline const uint64_t test_hlist = []() {
-    hlist l = hlist::hcons(
-        UINT64_C(42),
-        hlist::hcons(true, hlist::hcons(UINT64_C(7), hlist::hnil())));
+    hlist l = hlist::hcons(UINT64_C(42), hlist::hcons(
+                               true, hlist::hcons(UINT64_C(7), hlist::hnil())));
     return l.hlist_length();
   }();
 };

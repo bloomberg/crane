@@ -210,9 +210,9 @@ struct ReuseMovedCaptureRenamed {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? crane::make_rc<mylist<A>>(crane_convert<mylist<A>>(*a1))
@@ -228,9 +228,8 @@ struct ReuseMovedCaptureRenamed {
 
     static mylist<A> mycons_crane_reuse(crane::rc<mylist<A>> _tok, A a0,
                                         mylist<A> a1) {
-      return mylist<A>(Mycons{
-          std::move(a0),
-          crane::make_rc_reusing<mylist<A>>(std::move(_tok), std::move(a1))});
+      return mylist<A>(Mycons{std::move(a0), crane::make_rc_reusing<mylist<A>>(
+                                  std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS

@@ -40,6 +40,7 @@ struct InstanceForwardsDicts {
   tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
     return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
+
   enum class Tag { A, B };
 
   template <typename T1> static T1 tag_rect(T1 f, T1 f0, Tag t) {
@@ -58,6 +59,7 @@ struct InstanceForwardsDicts {
   template <typename T1> static T1 tag_rec(T1 f, T1 f0, Tag t) {
     return tag_rect<T1>(std::move(f), std::move(f0), t);
   }
+
   enum class Op { C, D };
 
   template <typename T1> static T1 op_rect(T1 f, T1 f0, Op o) {
@@ -76,6 +78,7 @@ struct InstanceForwardsDicts {
   template <typename T1> static T1 op_rec(T1 f, T1 f0, Op o) {
     return op_rect<T1>(std::move(f), std::move(f0), o);
   }
+
   enum class Cmp { E, F };
 
   template <typename T1> static T1 cmp_rect(T1 f, T1 f0, Cmp c) {
@@ -94,6 +97,7 @@ struct InstanceForwardsDicts {
   template <typename T1> static T1 cmp_rec(T1 f, T1 f0, Cmp c) {
     return cmp_rect<T1>(std::move(f), std::move(f0), c);
   }
+
   enum class Flag { G, H };
 
   template <typename T1> static T1 flag_rect(T1 f, T1 f0, Flag f1) {
@@ -112,6 +116,7 @@ struct InstanceForwardsDicts {
   template <typename T1> static T1 flag_rec(T1 f, T1 f0, Flag f1) {
     return flag_rect<T1>(std::move(f), std::move(f0), f1);
   }
+
   template <typename T> struct exp;
   template <typename T> struct meta;
 
@@ -162,17 +167,15 @@ struct InstanceForwardsDicts {
               const auto &[a0, a1] =
                   std::get<typename exp<CraneU>::Lit>(_other.v());
               return Lit{a0, [&]() -> T {
-                           if constexpr (crane_convertible<T, const CraneU &>) {
-                             return crane_convert<T>(a1);
-                           } else {
-                             throw std::logic_error(
-                                 "unreachable: inactive constructor field at "
-                                 "this instantiation");
-                           }
-                         }()};
+                if constexpr (crane_convertible<T, const CraneU &>) {
+                  return crane_convert<T>(a1);
+                } else {
+                  throw std::logic_error("unreachable: inactive constructor "
+                                         "field at this instantiation");
+                }
+              }()};
             } else {
-              if (std::holds_alternative<typename exp<CraneU>::Ops>(
-                      _other.v())) {
+              if (std::holds_alternative<typename exp<CraneU>::Ops>(_other.v())) {
                 const auto &[a0, a1, a2] =
                     std::get<typename exp<CraneU>::Ops>(_other.v());
                 return Ops{a0, a1, a2};
@@ -182,13 +185,13 @@ struct InstanceForwardsDicts {
                   const auto &[a0, a1] =
                       std::get<typename exp<CraneU>::Neg>(_other.v());
                   return Neg{a0, (a1 ? std::make_shared<exp<T>>(
-                                           crane_convert<exp<T>>(*a1))
+                                         crane_convert<exp<T>>(*a1))
                                      : nullptr)};
                 } else {
                   const auto &[a0] =
                       std::get<typename exp<CraneU>::EMeta>(_other.v());
                   return EMeta{(a0 ? std::make_shared<meta<T>>(
-                                         crane_convert<meta<T>>(*a0))
+                                       crane_convert<meta<T>>(*a0))
                                    : nullptr)};
                 }
               }
@@ -284,8 +287,7 @@ struct InstanceForwardsDicts {
     template <typename CraneU>
     meta(const meta<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename meta<CraneU>::MNull>(
-                    _other.v())) {
+            if (std::holds_alternative<typename meta<CraneU>::MNull>(_other.v())) {
               return MNull{};
             } else {
               const auto &[a0] =
@@ -355,8 +357,7 @@ struct InstanceForwardsDicts {
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
             typename F3>
     requires std::is_invocable_r_v<T2, F0 &, const Tag &, const T1 &> &&
-             std::is_invocable_r_v<T2, F1 &, const Op &, const Cmp &,
-                                   const Flag &>
+    std::is_invocable_r_v<T2, F1 &, const Op &, const Cmp &, const Flag &>
   static T2 exp_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const exp<T1> &e) {
     if (std::holds_alternative<typename exp<T1>::Lit>(e.v())) {
       const auto &[a0, a1] = std::get<typename exp<T1>::Lit>(e.v());
@@ -397,8 +398,8 @@ struct InstanceForwardsDicts {
   template <typename _tcI0, typename _tcI1, typename _tcI2, typename _tcI3,
             typename _tcI4, typename T1, typename T2, typename F0>
     requires Endo<_tcI0, Flag> && Endo<_tcI1, Cmp> && Endo<_tcI2, Op> &&
-             Endo<_tcI3, uint64_t> && Endo<_tcI4, Tag> &&
-             std::is_invocable_r_v<T2, F0 &, const T1 &>
+    Endo<_tcI3, uint64_t> && Endo<_tcI4, Tag> &&
+    std::is_invocable_r_v<T2, F0 &, const T1 &>
   static exp<T2> ft_exp(F0 &&f, const exp<T1> &e) {
     if (std::holds_alternative<typename exp<T1>::Lit>(e.v())) {
       const auto &[a0, a1] = std::get<typename exp<T1>::Lit>(e.v());
@@ -408,9 +409,8 @@ struct InstanceForwardsDicts {
       return exp<T2>::ops(_tcI2::endo(a0), _tcI1::endo(a1), _tcI0::endo(a2));
     } else if (std::holds_alternative<typename exp<T1>::Neg>(e.v())) {
       const auto &[a0, a1] = std::get<typename exp<T1>::Neg>(e.v());
-      return exp<T2>::neg(
-          _tcI3::endo(a0),
-          ft_exp<_tcI0, _tcI1, _tcI2, _tcI3, _tcI4, T1, T2>(f, *a1));
+      return exp<T2>::neg(_tcI3::endo(a0), ft_exp<_tcI0, _tcI1, _tcI2, _tcI3,
+                                                  _tcI4, T1, T2>(f, *a1));
     } else {
       const auto &[a0] = std::get<typename exp<T1>::EMeta>(e.v());
       return exp<T2>::emeta(
@@ -421,7 +421,7 @@ struct InstanceForwardsDicts {
   template <typename _tcI0, typename _tcI1, typename _tcI2, typename _tcI3,
             typename _tcI4, typename T1, typename T2, typename F0>
     requires Endo<_tcI0, Flag> && Endo<_tcI1, Cmp> && Endo<_tcI2, Op> &&
-             Endo<_tcI3, uint64_t> && Endo<_tcI4, Tag>
+    Endo<_tcI3, uint64_t> && Endo<_tcI4, Tag>
   static meta<T2> ft_meta(F0 &&f, const meta<T1> &m) {
     if (std::holds_alternative<typename meta<T1>::MNull>(m.v())) {
       return meta<T2>::mnull();
@@ -435,7 +435,7 @@ struct InstanceForwardsDicts {
   template <typename _tcI0, typename _tcI1, typename _tcI2, typename _tcI3,
             typename _tcI4>
     requires Endo<_tcI0, Tag> && Endo<_tcI1, uint64_t> && Endo<_tcI2, Op> &&
-             Endo<_tcI3, Cmp> && Endo<_tcI4, Flag>
+    Endo<_tcI3, Cmp> && Endo<_tcI4, Flag>
   struct TFunctor_exp {
     template <typename CraneA0> using T = exp<CraneA0>;
 
@@ -487,12 +487,11 @@ struct InstanceForwardsDicts {
 
   static_assert(Endo<Endo_flag, Flag>);
   static inline const exp<uint64_t> e0 = exp<uint64_t>::neg(
-      UINT64_C(1), exp<uint64_t>::emeta(meta<uint64_t>::mexp(
-                       exp<uint64_t>::lit(Tag::A, UINT64_C(2)))));
-  static inline const exp<uint64_t> e1 =
-      TFunctor_exp<Endo_tag, Endo_nat, Endo_op, Endo_cmp, Endo_flag>::
-          template tfmap<uint64_t, uint64_t>(
-              [](uint64_t n) { return (n + UINT64_C(10)); }, e0);
+      UINT64_C(1), exp<uint64_t>::emeta(
+          meta<uint64_t>::mexp(exp<uint64_t>::lit(Tag::A, UINT64_C(2)))));
+  static inline const exp<uint64_t> e1 = TFunctor_exp<
+      Endo_tag, Endo_nat, Endo_op, Endo_cmp, Endo_flag>::template tfmap<
+      uint64_t, uint64_t>([](uint64_t n) { return (n + UINT64_C(10)); }, e0);
   static uint64_t sum_exp(const exp<uint64_t> &e);
   static inline const uint64_t result = sum_exp(e1);
 };

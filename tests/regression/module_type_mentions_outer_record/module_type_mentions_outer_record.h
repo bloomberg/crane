@@ -134,9 +134,10 @@ struct ModuleTypeMentionsOuterRecord {
 
   struct NatT {
     using t = uint64_t;
-    static inline const ops<uint64_t> o = ops<uint64_t>{
-        [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-        UINT64_C(0)};
+    static inline const ops<uint64_t> o =
+        ops<uint64_t>{[](uint64_t _x0, uint64_t _x1) -> uint64_t {
+          return (_x0 + _x1);
+        }, UINT64_C(0)};
   };
 
   template <typename X> struct Use {
@@ -146,28 +147,27 @@ struct ModuleTypeMentionsOuterRecord {
   };
 
   using U = Use<NatT>;
-  static inline const uint64_t result = U::sum(List<uint64_t>::cons(
-      UINT64_C(1), List<uint64_t>::cons(
-                       UINT64_C(2), List<uint64_t>::cons(
-                                        UINT64_C(3), List<uint64_t>::nil()))));
+  static inline const uint64_t result =
+      U::sum(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                      UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3),
+                                          List<uint64_t>::nil()))));
 };
 
 template <typename M>
 concept T = requires {
   typename M::t;
-  requires(
-      requires {
-        {
-          M::o
-        } -> std::convertible_to<
-            ModuleTypeMentionsOuterRecord::ops<typename M::t>>;
-      } ||
-      requires {
-        {
-          M::o()
-        } -> std::convertible_to<
-            ModuleTypeMentionsOuterRecord::ops<typename M::t>>;
-      });
+  requires (requires {
+    {
+      M::o
+    }
+    -> std::convertible_to<ModuleTypeMentionsOuterRecord::ops<typename M::t>>;
+  } || requires {
+    {
+      M::o()
+    }
+    -> std::convertible_to<ModuleTypeMentionsOuterRecord::ops<typename M::t>>;
+  });
 };
 
 #endif // INCLUDED_MODULE_TYPE_MENTIONS_OUTER_RECORD

@@ -15,9 +15,12 @@ enum class Comparison;
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
+
 enum class Comparison { EQ, LT, GT };
 template <typename M>
-concept BaseType = requires { typename M::t; };
+concept BaseType = requires {
+  typename M::t;
+};
 template <typename M>
 concept OrderedType = requires {
   typename M::t;
@@ -30,13 +33,17 @@ concept Map = requires {
   typename M::key;
   typename M::value;
   typename M::t;
-  requires(
-      requires {
-        { M::empty } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::empty() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::empty
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::empty()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
   {
     M::add(std::declval<typename M::key>(), std::declval<typename M::value>(),
            std::declval<typename M::t>())
@@ -194,8 +201,8 @@ static_assert(OrderedType<NatOrdered>);
 using NatMap = MakeMap<NatOrdered, NatBase>;
 static_assert(Map<NatMap>);
 const NatMap::t mymap = NatMap::add(
-    UINT64_C(1), UINT64_C(10),
-    NatMap::add(UINT64_C(2), UINT64_C(20),
-                NatMap::add(UINT64_C(3), UINT64_C(30), NatMap::empty())));
+    UINT64_C(1), UINT64_C(10), NatMap::add(
+        UINT64_C(2), UINT64_C(20),
+        NatMap::add(UINT64_C(3), UINT64_C(30), NatMap::empty())));
 
 #endif // INCLUDED_MODULE

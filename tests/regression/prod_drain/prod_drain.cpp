@@ -15,10 +15,10 @@ ProdDrain::t ProdDrain::build(uint64_t n, ProdDrain::t acc) {
   }
 }
 
-uint64_t ProdDrain::depth(
-    const ProdDrain::t &x) { /// CraneEnter: captures varying parameters for
-                             /// each recursive call.
-
+uint64_t
+ProdDrain::depth(const ProdDrain::t &x) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     ProdDrain::t x;
   };

@@ -80,10 +80,9 @@ struct Nat {
         } else {
           const auto &[a0] = std::get<typename Nat::nat::S>(_sv.v());
           auto _cell = typename Nat::nat::S(nullptr);
-          Nat::nat &_node =
-              (_write
-                   ? *(*_write = std::make_shared<Nat::nat>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          Nat::nat &_node = (
+              _write ? *(*_write = std::make_shared<Nat::nat>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename Nat::nat::S>(_node.v_mut()).a0;
           _loop_self = crane_raw(a0);
           continue;
@@ -95,6 +94,7 @@ struct Nat {
 
   static Comparison compare(const Nat::nat &n, const Nat::nat &m);
 };
+
 enum class Comparison { EQ, LT, GT };
 
 /// comparison is emitted as a namespace-scope enum class *after* the struct
@@ -108,8 +108,8 @@ struct EnumAfterUse {
               Nat::nat::s(Nat::nat::s(Nat::nat::o()))))
           .add(tonat(c(Nat::nat::s(Nat::nat::s(Nat::nat::o())),
                        Nat::nat::s(Nat::nat::o()))))
-          .add(
-              tonat(c(Nat::nat::s(Nat::nat::o()), Nat::nat::s(Nat::nat::o()))));
+          .add(tonat(c(Nat::nat::s(Nat::nat::o()),
+                       Nat::nat::s(Nat::nat::o()))));
 };
 
 #endif // INCLUDED_ENUM_AFTER_USE

@@ -9,7 +9,6 @@
 #include "Datatypes.h"
 
 namespace PairIndexedInductiveAnyCast {
-
 struct Pair_wrap;
 
 struct Pair_wrap {
@@ -40,7 +39,6 @@ struct Ops {
     return Pair_wrap::mk_pair_wrap(std::make_pair(a, n));
   }
 };
-
 } // namespace PairIndexedInductiveAnyCast
 
 #endif // INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST

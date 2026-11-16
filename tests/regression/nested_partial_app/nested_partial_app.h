@@ -115,14 +115,15 @@ struct NestedPartialApp {
   /// h c1 = Node(t1, 42, c1)
   /// h c2 = Node(t1, 42, c2)
   /// tree_sum(h c1) + tree_sum(h c2) where c1=Node Leaf 1 Leaf, c2=Node Leaf 2
-  /// Leaf = (10 + 42 + 1) + (10 + 42 + 2) = 53 + 54 = 107
+  /// Leaf
+  /// = (10 + 42 + 1) + (10 + 42 + 2) = 53 + 54 = 107
   static inline const uint64_t nested_partial_bug = []() {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       crane::fn<tree(uint64_t, tree)> g =
           [=, t1 = std::move(t1)](uint64_t _x0, tree _x1) -> tree {
-        return build_node(std::move(t1), _x0, _x1);
-      };
+            return build_node(std::move(t1), _x0, _x1);
+          };
       crane::fn<tree(tree)> h = [=, g = std::move(g)](tree _pa0) {
         return g(UINT64_C(42), _pa0);
       };
@@ -138,8 +139,8 @@ struct NestedPartialApp {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       crane::fn<tree(uint64_t, tree)> g =
           [=, t1 = std::move(t1)](uint64_t _x0, tree _x1) -> tree {
-        return build_node(std::move(t1), _x0, _x1);
-      };
+            return build_node(std::move(t1), _x0, _x1);
+          };
       crane::fn<tree(tree)> h1 = [=](tree _pa0) {
         return g(UINT64_C(42), _pa0);
       };
@@ -158,9 +159,8 @@ struct NestedPartialApp {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       crane::fn<uint64_t(uint64_t, uint64_t, tree)> f1 =
           [=, t = std::move(t)](uint64_t _x0, uint64_t _x1,
-                                tree _x2) -> uint64_t {
-        return quad_fn(std::move(t), _x0, _x1, _x2);
-      };
+                                tree _x2)
+               -> uint64_t { return quad_fn(std::move(t), _x0, _x1, _x2); };
       crane::fn<uint64_t(uint64_t, tree)> f2 =
           [=, f1 = std::move(f1)](uint64_t _pa0, tree _pa1) {
             return f1(UINT64_C(20), _pa0, _pa1);

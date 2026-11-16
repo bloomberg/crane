@@ -13,17 +13,19 @@ uint64_t BoxedElementConcept::size(const BoxedElementConcept::rose &r) {
     auto go_impl =
         [](auto &_self_go,
            const crane::list<crane::box<BoxedElementConcept::rose>> &l)
-        -> uint64_t {
-      if (l.empty()) {
-        return UINT64_C(0);
-      } else {
-        const BoxedElementConcept::rose &k = l.front();
-        auto t = l.tail();
-        return (size(k) + _self_go(_self_go, t));
-      }
-    };
-    auto go = [&](const crane::list<crane::box<BoxedElementConcept::rose>> &l)
-        -> uint64_t { return go_impl(go_impl, l); };
+             -> uint64_t {
+              if (l.empty()) {
+                return UINT64_C(0);
+              } else {
+                const BoxedElementConcept::rose &k = l.front();
+                auto t = l.tail();
+                return (size(k) + _self_go(_self_go, t));
+              }
+            };
+    auto go =
+        [&](const crane::list<crane::box<BoxedElementConcept::rose>> &l) -> uint64_t {
+          return go_impl(go_impl, l);
+        };
     return go(kids);
   }() + 1);
 }

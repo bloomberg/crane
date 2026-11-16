@@ -10,11 +10,10 @@
 ///
 /// Found in Vellvm with the global Set Crane Loopify:
 /// Traversal.ft_exp / ft_metadata, 4 of its 59 errors.
-LoopifyMutualResultTypes::e
-LoopifyMutualResultTypes::dbl_e(const LoopifyMutualResultTypes::e &
-                                    x) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+LoopifyMutualResultTypes::e LoopifyMutualResultTypes::dbl_e(
+    const LoopifyMutualResultTypes::e &x) { /// CraneEnter: captures varying
+                                            /// parameters for each recursive
+                                            /// call.
   struct CraneEnter {
     const LoopifyMutualResultTypes::e *x;
   };
@@ -62,12 +61,11 @@ LoopifyMutualResultTypes::dbl_e(const LoopifyMutualResultTypes::e &
         const auto &[m0] =
             std::get<typename LoopifyMutualResultTypes::e::Meta>(x.v());
         auto &&_sv0 = *m0;
-        if (std::holds_alternative<
-                typename LoopifyMutualResultTypes::md::MNull>(_sv0.v())) {
+        if (std::holds_alternative<typename LoopifyMutualResultTypes::md::MNull>(
+                _sv0.v())) {
           _result = e::meta(md::mnull());
         } else if (std::holds_alternative<
-                       typename LoopifyMutualResultTypes::md::MConst>(
-                       _sv0.v())) {
+                       typename LoopifyMutualResultTypes::md::MConst>(_sv0.v())) {
           const auto &[x1] =
               std::get<typename LoopifyMutualResultTypes::md::MConst>(_sv0.v());
           _stack.emplace_back(CraneCont_MConst{});
@@ -95,10 +93,9 @@ LoopifyMutualResultTypes::dbl_e(const LoopifyMutualResultTypes::e &
 }
 
 LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
-    const LoopifyMutualResultTypes::md
-        &m) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyMutualResultTypes::md &m) { /// CraneEnter: captures varying
+                                             /// parameters for each recursive
+                                             /// call.
   struct CraneEnter {
     const LoopifyMutualResultTypes::md *m;
   };
@@ -178,10 +175,14 @@ LoopifyMutualResultTypes::md LoopifyMutualResultTypes::dbl_md(
 }
 
 uint64_t
-LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
-                                    x) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-
+LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &x) { /// CraneEnter:
+                                                                        /// captures
+                                                                        /// varying
+                                                                        /// parameters
+                                                                        /// for
+                                                                        /// each
+                                                                        /// recursive
+                                                                        /// call.
   struct CraneEnter {
     const LoopifyMutualResultTypes::e *x;
   };
@@ -259,12 +260,11 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
         const auto &[m0] =
             std::get<typename LoopifyMutualResultTypes::e::Meta>(x.v());
         auto &&_sv1 = *m0;
-        if (std::holds_alternative<
-                typename LoopifyMutualResultTypes::md::MNull>(_sv1.v())) {
+        if (std::holds_alternative<typename LoopifyMutualResultTypes::md::MNull>(
+                _sv1.v())) {
           _result = UINT64_C(0);
         } else if (std::holds_alternative<
-                       typename LoopifyMutualResultTypes::md::MConst>(
-                       _sv1.v())) {
+                       typename LoopifyMutualResultTypes::md::MConst>(_sv1.v())) {
           const auto &[x1] =
               std::get<typename LoopifyMutualResultTypes::md::MConst>(_sv1.v());
           _stack.emplace_back(CraneEnter{crane_raw(x1)});
@@ -321,11 +321,15 @@ LoopifyMutualResultTypes::sum_e(const LoopifyMutualResultTypes::e &
   return _result;
 }
 
-uint64_t LoopifyMutualResultTypes::sum_md(
-    const LoopifyMutualResultTypes::md
-        &m) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+uint64_t
+LoopifyMutualResultTypes::sum_md(const LoopifyMutualResultTypes::md &m) { /// CraneEnter:
+                                                                          /// captures
+                                                                          /// varying
+                                                                          /// parameters
+                                                                          /// for
+                                                                          /// each
+                                                                          /// recursive
+                                                                          /// call.
   struct CraneEnter {
     const LoopifyMutualResultTypes::md *m;
   };

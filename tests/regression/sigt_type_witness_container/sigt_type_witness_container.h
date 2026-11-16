@@ -223,9 +223,10 @@ struct SigtTypeWitnessContainer {
   }
 
   static Nat depth(const SigT<crane::obj, List<crane::obj>> &p);
-  static inline const Nat run = depth(pack<Nat>(List<Nat>::cons(
-      Nat::s(Nat::o()),
-      List<Nat>::cons(Nat::s(Nat::s(Nat::o())), List<Nat>::nil()))));
+  static inline const Nat run =
+      depth(pack<Nat>(List<Nat>::cons(
+                          Nat::s(Nat::o()), List<Nat>::cons(
+                              Nat::s(Nat::s(Nat::o())), List<Nat>::nil()))));
 };
 
 #endif // INCLUDED_SIGT_TYPE_WITNESS_CONTAINER

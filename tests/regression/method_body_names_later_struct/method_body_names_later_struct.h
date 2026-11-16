@@ -63,6 +63,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct PeanoNat {

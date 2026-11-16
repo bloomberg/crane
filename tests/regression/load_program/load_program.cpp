@@ -1,8 +1,7 @@
 #include "load_program.h"
 
-LoadProgram::state LoadProgram::set_prom_params(const LoadProgram::state &s,
-                                                uint64_t addr, uint64_t data,
-                                                bool enable) {
+LoadProgram::state LoadProgram::set_prom_params(
+    const LoadProgram::state &s, uint64_t addr, uint64_t data, bool enable) {
   return state{s.rom, addr, data, enable};
 }
 
@@ -16,9 +15,8 @@ LoadProgram::state LoadProgram::execute_wpm(const LoadProgram::state &s) {
   return state{std::move(new_rom), s.prom_addr, s.prom_data, s.prom_enable};
 }
 
-LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
-                                             uint64_t base,
-                                             const List<uint64_t> &bytes) {
+LoadProgram::state LoadProgram::load_program(
+    LoadProgram::state s, uint64_t base, const List<uint64_t> &bytes) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(bytes.v())) {
     return s;
   } else {
@@ -32,8 +30,8 @@ LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
 LoadProgram::state_extended
 LoadProgram::set_prom_params_ext(const LoadProgram::state_extended &s,
                                  uint64_t addr, uint64_t data, bool enable) {
-  return state_extended{s.regs_len, s.rom_ext, s.pc,  s.stack_len,
-                        addr,       data,      enable};
+  return state_extended{s.regs_len, s.rom_ext, s.pc, s.stack_len, addr, data,
+                        enable};
 }
 
 LoadProgram::state_extended
@@ -44,9 +42,8 @@ LoadProgram::execute_wpm_ext(const LoadProgram::state_extended &s) {
   } else {
     new_rom = s.rom_ext;
   }
-  return state_extended{s.regs_len,       std::move(new_rom), s.pc,
-                        s.stack_len,      s.prom_addr_ext,    s.prom_data_ext,
-                        s.prom_enable_ext};
+  return state_extended{s.regs_len, std::move(new_rom), s.pc, s.stack_len,
+                        s.prom_addr_ext, s.prom_data_ext, s.prom_enable_ext};
 }
 
 LoadProgram::state_simple

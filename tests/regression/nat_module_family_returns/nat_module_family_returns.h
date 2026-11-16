@@ -38,6 +38,7 @@ struct Coq_Little {
 struct Bool {
   static Reflect iff_reflect(bool b);
 };
+
 enum class Reflect { REFLECTT, REFLECTF };
 
 template <typename A, typename B> struct Sum {
@@ -103,6 +104,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 enum class CompareSpecT { COMPEQT, COMPLTT, COMPGTT };
 template <typename a = void> using CompSpecT = CompareSpecT;
@@ -127,8 +129,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -1249,10 +1251,12 @@ struct Nat {
       F0 &&f, std::type_identity_t<crane::fn<T2(T1, crane::fn<T2(T1)>)>> iH,
       const T1 &x) {
     return measure_right_induction<T1, T2>(
-        f, UINT64_C(0),
+        f,
+        UINT64_C(0),
         [=, iH = std::move(iH)](const T1 &y, crane::fn<T2(T1)> iH_) {
-          return iH(
-              y, [=, iH_ = std::move(iH_)](const T1 &y0) { return iH_(y0); });
+          return iH(y, [=, iH_ = std::move(iH_)](const T1 &y0) {
+            return iH_(y0);
+          });
         },
         x);
   }
@@ -1279,8 +1283,9 @@ struct Nat {
     template <typename T1, typename F2>
     static T1 max_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(
-          n, m, x, [=]() { return x0; }(), [=]() { return x1; }());
+      return max_case_strong<T1>(n, m, x, [=]() { return x0; }(), [=]() {
+        return x1;
+      }());
     }
 
     static bool max_dec(uint64_t n, uint64_t m);
@@ -1304,8 +1309,9 @@ struct Nat {
     template <typename T1, typename F2>
     static T1 min_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return min_case_strong<T1>(
-          n, m, x, [=]() { return x0; }(), [=]() { return x1; }());
+      return min_case_strong<T1>(n, m, x, [=]() { return x0; }(), [=]() {
+        return x1;
+      }());
     }
 
     static bool min_dec(uint64_t n, uint64_t m);
@@ -1319,8 +1325,9 @@ struct Nat {
 
   template <typename T1>
   static T1 max_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
-    return max_case_strong<T1>(
-        n, m, [=]() { return x; }(), [=]() { return x0; }());
+    return max_case_strong<T1>(n, m, [=]() { return x; }(), [=]() {
+      return x0;
+    }());
   }
 
   static bool max_dec(uint64_t x0_, uint64_t x1_);
@@ -1333,8 +1340,9 @@ struct Nat {
 
   template <typename T1>
   static T1 min_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
-    return min_case_strong<T1>(
-        n, m, [=]() { return x; }(), [=]() { return x0; }());
+    return min_case_strong<T1>(n, m, [=]() { return x; }(), [=]() {
+      return x0;
+    }());
   }
 
   static bool min_dec(uint64_t x0_, uint64_t x1_);

@@ -26,9 +26,8 @@
 /// Actual:   both return 2, plus an ASan heap-use-after-free.
 ///
 /// Without Set Crane Loopify the same file extracts to correct code.
-uint64_t LoopifyVariantSelfAssign::drain(uint64_t n,
-                                         const LoopifyVariantSelfAssign::lst &l,
-                                         uint64_t s) {
+uint64_t LoopifyVariantSelfAssign::drain(
+    uint64_t n, const LoopifyVariantSelfAssign::lst &l, uint64_t s) {
   uint64_t _loop_s = s;
   LoopifyVariantSelfAssign::lst _loop_l = l;
   uint64_t _loop_n = n;
@@ -41,8 +40,7 @@ uint64_t LoopifyVariantSelfAssign::drain(uint64_t n,
               _loop_l.v())) {
         return _loop_s;
       } else if (std::holds_alternative<
-                     typename LoopifyVariantSelfAssign::lst::One>(
-                     _loop_l.v())) {
+                     typename LoopifyVariantSelfAssign::lst::One>(_loop_l.v())) {
         const auto &[a0] =
             std::get<typename LoopifyVariantSelfAssign::lst::One>(_loop_l.v());
         _loop_s = (_loop_s + a0);

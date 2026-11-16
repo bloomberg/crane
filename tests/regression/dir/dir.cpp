@@ -31,10 +31,9 @@ List<std::string> Dir::list_dir(std::string path) {
     std::error_code _ec;
     std::size_t _count = 0;
     std::filesystem::directory_iterator _it(
-        std::filesystem::path(std::move(path)), _ec),
-        _end;
-    for (; !_ec && _it != _end && _count < 65536;
-         _it.increment(_ec), ++_count) {
+        std::filesystem::path(std::move(path)), _ec), _end;
+    for (; !_ec && _it != _end && _count < 65536; _it.increment(_ec),
+         ++_count) {
       result = List<std::string>::cons(_it->path().filename().string(),
                                        std::move(result));
     }

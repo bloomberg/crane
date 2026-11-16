@@ -41,24 +41,23 @@ public:
   template <typename CraneU>
   List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (crane::holds_alternative<typename List<CraneU>::Nil>(
-                  _other.v())) {
+          if (crane::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[a, l] =
                 crane::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::shared_box<List<A>>::make(
-                                 crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::shared_box<List<A>>::make(
+                       crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -102,9 +101,9 @@ public:
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
         auto _value = List<T1>::nil();
-        (_write
-             ? *(*_write = crane::shared_box<List<T1>>::make(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        crane::shared_box<List<T1>>::make(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
@@ -129,9 +128,9 @@ public:
       auto &&_sv = *_loop_self;
       if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
         auto _value = std::move(m);
-        (_write
-             ? *(*_write = crane::shared_box<List<A>>::make(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        crane::shared_box<List<A>>::make(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = crane::get<typename List<A>::Cons>(_sv.v());
@@ -198,9 +197,8 @@ struct SharedVariantParamField {
             } else {
               if (crane::holds_alternative<
                       typename step<CraneU0, CraneU1>::More>(_other.v())) {
-                const auto &[a0] =
-                    crane::get<typename step<CraneU0, CraneU1>::More>(
-                        _other.v());
+                const auto &[a0] = crane::get<
+                    typename step<CraneU0, CraneU1>::More>(_other.v());
                 return More{[&]() -> B {
                   if constexpr (crane_convertible<B, const CraneU1 &>) {
                     return crane_convert<B>(a0);
@@ -210,26 +208,25 @@ struct SharedVariantParamField {
                   }
                 }()};
               } else {
-                const auto &[a0, a1] =
-                    crane::get<typename step<CraneU0, CraneU1>::Both>(
-                        _other.v());
+                const auto &[a0, a1] = crane::get<
+                    typename step<CraneU0, CraneU1>::Both>(_other.v());
                 return Both{
                     [&]() -> A {
                       if constexpr (crane_convertible<A, const CraneU0 &>) {
                         return crane_convert<A>(a0);
                       } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
+                        throw std::logic_error("unreachable: inactive "
+                                               "constructor field at this "
+                                               "instantiation");
                       }
                     }(),
                     [&]() -> B {
                       if constexpr (crane_convertible<B, const CraneU1 &>) {
                         return crane_convert<B>(a1);
                       } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
+                        throw std::logic_error("unreachable: inactive "
+                                               "constructor field at this "
+                                               "instantiation");
                       }
                     }()};
               }
@@ -254,8 +251,8 @@ struct SharedVariantParamField {
   template <typename T1, typename T2, typename T3, typename F0, typename F1,
             typename F2>
     requires std::is_invocable_r_v<T3, F0 &, const T1 &> &&
-             std::is_invocable_r_v<T3, F1 &, const T2 &> &&
-             std::is_invocable_r_v<T3, F2 &, const T1 &, const T2 &>
+    std::is_invocable_r_v<T3, F1 &, const T2 &> &&
+    std::is_invocable_r_v<T3, F2 &, const T1 &, const T2 &>
   static T3 step_rect(F0 &&f, F1 &&f0, F2 &&f1, const step<T1, T2> &s) {
     if (crane::holds_alternative<typename step<T1, T2>::Done>(s.v())) {
       const auto &[a0] = crane::get<typename step<T1, T2>::Done>(s.v());
@@ -277,7 +274,7 @@ struct SharedVariantParamField {
 
   template <typename T1, typename T2, typename F0, typename F1>
     requires std::is_invocable_r_v<uint64_t, F0 &, const T1 &> &&
-             std::is_invocable_r_v<uint64_t, F1 &, const T2 &>
+    std::is_invocable_r_v<uint64_t, F1 &, const T2 &>
   static uint64_t weight(F0 &&fa, F1 &&fb, const step<T1, T2> &s) {
     if (crane::holds_alternative<typename step<T1, T2>::Done>(s.v())) {
       const auto &[a0] = crane::get<typename step<T1, T2>::Done>(s.v());
@@ -292,43 +289,48 @@ struct SharedVariantParamField {
   }
 
   static uint64_t pair_sum(const std::pair<uint64_t, uint64_t> &p);
-  static inline const List<step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>
-      steps = List<step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(
-          step<std::pair<uint64_t, uint64_t>, List<uint64_t>>::done(
-              std::make_pair(UINT64_C(1), UINT64_C(2))),
-          List<step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(
-              step<std::pair<uint64_t, uint64_t>, List<uint64_t>>::more(
-                  List<uint64_t>::cons(
-                      UINT64_C(3), List<uint64_t>::cons(
+  static inline const List<step<std::pair<uint64_t, uint64_t>,
+                                List<uint64_t>>> steps = List<
+      step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(
+      step<std::pair<uint64_t, uint64_t>, List<uint64_t>>::done(
+          std::make_pair(UINT64_C(1), UINT64_C(2))), List<
+          step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(
+          step<std::pair<uint64_t, uint64_t>, List<uint64_t>>::more(
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::cons(
                                        UINT64_C(4), List<uint64_t>::nil()))),
-              List<step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(
-                  step<std::pair<uint64_t, uint64_t>, List<uint64_t>>::both(
-                      std::make_pair(UINT64_C(5), UINT64_C(6)),
-                      List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())),
-                  List<step<std::pair<uint64_t, uint64_t>,
-                            List<uint64_t>>>::nil())));
-
+          List<step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(
+              step<std::pair<uint64_t, uint64_t>, List<uint64_t>>::both(
+                  std::make_pair(UINT64_C(5), UINT64_C(6)),
+                  List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())),
+              List<step<std::pair<uint64_t, uint64_t>,
+                        List<uint64_t>>>::nil())));
   static inline const uint64_t result =
-      steps.app(steps)
-          .template map<uint64_t>(
-              [](step<std::pair<uint64_t, uint64_t>, List<uint64_t>> _x0)
-                  -> uint64_t {
-                return weight<std::pair<uint64_t, uint64_t>, List<uint64_t>>(
-                    pair_sum,
-                    [](const List<uint64_t> &l) {
-                      return l.template fold_left<uint64_t>(
-                          [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                            return (_x0 + _x1);
-                          },
-                          UINT64_C(0));
-                    },
-                    _x0);
-              })
+      steps.app(steps).template map<uint64_t>([](step<std::pair<uint64_t,
+                                                                uint64_t>,
+                                                      List<uint64_t>> _x0)
+                                                   -> uint64_t {
+                                                    return weight<
+                                                        std::pair<uint64_t,
+                                                                  uint64_t>,
+                                                        List<uint64_t>>(
+                                                        pair_sum,
+                                                        [](const List<uint64_t> &l) {
+                                                          return l.template fold_left<
+                                                              uint64_t>(
+                                                              [](uint64_t _x0,
+                                                                 uint64_t _x1)
+                                                                   -> uint64_t {
+                                                                    return (
+                                                                        _x0 +
+                                                                        _x1);
+                                                                  },
+                                                              UINT64_C(0));
+                                                        },
+                                                        _x0);
+                                                  })
           .template fold_left<uint64_t>(
-              [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                return (_x0 + _x1);
-              },
-              UINT64_C(0));
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          UINT64_C(0));
 };
 
 #endif // INCLUDED_SHARED_VARIANT_PARAM_FIELD

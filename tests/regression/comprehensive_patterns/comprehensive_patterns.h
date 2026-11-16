@@ -108,8 +108,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -151,19 +151,17 @@ struct ComprehensivePatterns {
 
   static std::pair<
       std::pair<std::pair<std::pair<std::pair<std::pair<L5, L4>, L3>, L2>, L1>,
-                S>,
-      uint64_t>
-  deep_nest(const L5 &l5);
-  static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>, uint64_t>
-  nested_pair_reuse(const S &s);
+                S>, uint64_t> deep_nest(const L5 &l5);
+  static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>,
+                   uint64_t> nested_pair_reuse(const S &s);
   static std::pair<S, uint64_t> compose(const S &s);
   static std::pair<crane::fn<uint64_t(uint64_t)>, S> lambda_proj(S s);
-  static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>, uint64_t>
-  proj_chain(const S &s);
+  static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>,
+                   uint64_t> proj_chain(const S &s);
   static std::pair<
       std::pair<std::pair<S, S>, std::pair<uint64_t, uint64_t>>,
-      std::pair<std::pair<uint64_t, uint64_t>, std::pair<uint64_t, uint64_t>>>
-  octuple(const S &s);
+      std::pair<std::pair<uint64_t, uint64_t>,
+                std::pair<uint64_t, uint64_t>>> octuple(const S &s);
   static std::pair<std::optional<std::pair<S, uint64_t>>, S>
   nested_containers(const S &s);
   static std::pair<std::pair<S, uint64_t>, uint64_t>
@@ -198,8 +196,7 @@ struct ComprehensivePatterns {
   static std::pair<S, uint64_t> match_record(const S &s);
   static std::pair<S, uint64_t> rebind(const S &s1);
   static std::pair<crane::fn<uint64_t(std::monostate)>,
-                   crane::fn<uint64_t(std::monostate)>>
-  closure_pair(S s);
+                   crane::fn<uint64_t(std::monostate)>> closure_pair(S s);
   static Sig<S> sigma_reuse(const S &s);
   static std::pair<uint64_t, std::pair<uint64_t, uint64_t>>
   multi_proj_arg(const S &s);
@@ -245,7 +242,7 @@ struct ComprehensivePatterns {
 
     template <typename T1, typename F0, typename F1>
       requires std::is_invocable_r_v<T1, F0 &, const S &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+      std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
         const auto &[s0] = std::get<typename Either::Left_S>(this->v());

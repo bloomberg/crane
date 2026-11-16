@@ -34,8 +34,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -175,6 +174,7 @@ struct Monad0 {
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
+
 enum class Exc { OOPS };
 
 struct Dv {
@@ -226,8 +226,9 @@ static_assert(Monad<Monad_option>);
 template <Monad _tcI0>
 typename _tcI0::template m<Sum<Exc, Dv>>
 raise_right(typename _tcI0::template m<Dv> m) {
-  return Functor_Monad<_tcI0>::template fmap<Dv, Sum<Exc, Dv>>(
-      [](const Dv &x) { return Sum<Exc, Dv>::inr(x); }, std::move(m));
+  return Functor_Monad<_tcI0>::template fmap<Dv, Sum<Exc, Dv>>([](const Dv &x) {
+    return Sum<Exc, Dv>::inr(x);
+  }, std::move(m));
 }
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

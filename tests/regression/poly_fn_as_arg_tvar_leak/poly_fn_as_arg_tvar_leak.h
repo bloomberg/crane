@@ -64,13 +64,13 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-/// A polymorphic function passed as an argument to itself.  Crane eta-expands
-/// it at the call site and spells the eta-parameters with the *callee's* type
+/// A polymorphic function passed as an argument to itself. Crane eta-expands it
+/// at the call site and spells the eta-parameters with the *callee's* type
 /// variable name, which is not in scope there.
 struct PolyFnAsArgTvarLeak {
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1> &&
-             std::is_invocable_r_v<T1, F0 &, const T1 &>
+    std::is_invocable_r_v<T1, F0 &, const T1 &>
   static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }

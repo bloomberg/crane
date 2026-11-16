@@ -63,7 +63,6 @@ List<List<uint64_t>> LoopifyListSubsequences::inits_fuel(
     uint64_t fuel,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
     uint64_t fuel;
@@ -105,8 +104,9 @@ List<List<uint64_t>> LoopifyListSubsequences::inits_fuel(
       auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
-      _result = List<List<uint64_t>>::cons(
-          List<uint64_t>::nil(), map_cons_helper(a0, std::move(rest)));
+      _result =
+          List<List<uint64_t>>::cons(List<uint64_t>::nil(),
+                                     map_cons_helper(a0, std::move(rest)));
     }
   }
   return _result;
@@ -132,9 +132,9 @@ List<uint64_t> LoopifyListSubsequences::init_list(const List<uint64_t> &l) {
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
@@ -166,10 +166,9 @@ List<uint64_t> LoopifyListSubsequences::snoc(const List<uint64_t> &l,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
-      List<uint64_t> &_node =
-          (_write
-               ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_cell)))
-               : _root.emplace(std::move(_cell)));
+      List<uint64_t> &_node = (_write ? *(*_write = std::make_shared<
+                                              List<uint64_t>>(std::move(_cell)))
+                                      : _root.emplace(std::move(_cell)));
       _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_l = crane_raw(a1);
       continue;
@@ -221,7 +220,6 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListSubsequences::split_at(
     uint64_t n,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *l;
     uint64_t n;

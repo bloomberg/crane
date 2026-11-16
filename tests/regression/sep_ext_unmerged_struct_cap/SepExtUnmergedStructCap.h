@@ -9,7 +9,6 @@
 #include "Datatypes.h"
 
 namespace SepExtUnmergedStructCap {
-
 struct Exprs {
   struct Expr {
     // TYPES
@@ -73,7 +72,6 @@ struct Exprs {
 struct UseExprs {
   static Exprs::Expr make_neg(const Exprs::Expr &e);
 };
-
 } // namespace SepExtUnmergedStructCap
 
 #endif // INCLUDED_SEPEXTUNMERGEDSTRUCTCAP

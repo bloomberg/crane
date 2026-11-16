@@ -27,11 +27,14 @@ List<uint64_t> FrameKeptConsumedBeforeCall::snoc(List<uint64_t> x) {
   return std::move(*_head);
 }
 
-List<List<uint64_t>> FrameKeptConsumedBeforeCall::pairs(
-    uint64_t fuel,
-    List<List<uint64_t>> l) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+List<List<uint64_t>>
+FrameKeptConsumedBeforeCall::pairs(uint64_t fuel,
+                                   List<List<uint64_t>> l) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     List<List<uint64_t>> l;
     uint64_t fuel;
@@ -76,8 +79,9 @@ List<List<uint64_t>> FrameKeptConsumedBeforeCall::pairs(
                 std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
             List<uint64_t> y = snoc(a0);
             _stack.emplace_back(CraneCont_Cons{std::move(a0), std::move(y)});
-            _stack.emplace_back(CraneEnter{
-                List<List<uint64_t>>::cons(a00, crane::child(a10)), k});
+            _stack.emplace_back(
+                CraneEnter{List<List<uint64_t>>::cons(a00, crane::child(a10)),
+                           k});
           }
         }
       }
@@ -94,11 +98,14 @@ List<List<uint64_t>> FrameKeptConsumedBeforeCall::pairs(
   return _result;
 }
 
-List<List<uint64_t>> FrameKeptConsumedBeforeCall::again(
-    uint64_t fuel,
-    List<List<uint64_t>> l) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-
+List<List<uint64_t>>
+FrameKeptConsumedBeforeCall::again(uint64_t fuel,
+                                   List<List<uint64_t>> l) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     List<List<uint64_t>> l;
     uint64_t fuel;
@@ -144,8 +151,8 @@ List<List<uint64_t>> FrameKeptConsumedBeforeCall::again(
             List<uint64_t> y = snoc(a0);
             _stack.emplace_back(CraneCont_Cons{a0, std::move(y)});
             _stack.emplace_back(CraneEnter{
-                List<List<uint64_t>>::cons(std::move(a0), crane::child(a10)),
-                k});
+                                    List<List<uint64_t>>::cons(
+                                        std::move(a0), crane::child(a10)), k});
           }
         }
       }

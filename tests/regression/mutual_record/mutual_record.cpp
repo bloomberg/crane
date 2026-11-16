@@ -32,8 +32,7 @@ uint64_t MutualRecord::dept_total_salary(const MutualRecord::department &d) {
 }
 
 uint64_t MutualRecord::emp_list_salary(const List<MutualRecord::employee> &l) {
-  if (std::holds_alternative<typename List<MutualRecord::employee>::Nil>(
-          l.v())) {
+  if (std::holds_alternative<typename List<MutualRecord::employee>::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] =
@@ -49,8 +48,7 @@ uint64_t MutualRecord::dept_count(const MutualRecord::department &d) {
 }
 
 uint64_t MutualRecord::emp_list_count(const List<MutualRecord::employee> &l) {
-  if (std::holds_alternative<typename List<MutualRecord::employee>::Nil>(
-          l.v())) {
+  if (std::holds_alternative<typename List<MutualRecord::employee>::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] =

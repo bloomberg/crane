@@ -15,8 +15,7 @@ concept Monad = requires {
     I::template ret<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
-    I::bind(std::declval<typename I::template m<crane::obj>>(),
-            std::declval<
+    I::bind(std::declval<typename I::template m<crane::obj>>(), std::declval<
                 crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -49,8 +48,9 @@ struct BorrowConstructionArgument {
 
     template <typename CraneA0>
     static crane::fn<std::pair<big, CraneA0>(big)> ret(CraneA0 a) {
-      return
-          [=, a = std::move(a)](const big &s) { return std::make_pair(s, a); };
+      return [=, a = std::move(a)](const big &s) {
+        return std::make_pair(s, a);
+      };
     }
 
     static crane::fn<std::pair<big, crane::obj>(big)>

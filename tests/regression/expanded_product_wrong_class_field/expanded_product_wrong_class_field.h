@@ -16,33 +16,58 @@ struct state;
 using provenance = crane::obj;
 using allocationId = crane::obj;
 using ptr = crane::obj;
-template <typename
-I>concept Prov = requires {
-    typename I::provenance;
-    typename I::allocationId;
-    typename I::prov;
-  } && (requires {
-    { I::no_prov() } -> std::convertible_to<typename I::prov>;
+template <typename I>
+concept Prov = requires {
+  typename I::provenance;
+  typename I::allocationId;
+  typename I::prov;
+} && (requires {
+  {
+    I::no_prov()
+  }
+  -> std::convertible_to<typename I::prov>;
+} || requires {
+  {
+    I::no_prov
+  }
+  -> std::convertible_to<typename I::prov>;
+}) &&
+  (requires {
+    {
+      I::a_provenance()
+    }
+    -> std::convertible_to<typename I::provenance>;
   } || requires {
-    { I::no_prov } -> std::convertible_to<typename I::prov>;
-  }) && (requires {
-    { I::a_provenance() } -> std::convertible_to<typename I::provenance>;
+    {
+      I::a_provenance
+    }
+    -> std::convertible_to<typename I::provenance>;
+  }) &&
+  (requires {
+    {
+      I::an_allocationId()
+    }
+    -> std::convertible_to<typename I::allocationId>;
   } || requires {
-    { I::a_provenance } -> std::convertible_to<typename I::provenance>;
-  }) && (requires {
-    { I::an_allocationId() } -> std::convertible_to<typename I::allocationId>;
-  } || requires {
-    { I::an_allocationId } -> std::convertible_to<typename I::allocationId>;
+    {
+      I::an_allocationId
+    }
+    -> std::convertible_to<typename I::allocationId>;
   });
-template <typename
-I>concept Ptr = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-  });
-/// The fields are themselves instances: the wrong spelling in Vellvm is
+template <typename I>
+concept Ptr = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero_ptr()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero_ptr
+  }
+  -> std::convertible_to<typename I::ptr>;
+}); /// The fields are themselves instances: the wrong spelling in Vellvm is
 /// typename _tcI0::PROV::prov, a sibling field of an {e inner} class.
 template <typename I>
 concept ParamsV = requires {
@@ -143,11 +168,11 @@ using fused = std::pair<state<provenance, allocationId, ptr>, frame<ptr>>;
 /// Reads the expanded product, so the caller's parameter is inferred at it
 /// rather than at the alias.
 template <ParamsV _tcI0>
-typename _tcI0::PTR::ptr
-top(const std::pair<
-    state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
-          typename _tcI0::PTR::ptr>,
-    List<typename _tcI0::PTR::ptr>> &p) {
+typename _tcI0::PTR::ptr top(
+    const std::pair<
+        state<typename _tcI0::PROV::provenance,
+              typename _tcI0::PROV::allocationId, typename _tcI0::PTR::ptr>,
+        List<typename _tcI0::PTR::ptr>> &p) {
   return p.first.st_ptr;
 }
 
@@ -157,22 +182,20 @@ template <ParamsV _tcI0>
 fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
       typename _tcI0::PTR::ptr>
 step(const std::pair<
-     state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
-           typename _tcI0::PTR::ptr>,
-     List<typename _tcI0::PTR::ptr>> &s) {
+         state<typename _tcI0::PROV::provenance,
+               typename _tcI0::PROV::allocationId, typename _tcI0::PTR::ptr>,
+         List<typename _tcI0::PTR::ptr>> &s) {
   return std::make_pair(s.first, s.second);
 }
 
 template <ParamsV _tcI0>
 fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
-      typename _tcI0::PTR::ptr>
-initial() {
+      typename _tcI0::PTR::ptr> initial() {
   return std::make_pair(
       state<typename _tcI0::PROV::provenance,
             typename _tcI0::PROV::allocationId, typename _tcI0::PTR::ptr>{
           _tcI0::PROV::a_provenance(), _tcI0::PROV::an_allocationId(),
-          _tcI0::PTR::zero_ptr()},
-      List<typename _tcI0::PTR::ptr>::nil());
+          _tcI0::PTR::zero_ptr()}, List<typename _tcI0::PTR::ptr>::nil());
 }
 
 struct ExpandedProductWrongClassField {

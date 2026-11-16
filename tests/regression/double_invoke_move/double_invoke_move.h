@@ -112,9 +112,9 @@ struct DoubleInvokeMove {
   ///
   /// Expected: left_value(Node(t, 0, Leaf)) + left_value(Node(t, 1, Leaf))
   /// = left_value(t).left + left_value(t).left
-  /// = 20 + 20 = 40  (the left_value of t = Node(Node(Leaf,10,Leaf),20,...) is
-  /// 10, but left_value looks at l's first child... Actually let me
-  /// recalculate.
+  /// = 20 + 20 = 40 (the left_value of t = Node(Node(Leaf,10,Leaf),20,...) is
+  /// 10,
+  /// but left_value looks at l's first child... Actually let me recalculate.
   ///
   /// t = Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf))
   /// w1 = Node(t, 0, Leaf)
@@ -129,10 +129,10 @@ struct DoubleInvokeMove {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<tree(uint64_t)> f = [=,
-                                     t = std::move(t)](uint64_t _x0) -> tree {
-        return wrap_with(std::move(t), _x0);
-      };
+      crane::fn<tree(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> tree {
+            return wrap_with(std::move(t), _x0);
+          };
       tree w1 = f(UINT64_C(0));
       tree w2 = f(UINT64_C(1));
       return (left_value(std::move(w1)) + left_value(std::move(w2)));

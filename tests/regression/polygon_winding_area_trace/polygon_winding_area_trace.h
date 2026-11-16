@@ -173,12 +173,14 @@ struct PolygonWindingAreaTraceCase {
     Real lambda;
   };
 
-  static inline const Real R_earth_default = Rdefinitions::Q2R(Q{
-      INT64_C(3440065),
-      (2u *
-       (2u *
-        (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
-               1u))))});
+  static inline const Real R_earth_default =
+      Rdefinitions::Q2R(
+          Q{
+              INT64_C(3440065), (
+                  2u * (
+                      2u * (2u * (2u * (2u * (2u * (2u *
+                                                    (2u * (2u * 1u + 1u) + 1u) +
+                                                    1u) + 1u)) + 1u))))});
   [[gnu::used]] static inline const Real R_earth = R_earth_default;
   static Real hav(Real theta);
   static Real distance(const Point &p1, const Point &p2);
@@ -217,8 +219,7 @@ struct PolygonWindingAreaTraceCase {
       Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
             Real::from_z(INT64_C(1))};
   static inline const Polygon test_triangle = List<Point>::cons(
-      test_triangle_v1,
-      List<Point>::cons(
+      test_triangle_v1, List<Point>::cons(
           test_triangle_v2,
           List<Point>::cons(test_triangle_v3, List<Point>::nil())));
   static inline const Point test_centroid =

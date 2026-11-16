@@ -132,6 +132,7 @@ public:
     return _result;
   }
 };
+
 enum class Cop { CEQ, CLT };
 
 template <typename target> struct Instr {
@@ -177,8 +178,7 @@ public:
               }
             }()};
           } else {
-            if (std::holds_alternative<typename Instr<CraneU>::ICmp>(
-                    _other.v())) {
+            if (std::holds_alternative<typename Instr<CraneU>::ICmp>(_other.v())) {
               const auto &[a0] =
                   std::get<typename Instr<CraneU>::ICmp>(_other.v());
               return ICmp{a0};
@@ -210,14 +210,12 @@ struct prog {
   uint64_t nregs;
 };
 
-const prog sample =
-    prog{List<Instr<uint64_t>>::cons(
-             Instr<uint64_t>::igo(UINT64_C(3)),
-             List<Instr<uint64_t>>::cons(
-                 Instr<uint64_t>::icmp(Cop::CEQ),
-                 List<Instr<uint64_t>>::cons(Instr<uint64_t>::istop(),
-                                             List<Instr<uint64_t>>::nil()))),
-         UINT64_C(2)};
+const prog sample = prog{
+    List<Instr<uint64_t>>::cons(
+        Instr<uint64_t>::igo(UINT64_C(3)), List<Instr<uint64_t>>::cons(
+            Instr<uint64_t>::icmp(Cop::CEQ), List<Instr<uint64_t>>::cons(
+                Instr<uint64_t>::istop(), List<Instr<uint64_t>>::nil()))),
+    UINT64_C(2)};
 const uint64_t sample_size = sample.code.length();
 const uint64_t sample_regs = sample.nregs;
 

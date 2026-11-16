@@ -160,9 +160,8 @@ struct EvenOdd {
   static inline const even_list two = even_list::econs(
       UINT64_C(2), odd_list::ocons(UINT64_C(1), even_list::enil()));
   static inline const odd_list three = odd_list::ocons(
-      UINT64_C(3),
-      even_list::econs(UINT64_C(2),
-                       odd_list::ocons(UINT64_C(1), even_list::enil())));
+      UINT64_C(3), even_list::econs(
+          UINT64_C(2), odd_list::ocons(UINT64_C(1), even_list::enil())));
 };
 
 const uint64_t test_even_len = EvenOdd::even_length(EvenOdd::two);

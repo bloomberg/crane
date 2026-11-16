@@ -118,22 +118,30 @@ public:
 
   template <typename CraneU>
   Sseq(const Sseq<CraneU> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              const auto &[shead, stail] =
-                  std::get<typename Sseq<CraneU>::SCons>(_other.v());
-              return SCons{
-                  [&]() -> A {
-                    if constexpr (crane_convertible<A, const CraneU &>) {
-                      return crane_convert<A>(shead);
-                    } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
-                    }
-                  }(),
-                  crane_convert<Sseq<A>>(stail)};
-            })) {}
+      : lazy_v_(crane::lazy<variant_t>::converted_from(_other.lazy_cell(),
+                                                       [=]() -> variant_t {
+                                                         const auto &[shead,
+                                                                      stail] =
+                                                             std::get<
+                                                                 typename Sseq<
+                                                                     CraneU>::SCons>(
+                                                                 _other.v());
+                                                         return SCons{
+                                                             [&]() -> A {
+                                                               if constexpr (
+                                                                   crane_convertible<
+                                                                       A,
+                                                                       const CraneU &>) {
+                                                                 return crane_convert<
+                                                                     A>(shead);
+                                                               } else {
+                                                                 throw std::logic_error(
+                                                                     "unreachable: inactive constructor field at this instantiation");
+                                                               }
+                                                             }(),
+                                                             crane_convert<
+                                                                 Sseq<A>>(stail)};
+                                                       })) {}
 
   explicit Sseq(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -228,8 +236,9 @@ public:
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
   static const uint64_t &test1() {
     static const uint64_t v = []() {
-      Sseq<uint64_t> s =
-          nats_from(UINT64_C(0)).smap([](uint64_t x) { return (x + 1); });
+      Sseq<uint64_t> s = nats_from(UINT64_C(0)).smap([](uint64_t x) {
+        return (x + 1);
+      });
       return sum(s.take(UINT64_C(4)));
     }();
     return v;

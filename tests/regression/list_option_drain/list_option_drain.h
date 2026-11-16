@@ -141,9 +141,8 @@ struct ListOptionDrain {
               }
               std::atomic_thread_fence(std::memory_order_acquire);
               auto &_hw1e = *_hw1p;
-              if (auto *_ha3 =
-                      std::get_if<typename List<std::optional<t>>::Cons>(
-                          &_hw1e.v_mut())) {
+              if (auto *_ha3 = std::get_if<
+                      typename List<std::optional<t>>::Cons>(&_hw1e.v_mut())) {
                 if (_ha3->a.has_value()) {
                   _stack.push_back(std::make_shared<t>(std::move(*_ha3->a)));
                 }

@@ -167,16 +167,31 @@ struct Monadic {
   static State<uint64_t, uint64_t> count_elements(const List<T1> &l) {
     return l.template fold_left<State<uint64_t, uint64_t>>(
         [](crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)> acc, T1) {
-          return state_bind<uint64_t, uint64_t, uint64_t>(
-              std::move(acc), [](uint64_t) {
-                return state_bind<uint64_t, uint64_t, uint64_t>(
-                    state_get<uint64_t>(), [](uint64_t n) {
-                      return state_bind<uint64_t, std::monostate, uint64_t>(
-                          state_put<uint64_t>((n + 1)), [=](std::monostate) {
-                            return state_return<uint64_t, uint64_t>(n);
-                          });
-                    });
-              });
+          return state_bind<uint64_t, uint64_t, uint64_t>(std::move(acc),
+                                                          [](uint64_t) {
+                                                            return state_bind<
+                                                                uint64_t,
+                                                                uint64_t,
+                                                                uint64_t>(
+                                                                state_get<
+                                                                    uint64_t>(),
+                                                                [](uint64_t n) {
+                                                                  return state_bind<
+                                                                      uint64_t,
+                                                                      std::monostate,
+                                                                      uint64_t>(
+                                                                      state_put<
+                                                                          uint64_t>(
+                                                                          (n +
+                                                                           1)),
+                                                                      [=](std::monostate) {
+                                                                        return state_return<
+                                                                            uint64_t,
+                                                                            uint64_t>(
+                                                                            n);
+                                                                      });
+                                                                });
+                                                          });
         },
         state_return<uint64_t, uint64_t>(UINT64_C(0)));
   }
@@ -186,16 +201,16 @@ struct Monadic {
   static uint64_t fib(uint64_t n);
   static inline const std::optional<uint64_t> test_return =
       option_return<uint64_t>(UINT64_C(42));
-  static inline const std::optional<uint64_t> test_bind_some =
-      option_bind<uint64_t, uint64_t>(
-          std::make_optional<uint64_t>(UINT64_C(10)), [](uint64_t x) {
-            return std::make_optional<uint64_t>((x + UINT64_C(1)));
-          });
-  static inline const std::optional<uint64_t> test_bind_none =
-      option_bind<uint64_t, uint64_t>(
-          std::optional<uint64_t>(), [](uint64_t x) {
-            return std::make_optional<uint64_t>((x + UINT64_C(1)));
-          });
+  static inline const std::optional<uint64_t> test_bind_some = option_bind<
+      uint64_t, uint64_t>(std::make_optional<uint64_t>(UINT64_C(10)),
+                          [](uint64_t x) {
+                            return std::make_optional<uint64_t>(
+                                (x + UINT64_C(1)));
+                          });
+  static inline const std::optional<uint64_t> test_bind_none = option_bind<
+      uint64_t, uint64_t>(std::optional<uint64_t>(), [](uint64_t x) {
+        return std::make_optional<uint64_t>((x + UINT64_C(1)));
+      });
   static inline const std::optional<uint64_t> test_safe_div_ok =
       safe_div(UINT64_C(10), UINT64_C(3));
   static inline const std::optional<uint64_t> test_safe_div_zero =
@@ -204,17 +219,14 @@ struct Monadic {
       div_then_sub(UINT64_C(20), UINT64_C(4), UINT64_C(2));
   static inline const std::optional<uint64_t> test_chain_fail =
       div_then_sub(UINT64_C(20), UINT64_C(0), UINT64_C(2));
-  static inline const std::pair<uint64_t, uint64_t> test_state =
-      count_elements<uint64_t>(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(
-                      UINT64_C(4), List<uint64_t>::cons(
-                                       UINT64_C(5), List<uint64_t>::nil()))))))(
-          UINT64_C(0));
+  static inline const std::pair<uint64_t, uint64_t> test_state = count_elements<
+      uint64_t>(List<uint64_t>::cons(
+                    UINT64_C(1), List<uint64_t>::cons(
+                        UINT64_C(2), List<uint64_t>::cons(
+                            UINT64_C(3), List<uint64_t>::cons(
+                                UINT64_C(4), List<uint64_t>::cons(
+                                    UINT64_C(5), List<uint64_t>::nil()))))))(
+      UINT64_C(0));
   static inline const uint64_t test_state_fib = fib(UINT64_C(5));
 };
 

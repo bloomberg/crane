@@ -24,6 +24,7 @@ struct NilEmpty {
 struct NilZero {
   static String string_of_uint(const Uint &d);
 };
+
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -447,18 +448,24 @@ public:
 struct EmptyInductiveDecimalUint {
   static String s(const Nat::nat &n);
   static inline const Nat::nat test =
-      s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                    Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                        Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                    Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                        Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                            Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                                Nat::nat::
-                                                    o())))))))))))))))))))))))))))))))))))))))))))
+      s(Nat::nat::s(
+            Nat::nat::s(
+                Nat::nat::s(
+                    Nat::nat::s(
+                        Nat::nat::s(
+                            Nat::nat::s(
+                                Nat::nat::s(
+                                    Nat::nat::s(
+                                        Nat::nat::s(
+                                            Nat::nat::s(
+                                                Nat::nat::s(
+                                                    Nat::nat::s(
+                                                        Nat::nat::s(
+                                                            Nat::nat::s(
+                                                                Nat::nat::s(
+                                                                    Nat::nat::s(
+                                                                        Nat::nat::s(
+                                                                            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o())))))))))))))))))))))))))))))))))))))))))))
           .length();
 };
 

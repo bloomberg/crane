@@ -47,17 +47,17 @@ public:
           } else {
             const auto &[a, l] =
                 std::get<typename List<CraneU>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const CraneU &>) {
-                            return crane_convert<A>(a);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (l ? crane::make_rc<List<A>>(crane_convert<List<A>>(*l))
-                           : nullptr)};
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (l ? crane::make_rc<List<A>>(crane_convert<List<A>>(*l))
+                   : nullptr)};
           }
         }()) {}
 
@@ -68,8 +68,9 @@ public:
   }
 
   static List<A> cons_crane_reuse(crane::rc<List<A>> _tok, A a, List<A> l) {
-    return List<A>(Cons{std::move(a), crane::make_rc_reusing<List<A>>(
-                                          std::move(_tok), std::move(l))});
+    return List<A>(
+        Cons{std::move(a),
+             crane::make_rc_reusing<List<A>>(std::move(_tok), std::move(l))});
   }
 
   // MANIPULATORS
@@ -212,7 +213,6 @@ struct ReuseForcedViews {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -279,8 +279,9 @@ struct ReuseForcedViews {
 
   static tree smash(tree t, tree u);
   static List<tree> carry(List<tree> q, tree t);
-  static List<std::pair<
-      uint64_t, std::pair<std::optional<uint64_t>, std::optional<uint64_t>>>>
+  static List<
+      std::pair<uint64_t,
+                std::pair<std::optional<uint64_t>, std::optional<uint64_t>>>>
   combine(List<std::pair<uint64_t, uint64_t>> m,
           const List<std::pair<uint64_t, uint64_t>> &x0_);
 };

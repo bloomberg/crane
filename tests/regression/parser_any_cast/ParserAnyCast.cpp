@@ -8,7 +8,6 @@
 #include "String_.h"
 
 namespace ParserAnyCast {
-
 ParserAnyCast::Tag ParserAnyCast::get_tag(const ParserAnyCast::entry &x0_) {
   return x0_.projT1();
 }
@@ -45,5 +44,4 @@ ParserAnyCast::Label
 ParserAnyCast::get_entry_label(const ParserAnyCast::labeled_entry &x0_) {
   return x0_.projT1();
 }
-
 } // namespace ParserAnyCast

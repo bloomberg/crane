@@ -43,8 +43,7 @@ struct LoopifyTmc {
     template <typename CraneU>
     list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<CraneU>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
@@ -54,9 +53,9 @@ struct LoopifyTmc {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
@@ -104,7 +103,6 @@ struct LoopifyTmc {
   list_rect(T2 f, F1 &&f0,
             const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
     struct CraneEnter {
       const list<T1> *l;
     };
@@ -217,10 +215,9 @@ struct LoopifyTmc {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (f(a0)) {
           auto _cell = typename list<T1>::Cons(a0, nullptr);
-          list<T1> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          list<T1> &_node = (
+              _write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename list<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
@@ -311,10 +308,9 @@ struct LoopifyTmc {
           const auto &[a00, a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
           auto _cell = typename list<T3>::Cons(f(a0, a00), nullptr);
-          list<T3> &_node =
-              (_write
-                   ? *(*_write = std::make_shared<list<T3>>(std::move(_cell)))
-                   : _root.emplace(std::move(_cell)));
+          list<T3> &_node = (
+              _write ? *(*_write = std::make_shared<list<T3>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
           _write = &std::get<typename list<T3>::Cons>(_node.v_mut()).l;
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);
@@ -349,8 +345,8 @@ struct LoopifyTmc {
                     : _root.emplace(std::move(_cell)));
         _write =
             &std::get<typename list<T1>::Cons>(
-                 std::get<typename list<T1>::Cons>(_node.v_mut()).l->v_mut())
-                 .l;
+                std::get<typename list<T1>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
         _loop_l = crane_raw(a1);
         continue;
       }

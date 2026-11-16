@@ -23,9 +23,10 @@ Nat PartialLocalFix::run(Bool0 x0_) {
       return loop_impl(loop_impl, std::move(n), b);
     };
     return [=](Bool0 _pa0) {
-      return loop(Nat::s(Nat::s(Nat::s(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
-                  _pa0);
+      return loop(
+          Nat::s(
+              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+          _pa0);
     };
   }()(x0_);
 }

@@ -12,7 +12,6 @@
 #include "ProvDef.h"
 
 namespace SepExtPromotedAliasImport {
-
 template <typename ptr> struct Mbit;
 using ParamsDef::ptr;
 using ProvDef::prov;
@@ -44,8 +43,7 @@ public:
   template <typename CraneU>
   Mbit(const Mbit<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Mbit<CraneU>::Bit_ptr>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Mbit<CraneU>::Bit_ptr>(_other.v())) {
             const auto &[p] =
                 std::get<typename Mbit<CraneU>::Bit_ptr>(_other.v());
             return Bit_ptr{[&]() -> ptr {
@@ -86,7 +84,6 @@ public:
     }
   }
 };
-
 } // namespace SepExtPromotedAliasImport
 
 #endif // INCLUDED_SEPEXTPROMOTEDALIASIMPORT

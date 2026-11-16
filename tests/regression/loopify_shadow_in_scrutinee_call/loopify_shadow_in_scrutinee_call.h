@@ -215,15 +215,17 @@ public:
 struct LoopifyShadowInScrutineeCall {
   static Nat walk(const Nat &n, const List<Nat> &xs, Nat acc);
   static inline const Nat total = walk(
-      Nat::s(Nat::s(Nat::s(Nat::o()))),
-      List<Nat>::cons(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
-          List<Nat>::cons(
+      Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::cons(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))), List<Nat>::cons(
               Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
-              List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))),
-                              List<Nat>::nil()))),
-      Nat::o());
+              List<Nat>::cons(
+                  Nat::s(
+                      Nat::s(
+                          Nat::s(
+                              Nat::s(
+                                  Nat::s(
+                                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))),
+                  List<Nat>::nil()))), Nat::o());
 };
 
 #endif // INCLUDED_LOOPIFY_SHADOW_IN_SCRUTINEE_CALL

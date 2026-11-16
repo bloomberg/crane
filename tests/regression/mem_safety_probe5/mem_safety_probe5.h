@@ -152,8 +152,8 @@ struct MemSafetyProbe5 {
       tree _self_val = *this;
       crane::fn<uint64_t(uint64_t)> f =
           [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
-        return _self_val.get_left_val(_x0);
-      };
+            return _self_val.get_left_val(_x0);
+          };
       uint64_t v = [&]() {
         if (std::holds_alternative<typename tree::Leaf>(this->v())) {
           return UINT64_C(0);
@@ -288,13 +288,13 @@ struct MemSafetyProbe5 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -387,15 +387,15 @@ struct MemSafetyProbe5 {
   /// The closure body accesses nested tree structure.
   static uint64_t sum_left_vals(const mylist<tree> &l);
   static inline const uint64_t test_sum_left =
-      sum_left_vals(mylist<tree>::mycons(
-          tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                     UINT64_C(20), tree::leaf()),
+      sum_left_vals(
           mylist<tree>::mycons(
-              tree::node(tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
-                         UINT64_C(40), tree::leaf()),
-              mylist<tree>::mycons(
-                  tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
-                  mylist<tree>::mynil()))));
+              tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                         UINT64_C(20), tree::leaf()), mylist<tree>::mycons(
+                  tree::node(
+                      tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
+                      UINT64_C(40), tree::leaf()), mylist<tree>::mycons(
+                      tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
+                      mylist<tree>::mynil()))));
   /// TEST 2: Build a list of partial apps from trees, then apply all.
   /// Each partial app captures a tree with nested structure.
   static mylist<crane::fn<uint64_t(uint64_t)>>
@@ -405,11 +405,9 @@ struct MemSafetyProbe5 {
   static inline const uint64_t test_build_apply = []() {
     mylist<tree> trees = mylist<tree>::mycons(
         tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
-                   UINT64_C(20), tree::leaf()),
-        mylist<tree>::mycons(
+                   UINT64_C(20), tree::leaf()), mylist<tree>::mycons(
             tree::node(tree::node(tree::leaf(), UINT64_C(30), tree::leaf()),
-                       UINT64_C(40), tree::leaf()),
-            mylist<tree>::mycons(
+                       UINT64_C(40), tree::leaf()), mylist<tree>::mycons(
                 tree::node(tree::leaf(), UINT64_C(50), tree::leaf()),
                 mylist<tree>::mynil())));
     mylist<crane::fn<uint64_t(uint64_t)>> getters =
@@ -425,10 +423,9 @@ struct MemSafetyProbe5 {
   static inline const uint64_t test_collect = []() {
     tree t = tree::node(
         tree::node(tree::node(tree::leaf(), UINT64_C(5), tree::leaf()),
-                   UINT64_C(10), tree::leaf()),
-        UINT64_C(15),
-        tree::node(tree::leaf(), UINT64_C(20),
-                   tree::node(tree::leaf(), UINT64_C(25), tree::leaf())));
+                   UINT64_C(10), tree::leaf()), UINT64_C(15), tree::node(
+            tree::leaf(), UINT64_C(20),
+            tree::node(tree::leaf(), UINT64_C(25), tree::leaf())));
     mylist<crane::fn<uint64_t(uint64_t)>> fns = collect_left_vals(
         std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
     return apply_all(std::move(fns), UINT64_C(0));
@@ -437,7 +434,6 @@ struct MemSafetyProbe5 {
   static mylist<tree> make_tree_list(uint64_t n);
   static uint64_t sum_getters(const mylist<crane::fn<uint64_t(uint64_t)>> &l,
                               uint64_t x);
-
   static inline const uint64_t test_stress = []() {
     mylist<tree> trees = make_tree_list(UINT64_C(50));
     mylist<crane::fn<uint64_t(uint64_t)>> getters =

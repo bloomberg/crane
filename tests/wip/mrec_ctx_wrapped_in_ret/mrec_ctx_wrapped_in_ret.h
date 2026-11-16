@@ -17,14 +17,20 @@ template <typename A, typename B> struct Sum;
 template <typename ptr> struct CountE;
 struct natParams;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct MrecCtxWrappedInRet {
   static std::shared_ptr<ITree<Nat>> run();
@@ -150,10 +156,10 @@ public:
 
 struct Recursion {
   template <typename T1, typename T2 = void, typename T3>
-  static std::shared_ptr<ITree<T3>>
-  interp_mrec(const std::type_identity_t<
-                  crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
-              const std::shared_ptr<ITree<T3>> &x0_);
+  static std::shared_ptr<ITree<T3>> interp_mrec(
+      const std::type_identity_t<
+          crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
+      const std::shared_ptr<ITree<T3>> &x0_);
   template <typename T1, typename T2 = void, typename T3, typename F0>
   static std::shared_ptr<ITree<T3>> mrec(F0 &&ctx0, crane::rebind_t<T1, T3> d);
 };
@@ -186,10 +192,8 @@ template <typename ptr> struct CountE {
 template <Params _tcI0> std::shared_ptr<ITree<Nat>> run_mrec() {
   return Recursion::template mrec<CountE<typename _tcI0::ptr>, crane::obj, Nat>(
       []() {
-        return [](CountE<typename _tcI0::ptr> _x0)
-                   -> std::shared_ptr<ITree<crane::obj>> {
-          return _x0.template ctx<crane::obj>(false);
-        };
+        return [](CountE<typename _tcI0::ptr> _x0) -> std::shared_ptr<
+            ITree<crane::obj>> { return _x0.template ctx<crane::obj>(false); };
       }(),
       CountE<typename _tcI0::ptr>::count(Nat::s(Nat::s(Nat::s(Nat::o()))),
                                          _tcI0::nullp()));
@@ -209,37 +213,37 @@ std::shared_ptr<ITree<T3>> Recursion::interp_mrec(
         crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
     const std::shared_ptr<ITree<T3>> &x0_) {
   return itree_iter(
-      [=](const std::shared_ptr<ITree<T3>> &t)
-          -> std::shared_ptr<ITree<Sum<std::shared_ptr<ITree<T3>>, T3>>> {
-        auto _cs = t->observe();
-        if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
-          auto r = _itf.value;
-          return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inr(r));
-        } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
-          auto t0 = _itf.next;
-          return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(t0));
-        } else {
-          const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
-          auto e0 = crane_event_as<Sum1<T1, T2, crane::obj>>(_itf.effect);
-          auto k = _itf.cont;
-          if (std::holds_alternative<typename Sum1<T1, T2, crane::obj>::Inl1>(
-                  e0.v())) {
-            const auto &[a0] =
-                std::get<typename Sum1<T1, T2, crane::obj>::Inl1>(e0.v());
-            return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
-                itree_bind(ctx0(a0), k)));
-          } else {
-            const auto &[a0] =
-                std::get<typename Sum1<T1, T2, crane::obj>::Inr1>(e0.v());
-            return itree_vis(a0, [=](const auto &x) {
-              return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
-                  crane_call_erased(k, x)));
-            });
-          }
-        }
-      },
+      [=](const std::shared_ptr<ITree<T3>> &t) -> std::shared_ptr<
+          ITree<Sum<std::shared_ptr<ITree<T3>>, T3>>> {
+            auto _cs = t->observe();
+            if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
+              const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
+              auto r = _itf.value;
+              return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inr(r));
+            } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
+              const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
+              auto t0 = _itf.next;
+              return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(t0));
+            } else {
+              const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
+              auto e0 = crane_event_as<Sum1<T1, T2, crane::obj>>(_itf.effect);
+              auto k = _itf.cont;
+              if (std::holds_alternative<
+                      typename Sum1<T1, T2, crane::obj>::Inl1>(e0.v())) {
+                const auto &[a0] =
+                    std::get<typename Sum1<T1, T2, crane::obj>::Inl1>(e0.v());
+                return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
+                                     itree_bind(ctx0(a0), k)));
+              } else {
+                const auto &[a0] =
+                    std::get<typename Sum1<T1, T2, crane::obj>::Inr1>(e0.v());
+                return itree_vis(a0, [=](const auto &x) {
+                  return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
+                                       crane_call_erased(k, x)));
+                });
+              }
+            }
+          },
       x0_);
 }
 
@@ -247,14 +251,13 @@ template <typename T1, typename T2, typename T3, typename F0>
 std::shared_ptr<ITree<T3>> Recursion::mrec(F0 &&ctx0,
                                            crane::rebind_t<T1, T3> d) {
   return Recursion::template interp_mrec<T1, T2, T3>(ctx0, ctx0(std::move(d)));
-}
+} /// Takes a bool first, so it stays a function rather than becoming a
 
-/// Takes a bool first, so it stays a function rather than becoming a
 /// member template of CountE -- that shape has a defect of its own
 /// (tests/wip/eta_handler_event_as_template).
 template <typename ptr>
-template <Params _tcI0>
-std::shared_ptr<ITree<ptr>> CountE<ptr>::ctx(bool) const {
+template <Params _tcI0> std::shared_ptr<ITree<ptr>>
+CountE<ptr>::ctx(bool) const {
   const auto &[a0, a1] = *this;
   if (std::holds_alternative<typename Nat::O>(a0.v())) {
     return itree_ret(Nat::o());

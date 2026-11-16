@@ -296,13 +296,13 @@ struct MemSafetyProbe10 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -408,8 +408,7 @@ struct MemSafetyProbe10 {
     crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
     const mylist<uint64_t> *_loop_l = &l;
     while (true) {
-      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(
-              _loop_l->v())) {
+      if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(_loop_l->v())) {
         return _loop_acc(x0_);
       } else {
         const auto &[a0, a1] =
@@ -423,12 +422,12 @@ struct MemSafetyProbe10 {
 
   static inline const uint64_t test_chain = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
+        UINT64_C(10), mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
-    return chain_adders(
-        std::move(l), [](uint64_t x) { return x; }, UINT64_C(7));
+    return chain_adders(std::move(l), [](uint64_t x) {
+      return x;
+    }, UINT64_C(7));
   }();
   /// TEST 3: Recursive function returning a list of closures.
   /// Each closure captures the tree node's value and subtrees.

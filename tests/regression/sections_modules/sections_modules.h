@@ -15,13 +15,17 @@ concept Semigroup = requires {
 template <typename M>
 concept HasIdentity = requires {
   typename M::T;
-  requires(
-      requires {
-        { M::id } -> std::convertible_to<typename M::T>;
-      } ||
-      requires {
-        { M::id() } -> std::convertible_to<typename M::T>;
-      });
+  requires (requires {
+    {
+      M::id
+    }
+    -> std::convertible_to<typename M::T>;
+  } || requires {
+    {
+      M::id()
+    }
+    -> std::convertible_to<typename M::T>;
+  });
 };
 template <typename M>
 concept Monoid = requires {
@@ -29,13 +33,17 @@ concept Monoid = requires {
   {
     M::op(std::declval<typename M::T>(), std::declval<typename M::T>())
   } -> std::same_as<typename M::T>;
-  requires(
-      requires {
-        { M::id } -> std::convertible_to<typename M::T>;
-      } ||
-      requires {
-        { M::id() } -> std::convertible_to<typename M::T>;
-      });
+  requires (requires {
+    {
+      M::id
+    }
+    -> std::convertible_to<typename M::T>;
+  } || requires {
+    {
+      M::id()
+    }
+    -> std::convertible_to<typename M::T>;
+  });
 };
 
 struct SectionsModules {

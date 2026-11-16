@@ -3,8 +3,8 @@
 ReusePerFunctionOff::lst
 ReusePerFunctionOff::incr_reused(ReusePerFunctionOff::lst l) {
   if (l.v().index() == 1) {
-    if (std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut())
-            .a1.use_count() == 1) {
+    if (std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut()).a1.use_count() ==
+        1) {
       uint64_t x = std::move(
           std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut()).a0);
       ReusePerFunctionOff::lst xs = std::move(

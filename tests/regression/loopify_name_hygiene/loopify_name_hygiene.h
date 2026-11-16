@@ -82,7 +82,6 @@ struct LoopifyNameHygiene {
   Frame_rect_(F0 &&f, F1 &&f0,
               const Frame_ &f_) { /// CraneEnter: captures varying parameters
                                   /// for each recursive call.
-
     struct CraneEnter {
       const Frame_ *f_;
     };

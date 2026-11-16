@@ -3,12 +3,11 @@
 #include "Datatypes.h"
 
 namespace PairDerefValue {
-
-bool NatKey::key_eq_dec(
-    const Datatypes::Nat &n,
-    const Datatypes::Nat &x0) { /// CraneEnter: captures varying parameters for
-                                /// each recursive call.
-
+bool
+NatKey::key_eq_dec(const Datatypes::Nat &n,
+                   const Datatypes::Nat &x0) { /// CraneEnter: captures varying
+                                               /// parameters for each recursive
+                                               /// call.
   struct CraneEnter {
     const Datatypes::Nat *x0;
     const Datatypes::Nat *n;
@@ -56,5 +55,4 @@ bool NatKey::key_eq_dec(
   }
   return _result;
 }
-
 } // namespace PairDerefValue

@@ -1,7 +1,6 @@
 #include "Decimal.h"
 
 namespace Decimal {
-
 Uint Little::succ(const Uint &d) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
     return Uint::d1(Uint::nil());
@@ -109,5 +108,4 @@ Uint Little::succ_double(const Uint &d) {
     return Uint::d9(succ_double(*a0));
   }
 }
-
 } // namespace Decimal

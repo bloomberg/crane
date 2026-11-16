@@ -1,10 +1,14 @@
 #include "mem_safety_probe15.h"
 
 uint64_t
-MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t>
-                               &l) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-
+MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t> &l) { /// CraneEnter:
+                                                                          /// captures
+                                                                          /// varying
+                                                                          /// parameters
+                                                                          /// for
+                                                                          /// each
+                                                                          /// recursive
+                                                                          /// call.
   struct CraneEnter {
     const MemSafetyProbe15::mylist<uint64_t> *l;
   };
@@ -30,9 +34,8 @@ MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t>
               typename MemSafetyProbe15::mylist<uint64_t>::Mynil>(l.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1] =
-            std::get<typename MemSafetyProbe15::mylist<uint64_t>::Mycons>(
-                l.v());
+        const auto &[a0, a1] = std::get<
+            typename MemSafetyProbe15::mylist<uint64_t>::Mycons>(l.v());
         _stack.emplace_back(CraneCont_Mycons{a0});
         _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
@@ -52,7 +55,6 @@ MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t>
 MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
     const MemSafetyProbe15::tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe15::tree *t;
   };
@@ -82,8 +84,7 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe15::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(t.v())) {
         _result = mylist<uint64_t>::mynil();
       } else {
         const auto &[a0, a1, a2] =
@@ -112,7 +113,6 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::flatten(
 MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
     const MemSafetyProbe15::tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
   struct CraneEnter {
     const MemSafetyProbe15::tree *t;
   };
@@ -145,8 +145,7 @@ MemSafetyProbe15::mylist<uint64_t> MemSafetyProbe15::subtree_sums(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe15::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(t.v())) {
         _result = mylist<uint64_t>::mynil();
       } else {
         const auto &[a0, a1, a2] =
@@ -207,10 +206,10 @@ MemSafetyProbe15::tree MemSafetyProbe15::left_spine(uint64_t n) {
 }
 
 /// TEST 9: Build a large tree and verify all values are preserved.
-MemSafetyProbe15::tree MemSafetyProbe15::make_tree(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-
+MemSafetyProbe15::tree
+MemSafetyProbe15::make_tree(uint64_t n) { /// CraneEnter: captures varying
+                                          /// parameters for each recursive
+                                          /// call.
   struct CraneEnter {
     uint64_t n;
   };

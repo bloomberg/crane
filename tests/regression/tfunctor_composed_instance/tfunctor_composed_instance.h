@@ -295,8 +295,8 @@ struct TfunctorComposedInstance {
         if constexpr (crane_convertible<CraneU, const T &>) {
           return crane_convert<CraneU>(unbox);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -313,15 +313,13 @@ struct TfunctorComposedInstance {
 
   static_assert(TFunctor<TFunctor_box>);
   static inline const List<box<Nat>> l =
-      TFunctor_list_<TFunctor_box>::template tfmap<Nat, Nat>(
-          [](const Nat &x) { return Nat::s(x); },
-          List<crane::obj>::cons(
-              box<Nat>{Nat::s(Nat::o())},
-              List<crane::obj>::cons(box<Nat>{Nat::s(Nat::s(Nat::o()))},
-                                     List<crane::obj>::nil())));
-  static inline const Nat total = l.template fold_left<Nat>(
-      [](const Nat &acc, const box<Nat> &b) { return acc.add(b.unbox); },
-      Nat::o());
+      TFunctor_list_<TFunctor_box>::template tfmap<Nat, Nat>([](const Nat &x) {
+        return Nat::s(x);
+      }, List<crane::obj>::cons(box<Nat>{Nat::s(Nat::o())}, List<crane::obj>::cons(box<Nat>{Nat::s(Nat::s(Nat::o()))}, List<crane::obj>::nil())));
+  static inline const Nat total =
+      l.template fold_left<Nat>([](const Nat &acc, const box<Nat> &b) {
+        return acc.add(b.unbox);
+      }, Nat::o());
   static inline const bool is_five =
       total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };

@@ -114,13 +114,12 @@ public:
 struct InplaceFixSavedInFrame {
   static List<List<uint64_t>> insert_shift(uint64_t x, const List<uint64_t> &l);
   static uint64_t sum_heads(const List<List<uint64_t>> &ls);
-  static inline const uint64_t test = sum_heads(insert_shift(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(10),
-          List<uint64_t>::cons(
-              UINT64_C(20),
-              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))));
+  static inline const uint64_t test =
+      sum_heads(insert_shift(UINT64_C(1), List<uint64_t>::cons(
+                                 UINT64_C(10), List<uint64_t>::cons(
+                                     UINT64_C(20), List<uint64_t>::cons(
+                                         UINT64_C(30),
+                                         List<uint64_t>::nil())))));
 };
 
 #endif // INCLUDED_INPLACE_FIX_SAVED_IN_FRAME

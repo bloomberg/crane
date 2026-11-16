@@ -171,22 +171,34 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::ptr>;
-  });
-template <typename
-I>concept MemState = requires {
-    typename I::state;
-  } && (requires {
-    { I::initial_state() } -> std::convertible_to<typename I::state>;
-  } || requires {
-    { I::initial_state } -> std::convertible_to<typename I::state>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
+template <typename I>
+concept MemState = requires {
+  typename I::state;
+} && (requires {
+  {
+    I::initial_state()
+  }
+  -> std::convertible_to<typename I::state>;
+} || requires {
+  {
+    I::initial_state
+  }
+  -> std::convertible_to<typename I::state>;
+});
 template <typename I>
 concept MemPrims = requires {
   typename I::mm_state;
@@ -237,12 +249,12 @@ struct NestedClassStateArg {
   }
 
   template <Params _tcI0> static Nat start(std::monostate) {
-    return interp_it<_tcI0>(std::make_pair(
-        MemStateV<_tcI0>::initial_state(),
-        std::make_pair(List<Nat>::cons(Nat::s(Nat::o()),
-                                       List<Nat>::cons(Nat::s(Nat::s(Nat::o())),
-                                                       List<Nat>::nil())),
-                       Nat::s(Nat::s(Nat::s(Nat::o()))))));
+    return interp_it<_tcI0>(
+        std::make_pair(MemStateV<_tcI0>::initial_state(), std::make_pair(
+                           List<Nat>::cons(
+                               Nat::s(Nat::o()), List<Nat>::cons(
+                                   Nat::s(Nat::s(Nat::o())), List<Nat>::nil())),
+                           Nat::s(Nat::s(Nat::s(Nat::o()))))));
   }
 
   struct natParams {

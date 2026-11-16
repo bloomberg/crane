@@ -10,6 +10,7 @@ uint64_t OuterMemberShadowedByNested::Sub::f(uint64_t n) {
 
 OuterMemberShadowedByNested::reader
 OuterMemberShadowedByNested::read_with(OuterMemberShadowedByNested::tree t) {
-  return reader::reader0(
-      [=, t = std::move(t)](uint64_t x) { return (x + t.sum()); });
+  return reader::reader0([=, t = std::move(t)](uint64_t x) {
+    return (x + t.sum());
+  });
 }

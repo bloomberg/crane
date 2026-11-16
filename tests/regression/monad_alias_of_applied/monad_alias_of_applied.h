@@ -20,8 +20,7 @@ concept Monad = requires {
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
     I::template bind<crane::obj, crane::obj>(
-        std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
+        std::declval<typename I::template m<crane::obj>>(), std::declval<
             crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -182,8 +181,7 @@ struct MonadAliasOfApplied {
     template <typename CraneA0, typename CraneA1>
     static EOU<CraneA1> bind(EOU<CraneA0> c,
                              crane::fn<EOU<CraneA1>(CraneA0)> k) {
-      if (std::holds_alternative<typename EOU<CraneA0>::Raise_error>(
-              c.v_mut())) {
+      if (std::holds_alternative<typename EOU<CraneA0>::Raise_error>(c.v_mut())) {
         auto &[n] = std::get<typename EOU<CraneA0>::Raise_error>(c.v_mut());
         return EOU<CraneA1>::raise_error(std::move(n));
       } else {
@@ -267,19 +265,18 @@ struct MonadAliasOfApplied {
          crane::fn<EOU<MaybePoison<CraneA1>>(CraneA0)> k) {
       return EOU_monad::template bind<MaybePoison<CraneA0>,
                                       MaybePoison<CraneA1>>(
-          std::move(c),
-          [=, k = std::move(k)](
-              const MaybePoison<CraneA0> &pov) -> EOU<MaybePoison<CraneA1>> {
-            if (std::holds_alternative<typename MaybePoison<CraneA0>::Pois>(
-                    pov.v())) {
-              return EOU_monad::template ret<MaybePoison<CraneA1>>(
-                  MaybePoison<CraneA1>::pois());
-            } else {
-              const auto &[a0] =
-                  std::get<typename MaybePoison<CraneA0>::NoPois>(pov.v());
-              return k(a0);
-            }
-          });
+          std::move(c), [=, k = std::move(k)](const MaybePoison<CraneA0> &pov) -> EOU<
+              MaybePoison<CraneA1>> {
+                if (std::holds_alternative<typename MaybePoison<CraneA0>::Pois>(
+                        pov.v())) {
+                  return EOU_monad::template ret<MaybePoison<CraneA1>>(
+                      MaybePoison<CraneA1>::pois());
+                } else {
+                  const auto &[a0] =
+                      std::get<typename MaybePoison<CraneA0>::NoPois>(pov.v());
+                  return k(a0);
+                }
+              });
     }
   };
 

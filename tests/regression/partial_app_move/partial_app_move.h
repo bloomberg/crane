@@ -90,7 +90,6 @@ struct PartialAppMove {
   static T1 tree_rect(T1 f, F1 &&f0,
                       const tree &t) { /// CraneEnter: captures varying
                                        /// parameters for each recursive call.
-
     struct CraneEnter {
       const tree *t;
     };
@@ -168,9 +167,11 @@ struct PartialAppMove {
   /// then the lambda accesses the moved-from t.
   static uint64_t trigger_bug(tree t);
   /// Build a tree and trigger the bug.
-  static inline const uint64_t run_bug = trigger_bug(tree::node(
-      tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
-      tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
+  static inline const uint64_t run_bug =
+      trigger_bug(
+          tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
+                     UINT64_C(20),
+                     tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
   /// Inline version: t is a local variable, not a function parameter.
   /// This is where move optimization might actually move t.
   static inline const uint64_t inline_bug = []() {

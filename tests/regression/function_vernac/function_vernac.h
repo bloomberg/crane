@@ -107,8 +107,8 @@ template <typename A> struct Sig {
       if constexpr (crane_convertible<CraneU, const A &>) {
         return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -211,7 +211,7 @@ struct FunctionVernac {
 
     template <typename T1, typename F0, typename F1, typename F2>
       requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
+      std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 R_div2_rect(F0 &&f, F1 &&f0, F2 &&f1, uint64_t _x, uint64_t _x0) const {
       const R_div2 *_self = this;
 
@@ -248,8 +248,7 @@ struct FunctionVernac {
           if (std::holds_alternative<typename R_div2::R_div2_0>(_sv.v())) {
             const auto &[n0] = std::get<typename R_div2::R_div2_0>(_sv.v());
             _result = f(n0);
-          } else if (std::holds_alternative<typename R_div2::R_div2_1>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename R_div2::R_div2_1>(_sv.v())) {
             const auto &[n0] = std::get<typename R_div2::R_div2_1>(_sv.v());
             _result = f0(n0);
           } else {
@@ -425,8 +424,7 @@ struct FunctionVernac {
           const List<uint64_t> &_x = *_f._x;
           uint64_t _x0 = _f._x0;
           auto &&_sv = *_self;
-          if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(
-                  _sv.v())) {
+          if (std::holds_alternative<typename R_list_sum::R_list_sum_0>(_sv.v())) {
             const auto &[l0] =
                 std::get<typename R_list_sum::R_list_sum_0>(_sv.v());
             _result = f(l0);
@@ -452,8 +450,8 @@ struct FunctionVernac {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const List<uint64_t> &> &&
-             std::is_invocable_r_v<T1, const F1 &, const List<uint64_t> &,
-                                   uint64_t &, List<uint64_t> &, T1 &>
+    std::is_invocable_r_v<T1, const F1 &, const List<uint64_t> &, uint64_t &,
+                          List<uint64_t> &, T1 &>
   static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &l) {
     crane::fn<T1(uint64_t, List<uint64_t>, T1)> f1 =
         [=](uint64_t _pa0, List<uint64_t> _pa1, T1 _pa2) {
@@ -480,15 +478,13 @@ struct FunctionVernac {
 
   static R_list_sum R_list_sum_correct(const List<uint64_t> &l, uint64_t res_);
   static inline const uint64_t test_div2 = div2(UINT64_C(10));
-  static inline const uint64_t test_sum = list_sum(List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
-              UINT64_C(3),
-              List<uint64_t>::cons(
-                  UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
+  static inline const uint64_t test_sum =
+      list_sum(List<uint64_t>::cons(
+                   UINT64_C(1), List<uint64_t>::cons(
+                       UINT64_C(2), List<uint64_t>::cons(
+                           UINT64_C(3), List<uint64_t>::cons(
+                               UINT64_C(4), List<uint64_t>::cons(
+                                   UINT64_C(5), List<uint64_t>::nil()))))));
 };
 
 #endif // INCLUDED_FUNCTION_VERNAC

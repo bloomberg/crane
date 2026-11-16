@@ -515,9 +515,9 @@ struct LoopifyExprVariants {
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Cond_2{std::move(a0), &a1, &a2,
-                                               std::move(_f._tmp5),
-                                               std::move(_result)});
+          _stack.emplace_back(
+              CraneCont_Cond_2{std::move(a0), &a1, &a2, std::move(_f._tmp5),
+                               std::move(_result)});
           _stack.emplace_back(CraneEnter{_f.a2});
         } else {
           auto _f = std::move(std::get<CraneCont_Cond_2>(_frame));
@@ -722,13 +722,11 @@ struct LoopifyExprVariants {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
             _result = UINT64_C(0);
-          } else if (std::holds_alternative<typename arith_expr::AAdd>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename arith_expr::AAdd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename arith_expr::AAdd>(_sv.v());
             _stack.emplace_back(CraneCont_AAdd{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          } else if (std::holds_alternative<typename arith_expr::AMul>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename arith_expr::AMul>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename arith_expr::AMul>(_sv.v());
             _stack.emplace_back(CraneCont_AMul{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -830,13 +828,11 @@ struct LoopifyExprVariants {
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
             const auto &[a0] = std::get<typename arith_expr::ANum>(_sv.v());
             _result = std::move(a0);
-          } else if (std::holds_alternative<typename arith_expr::AAdd>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename arith_expr::AAdd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename arith_expr::AAdd>(_sv.v());
             _stack.emplace_back(CraneCont_AAdd{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
-          } else if (std::holds_alternative<typename arith_expr::AMul>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename arith_expr::AMul>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename arith_expr::AMul>(_sv.v());
             _stack.emplace_back(CraneCont_AMul{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -962,13 +958,11 @@ struct LoopifyExprVariants {
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
             const auto &[a0] = std::get<typename arith_expr::ANum>(_sv.v());
             _result = f(a0);
-          } else if (std::holds_alternative<typename arith_expr::AAdd>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename arith_expr::AAdd>(_sv.v())) {
             const auto &[a2, a3] = std::get<typename arith_expr::AAdd>(_sv.v());
             _stack.emplace_back(CraneCont_AAdd{a2, crane_raw(a3)});
             _stack.emplace_back(CraneEnter{crane_raw(a2)});
-          } else if (std::holds_alternative<typename arith_expr::AMul>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename arith_expr::AMul>(_sv.v())) {
             const auto &[a2, a3] = std::get<typename arith_expr::AMul>(_sv.v());
             _stack.emplace_back(CraneCont_AMul{a2, crane_raw(a3)});
             _stack.emplace_back(CraneEnter{crane_raw(a2)});
@@ -1234,11 +1228,10 @@ struct LoopifyExprVariants {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
             _result = bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
             _stack.emplace_back(CraneCont_BAnd{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -1255,22 +1248,21 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BAnd>(_frame));
           const bool_expr &a1 = *_f.a1;
           bool_expr _tmp5 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp5.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp5.v_mut())) {
             _stack.emplace_back(CraneCont_BTrue{});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp5.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp5.v_mut())) {
             _result = bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp5.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp5.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp5.v_mut());
             bool_expr a_ = bool_expr::band(*a00, *a10);
             _stack.emplace_back(CraneCont_BAnd_1{std::move(a_)});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp5.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp5.v_mut())) {
             auto &[a00, a10] = std::get<typename bool_expr::BOr>(_tmp5.v_mut());
             bool_expr a_ = bool_expr::bor(*a00, *a10);
             _stack.emplace_back(CraneCont_BOr{std::move(a_)});
@@ -1285,20 +1277,19 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BAnd_1>(_frame));
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp2 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp2.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp2.v_mut())) {
             _result = std::move(a_);
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp2.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp2.v_mut())) {
             _result = bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp2.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp2.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp2.v_mut());
             _result =
                 bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp2.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp2.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp2.v_mut());
             _result =
                 bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
@@ -1310,20 +1301,19 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BAnd_2>(_frame));
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp7 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp7.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp7.v_mut())) {
             _result = bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp7.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp7.v_mut())) {
             _result = std::move(a_);
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp7.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp7.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp7.v_mut());
             _result =
                 bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp7.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp7.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp7.v_mut());
             _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
           } else {
@@ -1333,19 +1323,18 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<CraneCont_BFalse>(_frame)) {
           auto _f = std::move(std::get<CraneCont_BFalse>(_frame));
           bool_expr _tmp6 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp6.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp6.v_mut())) {
             _result = bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp6.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp6.v_mut())) {
             _result = bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp6.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp6.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp6.v_mut());
             _result = bool_expr::band(*a01, *a11);
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp6.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp6.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp6.v_mut());
             _result = bool_expr::bor(*a01, *a11);
           } else {
@@ -1356,20 +1345,19 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BNot>(_frame));
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp4 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp4.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp4.v_mut())) {
             _result = std::move(a_);
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp4.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp4.v_mut())) {
             _result = bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp4.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp4.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp4.v_mut());
             _result =
                 bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp4.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp4.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp4.v_mut());
             _result =
                 bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
@@ -1381,20 +1369,19 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BNot_1>(_frame));
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp9 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp9.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp9.v_mut())) {
             _result = bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp9.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp9.v_mut())) {
             _result = std::move(a_);
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp9.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp9.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp9.v_mut());
             _result =
                 bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp9.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp9.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp9.v_mut());
             _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
           } else {
@@ -1404,19 +1391,18 @@ struct LoopifyExprVariants {
         } else if (std::holds_alternative<CraneCont_BNot_2>(_frame)) {
           auto _f = std::move(std::get<CraneCont_BNot_2>(_frame));
           bool_expr _tmp11 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp11.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp11.v_mut())) {
             _result = bool_expr::bfalse();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
                          _tmp11.v_mut())) {
             _result = bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp11.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp11.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp11.v_mut());
             _result = bool_expr::bnot(bool_expr::band(*a00, *a10));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp11.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp11.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BOr>(_tmp11.v_mut());
             _result = bool_expr::bnot(bool_expr::bor(*a00, *a10));
@@ -1428,20 +1414,19 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BOr>(_frame));
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp3 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp3.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp3.v_mut())) {
             _result = std::move(a_);
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp3.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp3.v_mut())) {
             _result = bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp3.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp3.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp3.v_mut());
             _result =
                 bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp3.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp3.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp3.v_mut());
             _result =
                 bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
@@ -1453,22 +1438,21 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BOr_1>(_frame));
           const bool_expr &a1 = *_f.a1;
           bool_expr _tmp10 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp10.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp10.v_mut())) {
             _result = bool_expr::btrue();
           } else if (std::holds_alternative<typename bool_expr::BFalse>(
                          _tmp10.v_mut())) {
             _stack.emplace_back(CraneCont_BFalse{});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp10.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp10.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp10.v_mut());
             bool_expr a_ = bool_expr::band(*a00, *a10);
             _stack.emplace_back(CraneCont_BAnd_2{std::move(a_)});
             _stack.emplace_back(CraneEnter{_f.a1});
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp10.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp10.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BOr>(_tmp10.v_mut());
             bool_expr a_ = bool_expr::bor(*a00, *a10);
@@ -1484,20 +1468,19 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<CraneCont_BOr_2>(_frame));
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp8 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp8.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp8.v_mut())) {
             _result = bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp8.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp8.v_mut())) {
             _result = std::move(a_);
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp8.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp8.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp8.v_mut());
             _result =
                 bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp8.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp8.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp8.v_mut());
             _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
           } else {
@@ -1507,19 +1490,18 @@ struct LoopifyExprVariants {
         } else {
           auto _f = std::move(std::get<CraneCont_BTrue>(_frame));
           bool_expr _tmp1 = std::move(_result);
-          if (std::holds_alternative<typename bool_expr::BTrue>(
-                  _tmp1.v_mut())) {
+          if (std::holds_alternative<typename bool_expr::BTrue>(_tmp1.v_mut())) {
             _result = bool_expr::btrue();
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _tmp1.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_tmp1.v_mut())) {
             _result = bool_expr::bfalse();
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _tmp1.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BAnd>(_tmp1.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp1.v_mut());
             _result = bool_expr::band(*a01, *a11);
-          } else if (std::holds_alternative<typename bool_expr::BOr>(
-                         _tmp1.v_mut())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BOr>(_tmp1.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp1.v_mut());
             _result = bool_expr::bor(*a01, *a11);
           } else {
@@ -1583,11 +1565,10 @@ struct LoopifyExprVariants {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = true;
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
             _result = false;
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
             _stack.emplace_back(CraneCont_BAnd{crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -1693,11 +1674,10 @@ struct LoopifyExprVariants {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
             _result = f;
-          } else if (std::holds_alternative<typename bool_expr::BFalse>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename bool_expr::BFalse>(_sv.v())) {
             _result = f0;
-          } else if (std::holds_alternative<typename bool_expr::BAnd>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename bool_expr::BAnd>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename bool_expr::BAnd>(_sv.v());
             _stack.emplace_back(CraneCont_BAnd{a0, crane_raw(a1)});
             _stack.emplace_back(CraneEnter{crane_raw(a0)});
@@ -1893,8 +1873,8 @@ struct LoopifyExprVariants {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
             _stack.emplace_back(CraneCont_LCons{});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          } else if (std::holds_alternative<typename list_expr::LAppend>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
             _stack.emplace_back(CraneCont_LAppend{crane_raw(a1)});
@@ -1960,13 +1940,12 @@ struct LoopifyExprVariants {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
             _result = List<uint64_t>::nil();
-          } else if (std::holds_alternative<typename list_expr::LCons>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename list_expr::LCons>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
             _stack.emplace_back(CraneCont_LCons{a0});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          } else if (std::holds_alternative<typename list_expr::LAppend>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
             _stack.emplace_back(CraneCont_LAppend{crane_raw(a1)});
@@ -2047,13 +2026,12 @@ struct LoopifyExprVariants {
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
             _result = f;
-          } else if (std::holds_alternative<typename list_expr::LCons>(
-                         _sv.v())) {
+          } else if (std::holds_alternative<typename list_expr::LCons>(_sv.v())) {
             const auto &[a0, a1] = std::get<typename list_expr::LCons>(_sv.v());
             _stack.emplace_back(CraneCont_LCons{a0, a1});
             _stack.emplace_back(CraneEnter{crane_raw(a1)});
-          } else if (std::holds_alternative<typename list_expr::LAppend>(
-                         _sv.v())) {
+          } else if (
+              std::holds_alternative<typename list_expr::LAppend>(_sv.v())) {
             const auto &[a0, a1] =
                 std::get<typename list_expr::LAppend>(_sv.v());
             _stack.emplace_back(CraneCont_LAppend{a0, crane_raw(a1)});

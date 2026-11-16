@@ -1,10 +1,13 @@
 #include "par_unit_not_concurrent.h"
 
 uint64_t
-ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree
-                              &t) { /// CraneEnter: captures varying parameters
-                                    /// for each recursive call.
-
+ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree &t) { /// CraneEnter:
+                                                                 /// captures
+                                                                 /// varying
+                                                                 /// parameters
+                                                                 /// for each
+                                                                 /// recursive
+                                                                 /// call.
   struct CraneEnter {
     const ParUnitNotConcurrent::tree *t;
   };
@@ -80,8 +83,7 @@ ParUnitNotConcurrent::tree ParUnitNotConcurrent::mk(uint64_t n) {
                               std::move(_cell)))
                   : _root.emplace(std::move(_cell)));
       _write =
-          &crane::get<typename ParUnitNotConcurrent::tree::Node>(_node.v_mut())
-               .a0;
+          &crane::get<typename ParUnitNotConcurrent::tree::Node>(_node.v_mut()).a0;
       _loop_n = m;
       continue;
     }
@@ -89,11 +91,10 @@ ParUnitNotConcurrent::tree ParUnitNotConcurrent::mk(uint64_t n) {
   return std::move(*_root);
 }
 
-ParUnitNotConcurrent::tree
-ParUnitNotConcurrent::mirror(const ParUnitNotConcurrent::tree
-                                 &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+ParUnitNotConcurrent::tree ParUnitNotConcurrent::mirror(
+    const ParUnitNotConcurrent::tree &t) { /// CraneEnter: captures varying
+                                           /// parameters for each recursive
+                                           /// call.
   struct CraneEnter {
     const ParUnitNotConcurrent::tree *t;
   };

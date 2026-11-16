@@ -22,8 +22,8 @@
 /// pushes
 ///
 /// _stack.emplace_back(_Enter{
-/// crane_raw(a1),                                   // points INTO this frame's
-/// l lst::cons(m + 1, lst::cons(m, lst::nil())),      // fresh l for the callee
+/// crane_raw(a1), // points INTO this frame's l
+/// lst::cons(m + 1, lst::cons(m, lst::nil())),      // fresh l for the callee
 /// m});
 ///
 /// The acc pointer aliases a cell owned by the *current* iteration's
@@ -97,7 +97,6 @@ struct LoopifyFramePtrEscape {
   static T1 lst_rect(T1 f, F1 &&f0,
                      const lst &l) { /// CraneEnter: captures varying parameters
                                      /// for each recursive call.
-
     struct CraneEnter {
       const lst *l;
     };

@@ -10,7 +10,6 @@
 #include <variant>
 
 namespace Datatypes {
-
 template <typename A> struct List;
 
 template <typename A> struct List {
@@ -91,7 +90,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
 } // namespace Datatypes
 
 #endif // INCLUDED_DATATYPES

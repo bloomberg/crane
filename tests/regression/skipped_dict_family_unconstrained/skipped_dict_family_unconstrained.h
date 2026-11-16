@@ -110,8 +110,9 @@ public:
 
 template <typename T1, typename T2>
 std::shared_ptr<ITree<T2>> trigger_cast_(crane::rebind_t<T1, Void0> e) {
-  return itree_bind(itree_trigger(std::move(e)),
-                    [](const Void0 &_x) { return _x.void_elim(); });
+  return itree_bind(itree_trigger(std::move(e)), [](const Void0 &_x) {
+    return _x.void_elim();
+  });
 }
 
 struct SkippedDictFamilyUnconstrained {

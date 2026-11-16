@@ -11,7 +11,6 @@
 #include "Datatypes.h"
 
 namespace ListDef {
-
 template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T2, F0 &, const T1 &>
 Datatypes::List<T2> map(F0 &&f, const Datatypes::List<T1> &l) {
@@ -19,8 +18,7 @@ Datatypes::List<T2> map(F0 &&f, const Datatypes::List<T1> &l) {
   std::shared_ptr<Datatypes::List<T2>> *_write = nullptr;
   const Datatypes::List<T1> *_loop_l = &l;
   while (true) {
-    if (std::holds_alternative<typename Datatypes::List<T1>::Nil>(
-            _loop_l->v())) {
+    if (std::holds_alternative<typename Datatypes::List<T1>::Nil>(_loop_l->v())) {
       auto _value = Datatypes::template List<T2>::nil();
       (_write ? *(*_write =
                       std::make_shared<Datatypes::List<T2>>(std::move(_value)))
@@ -41,7 +39,6 @@ Datatypes::List<T2> map(F0 &&f, const Datatypes::List<T1> &l) {
   }
   return std::move(*_root);
 }
-
 } // namespace ListDef
 
 #endif // INCLUDED_LISTDEF

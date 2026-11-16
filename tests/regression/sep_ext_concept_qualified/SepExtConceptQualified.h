@@ -7,7 +7,6 @@
 #include "Datatypes.h"
 
 namespace SepExtConceptQualified {
-
 template <typename M>
 concept OrderedType = requires {
   typename M::t;
@@ -28,7 +27,6 @@ template <OrderedType X> struct Make {
     }
   }
 };
-
 } // namespace SepExtConceptQualified
 
 #endif // INCLUDED_SEPEXTCONCEPTQUALIFIED

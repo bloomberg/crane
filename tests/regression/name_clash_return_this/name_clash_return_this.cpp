@@ -25,8 +25,7 @@ NameClashReturnThis::maybe_transform(bool flag,
 /// Match on shape where one branch returns the same shape unchanged.
 NameClashReturnThis::shape
 NameClashReturnThis::identity_or_double(const NameClashReturnThis::shape &s) {
-  if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(
-          s.v())) {
+  if (std::holds_alternative<typename NameClashReturnThis::shape::Circle>(s.v())) {
     const auto &[a0] =
         std::get<typename NameClashReturnThis::shape::Circle>(s.v());
     return shape::circle((a0 * UINT64_C(2)));

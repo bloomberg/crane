@@ -1,9 +1,8 @@
 #include "SllPairCastDeque.h"
 
 namespace SllPairCastDeque {
-
-bool SllPairCastDeque::sll_final_config(
-    const SllPairCastDeque::sll_subparser &sp) {
+bool
+SllPairCastDeque::sll_final_config(const SllPairCastDeque::sll_subparser &sp) {
   const crane::obj &_x = sp.sll_pred;
   const std::pair<SllPairCastDeque::sll_frame,
                   std::deque<SllPairCastDeque::sll_frame>> &sll_stk0 =
@@ -20,15 +19,14 @@ bool SllPairCastDeque::sll_final_config(
         return true;
       } else {
         const auto &_x0 = l.front();
-        std::deque<SllPairCastDeque::sll_frame> _x1(l.begin() + 1, l.end());
+        std::deque<SllPairCastDeque::sll_frame> _x1(l.begin()+1, l.end());
         return false;
       }
     } else {
       const auto &_x0 = fr_suf0.front();
-      std::deque<uint64_t> _x1(fr_suf0.begin() + 1, fr_suf0.end());
+      std::deque<uint64_t> _x1(fr_suf0.begin()+1, fr_suf0.end());
       return false;
     }
   }
 }
-
 } // namespace SllPairCastDeque

@@ -160,27 +160,30 @@ struct RecordTypeFieldConcept {
   using dty = crane::obj;
   static uint64_t read(const dyn &d);
   static inline const List<dyn> ds = List<dyn>::cons(
-      dyn{UINT64_C(7),
-          crane_erase_fn<uint64_t>([](const auto &n) { return n; })},
+      dyn{UINT64_C(7), crane_erase_fn<uint64_t>([](const auto &n) {
+        return n;
+      })},
       List<dyn>::cons(
-          dyn{List<uint64_t>::cons(
-                  UINT64_C(1),
-                  List<uint64_t>::cons(
-                      UINT64_C(2), List<uint64_t>::cons(
-                                       UINT64_C(3), List<uint64_t>::nil()))),
-              crane_erase_fn<uint64_t>(
-                  [](const List<uint64_t> &_x) { return _x.length(); })},
+          dyn{
+              List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::cons(
+                                       UINT64_C(2), List<uint64_t>::cons(
+                                           UINT64_C(3),
+                                           List<uint64_t>::nil()))),
+              crane_erase_fn<uint64_t>([](const List<uint64_t> &_x) {
+                return _x.length();
+              })},
           List<dyn>::cons(
               dyn{std::make_pair(UINT64_C(3), UINT64_C(4)),
                   crane_erase_fn<uint64_t>([](const auto &p) {
                     return (
                         crane_any_cast<std::pair<uint64_t, uint64_t>>(p).first *
-                        crane_any_cast<std::pair<uint64_t, uint64_t>>(p)
-                            .second);
+                        crane_any_cast<std::pair<uint64_t, uint64_t>>(p).second);
                   })},
               List<dyn>::nil())));
-  static inline const uint64_t total = ds.template fold_left<uint64_t>(
-      [](uint64_t acc, const dyn &d) { return (acc + read(d)); }, UINT64_C(0));
+  static inline const uint64_t total =
+      ds.template fold_left<uint64_t>([](uint64_t acc, const dyn &d) {
+        return (acc + read(d));
+      }, UINT64_C(0));
 };
 
 #endif // INCLUDED_RECORD_TYPE_FIELD_CONCEPT

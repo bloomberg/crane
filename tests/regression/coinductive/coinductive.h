@@ -33,8 +33,9 @@ struct Coinductive {
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
 
     static stream cons(uint64_t a0, stream a1) {
-      return stream(crane::lazy<variant_t>(
-          std::in_place, std::in_place_index<0>, a0, std::move(a1)));
+      return stream(
+          crane::lazy<variant_t>(std::in_place, std::in_place_index<0>, a0,
+                                 std::move(a1)));
     }
 
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
@@ -56,8 +57,9 @@ struct Coinductive {
 
   static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s) {
     const auto &[a0, a1] = std::get<typename stream::Cons>(s.v());
-    return stream::lazy_(
-        [=]() -> typename stream::Cons { return {f(a0), smap(f, a1)}; });
+    return stream::lazy_([=]() -> typename stream::Cons {
+      return {f(a0), smap(f, a1)};
+    });
   }
 
   static stream interleave(const stream &s1, const stream &s2);

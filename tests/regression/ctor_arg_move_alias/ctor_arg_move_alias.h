@@ -231,13 +231,13 @@ struct CtorArgMoveAlias {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -366,7 +366,7 @@ struct CtorArgMoveAlias {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const inner &, const uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, const mylist<inner> &>
+    std::is_invocable_r_v<T1, F1 &, const mylist<inner> &>
   static T1 pack_rect(F0 &&f, F1 &&f0, const pack &p) {
     if (std::holds_alternative<typename pack::Pack0>(p.v())) {
       const auto &[a0, a1] = std::get<typename pack::Pack0>(p.v());

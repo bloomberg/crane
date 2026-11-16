@@ -4,7 +4,6 @@ List<uint64_t> LoopifySpecialRecursion::process_twice_fuel(
     uint64_t fuel,
     const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
                                /// each recursive call.
-
   struct CraneEnter {
     List<uint64_t> l;
     uint64_t fuel;
@@ -69,11 +68,13 @@ List<uint64_t> LoopifySpecialRecursion::process_twice(const List<uint64_t> &l) {
   return process_twice_fuel((l.length() * l.length()), l);
 }
 
-List<uint64_t> LoopifySpecialRecursion::double_append(
-    const List<uint64_t> &l1,
-    List<uint64_t> l2) { /// CraneEnter: captures varying parameters for each
-                         /// recursive call.
-
+List<uint64_t>
+LoopifySpecialRecursion::double_append(const List<uint64_t> &l1,
+                                       List<uint64_t> l2) { /// CraneEnter:
+                                                            /// captures varying
+                                                            /// parameters for
+                                                            /// each recursive
+                                                            /// call.
   struct CraneEnter {
     const List<uint64_t> *l1;
   };
@@ -180,9 +181,9 @@ LoopifySpecialRecursion::reverse_insert(uint64_t x, const List<uint64_t> &l) {
         continue;
       } else {
         auto _value = List<uint64_t>::cons(x, *_loop_l);
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       }
     }
@@ -191,10 +192,9 @@ LoopifySpecialRecursion::reverse_insert(uint64_t x, const List<uint64_t> &l) {
 }
 
 List<uint64_t> LoopifySpecialRecursion::collect_sorted(
-    const LoopifySpecialRecursion::tree
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifySpecialRecursion::tree &t) { /// CraneEnter: captures varying
+                                              /// parameters for each recursive
+                                              /// call.
   struct CraneEnter {
     const LoopifySpecialRecursion::tree *t;
   };
@@ -249,11 +249,14 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
   return _result;
 }
 
-uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(
-    const List<uint64_t> &l,
-    uint64_t idx) { /// CraneEnter: captures varying parameters for each
-                    /// recursive call.
-
+uint64_t
+LoopifySpecialRecursion::sum_odd_indices_aux(const List<uint64_t> &l,
+                                             uint64_t idx) { /// CraneEnter:
+                                                             /// captures
+                                                             /// varying
+                                                             /// parameters for
+                                                             /// each recursive
+                                                             /// call.
   struct CraneEnter {
     uint64_t idx;
     const List<uint64_t> *l;
@@ -300,11 +303,15 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices(const List<uint64_t> &l) {
   return sum_odd_indices_aux(l, UINT64_C(0));
 }
 
-uint64_t LoopifySpecialRecursion::categorize_by(
-    uint64_t k,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifySpecialRecursion::categorize_by(uint64_t k,
+                                       const List<uint64_t> &l) { /// CraneEnter:
+                                                                  /// captures
+                                                                  /// varying
+                                                                  /// parameters
+                                                                  /// for each
+                                                                  /// recursive
+                                                                  /// call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -402,7 +409,6 @@ List<uint64_t> LoopifySpecialRecursion::between(uint64_t lo, uint64_t hi,
 List<uint64_t> LoopifySpecialRecursion::merge_levels(
     const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
                                       /// parameters for each recursive call.
-
   struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };

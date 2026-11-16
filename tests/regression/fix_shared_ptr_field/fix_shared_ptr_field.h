@@ -101,10 +101,10 @@ struct FixSharedPtrField {
             return (UINT64_C(1) + _self_compute(_self_compute, x_));
           }
         };
-        auto compute = [=, compute_impl = std::move(compute_impl)](
-                           uint64_t x) -> uint64_t {
-          return compute_impl(compute_impl, x);
-        };
+        auto compute =
+            [=, compute_impl = std::move(compute_impl)](uint64_t x) -> uint64_t {
+              return compute_impl(compute_impl, x);
+            };
         return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
             std::move(compute));
       }
@@ -267,11 +267,12 @@ struct FixSharedPtrField {
   /// compute(5) = (10+50) + 5 = 65.
   /// Bug: h and t captured by &, dangle after match scope ends.
   static inline const uint64_t test1 = []() -> uint64_t {
-    auto _cs = mylist::mycons(UINT64_C(10),
-                              mylist::mycons(UINT64_C(20),
-                                             mylist::mycons(UINT64_C(30),
-                                                            mylist::mynil())))
-                   .make_list_fn();
+    auto _cs =
+        mylist::mycons(
+            UINT64_C(10), mylist::mycons(
+                UINT64_C(20),
+                mylist::mycons(UINT64_C(30), mylist::mynil())))
+            .make_list_fn();
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(5));
@@ -285,13 +286,14 @@ struct FixSharedPtrField {
   static inline const uint64_t test2 = []() {
     std::optional<crane::fn<uint64_t(uint64_t)>> opt =
         mylist::mycons(UINT64_C(100),
-                       mylist::mycons(UINT64_C(200), mylist::mynil()))
+                       mylist::mycons(UINT64_C(200),
+                                      mylist::mynil()))
             .make_list_fn();
     uint64_t noise =
         mylist::mycons(
-            UINT64_C(1),
-            mylist::mycons(UINT64_C(2),
-                           mylist::mycons(UINT64_C(3), mylist::mynil())))
+            UINT64_C(1), mylist::mycons(
+                UINT64_C(2),
+                mylist::mycons(UINT64_C(3), mylist::mynil())))
             .mylist_sum();
     if (opt.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *opt;
@@ -304,16 +306,15 @@ struct FixSharedPtrField {
   /// l = 5, 10, 15, 20, 25, h=5, t=10,15,20,25,
   /// mylist_sum(t) = 70, compute(10) = (5+70)+10 = 85.
   static inline const uint64_t test3 = []() -> uint64_t {
-    auto _cs = mylist::mycons(
-                   UINT64_C(5),
-                   mylist::mycons(
-                       UINT64_C(10),
-                       mylist::mycons(
-                           UINT64_C(15),
-                           mylist::mycons(
-                               UINT64_C(20),
-                               mylist::mycons(UINT64_C(25), mylist::mynil())))))
-                   .make_list_fn();
+    auto _cs =
+        mylist::mycons(
+            UINT64_C(5), mylist::mycons(
+                UINT64_C(10), mylist::mycons(
+                    UINT64_C(15), mylist::mycons(
+                        UINT64_C(20),
+                        mylist::mycons(UINT64_C(25),
+                                       mylist::mynil())))))
+            .make_list_fn();
     if (_cs.has_value()) {
       const crane::fn<uint64_t(uint64_t)> &f = *_cs;
       return f(UINT64_C(10));

@@ -138,13 +138,15 @@ struct TypeFieldRecordInExpression {
   };
 
   using ty = crane::obj;
-  static inline const alg natalg = alg{
-      UINT64_C(3), crane_erase_fn<uint64_t>([](const auto &x) { return x; })};
+  static inline const alg natalg =
+      alg{UINT64_C(3), crane_erase_fn<uint64_t>([](const auto &x) {
+        return x;
+      })};
   static uint64_t get(const alg &a);
   static inline const uint64_t result =
-      (List<alg>::cons(natalg, List<alg>::cons(natalg, List<alg>::nil()))
-           .length() +
-       get(natalg));
+      (List<alg>::cons(natalg,
+                       List<alg>::cons(natalg, List<alg>::nil()))
+           .length() + get(natalg));
 };
 
 #endif // INCLUDED_TYPE_FIELD_RECORD_IN_EXPRESSION

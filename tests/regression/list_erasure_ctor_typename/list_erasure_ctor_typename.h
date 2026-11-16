@@ -43,21 +43,20 @@ struct List {
                     typename List::template list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
-              const auto &[a, l] =
-                  std::get<typename List::template list<CraneU>::Cons>(
-                      _other.v());
+              const auto &[a, l] = std::get<
+                  typename List::template list<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<typename List::template list<A>>(
-                           crane_convert<typename List::template list<A>>(*l))
+                         crane_convert<typename List::template list<A>>(*l))
                      : nullptr)};
             }
           }()) {}
@@ -67,23 +66,23 @@ struct List {
     }
 
     static typename List::template list<A> cons(A a, List::list<A> l) {
-      return typename List::template list<A>(Cons{
-          std::move(a),
-          std::make_shared<typename List::template list<A>>(std::move(l))});
+      return typename List::template list<A>(
+          Cons{std::move(a),
+               std::make_shared<typename List::template list<A>>(std::move(l))});
     }
 
     // MANIPULATORS
     ~list() {
-      auto _next = [&](variant_t &_v)
-          -> std::shared_ptr<typename List::template list<A>> {
-        if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->l && _alt->l.use_count() == 1) {
-            std::atomic_thread_fence(std::memory_order_acquire);
-            return std::move(_alt->l);
-          }
-        }
-        return nullptr;
-      };
+      auto _next =
+          [&](variant_t &_v) -> std::shared_ptr<typename List::template list<A>> {
+            if (auto *_alt = std::get_if<Cons>(&_v)) {
+              if (_alt->l && _alt->l.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                return std::move(_alt->l);
+              }
+            }
+            return nullptr;
+          };
       std::shared_ptr<typename List::template list<A>> _cur = _next(v_mut());
       while (_cur) {
         _cur = _next(_cur->v_mut());

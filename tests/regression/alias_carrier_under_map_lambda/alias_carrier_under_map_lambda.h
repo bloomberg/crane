@@ -236,8 +236,7 @@ public:
   template <typename CraneU>
   Exp(const Exp<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(_other.v())) {
             const auto &[a0] =
                 std::get<typename Exp<CraneU>::E_leaf>(_other.v());
             return E_leaf{[&]() -> t {
@@ -253,9 +252,9 @@ public:
                 std::get<typename Exp<CraneU>::E_node>(_other.v());
             return E_node{
                 (a0 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a0))
-                    : nullptr),
-                (a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
-                    : nullptr)};
+                    : nullptr), (
+                    a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
+                       : nullptr)};
           }
         }()) {}
 
@@ -435,8 +434,7 @@ public:
   template <typename CraneU>
   Instr(const Instr<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Instr<CraneU>::I_op>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Instr<CraneU>::I_op>(_other.v())) {
             const auto &[a0] =
                 std::get<typename Instr<CraneU>::I_op>(_other.v());
             return I_op{crane_convert<Exp<t>>(a0)};
@@ -480,8 +478,7 @@ struct TFunctor_instr {
                 auto [te, a] = std::move(pat);
                 return std::make_pair(
                     TFunctor_texp::template tfmap<CraneA0, CraneA1>(
-                        f, std::move(te)),
-                    std::move(a));
+                        f, std::move(te)), std::move(a));
               }));
     }
   }

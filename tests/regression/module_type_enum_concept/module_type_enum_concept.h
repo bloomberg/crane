@@ -5,7 +5,9 @@
 #include <utility>
 
 template <typename M>
-concept T = requires { typename M::Color; };
+concept T = requires {
+  typename M::Color;
+};
 
 struct ModuleTypeEnumConcept {
   struct Impl {

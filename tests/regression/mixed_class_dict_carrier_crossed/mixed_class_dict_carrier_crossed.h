@@ -227,8 +227,7 @@ public:
   template <typename CraneU>
   Exp(const Exp<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(
-                  _other.v())) {
+          if (std::holds_alternative<typename Exp<CraneU>::E_leaf>(_other.v())) {
             const auto &[a0] =
                 std::get<typename Exp<CraneU>::E_leaf>(_other.v());
             return E_leaf{[&]() -> t {
@@ -244,9 +243,9 @@ public:
                 std::get<typename Exp<CraneU>::E_node>(_other.v());
             return E_node{
                 (a0 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a0))
-                    : nullptr),
-                (a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
-                    : nullptr)};
+                    : nullptr), (
+                    a1 ? std::make_shared<Exp<t>>(crane_convert<Exp<t>>(*a1))
+                       : nullptr)};
           }
         }()) {}
 
@@ -369,8 +368,8 @@ template <typename t> struct Decl {
       if constexpr (crane_convertible<CraneU, const t &>) {
         return crane_convert<CraneU>(a0);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -479,8 +478,8 @@ struct TFunctor_modu {
 };
 
 template <typename F0> modu<bool> use_modu(F0 &&f, const modu<Nat> &m) {
-  return TFunctor_modu<TFunctor_exp, Endo_nat,
-                       TFunctor_decl>::template tfmap<Nat, bool>(f, m);
+  return TFunctor_modu<TFunctor_exp, Endo_nat, TFunctor_decl>::template tfmap<
+      Nat, bool>(f, m);
 }
 
 #endif // INCLUDED_MIXED_CLASS_DICT_CARRIER_CROSSED

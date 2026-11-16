@@ -17,7 +17,6 @@ SumDrain::t SumDrain::build(uint64_t n, SumDrain::t acc) {
 uint64_t
 SumDrain::depth(const SumDrain::t &x) { /// CraneEnter: captures varying
                                         /// parameters for each recursive call.
-
   struct CraneEnter {
     const SumDrain::t *x;
   };

@@ -6,23 +6,31 @@
 
 template <typename M>
 concept A_T = requires {
-  requires(
-      requires {
-        { M::x } -> std::convertible_to<uint64_t>;
-      } ||
-      requires {
-        { M::x() } -> std::convertible_to<uint64_t>;
-      });
+  requires (requires {
+    {
+      M::x
+    }
+    -> std::convertible_to<uint64_t>;
+  } || requires {
+    {
+      M::x()
+    }
+    -> std::convertible_to<uint64_t>;
+  });
 };
 template <typename M>
 concept B_T = requires {
-  requires(
-      requires {
-        { M::y } -> std::convertible_to<bool>;
-      } ||
-      requires {
-        { M::y() } -> std::convertible_to<bool>;
-      });
+  requires (requires {
+    {
+      M::y
+    }
+    -> std::convertible_to<bool>;
+  } || requires {
+    {
+      M::y()
+    }
+    -> std::convertible_to<bool>;
+  });
 };
 
 struct ModuleTypeShortNameClash {

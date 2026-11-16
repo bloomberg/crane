@@ -23,8 +23,7 @@ concept Monad = requires {
     I::template ret<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
   {
-    I::bind(std::declval<typename I::template m<crane::obj>>(),
-            std::declval<
+    I::bind(std::declval<typename I::template m<crane::obj>>(), std::declval<
                 crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
@@ -190,8 +189,7 @@ struct EOU_monad {
 
   static EOU<crane::obj> bind(EOU<crane::obj> c,
                               crane::fn<EOU<crane::obj>(crane::obj)> k) {
-    if (std::holds_alternative<typename EOU<crane::obj>::Raise_error>(
-            c.v_mut())) {
+    if (std::holds_alternative<typename EOU<crane::obj>::Raise_error>(c.v_mut())) {
       auto &[s0] = std::get<typename EOU<crane::obj>::Raise_error>(c.v_mut());
       return EOU<crane::obj>::raise_error(std::move(s0));
     } else {

@@ -8,7 +8,6 @@
 #include <variant>
 
 namespace Specif {
-
 template <typename A, typename P> struct SigT;
 
 template <typename A, typename P> struct SigT {
@@ -47,7 +46,6 @@ template <typename A, typename P> struct SigT {
     return x0;
   }
 };
-
 } // namespace Specif
 
 #endif // INCLUDED_SPECIF

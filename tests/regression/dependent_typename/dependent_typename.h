@@ -7,16 +7,22 @@
 template <typename M>
 concept HasType = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::default_ } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::default_() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::default_
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::default_()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 template <typename M>
-concept Container = requires { typename M::template t<void>; };
+concept Container = requires {
+  typename M::template t<void>;
+};
 
 struct DependentTypename {
   template <HasType M> struct UsesType {

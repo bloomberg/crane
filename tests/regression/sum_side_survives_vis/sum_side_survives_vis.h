@@ -16,8 +16,7 @@ struct SumSideSurvivesVis {
 
   template <typename T1 = void>
   static uint64_t side(const Sum1<AE, AE, crane::obj> &e) {
-    if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(
-            e.v())) {
+    if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(e.v())) {
       return UINT64_C(1);
     } else {
       return UINT64_C(2);

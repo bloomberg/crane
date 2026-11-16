@@ -93,16 +93,16 @@ public:
 };
 
 struct EtaMatchReturnsFun {
-  static inline const List<std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>
-      tbl = List<std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::cons(
-          std::make_pair(UINT64_C(0), [](uint64_t x) { return x; }),
-          List<std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::cons(
-              std::make_pair(UINT64_C(1), [](uint64_t x) { return (x + 1); }),
-              List<std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::nil()));
+  static inline const List<std::pair<uint64_t,
+                                     crane::fn<uint64_t(uint64_t)>>> tbl = List<
+      std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::cons(
+      std::make_pair(UINT64_C(0), [](uint64_t x) { return x; }), List<
+          std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::cons(
+          std::make_pair(UINT64_C(1), [](uint64_t x) { return (x + 1); }),
+          List<std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::nil()));
   static uint64_t
   lookup(const List<std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>> &l,
          uint64_t k, uint64_t x0_);
-
   static inline const uint64_t test = lookup(tbl, UINT64_C(1), UINT64_C(5));
 };
 

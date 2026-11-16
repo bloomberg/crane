@@ -8,7 +8,6 @@
 #include "Datatypes.h"
 
 namespace AnyCastDanglingPairRef {
-
 using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
@@ -36,14 +35,12 @@ template <SymTypes Ty> struct Destruct {
            symbols_semty vs) {
     auto a = crane::any_cast<std::pair<crane::obj, crane::obj>>(vs).first;
     auto tail =
-        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs))
-            .second;
-    auto b = crane_any_cast<std::pair<crane::obj, crane::obj>>(std::move(tail))
-                 .first;
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(vs)).second;
+    auto b =
+        crane_any_cast<std::pair<crane::obj, crane::obj>>(std::move(tail)).first;
     return std::make_pair(crane::obj(std::move(a)), crane::obj(std::move(b)));
   }
 };
-
 } // namespace AnyCastDanglingPairRef
 
 #endif // INCLUDED_ANYCASTDANGLINGPAIRREF

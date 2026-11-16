@@ -31,7 +31,7 @@ struct DoubleOptionNest {
 
     static t node(uint64_t a0, std::optional<std::optional<t>> a1) {
       return t(Node{a0, std::make_shared<std::optional<std::optional<t>>>(
-                            std::move(a1))});
+                        std::move(a1))});
     }
 
     // MANIPULATORS
@@ -85,7 +85,6 @@ struct DoubleOptionNest {
   static t wrap(uint64_t k, const t &acc);
   static inline const t empty =
       t::node(UINT64_C(0), std::optional<std::optional<t>>());
-
   static uint64_t peek(const t &x);
 };
 

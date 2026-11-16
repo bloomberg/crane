@@ -61,13 +61,13 @@ struct MemSafetyProbe11 {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -497,8 +497,9 @@ struct MemSafetyProbe11 {
         tree::node(tree::leaf(), UINT64_C(5), tree::leaf()), UINT64_C(10),
         tree::node(tree::leaf(), UINT64_C(15),
                    tree::node(tree::leaf(), UINT64_C(20), tree::leaf())));
-    return sum_fns(collect_dual_captures(
-        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
+    return sum_fns(
+        collect_dual_captures(std::move(t),
+                              mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
   }();
   /// TEST 2: Closure captures the TAIL of the list (unique_ptr field).
   /// Each closure computes length of the tail.
@@ -507,13 +508,14 @@ struct MemSafetyProbe11 {
   capture_tails(const mylist<uint64_t> &l,
                 mylist<crane::fn<uint64_t(uint64_t)>> acc);
   static inline const uint64_t test_capture_tails = []() {
-    mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(100),
+    mylist<uint64_t> l =
         mylist<uint64_t>::mycons(
-            UINT64_C(200), mylist<uint64_t>::mycons(
-                               UINT64_C(300), mylist<uint64_t>::mynil())));
-    return sum_fns(capture_tails(
-        std::move(l), mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
+            UINT64_C(100), mylist<uint64_t>::mycons(
+                UINT64_C(200), mylist<uint64_t>::mycons(
+                    UINT64_C(300), mylist<uint64_t>::mynil())));
+    return sum_fns(
+        capture_tails(std::move(l),
+                      mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
   }();
   /// TEST 3: Closure captures a SUBTREE, but the subtree is ALSO
   /// passed to a recursive call AND used in the continuation.
@@ -524,8 +526,9 @@ struct MemSafetyProbe11 {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                         UINT64_C(7),
                         tree::node(tree::leaf(), UINT64_C(11), tree::leaf()));
-    return sum_fns(triple_use_tree(
-        std::move(t), mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
+    return sum_fns(
+        triple_use_tree(std::move(t),
+                        mylist<crane::fn<uint64_t(uint64_t)>>::mynil()));
   }();
   static inline const uint64_t test_nested_capture = []() {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
@@ -544,8 +547,7 @@ struct MemSafetyProbe11 {
              mylist<crane::fn<uint64_t(uint64_t)>> fn_acc);
   static inline const uint64_t test_dual_accum = []() {
     mylist<uint64_t> l = mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
+        UINT64_C(10), mylist<uint64_t>::mycons(
             UINT64_C(20),
             mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil())));
     return sum_fns(dual_accum(std::move(l), UINT64_C(0),

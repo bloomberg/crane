@@ -9,23 +9,22 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
   std::string tmp = [&]() -> std::string {
     std::string _n =
         std::filesystem::path(std::move(prefix)).filename().string();
-    if (_n.empty() || _n == "." || _n == "..")
-      _n = "tmp";
+    if (_n.empty() || _n == "." || _n == "..") _n = "tmp";
     std::filesystem::path _base = std::filesystem::temp_directory_path();
     std::random_device _rng;
     for (;;) {
       std::string _d =
-          (_base / (_n + std::to_string(_rng()) + std::to_string(_rng())))
+          (_base /
+           (_n + std::to_string(_rng()) + std::to_string(_rng())))
               .string();
       if (::mkdir(_d.c_str(), 0700) != 0) {
-        if (errno == EEXIST)
-          continue;
+        if (errno == EEXIST) continue;
         throw std::runtime_error("crane: failed to create temporary directory");
       }
       std::string _p = _d + "/" + _n;
       int _fd = ::open(_p.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-      if (_fd < 0)
-        throw std::runtime_error("crane: failed to create temporary file");
+      if (_fd < 0) throw std::runtime_error("crane: failed to create temporary "
+                                            "file");
       ::close(_fd);
       return _p;
     }
@@ -73,10 +72,11 @@ uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    int64_t _x = static_cast<int64_t>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            std::chrono::steady_clock::now().time_since_epoch())
-            .count());
+    int64_t _x =
+        static_cast<int64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
     std::cout << msg << '\n';
     uint64_t r = repeat_log(n_, std::move(msg));
     return (r + 1);

@@ -1,9 +1,9 @@
 #include "loopify_list_windows.h"
 
-uint64_t LoopifyListWindows::len(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+uint64_t
+LoopifyListWindows::len(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                   /// varying parameters for
+                                                   /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -92,7 +92,6 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListWindows::span_eq(
     uint64_t first,
     const List<uint64_t> &lst) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
   struct CraneEnter {
     const List<uint64_t> *lst;
   };
@@ -151,9 +150,9 @@ List<uint64_t> LoopifyListWindows::differences(const List<uint64_t> &l) {
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         auto &&_sv1 = *a1;
@@ -190,10 +189,9 @@ LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
       auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-      (_write
-           ? *(*_write = std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                   std::move(_value)))
-           : _root.emplace(std::move(_value)));
+      (_write ? *(*_write = std::make_shared<
+                      List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
@@ -201,9 +199,8 @@ LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
         auto _value = List<std::pair<uint64_t, uint64_t>>::nil();
-        (_write ? *(*_write =
-                        std::make_shared<List<std::pair<uint64_t, uint64_t>>>(
-                            std::move(_value)))
+        (_write ? *(*_write = std::make_shared<
+                        List<std::pair<uint64_t, uint64_t>>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
         break;
       } else {
@@ -227,8 +224,8 @@ LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
                       : _root.emplace(std::move(_cell)));
           _write =
               &std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(
-                   _node.v_mut())
-                   .l;
+                  _node.v_mut())
+                  .l;
           _loop_l = crane_raw(a1);
           continue;
         }
@@ -238,10 +235,10 @@ LoopifyListWindows::sliding_pairs(const List<uint64_t> &l) {
   return std::move(*_root);
 }
 
-List<List<uint64_t>> LoopifyListWindows::inits(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-
+List<List<uint64_t>>
+LoopifyListWindows::inits(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                     /// varying parameters for
+                                                     /// each recursive call.
   struct CraneEnter {
     const List<uint64_t> *l;
   };
@@ -324,9 +321,9 @@ List<uint64_t> LoopifyListWindows::take(uint64_t n, const List<uint64_t> &l) {
       uint64_t n_ = _loop_n - 1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
         auto _value = List<uint64_t>::nil();
-        (_write
-             ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
-             : _root.emplace(std::move(_value)));
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =

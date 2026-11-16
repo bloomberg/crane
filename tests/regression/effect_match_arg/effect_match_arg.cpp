@@ -10,8 +10,7 @@ void EffectMatchArg::set_bool_value(bool flag, std::string key) {
         } else {
           return "no";
         }
-      }()
-                   .c_str(),
+      }().c_str(),
       1);
   return;
 }
@@ -25,9 +24,9 @@ void EffectMatchArg::set_bool_key(bool flag, std::string value) {
         } else {
           return "KEY_B";
         }
-      }()
-                   .c_str(),
-      std::move(value).c_str(), 1);
+      }().c_str(),
+      std::move(value).c_str(),
+      1);
   return;
 }
 
@@ -43,8 +42,7 @@ void EffectMatchArg::set_option_value(std::string key,
         } else {
           return "default";
         }
-      }()
-                   .c_str(),
+      }().c_str(),
       1);
   return;
 }
@@ -70,8 +68,7 @@ std::optional<std::string> EffectMatchArg::get_conditional(bool flag) {
       } else {
         return "KEY_B";
       }
-    }()
-                                       .c_str());
+    }().c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }

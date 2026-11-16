@@ -17,13 +17,17 @@ concept CARRIER = requires {
   typename M::t;
   typename M::inst;
   requires Weigh<typename M::inst, typename M::t>;
-  requires(
-      requires {
-        { M::sample } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::sample() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::sample
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::sample()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct ModuleParamClassInstance {

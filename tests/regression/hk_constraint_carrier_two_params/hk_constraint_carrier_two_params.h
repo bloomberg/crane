@@ -259,8 +259,8 @@ template <typename T, typename Body> struct outer1 {
       if constexpr (crane_convertible<CraneU1, const Body &>) {
         return crane_convert<CraneU1>(o_inner);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }

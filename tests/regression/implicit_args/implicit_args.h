@@ -26,7 +26,7 @@ struct ImplicitArgs {
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
     requires std::is_invocable_r_v<T3, F0 &, T2> &&
-             std::is_invocable_r_v<T2, F1 &, const T1 &>
+    std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
@@ -68,13 +68,13 @@ struct ImplicitArgs {
                     if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<mylist<A>>(
-                            crane_convert<mylist<A>>(*a1))
+                          crane_convert<mylist<A>>(*a1))
                       : nullptr)};
             }
           }()) {}
@@ -158,9 +158,10 @@ struct ImplicitArgs {
     return f(x0_);
   }
 
-  static inline const uint64_t use_apply_implicit = apply_implicit(
-      [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
-      UINT64_C(5));
+  static inline const uint64_t use_apply_implicit =
+      apply_implicit([](uint64_t _x0) -> uint64_t {
+        return (UINT64_C(1) + _x0);
+      }, UINT64_C(5));
   static uint64_t with_base(uint64_t x0_, uint64_t x1_);
   static uint64_t from_zero(uint64_t x0_);
   static uint64_t from_ten(uint64_t x0_);
@@ -183,8 +184,7 @@ struct ImplicitArgs {
       mylist<uint64_t>::mycons(UINT64_C(7), mylist<uint64_t>::mynil()));
   static uint64_t sum_with_init(uint64_t init, const mylist<uint64_t> &l);
   static inline const uint64_t use_sum_init = sum_with_init(
-      UINT64_C(5),
-      mylist<uint64_t>::mycons(
+      UINT64_C(5), mylist<uint64_t>::mycons(
           UINT64_C(1),
           mylist<uint64_t>::mycons(UINT64_C(2), mylist<uint64_t>::mynil())));
   static uint64_t nested_implicits(uint64_t a, uint64_t b, uint64_t c);
@@ -200,17 +200,15 @@ struct ImplicitArgs {
       fst_of<uint64_t, uint64_t>(UINT64_C(3), UINT64_C(7));
   static inline const uint64_t test_apply =
       apply<uint64_t, uint64_t>(double_nat, UINT64_C(5));
-  static inline const uint64_t test_compose =
-      compose<uint64_t, uint64_t, uint64_t>(
-          double_nat,
-          [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
-          UINT64_C(3));
+  static inline const uint64_t test_compose = compose<uint64_t, uint64_t,
+                                                      uint64_t>(
+      double_nat, [](uint64_t _x0) -> uint64_t { return (UINT64_C(1) + _x0); },
+      UINT64_C(3));
   static inline const uint64_t test_length =
       length<uint64_t>(mylist<uint64_t>::mycons(
-          UINT64_C(1),
-          mylist<uint64_t>::mycons(
-              UINT64_C(2), mylist<uint64_t>::mycons(
-                               UINT64_C(3), mylist<uint64_t>::mynil()))));
+                           UINT64_C(1), mylist<uint64_t>::mycons(
+                               UINT64_C(2), mylist<uint64_t>::mycons(
+                                   UINT64_C(3), mylist<uint64_t>::mynil()))));
   static inline const uint64_t test_explicit_id = explicit_id;
   static inline const uint64_t test_explicit_fst = explicit_fst;
   static inline const uint64_t test_add_implicit = use_add_implicit;

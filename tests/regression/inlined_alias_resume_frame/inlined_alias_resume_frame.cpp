@@ -3,7 +3,6 @@
 uint64_t
 InlinedAliasResumeFrame::h(uint64_t n) { /// CraneEnter: captures varying
                                          /// parameters for each recursive call.
-
   struct CraneEnter {
     uint64_t n;
   };

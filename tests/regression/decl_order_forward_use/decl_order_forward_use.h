@@ -120,10 +120,13 @@ struct Nat {
 
 struct DeclOrderForwardUse {
   static Nat::nat d(const Nat::nat &x0_, const Nat::nat &x1_);
-  static inline const Nat::nat test =
-      d(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))),
-        Nat::nat::s(Nat::nat::s(Nat::nat::o())));
+  static inline const Nat::nat test = d(
+      Nat::nat::s(
+          Nat::nat::s(
+              Nat::nat::s(
+                  Nat::nat::s(
+                      Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))),
+      Nat::nat::s(Nat::nat::s(Nat::nat::o())));
 };
 
 #endif // INCLUDED_DECL_ORDER_FORWARD_USE

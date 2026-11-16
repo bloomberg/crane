@@ -154,9 +154,8 @@ struct LentAliasByReference {
               _loop_t->v())) {
         return d;
       } else {
-        const auto &[a0, a1] =
-            std::get<typename List<std::pair<uint64_t, T1>>::Cons>(
-                _loop_t->v());
+        const auto &[a0, a1] = std::get<
+            typename List<std::pair<uint64_t, T1>>::Cons>(_loop_t->v());
         const auto &[k_, v] = a0;
         if (k == k_) {
           return std::move(v);
@@ -172,18 +171,16 @@ struct LentAliasByReference {
   /// Kept whole: owned, by value, moved in.
   static bag push(uint64_t x, const List<uint64_t> &b);
   static inline const bag sample = List<uint64_t>::cons(
-      UINT64_C(1),
-      List<uint64_t>::cons(
-          UINT64_C(2),
-          List<uint64_t>::cons(
+      UINT64_C(1), List<uint64_t>::cons(
+          UINT64_C(2), List<uint64_t>::cons(
               UINT64_C(3),
               List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))));
   static inline const table<uint64_t> names =
       List<std::pair<uint64_t, uint64_t>>::cons(
-          std::make_pair(UINT64_C(1), UINT64_C(10)),
-          List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(UINT64_C(2), UINT64_C(20)),
-              List<std::pair<uint64_t, uint64_t>>::cons(
+          std::make_pair(UINT64_C(1), UINT64_C(10)), List<
+              std::pair<uint64_t, uint64_t>>::cons(
+              std::make_pair(UINT64_C(2), UINT64_C(20)), List<
+                  std::pair<uint64_t, uint64_t>>::cons(
                   std::make_pair(UINT64_C(3), UINT64_C(30)),
                   List<std::pair<uint64_t, uint64_t>>::nil())));
   static inline const uint64_t test_size = bag_size(sample);

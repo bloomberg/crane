@@ -4,10 +4,9 @@
 /// value reads it for the last time in the turn
 /// (Ownership_ir.continue_moves).
 uint64_t LoopifyAccumulatorReadElsewhere::size(
-    const LoopifyAccumulatorReadElsewhere::tree
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyAccumulatorReadElsewhere::tree &t) { /// CraneEnter: captures
+                                                      /// varying parameters for
+                                                      /// each recursive call.
   struct CraneEnter {
     const LoopifyAccumulatorReadElsewhere::tree *t;
   };
@@ -39,9 +38,8 @@ uint64_t LoopifyAccumulatorReadElsewhere::size(
               typename LoopifyAccumulatorReadElsewhere::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
-            std::get<typename LoopifyAccumulatorReadElsewhere::tree::Node>(
-                t.v());
+        const auto &[a0, a1, a2] = std::get<
+            typename LoopifyAccumulatorReadElsewhere::tree::Node>(t.v());
         _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
         _stack.emplace_back(CraneEnter{crane_raw(a0)});
       }
@@ -59,10 +57,9 @@ uint64_t LoopifyAccumulatorReadElsewhere::size(
 }
 
 uint64_t LoopifyAccumulatorReadElsewhere::keys(
-    const LoopifyAccumulatorReadElsewhere::tree
-        &t) { /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-
+    const LoopifyAccumulatorReadElsewhere::tree &t) { /// CraneEnter: captures
+                                                      /// varying parameters for
+                                                      /// each recursive call.
   struct CraneEnter {
     const LoopifyAccumulatorReadElsewhere::tree *t;
   };
@@ -96,9 +93,8 @@ uint64_t LoopifyAccumulatorReadElsewhere::keys(
               typename LoopifyAccumulatorReadElsewhere::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
-        const auto &[a0, a1, a2] =
-            std::get<typename LoopifyAccumulatorReadElsewhere::tree::Node>(
-                t.v());
+        const auto &[a0, a1, a2] = std::get<
+            typename LoopifyAccumulatorReadElsewhere::tree::Node>(t.v());
         _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
         _stack.emplace_back(CraneEnter{crane_raw(a0)});
       }
@@ -166,13 +162,11 @@ LoopifyAccumulatorReadElsewhere::tree LoopifyAccumulatorReadElsewhere::graft(
   const LoopifyAccumulatorReadElsewhere::tree *_loop_t = &t;
   while (true) {
     if (std::holds_alternative<
-            typename LoopifyAccumulatorReadElsewhere::tree::Leaf>(
-            _loop_t->v())) {
+            typename LoopifyAccumulatorReadElsewhere::tree::Leaf>(_loop_t->v())) {
       return _loop_acc;
     } else {
-      const auto &[a0, a1, a2] =
-          std::get<typename LoopifyAccumulatorReadElsewhere::tree::Node>(
-              _loop_t->v());
+      const auto &[a0, a1, a2] = std::get<
+          typename LoopifyAccumulatorReadElsewhere::tree::Node>(_loop_t->v());
       _loop_acc = tree::node(std::move(_loop_acc), a1, *a0);
       _loop_t = crane_raw(a2);
     }

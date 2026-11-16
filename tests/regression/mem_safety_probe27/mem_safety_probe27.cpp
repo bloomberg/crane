@@ -1,9 +1,12 @@
 #include "mem_safety_probe27.h"
 
-uint64_t MemSafetyProbe27::tree_sum(
-    const MemSafetyProbe27::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe27::tree_sum(const MemSafetyProbe27::tree &t) { /// CraneEnter:
+                                                              /// captures
+                                                              /// varying
+                                                              /// parameters for
+                                                              /// each recursive
+                                                              /// call.
   struct CraneEnter {
     const MemSafetyProbe27::tree *t;
   };
@@ -33,8 +36,7 @@ uint64_t MemSafetyProbe27::tree_sum(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe27::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe27::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe27::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
@@ -57,10 +59,14 @@ uint64_t MemSafetyProbe27::tree_sum(
   return _result;
 }
 
-uint64_t MemSafetyProbe27::tree_depth(
-    const MemSafetyProbe27::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-
+uint64_t
+MemSafetyProbe27::tree_depth(const MemSafetyProbe27::tree &t) { /// CraneEnter:
+                                                                /// captures
+                                                                /// varying
+                                                                /// parameters
+                                                                /// for each
+                                                                /// recursive
+                                                                /// call.
   struct CraneEnter {
     const MemSafetyProbe27::tree *t;
   };
@@ -88,8 +94,7 @@ uint64_t MemSafetyProbe27::tree_depth(
     if (std::holds_alternative<CraneEnter>(_frame)) {
       auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe27::tree &t = *_f.t;
-      if (std::holds_alternative<typename MemSafetyProbe27::tree::Leaf>(
-              t.v())) {
+      if (std::holds_alternative<typename MemSafetyProbe27::tree::Leaf>(t.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1, a2] =
@@ -113,10 +118,11 @@ uint64_t MemSafetyProbe27::tree_depth(
 /// TEST 1: Pair containing closure that captures whole tree.
 /// No match on t — just direct capture. Tests whether Crane
 /// creates a clone of t for the closure.
-std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
-MemSafetyProbe27::pair_with_fn(MemSafetyProbe27::tree t) {
-  return std::make_pair([=](uint64_t x) { return (x + tree_sum(t)); },
-                        tree_sum(t));
+std::pair<crane::fn<uint64_t(uint64_t)>,
+          uint64_t> MemSafetyProbe27::pair_with_fn(MemSafetyProbe27::tree t) {
+  return std::make_pair([=](uint64_t x) {
+    return (x + tree_sum(t));
+  }, tree_sum(t));
 }
 
 /// TEST 2: if/else returning different closures in a pair.
@@ -125,13 +131,13 @@ MemSafetyProbe27::pair_with_fn(MemSafetyProbe27::tree t) {
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 MemSafetyProbe27::cond_pair_fn(MemSafetyProbe27::tree t, bool b) {
   if (b) {
-    return std::make_pair(
-        [=, t = std::move(t)](uint64_t x) { return (x + tree_sum(t)); },
-        UINT64_C(1));
+    return std::make_pair([=, t = std::move(t)](uint64_t x) {
+      return (x + tree_sum(t));
+    }, UINT64_C(1));
   } else {
-    return std::make_pair(
-        [=, t = std::move(t)](uint64_t x) { return (x + tree_depth(t)); },
-        UINT64_C(2));
+    return std::make_pair([=, t = std::move(t)](uint64_t x) {
+      return (x + tree_depth(t));
+    }, UINT64_C(2));
   }
 }
 
@@ -139,11 +145,9 @@ MemSafetyProbe27::cond_pair_fn(MemSafetyProbe27::tree t, bool b) {
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 MemSafetyProbe27::pair_two_trees(MemSafetyProbe27::tree t1,
                                  MemSafetyProbe27::tree t2) {
-  return std::make_pair(
-      [=, t2 = std::move(t2)](uint64_t x) {
-        return ((x + tree_sum(t1)) + tree_sum(t2));
-      },
-      tree_sum(t1));
+  return std::make_pair([=, t2 = std::move(t2)](uint64_t x) {
+    return ((x + tree_sum(t1)) + tree_sum(t2));
+  }, tree_sum(t1));
 }
 
 /// TEST 4: Closure stored in option (no match on tree).
@@ -164,19 +168,20 @@ MemSafetyProbe27::nested_closure_pair(MemSafetyProbe27::tree t) {
   crane::fn<uint64_t(uint64_t)> f = [=](uint64_t x) {
     return (x + tree_sum(t));
   };
-  return std::make_pair([=, f = std::move(f)](uint64_t x) { return f(f(x)); },
-                        tree_sum(std::move(t)));
+  return std::make_pair([=, f = std::move(f)](uint64_t x) {
+    return f(f(x));
+  }, tree_sum(std::move(t)));
 }
 
 /// TEST 6: Three closures stored in a triple, each using tree differently.
-std::pair<
-    std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
-    uint64_t>
-MemSafetyProbe27::triple_fns(MemSafetyProbe27::tree t) {
-  return std::make_pair(
-      std::make_pair([=](uint64_t x) { return (x + tree_sum(t)); },
-                     [=](uint64_t x) { return (x + tree_depth(t)); }),
-      (tree_sum(t) + tree_depth(t)));
+std::pair<std::pair<crane::fn<uint64_t(uint64_t)>,
+                    crane::fn<uint64_t(uint64_t)>>,
+          uint64_t> MemSafetyProbe27::triple_fns(MemSafetyProbe27::tree t) {
+  return std::make_pair(std::make_pair([=](uint64_t x) {
+    return (x + tree_sum(t));
+  }, [=](uint64_t x) {
+    return (x + tree_depth(t));
+  }), (tree_sum(t) + tree_depth(t)));
 }
 
 /// TEST 7: Closure and tree value stored together in a pair.
@@ -191,8 +196,9 @@ MemSafetyProbe27::fn_and_tree(MemSafetyProbe27::tree t) {
 /// Multiple levels of wrapping.
 std::pair<std::optional<crane::fn<uint64_t(uint64_t)>>, uint64_t>
 MemSafetyProbe27::wrapped_fn(MemSafetyProbe27::tree t, bool b) {
-  return std::make_pair((b ? std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-                                 [=](uint64_t x) { return (x + tree_sum(t)); })
-                           : std::optional<crane::fn<uint64_t(uint64_t)>>()),
-                        tree_sum(t));
+  return std::make_pair(
+      (b ? std::make_optional<crane::fn<uint64_t(uint64_t)>>([=](uint64_t x) {
+        return (x + tree_sum(t));
+      }) : std::optional<crane::fn<uint64_t(uint64_t)>>()),
+      tree_sum(t));
 }

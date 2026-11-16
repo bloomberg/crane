@@ -11,14 +11,20 @@
 
 struct Nat;
 struct IPZ;
-template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::iptr>;
-  });
+template <typename I>
+concept IPtr = requires {
+  typename I::iptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::iptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::iptr>;
+});
 template <typename I>
 concept Params = requires {
   typename I::IPTR;
@@ -123,7 +129,25 @@ template <IPtr _tcI0> struct ParamsV {
   using iptr = typename _tcI0::iptr;
 
   static Nat width() {
-return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
+    return Nat::s(
+        Nat::s(
+            Nat::s(
+                Nat::s(
+                    Nat::s(
+                        Nat::s(
+                            Nat::s(
+                                Nat::s(
+                                    Nat::s(
+                                        Nat::s(
+                                            Nat::s(
+                                                Nat::s(
+                                                    Nat::s(
+                                                        Nat::s(
+                                                            Nat::s(
+                                                                Nat::s(
+                                                                    Nat::s(
+                                                                        Nat::s(
+                                                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
   }
 };
 

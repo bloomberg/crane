@@ -7,7 +7,6 @@
 #include <variant>
 
 namespace Num {
-
 struct Num;
 
 struct Num {
@@ -65,7 +64,6 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
 } // namespace Num
 
 #endif // INCLUDED_NUM
