@@ -524,7 +524,7 @@ val setting : 'a ref -> 'a -> (unit -> 'b) -> 'b
     Each is the [std::] or [bsl::] spelling of the field's name unless noted;
     [Crane NonAtomicRc], [Crane FastVariant], [Crane SharedVariant] and
     [CRANE_COUNT_RC] substitute runtime names ({!sn}). *)
-type std_names = {
+type std_names = Unit_context.std_names = {
   shared_ptr : string;  (** the smart pointer for recursive fields *)
   make_shared : string;  (** its factory *)
   move : string;
@@ -555,14 +555,22 @@ val mk_std_names : string -> std_names
     every unit's {!sn}. *)
 val std_namespace : unit -> string
 
-(** The names a file of the unit [u] is written with: the BDE flavor when
+(** The names a file of the unit [u] is written with, computed: the BDE flavor when
     [Table.std_lib ()] is ["BDE"], otherwise the [std::] flavor; then, under
     [Table.fast_variant ()] or [Table.shared_variant ()], the [crane::]
     variant accessors (and, for the former, [crane::variant]); then, under
     [Table.count_rc_for], the counting pointer, or else under
     [Table.non_atomic_rc_for], [crane::rc] / [crane::make_rc] /
     [crane::enable_rc_from_this], in [u]'s configuration. *)
+val std_names_of : Unit_context.t -> std_names
+
+(** The names the unit's context carries ({!Unit_context.t.std_names}),
+    computed where the unit is configured ({!with_std_names}): what the
+    printer reads, a fact it is handed rather than one it asks the table. *)
 val sn : Unit_context.t -> std_names
+
+(** [u] carrying the names a file of it is written with ({!std_names_of}). *)
+val with_std_names : Unit_context.t -> Unit_context.t
 
 (** {2 Wrapper and scope tables} *)
 

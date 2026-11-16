@@ -152,9 +152,9 @@ let rec pp_concept_type ctx names frame (t : Modtype_concept.concept_type) : Pp.
     ++ str "<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type args
     ++ str ">"
-  | Shared_pointer ty -> str ((sn ctx.unit).ns ^ "::") ++ str "shared_ptr<" ++ pp_concept_type ty ++ str ">"
+  | Shared_pointer ty -> str ((std_names_of ctx.unit).ns ^ "::") ++ str "shared_ptr<" ++ pp_concept_type ty ++ str ">"
   | Variant (Inline, tys) ->
-    str ((sn ctx.unit).ns ^ "::")
+    str ((std_names_of ctx.unit).ns ^ "::")
     ++ str "variant<"
     ++ prlist_with_sep (fun () -> str ", ") pp_concept_type tys
     ++ str ">"
@@ -210,7 +210,7 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
     ++ fnl ()
   | Nullary_member {value; result} ->
     let name = Cpp_name.pp (name (Unmapped (Term, value))) in
-    let convertible_to = (sn ctx.unit).convertible_to in
+    let convertible_to = (std_names_of ctx.unit).convertible_to in
     writes_standard "concepts";
     let qualified_ret = pp_concept_type result in
     str "requires ("
@@ -235,8 +235,8 @@ let pp_requirement ctx names frame : Modtype_concept.requirement -> Pp.t =
     ++ fnl ()
   | Function_member {value; parameters; result} ->
     let name = Cpp_name.pp (name (Unmapped (Term, value))) in
-    let same_as = (sn ctx.unit).same_as in
-    let declval = (sn ctx.unit).declval in
+    let same_as = (std_names_of ctx.unit).same_as in
+    let declval = (std_names_of ctx.unit).declval in
     writes_standard "concepts";
     let declvals =
       List.map (fun ty -> str declval ++ str "<" ++ pp_concept_type ty ++ str ">()") parameters
@@ -293,7 +293,7 @@ let pp_refinements ctx refinements =
     List.map
       (fun (idl, cpp) ->
         let path = String.concat "::" (List.map Id.to_string idl) in
-        str (sn ctx.unit).same_as
+        str (std_names_of ctx.unit).same_as
         ++ str ("<typename " ^ self_scope)
         ++ str path
         ++ str ", "

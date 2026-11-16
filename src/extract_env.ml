@@ -1664,9 +1664,9 @@ let print_structure_to_file ?(namespace = None) ?(unit_includes = [])
   in
   (* The unit's context holds what the earlier units decided from the
      start; its configuration is its plan's. *)
-  with_plan Unit_context.detached earlier @@ fun u ->
+  with_plan (Cpp_state.with_std_names Unit_context.detached) earlier @@ fun u ->
   let facts, plan = analyze_and_plan struc in
-  let u = {u with config = plan.config; loops = {loops with effects = facts.effects}} in
+  let u = Cpp_state.with_std_names {u with config = plan.config; loops = {loops with effects = facts.effects}} in
   Translation_state.with_unit_facts
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;
@@ -2578,7 +2578,7 @@ let print_one_decl loops struc mp decl =
   let d = descr () in
   reset_renaming_tables ();
   let facts = Program_facts.analyze struc in
-  let u = {Unit_context.detached with loops = {loops with effects = facts.effects}} in
+  let u = Cpp_state.with_std_names {Unit_context.detached with loops = {loops with effects = facts.effects}} in
   Translation_state.with_unit_facts
     { higher_order_projections = facts.higher_order_projections;
       effects = facts.effects;

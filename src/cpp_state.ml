@@ -830,9 +830,8 @@ let setting cell v f =
       cell := v;
       f () )
 
-(** Resolved standard library names, a function of [Table.std_lib ()], the
-    runtime flags and the unit's configuration ({!sn}). *)
-type std_names = {
+(** Resolved standard library names ({!Unit_context.std_names}). *)
+type std_names = Unit_context.std_names = {
   shared_ptr : string; (* "std::shared_ptr" or "bsl::shared_ptr" *)
   make_shared : string; (* "std::make_shared" or "bsl::make_shared" *)
   move : string; (* "std::move" or "bsl::move" *)
@@ -851,25 +850,7 @@ type std_names = {
   enable_from_this : string; (* enable_shared_from_this base, or crane::enable_rc_from_this *)
 }
 
-let default_std_names =
-  {
-    shared_ptr = "std::shared_ptr";
-    make_shared = "std::make_shared";
-    move = "std::move";
-    forward = "std::forward";
-    logic_error = "std::logic_error";
-    ns = "std";
-    string = "std::string";
-    same_as = "std::same_as";
-    declval = "std::declval";
-    convertible_to = "std::convertible_to";
-    holds_alternative = "std::holds_alternative";
-    get_if = "std::get_if";
-    get = "std::get";
-    variant = "std::variant";
-    variant_header = Table.Standard "variant";
-    enable_from_this = "std::enable_shared_from_this";
-  }
+let default_std_names = Unit_context.default_std_names
 
 let mk_std_names prefix =
   match prefix with
@@ -889,7 +870,7 @@ let mk_std_names prefix =
 
 let std_namespace () = if Table.std_lib () = "BDE" then "bsl" else "std"
 
-let sn (u : Unit_context.t) =
+let std_names_of (u : Unit_context.t) =
   let base =
     if Table.std_lib () = "BDE" then mk_std_names "bsl::"
     else mk_std_names "std::"
@@ -932,6 +913,9 @@ let sn (u : Unit_context.t) =
       make_shared = Crane_rt.make_rc;
       enable_from_this = Crane_rt.enable_rc_from_this }
   else base
+
+let sn (u : Unit_context.t) = u.std_names
+let with_std_names (u : Unit_context.t) = {u with std_names = std_names_of u}
 
 
 

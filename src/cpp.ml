@@ -991,7 +991,7 @@ let rec pp_structure_elem ~is_header f ctx ~module_ = function
             let template = List.map (fun v -> Cpp_ast.Typename (Type_variable v)) vars in
             let base =
               if this_promote_sft then
-                Some (Cpp_ast.Of_itself {template = (sn ctx.unit).enable_from_this; type_args = vars})
+                Some (Cpp_ast.Of_itself {template = (std_names_of ctx.unit).enable_from_this; type_args = vars})
               else None
             in
             let struct_def =
