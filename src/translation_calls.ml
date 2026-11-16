@@ -52,7 +52,7 @@ type call_plan = {
 
 (** Checks the plan [abi] of a function against [live], the C++ type of its
     declared Core type as a call site rebuilds it: the plan declares one value
-    parameter per domain other than a class dictionary or a skipped type, and
+    parameter per domain other than a class dictionary, a skipped type or [unit], and
     one dictionary template parameter per dictionary domain.  Its types are
     not compared: the declaration spells its parameters after its head's
     relaxations, through its instances' associated types and with aliases
@@ -65,6 +65,18 @@ let check_planned_arity abi (live : Cpp_ir.Lowered.Type.t) =
       let doms = match live with Function (d, _) -> d | _ -> [] in
       let dicts, values = List.partition Type_util.is_typeclass_type_cpp doms in
       let values = List.filter (fun t -> not (is_skipped_cpp_type t)) values in
+      (* A declared [unit] parameter is left out ({!Type_util.declaration_drops_binder}). *)
+      let dropped =
+        let r = Callable_abi.callee abi in
+        match find_type_opt r with
+        | Some ty when not (Table.is_custom r || Table.is_projection r) ->
+          List.length
+            (List.filter
+               (fun d -> Type_util.declaration_drops_binder d && not (Table.is_typeclass_type d))
+               (Type_util.core_value_domains ty) )
+        | Some _ | None -> 0
+      in
+      let values = List.filteri (fun i _ -> i >= dropped) values in
       let instances =
         List.length
           (List.filter

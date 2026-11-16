@@ -855,11 +855,13 @@ let dfun_body_scope ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : head_p
      that are not recognized by is_typeclass because ReSum's GlobRef is a
      ConstRef, not an IndRef registered in inductive_kinds). *)
   let ids_with_owned =
-    List.filter
-      (fun (_, ty, _) ->
-        (not (Table.is_typeclass_type ty))
-        && is_runtime_binder_type ty
-        && not (is_skipped_core_type ty) )
+    List.filteri
+      (fun p (_, bty, _) ->
+        (not (Table.is_typeclass_type bty))
+        && is_runtime_binder_type bty
+        (* [all_ids] is innermost first: the [p]th is source parameter [n_params - 1 - p]. *)
+        && (not (declaration_drops_parameter ty (n_params - 1 - p) bty))
+        && not (is_skipped_core_type bty) )
       all_ids_with_owned
   in
   (* Convert Core types to C++ types and wrap with const. Owned shared_ptr params:

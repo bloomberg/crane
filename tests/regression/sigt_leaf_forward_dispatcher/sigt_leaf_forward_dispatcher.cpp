@@ -69,7 +69,7 @@ bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
   }
 }
 
-bool check(std::monostate) { return run(my_entry); }
+bool check() { return run(my_entry); }
 
 bool Bool::eqb(bool b1, bool b2) {
   if (b1) {

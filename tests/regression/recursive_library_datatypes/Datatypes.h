@@ -32,15 +32,13 @@ struct Empty_set {
   }
 };
 
-template <typename T1> T1 unit_rect(T1 f, std::monostate) {
+template <typename T1> T1 unit_rect(T1 f) {
   {
     return f;
   }
 }
 
-template <typename T1> T1 unit_rec(T1 f, std::monostate u) {
-  return unit_rect<T1>(std::move(f), u);
-}
+template <typename T1> T1 unit_rec(T1 f) { return unit_rect<T1>(std::move(f)); }
 
 template <typename T1> T1 bool_rect(T1 f, T1 f0, bool b) {
   if (b) {

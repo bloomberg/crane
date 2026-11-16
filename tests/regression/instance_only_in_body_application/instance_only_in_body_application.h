@@ -228,8 +228,8 @@ using ptr = typename PTR::ptr;
 static Nat zero_addr() {
 return Nat::o();}
 };struct InstanceOnlyInBodyApplication {
-static Nat check(std::monostate _x);
-static inline const Nat run = check(std::monostate{});
+static Nat check();
+static inline const Nat run = check();
 };
 
 #endif // INCLUDED_INSTANCE_ONLY_IN_BODY_APPLICATION

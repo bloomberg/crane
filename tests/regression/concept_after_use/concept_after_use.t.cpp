@@ -1,7 +1,7 @@
 #include <concept_after_use.h>
 #include <iostream>
 int main() {
-  bool ok = ConceptAfterUse::check(std::monostate{});
+  bool ok = ConceptAfterUse::check();
   std::cout << (ok ? "ok" : "wrong") << std::endl;
   return ok ? 0 : 1;
 }

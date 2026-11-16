@@ -65,8 +65,8 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename F0, typename F1>
-  std::monostate insert(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
-                        unsigned int newLevel) const {
+  void insert(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
+              unsigned int newLevel) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     unsigned int curLvl = stm::readTVar(this->slLevel);
     SkipList<int, int>::template extendPath<K, V>(path, this->slHead,
@@ -79,7 +79,7 @@ template <typename K, typename V> struct SkipList {
       bsl::shared_ptr<SkipNode<K, V>> existing = *nextOpt;
       if (eqK(existing->key, k)) {
         stm::writeTVar<V>(existing->value, v);
-        return std::monostate{};
+        return;
       } else {
         bsl::shared_ptr<SkipNode<K, V>> newN =
             SkipNode<K, V>::create(k, v, newLevel);
@@ -87,9 +87,9 @@ template <typename K, typename V> struct SkipList {
             bsl::move(path), this->slHead, bsl::move(newN));
         if (curLvl < newLevel) {
           stm::writeTVar(this->slLevel, newLevel);
-          return std::monostate{};
+          return;
         } else {
-          return std::monostate{};
+          return;
         }
       }
     } else {
@@ -99,15 +99,15 @@ template <typename K, typename V> struct SkipList {
                                                   bsl::move(newN));
       if (curLvl < newLevel) {
         stm::writeTVar(this->slLevel, newLevel);
-        return std::monostate{};
+        return;
       } else {
-        return std::monostate{};
+        return;
       }
     }
   }
 
   template <typename F0, typename F1>
-  std::monostate remove(F0 &&ltK, F1 &&eqK, const K &k) const {
+  void remove(F0 &&ltK, F1 &&eqK, const K &k) const {
     SkipPath<K, V> path = this->findPath(ltK, k);
     bsl::shared_ptr<SkipNode<K, V>> pred0 = path.get(0u);
     bsl::optional<bsl::shared_ptr<SkipNode<K, V>>> nextOpt =
@@ -121,12 +121,12 @@ template <typename K, typename V> struct SkipList {
                                                       (node->level + 1),
                                                       curLvl);
         SkipList<int, int>::template unlinkNode<K, V>(bsl::move(path), node);
-        return std::monostate{};
+        return;
       } else {
-        return std::monostate{};
+        return;
       }
     } else {
-      return std::monostate{};
+      return;
     }
   }
 
@@ -224,10 +224,10 @@ template <typename K, typename V> struct SkipList {
   }
 
   template <typename F0, typename F1>
-  std::monostate add(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
-                     unsigned int newLevel) const {
+  void add(F0 &&ltK, F1 &&eqK, const K &k, const V &v,
+           unsigned int newLevel) const {
     this->insert(ltK, eqK, k, v, newLevel);
-    return std::monostate{};
+    return;
   }
 
   template <typename F0, typename F1>

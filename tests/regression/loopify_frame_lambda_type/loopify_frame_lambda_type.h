@@ -332,7 +332,7 @@ struct LoopifyFrameLambdaType {
     return _result;
   }
 
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 template <Monad _tcI0, typename T2>

@@ -3,7 +3,7 @@
 #include <cassert>
 
 int main() {
-  ReuseScrutineeConcurrentUnit::run(std::monostate{});
-  assert(ReuseScrutineeConcurrentUnit::total(std::monostate{}) == 50);
+  ReuseScrutineeConcurrentUnit::run();
+  assert(ReuseScrutineeConcurrentUnit::total() == 50);
   return 0;
 }

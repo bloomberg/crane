@@ -12,8 +12,8 @@
 struct UnitType {
   static constexpr std::monostate unit_val = std::monostate{};
   static void return_unit(uint64_t _x);
-  static uint64_t take_unit(std::monostate _x);
-  static uint64_t match_unit(std::monostate u);
+  static uint64_t take_unit();
+  static uint64_t match_unit();
 
   template <typename A, typename B> struct pair {
     // DATA
@@ -66,7 +66,7 @@ struct UnitType {
   static inline const pair<std::monostate, std::monostate> unit_pair =
       pair<std::monostate, std::monostate>::pair0(std::monostate{},
                                                   std::monostate{});
-  static void unit_to_unit(std::monostate u);
+  static void unit_to_unit();
 
   template <typename T1, typename T2> static T2 seq(const T1 &, T2 b) {
     return b;
@@ -75,8 +75,8 @@ struct UnitType {
   static inline const uint64_t sequenced = seq<std::monostate, uint64_t>(
       std::monostate{},
       seq<std::monostate, uint64_t>(std::monostate{}, UINT64_C(5)));
-  static inline const uint64_t test_take = take_unit(std::monostate{});
-  static inline const uint64_t test_match = match_unit(std::monostate{});
+  static inline const uint64_t test_take = take_unit();
+  static inline const uint64_t test_match = match_unit();
   static inline const uint64_t test_seq = sequenced;
 };
 

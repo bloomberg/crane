@@ -26,7 +26,7 @@ struct List; /// A match in argument position becomes an immediately invoked lam
 struct ImmediateMatchOwnedScrutinee {
   static Nat count(const List<Nat> &l);
   static std::optional<Nat> pred_count(List<Nat> l);
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 struct Nat {

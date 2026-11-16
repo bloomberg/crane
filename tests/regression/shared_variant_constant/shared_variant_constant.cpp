@@ -87,13 +87,13 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
   }
 }
 
-Positive SharedVariantConstant::seven(std::monostate) {
+Positive SharedVariantConstant::seven() {
   static const auto pos_7 =
       crane::immortal(Positive::xi(Positive::xi(Positive::xh())));
   return pos_7;
 }
 
-std::pair<Positive, Positive> SharedVariantConstant::pair_of(std::monostate) {
+std::pair<Positive, Positive> SharedVariantConstant::pair_of() {
   static const auto pos_12 =
       crane::immortal(Positive::xo(Positive::xo(Positive::xi(Positive::xh()))));
   static const auto pos_6 =
@@ -118,7 +118,7 @@ Positive SharedVariantConstant::sum_tens(uint64_t n, Positive acc) {
 
 /// 2^110: a constant nested deeper than a compiler parses, whose
 /// initialiser is split into bindings that run once.
-Positive SharedVariantConstant::huge(std::monostate) {
+Positive SharedVariantConstant::huge() {
   static const auto pos = []() {
     auto _lit0 =
         Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))))))))))))))))))))))))));

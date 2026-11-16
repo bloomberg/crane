@@ -18,7 +18,7 @@
 // `std::make_pair(crane_erase_fn(f), crane_erase_fn(g))` and the read matches.
 int main() {
   try {
-    bool r = check(std::monostate{});
+    bool r = check();
     if (!r) {
       std::fprintf(stderr, "FAIL: check returned false (expected true)\n");
       return 1;

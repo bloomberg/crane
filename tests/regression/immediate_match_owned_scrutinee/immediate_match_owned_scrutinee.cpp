@@ -33,7 +33,7 @@ std::optional<Nat> ImmediateMatchOwnedScrutinee::pred_count(List<Nat> l) {
   }());
 }
 
-bool ImmediateMatchOwnedScrutinee::check(std::monostate) {
+bool ImmediateMatchOwnedScrutinee::check() {
   auto _cs = pred_count(List<Nat>::cons(
       Nat::s(Nat::o()),
       List<Nat>::cons(

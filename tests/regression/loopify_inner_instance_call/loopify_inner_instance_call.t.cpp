@@ -12,7 +12,7 @@ template <typename Tree> static auto run(Tree t) {
   }
 }
 int main() {
-  bool ok = run(LoopifyInnerInstanceCall::check(std::monostate{}));
+  bool ok = run(LoopifyInnerInstanceCall::check());
   std::cout << (ok ? "ok" : "wrong") << std::endl;
   return ok ? 0 : 1;
 }

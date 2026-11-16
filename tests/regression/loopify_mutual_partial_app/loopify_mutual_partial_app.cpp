@@ -260,7 +260,7 @@ uint64_t LoopifyMutualPartialApp::sum_md(
 
 /// leaves doubled: 2*(1+2+4) = 14; tags and consts +100 each: 107 + 105 + 101 =
 /// 313
-bool LoopifyMutualPartialApp::check(std::monostate) {
+bool LoopifyMutualPartialApp::check() {
   return sum_e(ft_e<LoopifyMutualPartialApp::endo_double, uint64_t, uint64_t>(
       [](uint64_t u) { return (u + UINT64_C(100)); }, sample)) ==
          (UINT64_C(14) + UINT64_C(313));

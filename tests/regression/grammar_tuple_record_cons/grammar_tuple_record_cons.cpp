@@ -10,6 +10,4 @@ bool triples_le_max(const std::deque<rgb> &ts, uint64_t m) {
   }
 }
 
-uint64_t num_entries(std::monostate) {
-  return static_cast<uint64_t>(entries.size());
-}
+uint64_t num_entries() { return static_cast<uint64_t>(entries.size()); }

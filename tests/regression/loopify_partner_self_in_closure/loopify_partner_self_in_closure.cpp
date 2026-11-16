@@ -130,7 +130,7 @@ uint64_t LoopifyPartnerSelfInClosure::sum_md(
 }
 
 /// 1 + (2 + (1 + 3))
-bool LoopifyPartnerSelfInClosure::check(std::monostate) {
+bool LoopifyPartnerSelfInClosure::check() {
   return sum_e(e::meta(md::mnode(List<LoopifyPartnerSelfInClosure::md>::cons(
       md::mconst(e::leaf(UINT64_C(2))), List<LoopifyPartnerSelfInClosure::md>::cons(
                                             md::mconst(e::meta(md::mconst(

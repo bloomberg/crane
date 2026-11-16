@@ -14,7 +14,7 @@
 #include <variant>
 
 struct UnitVoidEdge2 {
-  static uint64_t take_unit(std::monostate _x);
+  static uint64_t take_unit();
   static void opaque_unit(uint64_t _x);
   static uint64_t let_use_as_arg(uint64_t n);
   static void let_return_unit(uint64_t x0_);
@@ -30,8 +30,7 @@ struct UnitVoidEdge2 {
   static constexpr uint64_t call_fixpoint = UINT64_C(7);
   static inline const uint64_t fixpoint_result_used = []() {
     count_down_unit(UINT64_C(50));
-    std::monostate x = std::monostate{};
-    return take_unit(x);
+    return take_unit();
   }();
 
   template <typename F0> static uint64_t call_and_discard(F0 &&, uint64_t n) {
@@ -42,8 +41,7 @@ struct UnitVoidEdge2 {
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static uint64_t call_and_use(F0 &&f, uint64_t n) {
     f(n);
-    std::monostate x = std::monostate{};
-    return take_unit(x);
+    return take_unit();
   }
 
   template <typename T1, typename T2, typename F0>
@@ -53,7 +51,8 @@ struct UnitVoidEdge2 {
   }
 
   static inline const uint64_t apply_take_unit =
-      apply<std::monostate, uint64_t>(take_unit, std::monostate{});
+      apply<std::monostate, uint64_t>([](const auto &) { return take_unit(); },
+                                      std::monostate{});
   static std::optional<std::monostate> make_some_unit(bool b);
   static uint64_t use_option_unit(const std::optional<std::monostate> &o);
   static uint64_t compose_option_unit(bool b1, bool b2);

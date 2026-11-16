@@ -195,6 +195,6 @@ struct Inst {
 using M = Make<Inst>;
 [[gnu::used]] inline const M::entry my_entry = M::mk_entry(std::monostate{});
 Inst::sem my_arg(std::monostate _x);
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_PROD_FN_ANY_LIT_PAIR

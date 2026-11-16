@@ -13,7 +13,7 @@ static bool deep_alternation() {
 }
 
 int main() {
-  bool ok = M::check(std::monostate{}) && deep_alternation();
+  bool ok = M::check() && deep_alternation();
   std::cout << (ok ? "ok" : "wrong") << std::endl;
   return ok ? 0 : 1;
 }

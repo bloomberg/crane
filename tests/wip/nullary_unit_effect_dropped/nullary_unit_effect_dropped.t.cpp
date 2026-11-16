@@ -3,7 +3,7 @@
 
 int main() {
   try {
-    NullaryUnitEffectDropped::f(Unit::TT);
+    NullaryUnitEffectDropped::f();
   } catch (int) {
     return 0;
   }

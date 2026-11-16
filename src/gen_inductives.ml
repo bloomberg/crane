@@ -263,6 +263,7 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
      method would be desugared sequentially while the signature it is being
      given says [shared_ptr<ITree<_>>]. *)
   with_itree_mode_for ty @@ fun () ->
+  let decl_ty = ty in
   let num_ind_vars = List.length vars in
   let _, ret_ty = get_args_and_ret [] ty in
   (* The function's variables renumbered so the inductive's come first and
@@ -302,6 +303,8 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let ret_cpp = Translation_types.cpp_ir_of_core_type (empty_env ()) ~ns:method_ns vars ret_ty in
   let ret_cpp = strip_top_level_self_ptr ret_cpp in
   let ret_cpp = subst_extra_tvars ret_cpp in
+  (* A method returns [void] where the function it was made of does. *)
+  let ret_cpp = Translation_monadic.apply_unit_void (Translation_monadic.core_type_is_void_call ty) ret_cpp in
 
   (* Collect lambda parameters and build environment for de Bruijn lookup.
      push_vars' may rename duplicate parameters (e.g., two params named 't'
@@ -344,13 +347,15 @@ let method_scope name vars (func_ref, body, ty, this_pos) =
   let this_arg_id = Option.map (fun (id, _, _) -> id) this_arg_id_opt in
   let param_ids_with_pos =
     List.filter
-      (fun (_, ty, _) ->
+      (fun (_, ty, i) ->
         (* An instance is either promoted to a template parameter or skipped
            outright; either way it is not among the arguments a call passes,
            and {!Type_util.core_type_is_instance} is where both cases are
            recognised -- a skipped class is a [ConstRef] mapped to the empty
            string, which [is_typeclass_type] alone does not see. *)
-        Type_util.is_runtime_binder_type ty && not (Type_util.core_type_is_instance ty) )
+        Type_util.is_runtime_binder_type ty
+        && (not (Type_util.declaration_drops_parameter decl_ty i ty))
+        && not (Type_util.core_type_is_instance ty) )
       param_ids_with_pos
   in
 

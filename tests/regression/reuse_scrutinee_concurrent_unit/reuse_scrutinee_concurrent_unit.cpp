@@ -59,13 +59,13 @@ void ReuseScrutineeConcurrentUnit::test() {
   return;
 }
 
-void ReuseScrutineeConcurrentUnit::run(std::monostate) {
+void ReuseScrutineeConcurrentUnit::run() {
   {
     test();
     return;
   }
 }
 
-uint64_t ReuseScrutineeConcurrentUnit::total(std::monostate) {
+uint64_t ReuseScrutineeConcurrentUnit::total() {
   return churn(UINT64_C(10), shared);
 }

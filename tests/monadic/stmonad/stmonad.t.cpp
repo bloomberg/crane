@@ -145,7 +145,7 @@ int main() {
   }
 
   {
-    auto result = STMonadTests::test_quicksort_ST({});
+    auto result = STMonadTests::test_quicksort_ST();
     // sorted list: [4,51,126,127,2412,5981,74879,212498,2749812]
     std::cout << "Test 12 (test_quicksort_ST): " << result << std::endl;
   }

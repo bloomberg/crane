@@ -111,7 +111,7 @@ std::string QuicksortFun::list_to_string(const List<uint64_t> &l) {
   return std::string("[ ") + list_to_string_helper(l) + std::string(" ]");
 }
 
-std::string QuicksortFun::test_quicksort_fun(std::monostate) {
+std::string QuicksortFun::test_quicksort_fun() {
   List<uint64_t> out = quicksort_fun(input_lst1);
   return list_to_string(std::move(out));
 }

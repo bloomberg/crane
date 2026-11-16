@@ -12,7 +12,7 @@ template <typename Tree> static auto run(Tree t) {
   }
 }
 int main() {
-  auto r = run(LoopifyResultNoDefault::sum_tree(std::monostate{}));
+  auto r = run(LoopifyResultNoDefault::sum_tree());
   std::cout << r << std::endl;
   return r == 10 ? 0 : 1;
 }

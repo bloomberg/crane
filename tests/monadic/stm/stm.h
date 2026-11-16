@@ -140,7 +140,7 @@ struct stmtest {
     }
   }
 
-  static uint64_t stm_basic_counter(std::monostate _x);
+  static uint64_t stm_basic_counter();
   static uint64_t io_basic_counter();
   static uint64_t stm_inc(uint64_t x);
   static uint64_t io_inc(uint64_t x);
@@ -151,7 +151,7 @@ struct stmtest {
   static uint64_t stm_tryDequeue(stm::TVar<List<uint64_t>> q, uint64_t dflt);
   static uint64_t stm_queue_roundtrip(uint64_t x);
   static uint64_t io_queue_roundtrip(uint64_t x);
-  static uint64_t stm_orElse_retry_example(std::monostate _x);
+  static uint64_t stm_orElse_retry_example();
   static uint64_t io_orElse_retry_example();
 };
 

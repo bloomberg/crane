@@ -386,6 +386,15 @@ let gen_call_args ~slot ?(expected_ty : Cpp_ir.Lowered.Type.t option) env id pla
        statement position inside a lambda). *)
     let as_value () =
       match core_arg with
+      (* An inline custom's monadic [unit] parameter in sequential mode is a
+         computation its text runs -- [stm::atomically([&] { return %a0; })]
+         -- and a lambda may return a [void] call. *)
+      | _
+        when is_inline_custom id
+             && (match param_core_ty with
+                 | Some t -> is_monadic_core_type t && Translation_monadic.core_type_is_void_call t
+                 | None -> false) ->
+        expr
       | a when Translation_monadic.core_value_is_void_call a ->
         (* Don't wrap eta-expanded lambdas (partial applications) — they
            are function VALUES, not void call results. *)
@@ -659,6 +668,24 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
       _
     } = plan in
     let leading_params = Elaborated_call.leading_params call in
+    (* The C++ arguments of a call by name, from the regular arguments in
+       declared order (the given ones, then any eta parameters): a declared
+       [unit] parameter has no C++ counterpart
+       ({!Type_util.declaration_drops_binder}), and Rocq's [unit] argument
+       computes nothing worth keeping.  A custom's text takes its arguments by
+       position, and a projection reads a field holding a callable value, so
+       their lists are left whole. *)
+    let passed (l : Cpp_ir.Lowered.Expr.t list) =
+      if Table.is_custom id || Table.is_projection id then l
+      else
+        List.filteri
+          (fun i _ ->
+            not
+              (match Param_pos.nth fn_param_core_tys_orig (Param_pos.of_regular ~leading:leading_params i) with
+               | Some t -> Type_util.declaration_drops_binder t
+               | None -> false ) )
+          l
+    in
     (* The callee applied to all but the excess args, where that names no
        local: a function -- a handler [case_] combines -- built from nothing
        the call can change, as Core decided it
@@ -1142,7 +1169,7 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
             (* Nothing is missing, so there is nothing to fill: the template
                renders with what it was given. *)
             cglob
-          else Translation_calls.apply_global id cglob args
+          else Translation_calls.apply_global id cglob (passed args)
         else
           (* Substitute promoted type vars in eta-expanded lambda params. When
              partially applying a function like pick_op<nat_magma>, the domain
@@ -1412,11 +1439,13 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
               (* A call that fills the callee exactly yields the lambda's
                  result: recorded, so a mapping's [%ret] can name it. *)
               let yields = if surplus = [] && cod <> Void then Some cod else None in
-              let filled = made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call ?yields cglob (args @ fill)) in
+              let filled =
+                made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call ?yields cglob (passed (args @ fill)))
+              in
               (* The surplus goes to the result in the groups its spelling
                  takes them in ({!Translation_calls.call_result_site}). *)
               Translation_coerce.apply_at_site (Translation_calls.call_result_site id) filled surplus
-            | None -> made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob call_args)
+            | None -> made_of (Core.Global_use.occurrence use) (Cpp_ir.Build.call cglob (passed call_args))
           in
           let ret_ty, (body : Cpp_ir.Lowered.Stmt.t list) =
             if cod = Void then
@@ -1503,7 +1532,7 @@ let eta_fun ?(slot = Translation_slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered
              called.  Only globals whose declaration really takes no C++
              parameters -- thunks and those whose every parameter is erased --
              get the [()]. *)
-          Translation_calls.apply_global id cglob args
+          Translation_calls.apply_global id cglob (passed args)
     in
     (* Collapse identity inline customs (%a0) at AST level.  This prevents
        unnecessary IIFE wrapping when a void call passes through an identity

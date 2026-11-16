@@ -1950,27 +1950,15 @@ let derive_source_file filename =
 
 (** Core of recursive extraction: extracts the given references and module
     paths, optimizes, and writes to a monolithic output file. *)
-type export = {ref : GlobRef.t; name : string; unit : string}
-
-(** The C++ expression for Rocq's [tt] under the active mappings and naming,
-    written where [v] is visible. *)
-let cpp_unit v =
-  match Table.resolve_tt_ctor () with
-  | Some tt when Table.is_custom tt -> Table.find_custom tt
-  | Some (GlobRef.ConstructRef ((kn, index), constructor_index)) ->
-    Cpp_name.to_string (resolve_ref_name v Type (GlobRef.IndRef (kn, index)))
-    ^ "::"
-    ^ Common.enum_ctor_name_of_ref kn index constructor_index
-  | _ -> CErrors.anomaly Pp.(str "Crane could not resolve Rocq's unit constructor.")
+type export = {ref : GlobRef.t; name : string}
 
 (** What the unit just printed exports, read while its naming tables are live:
-    each requested constant, and [tt], as spelled from where the constant is
-    declared. *)
+    each requested constant, as spelled from where it is declared. *)
 let exports refs =
   let export r =
     let base, _ = Table.labels_of_ref r in
     let v = toplevel_visibility [base] in
-    {ref = r; name = Cpp_name.to_string (resolve_ref_name v Term r); unit = cpp_unit v}
+    {ref = r; name = Cpp_name.to_string (resolve_ref_name v Term r)}
   in
   List.filter_map
     (function GlobRef.ConstRef _ as r -> Some (export r) | _ -> None)

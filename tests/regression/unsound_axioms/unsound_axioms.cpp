@@ -28,7 +28,7 @@ UnsoundAxioms::Rec UnsoundAxioms::impossible_rec() {
       "CraneTestsRegression.unsound_axioms.UnsoundAxioms.UnsoundAxioms.impossible_rec");
 }
 
-uint64_t UnsoundAxioms::use_impossible(std::monostate) {
+uint64_t UnsoundAxioms::use_impossible() {
   auto _cs = impossible_rec();
   uint64_t a = std::move(_cs).f1;
   uint64_t b = std::move(_cs).f2;

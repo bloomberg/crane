@@ -440,6 +440,25 @@ let core_type_is_unit (ty : _ Core.Type.at) : bool =
   | Core.Type.Global_app {head = r; _} -> Table.is_unit_type r
   | _ -> false
 
+(** Whether a function declaration's parameter of type [ty] is left out of
+    its C++ signature, a call by name passing nothing for it: a [void] one
+    ({!void_binder}), or a [unit] one, whose one value is known without being
+    passed.  A callable value's parameter -- a lambda's, a [crane::fn]'s -- is
+    kept: a polymorphic slot [A -> B] instantiated at [A := unit] calls it with
+    a value. *)
+let declaration_drops_binder (ty : Core.Type.t) : bool = void_binder ty || core_type_is_unit ty
+
+(** Whether the declaration of type [decl_ty] leaves out its [i]th parameter
+    (0-based, source order, erased ones counted), read off the declared domain
+    as a call site reads it ({!declaration_drops_binder}): the binder's own
+    type may say [unit] where the declaration names an alias, and an alias
+    reached through a functor's argument is not [unit] inside the functor.
+    [binder_ty] answers past the declared arrows. *)
+let declaration_drops_parameter decl_ty i binder_ty =
+  match List.nth_opt (core_domains decl_ty) i with
+  | Some d -> declaration_drops_binder d
+  | None -> declaration_drops_binder binder_ty
+
 let own_type_variables ~n_outer tys =
   List.exists (fun ty -> Core_util.IntSet.exists (fun i -> i > n_outer) (Core_util.core_tvars ty)) tys
 

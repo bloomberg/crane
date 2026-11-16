@@ -243,6 +243,17 @@ val void_binder : 'p Core.Type.at -> bool
 (** Whether a Core type is unit. *)
 val core_type_is_unit : 'p Core.Type.at -> bool
 
+(** Whether a function declaration's parameter of the type is left out of its
+    C++ signature: a [void] one ({!void_binder}) or a [unit] one.  A callable
+    value's parameter is kept. *)
+val declaration_drops_binder : Core.Type.t -> bool
+
+(** [declaration_drops_parameter decl_ty i binder_ty]: whether the declaration
+    of type [decl_ty] leaves out its [i]th parameter (0-based, source order),
+    read off the declared domain; [binder_ty] answers past the declared
+    arrows. *)
+val declaration_drops_parameter : Core.Type.t -> int -> Core.Type.t -> bool
+
 (** [own_type_variables ~n_outer tys] -- whether a local definition whose
     types are [tys], lowered under a head of [n_outer] type variables, has a
     variable of its own: one past the head's.  Such a definition is lifted

@@ -135,14 +135,14 @@ template <typename K, typename V> struct CHT {
                                                       bsl::move(xs));
   }
 
-  std::monostate stm_put(const K &k, const V &v) const {
+  void stm_put(const K &k, const V &v) const {
     stm::TVar<List<bsl::pair<K, V>>> b = this->bucket_of(k);
     List<bsl::pair<K, V>> xs = stm::readTVar(b);
     List<bsl::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, bsl::move(xs));
     stm::writeTVar(bsl::move(b), bsl::move(xs_));
-    return std::monostate{};
+    return;
   }
 
   bsl::optional<V> stm_delete(const K &k) const {
@@ -186,13 +186,8 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  std::monostate put(const K &k, const V &v) const {
-    return stm::atomically([&] {
-      return [&]() {
-        this->stm_put(k, v);
-        return std::monostate{};
-      }();
-    });
+  void put(const K &k, const V &v) const {
+    return stm::atomically([&] { return this->stm_put(k, v); });
   }
 
   bsl::optional<V> get(const K &k) const {

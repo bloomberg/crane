@@ -56,7 +56,7 @@ int main() {
   {
     bool caught = false;
     try {
-      AxiomTypes::use_axiom(std::monostate{});
+      AxiomTypes::use_axiom();
     } catch (const std::logic_error &e) {
       caught = true;
     }
@@ -74,7 +74,7 @@ int main() {
   {
     bool caught = false;
     try {
-      AxiomTypes::nested_axiom(std::monostate{});
+      AxiomTypes::nested_axiom();
     } catch (const std::logic_error &e) {
       caught = true;
     }
@@ -85,7 +85,7 @@ int main() {
   {
     bool caught = false;
     try {
-      AxiomTypes::axiom_list(std::monostate{});
+      AxiomTypes::axiom_list();
     } catch (const std::logic_error &e) {
       caught = true;
     }

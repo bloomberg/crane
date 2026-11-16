@@ -246,7 +246,7 @@ struct NestedClassStateArg {
                                                s);
   }
 
-  template <Params _tcI0> static Nat start(std::monostate) {
+  template <Params _tcI0> static Nat start() {
     return interp_it<_tcI0>(
         std::make_pair(
             MemStateV<_tcI0>::initial_state(),
@@ -264,7 +264,7 @@ struct NestedClassStateArg {
 
   static_assert(Params<natParams>);
   static inline const bool is_three =
-      start<natParams>(std::monostate{}).eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
+      start<natParams>().eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
 
 #endif // INCLUDED_NESTED_CLASS_STATE_ARG

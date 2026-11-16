@@ -210,6 +210,6 @@ public:
 
 /// Takes a unit so that Crane leaves it a free function and something
 /// concrete instantiates map_In.
-Lst<Nat> run(std::monostate _x);
+Lst<Nat> run();
 
 #endif // INCLUDED_LOOP_TRANSFORM_REASSIGNS_CLOSURE_TYPED_VAR

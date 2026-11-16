@@ -95,7 +95,7 @@ struct NonatomicRcThreadRace {
   static uint64_t churn(uint64_t n, const lst &l);
   static void worker(uint64_t n);
   static void test();
-  static void run(std::monostate _x);
+  static void run();
 };
 
 #endif // INCLUDED_NONATOMIC_RC_THREAD_RACE

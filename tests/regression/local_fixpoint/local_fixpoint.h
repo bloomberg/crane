@@ -22,12 +22,12 @@ struct Monadic {
     };
   }
 
-  static State<bool, std::monostate> foo_state(std::monostate _x);
+  static State<bool, std::monostate> foo_state();
   static inline const bool foo = []() {
     crane::fn<State<bool, std::monostate>(std::monostate)> foo_state_ =
-        [](std::monostate u) {
+        [](std::monostate) {
           return state_bind<bool, std::monostate, std::monostate>(
-              foo_state(u), [](std::monostate) {
+              foo_state(), [](std::monostate) {
                 return state_return<bool, std::monostate>(std::monostate{});
               });
         };

@@ -208,6 +208,6 @@ using M = Make<Inst>;
     crane_erase_fn<bool>(
         [](std::string _x0, std::string _x1) -> bool { return (_x0 == _x1); }));
 Inst::sem my_arg(std::monostate _x);
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_LEAF_FORWARD_STRING

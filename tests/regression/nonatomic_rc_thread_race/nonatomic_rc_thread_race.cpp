@@ -59,7 +59,7 @@ void NonatomicRcThreadRace::test() {
   return;
 }
 
-void NonatomicRcThreadRace::run(std::monostate) {
+void NonatomicRcThreadRace::run() {
   {
     test();
     return;

@@ -25,7 +25,7 @@ void aSsErT(bool condition, const char *message, int line) {
 int main() {
   // Test 1: quicksort_fun sorts a list
   {
-    auto result = QuicksortFun::test_quicksort_fun({});
+    auto result = QuicksortFun::test_quicksort_fun();
     // sorted list: [4,51,126,127,2412,5981,74879,212498,2749812]
 
     ASSERT(result == "[ 4, 51, 126, 127, 2412, 5981, 10645, 74879, 212498, 2749812,  ]");

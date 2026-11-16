@@ -212,7 +212,7 @@ bool AsciiAsChar::decide(char a, char b) {
   }
 }
 
-bool AsciiAsChar::check(std::monostate) {
+bool AsciiAsChar::check() {
   switch (cmp(String::string0(
               static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
                                 (true ? 4 : 0) | (true ? 8 : 0) |

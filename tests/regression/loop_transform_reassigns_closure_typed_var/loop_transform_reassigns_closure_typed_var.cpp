@@ -2,7 +2,7 @@
 
 /// Takes a unit so that Crane leaves it a free function and something
 /// concrete instantiates map_In.
-Lst<Nat> run(std::monostate) {
+Lst<Nat> run() {
   return Lst<Nat>::cons(
       Nat::s(Nat::o()),
       Lst<Nat>::cons(Nat::s(Nat::s(Nat::o())), Lst<Nat>::nil()))

@@ -50,6 +50,42 @@ let check_binder_scopes env i =
           ++ name (Option.map (fun b -> b.id) b)
           ++ str " to the binders typed in scope")
 
+(** [unit_parameter_adapter x cglob] is the callable value of the global
+    function [x], named [cglob], where its declaration left a [unit]
+    parameter out ({!Type_util.declaration_drops_binder}): a lambda taking one
+    parameter per value domain of [x]'s type, as a slot of that type calls
+    it, and forwarding the ones the declaration kept.  [None] where the
+    declaration keeps every parameter, or is not one Crane writes. *)
+let unit_parameter_adapter x (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t option =
+  if Table.is_custom x || Table.is_projection x || Option.has_some (Cpp_names.lookup_method_this_pos x) then None
+  else
+    match callee_core_type x with
+    | None -> None
+    | Some ty ->
+      let doms =
+        List.filter (fun d -> not (Table.is_typeclass_type d)) (Type_util.core_value_domains ty)
+      in
+      if not (List.exists Type_util.declaration_drops_binder doms) then None
+      else
+        let params =
+          List.mapi
+            (fun j d ->
+              ( ( (Reference (Lvalue, Const Auto) : Cpp_ir.Lowered.Type.t),
+                  Some (Id.of_string (Printf.sprintf "_wa%d" j)) ),
+                Type_util.declaration_drops_binder d ) )
+            doms
+        in
+        let args =
+          List.filter_map
+            (fun ((_, id), dropped) -> if dropped then None else Some (Local (Option.get id) : Cpp_ir.Lowered.Expr.t))
+            params
+        in
+        let call = Cpp_ir.Build.call cglob args in
+        let body : Cpp_ir.Lowered.Stmt.t list =
+          if Translation_monadic.core_type_is_void_call ty then [Expression call] else [Return (Some call)]
+        in
+        Some (Cpp_ir.Build.lambda (List.map fst params) None body ~capture:Stored)
+
 (** [gen_expr ?expected_ty ?slot env core_e] -- the CppIR expression for the
     Core expression [core_e], generated against [expected_ty] where the
     position states one.  A global that is called when named
@@ -74,6 +110,11 @@ let check_binder_scopes env i =
 let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Translation_slot.empty_slot) env
     (core_e : Core.Expr.t) : Cpp_ir.Lowered.Expr.t =
   match core_e with
+  (* [unit] has one value, so a read of a [unit] binder is that value: the
+     binder may have no C++ parameter at all ({!Type_util.declaration_drops_binder}). *)
+  | Core.Expr.Bound_variable {index = i; _}
+    when (match get_env_type_opt i with Some t -> core_type_is_unit t | None -> false) ->
+    Translation_monadic.mk_tt_expr ()
   | Core.Expr.Bound_variable {index = i; occurrence = occ} ->
     check_binder_scopes env i;
     let boxed_read = Translation_binders.read_is_boxed i occ in
@@ -400,7 +441,10 @@ let rec gen_expr ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Translat
         ( match into with
         | Some into -> Translation_coerce.coerce ~from ~into cglob
         | None -> cglob )
-      | _ -> Translation_calls.curry_to_expected env ?expected_ty use cglob )
+      | _ -> (
+        match unit_parameter_adapter x cglob with
+        | Some adapter -> adapter
+        | None -> Translation_calls.curry_to_expected env ?expected_ty use cglob ) )
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _} when is_custom r ->
     gen_expr_custom_cons ?expected_ty ~slot env ty r ts
   | Core.Expr.Construct {result_type = ty; constructor = r; arguments = ts; _}

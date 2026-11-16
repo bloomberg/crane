@@ -466,8 +466,7 @@ struct PatternBinderStateBoxed {
   };
 
   template <Params _tcI0>
-  static Itree<noE, std::pair<FusedS<typename _tcI0::ptr>, Nat>>
-  go(std::monostate) {
+  static Itree<noE, std::pair<FusedS<typename _tcI0::ptr>, Nat>> go() {
     static const auto on_genv_1 = crane::immortal(on_genv<_tcI0, Nat>(incr));
     return on_genv_1(
         std::make_pair(MemStateV<_tcI0>::initial_state(),
@@ -484,7 +483,7 @@ struct PatternBinderStateBoxed {
   static_assert(Params<natParams>);
   static inline const Itree<noE,
                             std::pair<FusedS<typename natParams::ptr>, Nat>> t =
-      go<natParams>(std::monostate{});
+      go<natParams>();
 };
 
 #endif // INCLUDED_PATTERN_BINDER_STATE_BOXED
