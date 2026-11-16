@@ -16,6 +16,12 @@
     intermediate declarations to hand to the wrong pass, because none of them
     is nameable from outside. *)
 
+(** The check the "control" pass runs under [CRANE_CHECK_IR]: that what a
+    declaration of the unit emits is what control lowering recorded deciding
+    ({!Control_to_cpp_ir.check_lowered}).  Control lowering comes before
+    finishing, so its caller hands the check in. *)
+type control_check = unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit
+
 (** [finish u decl] runs every pass between translation and printing over
     [decl], a declaration of the unit [u], and hands back the printable
     declaration.  Under [CRANE_TRACE_PASSES] ([1], or a substring of the
@@ -28,7 +34,7 @@
     or projection called as a function, and the rest of
     {!Cpp_ir.Representation_obligation.t}), or if what it borrows and moves
     fails {!Borrow_projection.check_decl} or {!Move_check.check_decl}. *)
-val finish : Unit_context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
+val finish : check_control:control_check -> Unit_context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t
 
 
 (** [resolve_type ~what t] is the lowered type [t], written outside every

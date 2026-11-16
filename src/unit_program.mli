@@ -163,7 +163,7 @@ val record_lifted_ahead : Cpp_ir.Lowered.Decl.t list -> unit
     declaration.  What {!Cpp_demands} reads is read off the finished
     declaration.  Under [CRANE_CHECK_IR], two different declarations under
     one id are a violation. *)
-val finish : Unit_context.t -> job list -> t
+val finish : check_control:Cpp_pipeline.control_check -> Unit_context.t -> job list -> t
 
 (** Under [CRANE_CHECK_IR], fail unless [t] finished exactly the
     declarations its generations gave: those its entities name, and each
@@ -201,11 +201,12 @@ val find_declaration : id -> declaration option
 
 (** [finishes_as u d f] is whether finishing [d], of the unit [u], again
     gives [f]. *)
-val finishes_as : Unit_context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t -> bool
+val finishes_as :
+  check_control:Cpp_pipeline.control_check -> Unit_context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Resolved.Decl.t -> bool
 
 (** [refinish u jobs] finishes [jobs], of the unit [u], again, in order, and fails unless each
     comes out as it is in the installed program, under the same {!id}. *)
-val refinish : Unit_context.t -> job list -> unit
+val refinish : check_control:Cpp_pipeline.control_check -> Unit_context.t -> job list -> unit
 
 (** {!globals} of the installed program. *)
 val installed_globals : unit -> Names.GlobRef.t list

@@ -193,7 +193,7 @@ let record_ahead e =
 (* [compare] rather than [=]: a NaN literal is equal to itself. *)
 let same_source d d' = d == d' || compare d d' = 0
 
-let finish u jobs =
+let finish ~check_control u jobs =
   let declarations = ref [] and demands = ref [] and globals = ref [] and promoted = ref [] in
   let sources = ref Id_map.empty and by_id = ref Id_map.empty in
   List.iter
@@ -210,7 +210,7 @@ let finish u jobs =
           | Source e -> Some (Entity_id.to_ref e)
           | Generated g -> Option.map Entity_id.to_ref (Generated_entity_id.owner g)
         in
-        let finish () = Cpp_pipeline.finish u d in
+        let finish () = Cpp_pipeline.finish ~check_control u d in
         let finished = match owner_ref with Some r -> Table.with_decl_ref r finish | None -> finish () in
         Probe.hit "cpp_ir" (fun () -> "converted");
         demands := List.rev_append (Cpp_demands.of_decl u finished) !demands;
@@ -253,18 +253,18 @@ let installed_finished () = List.map (fun d -> d.finished) !program.declarations
 
 let installed_promoted () = !program.promoted
 
-let finishes_as u d f =
-  compare f (Cpp_pipeline.finish u d) = 0
+let finishes_as ~check_control u d f =
+  compare f (Cpp_pipeline.finish ~check_control u d) = 0
 
 let find_declaration id = Id_map.find_opt id !program.by_id
 
 let find id = Option.map (fun d -> d.finished) (find_declaration id)
 
-let refinish u jobs =
+let refinish ~check_control u jobs =
   List.iter
     (fun (id, d) ->
       match find id with
-      | Some f when finishes_as u d f -> ()
+      | Some f when finishes_as ~check_control u d f -> ()
       | Some _ | None ->
         CErrors.anomaly
           Pp.(str "Crane: a declaration was finished differently again in the reverse order.") )

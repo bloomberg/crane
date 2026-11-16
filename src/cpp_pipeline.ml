@@ -97,16 +97,18 @@ let scrutinees = Pipeline_trace.pass "scrutinees" Cpp_erasure.name_scrutinees
 let captures = Pipeline_trace.pass "captures" Cpp_erasure.decide_captures
 let initialisers = Pipeline_trace.pass "initialisers" Cpp_erasure.invoke_capturing_initialisers
 
+type control_check = unit:Unit_context.t -> Cpp_ir.Lowered.Decl.t -> unit
+
 (** Every pass before the {!Cpp_erasure} seam, in the order they run, over a
     declaration of the unit [u]. *)
-let lowered_passes u : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
+let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Pipeline_trace.pass list =
   [ (* Control is lowered as it is generated, from its ControlIR
        ({!Control_to_cpp_ir}): nothing is left here to lower.  Under
        [CRANE_CHECK_IR] what is emitted must be what control lowering
        recorded deciding, every loop the plan commits to decided, and no
        lowered loop still makes a call it takes. *)
     on_decl "control" (fun d ->
-        if Probe.checking () then Control_to_cpp_ir.check_lowered ~unit:u d;
+        if Probe.checking () then check_control ~unit:u d;
         d );
     (* Closures made and used in one place become the code they stand for.
        The moves they hold were decided over Core, the arguments a local
@@ -184,7 +186,7 @@ let instantiation_passes u =
   [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; captures; initialisers]
 
 let pass_names =
-  Pipeline_trace.names (lowered_passes Unit_context.detached)
+  Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_context.detached)
   @ [seam]
   @ Pipeline_trace.names (settled_passes Unit_context.detached)
   @ Pipeline_trace.names (instantiation_passes Unit_context.detached)
@@ -333,7 +335,7 @@ let spell_type t =
    the instantiation passes ({!checked_before_instantiation}), and the
    instantiated declaration is checked for what it borrows and moves
    ({!Borrow_projection.check_decl}, {!Move_check.check_decl}). *)
-let finish u decl =
+let finish ~check_control u decl =
   let trace = traced decl in
   let steps = ref [] in
   let note name before after =
@@ -352,7 +354,7 @@ let finish u decl =
         d' )
       d passes
   in
-  let decl = run Fun.id (lowered_passes u) decl in
+  let decl = run Fun.id (lowered_passes ~check_control u) decl in
   let settled = Cpp_erasure.materialise decl in
   let inj (d : Cpp_erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);
