@@ -115,10 +115,10 @@ struct DeepDestruct {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
@@ -129,6 +129,7 @@ struct DeepDestruct {
         }
       } else {
         auto _f = std::move(std::get<_after_mylist_rect_in_Mycons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         std::shared_ptr<mylist<T1>> a1 = std::move(_f.a1);
         _result = f0(a0, *a1, std::move(_result));

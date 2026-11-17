@@ -53,6 +53,8 @@ struct TmcAmbiguousCalls {
 
     // MANIPULATORS
     ~exp() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Var>(v_mut())) {
         return;
       }
@@ -96,35 +98,32 @@ struct TmcAmbiguousCalls {
     exp map_vars(F0 &&f) const {
       const exp *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of map_vars: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const exp *_self;
       };
 
-      /// CraneCont_v: saves [body0, v], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_v {
+      struct _after_map_vars_in_pair {
         const exp *body0;
         uint64_t v;
       };
 
-      /// CraneCont_v_1: saves [v, _tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_v_1 {
+      struct _after_map_vars_in_pair_2 {
         uint64_t v;
         exp _tmp2;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_v, CraneCont_v_1>;
+      using _frame = std::variant<_call, _after_map_vars_in_pair,
+                                  _after_map_vars_in_pair_2>;
       exp _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified map_vars: CraneEnter -> CraneCont_v -> CraneCont_v_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const exp *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename exp::Var>(_sv.v())) {
@@ -133,17 +132,19 @@ struct TmcAmbiguousCalls {
           } else {
             const auto &[b0, body0] = std::get<typename exp::Let>(_sv.v());
             const auto &[v, def] = (*b0);
-            _stack.emplace_back(CraneCont_v{crane_raw(body0), v});
-            _stack.emplace_back(CraneEnter{&def});
+            _stack.emplace_back(_after_map_vars_in_pair{crane_raw(body0), v});
+            _stack.emplace_back(_call{&def});
           }
-        } else if (std::holds_alternative<CraneCont_v>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_v>(_frame));
+        } else if (std::holds_alternative<_after_map_vars_in_pair>(_popped)) {
+          auto _f = std::move(std::get<_after_map_vars_in_pair>(_popped));
+          _stack.pop_back();
           const exp &body0 = *_f.body0;
           uint64_t v = _f.v;
-          _stack.emplace_back(CraneCont_v_1{v, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.body0});
+          _stack.emplace_back(_after_map_vars_in_pair_2{v, std::move(_result)});
+          _stack.emplace_back(_call{_f.body0});
         } else {
-          auto _f = std::move(std::get<CraneCont_v_1>(_frame));
+          auto _f = std::move(std::get<_after_map_vars_in_pair_2>(_popped));
+          _stack.pop_back();
           uint64_t v = _f.v;
           _result = exp::let(std::make_pair(f(v), std::move(_f._tmp2)),
                              std::move(_result));
@@ -162,28 +163,26 @@ struct TmcAmbiguousCalls {
     T1 exp_rect(F0 &&f, F1 &&f0) const {
       const exp *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of exp_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const exp *_self;
       };
 
-      /// CraneCont_Let: saves [b0, body0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Let {
+      struct _after_exp_rect_in_Let {
         std::shared_ptr<std::pair<uint64_t, exp>> b0;
         std::shared_ptr<exp> body0;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Let>;
+      using _frame = std::variant<_call, _after_exp_rect_in_Let>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified exp_rect: CraneEnter -> CraneCont_Let.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const exp *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename exp::Var>(_sv.v())) {
@@ -191,11 +190,12 @@ struct TmcAmbiguousCalls {
             _result = f(v_0);
           } else {
             const auto &[b0, body0] = std::get<typename exp::Let>(_sv.v());
-            _stack.emplace_back(CraneCont_Let{b0, body0});
-            _stack.emplace_back(CraneEnter{crane_raw(body0)});
+            _stack.emplace_back(_after_exp_rect_in_Let{b0, body0});
+            _stack.emplace_back(_call{crane_raw(body0)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_Let>(_frame));
+          auto _f = std::move(std::get<_after_exp_rect_in_Let>(_popped));
+          _stack.pop_back();
           std::shared_ptr<std::pair<uint64_t, exp>> b0 = std::move(_f.b0);
           std::shared_ptr<exp> body0 = std::move(_f.body0);
           _result = f0(*b0, *body0, std::move(_result));
@@ -276,6 +276,8 @@ struct TmcAmbiguousCalls {
 
     // MANIPULATORS
     ~bexp() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<BVar>(v_mut())) {
         return;
       }
@@ -319,36 +321,32 @@ struct TmcAmbiguousCalls {
     bexp map_bvars(F0 &&f) const {
       const bexp *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of map_bvars: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const bexp *_self;
       };
 
-      /// CraneCont_Bind: saves [body0, v_00], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Bind {
+      struct _after_map_bvars_in_Bind {
         const bexp *body0;
         uint64_t v_00;
       };
 
-      /// CraneCont_Bind_1: saves [v_00, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Bind_1 {
+      struct _after_map_bvars_in_Bind_2 {
         uint64_t v_00;
         bexp _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Bind, CraneCont_Bind_1>;
+      using _frame = std::variant<_call, _after_map_bvars_in_Bind,
+                                  _after_map_bvars_in_Bind_2>;
       bexp _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified map_bvars: CraneEnter -> CraneCont_Bind -> CraneCont_Bind_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const bexp *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bexp::BVar>(_sv.v())) {
@@ -358,17 +356,21 @@ struct TmcAmbiguousCalls {
             const auto &[b0, body0] = std::get<typename bexp::BLet>(_sv.v());
             const auto &_sv0 = *b0;
             const auto &[v_00, def0] = _sv0;
-            _stack.emplace_back(CraneCont_Bind{crane_raw(body0), v_00});
-            _stack.emplace_back(CraneEnter{&def0});
+            _stack.emplace_back(
+                _after_map_bvars_in_Bind{crane_raw(body0), v_00});
+            _stack.emplace_back(_call{&def0});
           }
-        } else if (std::holds_alternative<CraneCont_Bind>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Bind>(_frame));
+        } else if (std::holds_alternative<_after_map_bvars_in_Bind>(_popped)) {
+          auto _f = std::move(std::get<_after_map_bvars_in_Bind>(_popped));
+          _stack.pop_back();
           const bexp &body0 = *_f.body0;
           uint64_t v_00 = _f.v_00;
-          _stack.emplace_back(CraneCont_Bind_1{v_00, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.body0});
+          _stack.emplace_back(
+              _after_map_bvars_in_Bind_2{v_00, std::move(_result)});
+          _stack.emplace_back(_call{_f.body0});
         } else {
-          auto _f = std::move(std::get<CraneCont_Bind_1>(_frame));
+          auto _f = std::move(std::get<_after_map_bvars_in_Bind_2>(_popped));
+          _stack.pop_back();
           uint64_t v_00 = _f.v_00;
           _result =
               bexp::blet(binding<bexp>::bind(f(v_00), std::move(_f._tmp2)),
@@ -388,28 +390,26 @@ struct TmcAmbiguousCalls {
     T1 bexp_rect(F0 &&f, F1 &&f0) const {
       const bexp *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of bexp_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const bexp *_self;
       };
 
-      /// CraneCont_BLet: saves [b1, body0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_BLet {
+      struct _after_bexp_rect_in_BLet {
         std::shared_ptr<binding<bexp>> b1;
         std::shared_ptr<bexp> body0;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_BLet>;
+      using _frame = std::variant<_call, _after_bexp_rect_in_BLet>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified bexp_rect: CraneEnter -> CraneCont_BLet.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const bexp *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bexp::BVar>(_sv.v())) {
@@ -417,11 +417,12 @@ struct TmcAmbiguousCalls {
             _result = f(v_0);
           } else {
             const auto &[b1, body0] = std::get<typename bexp::BLet>(_sv.v());
-            _stack.emplace_back(CraneCont_BLet{b1, body0});
-            _stack.emplace_back(CraneEnter{crane_raw(body0)});
+            _stack.emplace_back(_after_bexp_rect_in_BLet{b1, body0});
+            _stack.emplace_back(_call{crane_raw(body0)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_BLet>(_frame));
+          auto _f = std::move(std::get<_after_bexp_rect_in_BLet>(_popped));
+          _stack.pop_back();
           std::shared_ptr<binding<bexp>> b1 = std::move(_f.b1);
           std::shared_ptr<bexp> body0 = std::move(_f.body0);
           _result = f0(*b1, *body0, std::move(_result));
@@ -465,6 +466,8 @@ struct TmcAmbiguousCalls {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Leaf>(v_mut())) {
         return;
       }
@@ -511,53 +514,52 @@ struct TmcAmbiguousCalls {
     tree map_tree(F0 &&f) const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of map_tree: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [x0, r0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_map_tree_in_Node {
         uint64_t x0;
         const tree *r0;
       };
 
-      /// CraneCont_Node_1: saves [x0, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_map_tree_in_Node_2 {
         uint64_t x0;
         tree _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_map_tree_in_Node,
+                                  _after_map_tree_in_Node_2>;
       tree _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified map_tree: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = tree::leaf();
           } else {
             const auto &[l0, x0, r0] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{x0, crane_raw(r0)});
-            _stack.emplace_back(CraneEnter{crane_raw(l0)});
+            _stack.emplace_back(_after_map_tree_in_Node{x0, crane_raw(r0)});
+            _stack.emplace_back(_call{crane_raw(l0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_map_tree_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_map_tree_in_Node>(_popped));
+          _stack.pop_back();
           uint64_t x0 = _f.x0;
           const tree &r0 = *_f.r0;
-          _stack.emplace_back(CraneCont_Node_1{x0, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.r0});
+          _stack.emplace_back(_after_map_tree_in_Node_2{x0,
+                                                        std::move(_result)});
+          _stack.emplace_back(_call{_f.r0});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_map_tree_in_Node_2>(_popped));
+          _stack.pop_back();
           uint64_t x0 = _f.x0;
           _result = tree::node(std::move(_f._tmp2), f(x0), std::move(_result));
         }
@@ -572,58 +574,57 @@ struct TmcAmbiguousCalls {
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of tree_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [l0, x0, r0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_tree_rect_in_Node {
         std::shared_ptr<tree> l0;
         uint64_t x0;
         const tree *r0;
       };
 
-      /// CraneCont_Node_1: saves [l0, x0, r0, _tmp2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_tree_rect_in_Node_2 {
         std::shared_ptr<tree> l0;
         uint64_t x0;
         const tree *r0;
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_tree_rect_in_Node,
+                                  _after_tree_rect_in_Node_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified tree_rect: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[l0, x0, r0] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{l0, x0, crane_raw(r0)});
-            _stack.emplace_back(CraneEnter{crane_raw(l0)});
+            _stack.emplace_back(_after_tree_rect_in_Node{l0, x0,
+                                                         crane_raw(r0)});
+            _stack.emplace_back(_call{crane_raw(l0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree> l0 = std::move(_f.l0);
           uint64_t x0 = _f.x0;
           const tree &r0 = *_f.r0;
-          _stack.emplace_back(
-              CraneCont_Node_1{std::move(l0), x0, &r0, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.r0});
+          _stack.emplace_back(_after_tree_rect_in_Node_2{std::move(l0), x0, &r0,
+                                                         std::move(_result)});
+          _stack.emplace_back(_call{_f.r0});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree> l0 = std::move(_f.l0);
           uint64_t x0 = _f.x0;
           const tree &r0 = *_f.r0;
@@ -679,6 +680,8 @@ struct TmcAmbiguousCalls {
 
     // MANIPULATORS
     ~term() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Lit>(v_mut())) {
         return;
       }
@@ -733,34 +736,30 @@ struct TmcAmbiguousCalls {
     uint64_t eval() const {
       const term *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of eval: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const term *_self;
       };
 
-      /// CraneCont_Add: saves [b0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add {
+      struct _after_eval_in_Add {
         const term *b0;
       };
 
-      /// CraneCont_Add_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add_1 {
+      struct _after_eval_in_Add_2 {
         uint64_t _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1>;
+      using _frame =
+          std::variant<_call, _after_eval_in_Add, _after_eval_in_Add_2>;
       uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified eval: CraneEnter -> CraneCont_Add -> CraneCont_Add_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const term *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename term::Lit>(_sv.v())) {
@@ -768,19 +767,21 @@ struct TmcAmbiguousCalls {
             _result = std::move(n0);
           } else if (std::holds_alternative<typename term::Neg>(_sv.v())) {
             const auto &[t1] = std::get<typename term::Neg>(_sv.v());
-            _stack.emplace_back(CraneEnter{crane_raw(t1)});
+            _stack.emplace_back(_call{crane_raw(t1)});
           } else {
             const auto &[a0, b0] = std::get<typename term::Add>(_sv.v());
-            _stack.emplace_back(CraneCont_Add{crane_raw(b0)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_eval_in_Add{crane_raw(b0)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add>(_frame));
+        } else if (std::holds_alternative<_after_eval_in_Add>(_popped)) {
+          auto _f = std::move(std::get<_after_eval_in_Add>(_popped));
+          _stack.pop_back();
           const term &b0 = *_f.b0;
-          _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.b0});
+          _stack.emplace_back(_after_eval_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.b0});
         } else {
-          auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+          auto _f = std::move(std::get<_after_eval_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         }
       }
@@ -790,38 +791,32 @@ struct TmcAmbiguousCalls {
     term scale(uint64_t k) const {
       const term *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of scale: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const term *_self;
       };
 
-      /// CraneCont_Add: saves [b0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add {
+      struct _after_scale_in_Add {
         const term *b0;
       };
 
-      /// CraneCont_Add_1: saves [_tmp3], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add_1 {
+      struct _after_scale_in_Add_2 {
         term _tmp3;
       };
 
-      /// CraneCont_Neg: resumes after recursive call, then processes rest.
-      struct CraneCont_Neg {};
+      struct _after_scale_in_Neg {};
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Add,
-                                      CraneCont_Add_1, CraneCont_Neg>;
+      using _frame = std::variant<_call, _after_scale_in_Add,
+                                  _after_scale_in_Add_2, _after_scale_in_Neg>;
       term _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified scale: CraneEnter -> CraneCont_Add -> CraneCont_Add_1 ->
-      /// CraneCont_Neg.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const term *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename term::Lit>(_sv.v())) {
@@ -829,23 +824,26 @@ struct TmcAmbiguousCalls {
             _result = term::lit((k * n0));
           } else if (std::holds_alternative<typename term::Neg>(_sv.v())) {
             const auto &[t1] = std::get<typename term::Neg>(_sv.v());
-            _stack.emplace_back(CraneCont_Neg{});
-            _stack.emplace_back(CraneEnter{crane_raw(t1)});
+            _stack.emplace_back(_after_scale_in_Neg{});
+            _stack.emplace_back(_call{crane_raw(t1)});
           } else {
             const auto &[a0, b0] = std::get<typename term::Add>(_sv.v());
-            _stack.emplace_back(CraneCont_Add{crane_raw(b0)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_scale_in_Add{crane_raw(b0)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add>(_frame));
+        } else if (std::holds_alternative<_after_scale_in_Add>(_popped)) {
+          auto _f = std::move(std::get<_after_scale_in_Add>(_popped));
+          _stack.pop_back();
           const term &b0 = *_f.b0;
-          _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.b0});
-        } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+          _stack.emplace_back(_after_scale_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.b0});
+        } else if (std::holds_alternative<_after_scale_in_Add_2>(_popped)) {
+          auto _f = std::move(std::get<_after_scale_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = term::add(std::move(_f._tmp3), std::move(_result));
         } else {
-          auto _f = std::move(std::get<CraneCont_Neg>(_frame));
+          auto _f = std::move(std::get<_after_scale_in_Neg>(_popped));
+          _stack.pop_back();
           _result = term::neg(std::move(_result));
         }
       }
@@ -862,44 +860,38 @@ struct TmcAmbiguousCalls {
     T1 term_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const term *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of term_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const term *_self;
       };
 
-      /// CraneCont_Add: saves [a0, b0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add {
+      struct _after_term_rect_in_Add {
         std::shared_ptr<term> a0;
         const term *b0;
       };
 
-      /// CraneCont_Add_1: saves [a0, b0, _tmp3], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Add_1 {
+      struct _after_term_rect_in_Add_2 {
         std::shared_ptr<term> a0;
         const term *b0;
         T1 _tmp3;
       };
 
-      /// CraneCont_Neg: saves [t1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Neg {
+      struct _after_term_rect_in_Neg {
         std::shared_ptr<term> t1;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Add,
-                                      CraneCont_Add_1, CraneCont_Neg>;
+      using _frame =
+          std::variant<_call, _after_term_rect_in_Add,
+                       _after_term_rect_in_Add_2, _after_term_rect_in_Neg>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified term_rect: CraneEnter -> CraneCont_Add -> CraneCont_Add_1 ->
-      /// CraneCont_Neg.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        _frame &_popped = _stack.back();
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const term *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename term::Lit>(_sv.v())) {
@@ -907,27 +899,31 @@ struct TmcAmbiguousCalls {
             _result = f(n0);
           } else if (std::holds_alternative<typename term::Neg>(_sv.v())) {
             const auto &[t1] = std::get<typename term::Neg>(_sv.v());
-            _stack.emplace_back(CraneCont_Neg{t1});
-            _stack.emplace_back(CraneEnter{crane_raw(t1)});
+            _stack.emplace_back(_after_term_rect_in_Neg{t1});
+            _stack.emplace_back(_call{crane_raw(t1)});
           } else {
             const auto &[a0, b0] = std::get<typename term::Add>(_sv.v());
-            _stack.emplace_back(CraneCont_Add{a0, crane_raw(b0)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_term_rect_in_Add{a0, crane_raw(b0)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add>(_frame));
+        } else if (std::holds_alternative<_after_term_rect_in_Add>(_popped)) {
+          auto _f = std::move(std::get<_after_term_rect_in_Add>(_popped));
+          _stack.pop_back();
           std::shared_ptr<term> a0 = std::move(_f.a0);
           const term &b0 = *_f.b0;
           _stack.emplace_back(
-              CraneCont_Add_1{std::move(a0), &b0, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.b0});
-        } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+              _after_term_rect_in_Add_2{std::move(a0), &b0,
+                                        std::move(_result)});
+          _stack.emplace_back(_call{_f.b0});
+        } else if (std::holds_alternative<_after_term_rect_in_Add_2>(_popped)) {
+          auto _f = std::move(std::get<_after_term_rect_in_Add_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<term> a0 = std::move(_f.a0);
           const term &b0 = *_f.b0;
           _result = f1(*a0, std::move(_f._tmp3), b0, std::move(_result));
         } else {
-          auto _f = std::move(std::get<CraneCont_Neg>(_frame));
+          auto _f = std::move(std::get<_after_term_rect_in_Neg>(_popped));
+          _stack.pop_back();
           std::shared_ptr<term> t1 = std::move(_f.t1);
           _result = f0(*t1, std::move(_result));
         }

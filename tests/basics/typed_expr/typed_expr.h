@@ -203,10 +203,10 @@ inline crane::obj Expr::eval(Ty _x) const {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{_self, _x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const Expr *_self = _f._self;
       Ty _x = _f._x;
       auto &&_sv = *_self;
@@ -232,24 +232,29 @@ inline crane::obj Expr::eval(Ty _x) const {
       }
     } else if (std::holds_alternative<_after_eval_in_EAdd>(_popped)) {
       auto _f = std::move(std::get<_after_eval_in_EAdd>(_popped));
+      _stack.pop_back();
       const Expr &a1 = *_f.a1;
       _stack.emplace_back(_after_eval_in_EAdd_2{std::move(_result)});
       _stack.emplace_back(_call{_f.a1, Ty::TNAT});
     } else if (std::holds_alternative<_after_eval_in_EAdd_2>(_popped)) {
       auto _f = std::move(std::get<_after_eval_in_EAdd_2>(_popped));
+      _stack.pop_back();
       _result = (crane::any_cast<uint64_t>(std::move(_f._tmp2)) +
                  crane::any_cast<uint64_t>(std::move(_result)));
     } else if (std::holds_alternative<_after_eval_in_EEq>(_popped)) {
       auto _f = std::move(std::get<_after_eval_in_EEq>(_popped));
+      _stack.pop_back();
       const Expr &a1 = *_f.a1;
       _stack.emplace_back(_after_eval_in_EEq_2{std::move(_result)});
       _stack.emplace_back(_call{_f.a1, Ty::TNAT});
     } else if (std::holds_alternative<_after_eval_in_EEq_2>(_popped)) {
       auto _f = std::move(std::get<_after_eval_in_EEq_2>(_popped));
+      _stack.pop_back();
       _result = crane::any_cast<uint64_t>(std::move(_f._tmp4)) ==
                 crane::any_cast<uint64_t>(std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_eval_in_EIf>(_popped));
+      _stack.pop_back();
       Ty t = _f.t;
       const Expr &a2 = *_f.a2;
       const Expr &a3 = *_f.a3;

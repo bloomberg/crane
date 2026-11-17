@@ -16,10 +16,10 @@ uint64_t LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&xs});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyMatchArg::Cell> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
               xs.v())) {
@@ -40,6 +40,7 @@ uint64_t LoopifyMatchArg::count_dots(const List<LoopifyMatchArg::Cell> &xs) {
       }
     } else {
       auto _f = std::move(std::get<_after_count_dots_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -62,10 +63,10 @@ uint64_t LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&xs});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyMatchArg::Cell> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyMatchArg::Cell>::Nil>(
               xs.v())) {
@@ -78,6 +79,7 @@ uint64_t LoopifyMatchArg::my_length(const List<LoopifyMatchArg::Cell> &xs) {
       }
     } else {
       auto _f = std::move(std::get<_after_my_length_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }

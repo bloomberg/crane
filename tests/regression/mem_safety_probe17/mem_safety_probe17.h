@@ -157,10 +157,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -180,6 +180,7 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_weighted_sum_in_QNode>(_popped)) {
           auto _f = std::move(std::get<_after_weighted_sum_in_QNode>(_popped));
+          _stack.pop_back();
           const qtree &a1 = *_f.a1;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
@@ -191,6 +192,7 @@ struct MemSafetyProbe17 {
                 std::holds_alternative<_after_weighted_sum_in_QNode_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_weighted_sum_in_QNode_2>(_popped));
+          _stack.pop_back();
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
@@ -201,6 +203,7 @@ struct MemSafetyProbe17 {
                 std::holds_alternative<_after_weighted_sum_in_QNode_3>(_popped)) {
           auto _f =
               std::move(std::get<_after_weighted_sum_in_QNode_3>(_popped));
+          _stack.pop_back();
           const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
           _stack.emplace_back(_after_weighted_sum_in_QNode_4{
@@ -209,6 +212,7 @@ struct MemSafetyProbe17 {
         } else {
           auto _f =
               std::move(std::get<_after_weighted_sum_in_QNode_4>(_popped));
+          _stack.pop_back();
           uint64_t local_weight = _f.local_weight;
           _result = ((((local_weight + _f._tmp4) + _f._tmp3) + _f._tmp2) +
                      std::move(_result));
@@ -273,10 +277,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &t2});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const qtree *_self = _f._self;
           const qtree &t2 = *_f.t2;
           auto &&_sv = *_self;
@@ -298,6 +302,7 @@ struct MemSafetyProbe17 {
           }
         } else if (std::holds_alternative<_after_qtree_zip_in_QNode>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_zip_in_QNode>(_popped));
+          _stack.pop_back();
           const qtree &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
           const qtree &a4 = *_f.a4;
@@ -311,6 +316,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a2, &a10});
         } else if (std::holds_alternative<_after_qtree_zip_in_QNode_2>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_zip_in_QNode_2>(_popped));
+          _stack.pop_back();
           uint64_t a3 = _f.a3;
           const qtree &a4 = *_f.a4;
           const qtree &a5 = *_f.a5;
@@ -322,6 +328,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a4, &a30});
         } else if (std::holds_alternative<_after_qtree_zip_in_QNode_3>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_zip_in_QNode_3>(_popped));
+          _stack.pop_back();
           uint64_t a3 = _f.a3;
           const qtree &a5 = *_f.a5;
           uint64_t a20 = _f.a20;
@@ -332,6 +339,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a5, &a40});
         } else {
           auto _f = std::move(std::get<_after_qtree_zip_in_QNode_4>(_popped));
+          _stack.pop_back();
           uint64_t a3 = _f.a3;
           uint64_t a20 = _f.a20;
           _result =
@@ -387,10 +395,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -405,6 +413,7 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_qtree_mirror_in_QNode>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_mirror_in_QNode>(_popped));
+          _stack.pop_back();
           const qtree &a0 = *_f.a0;
           const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
@@ -416,6 +425,7 @@ struct MemSafetyProbe17 {
                 std::holds_alternative<_after_qtree_mirror_in_QNode_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_qtree_mirror_in_QNode_2>(_popped));
+          _stack.pop_back();
           const qtree &a0 = *_f.a0;
           const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
@@ -426,6 +436,7 @@ struct MemSafetyProbe17 {
                 std::holds_alternative<_after_qtree_mirror_in_QNode_3>(_popped)) {
           auto _f =
               std::move(std::get<_after_qtree_mirror_in_QNode_3>(_popped));
+          _stack.pop_back();
           const qtree &a0 = *_f.a0;
           uint64_t a2 = _f.a2;
           _stack.emplace_back(_after_qtree_mirror_in_QNode_4{
@@ -435,6 +446,7 @@ struct MemSafetyProbe17 {
         } else {
           auto _f =
               std::move(std::get<_after_qtree_mirror_in_QNode_4>(_popped));
+          _stack.pop_back();
           uint64_t a2 = _f.a2;
           _result = qtree::qnode(std::move(_f._tmp4), std::move(_f._tmp3), a2,
                                  std::move(_f._tmp2), std::move(_result));
@@ -483,10 +495,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -500,6 +512,7 @@ struct MemSafetyProbe17 {
           }
         } else if (std::holds_alternative<_after_qtree_size_in_QNode>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_size_in_QNode>(_popped));
+          _stack.pop_back();
           const qtree &a1 = *_f.a1;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
@@ -509,6 +522,7 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_qtree_size_in_QNode_2>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_size_in_QNode_2>(_popped));
+          _stack.pop_back();
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           _stack.emplace_back(
@@ -517,12 +531,14 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_qtree_size_in_QNode_3>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_size_in_QNode_3>(_popped));
+          _stack.pop_back();
           const qtree &a4 = *_f.a4;
           _stack.emplace_back(_after_qtree_size_in_QNode_4{_f._tmp4, _f._tmp3,
                                                            std::move(_result)});
           _stack.emplace_back(_call{_f.a4});
         } else {
           auto _f = std::move(std::get<_after_qtree_size_in_QNode_4>(_popped));
+          _stack.pop_back();
           _result = ((((UINT64_C(1) + _f._tmp4) + _f._tmp3) + _f._tmp2) +
                      std::move(_result));
         }
@@ -570,10 +586,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -587,6 +603,7 @@ struct MemSafetyProbe17 {
           }
         } else if (std::holds_alternative<_after_qtree_depth_in_QNode>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_depth_in_QNode>(_popped));
+          _stack.pop_back();
           const qtree &a1 = *_f.a1;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
@@ -596,6 +613,7 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_qtree_depth_in_QNode_2>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_depth_in_QNode_2>(_popped));
+          _stack.pop_back();
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
           uint64_t da = _f.da;
@@ -605,6 +623,7 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_qtree_depth_in_QNode_3>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_depth_in_QNode_3>(_popped));
+          _stack.pop_back();
           const qtree &a4 = *_f.a4;
           uint64_t da = _f.da;
           uint64_t db = _f.db;
@@ -613,6 +632,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a4});
         } else {
           auto _f = std::move(std::get<_after_qtree_depth_in_QNode_4>(_popped));
+          _stack.pop_back();
           uint64_t da = _f.da;
           uint64_t db = _f.db;
           uint64_t dc = _f.dc;
@@ -679,10 +699,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -696,6 +716,7 @@ struct MemSafetyProbe17 {
           }
         } else if (std::holds_alternative<_after_qtree_sum_in_QNode>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode>(_popped));
+          _stack.pop_back();
           const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
           const qtree &a3 = *_f.a3;
@@ -705,6 +726,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_qtree_sum_in_QNode_2>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode_2>(_popped));
+          _stack.pop_back();
           uint64_t a2 = _f.a2;
           const qtree &a3 = *_f.a3;
           const qtree &a4 = *_f.a4;
@@ -713,6 +735,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a3});
         } else if (std::holds_alternative<_after_qtree_sum_in_QNode_3>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode_3>(_popped));
+          _stack.pop_back();
           uint64_t a2 = _f.a2;
           const qtree &a4 = *_f.a4;
           _stack.emplace_back(_after_qtree_sum_in_QNode_4{
@@ -720,6 +743,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a4});
         } else {
           auto _f = std::move(std::get<_after_qtree_sum_in_QNode_4>(_popped));
+          _stack.pop_back();
           uint64_t a2 = _f.a2;
           _result =
               ((((_f._tmp4 + _f._tmp3) + a2) + _f._tmp2) + std::move(_result));
@@ -786,10 +810,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -803,6 +827,7 @@ struct MemSafetyProbe17 {
           }
         } else if (std::holds_alternative<_after_qtree_rect_in_QNode>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_rect_in_QNode>(_popped));
+          _stack.pop_back();
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
           const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
@@ -814,6 +839,7 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_qtree_rect_in_QNode_2>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_rect_in_QNode_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
           const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
@@ -826,6 +852,7 @@ struct MemSafetyProbe17 {
         } else if (
                 std::holds_alternative<_after_qtree_rect_in_QNode_3>(_popped)) {
           auto _f = std::move(std::get<_after_qtree_rect_in_QNode_3>(_popped));
+          _stack.pop_back();
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
           const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
@@ -837,6 +864,7 @@ struct MemSafetyProbe17 {
           _stack.emplace_back(_call{_f.a4});
         } else {
           auto _f = std::move(std::get<_after_qtree_rect_in_QNode_4>(_popped));
+          _stack.pop_back();
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
           const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
@@ -1020,10 +1048,10 @@ struct MemSafetyProbe17 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -1036,6 +1064,7 @@ struct MemSafetyProbe17 {
           }
         } else {
           auto _f = std::move(std::get<_after_mylist_rect_in_Mycons>(_popped));
+          _stack.pop_back();
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));

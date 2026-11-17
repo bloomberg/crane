@@ -146,10 +146,10 @@ struct WhereClause {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const Expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
@@ -165,19 +165,23 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<_after_expr_size_in_Plus>(_popped)) {
           auto _f = std::move(std::get<_after_expr_size_in_Plus>(_popped));
+          _stack.pop_back();
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(_after_expr_size_in_Plus_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_expr_size_in_Plus_2>(_popped)) {
           auto _f = std::move(std::get<_after_expr_size_in_Plus_2>(_popped));
+          _stack.pop_back();
           _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
         } else if (std::holds_alternative<_after_expr_size_in_Times>(_popped)) {
           auto _f = std::move(std::get<_after_expr_size_in_Times>(_popped));
+          _stack.pop_back();
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(_after_expr_size_in_Times_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_expr_size_in_Times_2>(_popped));
+          _stack.pop_back();
           _result = ((UINT64_C(1) + _f._tmp4) + std::move(_result));
         }
       }
@@ -216,10 +220,10 @@ struct WhereClause {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const Expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
@@ -236,19 +240,23 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<_after_eval_in_Plus>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Plus>(_popped));
+          _stack.pop_back();
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_in_Plus_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_in_Plus_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Plus_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         } else if (std::holds_alternative<_after_eval_in_Times>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Times>(_popped));
+          _stack.pop_back();
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_in_Times_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_eval_in_Times_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp4 * std::move(_result));
         }
       }
@@ -300,10 +308,10 @@ struct WhereClause {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const Expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Expr::Num>(_sv.v())) {
@@ -320,6 +328,7 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<_after_Expr_rect_in_Plus>(_popped)) {
           auto _f = std::move(std::get<_after_Expr_rect_in_Plus>(_popped));
+          _stack.pop_back();
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(_after_Expr_rect_in_Plus_2{std::move(a0), &a1,
@@ -327,11 +336,13 @@ struct WhereClause {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_Expr_rect_in_Plus_2>(_popped)) {
           auto _f = std::move(std::get<_after_Expr_rect_in_Plus_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           const Expr &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
         } else if (std::holds_alternative<_after_Expr_rect_in_Times>(_popped)) {
           auto _f = std::move(std::get<_after_Expr_rect_in_Times>(_popped));
+          _stack.pop_back();
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           const Expr &a1 = *_f.a1;
           _stack.emplace_back(_after_Expr_rect_in_Times_2{std::move(a0), &a1,
@@ -339,6 +350,7 @@ struct WhereClause {
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_Expr_rect_in_Times_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<Expr> a0 = std::move(_f.a0);
           const Expr &a1 = *_f.a1;
           _result = f1(*a0, std::move(_f._tmp4), a1, std::move(_result));
@@ -512,10 +524,10 @@ struct WhereClause {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const BExpr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
@@ -537,22 +549,27 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<_after_beval_in_BAnd>(_popped)) {
           auto _f = std::move(std::get<_after_beval_in_BAnd>(_popped));
+          _stack.pop_back();
           const BExpr &a1 = *_f.a1;
           _stack.emplace_back(_after_beval_in_BAnd_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_beval_in_BAnd_2>(_popped)) {
           auto _f = std::move(std::get<_after_beval_in_BAnd_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 && std::move(_result));
         } else if (std::holds_alternative<_after_beval_in_BNot>(_popped)) {
           auto _f = std::move(std::get<_after_beval_in_BNot>(_popped));
+          _stack.pop_back();
           _result = !(std::move(_result));
         } else if (std::holds_alternative<_after_beval_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_beval_in_BOr>(_popped));
+          _stack.pop_back();
           const BExpr &a1 = *_f.a1;
           _stack.emplace_back(_after_beval_in_BOr_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_beval_in_BOr_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp4 || std::move(_result));
         }
       }
@@ -609,10 +626,10 @@ struct WhereClause {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const BExpr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename BExpr::BTrue>(_sv.v())) {
@@ -634,6 +651,7 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<_after_BExpr_rect_in_BAnd>(_popped)) {
           auto _f = std::move(std::get<_after_BExpr_rect_in_BAnd>(_popped));
+          _stack.pop_back();
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           const BExpr &a1 = *_f.a1;
           _stack.emplace_back(_after_BExpr_rect_in_BAnd_2{std::move(a0), &a1,
@@ -641,15 +659,18 @@ struct WhereClause {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_BExpr_rect_in_BAnd_2>(_popped)) {
           auto _f = std::move(std::get<_after_BExpr_rect_in_BAnd_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           const BExpr &a1 = *_f.a1;
           _result = f1(*a0, std::move(_f._tmp2), a1, std::move(_result));
         } else if (std::holds_alternative<_after_BExpr_rect_in_BNot>(_popped)) {
           auto _f = std::move(std::get<_after_BExpr_rect_in_BNot>(_popped));
+          _stack.pop_back();
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           _result = f3(*a0, std::move(_result));
         } else if (std::holds_alternative<_after_BExpr_rect_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_BExpr_rect_in_BOr>(_popped));
+          _stack.pop_back();
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           const BExpr &a1 = *_f.a1;
           _stack.emplace_back(_after_BExpr_rect_in_BOr_2{std::move(a0), &a1,
@@ -657,6 +678,7 @@ struct WhereClause {
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_BExpr_rect_in_BOr_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<BExpr> a0 = std::move(_f.a0);
           const BExpr &a1 = *_f.a1;
           _result = f2(*a0, std::move(_f._tmp4), a1, std::move(_result));
@@ -793,10 +815,10 @@ struct WhereClause {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const AExpr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
@@ -816,11 +838,13 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<_after_aeval_in_APlus>(_popped)) {
           auto _f = std::move(std::get<_after_aeval_in_APlus>(_popped));
+          _stack.pop_back();
           const AExpr &a1 = *_f.a1;
           _stack.emplace_back(_after_aeval_in_APlus_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_aeval_in_APlus_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         }
       }
@@ -874,10 +898,10 @@ struct WhereClause {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const AExpr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename AExpr::ANum>(_sv.v())) {
@@ -895,6 +919,7 @@ struct WhereClause {
           }
         } else if (std::holds_alternative<_after_AExpr_rect_in_AIf>(_popped)) {
           auto _f = std::move(std::get<_after_AExpr_rect_in_AIf>(_popped));
+          _stack.pop_back();
           BExpr a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
           const AExpr &a4 = *_f.a4;
@@ -903,12 +928,14 @@ struct WhereClause {
           _stack.emplace_back(_call{_f.a4});
         } else if (std::holds_alternative<_after_AExpr_rect_in_AIf_2>(_popped)) {
           auto _f = std::move(std::get<_after_AExpr_rect_in_AIf_2>(_popped));
+          _stack.pop_back();
           BExpr a2 = std::move(_f.a2);
           std::shared_ptr<AExpr> a3 = std::move(_f.a3);
           const AExpr &a4 = *_f.a4;
           _result = f1(a2, *a3, std::move(_f._tmp4), a4, std::move(_result));
         } else if (std::holds_alternative<_after_AExpr_rect_in_APlus>(_popped)) {
           auto _f = std::move(std::get<_after_AExpr_rect_in_APlus>(_popped));
+          _stack.pop_back();
           std::shared_ptr<AExpr> a2 = std::move(_f.a2);
           const AExpr &a3 = *_f.a3;
           _stack.emplace_back(_after_AExpr_rect_in_APlus_2{std::move(a2), &a3,
@@ -916,6 +943,7 @@ struct WhereClause {
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_AExpr_rect_in_APlus_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<AExpr> a2 = std::move(_f.a2);
           const AExpr &a3 = *_f.a3;
           _result = f0(*a2, std::move(_f._tmp2), a3, std::move(_result));

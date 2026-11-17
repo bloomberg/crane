@@ -16,10 +16,10 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(uint64_t fuel, uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -40,6 +40,7 @@ List<uint64_t> LoopifyListGenerators::cycle_fuel(uint64_t fuel, uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_cycle_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       _result = l.app(std::move(_result));
     }
   }
@@ -124,10 +125,10 @@ List<uint64_t> LoopifyListGenerators::replicate_each(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
@@ -139,6 +140,7 @@ List<uint64_t> LoopifyListGenerators::replicate_each(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_replicate_each_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> reps = std::move(_f.reps);
       _result = reps.app(std::move(_result));
     }

@@ -31,10 +31,10 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{std::move(i), &t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       Nat i = std::move(_f.i);
       const LoopifyAdoptedFixNameShared::tree &t = *_f.t;
       crane::fn<
@@ -95,6 +95,7 @@ LoopifyAdoptedFixNameShared::f(const LoopifyAdoptedFixNameShared::tree &t,
       }
     } else {
       auto _f = std::move(std::get<_call_loop>(_popped));
+      _stack.pop_back();
       Nat k = std::move(_f.k);
       const List<LoopifyAdoptedFixNameShared::tree> &ts = *_f.ts;
       if (std::holds_alternative<

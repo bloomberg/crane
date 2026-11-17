@@ -29,10 +29,10 @@ uint64_t LoopifyPartnerTailAndInvoked::walk(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -53,6 +53,7 @@ uint64_t LoopifyPartnerTailAndInvoked::walk(uint64_t n) {
       }
     } else if (std::holds_alternative<_call_step_entry>(_popped)) {
       auto _f = std::move(std::get<_call_step_entry>(_popped));
+      _stack.pop_back();
       uint64_t n0 = _f.n0;
       if (n0 <= 0) {
         _result = UINT64_C(1);
@@ -63,12 +64,15 @@ uint64_t LoopifyPartnerTailAndInvoked::walk(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_step_entry_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_step_entry_in_false>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     } else if (std::holds_alternative<_after_walk_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_walk_in_S>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     } else {
       auto _f = std::move(std::get<_after_walk_in_S_2>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -96,10 +100,10 @@ uint64_t LoopifyPartnerTailAndInvoked::step(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(1);
@@ -110,6 +114,7 @@ uint64_t LoopifyPartnerTailAndInvoked::step(uint64_t n) {
       }
     } else if (std::holds_alternative<_call_walk_entry>(_popped)) {
       auto _f = std::move(std::get<_call_walk_entry>(_popped));
+      _stack.pop_back();
       uint64_t n0 = _f.n0;
       if (n0 <= 0) {
         _result = UINT64_C(0);
@@ -124,9 +129,11 @@ uint64_t LoopifyPartnerTailAndInvoked::step(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_step_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_step_in_false>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_walk_entry_in_S>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }

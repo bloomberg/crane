@@ -107,10 +107,10 @@ uint64_t MemSafetyProbe20::sum_wrapped(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe20::mylist<MemSafetyProbe20::wrapped> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe20::mylist<
               MemSafetyProbe20::wrapped>::Mynil>(l.v())) {
@@ -123,6 +123,7 @@ uint64_t MemSafetyProbe20::sum_wrapped(
       }
     } else {
       auto _f = std::move(std::get<_after_sum_wrapped_in_Mycons>(_popped));
+      _stack.pop_back();
       MemSafetyProbe20::wrapped a0 = std::move(_f.a0);
       _result = (a0.unwrap(x) + std::move(_result));
     }

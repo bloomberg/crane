@@ -19,10 +19,10 @@ bool LoopifyDispatchOnCall::parity(const LoopifyDispatchOnCall::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyDispatchOnCall::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyDispatchOnCall::tree::Leaf>(
               t.v())) {
@@ -35,6 +35,7 @@ bool LoopifyDispatchOnCall::parity(const LoopifyDispatchOnCall::tree &t) {
       }
     } else if (std::holds_alternative<_after_parity_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_parity_in_Node>(_popped));
+      _stack.pop_back();
       const LoopifyDispatchOnCall::tree &r0 = *_f.r0;
       if (std::move(_result)) {
         _stack.emplace_back(_after_parity_in_true{});
@@ -44,6 +45,7 @@ bool LoopifyDispatchOnCall::parity(const LoopifyDispatchOnCall::tree &t) {
       }
     } else {
       auto _f = std::move(std::get<_after_parity_in_true>(_popped));
+      _stack.pop_back();
       _result = !(std::move(_result));
     }
   }
@@ -75,10 +77,10 @@ LoopifyDispatchOnCall::graft(const LoopifyDispatchOnCall::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyDispatchOnCall::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyDispatchOnCall::tree::Leaf>(
               t.v())) {
@@ -91,9 +93,11 @@ LoopifyDispatchOnCall::graft(const LoopifyDispatchOnCall::tree &t) {
       }
     } else if (std::holds_alternative<_after_graft_in_Leaf>(_popped)) {
       auto _f = std::move(std::get<_after_graft_in_Leaf>(_popped));
+      _stack.pop_back();
       _result = tree::node(std::move(_result), tree::leaf());
     } else if (std::holds_alternative<_after_graft_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_graft_in_Node>(_popped));
+      _stack.pop_back();
       const LoopifyDispatchOnCall::tree &r0 = *_f.r0;
       LoopifyDispatchOnCall::tree _tmp3 = std::move(_result);
       if (std::holds_alternative<typename LoopifyDispatchOnCall::tree::Leaf>(
@@ -108,6 +112,7 @@ LoopifyDispatchOnCall::graft(const LoopifyDispatchOnCall::tree &t) {
       }
     } else {
       auto _f = std::move(std::get<_after_graft_in_Node_2>(_popped));
+      _stack.pop_back();
       std::shared_ptr<LoopifyDispatchOnCall::tree> l1 = std::move(_f.l1);
       std::shared_ptr<LoopifyDispatchOnCall::tree> r1 = std::move(_f.r1);
       _result = tree::node(std::move(_result), tree::node(*r1, *l1));
@@ -137,10 +142,10 @@ uint64_t LoopifyDispatchOnCall::size(const LoopifyDispatchOnCall::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyDispatchOnCall::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifyDispatchOnCall::tree::Leaf>(
               t.v())) {
@@ -153,11 +158,13 @@ uint64_t LoopifyDispatchOnCall::size(const LoopifyDispatchOnCall::tree &t) {
       }
     } else if (std::holds_alternative<_after_size_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_size_in_Node>(_popped));
+      _stack.pop_back();
       const LoopifyDispatchOnCall::tree &r0 = *_f.r0;
       _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
       _stack.emplace_back(_call{&r0});
     } else {
       auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -184,10 +191,10 @@ LoopifyDispatchOnCall::tree LoopifyDispatchOnCall::comb(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree::leaf();
@@ -203,11 +210,13 @@ LoopifyDispatchOnCall::tree LoopifyDispatchOnCall::comb(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_comb_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_comb_in_S>(_popped));
+      _stack.pop_back();
       uint64_t m = _f.m;
       _stack.emplace_back(_after_comb_in_S_2{std::move(_result)});
       _stack.emplace_back(_call{m});
     } else {
       auto _f = std::move(std::get<_after_comb_in_S_2>(_popped));
+      _stack.pop_back();
       _result = tree::node(std::move(_f._tmp2),
                            tree::node(tree::leaf(), std::move(_result)));
     }

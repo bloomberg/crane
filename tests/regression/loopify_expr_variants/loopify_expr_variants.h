@@ -277,10 +277,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const cond_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
@@ -298,14 +298,17 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_size_cond_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Add>(_popped));
+          _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_size_cond_in_Add_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_size_cond_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
         } else if (std::holds_alternative<_after_size_cond_in_Cond>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Cond>(_popped));
+          _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
           _stack.emplace_back(
@@ -313,12 +316,14 @@ struct LoopifyExprVariants {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_size_cond_in_Cond_2>(_popped)) {
           auto _f = std::move(std::get<_after_size_cond_in_Cond_2>(_popped));
+          _stack.pop_back();
           const cond_expr &a2 = *_f.a2;
           _stack.emplace_back(
               _after_size_cond_in_Cond_3{_f._tmp5, std::move(_result)});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_size_cond_in_Cond_3>(_popped));
+          _stack.pop_back();
           _result =
               (((UINT64_C(1) + _f._tmp5) + _f._tmp4) + std::move(_result));
         }
@@ -355,10 +360,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const cond_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
@@ -377,14 +382,17 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_eval_cond_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_eval_cond_in_Add>(_popped));
+          _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_cond_in_Add_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_cond_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_cond_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         } else {
           auto _f = std::move(std::get<_after_eval_cond_in_Cond>(_popped));
+          _stack.pop_back();
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
           if (UINT64_C(0) < std::move(_result)) {
@@ -453,10 +461,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const cond_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename cond_expr::Lit>(_sv.v())) {
@@ -478,6 +486,7 @@ struct LoopifyExprVariants {
         } else if (
                 std::holds_alternative<_after_cond_expr_rect_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_cond_expr_rect_in_Add>(_popped));
+          _stack.pop_back();
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           _stack.emplace_back(
@@ -488,12 +497,14 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_cond_expr_rect_in_Add_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_cond_expr_rect_in_Add_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
         } else if (
                 std::holds_alternative<_after_cond_expr_rect_in_Cond>(_popped)) {
           auto _f = std::move(std::get<_after_cond_expr_rect_in_Cond>(_popped));
+          _stack.pop_back();
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
@@ -504,6 +515,7 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_cond_expr_rect_in_Cond_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
@@ -514,6 +526,7 @@ struct LoopifyExprVariants {
         } else {
           auto _f =
               std::move(std::get<_after_cond_expr_rect_in_Cond_3>(_popped));
+          _stack.pop_back();
           std::shared_ptr<cond_expr> a0 = std::move(_f.a0);
           const cond_expr &a1 = *_f.a1;
           const cond_expr &a2 = *_f.a2;
@@ -695,10 +708,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const arith_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
@@ -718,27 +731,33 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_count_ops_in_AAdd>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_AAdd>(_popped));
+          _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_count_ops_in_AAdd_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_count_ops_in_AAdd_2>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_AAdd_2>(_popped));
+          _stack.pop_back();
           _result = ((UINT64_C(1) + _f._tmp2) + std::move(_result));
         } else if (std::holds_alternative<_after_count_ops_in_ADiv>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_ADiv>(_popped));
+          _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_count_ops_in_ADiv_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_count_ops_in_ADiv_2>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_ADiv_2>(_popped));
+          _stack.pop_back();
           _result = ((UINT64_C(1) + _f._tmp6) + std::move(_result));
         } else if (std::holds_alternative<_after_count_ops_in_AMul>(_popped)) {
           auto _f = std::move(std::get<_after_count_ops_in_AMul>(_popped));
+          _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_count_ops_in_AMul_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_count_ops_in_AMul_2>(_popped));
+          _stack.pop_back();
           _result = ((UINT64_C(1) + _f._tmp4) + std::move(_result));
         }
       }
@@ -786,10 +805,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const arith_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
@@ -810,14 +829,17 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_eval_arith_in_AAdd>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AAdd>(_popped));
+          _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_arith_in_AAdd_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_arith_in_AAdd_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AAdd_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         } else if (std::holds_alternative<_after_eval_arith_in_ADiv>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_ADiv>(_popped));
+          _stack.pop_back();
           const arith_expr &a0 = *_f.a0;
           uint64_t _tmp6 = std::move(_result);
           if (_tmp6 <= 0) {
@@ -829,14 +851,17 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_eval_arith_in_AMul>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AMul>(_popped));
+          _stack.pop_back();
           const arith_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_arith_in_AMul_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_arith_in_AMul_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_arith_in_AMul_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp4 * std::move(_result));
         } else {
           auto _f = std::move(std::get<_after_eval_arith_in_S>(_popped));
+          _stack.pop_back();
           uint64_t n = _f.n;
           auto &&_once1 = (n + 1);
           _result = (_once1 ? std::move(_result) / _once1 : 0);
@@ -903,10 +928,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const arith_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename arith_expr::ANum>(_sv.v())) {
@@ -932,6 +957,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_arith_expr_rect_in_AAdd>(_popped)) {
           auto _f =
               std::move(std::get<_after_arith_expr_rect_in_AAdd>(_popped));
+          _stack.pop_back();
           std::shared_ptr<arith_expr> a2 = std::move(_f.a2);
           const arith_expr &a3 = *_f.a3;
           _stack.emplace_back(_after_arith_expr_rect_in_AAdd_2{
@@ -941,6 +967,7 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_arith_expr_rect_in_AAdd_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<arith_expr> a2 = std::move(_f.a2);
           const arith_expr &a3 = *_f.a3;
           _result = f0(*a2, std::move(_f._tmp2), a3, std::move(_result));
@@ -948,6 +975,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_arith_expr_rect_in_ADiv>(_popped)) {
           auto _f =
               std::move(std::get<_after_arith_expr_rect_in_ADiv>(_popped));
+          _stack.pop_back();
           std::shared_ptr<arith_expr> a2 = std::move(_f.a2);
           const arith_expr &a3 = *_f.a3;
           _stack.emplace_back(_after_arith_expr_rect_in_ADiv_2{
@@ -957,6 +985,7 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_arith_expr_rect_in_ADiv_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<arith_expr> a2 = std::move(_f.a2);
           const arith_expr &a3 = *_f.a3;
           _result = f2(*a2, std::move(_f._tmp6), a3, std::move(_result));
@@ -964,6 +993,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_arith_expr_rect_in_AMul>(_popped)) {
           auto _f =
               std::move(std::get<_after_arith_expr_rect_in_AMul>(_popped));
+          _stack.pop_back();
           std::shared_ptr<arith_expr> a2 = std::move(_f.a2);
           const arith_expr &a3 = *_f.a3;
           _stack.emplace_back(_after_arith_expr_rect_in_AMul_2{
@@ -972,6 +1002,7 @@ struct LoopifyExprVariants {
         } else {
           auto _f =
               std::move(std::get<_after_arith_expr_rect_in_AMul_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<arith_expr> a2 = std::move(_f.a2);
           const arith_expr &a3 = *_f.a3;
           _result = f1(*a2, std::move(_f._tmp4), a3, std::move(_result));
@@ -1169,10 +1200,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const bool_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
@@ -1196,6 +1227,7 @@ struct LoopifyExprVariants {
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BAnd>(_popped)) {
           auto _f = std::move(std::get<_after_simplify_bool_in_BAnd>(_popped));
+          _stack.pop_back();
           const bool_expr &a1 = *_f.a1;
           bool_expr _tmp5 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp5.v_mut())) {
@@ -1227,6 +1259,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_simplify_bool_in_BAnd_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_simplify_bool_in_BAnd_2>(_popped));
+          _stack.pop_back();
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp2 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp2.v_mut())) {
@@ -1253,6 +1286,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_simplify_bool_in_BAnd_3>(_popped)) {
           auto _f =
               std::move(std::get<_after_simplify_bool_in_BAnd_3>(_popped));
+          _stack.pop_back();
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp7 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp7.v_mut())) {
@@ -1278,6 +1312,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_simplify_bool_in_BFalse>(_popped)) {
           auto _f =
               std::move(std::get<_after_simplify_bool_in_BFalse>(_popped));
+          _stack.pop_back();
           bool_expr _tmp6 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp6.v_mut())) {
             _result = bool_expr::btrue();
@@ -1300,6 +1335,7 @@ struct LoopifyExprVariants {
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BNot>(_popped)) {
           auto _f = std::move(std::get<_after_simplify_bool_in_BNot>(_popped));
+          _stack.pop_back();
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp4 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp4.v_mut())) {
@@ -1326,6 +1362,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_simplify_bool_in_BNot_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_simplify_bool_in_BNot_2>(_popped));
+          _stack.pop_back();
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp9 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp9.v_mut())) {
@@ -1351,6 +1388,7 @@ struct LoopifyExprVariants {
                 std::holds_alternative<_after_simplify_bool_in_BNot_3>(_popped)) {
           auto _f =
               std::move(std::get<_after_simplify_bool_in_BNot_3>(_popped));
+          _stack.pop_back();
           bool_expr _tmp11 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp11.v_mut())) {
             _result = bool_expr::bfalse();
@@ -1373,6 +1411,7 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_simplify_bool_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_simplify_bool_in_BOr>(_popped));
+          _stack.pop_back();
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp3 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp3.v_mut())) {
@@ -1398,6 +1437,7 @@ struct LoopifyExprVariants {
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BOr_2>(_popped)) {
           auto _f = std::move(std::get<_after_simplify_bool_in_BOr_2>(_popped));
+          _stack.pop_back();
           const bool_expr &a1 = *_f.a1;
           bool_expr _tmp10 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp10.v_mut())) {
@@ -1429,6 +1469,7 @@ struct LoopifyExprVariants {
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BOr_3>(_popped)) {
           auto _f = std::move(std::get<_after_simplify_bool_in_BOr_3>(_popped));
+          _stack.pop_back();
           bool_expr a_ = std::move(_f.a_);
           bool_expr _tmp8 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp8.v_mut())) {
@@ -1452,6 +1493,7 @@ struct LoopifyExprVariants {
           }
         } else {
           auto _f = std::move(std::get<_after_simplify_bool_in_BTrue>(_popped));
+          _stack.pop_back();
           bool_expr _tmp1 = std::move(_result);
           if (std::holds_alternative<typename bool_expr::BTrue>(_tmp1.v_mut())) {
             _result = bool_expr::btrue();
@@ -1511,10 +1553,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const bool_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
@@ -1537,22 +1579,27 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_eval_bool_in_BAnd>(_popped)) {
           auto _f = std::move(std::get<_after_eval_bool_in_BAnd>(_popped));
+          _stack.pop_back();
           const bool_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_bool_in_BAnd_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_bool_in_BAnd_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_bool_in_BAnd_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 && std::move(_result));
         } else if (std::holds_alternative<_after_eval_bool_in_BNot>(_popped)) {
           auto _f = std::move(std::get<_after_eval_bool_in_BNot>(_popped));
+          _stack.pop_back();
           _result = !(std::move(_result));
         } else if (std::holds_alternative<_after_eval_bool_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_eval_bool_in_BOr>(_popped));
+          _stack.pop_back();
           const bool_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_bool_in_BOr_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_eval_bool_in_BOr_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp4 || std::move(_result));
         }
       }
@@ -1609,10 +1656,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const bool_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_expr::BTrue>(_sv.v())) {
@@ -1638,6 +1685,7 @@ struct LoopifyExprVariants {
         } else if (
                 std::holds_alternative<_after_bool_expr_rect_in_BAnd>(_popped)) {
           auto _f = std::move(std::get<_after_bool_expr_rect_in_BAnd>(_popped));
+          _stack.pop_back();
           std::shared_ptr<bool_expr> a0 = std::move(_f.a0);
           const bool_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_bool_expr_rect_in_BAnd_2{
@@ -1647,17 +1695,20 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_bool_expr_rect_in_BAnd_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<bool_expr> a0 = std::move(_f.a0);
           const bool_expr &a1 = *_f.a1;
           _result = f1(*a0, std::move(_f._tmp2), a1, std::move(_result));
         } else if (
                 std::holds_alternative<_after_bool_expr_rect_in_BNot>(_popped)) {
           auto _f = std::move(std::get<_after_bool_expr_rect_in_BNot>(_popped));
+          _stack.pop_back();
           std::shared_ptr<bool_expr> a0 = std::move(_f.a0);
           _result = f3(*a0, std::move(_result));
         } else if (
                 std::holds_alternative<_after_bool_expr_rect_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_bool_expr_rect_in_BOr>(_popped));
+          _stack.pop_back();
           std::shared_ptr<bool_expr> a0 = std::move(_f.a0);
           const bool_expr &a1 = *_f.a1;
           _stack.emplace_back(
@@ -1667,6 +1718,7 @@ struct LoopifyExprVariants {
         } else {
           auto _f =
               std::move(std::get<_after_bool_expr_rect_in_BOr_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<bool_expr> a0 = std::move(_f.a0);
           const bool_expr &a1 = *_f.a1;
           _result = f2(*a0, std::move(_f._tmp4), a1, std::move(_result));
@@ -1812,10 +1864,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const list_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LCons>(_sv.v())) {
@@ -1835,6 +1887,7 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_list_expr_size_in_LAppend>(_popped));
+          _stack.pop_back();
           const list_expr &a1 = *_f.a1;
           _stack.emplace_back(
               _after_list_expr_size_in_LAppend_2{std::move(_result)});
@@ -1843,10 +1896,12 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_list_expr_size_in_LAppend_2>(_popped));
+          _stack.pop_back();
           _result = ((UINT64_C(1) + _f._tmp3) + std::move(_result));
         } else {
           auto _f =
               std::move(std::get<_after_list_expr_size_in_LCons>(_popped));
+          _stack.pop_back();
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
@@ -1881,10 +1936,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const list_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
@@ -1906,15 +1961,18 @@ struct LoopifyExprVariants {
           }
         } else if (std::holds_alternative<_after_eval_list_in_LAppend>(_popped)) {
           auto _f = std::move(std::get<_after_eval_list_in_LAppend>(_popped));
+          _stack.pop_back();
           const list_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_list_in_LAppend_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (
                 std::holds_alternative<_after_eval_list_in_LAppend_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_list_in_LAppend_2>(_popped));
+          _stack.pop_back();
           _result = _f._tmp3.app(std::move(_result));
         } else {
           auto _f = std::move(std::get<_after_eval_list_in_LCons>(_popped));
+          _stack.pop_back();
           uint64_t a0 = _f.a0;
           _result = List<uint64_t>::cons(a0, std::move(_result));
         }
@@ -1962,10 +2020,10 @@ struct LoopifyExprVariants {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const list_expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list_expr::LNil>(_sv.v())) {
@@ -1990,6 +2048,7 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_list_expr_rect_in_LAppend>(_popped));
+          _stack.pop_back();
           std::shared_ptr<list_expr> a0 = std::move(_f.a0);
           const list_expr &a1 = *_f.a1;
           _stack.emplace_back(_after_list_expr_rect_in_LAppend_2{
@@ -1999,12 +2058,14 @@ struct LoopifyExprVariants {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_list_expr_rect_in_LAppend_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<list_expr> a0 = std::move(_f.a0);
           const list_expr &a1 = *_f.a1;
           _result = f1(*a0, std::move(_f._tmp3), a1, std::move(_result));
         } else {
           auto _f =
               std::move(std::get<_after_list_expr_rect_in_LCons>(_popped));
+          _stack.pop_back();
           uint64_t a0 = _f.a0;
           std::shared_ptr<list_expr> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));

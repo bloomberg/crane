@@ -18,10 +18,10 @@ uint64_t LoopifyDecltype::count_true(const List<bool> &xs) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&xs});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<bool> &xs = *_f.xs;
       if (std::holds_alternative<typename List<bool>::Nil>(xs.v())) {
         _result = UINT64_C(0);
@@ -32,6 +32,7 @@ uint64_t LoopifyDecltype::count_true(const List<bool> &xs) {
       }
     } else {
       auto _f = std::move(std::get<_after_count_true_in_Cons>(_popped));
+      _stack.pop_back();
       bool a0 = _f.a0;
       _result = ((a0 ? UINT64_C(1) : UINT64_C(0)) + std::move(_result));
     }
@@ -55,10 +56,10 @@ uint64_t LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&xs});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyDecltype::item> &xs = *_f.xs;
       if (std::holds_alternative<typename List<LoopifyDecltype::item>::Nil>(
               xs.v())) {
@@ -71,6 +72,7 @@ uint64_t LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_flagged_in_Cons>(_popped));
+      _stack.pop_back();
       LoopifyDecltype::item a0 = std::move(_f.a0);
       _result = ((a0.item_flag ? std::move(a0).item_val : UINT64_C(0)) +
                  std::move(_result));

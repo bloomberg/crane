@@ -28,10 +28,10 @@ LoopifyLocalFixInnerCallback::ack(const std::pair<uint64_t, uint64_t> &p) {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{n0});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           uint64_t n0 = _f.n0;
           if (m <= 0) {
             _result = (n0 + 1);
@@ -47,6 +47,7 @@ LoopifyLocalFixInnerCallback::ack(const std::pair<uint64_t, uint64_t> &p) {
           }
         } else {
           auto _f = std::move(std::get<_after_ack_m_in_S>(_popped));
+          _stack.pop_back();
           uint64_t pm = _f.pm;
           _result = _self_f(_self_f, pm, std::move(_result));
         }

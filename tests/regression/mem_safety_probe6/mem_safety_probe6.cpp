@@ -59,10 +59,10 @@ uint64_t MemSafetyProbe6::apply_chain(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&fns});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe6::mylist<crane::fn<uint64_t(uint64_t)>> &fns =
           *_f.fns;
       if (std::holds_alternative<typename MemSafetyProbe6::mylist<
@@ -76,6 +76,7 @@ uint64_t MemSafetyProbe6::apply_chain(
       }
     } else {
       auto _f = std::move(std::get<_after_apply_chain_in_Mycons>(_popped));
+      _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
       _result = a0(std::move(_result));
     }

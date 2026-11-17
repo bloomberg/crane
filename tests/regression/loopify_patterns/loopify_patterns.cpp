@@ -18,10 +18,10 @@ uint64_t LoopifyPatterns::multi_let(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -34,6 +34,7 @@ uint64_t LoopifyPatterns::multi_let(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_multi_let_in_S>(_popped));
+      _stack.pop_back();
       uint64_t c = _f.c;
       _result = (c + std::move(_result));
     }
@@ -99,10 +100,10 @@ uint64_t LoopifyPatterns::deep_nest(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -113,6 +114,7 @@ uint64_t LoopifyPatterns::deep_nest(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_deep_nest_in_S>(_popped));
+      _stack.pop_back();
       _result =
           (UINT64_C(1) + (UINT64_C(1) + (UINT64_C(1) + std::move(_result))));
     }
@@ -145,10 +147,10 @@ bool LoopifyPatterns::bool_chain_fuel(uint64_t fuel, uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -173,6 +175,7 @@ bool LoopifyPatterns::bool_chain_fuel(uint64_t fuel, uint64_t n,
       }
     } else if (std::holds_alternative<_after_bool_chain_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_bool_chain_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t f = _f.f;
       _stack.emplace_back(_after_bool_chain_fuel_in_false_2{std::move(_result)});
@@ -180,6 +183,7 @@ bool LoopifyPatterns::bool_chain_fuel(uint64_t fuel, uint64_t n,
           _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), f});
     } else {
       auto _f = std::move(std::get<_after_bool_chain_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 || std::move(_result));
     }
   }
@@ -212,10 +216,10 @@ bool LoopifyPatterns::chained_comp(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = true;
@@ -231,11 +235,13 @@ bool LoopifyPatterns::chained_comp(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_chained_comp_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_chained_comp_in_S>(_popped));
+      _stack.pop_back();
       uint64_t m = _f.m;
       _stack.emplace_back(_after_chained_comp_in_S_2{std::move(_result)});
       _stack.emplace_back(_call{m});
     } else {
       auto _f = std::move(std::get<_after_chained_comp_in_S_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 && std::move(_result));
     }
   }
@@ -260,10 +266,10 @@ LoopifyPatterns::tuple_constr(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
@@ -275,6 +281,7 @@ LoopifyPatterns::tuple_constr(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_tuple_constr_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
           std::move(_result);
@@ -447,10 +454,10 @@ uint64_t LoopifyPatterns::mod_pattern(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(1);
@@ -466,6 +473,7 @@ uint64_t LoopifyPatterns::mod_pattern(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_mod_pattern_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n_ = _f.n_;
       auto &&_once1 = (std::move(_result) + 1);
       _result = (_once1 ? n_ % _once1 : n_);
@@ -496,10 +504,10 @@ uint64_t LoopifyPatterns::alternating_ops(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -515,10 +523,12 @@ uint64_t LoopifyPatterns::alternating_ops(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_alternating_ops_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = ((n * UINT64_C(2)) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_alternating_ops_in_true>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }
@@ -596,10 +606,10 @@ uint64_t LoopifyPatterns::nested_pattern(const LoopifyPatterns::list<
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPatterns::list<
           std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPatterns::list<
@@ -615,6 +625,7 @@ uint64_t LoopifyPatterns::nested_pattern(const LoopifyPatterns::list<
       }
     } else {
       auto _f = std::move(std::get<_after_nested_pattern_in_pair>(_popped));
+      _stack.pop_back();
       uint64_t c = _f.c;
       uint64_t a = _f.a;
       uint64_t b = _f.b;
@@ -641,10 +652,10 @@ uint64_t LoopifyPatterns::let_nested(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -656,6 +667,7 @@ uint64_t LoopifyPatterns::let_nested(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_let_nested_in_S>(_popped));
+      _stack.pop_back();
       uint64_t a = _f.a;
       _result = (a + std::move(_result));
     }
@@ -678,10 +690,10 @@ uint64_t LoopifyPatterns::list_len(const LoopifyPatterns::list<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPatterns::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               l.v())) {
@@ -694,6 +706,7 @@ uint64_t LoopifyPatterns::list_len(const LoopifyPatterns::list<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_list_len_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -726,10 +739,10 @@ LoopifyPatterns::process_twice_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       LoopifyPatterns::list<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -749,6 +762,7 @@ LoopifyPatterns::process_twice_fuel(uint64_t fuel,
     } else if (
             std::holds_alternative<_after_process_twice_fuel_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_process_twice_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       LoopifyPatterns::list<uint64_t> first = std::move(_result);
@@ -757,6 +771,7 @@ LoopifyPatterns::process_twice_fuel(uint64_t fuel,
     } else {
       auto _f =
           std::move(std::get<_after_process_twice_fuel_in_Cons_2>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       LoopifyPatterns::list<uint64_t> second = std::move(_result);
       _result = list<uint64_t>::cons(a0, std::move(second));
@@ -853,10 +868,10 @@ LoopifyPatterns::quad_sum_pattern(const LoopifyPatterns::list<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPatterns::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               l.v())) {
@@ -896,6 +911,7 @@ LoopifyPatterns::quad_sum_pattern(const LoopifyPatterns::list<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_quad_sum_pattern_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
@@ -924,10 +940,10 @@ LoopifyPatterns::multi_guard(const LoopifyPatterns::list<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPatterns::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               l.v())) {
@@ -940,6 +956,7 @@ LoopifyPatterns::multi_guard(const LoopifyPatterns::list<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_multi_guard_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t rest = std::move(_result);
       if (UINT64_C(10) < a0) {
@@ -1013,10 +1030,10 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<uint64_t> &l1,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l1});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPatterns::list<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               l1.v())) {
@@ -1029,6 +1046,7 @@ LoopifyPatterns::double_append(const LoopifyPatterns::list<uint64_t> &l1,
       }
     } else {
       auto _f = std::move(std::get<_after_double_append_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       LoopifyPatterns::list<uint64_t> rest = std::move(_result);
       _result = list<uint64_t>::cons(a0, append_lists(rest, rest));
@@ -1068,10 +1086,10 @@ uint64_t LoopifyPatterns::sum_if_positive_else_double(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPatterns::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               l.v())) {
@@ -1085,6 +1103,7 @@ uint64_t LoopifyPatterns::sum_if_positive_else_double(
     } else {
       auto _f = std::move(
           std::get<_after_sum_if_positive_else_double_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t rest = std::move(_result);
       if (a0 == UINT64_C(0)) {
@@ -1174,10 +1193,10 @@ uint64_t LoopifyPatterns::four_elem(const LoopifyPatterns::list<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPatterns::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPatterns::list<uint64_t>::Nil>(
               l.v())) {
@@ -1216,6 +1235,7 @@ uint64_t LoopifyPatterns::four_elem(const LoopifyPatterns::list<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_four_elem_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;

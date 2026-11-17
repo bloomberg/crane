@@ -114,10 +114,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const inner *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
@@ -131,6 +131,7 @@ struct MemSafetyProbe29 {
         } else if (
                 std::holds_alternative<_after_double_inner_in_INode>(_popped)) {
           auto _f = std::move(std::get<_after_double_inner_in_INode>(_popped));
+          _stack.pop_back();
           uint64_t a1 = _f.a1;
           const inner &a2 = *_f.a2;
           _stack.emplace_back(
@@ -139,6 +140,7 @@ struct MemSafetyProbe29 {
         } else {
           auto _f =
               std::move(std::get<_after_double_inner_in_INode_2>(_popped));
+          _stack.pop_back();
           uint64_t a1 = _f.a1;
           _result = inner::inode(std::move(_f._tmp2), (a1 * UINT64_C(2)),
                                  std::move(_result));
@@ -172,10 +174,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const inner *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
@@ -187,6 +189,7 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_inner_sum_in_INode>(_popped)) {
           auto _f = std::move(std::get<_after_inner_sum_in_INode>(_popped));
+          _stack.pop_back();
           uint64_t a1 = _f.a1;
           const inner &a2 = *_f.a2;
           _stack.emplace_back(
@@ -194,6 +197,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_inner_sum_in_INode_2>(_popped));
+          _stack.pop_back();
           uint64_t a1 = _f.a1;
           _result = ((_f._tmp2 + a1) + std::move(_result));
         }
@@ -233,10 +237,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const inner *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename inner::ILeaf>(_sv.v())) {
@@ -249,6 +253,7 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_inner_rect_in_INode>(_popped)) {
           auto _f = std::move(std::get<_after_inner_rect_in_INode>(_popped));
+          _stack.pop_back();
           std::shared_ptr<inner> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           const inner &a2 = *_f.a2;
@@ -257,6 +262,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_inner_rect_in_INode_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<inner> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           const inner &a2 = *_f.a2;
@@ -374,10 +380,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const outer *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
@@ -392,6 +398,7 @@ struct MemSafetyProbe29 {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_transform_outer_in_ONode>(_popped));
+          _stack.pop_back();
           inner a1 = std::move(_f.a1);
           const outer &a2 = *_f.a2;
           _stack.emplace_back(_after_transform_outer_in_ONode_2{
@@ -400,6 +407,7 @@ struct MemSafetyProbe29 {
         } else {
           auto _f =
               std::move(std::get<_after_transform_outer_in_ONode_2>(_popped));
+          _stack.pop_back();
           inner a1 = std::move(_f.a1);
           _result = outer::onode(std::move(_f._tmp2), a1.double_inner(),
                                  std::move(_result));
@@ -433,10 +441,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const outer *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
@@ -448,6 +456,7 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_outer_sum_in_ONode>(_popped)) {
           auto _f = std::move(std::get<_after_outer_sum_in_ONode>(_popped));
+          _stack.pop_back();
           inner a1 = std::move(_f.a1);
           const outer &a2 = *_f.a2;
           _stack.emplace_back(
@@ -455,6 +464,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_outer_sum_in_ONode_2>(_popped));
+          _stack.pop_back();
           inner a1 = std::move(_f.a1);
           _result = ((_f._tmp2 + a1.inner_sum()) + std::move(_result));
         }
@@ -494,10 +504,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const outer *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename outer::OLeaf>(_sv.v())) {
@@ -510,6 +520,7 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_outer_rect_in_ONode>(_popped)) {
           auto _f = std::move(std::get<_after_outer_rect_in_ONode>(_popped));
+          _stack.pop_back();
           std::shared_ptr<outer> a0 = std::move(_f.a0);
           inner a1 = std::move(_f.a1);
           const outer &a2 = *_f.a2;
@@ -518,6 +529,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_outer_rect_in_ONode_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<outer> a0 = std::move(_f.a0);
           inner a1 = std::move(_f.a1);
           const outer &a2 = *_f.a2;
@@ -686,10 +698,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -709,21 +721,25 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_expr_to_inner_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_expr_to_inner_in_Add>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_expr_to_inner_in_Add_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (
                 std::holds_alternative<_after_expr_to_inner_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_expr_to_inner_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = inner::inode(std::move(_f._tmp2), UINT64_C(0),
                                  std::move(_result));
         } else if (std::holds_alternative<_after_expr_to_inner_in_Mul>(_popped)) {
           auto _f = std::move(std::get<_after_expr_to_inner_in_Mul>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_expr_to_inner_in_Mul_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_expr_to_inner_in_Mul_2>(_popped));
+          _stack.pop_back();
           _result = inner::inode(std::move(_f._tmp4), UINT64_C(1),
                                  std::move(_result));
         }
@@ -767,10 +783,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -791,22 +807,27 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_double_expr_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_double_expr_in_Add>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_double_expr_in_Add_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_double_expr_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_double_expr_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = expr::add(std::move(_f._tmp3), std::move(_result));
         } else if (std::holds_alternative<_after_double_expr_in_Mul>(_popped)) {
           auto _f = std::move(std::get<_after_double_expr_in_Mul>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_double_expr_in_Mul_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_double_expr_in_Mul_2>(_popped)) {
           auto _f = std::move(std::get<_after_double_expr_in_Mul_2>(_popped));
+          _stack.pop_back();
           _result = expr::mul(std::move(_f._tmp5), std::move(_result));
         } else {
           auto _f = std::move(std::get<_after_double_expr_in_Neg>(_popped));
+          _stack.pop_back();
           _result = expr::neg(std::move(_result));
         }
       }
@@ -845,10 +866,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -868,19 +889,23 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_eval_expr_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_eval_expr_in_Add>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_expr_in_Add_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_eval_expr_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_eval_expr_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         } else if (std::holds_alternative<_after_eval_expr_in_Mul>(_popped)) {
           auto _f = std::move(std::get<_after_eval_expr_in_Mul>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_expr_in_Mul_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_eval_expr_in_Mul_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp4 * std::move(_result));
         }
       }
@@ -937,10 +962,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -961,6 +986,7 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_expr_rect_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_expr_rect_in_Add>(_popped));
+          _stack.pop_back();
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _stack.emplace_back(
@@ -969,11 +995,13 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_expr_rect_in_Add_2>(_popped)) {
           auto _f = std::move(std::get<_after_expr_rect_in_Add_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _result = f1(*a0, std::move(_f._tmp3), a1, std::move(_result));
         } else if (std::holds_alternative<_after_expr_rect_in_Mul>(_popped)) {
           auto _f = std::move(std::get<_after_expr_rect_in_Mul>(_popped));
+          _stack.pop_back();
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _stack.emplace_back(
@@ -982,11 +1010,13 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_expr_rect_in_Mul_2>(_popped)) {
           auto _f = std::move(std::get<_after_expr_rect_in_Mul_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _result = f2(*a0, std::move(_f._tmp5), a1, std::move(_result));
         } else {
           auto _f = std::move(std::get<_after_expr_rect_in_Neg>(_popped));
+          _stack.pop_back();
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           _result = f0(*a0, std::move(_result));
         }
@@ -1112,10 +1142,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree3 *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
@@ -1129,6 +1159,7 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_tree3_sum_in_T3Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree3_sum_in_T3Node>(_popped));
+          _stack.pop_back();
           const tree3 &a1 = *_f.a1;
           const tree3 &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
@@ -1138,6 +1169,7 @@ struct MemSafetyProbe29 {
         } else if (
                 std::holds_alternative<_after_tree3_sum_in_T3Node_2>(_popped)) {
           auto _f = std::move(std::get<_after_tree3_sum_in_T3Node_2>(_popped));
+          _stack.pop_back();
           const tree3 &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
           _stack.emplace_back(
@@ -1145,6 +1177,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree3_sum_in_T3Node_3>(_popped));
+          _stack.pop_back();
           uint64_t a3 = _f.a3;
           _result = (((_f._tmp3 + _f._tmp2) + std::move(_result)) + a3);
         }
@@ -1196,10 +1229,10 @@ struct MemSafetyProbe29 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree3 *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree3::T3Leaf>(_sv.v())) {
@@ -1213,6 +1246,7 @@ struct MemSafetyProbe29 {
           }
         } else if (std::holds_alternative<_after_tree3_rect_in_T3Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree3_rect_in_T3Node>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree3> a0 = std::move(_f.a0);
           const tree3 &a1 = *_f.a1;
           const tree3 &a2 = *_f.a2;
@@ -1223,6 +1257,7 @@ struct MemSafetyProbe29 {
         } else if (
                 std::holds_alternative<_after_tree3_rect_in_T3Node_2>(_popped)) {
           auto _f = std::move(std::get<_after_tree3_rect_in_T3Node_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree3> a0 = std::move(_f.a0);
           const tree3 &a1 = *_f.a1;
           const tree3 &a2 = *_f.a2;
@@ -1233,6 +1268,7 @@ struct MemSafetyProbe29 {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree3_rect_in_T3Node_3>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree3> a0 = std::move(_f.a0);
           const tree3 &a1 = *_f.a1;
           const tree3 &a2 = *_f.a2;

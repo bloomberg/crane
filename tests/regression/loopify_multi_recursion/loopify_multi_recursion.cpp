@@ -31,10 +31,10 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -60,6 +60,7 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
     } else if (
             std::holds_alternative<_after_mixed_arith_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_mixed_arith_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(
@@ -70,6 +71,7 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
             std::holds_alternative<_after_mixed_arith_fuel_in_false_2>(_popped)) {
       auto _f =
           std::move(std::get<_after_mixed_arith_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(
@@ -79,6 +81,7 @@ uint64_t LoopifyMultiRecursion::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
     } else {
       auto _f =
           std::move(std::get<_after_mixed_arith_fuel_in_false_3>(_popped));
+      _stack.pop_back();
       _result = ((_f._tmp3 * _f._tmp2) + std::move(_result));
     }
   }
@@ -114,10 +117,10 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(uint64_t fuel, uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -136,6 +139,7 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(uint64_t fuel, uint64_t n,
             std::holds_alternative<_after_bool_or_chain_fuel_in_false>(_popped)) {
       auto _f =
           std::move(std::get<_after_bool_or_chain_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(
@@ -145,6 +149,7 @@ bool LoopifyMultiRecursion::bool_or_chain_fuel(uint64_t fuel, uint64_t n,
     } else {
       auto _f =
           std::move(std::get<_after_bool_or_chain_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = ((n == target || _f._tmp2) || std::move(_result));
     }
@@ -183,10 +188,10 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -205,6 +210,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(uint64_t fuel, uint64_t n) {
                    _popped)) {
       auto _f =
           std::move(std::get<_after_bool_and_chain_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(
@@ -214,6 +220,7 @@ bool LoopifyMultiRecursion::bool_and_chain_fuel(uint64_t fuel, uint64_t n) {
     } else {
       auto _f =
           std::move(std::get<_after_bool_and_chain_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 && std::move(_result));
     }
   }
@@ -268,10 +275,10 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &t = *_f.t;
       if (std::holds_alternative<
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
@@ -286,6 +293,7 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
     } else if (
             std::holds_alternative<_after_quad_count_leaves_in_QQuad>(_popped)) {
       auto _f = std::move(std::get<_after_quad_count_leaves_in_QQuad>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &a1 = *_f.a1;
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
@@ -296,6 +304,7 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_quad_count_leaves_in_QQuad_2>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
       _stack.emplace_back(_after_quad_count_leaves_in_QQuad_3{
@@ -305,6 +314,7 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_quad_count_leaves_in_QQuad_3>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
       _stack.emplace_back(_after_quad_count_leaves_in_QQuad_4{
           _f._tmp4, _f._tmp3, std::move(_result)});
@@ -312,6 +322,7 @@ uint64_t LoopifyMultiRecursion::quad_count_leaves(
     } else {
       auto _f =
           std::move(std::get<_after_quad_count_leaves_in_QQuad_4>(_popped));
+      _stack.pop_back();
       _result = (((_f._tmp4 + _f._tmp3) + _f._tmp2) + std::move(_result));
     }
   }
@@ -357,10 +368,10 @@ LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &t = *_f.t;
       if (std::holds_alternative<
               typename LoopifyMultiRecursion::quadtree::QLeaf>(t.v())) {
@@ -374,6 +385,7 @@ LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
       }
     } else if (std::holds_alternative<_after_quad_depth_in_QQuad>(_popped)) {
       auto _f = std::move(std::get<_after_quad_depth_in_QQuad>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &a1 = *_f.a1;
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
@@ -382,6 +394,7 @@ LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
       _stack.emplace_back(_call{&a1});
     } else if (std::holds_alternative<_after_quad_depth_in_QQuad_2>(_popped)) {
       auto _f = std::move(std::get<_after_quad_depth_in_QQuad_2>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &a2 = *_f.a2;
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
       _stack.emplace_back(
@@ -389,12 +402,14 @@ LoopifyMultiRecursion::quad_depth(const LoopifyMultiRecursion::quadtree &t) {
       _stack.emplace_back(_call{&a2});
     } else if (std::holds_alternative<_after_quad_depth_in_QQuad_3>(_popped)) {
       auto _f = std::move(std::get<_after_quad_depth_in_QQuad_3>(_popped));
+      _stack.pop_back();
       const LoopifyMultiRecursion::quadtree &a3 = *_f.a3;
       _stack.emplace_back(
           _after_quad_depth_in_QQuad_4{_f._tmp4, _f._tmp3, std::move(_result)});
       _stack.emplace_back(_call{&a3});
     } else {
       auto _f = std::move(std::get<_after_quad_depth_in_QQuad_4>(_popped));
+      _stack.pop_back();
       _result =
           (UINT64_C(1) + std::max(std::max(_f._tmp4, _f._tmp3),
                                   std::max(_f._tmp2, std::move(_result))));
@@ -440,10 +455,10 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -469,6 +484,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
     } else if (
             std::holds_alternative<_after_hofstadter_q_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_hofstadter_q_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       uint64_t q1 = std::move(_result);
@@ -479,6 +495,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
                    _popped)) {
       auto _f =
           std::move(std::get<_after_hofstadter_q_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       uint64_t q1 = _f.q1;
@@ -489,6 +506,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
                    _popped)) {
       auto _f =
           std::move(std::get<_after_hofstadter_q_fuel_in_false_3>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       uint64_t q2 = _f.q2;
@@ -498,6 +516,7 @@ uint64_t LoopifyMultiRecursion::hofstadter_q_fuel(uint64_t fuel, uint64_t n) {
     } else {
       auto _f =
           std::move(std::get<_after_hofstadter_q_fuel_in_false_4>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }

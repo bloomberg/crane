@@ -20,10 +20,10 @@ LoopifyItreeReified::count_taus(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{t, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const std::shared_ptr<ITree<uint64_t>> &t = _f.t;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -49,6 +49,7 @@ LoopifyItreeReified::count_taus(uint64_t fuel,
       }
     } else {
       auto _f = std::move(std::get<_after_count_taus_in_TauF>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }

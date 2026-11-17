@@ -629,10 +629,10 @@ uint64_t ComprehensivePatterns::count_down(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = r.nc_a;
@@ -643,6 +643,7 @@ uint64_t ComprehensivePatterns::count_down(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_count_down_in_S>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + r.nc_b);
     }
   }
@@ -715,10 +716,10 @@ uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -729,6 +730,7 @@ uint64_t ComprehensivePatterns::sum_proj(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_sum_proj_in_S>(_popped));
+      _stack.pop_back();
       _result = (r.nc_a + std::move(_result));
     }
   }
@@ -951,10 +953,10 @@ ComprehensivePatterns::sum_values(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -965,6 +967,7 @@ ComprehensivePatterns::sum_values(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_sum_values_in_S>(_popped));
+      _stack.pop_back();
       _result = (s.stmt_value + std::move(_result));
     }
   }
@@ -1016,10 +1019,10 @@ ComprehensivePatterns::sum_with_state(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = r.cf_val;
@@ -1030,6 +1033,7 @@ ComprehensivePatterns::sum_with_state(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_sum_with_state_in_S>(_popped));
+      _stack.pop_back();
       _result = (r.cf_val + std::move(_result));
     }
   }
@@ -1062,10 +1066,10 @@ ComprehensivePatterns::even_count(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&r, n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const ComprehensivePatterns::RCF &r = *_f.r;
       uint64_t n = _f.n;
       if (n <= 0) {
@@ -1077,6 +1081,7 @@ ComprehensivePatterns::even_count(uint64_t n,
       }
     } else if (std::holds_alternative<_call_odd_count_entry>(_popped)) {
       auto _f = std::move(std::get<_call_odd_count_entry>(_popped));
+      _stack.pop_back();
       const ComprehensivePatterns::RCF &r0 = *_f.r0;
       uint64_t n0 = _f.n0;
       if (n0 <= 0) {
@@ -1088,9 +1093,11 @@ ComprehensivePatterns::even_count(uint64_t n,
       }
     } else if (std::holds_alternative<_after_even_count_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_even_count_in_S>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_odd_count_entry_in_S>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -1122,10 +1129,10 @@ uint64_t ComprehensivePatterns::odd_count(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&r, n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const ComprehensivePatterns::RCF &r = *_f.r;
       uint64_t n = _f.n;
       if (n <= 0) {
@@ -1137,6 +1144,7 @@ uint64_t ComprehensivePatterns::odd_count(uint64_t n,
       }
     } else if (std::holds_alternative<_call_even_count_entry>(_popped)) {
       auto _f = std::move(std::get<_call_even_count_entry>(_popped));
+      _stack.pop_back();
       const ComprehensivePatterns::RCF &r0 = *_f.r0;
       uint64_t n0 = _f.n0;
       if (n0 <= 0) {
@@ -1148,9 +1156,11 @@ uint64_t ComprehensivePatterns::odd_count(uint64_t n,
       }
     } else if (std::holds_alternative<_after_even_count_entry_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_even_count_entry_in_S>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_odd_count_in_S>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -1172,10 +1182,10 @@ uint64_t ComprehensivePatterns::accum_with_state(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = s.lb_value;
@@ -1186,6 +1196,7 @@ uint64_t ComprehensivePatterns::accum_with_state(
       }
     } else {
       auto _f = std::move(std::get<_after_accum_with_state_in_S>(_popped));
+      _stack.pop_back();
       _result = (s.lb_value + std::move(_result));
     }
   }

@@ -110,10 +110,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -125,6 +125,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }
@@ -197,10 +198,10 @@ struct LoopifyNumbers {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{n});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         uint64_t n = _f.n;
         if (n <= 0) {
           _result = x;
@@ -216,6 +217,7 @@ struct LoopifyNumbers {
         }
       } else {
         auto _f = std::move(std::get<_after_nest_apply_in_S>(_popped));
+        _stack.pop_back();
         _result = f(std::move(_result));
       }
     }

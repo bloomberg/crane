@@ -14,10 +14,10 @@ uint64_t LoopifyAdvancedPatterns::len_impl(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -28,6 +28,7 @@ uint64_t LoopifyAdvancedPatterns::len_impl(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -86,10 +87,10 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -109,9 +110,11 @@ uint64_t LoopifyAdvancedPatterns::multi_guard(const List<uint64_t> &l) {
       }
     } else if (std::holds_alternative<_after_multi_guard_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_multi_guard_in_false>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_multi_guard_in_true>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -138,10 +141,10 @@ uint64_t LoopifyAdvancedPatterns::four_elem(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -173,6 +176,7 @@ uint64_t LoopifyAdvancedPatterns::four_elem(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_four_elem_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       uint64_t a01 = _f.a01;
@@ -202,10 +206,10 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>> &l = *_f.l;
       if (std::holds_alternative<typename List<
               std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>::Nil>(l.v())) {
@@ -220,6 +224,7 @@ uint64_t LoopifyAdvancedPatterns::nested_pattern(
       }
     } else {
       auto _f = std::move(std::get<_after_nested_pattern_in_pair>(_popped));
+      _stack.pop_back();
       uint64_t c = _f.c;
       uint64_t a = _f.a;
       uint64_t b = _f.b;
@@ -336,10 +341,10 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyAdvancedPatterns::shape> &l = *_f.l;
       if (std::holds_alternative<
               typename List<LoopifyAdvancedPatterns::shape>::Nil>(l.v())) {
@@ -352,6 +357,7 @@ uint64_t LoopifyAdvancedPatterns::sum_shapes(
       }
     } else {
       auto _f = std::move(std::get<_after_sum_shapes_in_Cons>(_popped));
+      _stack.pop_back();
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
       _result = (extract_value(std::move(a0)) + std::move(_result));
     }
@@ -377,10 +383,10 @@ LoopifyAdvancedPatterns::count_by_shape(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyAdvancedPatterns::shape> &l = *_f.l;
       if (std::holds_alternative<
               typename List<LoopifyAdvancedPatterns::shape>::Nil>(l.v())) {
@@ -394,6 +400,7 @@ LoopifyAdvancedPatterns::count_by_shape(
       }
     } else {
       auto _f = std::move(std::get<_after_count_by_shape_in_Cons>(_popped));
+      _stack.pop_back();
       LoopifyAdvancedPatterns::shape a0 = std::move(_f.a0);
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
           std::move(_result);

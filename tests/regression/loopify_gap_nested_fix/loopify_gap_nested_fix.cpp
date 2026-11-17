@@ -30,10 +30,10 @@ uint64_t LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose &r) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&r});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyGapNestedFix::rose &r = *_f.r;
       const auto &[a0, a1] =
           std::get<typename LoopifyGapNestedFix::rose::Rose0>(r.v());
@@ -41,6 +41,7 @@ uint64_t LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose &r) {
       _stack.emplace_back(_call_sum_list{crane_raw(a1)});
     } else if (std::holds_alternative<_call_sum_list>(_popped)) {
       auto _f = std::move(std::get<_call_sum_list>(_popped));
+      _stack.pop_back();
       const List<LoopifyGapNestedFix::rose> &l = *_f.l;
       if (std::holds_alternative<typename List<LoopifyGapNestedFix::rose>::Nil>(
               l.v())) {
@@ -53,14 +54,17 @@ uint64_t LoopifyGapNestedFix::rose_sum(const LoopifyGapNestedFix::rose &r) {
       }
     } else if (std::holds_alternative<_after_rose_sum_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_rose_sum_in_Cons>(_popped));
+      _stack.pop_back();
       const List<LoopifyGapNestedFix::rose> &a10 = *_f.a10;
       _stack.emplace_back(_after_sum_list_in_Cons{std::move(_result)});
       _stack.emplace_back(_call_sum_list{&a10});
     } else if (std::holds_alternative<_after_sum_list_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_sum_list_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_sum_list_in_Rose0>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }

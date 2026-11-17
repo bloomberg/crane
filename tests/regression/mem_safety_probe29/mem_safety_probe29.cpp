@@ -39,10 +39,10 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree3::t3leaf();
@@ -53,12 +53,14 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_build_tree3_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_build_tree3_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(_after_build_tree3_in_S_2{n, n_, std::move(_result)});
       _stack.emplace_back(_call{n_});
     } else if (std::holds_alternative<_after_build_tree3_in_S_2>(_popped)) {
       auto _f = std::move(std::get<_after_build_tree3_in_S_2>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(
@@ -67,6 +69,7 @@ MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(uint64_t n) {
       _stack.emplace_back(_call{n_});
     } else {
       auto _f = std::move(std::get<_after_build_tree3_in_S_3>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = tree3::t3node(std::move(_f._tmp3), std::move(_f._tmp2),
                               std::move(_result), n);

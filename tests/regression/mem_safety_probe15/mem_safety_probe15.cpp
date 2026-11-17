@@ -17,10 +17,10 @@ MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe15::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe15::mylist<uint64_t>::Mynil>(l.v())) {
@@ -33,6 +33,7 @@ MemSafetyProbe15::sum_list(const MemSafetyProbe15::mylist<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -68,10 +69,10 @@ MemSafetyProbe15::flatten(const MemSafetyProbe15::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe15::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(t.v())) {
         _result = mylist<uint64_t>::mynil();
@@ -83,12 +84,14 @@ MemSafetyProbe15::flatten(const MemSafetyProbe15::tree &t) {
       }
     } else if (std::holds_alternative<_after_flatten_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_flatten_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
       _stack.emplace_back(_after_flatten_in_Node_2{a1, std::move(_result)});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_flatten_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result =
           _f._tmp2.myapp(mylist<uint64_t>::mycons(a1, std::move(_result)));
@@ -126,10 +129,10 @@ MemSafetyProbe15::subtree_sums(const MemSafetyProbe15::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe15::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe15::tree::Leaf>(t.v())) {
         _result = mylist<uint64_t>::mynil();
@@ -141,6 +144,7 @@ MemSafetyProbe15::subtree_sums(const MemSafetyProbe15::tree &t) {
       }
     } else if (std::holds_alternative<_after_subtree_sums_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_subtree_sums_in_Node>(_popped));
+      _stack.pop_back();
       std::shared_ptr<MemSafetyProbe15::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
@@ -149,6 +153,7 @@ MemSafetyProbe15::subtree_sums(const MemSafetyProbe15::tree &t) {
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_subtree_sums_in_Node_2>(_popped));
+      _stack.pop_back();
       std::shared_ptr<MemSafetyProbe15::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe15::tree &a2 = *_f.a2;
@@ -217,10 +222,10 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree::leaf();
@@ -231,12 +236,14 @@ MemSafetyProbe15::tree MemSafetyProbe15::make_tree(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_make_tree_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_make_tree_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(_after_make_tree_in_S_2{n, std::move(_result)});
       _stack.emplace_back(_call{n_});
     } else {
       auto _f = std::move(std::get<_after_make_tree_in_S_2>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = tree::node(std::move(_f._tmp2), n, std::move(_result));
     }

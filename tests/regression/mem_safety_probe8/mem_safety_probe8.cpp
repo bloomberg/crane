@@ -28,10 +28,10 @@ uint64_t MemSafetyProbe8::tree_sum_ext(uint64_t _x,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t, _x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe8::tree &t = *_f.t;
       uint64_t _x = _f._x;
       if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
@@ -44,6 +44,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(uint64_t _x,
       }
     } else if (std::holds_alternative<_after_tree_sum_ext_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_tree_sum_ext_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       const MemSafetyProbe8::tree &a2 = *_f.a2;
       _stack.emplace_back(_after_tree_sum_ext_in_Node_2{a1,
@@ -51,6 +52,7 @@ uint64_t MemSafetyProbe8::tree_sum_ext(uint64_t _x,
       _stack.emplace_back(_call{&a2, UINT64_C(0)});
     } else {
       auto _f = std::move(std::get<_after_tree_sum_ext_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result = ((_f._tmp2 + a1) + std::move(_result));
     }
@@ -89,10 +91,10 @@ MemSafetyProbe8::tree_weighted(uint64_t _x, const MemSafetyProbe8::tree &t,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{depth, &t, _x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t depth = _f.depth;
       const MemSafetyProbe8::tree &t = *_f.t;
       uint64_t _x = _f._x;
@@ -108,6 +110,7 @@ MemSafetyProbe8::tree_weighted(uint64_t _x, const MemSafetyProbe8::tree &t,
       }
     } else if (std::holds_alternative<_after_tree_weighted_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_tree_weighted_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t depth = _f.depth;
       uint64_t a1 = _f.a1;
       const MemSafetyProbe8::tree &a2 = *_f.a2;
@@ -116,6 +119,7 @@ MemSafetyProbe8::tree_weighted(uint64_t _x, const MemSafetyProbe8::tree &t,
       _stack.emplace_back(_call{(UINT64_C(1) + depth), &a2, UINT64_C(0)});
     } else {
       auto _f = std::move(std::get<_after_tree_weighted_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t depth = _f.depth;
       uint64_t a1 = _f.a1;
       _result = ((_f._tmp2 + (a1 * depth)) + std::move(_result));
@@ -184,10 +188,10 @@ uint64_t MemSafetyProbe8::tree_collect(uint64_t _x,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t, _x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe8::tree &t = *_f.t;
       uint64_t _x = _f._x;
       if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
@@ -200,6 +204,7 @@ uint64_t MemSafetyProbe8::tree_collect(uint64_t _x,
       }
     } else if (std::holds_alternative<_after_tree_collect_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_tree_collect_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       const MemSafetyProbe8::tree &a2 = *_f.a2;
       uint64_t left = std::move(_result);
@@ -207,6 +212,7 @@ uint64_t MemSafetyProbe8::tree_collect(uint64_t _x,
       _stack.emplace_back(_call{&a2, UINT64_C(0)});
     } else {
       auto _f = std::move(std::get<_after_tree_collect_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       uint64_t left = _f.left;
       uint64_t right = std::move(_result);
@@ -243,10 +249,10 @@ uint64_t MemSafetyProbe8::tree_flatten(uint64_t _x,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t, _x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe8::tree &t = *_f.t;
       uint64_t _x = _f._x;
       if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(t.v())) {
@@ -259,6 +265,7 @@ uint64_t MemSafetyProbe8::tree_flatten(uint64_t _x,
       }
     } else if (std::holds_alternative<_after_tree_flatten_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_tree_flatten_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       const MemSafetyProbe8::tree &a2 = *_f.a2;
       _stack.emplace_back(_after_tree_flatten_in_Node_2{a1,
@@ -266,6 +273,7 @@ uint64_t MemSafetyProbe8::tree_flatten(uint64_t _x,
       _stack.emplace_back(_call{&a2, UINT64_C(0)});
     } else {
       auto _f = std::move(std::get<_after_tree_flatten_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result = ((_f._tmp2 * a1) * std::move(_result));
     }
@@ -300,10 +308,10 @@ uint64_t MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
     crane::small_vector<_frame> _lc1_stack;
     _lc1_stack.emplace_back(_call{&_lc1_t0, _lc1_x});
     while (!_lc1_stack.empty()) {
-      _frame _popped = std::move(_lc1_stack.back());
-      _lc1_stack.pop_back();
+      _frame &_popped = _lc1_stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _lc1_stack.pop_back();
         const MemSafetyProbe8::tree &_lc1_t0 = *_f.t0;
         uint64_t _lc1_x = _f._x;
         if (std::holds_alternative<typename MemSafetyProbe8::tree::Leaf>(
@@ -317,11 +325,13 @@ uint64_t MemSafetyProbe8::tree_size_via_fold(const MemSafetyProbe8::tree &t) {
         }
       } else if (std::holds_alternative<_after_go_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_go_in_Node>(_popped));
+        _lc1_stack.pop_back();
         const MemSafetyProbe8::tree &a2 = *_f.a2;
         _lc1_stack.emplace_back(_after_go_in_Node_2{std::move(_lc1_result)});
         _lc1_stack.emplace_back(_call{&a2, UINT64_C(0)});
       } else {
         auto _f = std::move(std::get<_after_go_in_Node_2>(_popped));
+        _lc1_stack.pop_back();
         _lc1_result = ((UINT64_C(1) + _f._tmp2) + std::move(_lc1_result));
       }
     }

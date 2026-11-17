@@ -16,10 +16,10 @@ uint64_t LoopifyAdvancedLists::product(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(1);
@@ -30,6 +30,7 @@ uint64_t LoopifyAdvancedLists::product(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 * std::move(_result));
     }
@@ -231,10 +232,10 @@ LoopifyAdvancedLists::concat_lists(const List<List<uint64_t>> &ll) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -246,6 +247,7 @@ LoopifyAdvancedLists::concat_lists(const List<List<uint64_t>> &ll) {
       }
     } else {
       auto _f = std::move(std::get<_after_concat_lists_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = a0.app(std::move(_result));
     }

@@ -140,10 +140,10 @@ struct LoopifySearch {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -154,6 +154,7 @@ struct LoopifySearch {
         }
       } else {
         auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }
@@ -193,10 +194,10 @@ struct LoopifySearch {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -212,6 +213,7 @@ struct LoopifySearch {
         }
       } else {
         auto _f = std::move(std::get<_after_maximum_by_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         uint64_t m = std::move(_result);
         if (cmp(a0, m) == UINT64_C(1)) {
@@ -334,10 +336,10 @@ struct LoopifySearch {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<List<uint64_t>>::nil();
@@ -348,6 +350,7 @@ struct LoopifySearch {
         }
       } else {
         auto _f = std::move(std::get<_after_concat_map_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         _result = f(a0).app(std::move(_result));
       }
@@ -485,10 +488,10 @@ struct LoopifySearch {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&b});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const btree &b = *_f.b;
         if (std::holds_alternative<typename btree::BLeaf>(b.v())) {
           const auto &[a0] = std::get<typename btree::BLeaf>(b.v());
@@ -500,6 +503,7 @@ struct LoopifySearch {
         }
       } else if (std::holds_alternative<_after_btree_rect_in_BNode>(_popped)) {
         auto _f = std::move(std::get<_after_btree_rect_in_BNode>(_popped));
+        _stack.pop_back();
         std::shared_ptr<btree> a0 = std::move(_f.a0);
         const btree &a1 = *_f.a1;
         _stack.emplace_back(_after_btree_rect_in_BNode_2{std::move(a0), &a1,
@@ -507,6 +511,7 @@ struct LoopifySearch {
         _stack.emplace_back(_call{&a1});
       } else {
         auto _f = std::move(std::get<_after_btree_rect_in_BNode_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<btree> a0 = std::move(_f.a0);
         const btree &a1 = *_f.a1;
         _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
@@ -544,10 +549,10 @@ struct LoopifySearch {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const btree &t = *_f.t;
         if (std::holds_alternative<typename btree::BLeaf>(t.v())) {
           const auto &[a0] = std::get<typename btree::BLeaf>(t.v());
@@ -559,11 +564,13 @@ struct LoopifySearch {
         }
       } else if (std::holds_alternative<_after_or_search_in_BNode>(_popped)) {
         auto _f = std::move(std::get<_after_or_search_in_BNode>(_popped));
+        _stack.pop_back();
         const btree &a1 = *_f.a1;
         _stack.emplace_back(_after_or_search_in_BNode_2{std::move(_result)});
         _stack.emplace_back(_call{&a1});
       } else {
         auto _f = std::move(std::get<_after_or_search_in_BNode_2>(_popped));
+        _stack.pop_back();
         _result = (_f._tmp2 || std::move(_result));
       }
     }

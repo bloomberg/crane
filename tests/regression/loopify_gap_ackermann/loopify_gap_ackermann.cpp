@@ -22,15 +22,16 @@ uint64_t LoopifyGapAckermann::ack(uint64_t m, uint64_t x0_) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{x0_, m});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t x0_ = _f.x0_;
       uint64_t m = _f.m;
       _stack.emplace_back(_call_ack_n{x0_, m});
     } else if (std::holds_alternative<_call_ack_n>(_popped)) {
       auto _f = std::move(std::get<_call_ack_n>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t m = _f.m;
       if (m <= 0) {
@@ -47,6 +48,7 @@ uint64_t LoopifyGapAckermann::ack(uint64_t m, uint64_t x0_) {
       }
     } else {
       auto _f = std::move(std::get<_after_ack_n_in_S>(_popped));
+      _stack.pop_back();
       uint64_t m_ = _f.m_;
       _stack.emplace_back(_call{std::move(_result), m_});
     }

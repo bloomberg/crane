@@ -17,10 +17,10 @@ List<uint64_t> LoopifyListOfLists::intercalate(const List<uint64_t> &sep,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -37,6 +37,7 @@ List<uint64_t> LoopifyListOfLists::intercalate(const List<uint64_t> &sep,
       }
     } else {
       auto _f = std::move(std::get<_after_intercalate_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = a0.app(sep.app(std::move(_result)));
     }
@@ -214,10 +215,10 @@ uint64_t LoopifyListOfLists::list_len(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -228,6 +229,7 @@ uint64_t LoopifyListOfLists::list_len(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_list_len_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -250,10 +252,10 @@ uint64_t LoopifyListOfLists::total_length(const List<List<uint64_t>> &ll) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = UINT64_C(0);
@@ -265,6 +267,7 @@ uint64_t LoopifyListOfLists::total_length(const List<List<uint64_t>> &ll) {
       }
     } else {
       auto _f = std::move(std::get<_after_total_length_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = (list_len(std::move(a0)) + std::move(_result));
     }
@@ -293,10 +296,10 @@ List<uint64_t> LoopifyListOfLists::flatten(const List<List<uint64_t>> &ll) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -308,6 +311,7 @@ List<uint64_t> LoopifyListOfLists::flatten(const List<List<uint64_t>> &ll) {
       }
     } else {
       auto _f = std::move(std::get<_after_flatten_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = a0.app(std::move(_result));
     }
@@ -398,10 +402,10 @@ uint64_t LoopifyListOfLists::max_length(const List<List<uint64_t>> &ll) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = UINT64_C(0);
@@ -413,6 +417,7 @@ uint64_t LoopifyListOfLists::max_length(const List<List<uint64_t>> &ll) {
       }
     } else {
       auto _f = std::move(std::get<_after_max_length_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = std::max(list_len(std::move(a0)), std::move(_result));
     }

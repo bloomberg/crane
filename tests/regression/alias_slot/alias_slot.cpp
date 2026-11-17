@@ -33,10 +33,10 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{k, &e});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (crane::holds_alternative<_call>(_popped)) {
       auto _f = std::move(crane::get<_call>(_popped));
+      _stack.pop_back();
       const List<String> &k = _f.k;
       const AliasSlot::expr &e = *_f.e;
       if (crane::holds_alternative<typename AliasSlot::expr::ELit>(e.v())) {
@@ -50,6 +50,7 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
       }
     } else if (crane::holds_alternative<_after_expr_parts_in_EAdd>(_popped)) {
       auto _f = std::move(crane::get<_after_expr_parts_in_EAdd>(_popped));
+      _stack.pop_back();
       const AliasSlot::expr &a0 = *_f.a0;
       List<String> rest = List<String>::cons(k_1, std::move(_result));
       if (crane::holds_alternative<typename AliasSlot::expr::ELit>(a0.v())) {
@@ -61,6 +62,7 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
       }
     } else {
       auto _f = std::move(crane::get<_after_expr_parts_in_EAdd_2>(_popped));
+      _stack.pop_back();
       _result = List<String>::cons(k_3, std::move(_result));
     }
   }

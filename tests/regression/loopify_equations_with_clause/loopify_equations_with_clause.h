@@ -601,10 +601,10 @@ struct LoopifyEquationsWithClause {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&p, _x0, &_x});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const plain_graph &p = *_f.p;
         uint64_t _x0 = _f._x0;
         const List<uint64_t> &_x = *_f._x;
@@ -624,6 +624,7 @@ struct LoopifyEquationsWithClause {
             std::move(
                 std::get<_after_plain_graph_rect_in_Plain_graph_equation_2>(
                     _popped));
+        _stack.pop_back();
         uint64_t x0 = _f.x0;
         List<uint64_t> xs0 = std::move(_f.xs0);
         std::shared_ptr<plain_graph> hind0 = std::move(_f.hind0);
@@ -662,10 +663,10 @@ struct LoopifyEquationsWithClause {
       crane::small_vector<_frame> _lc1_stack;
       _lc1_stack.emplace_back(_call{&_lc1_p, _lc1_x0, &_lc1_x});
       while (!_lc1_stack.empty()) {
-        _frame _popped = std::move(_lc1_stack.back());
-        _lc1_stack.pop_back();
+        _frame &_popped = _lc1_stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _lc1_stack.pop_back();
           const plain_graph &_lc1_p = *_f.p;
           uint64_t _lc1_x0 = _f._x0;
           const List<uint64_t> &_lc1_x = *_f._x;
@@ -683,6 +684,7 @@ struct LoopifyEquationsWithClause {
         } else {
           auto _f =
               std::move(std::get<_after_f1_in_Plain_graph_equation_2>(_popped));
+          _lc1_stack.pop_back();
           uint64_t x0 = _f.x0;
           List<uint64_t> xs0 = std::move(_f.xs0);
           _lc1_result = f0(x0, xs0, std::move(_lc1_result));

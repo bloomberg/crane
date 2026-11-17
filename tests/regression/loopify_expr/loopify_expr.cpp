@@ -18,10 +18,10 @@ uint64_t LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyExpr::shape> &l = *_f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -51,6 +51,7 @@ uint64_t LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_shapes_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t val = _f.val;
       _result = (val + std::move(_result));
     }
@@ -76,10 +77,10 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyExpr::shape> &l = *_f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(l.v())) {
         _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
@@ -92,6 +93,7 @@ LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_count_by_shape_in_Cons>(_popped));
+      _stack.pop_back();
       LoopifyExpr::shape a0 = std::move(_f.a0);
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
           std::move(_result);

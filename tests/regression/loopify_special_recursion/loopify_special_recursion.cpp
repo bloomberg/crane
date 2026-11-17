@@ -25,10 +25,10 @@ LoopifySpecialRecursion::process_twice_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = _f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -46,6 +46,7 @@ LoopifySpecialRecursion::process_twice_fuel(uint64_t fuel,
     } else if (
             std::holds_alternative<_after_process_twice_fuel_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_process_twice_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t fuel_ = _f.fuel_;
       uint64_t a0 = _f.a0;
       List<uint64_t> first = std::move(_result);
@@ -54,6 +55,7 @@ LoopifySpecialRecursion::process_twice_fuel(uint64_t fuel,
     } else {
       auto _f =
           std::move(std::get<_after_process_twice_fuel_in_Cons_2>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> second = std::move(_result);
       _result = List<uint64_t>::cons(a0, std::move(second));
@@ -83,10 +85,10 @@ List<uint64_t> LoopifySpecialRecursion::double_append(const List<uint64_t> &l1,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l1});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
         _result = l2;
@@ -97,6 +99,7 @@ List<uint64_t> LoopifySpecialRecursion::double_append(const List<uint64_t> &l1,
       }
     } else {
       auto _f = std::move(std::get<_after_double_append_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons(a0, rest.app(rest));
@@ -211,10 +214,10 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifySpecialRecursion::tree &t = *_f.t;
       if (std::holds_alternative<typename LoopifySpecialRecursion::tree::Leaf>(
               t.v())) {
@@ -227,6 +230,7 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
       }
     } else if (std::holds_alternative<_after_collect_sorted_in_Node>(_popped)) {
       auto _f = std::move(std::get<_after_collect_sorted_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       const LoopifySpecialRecursion::tree &a2 = *_f.a2;
       _stack.emplace_back(
@@ -234,6 +238,7 @@ List<uint64_t> LoopifySpecialRecursion::collect_sorted(
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(std::get<_after_collect_sorted_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result = _f._tmp2.app(List<uint64_t>::cons(a1, std::move(_result)));
     }
@@ -259,10 +264,10 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(const List<uint64_t> &l,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{idx, &l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t idx = _f.idx;
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
@@ -279,6 +284,7 @@ uint64_t LoopifySpecialRecursion::sum_odd_indices_aux(const List<uint64_t> &l,
     } else {
       auto _f =
           std::move(std::get<_after_sum_odd_indices_aux_in_true>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -311,10 +317,10 @@ uint64_t LoopifySpecialRecursion::categorize_by(uint64_t k,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -335,12 +341,15 @@ uint64_t LoopifySpecialRecursion::categorize_by(uint64_t k,
       }
     } else if (std::holds_alternative<_after_categorize_by_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_categorize_by_in_false>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     } else if (std::holds_alternative<_after_categorize_by_in_true>(_popped)) {
       auto _f = std::move(std::get<_after_categorize_by_in_true>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(3) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_categorize_by_in_true_2>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(2) + std::move(_result));
     }
   }
@@ -403,10 +412,10 @@ LoopifySpecialRecursion::merge_levels(const List<List<uint64_t>> &ll) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -418,6 +427,7 @@ LoopifySpecialRecursion::merge_levels(const List<List<uint64_t>> &ll) {
       }
     } else {
       auto _f = std::move(std::get<_after_merge_levels_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = a0.app(std::move(_result));
     }

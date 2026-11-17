@@ -75,10 +75,10 @@ List<uint64_t> LoopifyListGeneration::cycle(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = List<uint64_t>::nil();
@@ -89,6 +89,7 @@ List<uint64_t> LoopifyListGeneration::cycle(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_cycle_in_S>(_popped));
+      _stack.pop_back();
       _result = l.app(std::move(_result));
     }
   }
@@ -141,10 +142,10 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<std::pair<uint64_t, uint64_t>> &l = *_f.l;
       if (std::holds_alternative<
               typename List<std::pair<uint64_t, uint64_t>>::Nil>(l.v())) {
@@ -159,6 +160,7 @@ List<uint64_t> LoopifyListGeneration::replicate_list(
       }
     } else {
       auto _f = std::move(std::get<_after_replicate_list_in_pair>(_popped));
+      _stack.pop_back();
       List<uint64_t> rep = std::move(_f.rep);
       _result = rep.app(std::move(_result));
     }

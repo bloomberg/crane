@@ -90,10 +90,10 @@ LoopifyListCombining::intercalate(const List<uint64_t> &sep,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -110,6 +110,7 @@ LoopifyListCombining::intercalate(const List<uint64_t> &sep,
       }
     } else {
       auto _f = std::move(std::get<_after_intercalate_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = append(std::move(a0), append(sep, std::move(_result)));
     }
@@ -133,10 +134,10 @@ List<uint64_t> LoopifyListCombining::concat(const List<List<uint64_t>> &ll) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -148,6 +149,7 @@ List<uint64_t> LoopifyListCombining::concat(const List<List<uint64_t>> &ll) {
       }
     } else {
       auto _f = std::move(std::get<_after_concat_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result = append(std::move(a0), std::move(_result));
     }
@@ -171,10 +173,10 @@ List<uint64_t> LoopifyListCombining::mapcat(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
@@ -185,6 +187,7 @@ List<uint64_t> LoopifyListCombining::mapcat(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_mapcat_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = append(List<uint64_t>::cons(
           a0, List<uint64_t>::cons(a0, List<uint64_t>::nil())),
@@ -257,10 +260,10 @@ LoopifyListCombining::concat_sep(uint64_t sep, const List<List<uint64_t>> &ll) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -277,6 +280,7 @@ LoopifyListCombining::concat_sep(uint64_t sep, const List<List<uint64_t>> &ll) {
       }
     } else {
       auto _f = std::move(std::get<_after_concat_sep_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       _result =
           append(std::move(a0), List<uint64_t>::cons(sep, std::move(_result)));

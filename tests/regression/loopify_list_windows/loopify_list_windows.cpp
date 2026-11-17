@@ -14,10 +14,10 @@ uint64_t LoopifyListWindows::len(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -28,6 +28,7 @@ uint64_t LoopifyListWindows::len(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_len_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -106,10 +107,10 @@ LoopifyListWindows::span_eq(uint64_t first, const List<uint64_t> &lst) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&lst});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &lst = *_f.lst;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(lst.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
@@ -124,6 +125,7 @@ LoopifyListWindows::span_eq(uint64_t first, const List<uint64_t> &lst) {
       }
     } else {
       auto _f = std::move(std::get<_after_span_eq_in_true>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [s, r] = std::move(_result);
       _result =
@@ -256,10 +258,10 @@ List<List<uint64_t>> LoopifyListWindows::inits(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<List<uint64_t>>::cons(List<uint64_t>::nil(),
@@ -271,6 +273,7 @@ List<List<uint64_t>> LoopifyListWindows::inits(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_inits_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = List<List<uint64_t>>::cons(
           List<uint64_t>::nil(), map_cons_helper(a0, std::move(_result)));

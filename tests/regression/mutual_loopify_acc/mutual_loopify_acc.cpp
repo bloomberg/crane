@@ -16,10 +16,10 @@ uint64_t MutualLoopifyAcc::tsum(uint64_t acc, const MutualLoopifyAcc::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MutualLoopifyAcc::tree &t = *_f.t;
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
         const auto &[a0] =
@@ -41,6 +41,7 @@ uint64_t MutualLoopifyAcc::tsum(uint64_t acc, const MutualLoopifyAcc::tree &t) {
       }
     } else {
       auto _f = std::move(std::get<_after_tsum_in_Fcons>(_popped));
+      _stack.pop_back();
       std::shared_ptr<MutualLoopifyAcc::forest> a10 = std::move(_f.a10);
       _result = fsum(std::move(_result), *a10);
     }
@@ -72,10 +73,10 @@ uint64_t MutualLoopifyAcc::fsum(uint64_t acc,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&f, acc});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MutualLoopifyAcc::forest &f = *_f.f;
       uint64_t acc = _f.acc;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(f.v())) {
@@ -88,6 +89,7 @@ uint64_t MutualLoopifyAcc::fsum(uint64_t acc,
       }
     } else if (std::holds_alternative<_call_tsum_entry>(_popped)) {
       auto _f = std::move(std::get<_call_tsum_entry>(_popped));
+      _stack.pop_back();
       const MutualLoopifyAcc::tree &t = *_f.t;
       uint64_t acc0 = _f.acc0;
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
@@ -101,6 +103,7 @@ uint64_t MutualLoopifyAcc::fsum(uint64_t acc,
       }
     } else {
       auto _f = std::move(std::get<_after_tsum_entry_in_Fcons>(_popped));
+      _stack.pop_back();
       const MutualLoopifyAcc::forest &a10 = *_f.a10;
       _stack.emplace_back(_call{&a10, std::move(_result)});
     }

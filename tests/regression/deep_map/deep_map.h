@@ -143,10 +143,10 @@ struct DeepMap {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
           _result = f;
@@ -157,6 +157,7 @@ struct DeepMap {
         }
       } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
@@ -165,6 +166,7 @@ struct DeepMap {
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
@@ -209,10 +211,10 @@ struct DeepMap {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
           _result = tree<T2>::leaf();
@@ -223,6 +225,7 @@ struct DeepMap {
         }
       } else if (std::holds_alternative<_after_tmap_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tmap_in_Node>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         _stack.emplace_back(
@@ -230,6 +233,7 @@ struct DeepMap {
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_tmap_in_Node_2>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         _result =
             tree<T2>::node(std::move(_f._tmp2), f(a1), std::move(_result));

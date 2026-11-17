@@ -48,10 +48,10 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel, List<List<uint64_t>> l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{std::move(l), fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       List<List<uint64_t>> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -82,6 +82,7 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel, List<List<uint64_t>> l) {
       }
     } else {
       auto _f = std::move(std::get<_after_pairs_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       List<uint64_t> y = std::move(_f.y);
       List<List<uint64_t>> r = std::move(_result);
@@ -112,10 +113,10 @@ FrameKeptConsumedBeforeCall::again(uint64_t fuel, List<List<uint64_t>> l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{std::move(l), fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       List<List<uint64_t>> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -146,6 +147,7 @@ FrameKeptConsumedBeforeCall::again(uint64_t fuel, List<List<uint64_t>> l) {
       }
     } else {
       auto _f = std::move(std::get<_after_again_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> a0 = std::move(_f.a0);
       List<uint64_t> y = std::move(_f.y);
       List<List<uint64_t>> r = std::move(_result);

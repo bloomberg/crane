@@ -30,10 +30,10 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num &n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyMutualTmcTemporary::num &n = *_f.n;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
               n.v())) {
@@ -59,6 +59,7 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num &n) {
       }
     } else if (std::holds_alternative<_call_eb_entry>(_popped)) {
       auto _f = std::move(std::get<_call_eb_entry>(_popped));
+      _stack.pop_back();
       LoopifyMutualTmcTemporary::num x = std::move(_f.x);
       const LoopifyMutualTmcTemporary::num &n0 = *_f.n0;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
@@ -71,6 +72,7 @@ LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num &n) {
       }
     } else {
       auto _f = std::move(std::get<_after_eb_entry_in_Su>(_popped));
+      _stack.pop_back();
       _result = num::su(std::move(_result));
     }
   }
@@ -283,10 +285,10 @@ LoopifyMutualTmcTemporary::to_nat(const LoopifyMutualTmcTemporary::num &n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyMutualTmcTemporary::num &n = *_f.n;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
               n.v())) {
@@ -299,6 +301,7 @@ LoopifyMutualTmcTemporary::to_nat(const LoopifyMutualTmcTemporary::num &n) {
       }
     } else {
       auto _f = std::move(std::get<_after_to_nat_in_Su>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }

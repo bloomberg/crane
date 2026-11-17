@@ -138,10 +138,10 @@ struct LoopifyPolymorphic {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -152,6 +152,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_after_poly_length_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (UINT64_C(1) + std::move(_result));
       }
     }
@@ -174,10 +175,10 @@ struct LoopifyPolymorphic {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T1>::nil();
@@ -188,6 +189,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_after_poly_reverse_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         _result = _result.app(List<T1>::cons(std::move(a0), List<T1>::nil()));
       }
@@ -447,10 +449,10 @@ struct LoopifyPolymorphic {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<std::pair<T1, T2>> &l = *_f.l;
         if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T2>::nil());
@@ -463,6 +465,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_after_poly_unzip_in_pair>(_popped));
+        _stack.pop_back();
         auto a = std::move(_f.a);
         auto b = std::move(_f.b);
         auto [as_, bs] = std::move(_result);
@@ -491,10 +494,10 @@ struct LoopifyPolymorphic {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
@@ -505,6 +508,7 @@ struct LoopifyPolymorphic {
         }
       } else {
         auto _f = std::move(std::get<_after_poly_partition_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         auto [trues, falses] = std::move(_result);
         if (p(a0)) {

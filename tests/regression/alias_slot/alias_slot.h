@@ -93,10 +93,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (crane::holds_alternative<_call>(_popped)) {
         auto _f = std::move(crane::get<_call>(_popped));
+        _stack.pop_back();
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (crane::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -108,6 +108,7 @@ public:
         }
       } else {
         auto _f = std::move(crane::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }
@@ -241,10 +242,10 @@ struct AliasSlot {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&e});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (crane::holds_alternative<_call>(_popped)) {
         auto _f = std::move(crane::get<_call>(_popped));
+        _stack.pop_back();
         const expr &e = *_f.e;
         if (crane::holds_alternative<typename expr::ELit>(e.v())) {
           const auto &[s0] = crane::get<typename expr::ELit>(e.v());
@@ -256,6 +257,7 @@ struct AliasSlot {
         }
       } else if (crane::holds_alternative<_after_expr_rect_in_EAdd>(_popped)) {
         auto _f = std::move(crane::get<_after_expr_rect_in_EAdd>(_popped));
+        _stack.pop_back();
         crane::shared_box<expr> a0 = std::move(_f.a0);
         const expr &b0 = *_f.b0;
         _stack.emplace_back(
@@ -263,6 +265,7 @@ struct AliasSlot {
         _stack.emplace_back(_call{&b0});
       } else {
         auto _f = std::move(crane::get<_after_expr_rect_in_EAdd_2>(_popped));
+        _stack.pop_back();
         crane::shared_box<expr> a0 = std::move(_f.a0);
         const expr &b0 = *_f.b0;
         _result = f0(*a0, std::move(_f._tmp2), b0, std::move(_result));

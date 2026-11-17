@@ -208,10 +208,10 @@ struct Comp {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -223,11 +223,13 @@ struct Comp {
           }
         } else if (std::holds_alternative<_after_esize_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_esize_in_Add>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_esize_in_Add_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_esize_in_Add_2>(_popped));
+          _stack.pop_back();
           _result =
               Nat::s(Nat::o()).add(std::move(_f._tmp2)).add(std::move(_result));
         }
@@ -258,10 +260,10 @@ struct Comp {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -274,11 +276,13 @@ struct Comp {
           }
         } else if (std::holds_alternative<_after_eval_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_eval_in_Add>(_popped));
+          _stack.pop_back();
           const expr &a1 = *_f.a1;
           _stack.emplace_back(_after_eval_in_Add_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_eval_in_Add_2>(_popped));
+          _stack.pop_back();
           _result = _f._tmp2.add(std::move(_result));
         }
       }
@@ -318,10 +322,10 @@ struct Comp {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -334,6 +338,7 @@ struct Comp {
           }
         } else if (std::holds_alternative<_after_expr_rect_in_Add>(_popped)) {
           auto _f = std::move(std::get<_after_expr_rect_in_Add>(_popped));
+          _stack.pop_back();
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _stack.emplace_back(
@@ -342,6 +347,7 @@ struct Comp {
           _stack.emplace_back(_call{_f.a1});
         } else {
           auto _f = std::move(std::get<_after_expr_rect_in_Add_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
@@ -454,10 +460,10 @@ struct Comp {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const avl *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
@@ -470,11 +476,13 @@ struct Comp {
           }
         } else if (std::holds_alternative<_after_size_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_size_in_Node>(_popped));
+          _stack.pop_back();
           const avl &a3 = *_f.a3;
           _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
+          _stack.pop_back();
           _result =
               Nat::s(Nat::o()).add(std::move(_f._tmp2)).add(std::move(_result));
         }
@@ -546,10 +554,10 @@ struct Comp {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const avl *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
@@ -585,12 +593,14 @@ struct Comp {
           }
         } else if (std::holds_alternative<_after_insert_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_insert_in_Node>(_popped));
+          _stack.pop_back();
           Nat a1 = std::move(_f.a1);
           expr a2 = std::move(_f.a2);
           std::shared_ptr<avl> a3 = std::move(_f.a3);
           _result = _result.balance(a1, a2, *a3);
         } else {
           auto _f = std::move(std::get<_after_insert_in_Node_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<avl> a0 = std::move(_f.a0);
           Nat a1 = std::move(_f.a1);
           expr a2 = std::move(_f.a2);
@@ -694,10 +704,10 @@ struct Comp {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const avl *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
@@ -711,6 +721,7 @@ struct Comp {
           }
         } else if (std::holds_alternative<_after_avl_rect_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_avl_rect_in_Node>(_popped));
+          _stack.pop_back();
           std::shared_ptr<avl> a2 = std::move(_f.a2);
           Nat a3 = std::move(_f.a3);
           expr a4 = std::move(_f.a4);
@@ -722,6 +733,7 @@ struct Comp {
           _stack.emplace_back(_call{_f.a5});
         } else {
           auto _f = std::move(std::get<_after_avl_rect_in_Node_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<avl> a2 = std::move(_f.a2);
           Nat a3 = std::move(_f.a3);
           expr a4 = std::move(_f.a4);

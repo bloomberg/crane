@@ -117,10 +117,10 @@ struct LoopifyPatterns {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
@@ -131,6 +131,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_after_list_rect_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
         _result = f0(a0, *a1, std::move(_result));
@@ -198,10 +199,10 @@ struct LoopifyPatterns {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -217,6 +218,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_after_max_by_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
@@ -259,10 +261,10 @@ struct LoopifyPatterns {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = list<list<T1>>::cons(list<T1>::cons(x, list<T1>::nil()),
@@ -286,10 +288,10 @@ struct LoopifyPatterns {
             crane::small_vector<_frame> _stack;
             _stack.emplace_back(_call{std::move(lsts)});
             while (!_stack.empty()) {
-              _frame _popped = std::move(_stack.back());
-              _stack.pop_back();
+              _frame &_popped = _stack.back();
               if (std::holds_alternative<_call>(_popped)) {
                 auto _f = std::move(std::get<_call>(_popped));
+                _stack.pop_back();
                 list<list<T1>> lsts = std::move(_f.lsts);
                 if (std::holds_alternative<typename list<list<T1>>::Nil>(
                         lsts.v_mut())) {
@@ -303,6 +305,7 @@ struct LoopifyPatterns {
               } else {
                 auto _f =
                     std::move(std::get<_after_map_cons_h_in_Cons>(_popped));
+                _stack.pop_back();
                 list<T1> a00 = std::move(_f.a00);
                 _result = list<list<T1>>::cons(
                     list<T1>::cons(a0, std::move(a00)), std::move(_result));
@@ -317,6 +320,7 @@ struct LoopifyPatterns {
       } else {
         auto _f =
             std::move(std::get<_after_insert_everywhere_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
         crane::fn<list<list<T1>>(list<list<T1>>)> map_cons_h =
@@ -494,10 +498,10 @@ struct LoopifyPatterns {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
           _result = std::make_pair(
@@ -510,6 +514,7 @@ struct LoopifyPatterns {
         }
       } else {
         auto _f = std::move(std::get<_after_partition_by_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         auto [p0, cs] = std::move(_result);
         auto [as_, bs] = std::move(p0);

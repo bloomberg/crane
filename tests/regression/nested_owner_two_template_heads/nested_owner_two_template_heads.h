@@ -200,10 +200,10 @@ template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{_self});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const typename Bag::template bag<A> *_self = _f._self;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename Bag::bag<A>::Empty>(_sv.v())) {
@@ -219,6 +219,7 @@ template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
       }
     } else {
       auto _f = std::move(std::get<_after_countIf_in_true>(_popped));
+      _stack.pop_back();
       _result = Tally::bump(std::move(_result));
     }
   }

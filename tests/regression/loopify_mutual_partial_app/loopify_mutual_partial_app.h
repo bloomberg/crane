@@ -525,10 +525,10 @@ struct LoopifyMutualPartialApp {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&e0});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const e<T1> &e0 = *_f.e0;
         if (std::holds_alternative<typename e<T1>::Leaf>(e0.v())) {
           const auto &[n0] = std::get<typename e<T1>::Leaf>(e0.v());
@@ -546,6 +546,7 @@ struct LoopifyMutualPartialApp {
         }
       } else if (std::holds_alternative<_after_e_rect_in_Add>(_popped)) {
         auto _f = std::move(std::get<_after_e_rect_in_Add>(_popped));
+        _stack.pop_back();
         std::shared_ptr<e<T1>> a0 = std::move(_f.a0);
         const e<T1> &b0 = *_f.b0;
         _stack.emplace_back(
@@ -553,6 +554,7 @@ struct LoopifyMutualPartialApp {
         _stack.emplace_back(_call{&b0});
       } else {
         auto _f = std::move(std::get<_after_e_rect_in_Add_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<e<T1>> a0 = std::move(_f.a0);
         const e<T1> &b0 = *_f.b0;
         _result = f1(*a0, std::move(_f._tmp2), b0, std::move(_result));
@@ -592,10 +594,10 @@ struct LoopifyMutualPartialApp {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const md<T1> &m = *_f.m;
         if (std::holds_alternative<typename md<T1>::MNull>(m.v())) {
           _result = f;
@@ -612,6 +614,7 @@ struct LoopifyMutualPartialApp {
         }
       } else if (std::holds_alternative<_after_md_rect_in_MPair>(_popped)) {
         auto _f = std::move(std::get<_after_md_rect_in_MPair>(_popped));
+        _stack.pop_back();
         std::shared_ptr<md<T1>> a0 = std::move(_f.a0);
         const md<T1> &b0 = *_f.b0;
         _stack.emplace_back(
@@ -619,6 +622,7 @@ struct LoopifyMutualPartialApp {
         _stack.emplace_back(_call{&b0});
       } else {
         auto _f = std::move(std::get<_after_md_rect_in_MPair_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<md<T1>> a0 = std::move(_f.a0);
         const md<T1> &b0 = *_f.b0;
         _result = f2(*a0, std::move(_f._tmp2), b0, std::move(_result));
@@ -661,10 +665,10 @@ struct LoopifyMutualPartialApp {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&x});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const e<T1> &x = *_f.x;
         if (std::holds_alternative<typename e<T1>::Leaf>(x.v())) {
           const auto &[n0] = std::get<typename e<T1>::Leaf>(x.v());
@@ -704,14 +708,17 @@ struct LoopifyMutualPartialApp {
         }
       } else if (std::holds_alternative<_after_ft_e_in_Add>(_popped)) {
         auto _f = std::move(std::get<_after_ft_e_in_Add>(_popped));
+        _stack.pop_back();
         const e<T1> &b0 = *_f.b0;
         _stack.emplace_back(_after_ft_e_in_Add_2{std::move(_result)});
         _stack.emplace_back(_call{&b0});
       } else if (std::holds_alternative<_after_ft_e_in_Add_2>(_popped)) {
         auto _f = std::move(std::get<_after_ft_e_in_Add_2>(_popped));
+        _stack.pop_back();
         _result = e<T2>::add(std::move(_f._tmp2), std::move(_result));
       } else {
         auto _f = std::move(std::get<_after_ft_e_in_MConst>(_popped));
+        _stack.pop_back();
         auto u0 = std::move(_f.u0);
         _result = e<T2>::meta(md<T2>::mconst(f(u0), std::move(_result)));
       }
@@ -748,10 +755,10 @@ struct LoopifyMutualPartialApp {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const md<T1> &m = *_f.m;
         if (std::holds_alternative<typename md<T1>::MNull>(m.v())) {
           _result = md<T2>::mnull();
@@ -788,14 +795,17 @@ struct LoopifyMutualPartialApp {
         }
       } else if (std::holds_alternative<_after_ft_md_in_MPair>(_popped)) {
         auto _f = std::move(std::get<_after_ft_md_in_MPair>(_popped));
+        _stack.pop_back();
         const md<T1> &b0 = *_f.b0;
         _stack.emplace_back(_after_ft_md_in_MPair_2{std::move(_result)});
         _stack.emplace_back(_call{&b0});
       } else if (std::holds_alternative<_after_ft_md_in_MPair_2>(_popped)) {
         auto _f = std::move(std::get<_after_ft_md_in_MPair_2>(_popped));
+        _stack.pop_back();
         _result = md<T2>::mpair(std::move(_f._tmp9), std::move(_result));
       } else {
         auto _f = std::move(std::get<_after_ft_md_in_Meta>(_popped));
+        _stack.pop_back();
         auto u0 = std::move(_f.u0);
         _result = md<T2>::mconst(f(u0), e<T2>::meta(std::move(_result)));
       }

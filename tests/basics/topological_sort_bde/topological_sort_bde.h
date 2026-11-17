@@ -229,10 +229,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = bsl::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (bsl::holds_alternative<_call>(_popped)) {
         auto _f = std::move(bsl::get<_call>(_popped));
+        _stack.pop_back();
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -245,6 +245,7 @@ public:
         }
       } else {
         auto _f = std::move(bsl::get<_after_fold_right_in_Cons>(_popped));
+        _stack.pop_back();
         auto d_a0 = bsl::move(_f.d_a0);
         _result = f(d_a0, bsl::move(_result));
       }
@@ -270,10 +271,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = bsl::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (bsl::holds_alternative<_call>(_popped)) {
         auto _f = std::move(bsl::get<_call>(_popped));
+        _stack.pop_back();
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
@@ -286,6 +287,7 @@ public:
         }
       } else {
         auto _f = std::move(bsl::get<_after_concat_in_Cons>(_popped));
+        _stack.pop_back();
         List<T1> d_a0 = bsl::move(_f.d_a0);
         _result = d_a0.app(bsl::move(_result));
       }
@@ -338,10 +340,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = bsl::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (bsl::holds_alternative<_call>(_popped)) {
         auto _f = std::move(bsl::get<_call>(_popped));
+        _stack.pop_back();
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -353,6 +355,7 @@ public:
         }
       } else {
         auto _f = std::move(bsl::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (bsl::move(_result) + 1);
       }
     }

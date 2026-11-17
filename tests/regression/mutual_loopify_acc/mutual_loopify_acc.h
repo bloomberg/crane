@@ -210,10 +210,10 @@ struct MutualLoopifyAcc {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&f1});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const forest &f1 = *_f.f1;
         if (std::holds_alternative<typename forest::Fnil>(f1.v())) {
           _result = f;
@@ -224,6 +224,7 @@ struct MutualLoopifyAcc {
         }
       } else {
         auto _f = std::move(std::get<_after_forest_rect_in_Fcons>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree> a0 = std::move(_f.a0);
         std::shared_ptr<forest> a1 = std::move(_f.a1);
         _result = f0(*a0, *a1, std::move(_result));

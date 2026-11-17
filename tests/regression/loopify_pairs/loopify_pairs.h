@@ -115,10 +115,10 @@ struct LoopifyPairs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
@@ -129,6 +129,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_after_list_rect_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
         _result = f0(a0, *a1, std::move(_result));
@@ -160,10 +161,10 @@ struct LoopifyPairs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
@@ -174,6 +175,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_after_partition_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         auto [yes, no] = std::move(_result);
         if (p(a0)) {
@@ -320,10 +322,10 @@ struct LoopifyPairs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l, n});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<T1> &l = *_f.l;
         uint64_t n = _f.n;
         if (n <= 0) {
@@ -340,6 +342,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_after_split_at_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         auto [taken, rest] = std::move(_result);
         _result = std::make_pair(
@@ -368,10 +371,10 @@ struct LoopifyPairs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
@@ -390,6 +393,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_after_swizzle_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
         auto [evens, odds] = std::move(_result);
@@ -419,10 +423,10 @@ struct LoopifyPairs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = std::make_pair(list<T1>::nil(), list<T1>::nil());
@@ -437,6 +441,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_after_span_in_true>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         auto [ys, zs] = std::move(_result);
         _result = std::make_pair(list<T1>::cons(std::move(a0), std::move(ys)),
@@ -477,10 +482,10 @@ struct LoopifyPairs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l, acc});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const list<uint64_t> &l = *_f.l;
         uint64_t acc = _f.acc;
         if (std::holds_alternative<typename list<uint64_t>::Nil>(l.v())) {
@@ -493,6 +498,7 @@ struct LoopifyPairs {
         }
       } else {
         auto _f = std::move(std::get<_after_mapAccumL_in_pair>(_popped));
+        _stack.pop_back();
         uint64_t y = _f.y;
         auto [final_acc, ys] = std::move(_result);
         _result =

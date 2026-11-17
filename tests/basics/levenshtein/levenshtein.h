@@ -506,10 +506,10 @@ struct Levenshtein {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &_x, &_x0, &_x1});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const chain *_self = _f._self;
           const String &_x = *_f._x;
           const String &_x0 = *_f._x0;
@@ -531,6 +531,7 @@ struct Levenshtein {
           }
         } else if (std::holds_alternative<_after_chain_rect_in_Change>(_popped)) {
           auto _f = std::move(std::get<_after_chain_rect_in_Change>(_popped));
+          _stack.pop_back();
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
           String u0 = std::move(_f.u0);
@@ -540,6 +541,7 @@ struct Levenshtein {
           _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
           auto _f = std::move(std::get<_after_chain_rect_in_Skip>(_popped));
+          _stack.pop_back();
           Ascii a0 = std::move(_f.a0);
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);

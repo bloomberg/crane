@@ -15,10 +15,10 @@ LoopifyReuseCursorReadsField::len(const LoopifyReuseCursorReadsField::lst &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyReuseCursorReadsField::lst &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyReuseCursorReadsField::lst::Nil>(l.v())) {
@@ -31,6 +31,7 @@ LoopifyReuseCursorReadsField::len(const LoopifyReuseCursorReadsField::lst &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_len_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -54,10 +55,10 @@ LoopifyReuseCursorReadsField::sum(const LoopifyReuseCursorReadsField::lst &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyReuseCursorReadsField::lst &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyReuseCursorReadsField::lst::Nil>(l.v())) {
@@ -70,6 +71,7 @@ LoopifyReuseCursorReadsField::sum(const LoopifyReuseCursorReadsField::lst &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }

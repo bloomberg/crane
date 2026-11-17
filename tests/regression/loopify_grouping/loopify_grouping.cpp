@@ -38,10 +38,10 @@ List<List<uint64_t>> LoopifyGrouping::group_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = _f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -67,6 +67,7 @@ List<List<uint64_t>> LoopifyGrouping::group_fuel(uint64_t fuel,
       }
     } else {
       auto _f = std::move(std::get<_after_group_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       List<List<uint64_t>> rec_result = std::move(_result);
@@ -115,10 +116,10 @@ List<uint64_t> LoopifyGrouping::nub(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
@@ -129,6 +130,7 @@ List<uint64_t> LoopifyGrouping::nub(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_nub_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> rest = std::move(_result);
       if (elem(a0, rest)) {
@@ -193,10 +195,10 @@ LoopifyGrouping::partition3(uint64_t pivot, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(
@@ -209,6 +211,7 @@ LoopifyGrouping::partition3(uint64_t pivot, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_partition3_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [p, greater] = std::move(_result);
       auto [less, equal] = std::move(p);
@@ -246,10 +249,10 @@ uint64_t LoopifyGrouping::count_elem(uint64_t x, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -264,6 +267,7 @@ uint64_t LoopifyGrouping::count_elem(uint64_t x, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_count_elem_in_true>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }

@@ -281,10 +281,10 @@ struct MemSafetyProbe2 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -297,6 +297,7 @@ struct MemSafetyProbe2 {
           }
         } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
@@ -305,6 +306,7 @@ struct MemSafetyProbe2 {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
@@ -436,10 +438,10 @@ struct MemSafetyProbe2 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -451,6 +453,7 @@ struct MemSafetyProbe2 {
           }
         } else {
           auto _f = std::move(std::get<_after_mylength_in_Mycons>(_popped));
+          _stack.pop_back();
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
@@ -480,10 +483,10 @@ struct MemSafetyProbe2 {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -496,6 +499,7 @@ struct MemSafetyProbe2 {
           }
         } else {
           auto _f = std::move(std::get<_after_mylist_rect_in_Mycons>(_popped));
+          _stack.pop_back();
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));

@@ -254,10 +254,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -270,6 +270,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_tree_map_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree_map_in_Node>(_popped));
+          _stack.pop_back();
           auto a1 = std::move(_f.a1);
           const tree<A> &a2 = *_f.a2;
           _stack.emplace_back(
@@ -277,6 +278,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_map_in_Node_2>(_popped));
+          _stack.pop_back();
           auto a1 = std::move(_f.a1);
           _result =
               tree<T1>::node(std::move(_f._tmp2), f(a1), std::move(_result));
@@ -311,10 +313,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &t2});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           const tree<A> &t2 = *_f.t2;
           auto &&_sv = *_self;
@@ -338,12 +340,14 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_mirror_equal_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_mirror_equal_in_Node>(_popped));
+          _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
           const tree<A> &a00 = *_f.a00;
           _stack.emplace_back(_after_mirror_equal_in_Node_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a2, &a00});
         } else {
           auto _f = std::move(std::get<_after_mirror_equal_in_Node_2>(_popped));
+          _stack.pop_back();
           _result = ((_f._tmp2 && std::move(_result)) && true);
         }
       }
@@ -376,10 +380,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -392,6 +396,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_tree_to_list_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree_to_list_in_Node>(_popped));
+          _stack.pop_back();
           auto a1 = std::move(_f.a1);
           const tree<A> &a2 = *_f.a2;
           _stack.emplace_back(
@@ -399,6 +404,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_to_list_in_Node_2>(_popped));
+          _stack.pop_back();
           auto a1 = std::move(_f.a1);
           _result =
               _f._tmp2.app(List<A>::cons(std::move(a1), std::move(_result)));
@@ -431,10 +437,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -446,11 +452,13 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_count_leaves_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_count_leaves_in_Node>(_popped));
+          _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
           _stack.emplace_back(_after_count_leaves_in_Node_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_count_leaves_in_Node_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         }
       }
@@ -519,10 +527,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &t2});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           const tree<T1> &t2 = *_f.t2;
           auto &&_sv = *_self;
@@ -546,6 +554,7 @@ struct LoopifyTrees {
           }
         } else {
           auto _f = std::move(std::get<_after_same_shape_in_Node>(_popped));
+          _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
           const tree<T1> &a20 = *_f.a20;
           if (std::move(_result)) {
@@ -583,10 +592,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -599,6 +608,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_mirror_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_mirror_in_Node>(_popped));
+          _stack.pop_back();
           const tree<A> &a0 = *_f.a0;
           auto a1 = std::move(_f.a1);
           _stack.emplace_back(
@@ -606,6 +616,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a0});
         } else {
           auto _f = std::move(std::get<_after_mirror_in_Node_2>(_popped));
+          _stack.pop_back();
           auto a1 = std::move(_f.a1);
           _result = tree<A>::node(std::move(_f._tmp2), std::move(a1),
                                   std::move(_result));
@@ -637,10 +648,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -652,11 +663,13 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_tree_size_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree_size_in_Node>(_popped));
+          _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
           _stack.emplace_back(_after_tree_size_in_Node_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_size_in_Node_2>(_popped));
+          _stack.pop_back();
           _result = ((_f._tmp2 + std::move(_result)) + 1);
         }
       }
@@ -686,10 +699,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -701,12 +714,14 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_tree_height_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree_height_in_Node>(_popped));
+          _stack.pop_back();
           const tree<A> &a2 = *_f.a2;
           uint64_t lh = std::move(_result);
           _stack.emplace_back(_after_tree_height_in_Node_2{lh});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_height_in_Node_2>(_popped));
+          _stack.pop_back();
           uint64_t lh = _f.lh;
           uint64_t rh = std::move(_result);
           _result = ((lh <= rh ? rh : lh) + 1);
@@ -747,10 +762,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const tree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree<A>::Leaf>(_sv.v())) {
@@ -764,6 +779,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree<A>> a0 = std::move(_f.a0);
           auto a1 = std::move(_f.a1);
           const tree<A> &a2 = *_f.a2;
@@ -772,6 +788,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<tree<A>> a0 = std::move(_f.a0);
           auto a1 = std::move(_f.a1);
           const tree<A> &a2 = *_f.a2;
@@ -905,10 +922,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
@@ -923,6 +940,7 @@ struct LoopifyTrees {
         } else if (
                 std::holds_alternative<_after_ternary_depth_in_TNode>(_popped)) {
           auto _f = std::move(std::get<_after_ternary_depth_in_TNode>(_popped));
+          _stack.pop_back();
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
           uint64_t d1 = std::move(_result);
@@ -932,6 +950,7 @@ struct LoopifyTrees {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_ternary_depth_in_TNode_2>(_popped));
+          _stack.pop_back();
           const ternary &a2 = *_f.a2;
           uint64_t d1 = _f.d1;
           uint64_t d2 = std::move(_result);
@@ -940,6 +959,7 @@ struct LoopifyTrees {
         } else {
           auto _f =
               std::move(std::get<_after_ternary_depth_in_TNode_3>(_popped));
+          _stack.pop_back();
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
           uint64_t d3 = std::move(_result);
@@ -993,10 +1013,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
@@ -1010,6 +1030,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_ternary_sum_in_TNode>(_popped)) {
           auto _f = std::move(std::get<_after_ternary_sum_in_TNode>(_popped));
+          _stack.pop_back();
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
@@ -1019,6 +1040,7 @@ struct LoopifyTrees {
         } else if (
                 std::holds_alternative<_after_ternary_sum_in_TNode_2>(_popped)) {
           auto _f = std::move(std::get<_after_ternary_sum_in_TNode_2>(_popped));
+          _stack.pop_back();
           const ternary &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
           _stack.emplace_back(
@@ -1026,6 +1048,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_ternary_sum_in_TNode_3>(_popped));
+          _stack.pop_back();
           uint64_t a3 = _f.a3;
           _result = (a3 + (_f._tmp3 + (_f._tmp2 + std::move(_result))));
         }
@@ -1077,10 +1100,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const ternary *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ternary::TLeaf>(_sv.v())) {
@@ -1096,6 +1119,7 @@ struct LoopifyTrees {
         } else if (
                 std::holds_alternative<_after_ternary_rect_in_TNode>(_popped)) {
           auto _f = std::move(std::get<_after_ternary_rect_in_TNode>(_popped));
+          _stack.pop_back();
           std::shared_ptr<ternary> a0 = std::move(_f.a0);
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
@@ -1107,6 +1131,7 @@ struct LoopifyTrees {
                 std::holds_alternative<_after_ternary_rect_in_TNode_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_ternary_rect_in_TNode_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<ternary> a0 = std::move(_f.a0);
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
@@ -1118,6 +1143,7 @@ struct LoopifyTrees {
         } else {
           auto _f =
               std::move(std::get<_after_ternary_rect_in_TNode_3>(_popped));
+          _stack.pop_back();
           std::shared_ptr<ternary> a0 = std::move(_f.a0);
           const ternary &a1 = *_f.a1;
           const ternary &a2 = *_f.a2;
@@ -1269,10 +1295,10 @@ struct LoopifyTrees {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&cs, fuel});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<rose> &cs = *_f.cs;
         uint64_t fuel = _f.fuel;
         if (fuel <= 0) {
@@ -1293,6 +1319,7 @@ struct LoopifyTrees {
                      _popped)) {
         auto _f =
             std::move(std::get<_after_map_rose_list_fuel_in_RNode>(_popped));
+        _stack.pop_back();
         uint64_t g = _f.g;
         const List<rose> &a1 = *_f.a1;
         uint64_t a00 = _f.a00;
@@ -1302,6 +1329,7 @@ struct LoopifyTrees {
       } else {
         auto _f =
             std::move(std::get<_after_map_rose_list_fuel_in_RNode_2>(_popped));
+        _stack.pop_back();
         uint64_t a00 = _f.a00;
         _result = List<rose>::cons(rose::rnode(f(a00), std::move(_f._tmp2)),
                                    std::move(_result));
@@ -1367,10 +1395,10 @@ struct LoopifyTrees {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<uint64_t> &t = *_f.t;
         if (std::holds_alternative<typename tree<uint64_t>::Leaf>(t.v())) {
           _result = false;
@@ -1386,11 +1414,13 @@ struct LoopifyTrees {
         }
       } else if (std::holds_alternative<_after_or_search_in_false>(_popped)) {
         auto _f = std::move(std::get<_after_or_search_in_false>(_popped));
+        _stack.pop_back();
         const tree<uint64_t> &a2 = *_f.a2;
         _stack.emplace_back(_after_or_search_in_false_2{std::move(_result)});
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_or_search_in_false_2>(_popped));
+        _stack.pop_back();
         _result = (_f._tmp2 || std::move(_result));
       }
     }
@@ -1527,10 +1557,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -1544,6 +1574,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_quad_depth_in_Quad>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad>(_popped));
+          _stack.pop_back();
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
@@ -1552,6 +1583,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_2>(_popped));
+          _stack.pop_back();
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
@@ -1559,12 +1591,14 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_3>(_popped));
+          _stack.pop_back();
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(_after_quad_depth_in_Quad_4{_f._tmp4, _f._tmp3,
                                                           std::move(_result)});
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_4>(_popped));
+          _stack.pop_back();
           _result =
               (max4_impl(_f._tmp4, _f._tmp3, _f._tmp2, std::move(_result)) + 1);
         }
@@ -1613,10 +1647,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -1631,6 +1665,7 @@ struct LoopifyTrees {
           }
         } else if (std::holds_alternative<_after_quad_sum_in_Quad>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad>(_popped));
+          _stack.pop_back();
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
@@ -1639,6 +1674,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_2>(_popped));
+          _stack.pop_back();
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
@@ -1646,6 +1682,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_3>(_popped));
+          _stack.pop_back();
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
               _after_quad_sum_in_Quad_4{_f._tmp4, _f._tmp3,
@@ -1653,6 +1690,7 @@ struct LoopifyTrees {
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_4>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + std::move(_result))));
         }
       }
@@ -1716,10 +1754,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -1735,6 +1773,7 @@ struct LoopifyTrees {
         } else if (
                 std::holds_alternative<_after_quadtree_rect_in_Quad>(_popped)) {
           auto _f = std::move(std::get<_after_quadtree_rect_in_Quad>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -1746,6 +1785,7 @@ struct LoopifyTrees {
                 std::holds_alternative<_after_quadtree_rect_in_Quad_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_quadtree_rect_in_Quad_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -1758,6 +1798,7 @@ struct LoopifyTrees {
                 std::holds_alternative<_after_quadtree_rect_in_Quad_3>(_popped)) {
           auto _f =
               std::move(std::get<_after_quadtree_rect_in_Quad_3>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -1769,6 +1810,7 @@ struct LoopifyTrees {
         } else {
           auto _f =
               std::move(std::get<_after_quadtree_rect_in_Quad_4>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -1888,10 +1930,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, n});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const simple_tree *_self = _f._self;
           uint64_t n = _f.n;
           auto &&_sv = *_self;
@@ -1919,6 +1961,7 @@ struct LoopifyTrees {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_count_paths_simple_in_false>(_popped));
+          _stack.pop_back();
           uint64_t n = _f.n;
           const simple_tree &a1 = *_f.a1;
           _stack.emplace_back(
@@ -1928,6 +1971,7 @@ struct LoopifyTrees {
         } else {
           auto _f = std::move(
               std::get<_after_count_paths_simple_in_false_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         }
       }
@@ -1958,10 +2002,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const simple_tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
@@ -1977,6 +2021,7 @@ struct LoopifyTrees {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_simple_tree_sum_in_SNode>(_popped));
+          _stack.pop_back();
           const simple_tree &a1 = *_f.a1;
           _stack.emplace_back(
               _after_simple_tree_sum_in_SNode_2{std::move(_result)});
@@ -1984,6 +2029,7 @@ struct LoopifyTrees {
         } else {
           auto _f =
               std::move(std::get<_after_simple_tree_sum_in_SNode_2>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp2 + std::move(_result));
         }
       }
@@ -2023,10 +2069,10 @@ struct LoopifyTrees {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const simple_tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename simple_tree::SLeaf>(_sv.v())) {
@@ -2043,6 +2089,7 @@ struct LoopifyTrees {
                        _popped)) {
           auto _f =
               std::move(std::get<_after_simple_tree_rect_in_SNode>(_popped));
+          _stack.pop_back();
           std::shared_ptr<simple_tree> a0 = std::move(_f.a0);
           const simple_tree &a1 = *_f.a1;
           _stack.emplace_back(_after_simple_tree_rect_in_SNode_2{
@@ -2051,6 +2098,7 @@ struct LoopifyTrees {
         } else {
           auto _f =
               std::move(std::get<_after_simple_tree_rect_in_SNode_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<simple_tree> a0 = std::move(_f.a0);
           const simple_tree &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));

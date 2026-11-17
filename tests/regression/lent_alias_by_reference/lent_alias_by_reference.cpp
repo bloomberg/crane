@@ -32,10 +32,10 @@ uint64_t LentAliasByReference::bag_sum(const List<uint64_t> &b) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&b});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &b = *_f.b;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(b.v())) {
         _result = UINT64_C(0);
@@ -46,6 +46,7 @@ uint64_t LentAliasByReference::bag_sum(const List<uint64_t> &b) {
       }
     } else {
       auto _f = std::move(std::get<_after_bag_sum_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -73,10 +74,10 @@ uint64_t LentAliasByReference::dot(const List<uint64_t> &a,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&b, &a});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &b = *_f.b;
       const List<uint64_t> &a = *_f.a;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(a.v())) {
@@ -94,6 +95,7 @@ uint64_t LentAliasByReference::dot(const List<uint64_t> &a,
       }
     } else {
       auto _f = std::move(std::get<_after_dot_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       _result = ((a0 * a00) + std::move(_result));

@@ -25,10 +25,10 @@ MutualTmcLoopify::mylist MutualTmcLoopify::evens(const Nat &n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const Nat &n = *_f.n;
       if (std::holds_alternative<typename Nat::O>(n.v())) {
         _result = mylist::mnil();
@@ -39,6 +39,7 @@ MutualTmcLoopify::mylist MutualTmcLoopify::evens(const Nat &n) {
       }
     } else if (std::holds_alternative<_call_odds_entry>(_popped)) {
       auto _f = std::move(std::get<_call_odds_entry>(_popped));
+      _stack.pop_back();
       const Nat &n0 = *_f.n0;
       if (std::holds_alternative<typename Nat::O>(n0.v())) {
         _result = mylist::mnil();
@@ -49,10 +50,12 @@ MutualTmcLoopify::mylist MutualTmcLoopify::evens(const Nat &n) {
       }
     } else if (std::holds_alternative<_after_evens_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_evens_in_S>(_popped));
+      _stack.pop_back();
       Nat n0 = std::move(_f.n0);
       _result = mylist::mcons(std::move(n0), std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_odds_entry_in_S>(_popped));
+      _stack.pop_back();
       Nat n = std::move(_f.n);
       _result = mylist::mcons(std::move(n), std::move(_result));
     }

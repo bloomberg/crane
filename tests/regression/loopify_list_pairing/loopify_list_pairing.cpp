@@ -18,10 +18,10 @@ LoopifyListPairing::unzip(const List<std::pair<uint64_t, uint64_t>> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<std::pair<uint64_t, uint64_t>> &l = *_f.l;
       if (std::holds_alternative<
               typename List<std::pair<uint64_t, uint64_t>>::Nil>(l.v())) {
@@ -35,6 +35,7 @@ LoopifyListPairing::unzip(const List<std::pair<uint64_t, uint64_t>> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_unzip_in_pair>(_popped));
+      _stack.pop_back();
       uint64_t a = _f.a;
       uint64_t b = _f.b;
       auto [xs, ys] = std::move(_result);
@@ -62,10 +63,10 @@ LoopifyListPairing::swizzle(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
@@ -76,6 +77,7 @@ LoopifyListPairing::swizzle(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_swizzle_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [odds, evens] = std::move(_result);
       _result = std::make_pair(List<uint64_t>::cons(a0, std::move(evens)),
@@ -102,10 +104,10 @@ LoopifyListPairing::partition(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
@@ -116,6 +118,7 @@ LoopifyListPairing::partition(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_partition_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [yes, no] = std::move(_result);
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {

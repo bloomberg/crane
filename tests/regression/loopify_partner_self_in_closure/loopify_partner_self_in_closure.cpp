@@ -20,10 +20,10 @@ LoopifyPartnerSelfInClosure::sum_e(const LoopifyPartnerSelfInClosure::e &x) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPartnerSelfInClosure::e &x = *_f.x;
       if (std::holds_alternative<typename LoopifyPartnerSelfInClosure::e::Leaf>(
               x.v())) {
@@ -61,6 +61,7 @@ LoopifyPartnerSelfInClosure::sum_e(const LoopifyPartnerSelfInClosure::e &x) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_e_in_MConst>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -82,10 +83,10 @@ LoopifyPartnerSelfInClosure::sum_md(const LoopifyPartnerSelfInClosure::md &m) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&m});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPartnerSelfInClosure::md &m = *_f.m;
       if (std::holds_alternative<typename LoopifyPartnerSelfInClosure::md::MNil>(
               m.v())) {
@@ -119,6 +120,7 @@ LoopifyPartnerSelfInClosure::sum_md(const LoopifyPartnerSelfInClosure::md &m) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_md_in_Meta>(_popped));
+      _stack.pop_back();
       _result = (UINT64_C(1) + std::move(_result));
     }
   }

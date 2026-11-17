@@ -387,10 +387,10 @@ struct BoxedFields {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const scene *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
@@ -402,6 +402,7 @@ struct BoxedFields {
           }
         } else {
           auto _f = std::move(std::get<_after_total_in_Layer>(_popped));
+          _stack.pop_back();
           std::shared_ptr<shape> a0 = std::move(_f.a0);
           _result = (a0->weight() + std::move(_result));
         }
@@ -432,10 +433,10 @@ struct BoxedFields {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const scene *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
@@ -447,6 +448,7 @@ struct BoxedFields {
           }
         } else {
           auto _f = std::move(std::get<_after_scene_rect_in_Layer>(_popped));
+          _stack.pop_back();
           std::shared_ptr<shape> a0 = std::move(_f.a0);
           std::shared_ptr<scene> a1 = std::move(_f.a1);
           _result = f0(*a0, *a1, std::move(_result));

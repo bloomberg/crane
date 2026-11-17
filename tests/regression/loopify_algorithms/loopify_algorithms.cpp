@@ -15,10 +15,10 @@ uint64_t LoopifyAlgorithms::len_impl(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -29,6 +29,7 @@ uint64_t LoopifyAlgorithms::len_impl(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -80,10 +81,10 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
               crane::small_vector<_frame> _stack;
               _stack.emplace_back(_call{&rest});
               while (!_stack.empty()) {
-                _frame _popped = std::move(_stack.back());
-                _stack.pop_back();
+                _frame &_popped = _stack.back();
                 if (std::holds_alternative<_call>(_popped)) {
                   auto _f = std::move(std::get<_call>(_popped));
+                  _stack.pop_back();
                   const List<uint64_t> &rest = *_f.rest;
                   if (std::holds_alternative<typename List<uint64_t>::Nil>(
                           rest.v())) {
@@ -101,6 +102,7 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
                 } else {
                   auto _f = std::move(
                       std::get<_after_filter_multiples_in_false>(_popped));
+                  _stack.pop_back();
                   uint64_t a00 = _f.a00;
                   _result = List<uint64_t>::cons(a00, std::move(_result));
                 }
@@ -145,10 +147,10 @@ LoopifyAlgorithms::run_length_encode(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<std::pair<uint64_t, uint64_t>>::nil();
@@ -159,6 +161,7 @@ LoopifyAlgorithms::run_length_encode(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_run_length_encode_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<std::pair<uint64_t, uint64_t>> _tmp1 = std::move(_result);
       if (std::holds_alternative<
@@ -339,10 +342,10 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
               crane::small_vector<_frame> _stack;
               _stack.emplace_back(_call{&rest});
               while (!_stack.empty()) {
-                _frame _popped = std::move(_stack.back());
-                _stack.pop_back();
+                _frame &_popped = _stack.back();
                 if (std::holds_alternative<_call>(_popped)) {
                   auto _f = std::move(std::get<_call>(_popped));
+                  _stack.pop_back();
                   const List<uint64_t> &rest = *_f.rest;
                   if (std::holds_alternative<typename List<uint64_t>::Nil>(
                           rest.v())) {
@@ -360,6 +363,7 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
                 } else {
                   auto _f =
                       std::move(std::get<_after_filter_out_in_false>(_popped));
+                  _stack.pop_back();
                   uint64_t a00 = _f.a00;
                   _result = List<uint64_t>::cons(a00, std::move(_result));
                 }
@@ -606,10 +610,10 @@ uint64_t LoopifyAlgorithms::max_prefix_sum(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -620,6 +624,7 @@ uint64_t LoopifyAlgorithms::max_prefix_sum(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_max_prefix_sum_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t rest = std::move(_result);
       uint64_t sum = (a0 + rest);
@@ -656,10 +661,10 @@ uint64_t LoopifyAlgorithms::weighted_sum(uint64_t i, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, i});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       uint64_t i = _f.i;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
@@ -671,6 +676,7 @@ uint64_t LoopifyAlgorithms::weighted_sum(uint64_t i, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_weighted_sum_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t i = _f.i;
       uint64_t a0 = _f.a0;
       _result = ((i * a0) + std::move(_result));
@@ -696,10 +702,10 @@ uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -716,6 +722,7 @@ uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t contribution = _f.contribution;
       _result = (contribution + std::move(_result));
     }
@@ -750,10 +757,10 @@ List<uint64_t> LoopifyAlgorithms::suffix_sums(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
@@ -764,6 +771,7 @@ List<uint64_t> LoopifyAlgorithms::suffix_sums(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_suffix_sums_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons((a0 + head_nat(UINT64_C(0), rest)), rest);

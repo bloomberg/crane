@@ -18,10 +18,10 @@ uint64_t LoopifyNumbers::factorial(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(1);
@@ -32,6 +32,7 @@ uint64_t LoopifyNumbers::factorial(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_factorial_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n * std::move(_result));
     }
@@ -59,10 +60,10 @@ uint64_t LoopifyNumbers::fib(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -78,11 +79,13 @@ uint64_t LoopifyNumbers::fib(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_fib_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_fib_in_S>(_popped));
+      _stack.pop_back();
       uint64_t m = _f.m;
       _stack.emplace_back(_after_fib_in_S_2{std::move(_result)});
       _stack.emplace_back(_call{m});
     } else {
       auto _f = std::move(std::get<_after_fib_in_S_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -120,10 +123,10 @@ uint64_t LoopifyNumbers::tribonacci_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -150,6 +153,7 @@ uint64_t LoopifyNumbers::tribonacci_fuel(uint64_t fuel, uint64_t n) {
       }
     } else if (std::holds_alternative<_after_tribonacci_fuel_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_tribonacci_fuel_in_S>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t m = _f.m;
       _stack.emplace_back(
@@ -157,6 +161,7 @@ uint64_t LoopifyNumbers::tribonacci_fuel(uint64_t fuel, uint64_t n) {
       _stack.emplace_back(_call{(m + 1), f});
     } else if (std::holds_alternative<_after_tribonacci_fuel_in_S_2>(_popped)) {
       auto _f = std::move(std::get<_after_tribonacci_fuel_in_S_2>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t m = _f.m;
       _stack.emplace_back(
@@ -164,6 +169,7 @@ uint64_t LoopifyNumbers::tribonacci_fuel(uint64_t fuel, uint64_t n) {
       _stack.emplace_back(_call{m, f});
     } else {
       auto _f = std::move(std::get<_after_tribonacci_fuel_in_S_3>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp3 + (_f._tmp2 + std::move(_result)));
     }
   }
@@ -226,10 +232,10 @@ uint64_t LoopifyNumbers::binomial(uint64_t n, uint64_t k) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{k, n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t k = _f.k;
       uint64_t n = _f.n;
       if (n <= 0) {
@@ -251,12 +257,14 @@ uint64_t LoopifyNumbers::binomial(uint64_t n, uint64_t k) {
       }
     } else if (std::holds_alternative<_after_binomial_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_binomial_in_S>(_popped));
+      _stack.pop_back();
       uint64_t k = _f.k;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(_after_binomial_in_S_2{std::move(_result)});
       _stack.emplace_back(_call{k, n_});
     } else {
       auto _f = std::move(std::get<_after_binomial_in_S_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -285,10 +293,10 @@ uint64_t LoopifyNumbers::pascal(uint64_t row, uint64_t col) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{col, row});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t col = _f.col;
       uint64_t row = _f.row;
       if (col <= 0) {
@@ -305,12 +313,14 @@ uint64_t LoopifyNumbers::pascal(uint64_t row, uint64_t col) {
       }
     } else if (std::holds_alternative<_after_pascal_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_pascal_in_S>(_popped));
+      _stack.pop_back();
       uint64_t c = _f.c;
       uint64_t r = _f.r;
       _stack.emplace_back(_after_pascal_in_S_2{std::move(_result)});
       _stack.emplace_back(_call{(c + 1), r});
     } else {
       auto _f = std::move(std::get<_after_pascal_in_S_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -336,10 +346,10 @@ uint64_t LoopifyNumbers::ackermann_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, m, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t m = _f.m;
       uint64_t fuel = _f.fuel;
@@ -362,6 +372,7 @@ uint64_t LoopifyNumbers::ackermann_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_ackermann_fuel_in_S>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t m_ = _f.m_;
       _stack.emplace_back(_call{std::move(_result), m_, f});
@@ -392,10 +403,10 @@ uint64_t LoopifyNumbers::collatz_length_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -418,10 +429,12 @@ uint64_t LoopifyNumbers::collatz_length_fuel(uint64_t fuel, uint64_t n) {
                    _popped)) {
       auto _f =
           std::move(std::get<_after_collatz_length_fuel_in_false>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     } else {
       auto _f =
           std::move(std::get<_after_collatz_length_fuel_in_true>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -449,10 +462,10 @@ uint64_t LoopifyNumbers::digitsum_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -469,6 +482,7 @@ uint64_t LoopifyNumbers::digitsum_fuel(uint64_t fuel, uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_digitsum_fuel_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = ((UINT64_C(10) ? n % UINT64_C(10) : n) + std::move(_result));
     }
@@ -497,10 +511,10 @@ uint64_t LoopifyNumbers::dec_to_bin_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -518,6 +532,7 @@ uint64_t LoopifyNumbers::dec_to_bin_fuel(uint64_t fuel, uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_dec_to_bin_fuel_in_S>(_popped));
+      _stack.pop_back();
       uint64_t digit = _f.digit;
       uint64_t rest = std::move(_result);
       _result = (digit + (UINT64_C(10) * rest));
@@ -546,10 +561,10 @@ uint64_t LoopifyNumbers::sum_to(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -560,6 +575,7 @@ uint64_t LoopifyNumbers::sum_to(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_to_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }
@@ -583,10 +599,10 @@ uint64_t LoopifyNumbers::sum_squares(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -597,6 +613,7 @@ uint64_t LoopifyNumbers::sum_squares(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_squares_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = ((n * n) + std::move(_result));
     }
@@ -660,10 +677,10 @@ uint64_t LoopifyNumbers::staircase_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -690,6 +707,7 @@ uint64_t LoopifyNumbers::staircase_fuel(uint64_t fuel, uint64_t n) {
       }
     } else if (std::holds_alternative<_after_staircase_fuel_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_staircase_fuel_in_S>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t m = _f.m;
       _stack.emplace_back(
@@ -697,6 +715,7 @@ uint64_t LoopifyNumbers::staircase_fuel(uint64_t fuel, uint64_t n) {
       _stack.emplace_back(_call{(m + 1), f});
     } else if (std::holds_alternative<_after_staircase_fuel_in_S_2>(_popped)) {
       auto _f = std::move(std::get<_after_staircase_fuel_in_S_2>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t m = _f.m;
       _stack.emplace_back(
@@ -704,6 +723,7 @@ uint64_t LoopifyNumbers::staircase_fuel(uint64_t fuel, uint64_t n) {
       _stack.emplace_back(_call{m, f});
     } else {
       auto _f = std::move(std::get<_after_staircase_fuel_in_S_3>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp3 + (_f._tmp2 + std::move(_result)));
     }
   }
@@ -752,10 +772,10 @@ uint64_t LoopifyNumbers::count_down_by_fuel(uint64_t fuel, uint64_t k,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -777,6 +797,7 @@ uint64_t LoopifyNumbers::count_down_by_fuel(uint64_t fuel, uint64_t k,
     } else {
       auto _f =
           std::move(std::get<_after_count_down_by_fuel_in_false>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -819,10 +840,10 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -849,6 +870,7 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
       }
     } else if (std::holds_alternative<_after_mixed_arith_fuel_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_mixed_arith_fuel_in_S>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t m = _f.m;
       _stack.emplace_back(
@@ -856,6 +878,7 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
       _stack.emplace_back(_call{m, f});
     } else if (std::holds_alternative<_after_mixed_arith_fuel_in_S_2>(_popped)) {
       auto _f = std::move(std::get<_after_mixed_arith_fuel_in_S_2>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t m = _f.m;
       _stack.emplace_back(
@@ -867,6 +890,7 @@ uint64_t LoopifyNumbers::mixed_arith_fuel(uint64_t fuel, uint64_t n) {
                 f});
     } else {
       auto _f = std::move(std::get<_after_mixed_arith_fuel_in_S_3>(_popped));
+      _stack.pop_back();
       _result = ((_f._tmp3 * _f._tmp2) + std::move(_result));
     }
   }
@@ -963,10 +987,10 @@ uint64_t LoopifyNumbers::power(uint64_t b, uint64_t e) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{e});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t e = _f.e;
       if (e <= 0) {
         _result = UINT64_C(1);
@@ -977,6 +1001,7 @@ uint64_t LoopifyNumbers::power(uint64_t b, uint64_t e) {
       }
     } else {
       auto _f = std::move(std::get<_after_power_in_S>(_popped));
+      _stack.pop_back();
       _result = (b * std::move(_result));
     }
   }
@@ -1003,10 +1028,10 @@ uint64_t LoopifyNumbers::power_mod_fuel(uint64_t fuel, uint64_t b, uint64_t e,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{e, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t e = _f.e;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -1027,11 +1052,13 @@ uint64_t LoopifyNumbers::power_mod_fuel(uint64_t fuel, uint64_t b, uint64_t e,
       }
     } else if (std::holds_alternative<_after_power_mod_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_power_mod_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t half = std::move(_result);
       auto &&_once1 = (b * (half * half));
       _result = (m ? _once1 % m : _once1);
     } else {
       auto _f = std::move(std::get<_after_power_mod_fuel_in_true>(_popped));
+      _stack.pop_back();
       uint64_t half = std::move(_result);
       auto &&_once2 = (half * half);
       _result = (m ? _once2 % m : _once2);
@@ -1061,10 +1088,10 @@ uint64_t LoopifyNumbers::sum_divisors_aux(uint64_t n, uint64_t k) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{k});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t k = _f.k;
       if (k <= 0) {
         _result = UINT64_C(0);
@@ -1084,6 +1111,7 @@ uint64_t LoopifyNumbers::sum_divisors_aux(uint64_t n, uint64_t k) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_divisors_aux_in_true>(_popped));
+      _stack.pop_back();
       uint64_t k = _f.k;
       _result = (k + std::move(_result));
     }
@@ -1134,10 +1162,10 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -1157,6 +1185,7 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
     } else if (
             std::holds_alternative<_call_sum_even_indices_fuel_entry>(_popped)) {
       auto _f = std::move(std::get<_call_sum_even_indices_fuel_entry>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l0 = *_f.l0;
       uint64_t fuel0 = _f.fuel0;
       if (fuel0 <= 0) {
@@ -1173,6 +1202,7 @@ uint64_t LoopifyNumbers::sum_odd_indices_fuel(uint64_t fuel,
     } else {
       auto _f = std::move(
           std::get<_after_sum_even_indices_fuel_entry_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a00 = _f.a00;
       _result = (a00 + std::move(_result));
     }
@@ -1198,10 +1228,10 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -1231,6 +1261,7 @@ uint64_t LoopifyNumbers::sum_even_indices_fuel(uint64_t fuel,
     } else {
       auto _f =
           std::move(std::get<_after_sum_even_indices_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a00 = _f.a00;
       _result = (a00 + std::move(_result));
     }
@@ -1329,10 +1360,10 @@ uint64_t LoopifyNumbers::sum_divisible_by(uint64_t k, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -1347,6 +1378,7 @@ uint64_t LoopifyNumbers::sum_divisible_by(uint64_t k, uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_divisible_by_in_true>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }

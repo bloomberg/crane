@@ -53,10 +53,10 @@ List<uint64_t> LoopifySorting::insertion_sort(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
@@ -67,6 +67,7 @@ List<uint64_t> LoopifySorting::insertion_sort(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_insertion_sort_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = insert(a0, std::move(_result));
     }
@@ -169,10 +170,10 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       List<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -196,12 +197,14 @@ List<uint64_t> LoopifySorting::merge_sort_fuel(uint64_t fuel,
       }
     } else if (std::holds_alternative<_after_merge_sort_fuel_in_pair>(_popped)) {
       auto _f = std::move(std::get<_after_merge_sort_fuel_in_pair>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       List<uint64_t> l2 = std::move(_f.l2);
       _stack.emplace_back(_after_merge_sort_fuel_in_pair_2{std::move(_result)});
       _stack.emplace_back(_call{std::move(l2), f});
     } else {
       auto _f = std::move(std::get<_after_merge_sort_fuel_in_pair_2>(_popped));
+      _stack.pop_back();
       _result = merge(std::move(_f._tmp2), std::move(_result));
     }
   }
@@ -229,10 +232,10 @@ LoopifySorting::partition(uint64_t pivot, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
@@ -243,6 +246,7 @@ LoopifySorting::partition(uint64_t pivot, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_partition_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [lo, hi] = std::move(_result);
       if (a0 <= pivot) {
@@ -283,10 +287,10 @@ List<uint64_t> LoopifySorting::quicksort_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       List<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -305,6 +309,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(uint64_t fuel,
       }
     } else if (std::holds_alternative<_after_quicksort_fuel_in_pair>(_popped)) {
       auto _f = std::move(std::get<_after_quicksort_fuel_in_pair>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       List<uint64_t> hi = std::move(_f.hi);
@@ -313,6 +318,7 @@ List<uint64_t> LoopifySorting::quicksort_fuel(uint64_t fuel,
       _stack.emplace_back(_call{std::move(hi), f});
     } else {
       auto _f = std::move(std::get<_after_quicksort_fuel_in_pair_2>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = _f._tmp2.app(List<uint64_t>::cons(a0, std::move(_result)));
     }

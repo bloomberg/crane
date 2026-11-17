@@ -239,10 +239,10 @@ struct FunctionVernac {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, _x, _x0});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const R_div2 *_self = _f._self;
           uint64_t _x = _f._x;
           uint64_t _x0 = _f._x0;
@@ -263,6 +263,7 @@ struct FunctionVernac {
         } else {
           auto _f =
               std::move(std::get<_after_R_div2_rect_in_R_div2_2>(_popped));
+          _stack.pop_back();
           uint64_t n0 = _f.n0;
           uint64_t p0 = _f.p0;
           uint64_t a2 = _f.a2;
@@ -419,10 +420,10 @@ struct FunctionVernac {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &_x, _x0});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const R_list_sum *_self = _f._self;
           const List<uint64_t> &_x = *_f._x;
           uint64_t _x0 = _f._x0;
@@ -441,6 +442,7 @@ struct FunctionVernac {
         } else {
           auto _f = std::move(
               std::get<_after_R_list_sum_rect_in_R_list_sum_1>(_popped));
+          _stack.pop_back();
           List<uint64_t> l0 = std::move(_f.l0);
           uint64_t x0 = _f.x0;
           List<uint64_t> xs0 = std::move(_f.xs0);

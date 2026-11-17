@@ -47,10 +47,10 @@ Comparison GuardCompareShared::tcompare(const GuardCompareShared::tree &a,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&b, &a});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (crane::holds_alternative<_call>(_popped)) {
       auto _f = std::move(crane::get<_call>(_popped));
+      _stack.pop_back();
       const GuardCompareShared::tree &b = *_f.b;
       const GuardCompareShared::tree &a = *_f.a;
       if (b.v().same_as(a.v())) {
@@ -82,6 +82,7 @@ Comparison GuardCompareShared::tcompare(const GuardCompareShared::tree &a,
       }
     } else {
       auto _f = std::move(crane::get<_after_tcompare_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       const GuardCompareShared::tree &a2 = *_f.a2;
       uint64_t a10 = _f.a10;

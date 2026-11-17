@@ -14,10 +14,10 @@ uint64_t LoopifyEquationsWithClause::zeros(const List<uint64_t> &x) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &x = *_f.x;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(x.v())) {
         _result = UINT64_C(0);
@@ -32,6 +32,7 @@ uint64_t LoopifyEquationsWithClause::zeros(const List<uint64_t> &x) {
       }
     } else {
       auto _f = std::move(std::get<_after_zeros_in_true>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -92,10 +93,10 @@ uint64_t LoopifyEquationsWithClause::plain(const List<uint64_t> &x) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &x = *_f.x;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(x.v())) {
         _result = UINT64_C(0);
@@ -106,6 +107,7 @@ uint64_t LoopifyEquationsWithClause::plain(const List<uint64_t> &x) {
       }
     } else {
       auto _f = std::move(std::get<_after_plain_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }

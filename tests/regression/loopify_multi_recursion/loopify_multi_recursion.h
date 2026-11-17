@@ -159,10 +159,10 @@ struct LoopifyMultiRecursion {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&q});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const quadtree &q = *_f.q;
         if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
           const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
@@ -176,6 +176,7 @@ struct LoopifyMultiRecursion {
         }
       } else if (std::holds_alternative<_after_quadtree_rect_in_QQuad>(_popped)) {
         auto _f = std::move(std::get<_after_quadtree_rect_in_QQuad>(_popped));
+        _stack.pop_back();
         std::shared_ptr<quadtree> a0 = std::move(_f.a0);
         const quadtree &a1 = *_f.a1;
         const quadtree &a2 = *_f.a2;
@@ -186,6 +187,7 @@ struct LoopifyMultiRecursion {
       } else if (
               std::holds_alternative<_after_quadtree_rect_in_QQuad_2>(_popped)) {
         auto _f = std::move(std::get<_after_quadtree_rect_in_QQuad_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<quadtree> a0 = std::move(_f.a0);
         const quadtree &a1 = *_f.a1;
         const quadtree &a2 = *_f.a2;
@@ -197,6 +199,7 @@ struct LoopifyMultiRecursion {
       } else if (
               std::holds_alternative<_after_quadtree_rect_in_QQuad_3>(_popped)) {
         auto _f = std::move(std::get<_after_quadtree_rect_in_QQuad_3>(_popped));
+        _stack.pop_back();
         std::shared_ptr<quadtree> a0 = std::move(_f.a0);
         const quadtree &a1 = *_f.a1;
         const quadtree &a2 = *_f.a2;
@@ -207,6 +210,7 @@ struct LoopifyMultiRecursion {
         _stack.emplace_back(_call{&a3});
       } else {
         auto _f = std::move(std::get<_after_quadtree_rect_in_QQuad_4>(_popped));
+        _stack.pop_back();
         std::shared_ptr<quadtree> a0 = std::move(_f.a0);
         const quadtree &a1 = *_f.a1;
         const quadtree &a2 = *_f.a2;

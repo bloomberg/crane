@@ -54,10 +54,10 @@ uint64_t MemSafetyProbe2::mysum(const MemSafetyProbe2::mylist<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe2::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe2::mylist<uint64_t>::Mynil>(l.v())) {
@@ -70,6 +70,7 @@ uint64_t MemSafetyProbe2::mysum(const MemSafetyProbe2::mylist<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_mysum_in_Mycons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -133,10 +134,10 @@ uint64_t MemSafetyProbe2::apply_all(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&fs});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe2::mylist<crane::fn<uint64_t(uint64_t)>> &fs = *_f.fs;
       if (std::holds_alternative<typename MemSafetyProbe2::mylist<
               crane::fn<uint64_t(uint64_t)>>::Mynil>(fs.v())) {
@@ -149,6 +150,7 @@ uint64_t MemSafetyProbe2::apply_all(
       }
     } else {
       auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
+      _stack.pop_back();
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
       _result = (a0(x) + std::move(_result));
     }

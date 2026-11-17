@@ -225,10 +225,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&ls});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<String> &ls = *_f.ls;
         if (std::holds_alternative<typename List<String>::Nil>(ls.v())) {
           _result = String::emptystring();
@@ -244,6 +244,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_after_concat_in_Cons>(_popped));
+        _stack.pop_back();
         String a0 = std::move(_f.a0);
         _result = a0.append(_self->append(std::move(_result)));
       }

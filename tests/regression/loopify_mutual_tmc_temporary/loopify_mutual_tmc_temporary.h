@@ -96,10 +96,10 @@ struct LoopifyMutualTmcTemporary {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&n});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const num &n = *_f.n;
         if (std::holds_alternative<typename num::Z>(n.v())) {
           _result = f;
@@ -110,6 +110,7 @@ struct LoopifyMutualTmcTemporary {
         }
       } else {
         auto _f = std::move(std::get<_after_num_rect_in_Su>(_popped));
+        _stack.pop_back();
         std::shared_ptr<num> n1 = std::move(_f.n1);
         _result = f0(*n1, std::move(_result));
       }

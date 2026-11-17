@@ -81,10 +81,10 @@ LoopifyListSubsequences::inits_fuel(uint64_t fuel, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -103,6 +103,7 @@ LoopifyListSubsequences::inits_fuel(uint64_t fuel, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_inits_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
       _result =
@@ -244,10 +245,10 @@ LoopifyListSubsequences::split_at(uint64_t n, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       uint64_t n = _f.n;
       if (n <= 0) {
@@ -265,6 +266,7 @@ LoopifyListSubsequences::split_at(uint64_t n, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_split_at_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [before, after] = std::move(_result);
       _result = std::make_pair(List<uint64_t>::cons(a0, std::move(before)),

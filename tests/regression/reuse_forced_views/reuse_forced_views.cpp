@@ -145,10 +145,10 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&x0_, &m});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<std::pair<uint64_t, uint64_t>> &x0_ = *_f.x0_;
       const List<std::pair<uint64_t, uint64_t>> &m = *_f.m;
       if (std::holds_alternative<
@@ -171,6 +171,7 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
       }
     } else if (std::holds_alternative<_call_combine_aux>(_popped)) {
       auto _f = std::move(std::get<_call_combine_aux>(_popped));
+      _stack.pop_back();
       const List<std::pair<uint64_t, uint64_t>> &m_ = *_f.m_;
       const List<std::pair<uint64_t, uint64_t>> &a1_value = *_f.a1_value;
       uint64_t e = _f.e;
@@ -207,6 +208,7 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
       }
     } else if (std::holds_alternative<_after_combine_aux_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_combine_aux_in_false>(_popped));
+      _stack.pop_back();
       uint64_t k_ = _f.k_;
       uint64_t e_ = _f.e_;
       _result =
@@ -218,6 +220,7 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
               std::move(_result));
     } else if (std::holds_alternative<_after_combine_in_true>(_popped)) {
       auto _f = std::move(std::get<_after_combine_in_true>(_popped));
+      _stack.pop_back();
       uint64_t k = _f.k;
       uint64_t e = _f.e;
       _result =
@@ -228,6 +231,7 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
               std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_combine_in_true_2>(_popped));
+      _stack.pop_back();
       uint64_t k = _f.k;
       uint64_t e = _f.e;
       uint64_t e_ = _f.e_;

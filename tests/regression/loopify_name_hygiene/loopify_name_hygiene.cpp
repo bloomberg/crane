@@ -19,10 +19,10 @@ uint64_t LoopifyNameHygiene::depth(const LoopifyNameHygiene::Frame_ &f) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&f});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyNameHygiene::Frame_ &f = *_f.f;
       if (std::holds_alternative<typename LoopifyNameHygiene::Frame_::Enter_>(
               f.v())) {
@@ -37,6 +37,7 @@ uint64_t LoopifyNameHygiene::depth(const LoopifyNameHygiene::Frame_ &f) {
       }
     } else {
       auto _f = std::move(std::get<_after_depth_in_Resume_Cons_>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -88,10 +89,10 @@ uint64_t LoopifyNameHygiene::locals(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = ((stack_ + result_) + self_);
@@ -102,6 +103,7 @@ uint64_t LoopifyNameHygiene::locals(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_locals_in_S>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }

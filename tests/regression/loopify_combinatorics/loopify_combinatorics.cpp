@@ -110,10 +110,10 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{orig, choices, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &orig = _f.orig;
       const List<uint64_t> &choices = _f.choices;
       uint64_t fuel = _f.fuel;
@@ -141,6 +141,7 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
     } else if (
             std::holds_alternative<_after_perms_choices_fuel_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_perms_choices_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> orig = std::move(_f.orig);
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
@@ -152,10 +153,12 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_perms_choices_fuel_in_Cons_2>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = map_cons(a0, std::move(_f._tmp3)).app(std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_perms_choices_fuel_in_Nil>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result =
           map_cons(a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
@@ -192,10 +195,10 @@ uint64_t LoopifyCombinatorics::len_list(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -206,6 +209,7 @@ uint64_t LoopifyCombinatorics::len_list(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_len_list_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -228,10 +232,10 @@ uint64_t LoopifyCombinatorics::factorial_impl(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(1);
@@ -242,6 +246,7 @@ uint64_t LoopifyCombinatorics::factorial_impl(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_factorial_impl_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n * std::move(_result));
     }
@@ -272,10 +277,10 @@ LoopifyCombinatorics::subsequences(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<List<uint64_t>>::cons(List<uint64_t>::nil(),
@@ -287,6 +292,7 @@ LoopifyCombinatorics::subsequences(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_subsequences_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
       auto map_prepend =
@@ -306,10 +312,10 @@ LoopifyCombinatorics::subsequences(const List<uint64_t> &l) {
             crane::small_vector<_frame> _stack;
             _stack.emplace_back(_call{&lst});
             while (!_stack.empty()) {
-              _frame _popped = std::move(_stack.back());
-              _stack.pop_back();
+              _frame &_popped = _stack.back();
               if (std::holds_alternative<_call>(_popped)) {
                 auto _f = std::move(std::get<_call>(_popped));
+                _stack.pop_back();
                 const List<List<uint64_t>> &lst = *_f.lst;
                 if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
                         lst.v())) {
@@ -323,6 +329,7 @@ LoopifyCombinatorics::subsequences(const List<uint64_t> &l) {
               } else {
                 auto _f =
                     std::move(std::get<_after_map_prepend_in_Cons>(_popped));
+                _stack.pop_back();
                 List<uint64_t> a00 = std::move(_f.a00);
                 _result = List<List<uint64_t>>::cons(
                     List<uint64_t>::cons(a0, std::move(a00)),
@@ -393,10 +400,10 @@ LoopifyCombinatorics::cartesian(const List<uint64_t> &l1,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l2});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l2 = *_f.l2;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l2.v())) {
         _result = List<std::pair<uint64_t, uint64_t>>::nil();
@@ -407,6 +414,7 @@ LoopifyCombinatorics::cartesian(const List<uint64_t> &l1,
       }
     } else {
       auto _f = std::move(std::get<_after_cartesian_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = map_pairs(a0, l1).app(std::move(_result));
     }
@@ -438,10 +446,10 @@ LoopifyCombinatorics::insert_everywhere(uint64_t x, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<List<uint64_t>>::cons(
@@ -454,6 +462,7 @@ LoopifyCombinatorics::insert_everywhere(uint64_t x, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_insert_everywhere_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> l = std::move(_f.l);
       uint64_t a0 = _f.a0;
       List<List<uint64_t>> rest = std::move(_result);
@@ -474,10 +483,10 @@ LoopifyCombinatorics::insert_everywhere(uint64_t x, const List<uint64_t> &l) {
             crane::small_vector<_frame> _stack;
             _stack.emplace_back(_call{&lsts});
             while (!_stack.empty()) {
-              _frame _popped = std::move(_stack.back());
-              _stack.pop_back();
+              _frame &_popped = _stack.back();
               if (std::holds_alternative<_call>(_popped)) {
                 auto _f = std::move(std::get<_call>(_popped));
+                _stack.pop_back();
                 const List<List<uint64_t>> &lsts = *_f.lsts;
                 if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
                         lsts.v())) {
@@ -491,6 +500,7 @@ LoopifyCombinatorics::insert_everywhere(uint64_t x, const List<uint64_t> &l) {
               } else {
                 auto _f =
                     std::move(std::get<_after_prepend_y_in_Cons>(_popped));
+                _stack.pop_back();
                 List<uint64_t> a00 = std::move(_f.a00);
                 _result = List<List<uint64_t>>::cons(
                     List<uint64_t>::cons(a0, std::move(a00)),
@@ -523,10 +533,10 @@ bool LoopifyCombinatorics::elem(uint64_t x, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = false;
@@ -537,6 +547,7 @@ bool LoopifyCombinatorics::elem(uint64_t x, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_elem_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (x == a0 || std::move(_result));
     }
@@ -568,10 +579,10 @@ List<uint64_t> LoopifyCombinatorics::dedup_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -588,6 +599,7 @@ List<uint64_t> LoopifyCombinatorics::dedup_fuel(uint64_t fuel,
       }
     } else {
       auto _f = std::move(std::get<_after_dedup_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> rest = std::move(_result);
       if (elem(a0, rest)) {

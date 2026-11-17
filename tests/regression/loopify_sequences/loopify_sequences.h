@@ -111,10 +111,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -126,6 +126,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }
@@ -184,10 +185,10 @@ struct LoopifySequences {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&lists});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<List<T1>> &lists = *_f.lists;
         if (std::holds_alternative<typename List<List<T1>>::Nil>(lists.v())) {
           _result = List<T1>::nil();
@@ -204,6 +205,7 @@ struct LoopifySequences {
         }
       } else {
         auto _f = std::move(std::get<_after_intercalate_in_Cons>(_popped));
+        _stack.pop_back();
         List<T1> a0 = std::move(_f.a0);
         _result = a0.app(sep.app(std::move(_result)));
       }
@@ -233,10 +235,10 @@ struct LoopifySequences {
         crane::small_vector<_frame> _stack;
         _stack.emplace_back(_call{&rest});
         while (!_stack.empty()) {
-          _frame _popped = std::move(_stack.back());
-          _stack.pop_back();
+          _frame &_popped = _stack.back();
           if (std::holds_alternative<_call>(_popped)) {
             auto _f = std::move(std::get<_call>(_popped));
+            _stack.pop_back();
             const List<T1> &rest = *_f.rest;
             if (std::holds_alternative<typename List<T1>::Nil>(rest.v())) {
               _result = List<T1>::nil();
@@ -248,6 +250,7 @@ struct LoopifySequences {
             }
           } else {
             auto _f = std::move(std::get<_after_go_in_Cons>(_popped));
+            _stack.pop_back();
             auto a00 = std::move(_f.a00);
             _result = List<T1>::cons(
                 sep, List<T1>::cons(std::move(a00), std::move(_result)));
@@ -320,10 +323,10 @@ struct LoopifySequences {
             crane::small_vector<_frame> _stack;
             _stack.emplace_back(_call{&l});
             while (!_stack.empty()) {
-              _frame _popped = std::move(_stack.back());
-              _stack.pop_back();
+              _frame &_popped = _stack.back();
               if (std::holds_alternative<_call>(_popped)) {
                 auto _f = std::move(std::get<_call>(_popped));
+                _stack.pop_back();
                 const List<List<T1>> &l = *_f.l;
                 if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
                   _result = List<T1>::nil();
@@ -341,6 +344,7 @@ struct LoopifySequences {
                 }
               } else {
                 auto _f = std::move(std::get<_after_heads_in_Cons>(_popped));
+                _stack.pop_back();
                 auto a01 = std::move(_f.a01);
                 _result = List<T1>::cons(std::move(a01), std::move(_result));
               }
@@ -363,10 +367,10 @@ struct LoopifySequences {
             crane::small_vector<_frame> _stack;
             _stack.emplace_back(_call{&l});
             while (!_stack.empty()) {
-              _frame _popped = std::move(_stack.back());
-              _stack.pop_back();
+              _frame &_popped = _stack.back();
               if (std::holds_alternative<_call>(_popped)) {
                 auto _f = std::move(std::get<_call>(_popped));
+                _stack.pop_back();
                 const List<List<T1>> &l = *_f.l;
                 if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
                   _result = List<List<T1>>::nil();
@@ -384,6 +388,7 @@ struct LoopifySequences {
                 }
               } else {
                 auto _f = std::move(std::get<_after_tails_in_Cons>(_popped));
+                _stack.pop_back();
                 std::shared_ptr<List<T1>> a12 = std::move(_f.a12);
                 _result = List<List<T1>>::cons(*a12, std::move(_result));
               }
@@ -595,10 +600,10 @@ struct LoopifySequences {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = true;
@@ -609,6 +614,7 @@ struct LoopifySequences {
         }
       } else {
         auto _f = std::move(std::get<_after_bool_all_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         _result = (p(a0) && std::move(_result));
       }

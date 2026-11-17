@@ -19,10 +19,10 @@ LoopifyConditionalRecursion::cached_sum(const std::optional<uint64_t> &cache,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, cache});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       const std::optional<uint64_t> cache = _f.cache;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
@@ -44,6 +44,7 @@ LoopifyConditionalRecursion::cached_sum(const std::optional<uint64_t> &cache,
       }
     } else {
       auto _f = std::move(std::get<_after_cached_sum_in_None>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
       _result = std::make_pair((a0 + sub.first), (sub.second + UINT64_C(1)));
@@ -68,10 +69,10 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), List<uint64_t>::nil());
@@ -91,6 +92,7 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
       }
     } else {
       auto _f = std::move(std::get<_after_find_or_recurse_in_false>(_popped));
+      _stack.pop_back();
       auto sub = std::move(_result);
       _result = std::make_pair((std::move(sub).first + UINT64_C(1)),
                                std::move(sub).second);
@@ -115,10 +117,10 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -152,6 +154,7 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
       }
     } else {
       auto _f = std::move(std::get<_after_nested_cond_in_true>(_popped));
+      _stack.pop_back();
       std::pair<uint64_t, bool> sub = std::make_pair(std::move(_result), false);
       _result = (sub.first + (sub.second ? UINT64_C(1) : UINT64_C(0)));
     }
@@ -179,10 +182,10 @@ LoopifyConditionalRecursion::multi_return(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, memo});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       const std::optional<std::pair<uint64_t, uint64_t>> memo = _f.memo;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
@@ -222,6 +225,7 @@ LoopifyConditionalRecursion::multi_return(
       }
     } else {
       auto _f = std::move(std::get<_after_multi_return_in_None>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
       uint64_t count = sub.first;
@@ -261,10 +265,10 @@ LoopifyConditionalRecursion::accum_with_cache(uint64_t key,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), UINT64_C(0));
@@ -291,6 +295,7 @@ LoopifyConditionalRecursion::accum_with_cache(uint64_t key,
       }
     } else {
       auto _f = std::move(std::get<_after_accum_with_cache_in_None>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto sub = std::move(_result);
       _result = std::make_pair((sub.first + a0), (sub.second + UINT64_C(1)));

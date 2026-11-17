@@ -42,10 +42,10 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&items, capacity, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<std::pair<uint64_t, uint64_t>> &items = *_f.items;
       uint64_t capacity = _f.capacity;
       uint64_t fuel = _f.fuel;
@@ -72,6 +72,7 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
       }
     } else if (std::holds_alternative<_after_knapsack_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_knapsack_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t capacity = _f.capacity;
       uint64_t f = _f.f;
       const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
@@ -84,6 +85,7 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
           f});
     } else if (std::holds_alternative<_after_knapsack_fuel_in_false_2>(_popped)) {
       auto _f = std::move(std::get<_after_knapsack_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       uint64_t capacity = _f.capacity;
       uint64_t f = _f.f;
       const List<std::pair<uint64_t, uint64_t>> &a1 = *_f.a1;
@@ -99,6 +101,7 @@ LoopifySearch::knapsack_fuel(uint64_t fuel, uint64_t capacity,
       }
     } else {
       auto _f = std::move(std::get<_after_knapsack_fuel_in_true>(_popped));
+      _stack.pop_back();
       uint64_t value = _f.value;
       _result = (value + std::move(_result));
     }
@@ -131,10 +134,10 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), UINT64_C(0));
@@ -145,6 +148,7 @@ std::pair<uint64_t, uint64_t> LoopifySearch::majority(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_majority_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
       const auto &[cand, count] = _tmp1;
@@ -420,10 +424,10 @@ uint64_t LoopifySearch::collatz_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -444,9 +448,11 @@ uint64_t LoopifySearch::collatz_fuel(uint64_t fuel, uint64_t n) {
       }
     } else if (std::holds_alternative<_after_collatz_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_collatz_fuel_in_false>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     } else {
       auto _f = std::move(std::get<_after_collatz_fuel_in_true>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }
@@ -485,10 +491,10 @@ bool LoopifySearch::subset_sum_fuel(uint64_t fuel, uint64_t target,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, target, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       uint64_t target = _f.target;
       uint64_t fuel = _f.fuel;
@@ -507,6 +513,7 @@ bool LoopifySearch::subset_sum_fuel(uint64_t fuel, uint64_t target,
       }
     } else {
       auto _f = std::move(std::get<_after_subset_sum_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t target = _f.target;
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
@@ -729,10 +736,10 @@ List<uint64_t> LoopifySearch::quicksort_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       List<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -755,6 +762,7 @@ List<uint64_t> LoopifySearch::quicksort_fuel(uint64_t fuel,
       }
     } else if (std::holds_alternative<_after_quicksort_fuel_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_quicksort_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       List<uint64_t> greater = std::move(_f.greater);
@@ -763,6 +771,7 @@ List<uint64_t> LoopifySearch::quicksort_fuel(uint64_t fuel,
       _stack.emplace_back(_call{std::move(greater), f});
     } else {
       auto _f = std::move(std::get<_after_quicksort_fuel_in_Cons_2>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = _f._tmp2.app(List<uint64_t>::cons(a0, std::move(_result)));
     }
@@ -793,10 +802,10 @@ LoopifySearch::split_list(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
@@ -816,6 +825,7 @@ LoopifySearch::split_list(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_split_list_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       auto [a, b] = std::move(_result);
@@ -924,10 +934,10 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(uint64_t fuel,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       List<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -951,12 +961,14 @@ List<uint64_t> LoopifySearch::merge_sort_fuel(uint64_t fuel,
       }
     } else if (std::holds_alternative<_after_merge_sort_fuel_in_pair>(_popped)) {
       auto _f = std::move(std::get<_after_merge_sort_fuel_in_pair>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       List<uint64_t> b = std::move(_f.b);
       _stack.emplace_back(_after_merge_sort_fuel_in_pair_2{std::move(_result)});
       _stack.emplace_back(_call{std::move(b), f});
     } else {
       auto _f = std::move(std::get<_after_merge_sort_fuel_in_pair_2>(_popped));
+      _stack.pop_back();
       _result = merge_sorted(std::move(_f._tmp2), std::move(_result));
     }
   }
@@ -1075,10 +1087,10 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{orig, choices, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &orig = _f.orig;
       const List<uint64_t> &choices = _f.choices;
       uint64_t fuel = _f.fuel;
@@ -1106,6 +1118,7 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
     } else if (
             std::holds_alternative<_after_perms_choices_fuel_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_perms_choices_fuel_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> orig = std::move(_f.orig);
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
@@ -1117,10 +1130,12 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
                    _popped)) {
       auto _f =
           std::move(std::get<_after_perms_choices_fuel_in_Cons_2>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = map_cons(a0, std::move(_f._tmp3)).app(std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_perms_choices_fuel_in_Nil>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result =
           map_cons(a0, List<List<uint64_t>>::cons(List<uint64_t>::nil(),
@@ -1235,10 +1250,10 @@ uint64_t LoopifySearch::min_element(const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -1254,6 +1269,7 @@ uint64_t LoopifySearch::min_element(const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_min_element_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t min_rest = std::move(_result);
       if (a0 <= min_rest) {

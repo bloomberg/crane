@@ -239,10 +239,10 @@ struct SharedVariantNested {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (crane::holds_alternative<_call>(_popped)) {
           auto _f = std::move(crane::get<_call>(_popped));
+          _stack.pop_back();
           const chain *_self = _f._self;
           auto &&_sv = *_self;
           const auto &[_, a1] = crane::get<typename chain::Link>(_sv.v());
@@ -255,6 +255,7 @@ struct SharedVariantNested {
           }
         } else {
           auto _f = std::move(crane::get<_after_clen_in_Some>(_popped));
+          _stack.pop_back();
           _result = (std::move(_result) + 1);
         }
       }

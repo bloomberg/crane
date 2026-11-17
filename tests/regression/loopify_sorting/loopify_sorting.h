@@ -138,10 +138,10 @@ struct LoopifySorting {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -152,6 +152,7 @@ struct LoopifySorting {
         }
       } else {
         auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }
@@ -179,10 +180,10 @@ struct LoopifySorting {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
@@ -201,6 +202,7 @@ struct LoopifySorting {
         }
       } else {
         auto _f = std::move(std::get<_after_split_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
         auto [l1, l2] = std::move(_result);

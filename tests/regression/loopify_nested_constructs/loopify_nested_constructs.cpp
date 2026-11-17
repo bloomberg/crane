@@ -16,10 +16,10 @@ uint64_t LoopifyNestedConstructs::multi_let(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -32,6 +32,7 @@ uint64_t LoopifyNestedConstructs::multi_let(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_multi_let_in_S>(_popped));
+      _stack.pop_back();
       uint64_t c = _f.c;
       _result = (c + std::move(_result));
     }
@@ -96,10 +97,10 @@ uint64_t LoopifyNestedConstructs::deep_nest(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -110,6 +111,7 @@ uint64_t LoopifyNestedConstructs::deep_nest(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_deep_nest_in_S>(_popped));
+      _stack.pop_back();
       uint64_t inner = std::move(_result);
       uint64_t mid = (inner + UINT64_C(1));
       _result = (mid * UINT64_C(2));
@@ -134,10 +136,10 @@ uint64_t LoopifyNestedConstructs::let_nested(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -149,6 +151,7 @@ uint64_t LoopifyNestedConstructs::let_nested(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_let_nested_in_S>(_popped));
+      _stack.pop_back();
       uint64_t a = _f.a;
       _result = (a + std::move(_result));
     }
@@ -173,10 +176,10 @@ uint64_t LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -193,6 +196,7 @@ uint64_t LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel, uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_mod_pattern_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       auto &&_once1 = (UINT64_C(1) + std::move(_result));
       _result = (_once1 ? n % _once1 : n);
@@ -222,10 +226,10 @@ LoopifyNestedConstructs::tuple_constr(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
@@ -237,6 +241,7 @@ LoopifyNestedConstructs::tuple_constr(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_tuple_constr_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
           std::move(_result);
@@ -270,10 +275,10 @@ uint64_t LoopifyNestedConstructs::alternating_ops(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -289,10 +294,12 @@ uint64_t LoopifyNestedConstructs::alternating_ops(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_alternating_ops_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = ((n * UINT64_C(2)) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_alternating_ops_in_true>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }
@@ -323,10 +330,10 @@ bool LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -344,6 +351,7 @@ bool LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel, uint64_t n) {
     } else if (
             std::holds_alternative<_after_chained_comp_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_chained_comp_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
       _stack.emplace_back(
@@ -353,6 +361,7 @@ bool LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel, uint64_t n) {
     } else {
       auto _f =
           std::move(std::get<_after_chained_comp_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 && std::move(_result));
     }
   }
@@ -388,10 +397,10 @@ uint64_t LoopifyNestedConstructs::compute_with_lets(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -407,12 +416,14 @@ uint64_t LoopifyNestedConstructs::compute_with_lets(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_compute_with_lets_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_compute_with_lets_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n_p = _f.n_p;
       uint64_t x = std::move(_result);
       _stack.emplace_back(_after_compute_with_lets_in_S_2{x});
       _stack.emplace_back(_call{n_p});
     } else {
       auto _f = std::move(std::get<_after_compute_with_lets_in_S_2>(_popped));
+      _stack.pop_back();
       uint64_t x = _f.x;
       uint64_t y = std::move(_result);
       uint64_t z = (x + y);
@@ -438,10 +449,10 @@ uint64_t LoopifyNestedConstructs::nested_match(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -457,6 +468,7 @@ uint64_t LoopifyNestedConstructs::nested_match(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_nested_match_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }

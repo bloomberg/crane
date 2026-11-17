@@ -19,10 +19,10 @@ InplaceFixSavedInFrame::insert_shift(uint64_t x, const List<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<List<uint64_t>>::cons(
@@ -48,10 +48,10 @@ InplaceFixSavedInFrame::insert_shift(uint64_t x, const List<uint64_t> &l) {
           crane::small_vector<_frame> _stack;
           _stack.emplace_back(_call{std::move(lsts)});
           while (!_stack.empty()) {
-            _frame _popped = std::move(_stack.back());
-            _stack.pop_back();
+            _frame &_popped = _stack.back();
             if (std::holds_alternative<_call>(_popped)) {
               auto _f = std::move(std::get<_call>(_popped));
+              _stack.pop_back();
               List<List<uint64_t>> lsts = std::move(_f.lsts);
               if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
                       lsts.v_mut())) {
@@ -64,6 +64,7 @@ InplaceFixSavedInFrame::insert_shift(uint64_t x, const List<uint64_t> &l) {
               }
             } else {
               auto _f = std::move(std::get<_after_map_k_in_Cons>(_popped));
+              _stack.pop_back();
               List<uint64_t> a00 = std::move(_f.a00);
               _result = List<List<uint64_t>>::cons(
                   List<uint64_t>::cons(k, std::move(a00)), std::move(_result));
@@ -77,6 +78,7 @@ InplaceFixSavedInFrame::insert_shift(uint64_t x, const List<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_insert_shift_in_Cons>(_popped));
+      _stack.pop_back();
       List<uint64_t> l = std::move(_f.l);
       uint64_t k = _f.k;
       crane::fn<List<List<uint64_t>>(List<List<uint64_t>>)> map_k =

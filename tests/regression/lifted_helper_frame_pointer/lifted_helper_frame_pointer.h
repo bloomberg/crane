@@ -147,10 +147,10 @@ struct LiftedHelperFramePointer {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
           _result = f;
@@ -161,6 +161,7 @@ struct LiftedHelperFramePointer {
         }
       } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
@@ -169,6 +170,7 @@ struct LiftedHelperFramePointer {
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
@@ -217,10 +219,10 @@ struct LiftedHelperFramePointer {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&b, &a});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &b = *_f.b;
         const tree<T1> &a = *_f.a;
         if (std::holds_alternative<typename tree<T1>::Leaf>(a.v())) {
@@ -234,6 +236,7 @@ struct LiftedHelperFramePointer {
       } else if (
               std::holds_alternative<_after_zigzag_crane_go_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_zigzag_crane_go_in_Node>(_popped));
+        _stack.pop_back();
         const tree<T1> &a0 = *_f.a0;
         const tree<T1> &a2 = *_f.a2;
         _stack.emplace_back(
@@ -242,6 +245,7 @@ struct LiftedHelperFramePointer {
       } else {
         auto _f =
             std::move(std::get<_after_zigzag_crane_go_in_Node_2>(_popped));
+        _stack.pop_back();
         _result = (_f._tmp2 + std::move(_result));
       }
     }
@@ -277,10 +281,10 @@ struct LiftedHelperFramePointer {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&b, &a});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &b = *_f.b;
         const tree<T1> &a = *_f.a;
         if (std::holds_alternative<typename tree<T1>::Leaf>(a.v())) {
@@ -293,12 +297,14 @@ struct LiftedHelperFramePointer {
         }
       } else if (std::holds_alternative<_after_go_ref_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_go_ref_in_Node>(_popped));
+        _stack.pop_back();
         const tree<T1> &a0 = *_f.a0;
         const tree<T1> &a2 = *_f.a2;
         _stack.emplace_back(_after_go_ref_in_Node_2{std::move(_result)});
         _stack.emplace_back(_call{&a0, &a2});
       } else {
         auto _f = std::move(std::get<_after_go_ref_in_Node_2>(_popped));
+        _stack.pop_back();
         _result = (_f._tmp2 + std::move(_result));
       }
     }

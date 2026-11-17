@@ -249,10 +249,10 @@ struct LoopifyExistentialRecursiveCall {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&e});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const expr &e = *_f.e;
         if (std::holds_alternative<typename expr::Lit>(e.v())) {
           const auto &[a0] = std::get<typename expr::Lit>(e.v());
@@ -280,10 +280,12 @@ struct LoopifyExistentialRecursiveCall {
         }
       } else if (std::holds_alternative<_after_expr_rect_in_FstE>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rect_in_FstE>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         _result = crane_any_cast<T1>(f4(*a, std::move(_result)));
       } else if (std::holds_alternative<_after_expr_rect_in_Ite>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rect_in_Ite>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -292,6 +294,7 @@ struct LoopifyExistentialRecursiveCall {
         _stack.emplace_back(_call{&a1});
       } else if (std::holds_alternative<_after_expr_rect_in_Ite_2>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rect_in_Ite_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -300,6 +303,7 @@ struct LoopifyExistentialRecursiveCall {
         _stack.emplace_back(_call{&a2});
       } else if (std::holds_alternative<_after_expr_rect_in_Ite_3>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rect_in_Ite_3>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -308,6 +312,7 @@ struct LoopifyExistentialRecursiveCall {
                                   std::move(_f._tmp3), a2, std::move(_result)));
       } else if (std::holds_alternative<_after_expr_rect_in_PairE>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rect_in_PairE>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &b = *_f.b;
         _stack.emplace_back(
@@ -315,12 +320,14 @@ struct LoopifyExistentialRecursiveCall {
         _stack.emplace_back(_call{&b});
       } else if (std::holds_alternative<_after_expr_rect_in_PairE_2>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rect_in_PairE_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &b = *_f.b;
         _result = crane_any_cast<T1>(
             f3(*a, std::move(_f._tmp6), b, std::move(_result)));
       } else {
         auto _f = std::move(std::get<_after_expr_rect_in_SuccE>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a0 = std::move(_f.a0);
         _result = f1(*a0, std::move(_result));
       }
@@ -389,10 +396,10 @@ struct LoopifyExistentialRecursiveCall {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&e});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const expr &e = *_f.e;
         if (std::holds_alternative<typename expr::Lit>(e.v())) {
           const auto &[a0] = std::get<typename expr::Lit>(e.v());
@@ -420,10 +427,12 @@ struct LoopifyExistentialRecursiveCall {
         }
       } else if (std::holds_alternative<_after_expr_rec_in_FstE>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rec_in_FstE>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         _result = crane_any_cast<T1>(f4(*a, std::move(_result)));
       } else if (std::holds_alternative<_after_expr_rec_in_Ite>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rec_in_Ite>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -432,6 +441,7 @@ struct LoopifyExistentialRecursiveCall {
         _stack.emplace_back(_call{&a1});
       } else if (std::holds_alternative<_after_expr_rec_in_Ite_2>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rec_in_Ite_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -440,6 +450,7 @@ struct LoopifyExistentialRecursiveCall {
         _stack.emplace_back(_call{&a2});
       } else if (std::holds_alternative<_after_expr_rec_in_Ite_3>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rec_in_Ite_3>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -448,6 +459,7 @@ struct LoopifyExistentialRecursiveCall {
                                   std::move(_f._tmp3), a2, std::move(_result)));
       } else if (std::holds_alternative<_after_expr_rec_in_PairE>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rec_in_PairE>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &b = *_f.b;
         _stack.emplace_back(
@@ -455,12 +467,14 @@ struct LoopifyExistentialRecursiveCall {
         _stack.emplace_back(_call{&b});
       } else if (std::holds_alternative<_after_expr_rec_in_PairE_2>(_popped)) {
         auto _f = std::move(std::get<_after_expr_rec_in_PairE_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &b = *_f.b;
         _result = crane_any_cast<T1>(
             f3(*a, std::move(_f._tmp6), b, std::move(_result)));
       } else {
         auto _f = std::move(std::get<_after_expr_rec_in_SuccE>(_popped));
+        _stack.pop_back();
         std::shared_ptr<expr> a0 = std::move(_f.a0);
         _result = f1(*a0, std::move(_result));
       }
@@ -499,10 +513,10 @@ struct LoopifyExistentialRecursiveCall {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&e});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const expr &e = *_f.e;
         if (std::holds_alternative<typename expr::Lit>(e.v())) {
           const auto &[a0] = std::get<typename expr::Lit>(e.v());
@@ -529,12 +543,14 @@ struct LoopifyExistentialRecursiveCall {
         }
       } else if (std::holds_alternative<_after_eval_in_FstE>(_popped)) {
         auto _f = std::move(std::get<_after_eval_in_FstE>(_popped));
+        _stack.pop_back();
         _result =
             crane::any_cast<std::pair<crane::obj, crane::obj>>(
                 std::move(_result))
                 .first;
       } else if (std::holds_alternative<_after_eval_in_Ite>(_popped)) {
         auto _f = std::move(std::get<_after_eval_in_Ite>(_popped));
+        _stack.pop_back();
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
         if (crane::any_cast<bool>(std::move(_result))) {
@@ -544,15 +560,18 @@ struct LoopifyExistentialRecursiveCall {
         }
       } else if (std::holds_alternative<_after_eval_in_PairE>(_popped)) {
         auto _f = std::move(std::get<_after_eval_in_PairE>(_popped));
+        _stack.pop_back();
         const expr &b = *_f.b;
         _stack.emplace_back(_after_eval_in_PairE_2{std::move(_result)});
         _stack.emplace_back(_call{&b});
       } else if (std::holds_alternative<_after_eval_in_PairE_2>(_popped)) {
         auto _f = std::move(std::get<_after_eval_in_PairE_2>(_popped));
+        _stack.pop_back();
         _result = std::make_pair(crane::obj(std::move(_f._tmp4)),
                                  crane::obj(std::move(_result)));
       } else {
         auto _f = std::move(std::get<_after_eval_in_SuccE>(_popped));
+        _stack.pop_back();
         _result = (crane::any_cast<uint64_t>(std::move(_result)) + 1);
       }
     }

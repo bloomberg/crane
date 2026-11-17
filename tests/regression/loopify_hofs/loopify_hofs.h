@@ -111,10 +111,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -126,6 +126,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }
@@ -305,10 +306,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T2>::nil();
@@ -319,6 +320,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_flat_map_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         _result = f(a0).app(std::move(_result));
       }
@@ -345,10 +347,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l1});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T1> &l1 = *_f.l1;
         auto pair_with =
             [&](const T1 &x, const List<T2> &l) -> List<std::pair<T1, T2>> {
@@ -367,10 +369,10 @@ struct LoopifyHofs {
               crane::small_vector<_frame> _stack;
               _stack.emplace_back(_call{&l});
               while (!_stack.empty()) {
-                _frame _popped = std::move(_stack.back());
-                _stack.pop_back();
+                _frame &_popped = _stack.back();
                 if (std::holds_alternative<_call>(_popped)) {
                   auto _f = std::move(std::get<_call>(_popped));
+                  _stack.pop_back();
                   const List<T2> &l = *_f.l;
                   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
                     _result = List<std::pair<T1, T2>>::nil();
@@ -383,6 +385,7 @@ struct LoopifyHofs {
                 } else {
                   auto _f =
                       std::move(std::get<_after_pair_with_in_Cons>(_popped));
+                  _stack.pop_back();
                   auto a0 = std::move(_f.a0);
                   _result = List<std::pair<T1, T2>>::cons(
                       std::make_pair(x, std::move(a0)), std::move(_result));
@@ -399,6 +402,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_all_pairs_in_Cons>(_popped));
+        _stack.pop_back();
         auto a00 = std::move(_f.a00);
         auto pair_with =
             [&](const T1 &x, const List<T2> &l) -> List<std::pair<T1, T2>> {
@@ -417,10 +421,10 @@ struct LoopifyHofs {
               crane::small_vector<_frame> _stack;
               _stack.emplace_back(_call{&l});
               while (!_stack.empty()) {
-                _frame _popped = std::move(_stack.back());
-                _stack.pop_back();
+                _frame &_popped = _stack.back();
                 if (std::holds_alternative<_call>(_popped)) {
                   auto _f = std::move(std::get<_call>(_popped));
+                  _stack.pop_back();
                   const List<T2> &l = *_f.l;
                   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
                     _result = List<std::pair<T1, T2>>::nil();
@@ -433,6 +437,7 @@ struct LoopifyHofs {
                 } else {
                   auto _f =
                       std::move(std::get<_after_pair_with_in_Cons>(_popped));
+                  _stack.pop_back();
                   auto a0 = std::move(_f.a0);
                   _result = List<std::pair<T1, T2>>::cons(
                       std::make_pair(x, std::move(a0)), std::move(_result));
@@ -649,10 +654,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -668,6 +673,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_foldr1_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         _result = f(a0, std::move(_result));
       }
@@ -697,10 +703,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::cons(acc, List<uint64_t>::nil());
@@ -711,6 +717,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_scanr_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(acc, rest);
@@ -739,10 +746,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
@@ -758,6 +765,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_scanr1_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         List<uint64_t> rest = std::move(_result);
         uint64_t h = head_default(a0, rest);
@@ -786,10 +794,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<T1>::nil();
@@ -800,6 +808,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_mapcat_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         _result = f(a0).app(std::move(_result));
       }
@@ -826,10 +835,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = List<uint64_t>::nil();
@@ -840,6 +849,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_map_maybe_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         List<uint64_t> rest = std::move(_result);
         auto _cs = f(a0);
@@ -873,10 +883,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = true;
@@ -887,6 +897,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_bool_all_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         _result = (p(a0) && std::move(_result));
       }
@@ -992,10 +1003,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -1011,6 +1022,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_max_by_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         uint64_t rest_max = std::move(_result);
         uint64_t fx = f(a0);
@@ -1074,10 +1086,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = UINT64_C(0);
@@ -1093,6 +1105,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_maximum_by_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         uint64_t m = std::move(_result);
         if (UINT64_C(0) <= cmp(a0, m)) {
@@ -1124,10 +1137,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = acc;
@@ -1138,6 +1151,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_fold_right_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         _result = f(a0, std::move(_result));
       }
@@ -1164,10 +1178,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result =
@@ -1179,6 +1193,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_partition_in_Cons>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         auto [yes, no] = std::move(_result);
         if (p(a0)) {
@@ -1304,10 +1319,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result =
@@ -1324,6 +1339,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_span_split_in_true>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         auto [taken, rest] = std::move(_result);
         _result = std::make_pair(List<uint64_t>::cons(a0, std::move(taken)),
@@ -1358,10 +1374,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l, fuel});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         uint64_t fuel = _f.fuel;
         if (fuel <= 0) {
@@ -1395,12 +1411,14 @@ struct LoopifyHofs {
               std::holds_alternative<_after_group_by_eq_fuel_in_false>(_popped)) {
         auto _f =
             std::move(std::get<_after_group_by_eq_fuel_in_false>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         _result = List<List<uint64_t>>::cons(
             List<uint64_t>::cons(a0, List<uint64_t>::nil()),
             std::move(_result));
       } else {
         auto _f = std::move(std::get<_after_group_by_eq_fuel_in_true>(_popped));
+        _stack.pop_back();
         uint64_t a0 = _f.a0;
         List<List<uint64_t>> _tmp1 = std::move(_result);
         if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
@@ -1447,10 +1465,10 @@ struct LoopifyHofs {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l, acc});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<uint64_t> &l = *_f.l;
         uint64_t acc = _f.acc;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
@@ -1463,6 +1481,7 @@ struct LoopifyHofs {
         }
       } else {
         auto _f = std::move(std::get<_after_map_accum_l_in_pair>(_popped));
+        _stack.pop_back();
         uint64_t y = _f.y;
         auto [acc_p, ys] = std::move(_result);
         _result = std::make_pair(acc_p, List<uint64_t>::cons(y, std::move(ys)));

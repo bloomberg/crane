@@ -18,10 +18,10 @@ bool NatKey::key_eq_dec(const Datatypes::Nat &n, const Datatypes::Nat &x0) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&x0, &n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const Datatypes::Nat &x0 = *_f.x0;
       const Datatypes::Nat &n = *_f.n;
       if (std::holds_alternative<typename Datatypes::Nat::O>(n.v())) {
@@ -42,6 +42,7 @@ bool NatKey::key_eq_dec(const Datatypes::Nat &n, const Datatypes::Nat &x0) {
       }
     } else {
       auto _f = std::move(std::get<_after_key_eq_dec_in_S>(_popped));
+      _stack.pop_back();
       if (std::move(_result)) {
         _result = true;
       } else {

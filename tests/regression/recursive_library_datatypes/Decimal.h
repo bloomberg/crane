@@ -283,10 +283,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const Uint *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Uint::Nil>(_sv.v())) {
@@ -334,42 +334,52 @@ public:
         }
       } else if (std::holds_alternative<_after_uint_rect_in_D0>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D0>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f0(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D1>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D1>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f1(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D2>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f2(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D3>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D3>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f3(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D4>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D4>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f4(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D5>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D5>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f5(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D6>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D6>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f6(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D7>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D7>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f7(*a0, std::move(_result));
       } else if (std::holds_alternative<_after_uint_rect_in_D8>(_popped)) {
         auto _f = std::move(std::get<_after_uint_rect_in_D8>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f8(*a0, std::move(_result));
       } else {
         auto _f = std::move(std::get<_after_uint_rect_in_D9>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f9(*a0, std::move(_result));
       }
@@ -546,10 +556,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const Uint *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Uint::Nil>(_sv.v())) {
@@ -597,33 +607,43 @@ public:
         }
       } else if (std::holds_alternative<_after_nb_digits_in_D0>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D0>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D1>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D1>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D2>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D2>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D3>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D3>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D4>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D4>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D5>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D5>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D6>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D6>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D7>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D7>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else if (std::holds_alternative<_after_nb_digits_in_D8>(_popped)) {
         auto _f = std::move(std::get<_after_nb_digits_in_D8>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       } else {
         auto _f = std::move(std::get<_after_nb_digits_in_D9>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }

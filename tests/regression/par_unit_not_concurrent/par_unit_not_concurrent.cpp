@@ -22,10 +22,10 @@ uint64_t ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (crane::holds_alternative<_call>(_popped)) {
       auto _f = std::move(crane::get<_call>(_popped));
+      _stack.pop_back();
       const ParUnitNotConcurrent::tree &t = *_f.t;
       if (crane::holds_alternative<typename ParUnitNotConcurrent::tree::Leaf>(
               t.v())) {
@@ -38,12 +38,14 @@ uint64_t ParUnitNotConcurrent::sum(const ParUnitNotConcurrent::tree &t) {
       }
     } else if (crane::holds_alternative<_after_sum_in_Node>(_popped)) {
       auto _f = std::move(crane::get<_after_sum_in_Node>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       const ParUnitNotConcurrent::tree &a2 = *_f.a2;
       _stack.emplace_back(_after_sum_in_Node_2{a1, std::move(_result)});
       _stack.emplace_back(_call{&a2});
     } else {
       auto _f = std::move(crane::get<_after_sum_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result = ((_f._tmp2 + a1) + std::move(_result));
     }
@@ -107,10 +109,10 @@ ParUnitNotConcurrent::mirror(const ParUnitNotConcurrent::tree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (crane::holds_alternative<_call>(_popped)) {
       auto _f = std::move(crane::get<_call>(_popped));
+      _stack.pop_back();
       const ParUnitNotConcurrent::tree &t = *_f.t;
       if (crane::holds_alternative<typename ParUnitNotConcurrent::tree::Leaf>(
               t.v())) {
@@ -123,12 +125,14 @@ ParUnitNotConcurrent::mirror(const ParUnitNotConcurrent::tree &t) {
       }
     } else if (crane::holds_alternative<_after_mirror_in_Node>(_popped)) {
       auto _f = std::move(crane::get<_after_mirror_in_Node>(_popped));
+      _stack.pop_back();
       const ParUnitNotConcurrent::tree &a0 = *_f.a0;
       uint64_t a1 = _f.a1;
       _stack.emplace_back(_after_mirror_in_Node_2{a1, std::move(_result)});
       _stack.emplace_back(_call{&a0});
     } else {
       auto _f = std::move(crane::get<_after_mirror_in_Node_2>(_popped));
+      _stack.pop_back();
       uint64_t a1 = _f.a1;
       _result = tree::node(std::move(_f._tmp2), a1, std::move(_result));
     }

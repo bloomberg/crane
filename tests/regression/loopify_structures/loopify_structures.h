@@ -397,10 +397,10 @@ struct LoopifyStructures {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -415,6 +415,7 @@ struct LoopifyStructures {
           }
         } else if (std::holds_alternative<_after_quad_map_in_Quad>(_popped)) {
           auto _f = std::move(std::get<_after_quad_map_in_Quad>(_popped));
+          _stack.pop_back();
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
@@ -423,6 +424,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_map_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_map_in_Quad_2>(_popped));
+          _stack.pop_back();
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(_after_quad_map_in_Quad_3{
@@ -430,12 +432,14 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_map_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_map_in_Quad_3>(_popped));
+          _stack.pop_back();
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(_after_quad_map_in_Quad_4{
               std::move(_f._tmp4), std::move(_f._tmp3), std::move(_result)});
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_map_in_Quad_4>(_popped));
+          _stack.pop_back();
           _result = quadtree::quad(std::move(_f._tmp4), std::move(_f._tmp3),
                                    std::move(_f._tmp2), std::move(_result));
         }
@@ -484,10 +488,10 @@ struct LoopifyStructures {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -501,6 +505,7 @@ struct LoopifyStructures {
           }
         } else if (std::holds_alternative<_after_quad_depth_in_Quad>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad>(_popped));
+          _stack.pop_back();
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
@@ -509,6 +514,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_2>(_popped));
+          _stack.pop_back();
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
           uint64_t d1 = _f.d1;
@@ -517,6 +523,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_depth_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_3>(_popped));
+          _stack.pop_back();
           const quadtree &a3 = *_f.a3;
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
@@ -525,6 +532,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_depth_in_Quad_4>(_popped));
+          _stack.pop_back();
           uint64_t d1 = _f.d1;
           uint64_t d2 = _f.d2;
           uint64_t d3 = _f.d3;
@@ -590,10 +598,10 @@ struct LoopifyStructures {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -608,6 +616,7 @@ struct LoopifyStructures {
           }
         } else if (std::holds_alternative<_after_quad_sum_in_Quad>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad>(_popped));
+          _stack.pop_back();
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
@@ -616,6 +625,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a1});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_2>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_2>(_popped));
+          _stack.pop_back();
           const quadtree &a2 = *_f.a2;
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
@@ -623,6 +633,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a2});
         } else if (std::holds_alternative<_after_quad_sum_in_Quad_3>(_popped)) {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_3>(_popped));
+          _stack.pop_back();
           const quadtree &a3 = *_f.a3;
           _stack.emplace_back(
               _after_quad_sum_in_Quad_4{_f._tmp4, _f._tmp3,
@@ -630,6 +641,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a3});
         } else {
           auto _f = std::move(std::get<_after_quad_sum_in_Quad_4>(_popped));
+          _stack.pop_back();
           _result = (_f._tmp4 + (_f._tmp3 + (_f._tmp2 + std::move(_result))));
         }
       }
@@ -693,10 +705,10 @@ struct LoopifyStructures {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const quadtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename quadtree::QLeaf>(_sv.v())) {
@@ -712,6 +724,7 @@ struct LoopifyStructures {
         } else if (
                 std::holds_alternative<_after_quadtree_rect_in_Quad>(_popped)) {
           auto _f = std::move(std::get<_after_quadtree_rect_in_Quad>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -723,6 +736,7 @@ struct LoopifyStructures {
                 std::holds_alternative<_after_quadtree_rect_in_Quad_2>(_popped)) {
           auto _f =
               std::move(std::get<_after_quadtree_rect_in_Quad_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -735,6 +749,7 @@ struct LoopifyStructures {
                 std::holds_alternative<_after_quadtree_rect_in_Quad_3>(_popped)) {
           auto _f =
               std::move(std::get<_after_quadtree_rect_in_Quad_3>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -746,6 +761,7 @@ struct LoopifyStructures {
         } else {
           auto _f =
               std::move(std::get<_after_quadtree_rect_in_Quad_4>(_popped));
+          _stack.pop_back();
           std::shared_ptr<quadtree> a0 = std::move(_f.a0);
           const quadtree &a1 = *_f.a1;
           const quadtree &a2 = *_f.a2;
@@ -966,10 +982,10 @@ struct LoopifyStructures {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &t2});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const ltree *_self = _f._self;
           const ltree &t2 = *_f.t2;
           auto &&_sv = *_self;
@@ -1001,6 +1017,7 @@ struct LoopifyStructures {
           }
         } else if (std::holds_alternative<_after_ltree_max_in_LNode>(_popped)) {
           auto _f = std::move(std::get<_after_ltree_max_in_LNode>(_popped));
+          _stack.pop_back();
           const ltree &a2 = *_f.a2;
           const ltree &a20 = *_f.a20;
           uint64_t max_val = _f.max_val;
@@ -1009,6 +1026,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a2, &a20});
         } else {
           auto _f = std::move(std::get<_after_ltree_max_in_LNode_2>(_popped));
+          _stack.pop_back();
           uint64_t max_val = _f.max_val;
           _result =
               ltree::lnode(max_val, std::move(_f._tmp2), std::move(_result));
@@ -1052,10 +1070,10 @@ struct LoopifyStructures {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const ltree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ltree::LLeaf>(_sv.v())) {
@@ -1069,6 +1087,7 @@ struct LoopifyStructures {
           }
         } else if (std::holds_alternative<_after_ltree_rect_in_LNode>(_popped)) {
           auto _f = std::move(std::get<_after_ltree_rect_in_LNode>(_popped));
+          _stack.pop_back();
           uint64_t a0 = _f.a0;
           std::shared_ptr<ltree> a1 = std::move(_f.a1);
           const ltree &a2 = *_f.a2;
@@ -1077,6 +1096,7 @@ struct LoopifyStructures {
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_ltree_rect_in_LNode_2>(_popped));
+          _stack.pop_back();
           uint64_t a0 = _f.a0;
           std::shared_ptr<ltree> a1 = std::move(_f.a1);
           const ltree &a2 = *_f.a2;

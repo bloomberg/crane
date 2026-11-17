@@ -157,10 +157,10 @@ struct LoopifyAdoptedFixAliasResult {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<std::pair<uint64_t, T1>> &m = *_f.m;
         if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
                 m.v())) {
@@ -174,6 +174,7 @@ struct LoopifyAdoptedFixAliasResult {
         }
       } else {
         auto _f = std::move(std::get<_after_map2_l_in_pair>(_popped));
+        _stack.pop_back();
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
         _result = option_cons<T3>(
@@ -202,10 +203,10 @@ struct LoopifyAdoptedFixAliasResult {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<std::pair<uint64_t, T2>> &m = *_f.m;
         if (std::holds_alternative<typename List<std::pair<uint64_t, T2>>::Nil>(
                 m.v())) {
@@ -219,6 +220,7 @@ struct LoopifyAdoptedFixAliasResult {
         }
       } else {
         auto _f = std::move(std::get<_after_map2_r_in_pair>(_popped));
+        _stack.pop_back();
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
         _result = option_cons<T3>(
@@ -272,10 +274,10 @@ struct LoopifyAdoptedFixAliasResult {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&x0_, std::move(m)});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const t<T2> &x0_ = *_f.x0_;
         List<std::pair<uint64_t, T1>> m = std::move(_f.m);
         if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
@@ -289,6 +291,7 @@ struct LoopifyAdoptedFixAliasResult {
         }
       } else if (std::holds_alternative<_call_map2_aux>(_popped)) {
         auto _f = std::move(std::get<_call_map2_aux>(_popped));
+        _stack.pop_back();
         const List<std::pair<uint64_t, T2>> &m_ = *_f.m_;
         std::shared_ptr<List<std::pair<uint64_t, T1>>> a1 = std::move(_f.a1);
         auto e = std::move(_f.e);
@@ -319,6 +322,7 @@ struct LoopifyAdoptedFixAliasResult {
         }
       } else if (std::holds_alternative<_after_map2_aux_in_true>(_popped)) {
         auto _f = std::move(std::get<_after_map2_aux_in_true>(_popped));
+        _stack.pop_back();
         std::decay_t<F0> f = std::move(_f.f);
         uint64_t k_ = _f.k_;
         auto e_ = std::move(_f.e_);
@@ -327,6 +331,7 @@ struct LoopifyAdoptedFixAliasResult {
             std::move(_result));
       } else if (std::holds_alternative<_after_map2_in_false>(_popped)) {
         auto _f = std::move(std::get<_after_map2_in_false>(_popped));
+        _stack.pop_back();
         std::decay_t<F0> f = std::move(_f.f);
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
@@ -336,6 +341,7 @@ struct LoopifyAdoptedFixAliasResult {
             std::move(_result));
       } else {
         auto _f = std::move(std::get<_after_map2_in_true>(_popped));
+        _stack.pop_back();
         std::decay_t<F0> f = std::move(_f.f);
         uint64_t k = _f.k;
         auto e = std::move(_f.e);

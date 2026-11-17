@@ -337,10 +337,10 @@ struct BareSelfMethodValue {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const bareSelfMethodValue *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bareSelfMethodValue::Leaf>(
@@ -358,6 +358,7 @@ struct BareSelfMethodValue {
                     _popped)) {
           auto _f = std::move(
               std::get<_after_bareSelfMethodValue_rect_in_Node>(_popped));
+          _stack.pop_back();
           std::shared_ptr<bareSelfMethodValue> a0 = std::move(_f.a0);
           Nat a1 = std::move(_f.a1);
           const bareSelfMethodValue &a2 = *_f.a2;
@@ -367,6 +368,7 @@ struct BareSelfMethodValue {
         } else {
           auto _f = std::move(
               std::get<_after_bareSelfMethodValue_rect_in_Node_2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<bareSelfMethodValue> a0 = std::move(_f.a0);
           Nat a1 = std::move(_f.a1);
           const bareSelfMethodValue &a2 = *_f.a2;
@@ -404,10 +406,10 @@ struct BareSelfMethodValue {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const bareSelfMethodValue *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bareSelfMethodValue::Leaf>(
@@ -421,11 +423,13 @@ struct BareSelfMethodValue {
           }
         } else if (std::holds_alternative<_after_size_in_Node>(_popped)) {
           auto _f = std::move(std::get<_after_size_in_Node>(_popped));
+          _stack.pop_back();
           const bareSelfMethodValue &a2 = *_f.a2;
           _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
           _stack.emplace_back(_call{_f.a2});
         } else {
           auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
+          _stack.pop_back();
           _result = Nat::s(_f._tmp2.add(std::move(_result)));
         }
       }

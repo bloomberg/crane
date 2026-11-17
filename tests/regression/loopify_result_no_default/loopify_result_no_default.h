@@ -367,10 +367,10 @@ struct LoopifyResultNoDefault {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<T2> &l = *_f.l;
         if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
           _result = _tcI0::template ret<T3>(b);
@@ -382,6 +382,7 @@ struct LoopifyResultNoDefault {
         }
       } else {
         auto _f = std::move(std::get<_after_mfr_in_Cons>(_popped));
+        _stack.pop_back();
         auto a0 = std::move(_f.a0);
         _result = _tcI0::template bind<T3, T3>(
             std::move(_result),

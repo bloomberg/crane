@@ -19,10 +19,10 @@ bool LoopifyListRelations::is_prefix_of(const List<uint64_t> &l1,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l2, &l1});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l2 = *_f.l2;
       const List<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
@@ -40,6 +40,7 @@ bool LoopifyListRelations::is_prefix_of(const List<uint64_t> &l1,
       }
     } else {
       auto _f = std::move(std::get<_after_is_prefix_of_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       _result = (a0 == a00 && std::move(_result));
@@ -208,10 +209,10 @@ bool LoopifyListRelations::list_eq(const List<uint64_t> &l1,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l2, &l1});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<uint64_t> &l2 = *_f.l2;
       const List<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
@@ -233,6 +234,7 @@ bool LoopifyListRelations::list_eq(const List<uint64_t> &l1,
       }
     } else {
       auto _f = std::move(std::get<_after_list_eq_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       _result = (a0 == a00 && std::move(_result));
@@ -549,10 +551,10 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
           crane::small_vector<_frame> _stack;
           _stack.emplace_back(_call{&ys});
           while (!_stack.empty()) {
-            _frame _popped = std::move(_stack.back());
-            _stack.pop_back();
+            _frame &_popped = _stack.back();
             if (std::holds_alternative<_call>(_popped)) {
               auto _f = std::move(std::get<_call>(_popped));
+              _stack.pop_back();
               const List<uint64_t> &ys = *_f.ys;
               if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
                 _result = false;
@@ -564,6 +566,7 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
               }
             } else {
               auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
+              _stack.pop_back();
               uint64_t a2 = _f.a2;
               _result = (y == a2 || std::move(_result));
             }
@@ -623,10 +626,10 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
           crane::small_vector<_frame> _stack;
           _stack.emplace_back(_call{&ys});
           while (!_stack.empty()) {
-            _frame _popped = std::move(_stack.back());
-            _stack.pop_back();
+            _frame &_popped = _stack.back();
             if (std::holds_alternative<_call>(_popped)) {
               auto _f = std::move(std::get<_call>(_popped));
+              _stack.pop_back();
               const List<uint64_t> &ys = *_f.ys;
               if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
                 _result = false;
@@ -638,6 +641,7 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
               }
             } else {
               auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
+              _stack.pop_back();
               uint64_t a2 = _f.a2;
               _result = (y == a2 || std::move(_result));
             }

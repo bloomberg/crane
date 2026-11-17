@@ -47,6 +47,8 @@ struct R {
 
     // MANIPULATORS
     ~lst() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> crane::rc<lst> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -90,6 +92,8 @@ struct R {
   template <typename F0>
     requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &&>
   static lst map1(F0 &&f, lst l) {
+    // Reuse the matched cell in place when this is its only owner; otherwise
+    // rebuild.
     if (l.v().index() == 1) {
       if (std::get<typename lst::Cons>(l.v_mut()).a1.use_count() == 1) {
         uint64_t x = std::move(std::get<typename lst::Cons>(l.v_mut()).a0);

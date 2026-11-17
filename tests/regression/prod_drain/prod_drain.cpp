@@ -31,10 +31,10 @@ uint64_t ProdDrain::depth(const ProdDrain::t &x) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{x});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const ProdDrain::t &x = _f.x;
       if (std::holds_alternative<typename ProdDrain::t::L>(x.v())) {
         _result = UINT64_C(0);
@@ -46,6 +46,7 @@ uint64_t ProdDrain::depth(const ProdDrain::t &x) {
       }
     } else {
       auto _f = std::move(std::get<_after_depth_in_pair>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }

@@ -23,10 +23,10 @@ TmcNestedCtorWrap::rose TmcNestedCtorWrap::spine(const Nat &n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const Nat &n = *_f.n;
       if (std::holds_alternative<typename Nat::O>(n.v())) {
         _result = rose::rnode(List<TmcNestedCtorWrap::rose>::nil());
@@ -37,6 +37,7 @@ TmcNestedCtorWrap::rose TmcNestedCtorWrap::spine(const Nat &n) {
       }
     } else {
       auto _f = std::move(std::get<_after_spine_in_S>(_popped));
+      _stack.pop_back();
       _result = rose::rnode(List<TmcNestedCtorWrap::rose>::cons(
           std::move(_result), List<TmcNestedCtorWrap::rose>::nil()));
     }

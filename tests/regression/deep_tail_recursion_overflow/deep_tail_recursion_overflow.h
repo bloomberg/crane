@@ -95,10 +95,10 @@ struct DeepTailRecursionOverflow {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&c});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const chain &c = *_f.c;
         if (std::holds_alternative<typename chain::End_>(c.v())) {
           const auto &[a0] = std::get<typename chain::End_>(c.v());
@@ -110,6 +110,7 @@ struct DeepTailRecursionOverflow {
         }
       } else {
         auto _f = std::move(std::get<_after_chain_rect_in_Link>(_popped));
+        _stack.pop_back();
         std::shared_ptr<chain> a0 = std::move(_f.a0);
         uint64_t a1 = _f.a1;
         _result = f0(*a0, std::move(_result), a1);

@@ -143,10 +143,10 @@ struct HofTreeLoopify {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
           _result = f;
@@ -157,6 +157,7 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
@@ -165,6 +166,7 @@ struct HofTreeLoopify {
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree<T1>> a0 = std::move(_f.a0);
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
@@ -206,10 +208,10 @@ struct HofTreeLoopify {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
           _result = tree<T2>::leaf();
@@ -220,6 +222,7 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_after_tree_map_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_map_in_Node>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         _stack.emplace_back(
@@ -227,6 +230,7 @@ struct HofTreeLoopify {
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_tree_map_in_Node_2>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         _result =
             tree<T2>::node(std::move(_f._tmp2), f(a1), std::move(_result));
@@ -260,10 +264,10 @@ struct HofTreeLoopify {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &t = *_f.t;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
           _result = base;
@@ -274,6 +278,7 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_after_tree_fold_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_fold_in_Node>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         _stack.emplace_back(
@@ -281,6 +286,7 @@ struct HofTreeLoopify {
         _stack.emplace_back(_call{&a2});
       } else {
         auto _f = std::move(std::get<_after_tree_fold_in_Node_2>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         _result = f(std::move(_f._tmp2), a1, std::move(_result));
       }
@@ -318,10 +324,10 @@ struct HofTreeLoopify {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t2, &t1});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T2> &t2 = *_f.t2;
         const tree<T1> &t1 = *_f.t1;
         if (std::holds_alternative<typename tree<T1>::Leaf>(t1.v())) {
@@ -340,6 +346,7 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_after_tree_zip_with_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_zip_with_in_Node>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         auto a10 = std::move(_f.a10);
@@ -349,6 +356,7 @@ struct HofTreeLoopify {
         _stack.emplace_back(_call{&a20, &a2});
       } else {
         auto _f = std::move(std::get<_after_tree_zip_with_in_Node_2>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         auto a10 = std::move(_f.a10);
         _result =
@@ -384,10 +392,10 @@ struct HofTreeLoopify {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t, acc});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree<T1> &t = *_f.t;
         const T3 acc = std::move(_f.acc);
         if (std::holds_alternative<typename tree<T1>::Leaf>(t.v())) {
@@ -399,6 +407,7 @@ struct HofTreeLoopify {
         }
       } else if (std::holds_alternative<_after_tree_map_accum_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_map_accum_in_Node>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         const tree<T1> &a2 = *_f.a2;
         auto [acc1, l_] = std::move(_result);
@@ -408,6 +417,7 @@ struct HofTreeLoopify {
         _stack.emplace_back(_call{&a2, std::move(acc2)});
       } else {
         auto _f = std::move(std::get<_after_tree_map_accum_in_pair>(_popped));
+        _stack.pop_back();
         tree<T2> l_ = std::move(_f.l_);
         auto x_ = std::move(_f.x_);
         auto [acc3, r_] = std::move(_result);

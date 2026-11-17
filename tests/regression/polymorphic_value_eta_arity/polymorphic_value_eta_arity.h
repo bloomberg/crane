@@ -155,7 +155,7 @@ struct PolymorphicValueEtaArity {
             List<crane::fn<uint64_t(uint64_t)>>::nil()))
                .template map<crane::fn<uint64_t(uint64_t)>>(
         [](crane::fn<uint64_t(uint64_t)> _ec0) {
-          return [=](uint64_t _ec1) {
+          return [=, _ec0 = std::move(_ec0)](uint64_t _ec1) {
             return idf<crane::fn<uint64_t(uint64_t)>>(_ec0)(_ec1);
           };
         });

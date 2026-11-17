@@ -53,15 +53,16 @@ LoopifyTopLevelCallBinding::csum(const LoopifyTopLevelCallBinding::cell &c) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{c});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyTopLevelCallBinding::cell &c = _f.c;
       _stack.emplace_back(_after_go{c});
       _stack.emplace_back(_call_go{kids(c)});
     } else if (std::holds_alternative<_call_go>(_popped)) {
       auto _f = std::move(std::get<_call_go>(_popped));
+      _stack.pop_back();
       const List<LoopifyTopLevelCallBinding::cell> &l = _f.l;
       if (std::holds_alternative<
               typename List<LoopifyTopLevelCallBinding::cell>::Nil>(l.v())) {
@@ -75,16 +76,19 @@ LoopifyTopLevelCallBinding::csum(const LoopifyTopLevelCallBinding::cell &c) {
       }
     } else if (std::holds_alternative<_after_csum_in_Cons>(_popped)) {
       auto _f = std::move(std::get<_after_csum_in_Cons>(_popped));
+      _stack.pop_back();
       std::shared_ptr<List<LoopifyTopLevelCallBinding::cell>> a1 =
           std::move(_f.a1);
       _stack.emplace_back(_after_go_in_Cons{std::move(_result)});
       _stack.emplace_back(_call_go{*a1});
     } else if (std::holds_alternative<_after_go>(_popped)) {
       auto _f = std::move(std::get<_after_go>(_popped));
+      _stack.pop_back();
       LoopifyTopLevelCallBinding::cell c = std::move(_f.c);
       _result = (key(std::move(c)) + std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_go_in_Cons>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -107,10 +111,10 @@ LoopifyTopLevelCallBinding::cell LoopifyTopLevelCallBinding::chain(uint64_t n,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result =
@@ -122,6 +126,7 @@ LoopifyTopLevelCallBinding::cell LoopifyTopLevelCallBinding::chain(uint64_t n,
       }
     } else {
       auto _f = std::move(std::get<_after_chain_in_S>(_popped));
+      _stack.pop_back();
       _result =
           cell::mkcell(k, List<LoopifyTopLevelCallBinding::cell>::cons(
                               std::move(_result),

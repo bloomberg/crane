@@ -16,10 +16,10 @@ uint64_t LoopifyClassics::factorial(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(1);
@@ -30,6 +30,7 @@ uint64_t LoopifyClassics::factorial(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_factorial_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n * std::move(_result));
     }
@@ -57,10 +58,10 @@ uint64_t LoopifyClassics::fib(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -76,11 +77,13 @@ uint64_t LoopifyClassics::fib(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_fib_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_fib_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n_p = _f.n_p;
       _stack.emplace_back(_after_fib_in_S_2{std::move(_result)});
       _stack.emplace_back(_call{n_p});
     } else {
       auto _f = std::move(std::get<_after_fib_in_S_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -106,10 +109,10 @@ uint64_t LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n, m, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t m = _f.m;
       uint64_t fuel = _f.fuel;
@@ -134,6 +137,7 @@ uint64_t LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_ack_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t m = _f.m;
       uint64_t fuel_ = _f.fuel_;
       uint64_t inner = std::move(_result);
@@ -174,10 +178,10 @@ uint64_t LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n, uint64_t k) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{k, n, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t k = _f.k;
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
@@ -196,6 +200,7 @@ uint64_t LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n, uint64_t k) {
       }
     } else if (std::holds_alternative<_after_binomial_fuel_in_false>(_popped)) {
       auto _f = std::move(std::get<_after_binomial_fuel_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t k = _f.k;
       uint64_t fuel_ = _f.fuel_;
@@ -204,6 +209,7 @@ uint64_t LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n, uint64_t k) {
           _call{k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
     } else {
       auto _f = std::move(std::get<_after_binomial_fuel_in_false_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -265,10 +271,10 @@ uint64_t LoopifyClassics::power(uint64_t base, uint64_t exp) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{exp});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t exp = _f.exp;
       if (exp <= 0) {
         _result = UINT64_C(1);
@@ -279,6 +285,7 @@ uint64_t LoopifyClassics::power(uint64_t base, uint64_t exp) {
       }
     } else {
       auto _f = std::move(std::get<_after_power_in_S>(_popped));
+      _stack.pop_back();
       _result = (base * std::move(_result));
     }
   }
@@ -301,10 +308,10 @@ uint64_t LoopifyClassics::sum_to(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -315,6 +322,7 @@ uint64_t LoopifyClassics::sum_to(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_to_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }
@@ -338,10 +346,10 @@ uint64_t LoopifyClassics::sum_squares(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -352,6 +360,7 @@ uint64_t LoopifyClassics::sum_squares(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_squares_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = ((n * n) + std::move(_result));
     }

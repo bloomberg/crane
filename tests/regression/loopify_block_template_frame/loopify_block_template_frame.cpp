@@ -16,10 +16,10 @@ List<uint64_t> LoopifyBlockTemplateFrame::doubles(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = List<uint64_t>::nil();
@@ -32,6 +32,7 @@ List<uint64_t> LoopifyBlockTemplateFrame::doubles(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_doubles_in_S>(_popped));
+      _stack.pop_back();
       uint64_t d = _f.d;
       List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons(d, std::move(rest));

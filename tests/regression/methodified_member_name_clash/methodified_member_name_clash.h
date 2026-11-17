@@ -90,10 +90,10 @@ struct MethodifiedMemberNameClash {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const other *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename other::O1>(_sv.v())) {
@@ -105,6 +105,7 @@ struct MethodifiedMemberNameClash {
           }
         } else {
           auto _f = std::move(std::get<_after_other_rect_in_O2>(_popped));
+          _stack.pop_back();
           std::shared_ptr<other> a0 = std::move(_f.a0);
           _result = f0(*a0, std::move(_result));
         }
@@ -201,10 +202,10 @@ struct MethodifiedMemberNameClash {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const wrap *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename wrap::W>(_sv.v())) {
@@ -217,6 +218,7 @@ struct MethodifiedMemberNameClash {
           }
         } else {
           auto _f = std::move(std::get<_after_wrap_rect_in_WW>(_popped));
+          _stack.pop_back();
           std::shared_ptr<wrap> a0 = std::move(_f.a0);
           _result = f0(*a0, std::move(_result));
         }

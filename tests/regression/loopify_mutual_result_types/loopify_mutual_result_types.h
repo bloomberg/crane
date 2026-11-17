@@ -257,10 +257,10 @@ struct LoopifyMutualResultTypes {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&e0});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const e &e0 = *_f.e0;
         if (std::holds_alternative<typename e::Leaf>(e0.v())) {
           const auto &[n0] = std::get<typename e::Leaf>(e0.v());
@@ -275,6 +275,7 @@ struct LoopifyMutualResultTypes {
         }
       } else if (std::holds_alternative<_after_e_rect_in_Add>(_popped)) {
         auto _f = std::move(std::get<_after_e_rect_in_Add>(_popped));
+        _stack.pop_back();
         std::shared_ptr<e> a0 = std::move(_f.a0);
         const e &b0 = *_f.b0;
         _stack.emplace_back(
@@ -282,6 +283,7 @@ struct LoopifyMutualResultTypes {
         _stack.emplace_back(_call{&b0});
       } else {
         auto _f = std::move(std::get<_after_e_rect_in_Add_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<e> a0 = std::move(_f.a0);
         const e &b0 = *_f.b0;
         _result = f0(*a0, std::move(_f._tmp2), b0, std::move(_result));
@@ -320,10 +322,10 @@ struct LoopifyMutualResultTypes {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const md &m = *_f.m;
         if (std::holds_alternative<typename md::MNull>(m.v())) {
           _result = f;
@@ -337,6 +339,7 @@ struct LoopifyMutualResultTypes {
         }
       } else if (std::holds_alternative<_after_md_rect_in_MPair>(_popped)) {
         auto _f = std::move(std::get<_after_md_rect_in_MPair>(_popped));
+        _stack.pop_back();
         std::shared_ptr<md> a0 = std::move(_f.a0);
         const md &b0 = *_f.b0;
         _stack.emplace_back(
@@ -344,6 +347,7 @@ struct LoopifyMutualResultTypes {
         _stack.emplace_back(_call{&b0});
       } else {
         auto _f = std::move(std::get<_after_md_rect_in_MPair_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<md> a0 = std::move(_f.a0);
         const md &b0 = *_f.b0;
         _result = f1(*a0, std::move(_f._tmp2), b0, std::move(_result));

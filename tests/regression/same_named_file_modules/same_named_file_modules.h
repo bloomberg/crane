@@ -145,10 +145,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -160,6 +160,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_after_fold_right_in_Cons>(_popped));
+        _stack.pop_back();
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -183,10 +184,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
@@ -198,6 +199,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
         _result = (std::move(_result) + 1);
       }
     }
@@ -1573,10 +1575,10 @@ struct Coq_Pos {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &_x});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const PeanoView *_self = _f._self;
           const Positive &_x = *_f._x;
           auto &&_sv = *_self;
@@ -1591,6 +1593,7 @@ struct Coq_Pos {
         } else {
           auto _f =
               std::move(std::get<_after_PeanoView_iter_in_PeanoSucc>(_popped));
+          _stack.pop_back();
           Positive p = std::move(_f.p);
           _result = f(p, std::move(_result));
         }
@@ -1695,10 +1698,10 @@ struct Coq_Pos {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, &_x});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const PeanoView *_self = _f._self;
           const Positive &_x = *_f._x;
           auto &&_sv = *_self;
@@ -1713,6 +1716,7 @@ struct Coq_Pos {
         } else {
           auto _f =
               std::move(std::get<_after_PeanoView_rect_in_PeanoSucc>(_popped));
+          _stack.pop_back();
           Positive p2 = std::move(_f.p2);
           std::shared_ptr<PeanoView> a1 = std::move(_f.a1);
           _result = f0(p2, *a1, std::move(_result));

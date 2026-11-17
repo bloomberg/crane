@@ -20,10 +20,10 @@ uint64_t sum_signum(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -34,6 +34,7 @@ uint64_t sum_signum(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_signum_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n_ = _f.n_;
       uint64_t rest = std::move(_result);
       uint64_t here;
@@ -71,10 +72,10 @@ List<uint64_t> down_let(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = List<uint64_t>::nil();
@@ -93,6 +94,7 @@ List<uint64_t> down_let(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_down_let_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n_ = _f.n_;
       auto rest = std::move(_result);
       _result = List<uint64_t>::cons(n_, std::move(rest));
@@ -123,10 +125,10 @@ List<uint64_t> down_inline(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = List<uint64_t>::nil();
@@ -145,6 +147,7 @@ List<uint64_t> down_inline(uint64_t n) {
       }
     } else {
       auto _f = std::move(std::get<_after_down_inline_in_false>(_popped));
+      _stack.pop_back();
       uint64_t n_ = _f.n_;
       _result = List<uint64_t>::cons(n_, std::move(_result));
     }

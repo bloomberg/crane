@@ -111,10 +111,10 @@ struct LoopifyOperandMatchCall {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const tree &t = *_f.t;
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
           _result = f;
@@ -125,6 +125,7 @@ struct LoopifyOperandMatchCall {
         }
       } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
         auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree> l0 = std::move(_f.l0);
         const tree &r0 = *_f.r0;
         _stack.emplace_back(
@@ -132,6 +133,7 @@ struct LoopifyOperandMatchCall {
         _stack.emplace_back(_call{&r0});
       } else {
         auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
+        _stack.pop_back();
         std::shared_ptr<tree> l0 = std::move(_f.l0);
         const tree &r0 = *_f.r0;
         _result = f0(*l0, std::move(_f._tmp2), r0, std::move(_result));

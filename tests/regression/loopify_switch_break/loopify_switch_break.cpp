@@ -142,10 +142,10 @@ uint64_t LoopifySwitchBreak::count_tag(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&ops});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<std::pair<LoopifySwitchBreak::Tag, uint64_t>> &ops = *_f.ops;
       if (std::holds_alternative<
               typename List<std::pair<LoopifySwitchBreak::Tag, uint64_t>>::Nil>(
@@ -202,12 +202,15 @@ uint64_t LoopifySwitchBreak::count_tag(
       }
     } else if (std::holds_alternative<_after_count_tag_in_pair>(_popped)) {
       auto _f = std::move(std::get<_after_count_tag_in_pair>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     } else if (std::holds_alternative<_after_count_tag_in_pair_2>(_popped)) {
       auto _f = std::move(std::get<_after_count_tag_in_pair_2>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     } else {
       auto _f = std::move(std::get<_after_count_tag_in_pair_3>(_popped));
+      _stack.pop_back();
       _result = (std::move(_result) + 1);
     }
   }

@@ -17,10 +17,10 @@ MemSafetyProbe17::sum_list(const MemSafetyProbe17::mylist<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe17::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe17::mylist<uint64_t>::Mynil>(l.v())) {
@@ -33,6 +33,7 @@ MemSafetyProbe17::sum_list(const MemSafetyProbe17::mylist<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -83,10 +84,10 @@ MemSafetyProbe17::qtree_flatten(const MemSafetyProbe17::qtree &t) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe17::qtree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe17::qtree::QLeaf>(t.v())) {
         _result = mylist<uint64_t>::mynil();
@@ -99,6 +100,7 @@ MemSafetyProbe17::qtree_flatten(const MemSafetyProbe17::qtree &t) {
       }
     } else if (std::holds_alternative<_after_qtree_flatten_in_QNode>(_popped)) {
       auto _f = std::move(std::get<_after_qtree_flatten_in_QNode>(_popped));
+      _stack.pop_back();
       const MemSafetyProbe17::qtree &a1 = *_f.a1;
       uint64_t a2 = _f.a2;
       const MemSafetyProbe17::qtree &a3 = *_f.a3;
@@ -108,6 +110,7 @@ MemSafetyProbe17::qtree_flatten(const MemSafetyProbe17::qtree &t) {
       _stack.emplace_back(_call{&a1});
     } else if (std::holds_alternative<_after_qtree_flatten_in_QNode_2>(_popped)) {
       auto _f = std::move(std::get<_after_qtree_flatten_in_QNode_2>(_popped));
+      _stack.pop_back();
       uint64_t a2 = _f.a2;
       const MemSafetyProbe17::qtree &a3 = *_f.a3;
       const MemSafetyProbe17::qtree &a4 = *_f.a4;
@@ -116,6 +119,7 @@ MemSafetyProbe17::qtree_flatten(const MemSafetyProbe17::qtree &t) {
       _stack.emplace_back(_call{&a3});
     } else if (std::holds_alternative<_after_qtree_flatten_in_QNode_3>(_popped)) {
       auto _f = std::move(std::get<_after_qtree_flatten_in_QNode_3>(_popped));
+      _stack.pop_back();
       uint64_t a2 = _f.a2;
       const MemSafetyProbe17::qtree &a4 = *_f.a4;
       _stack.emplace_back(_after_qtree_flatten_in_QNode_4{
@@ -123,6 +127,7 @@ MemSafetyProbe17::qtree_flatten(const MemSafetyProbe17::qtree &t) {
       _stack.emplace_back(_call{&a4});
     } else {
       auto _f = std::move(std::get<_after_qtree_flatten_in_QNode_4>(_popped));
+      _stack.pop_back();
       uint64_t a2 = _f.a2;
       _result = _f._tmp4.myapp(_f._tmp3.myapp(
           mylist<uint64_t>::mycons(a2, _f._tmp2.myapp(std::move(_result)))));
@@ -155,10 +160,10 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = qtree::qleaf();
@@ -169,12 +174,14 @@ MemSafetyProbe17::qtree MemSafetyProbe17::make_qtree(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_make_qtree_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_make_qtree_in_S>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(_after_make_qtree_in_S_2{n, std::move(_result)});
       _stack.emplace_back(_call{n_});
     } else {
       auto _f = std::move(std::get<_after_make_qtree_in_S_2>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       _result = qtree::qnode(std::move(_f._tmp2), qtree::qleaf(), n,
                              std::move(_result), qtree::qleaf());

@@ -62,10 +62,10 @@ struct DequeAnyCast {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{l});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const std::deque<typename _tcI0::m_carrier> &l = _f.l;
         if (l.empty()) {
           _result = _tcI0::m_id();
@@ -79,6 +79,7 @@ struct DequeAnyCast {
         }
       } else {
         auto _f = std::move(std::get<_after_mfold_in_cons>(_popped));
+        _stack.pop_back();
         typename _tcI0::m_carrier x = std::move(_f.x);
         const auto &m_op0 = _tcI0::m_op;
         _result = m_op0(std::move(x), std::move(_result));

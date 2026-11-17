@@ -22,10 +22,10 @@ LoopifyPairs::unzip(const LoopifyPairs::list<std::pair<uint64_t,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPairs::list<std::pair<uint64_t, uint64_t>> &l = *_f.l;
       if (std::holds_alternative<
               typename LoopifyPairs::list<std::pair<uint64_t, uint64_t>>::Nil>(
@@ -41,6 +41,7 @@ LoopifyPairs::unzip(const LoopifyPairs::list<std::pair<uint64_t,
       }
     } else {
       auto _f = std::move(std::get<_after_unzip_in_pair>(_popped));
+      _stack.pop_back();
       uint64_t x = _f.x;
       uint64_t y = _f.y;
       auto [xs, ys] = std::move(_result);
@@ -74,10 +75,10 @@ LoopifyPairs::partition3(uint64_t pivot,
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPairs::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPairs::list<uint64_t>::Nil>(
               l.v())) {
@@ -92,6 +93,7 @@ LoopifyPairs::partition3(uint64_t pivot,
       }
     } else {
       auto _f = std::move(std::get<_after_partition3_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       auto [lt, p] = std::move(_result);
       auto [eq, gt] = std::move(p);
@@ -134,10 +136,10 @@ LoopifyPairs::min_max(const LoopifyPairs::list<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPairs::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPairs::list<uint64_t>::Nil>(
               l.v())) {
@@ -156,6 +158,7 @@ LoopifyPairs::min_max(const LoopifyPairs::list<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_min_max_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
       const auto &[mn, mx] = _tmp1;
@@ -183,10 +186,10 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPairs::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPairs::list<uint64_t>::Nil>(
               l.v())) {
@@ -199,6 +202,7 @@ LoopifyPairs::sum_and_count(const LoopifyPairs::list<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_and_count_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
       const auto &[s, c] = _tmp1;
@@ -226,10 +230,10 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<uint64_t> &l) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const LoopifyPairs::list<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename LoopifyPairs::list<uint64_t>::Nil>(
               l.v())) {
@@ -243,6 +247,7 @@ LoopifyPairs::sum_prod_count(const LoopifyPairs::list<uint64_t> &l) {
       }
     } else {
       auto _f = std::move(std::get<_after_sum_prod_count_in_Cons>(_popped));
+      _stack.pop_back();
       uint64_t a0 = _f.a0;
       std::pair<uint64_t, std::pair<uint64_t, uint64_t>> _tmp1 =
           std::move(_result);

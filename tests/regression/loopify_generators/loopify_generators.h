@@ -296,10 +296,10 @@ struct LoopifyGenerators {
       crane::small_vector<_frame> _lc1_stack;
       _lc1_stack.emplace_back(_call{_lc1_i});
       while (!_lc1_stack.empty()) {
-        _frame _popped = std::move(_lc1_stack.back());
-        _lc1_stack.pop_back();
+        _frame &_popped = _lc1_stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _lc1_stack.pop_back();
           uint64_t _lc1_i = _f.i;
           if (_lc1_i <= 0) {
             _lc1_result = List<uint64_t>::nil();
@@ -310,6 +310,7 @@ struct LoopifyGenerators {
           }
         } else {
           auto _f = std::move(std::get<_after_go_in_S>(_popped));
+          _lc1_stack.pop_back();
           uint64_t _lc1_i = _f.i;
           _lc1_result =
               List<uint64_t>::cons(f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))),

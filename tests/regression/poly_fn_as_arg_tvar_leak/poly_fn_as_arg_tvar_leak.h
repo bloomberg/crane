@@ -80,7 +80,9 @@ struct PolyFnAsArgTvarLeak {
   static inline const Nat run = []() {
     return twice<crane::fn<Nat(Nat)>>(
         [](crane::fn<Nat(Nat)> _ec0) {
-          return [=](Nat _ec1) { return twice<Nat>(_ec0, _ec1); };
+          return [=, _ec0 = std::move(_ec0)](Nat _ec1) {
+            return twice<Nat>(_ec0, _ec1);
+          };
         },
         [](const Nat &x) { return Nat::s(x); })(Nat::o());
   }();

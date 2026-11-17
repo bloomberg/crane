@@ -118,10 +118,10 @@ public:
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{_self, _x});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const T *_self = _f._self;
         uint64_t _x = _f._x;
         auto &&_sv = *_self;
@@ -134,6 +134,7 @@ public:
         }
       } else {
         auto _f = std::move(std::get<_after_to_nat_in_FS>(_popped));
+        _stack.pop_back();
         Sig<uint64_t> _tmp1 = std::move(_result);
         auto &[x0] = _tmp1;
         _result = Sig<uint64_t>::exist((std::move(x0) + 1));

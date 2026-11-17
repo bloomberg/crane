@@ -174,10 +174,10 @@ struct DepElim {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, _x});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const fin *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -190,6 +190,7 @@ struct DepElim {
           }
         } else {
           auto _f = std::move(std::get<_after_fin_to_nat_in_FS>(_popped));
+          _stack.pop_back();
           _result = (std::move(_result) + 1);
         }
       }
@@ -223,10 +224,10 @@ struct DepElim {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, _x});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const fin *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -240,6 +241,7 @@ struct DepElim {
           }
         } else {
           auto _f = std::move(std::get<_after_fin_rect_in_FS>(_popped));
+          _stack.pop_back();
           uint64_t n0 = _f.n0;
           std::shared_ptr<fin> a1 = std::move(_f.a1);
           _result = f0(n0, *a1, std::move(_result));
@@ -436,10 +438,10 @@ struct DepElim {
       crane::small_vector<_frame> _stack;
       _stack.emplace_back(_call{_self, _x});
       while (!_stack.empty()) {
-        _frame _popped = std::move(_stack.back());
-        _stack.pop_back();
+        _frame &_popped = _stack.back();
         if (std::holds_alternative<_call>(_popped)) {
           auto _f = std::move(std::get<_call>(_popped));
+          _stack.pop_back();
           const vec<A> *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -453,6 +455,7 @@ struct DepElim {
           }
         } else {
           auto _f = std::move(std::get<_after_vec_rect_in_Vcons>(_popped));
+          _stack.pop_back();
           uint64_t n0 = _f.n0;
           auto a1 = std::move(_f.a1);
           std::shared_ptr<vec<A>> a2 = std::move(_f.a2);

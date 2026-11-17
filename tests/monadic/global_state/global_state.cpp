@@ -21,10 +21,10 @@ uint64_t GlobalStateTests::fib_fun(uint64_t n) {
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -40,11 +40,13 @@ uint64_t GlobalStateTests::fib_fun(uint64_t n) {
       }
     } else if (std::holds_alternative<_after_fib_fun_in_S>(_popped)) {
       auto _f = std::move(std::get<_after_fib_fun_in_S>(_popped));
+      _stack.pop_back();
       uint64_t m = _f.m;
       _stack.emplace_back(_after_fib_fun_in_S_2{std::move(_result)});
       _stack.emplace_back(_call{m});
     } else {
       auto _f = std::move(std::get<_after_fib_fun_in_S_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp2 + std::move(_result));
     }
   }

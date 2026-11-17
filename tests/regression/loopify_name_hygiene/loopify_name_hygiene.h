@@ -96,10 +96,10 @@ struct LoopifyNameHygiene {
     crane::small_vector<_frame> _stack;
     _stack.emplace_back(_call{&f_});
     while (!_stack.empty()) {
-      _frame _popped = std::move(_stack.back());
-      _stack.pop_back();
+      _frame &_popped = _stack.back();
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
         const Frame_ &f_ = *_f.f_;
         if (std::holds_alternative<typename Frame_::Enter_>(f_.v())) {
           const auto &[a0] = std::get<typename Frame_::Enter_>(f_.v());
@@ -112,6 +112,7 @@ struct LoopifyNameHygiene {
       } else {
         auto _f =
             std::move(std::get<_after_pFrame_rect_in_Resume_Cons_>(_popped));
+        _stack.pop_back();
         std::shared_ptr<Frame_> a0 = std::move(_f.a0);
         _result = f0(*a0, std::move(_result));
       }

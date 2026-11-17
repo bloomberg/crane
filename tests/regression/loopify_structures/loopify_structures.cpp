@@ -32,10 +32,10 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyStructures::nested> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -67,12 +67,14 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_sum_nested_list_fuel_in_Elem>(_popped));
+      _stack.pop_back();
       uint64_t a00 = _f.a00;
       _result = (a00 + std::move(_result));
     } else if (std::holds_alternative<_after_sum_nested_list_fuel_in_NList>(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_sum_nested_list_fuel_in_NList>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
       _stack.emplace_back(
@@ -81,6 +83,7 @@ uint64_t LoopifyStructures::sum_nested_list_fuel(
     } else {
       auto _f =
           std::move(std::get<_after_sum_nested_list_fuel_in_NList_2>(_popped));
+      _stack.pop_back();
       _result = (_f._tmp3 + std::move(_result));
     }
   }
@@ -115,10 +118,10 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyStructures::nested> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -148,6 +151,7 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_depth_nested_list_fuel_in_Elem>(_popped));
+      _stack.pop_back();
       uint64_t rest_max = std::move(_result);
       if (UINT64_C(0) <= rest_max) {
         _result = std::move(rest_max);
@@ -158,6 +162,7 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_depth_nested_list_fuel_in_NList>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
       uint64_t d = (std::move(_result) + 1);
@@ -166,6 +171,7 @@ uint64_t LoopifyStructures::depth_nested_list_fuel(
     } else {
       auto _f = std::move(
           std::get<_after_depth_nested_list_fuel_in_NList_2>(_popped));
+      _stack.pop_back();
       uint64_t d = _f.d;
       uint64_t rest_max = std::move(_result);
       if (d <= rest_max) {
@@ -208,10 +214,10 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
   crane::small_vector<_frame> _stack;
   _stack.emplace_back(_call{&l, fuel});
   while (!_stack.empty()) {
-    _frame _popped = std::move(_stack.back());
-    _stack.pop_back();
+    _frame &_popped = _stack.back();
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
       const List<LoopifyStructures::nested> &l = *_f.l;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -243,12 +249,14 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
                    _popped)) {
       auto _f =
           std::move(std::get<_after_flatten_nested_list_fuel_in_Elem>(_popped));
+      _stack.pop_back();
       uint64_t a00 = _f.a00;
       _result = List<uint64_t>::cons(a00, std::move(_result));
     } else if (std::holds_alternative<_after_flatten_nested_list_fuel_in_NList>(
                    _popped)) {
       auto _f = std::move(
           std::get<_after_flatten_nested_list_fuel_in_NList>(_popped));
+      _stack.pop_back();
       uint64_t f = _f.f;
       const List<LoopifyStructures::nested> &a1 = *_f.a1;
       _stack.emplace_back(
@@ -257,6 +265,7 @@ List<uint64_t> LoopifyStructures::flatten_nested_list_fuel(
     } else {
       auto _f = std::move(
           std::get<_after_flatten_nested_list_fuel_in_NList_2>(_popped));
+      _stack.pop_back();
       _result = _f._tmp3.app(std::move(_result));
     }
   }
