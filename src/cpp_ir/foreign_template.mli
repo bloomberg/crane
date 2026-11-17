@@ -51,6 +51,11 @@ val is_pair_projection : string -> bool
     ([first] for ["%a0.first"]), when it is a pair projection. *)
 val pair_projection_field : string -> string option
 
+(** The binders [(i, j)] ([%b{i}a{j}]) the match template [s] writes outside
+    any braces, and so declares in the scope the match is spliced into:
+    [const auto& [%b0a0, %b0a1] = %scrut; %br0] declares both. *)
+val unbraced_binders : string -> (int * int) list
+
 (** How many times the template [s] splices its [i]-th value argument.  An
     argument past the last one it splices is applied to what it expands to,
     as a call's argument, and so is evaluated once -- every argument of a

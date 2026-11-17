@@ -31,6 +31,25 @@ let in_rhs_scope cx f =
   let saved = cx.ctx.lexical.env_types in
   Fun.protect ~finally:(fun () -> restore_env_types cx saved) f
 
+(** The names [stmts] declare in the scope they are spliced into: their own
+    declarations, and the binders a custom match's template writes outside
+    braces ([const auto& [a, b] = p;]). *)
+let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
+  List.concat_map
+    (fun (s : Cpp_ir.Lowered.Stmt.t) ->
+      match s with
+      | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+      | Structured_binding (xs, _) -> xs
+      | Foreign_block b -> [b.result]
+      | Custom_match m ->
+        List.filter_map
+          (fun (i, j) ->
+            Option.bind (List.nth_opt m.branches i) (fun (b : _ Cpp_ir.Grammar.Custom_match.branch) ->
+                Option.map (fun (p : _ Cpp_ir.Grammar.Custom_match.param) -> p.name) (List.nth_opt b.params j)))
+          (Cpp_ir.Foreign_template.unbraced_binders m.template)
+      | _ -> [])
+    stmts
+
 (** [gen_stmts ?slot env k e] -- [e] lowered as statements, the value it
     computes handed to [k] (a [return], an assignment).  [slot] is
     {!Expr.gen_expr}'s, carried into the tail positions. *)
@@ -361,9 +380,17 @@ let rec gen_stmts cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
             end
           | _ ->
             let cpp_ty = Types.cpp_of_core cx env t in
+            (* The value's statements share the body's C++ scope, and names
+               are fresh only along Core's: the binders of a match the value
+               ended in are out of Core scope once the let is, and the body
+               must not declare them again ([let x := match p with (a, b)
+               => a in match q with (a, b) => ...]). *)
+            let env_body =
+              (fst env', Id.Set.union (snd env') (Id.Set.of_list (declared_in_scope asgn)))
+            in
             ((Declare (x_renamed, cpp_ty, core_binder cx ~site:(Binding let_occ) env' 1) :
               Cpp_ir.Lowered.Stmt.t) :: asgn)
-            @ gen_stmts cx ~slot env' k b
+            @ gen_stmts cx ~slot env_body k b
       in
       result
   | Core.Expr.Apply {callee = ((Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group) as fix_term);

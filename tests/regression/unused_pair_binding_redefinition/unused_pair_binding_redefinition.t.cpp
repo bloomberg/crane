@@ -10,6 +10,7 @@
 int main() {
   int fails = 0;
   if (!(M::f(3) == 5)) { std::cout << "FAIL: M::f(3)" << std::endl; ++fails; }
+  if (!(M::g(7) == 14)) { std::cout << "FAIL: M::g(7)" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All unused_pair_binding_redefinition tests passed!" << std::endl;
   return fails;

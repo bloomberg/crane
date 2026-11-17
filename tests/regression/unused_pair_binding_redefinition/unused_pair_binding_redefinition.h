@@ -16,9 +16,12 @@ struct List; /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differ
 ///
 /// Two sequential matches on pairs whose fields are unused, each scrutinee a
 /// local fixpoint call, lower to two auto [_x, _x0] = ...; structured
-/// bindings in one scope: "redefinition of '_x'".
+/// bindings in one scope: "redefinition of '_x'".  g is the same with the
+/// fields read: "redefinition of 'p'".  The let's body now avoids the names
+/// its value's statements declare in the shared scope.
 struct UnusedPairBindingRedefinition {
   static uint64_t f(uint64_t a);
+  static uint64_t g(uint64_t a);
 };
 
 template <typename A> struct List {

@@ -329,17 +329,6 @@
   (action (run ./local_fix_moves_captured_local.t.exe))))
 
 
-(subdir unused_pair_binding_redefinition
- (rule
-  (targets unused_pair_binding_redefinition.t.exe)
-  (deps UnusedPairBindingRedefinition.vo unused_pair_binding_redefinition.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} unused_pair_binding_redefinition.t.exe unused_pair_binding_redefinition.t.cpp unused_pair_binding_redefinition.cpp)))
- (rule
-  (alias runtest)
-  (deps unused_pair_binding_redefinition.t.exe)
-  (action (run ./unused_pair_binding_redefinition.t.exe))))
-
 (subdir poly_local_fix_normal_form
  (rule
   (targets poly_local_fix_normal_form.t.exe)

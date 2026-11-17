@@ -366,6 +366,17 @@ let pair_projection_field s =
 
 let is_pair_projection s = Option.has_some (pair_projection_field s)
 
+let unbraced_binders s =
+  let depth = ref 0 in
+  List.filter_map
+    (function
+      | Text t ->
+        String.iter (function '{' -> incr depth | '}' -> decr depth | _ -> ()) t;
+        None
+      | Br_var (i, j) when !depth = 0 -> Some (i, j)
+      | _ -> None)
+    (match_template s)
+
 let arg_mentions s =
   let tokens = term_template s in
   let holes = List.filter_map (function Arg j -> Some j | _ -> None) tokens in
