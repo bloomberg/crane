@@ -36,13 +36,13 @@ struct Equations {
   static uint64_t gcd_clause_3(uint64_t n, uint64_t n0, bool refine,
                                F3 &&gcd0) {
     if (refine) {
-      auto &&_once1 = (n0 + 1);
-      auto &&_once2 = (n + 1);
+      auto _once1 = (n0 + 1);
+      auto _once2 = (n + 1);
       return gcd0(std::make_pair(
           (n + 1), (((_once1 - _once2) > _once1 ? 0 : (_once1 - _once2)))));
     } else {
-      auto &&_once3 = (n + 1);
-      auto &&_once4 = (n0 + 1);
+      auto _once3 = (n + 1);
+      auto _once4 = (n0 + 1);
       return gcd0(std::make_pair(
           (((_once3 - _once4) > _once3 ? 0 : (_once3 - _once4))), (n0 + 1)));
     }
@@ -318,10 +318,10 @@ struct Equations {
             const auto &[n1, n00, hind0] = std::get<
                 typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
                 g.v());
-            auto &&_once1 = (n00 + 1);
-            auto &&_once2 = (n1 + 1);
-            auto &&_once3 = (n00 + 1);
-            auto &&_once4 = (n1 + 1);
+            auto _once1 = (n00 + 1);
+            auto _once2 = (n1 + 1);
+            auto _once3 = (n00 + 1);
+            auto _once4 = (n1 + 1);
             return f2(n1, n00, *hind0,
                       _self_f4(_self_f4, _self_f5,
                                std::make_pair((n1 + 1),
@@ -337,10 +337,10 @@ struct Equations {
             const auto &[n1, n00, hind0] = std::get<
                 typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(
                 g.v());
-            auto &&_once5 = (n1 + 1);
-            auto &&_once6 = (n00 + 1);
-            auto &&_once7 = (n1 + 1);
-            auto &&_once8 = (n00 + 1);
+            auto _once5 = (n1 + 1);
+            auto _once6 = (n00 + 1);
+            auto _once7 = (n1 + 1);
+            auto _once8 = (n00 + 1);
             return f3(
                 n1, n00, *hind0,
                 _self_f4(
@@ -408,10 +408,10 @@ struct Equations {
             const auto &[n1, n00, hind0] = std::get<
                 typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_1>(
                 g.v());
-            auto &&_once1 = (n00 + 1);
-            auto &&_once2 = (n1 + 1);
-            auto &&_once3 = (n00 + 1);
-            auto &&_once4 = (n1 + 1);
+            auto _once1 = (n00 + 1);
+            auto _once2 = (n1 + 1);
+            auto _once3 = (n00 + 1);
+            auto _once4 = (n1 + 1);
             return f2(n1, n00, *hind0,
                       _self_f4(_self_f4, _self_f5,
                                std::make_pair((n1 + 1),
@@ -427,10 +427,10 @@ struct Equations {
             const auto &[n1, n00, hind0] = std::get<
                 typename gcd_clause_3_graph::Gcd_clause_3_graph_equation_2>(
                 g.v());
-            auto &&_once5 = (n1 + 1);
-            auto &&_once6 = (n00 + 1);
-            auto &&_once7 = (n1 + 1);
-            auto &&_once8 = (n00 + 1);
+            auto _once5 = (n1 + 1);
+            auto _once6 = (n00 + 1);
+            auto _once7 = (n1 + 1);
+            auto _once8 = (n00 + 1);
             return f3(
                 n1, n00, *hind0,
                 _self_f4(

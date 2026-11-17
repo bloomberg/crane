@@ -198,7 +198,7 @@ uint64_t LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel, uint64_t n) {
       auto _f = std::move(std::get<_after_mod_pattern_fuel_in_false>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      auto &&_once1 = (UINT64_C(1) + std::move(_result));
+      auto _once1 = (UINT64_C(1) + std::move(_result));
       _result = (_once1 ? n % _once1 : n);
     }
   }

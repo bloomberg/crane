@@ -475,7 +475,7 @@ uint64_t LoopifyPatterns::mod_pattern(uint64_t n) {
       auto _f = std::move(std::get<_after_mod_pattern_in_S>(_popped));
       _stack.pop_back();
       uint64_t n_ = _f.n_;
-      auto &&_once1 = (std::move(_result) + 1);
+      auto _once1 = (std::move(_result) + 1);
       _result = (_once1 ? n_ % _once1 : n_);
     }
   }

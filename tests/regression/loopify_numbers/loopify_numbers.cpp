@@ -1054,13 +1054,13 @@ uint64_t LoopifyNumbers::power_mod_fuel(uint64_t fuel, uint64_t b, uint64_t e,
       auto _f = std::move(std::get<_after_power_mod_fuel_in_false>(_popped));
       _stack.pop_back();
       uint64_t half = std::move(_result);
-      auto &&_once1 = (b * (half * half));
+      auto _once1 = (b * (half * half));
       _result = (m ? _once1 % m : _once1);
     } else {
       auto _f = std::move(std::get<_after_power_mod_fuel_in_true>(_popped));
       _stack.pop_back();
       uint64_t half = std::move(_result);
-      auto &&_once2 = (half * half);
+      auto _once2 = (half * half);
       _result = (m ? _once2 % m : _once2);
     }
   }

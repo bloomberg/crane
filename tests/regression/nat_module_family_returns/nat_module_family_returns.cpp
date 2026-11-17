@@ -435,7 +435,7 @@ uint64_t Nat::gcd(uint64_t a, uint64_t b) {
     return b;
   } else {
     uint64_t a_ = a - 1;
-    auto &&_once1 = (a_ + 1);
+    auto _once1 = (a_ + 1);
     return gcd((_once1 ? b % _once1 : b), (a_ + 1));
   }
 }

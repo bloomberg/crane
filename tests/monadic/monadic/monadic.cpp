@@ -5,7 +5,7 @@ std::optional<uint64_t> Monadic::safe_div(uint64_t n, uint64_t m) {
     return std::optional<uint64_t>();
   } else {
     uint64_t m_ = m - 1;
-    auto &&_once1 = (m_ + 1);
+    auto _once1 = (m_ + 1);
     return std::make_optional<uint64_t>((_once1 ? n / _once1 : 0));
   }
 }

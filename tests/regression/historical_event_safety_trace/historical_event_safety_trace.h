@@ -186,7 +186,7 @@ struct HistoricalEventSafetyTraceCase {
         (UINT64_C(100) ? (pconf.gate_capacity_cm * ctrl(s, t)) / UINT64_C(100)
                        : 0),
         (s.reservoir_level_cm + inflow(t)));
-    auto &&_once1 = (s.reservoir_level_cm + inflow(t));
+    auto _once1 = (s.reservoir_level_cm + inflow(t));
     uint64_t new_level = (((_once1 - out) > _once1 ? 0 : (_once1 - out)));
     uint64_t new_stage = stage_fn(out);
     return State{new_level, new_stage, ctrl(s, t)};

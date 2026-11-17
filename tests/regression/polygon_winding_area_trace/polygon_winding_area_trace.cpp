@@ -46,7 +46,7 @@ Real PolygonWindingAreaTraceCase::spherical_shoelace_aux(
         std::get<typename List<PolygonWindingAreaTraceCase::Point>::Cons>(
             pts.v());
     uint64_t n = all_pts.length();
-    auto &&_once1 = (idx + n);
+    auto _once1 = (idx + n);
     Real lambda_prev =
         nth_cyclic<PolygonWindingAreaTraceCase::Point>(
             a0, all_pts,

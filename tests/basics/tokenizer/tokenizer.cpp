@@ -32,7 +32,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                    ? _lc1_loop_s[_lc1_loop_index]
                    : static_cast<char>(0));
           if (hard.contains(c)) {
-            auto &&_once1 =
+            auto _once1 =
                 static_cast<int64_t>((static_cast<uint64_t>(_lc1_loop_index) +
                                       static_cast<uint64_t>(INT64_C(1))) &
                                      0x7FFFFFFFFFFFFFFFULL);
@@ -77,7 +77,7 @@ Tokenizer::next_token(std::basic_string_view<char> input,
                 _lc1_loop_index = INT64_C(0);
                 _lc1_loop_fuel = fuel_;
               } else {
-                auto &&_once2 = static_cast<int64_t>(
+                auto _once2 = static_cast<int64_t>(
                     (static_cast<uint64_t>(_lc1_loop_index) +
                      static_cast<uint64_t>(INT64_C(1))) &
                     0x7FFFFFFFFFFFFFFFULL);

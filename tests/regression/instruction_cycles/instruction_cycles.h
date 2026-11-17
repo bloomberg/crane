@@ -183,9 +183,9 @@ struct InstructionCycles {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, _] = std::get<typename instruction1::JCN1>(this->v());
         uint64_t c1 = (UINT64_C(8) ? a0 / UINT64_C(8) : 0);
-        auto &&_once1 = (UINT64_C(4) ? a0 / UINT64_C(4) : 0);
+        auto _once1 = (UINT64_C(4) ? a0 / UINT64_C(4) : 0);
         uint64_t c2 = (UINT64_C(2) ? _once1 % UINT64_C(2) : _once1);
-        auto &&_once2 = (UINT64_C(2) ? a0 / UINT64_C(2) : 0);
+        auto _once2 = (UINT64_C(2) ? a0 / UINT64_C(2) : 0);
         uint64_t c3 = (UINT64_C(2) ? _once2 % UINT64_C(2) : _once2);
         uint64_t c4 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
         bool base_cond = ((s.acc1 == UINT64_C(0) && c2 == UINT64_C(1)) ||
@@ -493,7 +493,7 @@ struct InstructionCycles {
 
     state5 execute5(state5 s) const {
       if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
-        auto &&_once1 = (s.acc5 + UINT64_C(1));
+        auto _once1 = (s.acc5 + UINT64_C(1));
         return state5{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1), s.carry5,
                       s.test5};
       } else {

@@ -172,7 +172,7 @@ struct Err {
 
 struct nat_ix {
   static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-    auto &&_once1 = (UINT64_C(1) + sp);
+    auto _once1 = (UINT64_C(1) + sp);
     return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
   }
 
@@ -185,7 +185,7 @@ struct nat_ix {
   }
 
   constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-    auto &&_once2 = (UINT64_C(1) + sp);
+    auto _once2 = (UINT64_C(1) + sp);
     return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
   }
 

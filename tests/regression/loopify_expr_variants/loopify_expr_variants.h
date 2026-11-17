@@ -862,7 +862,7 @@ struct LoopifyExprVariants {
           auto _f = std::move(std::get<_after_eval_arith_in_S>(_popped));
           _stack.pop_back();
           uint64_t n = _f.n;
-          auto &&_once1 = (n + 1);
+          auto _once1 = (n + 1);
           _result = (_once1 ? std::move(_result) / _once1 : 0);
         }
       }

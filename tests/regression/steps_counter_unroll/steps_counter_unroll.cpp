@@ -2,7 +2,7 @@
 
 StepsCounterUnroll::state
 StepsCounterUnroll::step(const StepsCounterUnroll::state &s) {
-  auto &&_once1 = (s.pc + UINT64_C(1));
+  auto _once1 = (s.pc + UINT64_C(1));
   return state{(UINT64_C(4096) ? _once1 % UINT64_C(4096) : _once1)};
 }
 

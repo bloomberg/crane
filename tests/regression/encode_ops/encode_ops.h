@@ -236,7 +236,7 @@ struct EncodeOps {
         return std::make_pair(UINT64_C(251), UINT64_C(0));
       } else if (std::holds_alternative<typename instruction1::FIM>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::FIM>(this->v());
-        auto &&_once1 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
+        auto _once1 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
         return std::make_pair(
             (UINT64_C(32) + (((a0 - _once1) > a0 ? 0 : (a0 - _once1)))),
             (UINT64_C(256) ? a1 % UINT64_C(256) : a1));

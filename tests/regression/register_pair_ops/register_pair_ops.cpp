@@ -12,7 +12,7 @@ RegisterPairOps::state RegisterPairOps::set_reg(const RegisterPairOps::state &s,
 
 uint64_t RegisterPairOps::get_reg_pair(const RegisterPairOps::state &s,
                                        uint64_t r) {
-  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  auto _once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   return ((get_reg(s, base) * UINT64_C(16)) + get_reg(s, (base + UINT64_C(1))));
 }
@@ -20,7 +20,7 @@ uint64_t RegisterPairOps::get_reg_pair(const RegisterPairOps::state &s,
 RegisterPairOps::state
 RegisterPairOps::set_reg_pair(const RegisterPairOps::state &s, uint64_t r,
                               uint64_t v) {
-  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  auto _once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
   uint64_t base = (((r - _once1) > r ? 0 : (r - _once1)));
   uint64_t hi = (UINT64_C(16) ? v / UINT64_C(16) : 0);
   uint64_t lo = (UINT64_C(16) ? v % UINT64_C(16) : v);
@@ -29,7 +29,7 @@ RegisterPairOps::set_reg_pair(const RegisterPairOps::state &s, uint64_t r,
 }
 
 uint64_t RegisterPairOps::pair_base(uint64_t r) {
-  auto &&_once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
+  auto _once1 = (UINT64_C(2) ? r % UINT64_C(2) : r);
   return (((r - _once1) > r ? 0 : (r - _once1)));
 }
 
