@@ -747,19 +747,22 @@ and extract_spine env sg db j c args =
 
          Extracting the class first makes the answer independent of the order
          uses are met in.  Which class it is, the projection's own type says:
-         it takes the record it projects from as its first argument. *)
+         it takes the record it projects from as its last argument, after
+         the record's parameters -- [state : forall {Pa : Params}
+         {MS : @MemoryModelState Pa}, Type] projects from
+         [MemoryModelState], not from [Params]. *)
       let () =
         if lang () == Cpp && args <> [] && not (Base.Table.is_promoted_type_var r)
         then
-          match EConstr.kind sg (whd_all env sg typ) with
-          | Prod (_, dom, _) -> (
+          match fst (EConstr.decompose_prod sg (whd_all env sg typ)) with
+          | (_, dom) :: _ -> (
             match EConstr.kind sg (EConstr.decompose_app sg dom |> fst) with
             | Ind ((mind, _), _) when not (already_extracting mind) ->
               with_extracting mind (fun () ->
                   try ignore (extract_ind env mind)
                   with e when CErrors.noncritical e -> () )
             | _ -> () )
-          | _ -> ()
+          | [] -> ()
       in
       if lang () == Cpp && args <> [] && Base.Table.is_promoted_type_var r then
         let full = EConstr.applist (EConstr.mkConstU (kn, u), args) in

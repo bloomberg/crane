@@ -19,19 +19,18 @@ struct Nat;
 template <typename A>struct EOU;
 struct EOU_monad;
 struct natIPtr;using iptr = crane::obj;
-using prov = crane::obj;
-using ptr = crane::obj;template <typename I>concept Monad = requires {
-                                              typename I::template m<crane::obj>;
-                                              { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-                                              { I::template bind<crane::obj, crane::obj>(std::declval<typename I::template m<crane::obj>>(), std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
-                                            };template <typename I>concept IPtr = requires {
-                                                                     typename I::iptr;
-                                                                     typename I::prov;
-                                                                     { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
-                                                                   };template <typename I, typename prov>concept ITOP = requires {
-                                                                                                           typename I::ptr;
-                                                                                                           { I::int_to_ptr(std::declval<Nat>(), std::declval<prov>()) } -> std::convertible_to<EOU<typename I::ptr>>;
-                                                                                                         };struct Nat {
+using prov = crane::obj;template <typename I>concept Monad = requires {
+                                               typename I::template m<crane::obj>;
+                                               { I::template ret<crane::obj>(std::declval<crane::obj>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+                                               { I::template bind<crane::obj, crane::obj>(std::declval<typename I::template m<crane::obj>>(), std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>()) } -> std::convertible_to<typename I::template m<crane::obj>>;
+                                             };template <typename I>concept IPtr = requires {
+                                                                      typename I::iptr;
+                                                                      typename I::prov;
+                                                                      { I::from_Z(std::declval<Nat>()) } -> std::convertible_to<EOU<typename I::iptr>>;
+                                                                    };template <typename I, typename prov>concept ITOP = requires {
+                                                                                                            typename I::ptr;
+                                                                                                            { I::int_to_ptr(std::declval<Nat>(), std::declval<prov>()) } -> std::convertible_to<EOU<typename I::ptr>>;
+                                                                                                          };struct Nat {
   // TYPES
 struct O {
 
@@ -152,7 +151,7 @@ return EOU_monad::template ret<Nat>(std::move(n));}
 };
 static_assert(IPtr<natIPtr>);
 struct InstanceCarrierUnqualifiedAtKnownInstance {
-static inline const auto run = PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true);
+static inline const EOU<std::pair<Nat, bool>> run = crane::any_cast<EOU<std::pair<Nat, bool>>>(PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true));
 };
 
 #endif // INCLUDED_INSTANCE_CARRIER_UNQUALIFIED_AT_KNOWN_INSTANCE

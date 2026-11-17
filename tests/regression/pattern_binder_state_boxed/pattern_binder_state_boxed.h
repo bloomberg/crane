@@ -436,7 +436,8 @@ struct PatternBinderStateBoxed {
                                  crane_carrier_tc_73ef07e9f18b86f9, T1>
   on_genv(std::type_identity_t<
       Monads::template stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9, T1>> f) {
-    return [=, f = std::move(f)](FusedS<typename _tcI0::ptr> pat) {
+    return [=, f = std::move(f)](
+        std::pair<St<typename _tcI0::ptr>, std::pair<List<Nat>, Nat>> pat) {
       auto [m, p] = std::move(pat);
       auto [ls, g] = std::move(p);
       return ITree::template bind<

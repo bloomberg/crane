@@ -549,7 +549,7 @@ struct BinderTypeNamesSectionField {
       return crane_erase_global<Function::Id_IFun, crane::obj>();
     },
                                                        crane::obj()));
-    return [=](const FusedS<typename _tcI0::ptr> &s) {
+    return [=](const std::pair<St<typename _tcI0::ptr>, Nat> &s) {
       return ITree::template bind<CntE, T1,
                                   std::pair<FusedS<typename _tcI0::ptr>, T1>>(
           ITree::template trigger<CntE, T1>(

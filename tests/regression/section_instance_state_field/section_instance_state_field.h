@@ -278,8 +278,9 @@ struct SectionInstanceStateField {
 
   static_assert(Params<natParams>);
   static inline const bool is_zero =
-      get_size2<natParams>()(
-          St<typename natParams::ptr>{List<typename natParams::ptr>::nil()})
+      crane_any_cast<std::pair<St<typename natParams::ptr>, Nat>>(get_size2<
+          natParams>()(
+          St<typename natParams::ptr>{List<typename natParams::ptr>::nil()}))
           .second.eqb(Nat::o());
 };
 

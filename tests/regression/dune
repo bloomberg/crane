@@ -14342,3 +14342,14 @@
   (alias runtest)
   (deps bind_continuation_monad_element.t.exe)
   (action (run ./bind_continuation_monad_element.t.exe))))
+
+(subdir subclass_type_projection_alias
+ (rule
+  (targets subclass_type_projection_alias.t.exe)
+  (deps SubclassTypeProjectionAlias.vo subclass_type_projection_alias.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} subclass_type_projection_alias.t.exe subclass_type_projection_alias.t.cpp subclass_type_projection_alias.cpp)))
+ (rule
+  (alias runtest)
+  (deps subclass_type_projection_alias.t.exe)
+  (action (run ./subclass_type_projection_alias.t.exe))))

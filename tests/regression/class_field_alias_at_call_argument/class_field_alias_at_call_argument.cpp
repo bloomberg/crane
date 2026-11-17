@@ -2,6 +2,6 @@
 
 
 
-Nat ClassFieldAliasAtCallArgument::use(const typename PointerV<natIPtr>::ptr& p){
+Nat ClassFieldAliasAtCallArgument::use(const std::pair<Nat, bool>& p){
 return PIV<natIPtr>::ptr_to_int(p);}
 

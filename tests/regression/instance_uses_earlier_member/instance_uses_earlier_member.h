@@ -278,8 +278,9 @@ static_assert(Params<natParams>);
 
 struct InstanceUsesEarlierMember {
   static inline const bool is_one =
-      IuMemImpl::template get_size2<natParams>()(
-          IuMemImpl::template empty_st<natParams>())
+      crane_any_cast<std::pair<St<typename natParams::ptr>, Nat>>(
+          IuMemImpl::template get_size2<natParams>()(
+              IuMemImpl::template empty_st<natParams>()))
           .second.eqb(Nat::s(Nat::o()));
 };
 

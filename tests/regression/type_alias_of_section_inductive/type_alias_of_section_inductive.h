@@ -19,7 +19,7 @@ struct Nat;
 template <typename A>struct EOU;
 struct EOU_monad;
 struct ProvenanceV;
-template <typename ptr>struct Dval;
+template <typename iptr>struct Dval;
 struct natIPtr;using iptr = crane::obj;
 using prov = crane::obj;
 using ptr = crane::obj;template <typename I>concept Monad = requires {
@@ -172,10 +172,10 @@ static EOU<typename PointerV<_tcI0>::ptr> int_to_ptr(Nat i, typename ProvenanceV
 return EOU_monad::template bind<typename _tcI0::iptr, std::pair<typename _tcI0::iptr, bool>>(_tcI0::from_Z(std::move(i)), [=, pr = std::move(pr)](const typename _tcI0::iptr& a) {
 return EOU_monad::template ret<std::pair<typename _tcI0::iptr, bool>>(std::make_pair(a, pr));
 });}
-};template <typename ptr>struct Dval {
+};template <typename iptr>struct Dval {
   // TYPES
 struct DPtr {
-ptr p;
+std::pair<iptr, bool> p;
 };
 struct DNat {
 Nat n;
@@ -193,29 +193,23 @@ template <typename CraneU>
 Dval(const Dval<CraneU>& _other) : v_([&]() -> variant_t {
 if (std::holds_alternative<typename Dval<CraneU>::DPtr>(_other.v())) {
 const auto& [p] = std::get<typename Dval<CraneU>::DPtr>(_other.v());
-return DPtr{[&]() -> ptr {
-if constexpr (crane_convertible<ptr, const CraneU&>) {
-return crane_convert<ptr>(p);
-} else {
-throw std::logic_error("unreachable: inactive constructor field at this instantiation");
-}
-}()};
+return DPtr{std::pair<iptr, bool>(p)};
 } else {
 const auto& [n] = std::get<typename Dval<CraneU>::DNat>(_other.v());
 return DNat{n};
 }
 }()) {}
-static Dval<ptr> dptr(ptr p) {
-return Dval<ptr>(DPtr{std::move(p)});}
-static Dval<ptr> dnat(Nat n) {
-return Dval<ptr>(DNat{std::move(n)});}
+static Dval<iptr> dptr(std::pair<iptr, bool> p) {
+return Dval<iptr>(DPtr{std::move(p)});}
+static Dval<iptr> dnat(Nat n) {
+return Dval<iptr>(DNat{std::move(n)});}
   // MANIPULATORS
 inline variant_t& v_mut() {
 return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};template <typename ptr> using dbox = std::pair<Dval<ptr>, Nat>;struct natIPtr {
+};template <typename iptr> using dbox = std::pair<Dval<iptr>, Nat>;struct natIPtr {
 using iptr = Nat;
 static Nat zero_iptr() {
 return Nat::o();}
@@ -225,14 +219,14 @@ static Nat to_Z(Nat n) {
 return n;}
 };
 static_assert(IPtr<natIPtr>);struct TypeAliasOfSectionInductive {
-static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());static inline const dbox<typename PointerV<natIPtr>::ptr> packed = std::make_pair(Dval<typename PointerV<natIPtr>::ptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());static inline const dbox<typename natIPtr::iptr> packed = std::make_pair(Dval<typename natIPtr::iptr>::dptr(the_null), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 static inline const Nat run = []() {
 auto&& _sv = packed.first;
-if (std::holds_alternative<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv.v())) {
-const auto& [p0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DPtr>(_sv.v());
+if (std::holds_alternative<typename Dval<typename natIPtr::iptr>::DPtr>(_sv.v())) {
+const auto& [p0] = std::get<typename Dval<typename natIPtr::iptr>::DPtr>(_sv.v());
 return PIV<natIPtr>::ptr_to_int(p0);
 } else {
-const auto& [n0] = std::get<typename Dval<typename PointerV<natIPtr>::ptr>::DNat>(_sv.v());
+const auto& [n0] = std::get<typename Dval<typename natIPtr::iptr>::DNat>(_sv.v());
 return n0;
 }
 }();
