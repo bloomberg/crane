@@ -239,7 +239,20 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
         | Some into -> Coerce.coerce cx ~term:e ~into result
         | None -> result
       in
-      result) ts)
+      (* A closure stored as itself at a field the inductive declares at one
+         of its parameters has to arrive under a name: a custom template
+         deduces that parameter from it ([std::make_pair(0, [](...) {...})]),
+         and each closure's own type would make two constructions of the same
+         Rocq type -- the branches of a conditional -- two C++ types.  Only
+         a closure with a signature to name: one taking [auto] has none. *)
+      let has_signature (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) =
+        not (List.exists (fun (t, _) -> Cpp_ir.Types.exists (fun t -> t = Cpp_ir.Type.Auto) t) l.params)
+      in
+      match (into, List.nth_opt field_types_for_wrap i, result) with
+      | None, Some ft, Lambda l
+        when (not (is_passthrough_ctor_arg i)) && has_signature l && Erasure.core_expr_is_function_value cx e ->
+        Coerce.name_fn_arg_for_tvar_param ft result
+      | _ -> result) ts)
   in
   (* Helper to wrap expression in function call syntax if it has arguments.
      [yields] is the constructed value's C++ type, where the caller could work

@@ -272,15 +272,5 @@
   (deps local_fix_returns_function.t.exe)
   (action (run ./local_fix_returns_function.t.exe))))
 
-(subdir branch_pairs_of_lambdas
- (rule
-  (targets branch_pairs_of_lambdas.t.exe)
-  (deps BranchPairsOfLambdas.vo branch_pairs_of_lambdas.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_pairs_of_lambdas.t.exe branch_pairs_of_lambdas.t.cpp branch_pairs_of_lambdas.cpp)))
- (rule
-  (alias runtest)
-  (deps branch_pairs_of_lambdas.t.exe)
-  (action (run ./branch_pairs_of_lambdas.t.exe))))
 
 
