@@ -2,7 +2,7 @@
 #define INCLUDED_SLLPAIRCAST
 
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -11,7 +11,6 @@
 #include "Datatypes.h"
 
 namespace SllPairCast {
-
 struct SllPairCast {
   struct sll_frame {
     std::optional<uint64_t> fr_ret;
@@ -54,7 +53,6 @@ struct SllPairCast {
     return v;
   }
 };
-
 } // namespace SllPairCast
 
 #endif // INCLUDED_SLLPAIRCAST

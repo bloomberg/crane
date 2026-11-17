@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -61,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -70,25 +70,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -115,16 +118,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -161,8 +165,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -170,42 +174,42 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a1], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          _stack.emplace_back(CraneCont_Cons{a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -221,13 +225,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -242,19 +246,16 @@ struct SigArgMatch {
   static Nat addp(const Sig<Nat> &p, const Sig<Nat> &q);
   static inline const List<pos> ps =
       List<pos>::cons(one, List<pos>::cons(one, List<pos>::nil()));
-
   static inline const Nat run = []() {
-    return ps
-        .template fold_right<Nat>(
-            [](const Sig<Nat> &p, const Nat &acc) {
-              return [&]() {
-                const auto &[x] = p;
-                return x;
-              }()
-                         .add(acc);
-            },
-            Nat::o())
-        .add(addp(one, one));
+    return ps.template fold_right<Nat>(
+        [](const Sig<Nat> &p, Nat acc) {
+          return [&]() {
+            const auto &[x] = p;
+            return x;
+          }().add(std::move(acc));
+        },
+        Nat::o())
+               .add(addp(one, one));
   }();
 };
 

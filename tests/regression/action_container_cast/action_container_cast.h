@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <deque>
 #include <memory>
@@ -71,8 +70,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -88,18 +87,19 @@ template <typename A, typename B> struct Prod {
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
 
-  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(a0);
+  template <typename CraneU0, typename CraneU1>
+  operator Prod<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const B &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const B &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -119,18 +119,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -174,6 +175,9 @@ public:
 
   // MANIPULATORS
   ~R() {
+    if (std::holds_alternative<RNum>(v_mut())) {
+      return;
+    }
     crane::small_vector<std::shared_ptr<R>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<RArr>(&_v)) {
@@ -199,14 +203,15 @@ public:
 
   R(const R &) = default;
   R &operator=(const R &) = default;
-  R(R &&) noexcept = default;
-  R &operator=(R &&) noexcept = default;
+  R(R &&) = default;
+  R &operator=(R &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Nonterminal { NARR, NVAL };
 
 struct Symbol {
@@ -248,42 +253,38 @@ using grammar_entry = SigT<production, production_semty>;
 /// Minimal grammar isolating the container conversion:
 /// - NArr ->         (nil):  builds the empty list R -> erased deque<any>
 /// - NVal -> NT NArr   (JList): applies RArr to that erased list leaf.
-const std::deque<grammar_entry> entries =
-    [](auto _a0, auto _a1) {
-      _a1.push_front(_a0);
-      return _a1;
-    }(SigT<Prod<Nonterminal, std::deque<Symbol>>,
-           Prod<crane::obj, crane::obj>>::
-          existt(Prod<Nonterminal, std::deque<Symbol>>::pair(
-                     Nonterminal::NARR, std::deque<Symbol>{}),
-                 Prod<crane::obj, crane::obj>::pair(
-                     crane_erase_fn(
-                         [](const crane::obj &) { return Bool0::TRUE_; }),
-                     crane_erase_fn([](const crane::obj &) {
-                       return std::deque<crane::obj>{};
-                     }))),
-      [](auto _a0, auto _a1) {
-        _a1.push_front(_a0);
-        return _a1;
-      }(SigT<Prod<Nonterminal, std::deque<Symbol>>,
-             Prod<crane::obj, crane::obj>>::
-            existt(Prod<Nonterminal, std::deque<Symbol>>::pair(
-                       Nonterminal::NVAL,
-                       [](auto _a0, auto _a1) {
-                         _a1.push_front(_a0);
-                         return _a1;
-                       }(Symbol::nt(Nonterminal::NARR), std::deque<Symbol>{})),
-                   Prod<crane::obj, crane::obj>::pair(
-                       crane_erase_fn(
-                           [](const crane::obj &) { return Bool0::TRUE_; }),
-                       crane_erase_fn([](const crane::obj &_any_ss) {
-                         Prod<symbol_semty, Unit> ss =
-                             crane::any_cast<Prod<symbol_semty, Unit>>(_any_ss);
-                         const auto &[a0, a1] = ss;
-                         return R::rarr(crane_container_cast<std::deque<R>>(
-                             crane::any_cast<std::deque<crane::obj>>(a0)));
-                       }))),
-        std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
-                        Prod<crane::obj, crane::obj>>>{}));
+const std::deque<grammar_entry> entries = [](auto _a0, auto _a1) {
+  _a1.push_front(_a0);
+  return _a1;
+}(SigT<Prod<Nonterminal, std::deque<Symbol>>,
+       Prod<crane::obj, crane::obj>>::existt(
+      Prod<Nonterminal, std::deque<Symbol>>::pair(Nonterminal::NARR,
+                                                  std::deque<Symbol>{}),
+      Prod<crane::obj, crane::obj>::pair(
+          crane_erase_fn([](const crane::obj &) { return Bool0::TRUE_; }),
+          crane_erase_fn(
+              [](const crane::obj &) { return std::deque<crane::obj>{}; }))),
+  [](auto _a0, auto _a1) {
+    _a1.push_front(_a0);
+    return _a1;
+  }(
+      SigT<Prod<Nonterminal, std::deque<Symbol>>,
+           Prod<crane::obj, crane::obj>>::existt(
+          Prod<Nonterminal, std::deque<Symbol>>::pair(
+              Nonterminal::NVAL, [](auto _a0, auto _a1) {
+                _a1.push_front(_a0);
+                return _a1;
+              }(Symbol::nt(Nonterminal::NARR), std::deque<Symbol>{})),
+          Prod<crane::obj, crane::obj>::pair(
+              crane_erase_fn([](const crane::obj &) { return Bool0::TRUE_; }),
+              crane_erase_fn([](const crane::obj &_any_ss) {
+                Prod<symbol_semty, Unit> ss =
+                    crane::any_cast<Prod<symbol_semty, Unit>>(_any_ss);
+                auto &[a0, _] = ss;
+                return R::rarr(crane_container_cast<std::deque<R>>(
+                    crane::any_cast<std::deque<crane::obj>>(std::move(a0))));
+              }))),
+      std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
+                      Prod<crane::obj, crane::obj>>>{}));
 
 #endif // INCLUDED_ACTION_CONTAINER_CAST

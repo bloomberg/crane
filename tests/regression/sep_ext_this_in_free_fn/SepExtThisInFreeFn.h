@@ -5,21 +5,21 @@
 #include "ListDef.h"
 
 namespace SepExtThisInFreeFn {
-
 template <typename M>
-concept S = requires { typename M::t; };
+concept S = requires {
+  typename M::t;
+};
 
 template <S X> struct FreeFn {
   template <typename T1>
   static typename Datatypes::template List<typename Datatypes::Nat>
   map_lengths(const typename Datatypes::template List<
-              typename Datatypes::template List<T1>> &xss) {
+      typename Datatypes::template List<T1>> &xss) {
     return ListDef::template map<typename Datatypes::template List<T1>,
                                  typename Datatypes::Nat>(
         [](const auto &_x) { return _x.length(); }, xss);
   }
 };
-
 } // namespace SepExtThisInFreeFn
 
 #endif // INCLUDED_SEPEXTTHISINFREEFN

@@ -3,20 +3,16 @@
 
 #include "shared_block.h"
 #include <atomic>
-#include <chrono>
-#include <crane_itree.h>
+#include <crane_thread.h>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <string>
-#include <thread>
-#include <type_traits>
 #include <utility>
 #include <variant>
 static_assert(crane::rc_is_atomic,
-              "this unit spawns threads, but a header included before it chose "
-              "CRANE_NON_ATOMIC_RC");
-
-using namespace std::string_literals;
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 struct NonatomicRcThreadRace {
   struct lst {
@@ -67,8 +63,8 @@ struct NonatomicRcThreadRace {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -77,7 +73,6 @@ struct NonatomicRcThreadRace {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rect(T1 f, F1 &&f0, const lst &l) {
     if (std::holds_alternative<typename lst::Nil>(l.v())) {
       return f;
@@ -88,25 +83,19 @@ struct NonatomicRcThreadRace {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rec(T1 f, F1 &&f0, const lst &l) {
-    if (std::holds_alternative<typename lst::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
-      return f0(a0, *a1, lst_rec<T1>(std::move(f), f0, *a1));
-    }
+    return lst_rect<T1>(std::move(f), f0, l);
   }
 
   static lst build(uint64_t n);
   static uint64_t len(const lst &l);
   /// Shared between both threads; every step copies it.
-  static inline const lst shared = build(UINT64_C(4));
+  [[gnu::used]] static inline const lst shared = build(UINT64_C(4));
   static uint64_t step(const lst &l);
   static uint64_t churn(uint64_t n, const lst &l);
   static void worker(uint64_t n);
   static void test();
-  static void run(std::monostate _x);
+  static void run();
 };
 
 #endif // INCLUDED_NONATOMIC_RC_THREAD_RACE

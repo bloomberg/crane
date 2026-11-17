@@ -4,9 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -21,13 +19,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -41,17 +39,17 @@ struct RocqBug10757 {
   static Sig<T1>
   iterate_func(std::type_identity_t<crane::fn<Bool0(T1, T1)>> beq,
                std::type_identity_t<crane::fn<T1(T1)>> f,
-               const T1 &x) { // Precondition: (exists _ : le x (F x), forall z
-                              // : A, le (F z) z -> le x z)
+               const Sig<T1> &x) { // Precondition: (exists _ : le x (F x),
+                                   // forall z : A, le (F z) z -> le x z)
     T1 x0 = [&]() {
       const auto &[x1] = x;
       return x1;
     }();
     crane::fn<Sig<T1>(T1)> iterate0 = [=](const T1 &x1) {
-      Sig<T1> y = Sig<T1>::exist(Sig<T1>::exist(x1));
+      Sig<Sig<T1>> y = Sig<Sig<T1>>::exist(Sig<T1>::exist(x1));
       return iterate_func<T1>(beq, f, [&]() {
         auto &[x2] = y;
-        return x2;
+        return std::move(x2);
       }());
     };
     T1 x_ = f(x0);
@@ -69,10 +67,8 @@ struct RocqBug10757 {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<Bool0, F0 &, T1 &, T1 &> &&
-             std::is_invocable_r_v<T1, F1 &, T1 &>
   static Sig<T1> iterate(F0 &&beq, F1 &&f, const T1 &x) {
-    return iterate_func(beq, f, Sig<T1>::exist(x));
+    return iterate_func<T1>(beq, f, Sig<T1>::exist(x));
   }
 };
 

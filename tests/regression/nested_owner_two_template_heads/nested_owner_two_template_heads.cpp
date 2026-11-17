@@ -43,4 +43,4 @@ bool count_odd_is(const Bag::bag<Nat> &b, const Nat &n) {
   return PeanoNat::eqb(b.countIf(PeanoNat::odd), n);
 }
 
-Bag::bag<Nat> round(const Bag::bag<Nat> &x0_) { return roundtrip(x0_); }
+Bag::bag<Nat> round(Bag::bag<Nat> x0_) { return roundtrip(std::move(x0_)); }

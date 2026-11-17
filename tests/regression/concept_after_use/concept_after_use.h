@@ -18,6 +18,7 @@ struct Coq_Pos {
   static Positive add_carry(const Positive &x, const Positive &y);
   static Positive mul(const Positive &x, Positive y);
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct Positive {
@@ -83,8 +84,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -181,7 +182,7 @@ struct Pos {
 struct BinNat {
   static N succ_double(const N &x);
   static N double_(const N &n);
-  static N sub(N n, const N &m);
+  static N sub(const N &n, const N &m);
   static Comparison compare(const N &n, const N &m);
   static bool leb(const N &x, const N &y);
   static std::pair<N, N> pos_div_eucl(const Positive &a, const N &b);
@@ -251,8 +252,8 @@ struct ConceptAfterUse {
 
     ty(const ty &) = default;
     ty &operator=(const ty &) = default;
-    ty(ty &&) noexcept = default;
-    ty &operator=(ty &&) noexcept = default;
+    ty(ty &&) = default;
+    ty &operator=(ty &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -261,8 +262,7 @@ struct ConceptAfterUse {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Positive &> &&
-             std::is_invocable_r_v<T1, F1 &, N &, ty &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const Positive &>
   static T1 ty_rect(F0 &&f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TB>(t.v())) {
       const auto &[n0] = std::get<typename ty::TB>(t.v());
@@ -274,23 +274,15 @@ struct ConceptAfterUse {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Positive &> &&
-             std::is_invocable_r_v<T1, F1 &, N &, ty &, T1 &>
   static T1 ty_rec(F0 &&f, F1 &&f0, const ty &t) {
-    if (std::holds_alternative<typename ty::TB>(t.v())) {
-      const auto &[n0] = std::get<typename ty::TB>(t.v());
-      return f(n0);
-    } else {
-      const auto &[sz1, t1] = std::get<typename ty::TA>(t.v());
-      return f0(sz1, *t1, ty_rec<T1>(f, f0, *t1));
-    }
+    return ty_rect<T1>(f, f0, t);
   }
 
   template <typename _tcI0> static N walk(const ty &t) {
     if (std::holds_alternative<typename ty::TB>(t.v())) {
       return N::n0();
     } else {
-      const auto &[sz0, t0] = std::get<typename ty::TA>(t.v());
+      const auto &[_, t0] = std::get<typename ty::TA>(t.v());
       return _tcI0::size_of(*t0);
     }
   }
@@ -301,7 +293,7 @@ struct ConceptAfterUse {
     static N size_of(ty a0) { return sz(std::move(a0)); }
   };
 
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 template <typename I>

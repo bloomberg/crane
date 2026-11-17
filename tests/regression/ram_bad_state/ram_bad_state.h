@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -35,16 +35,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -81,8 +82,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -101,7 +102,7 @@ struct RamBadState {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return List<T1>::cons(x, *a1);
       }
     } else {
@@ -160,27 +161,17 @@ struct RamBadState {
       ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state bad_state_acc_overflow =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(16),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(16), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_pc_overflow =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(0),
-            false,
-            UINT64_C(4096),
-            List<uint64_t>::nil(),
-            empty_ram,
-            default_sel,
+            UINT64_C(0), false, UINT64_C(4096), List<uint64_t>::nil(),
+            empty_ram, default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_stack_overflow = state{
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-      UINT64_C(0),
-      false,
-      UINT64_C(0),
+      UINT64_C(0), false, UINT64_C(0),
       List<uint64_t>::cons(
           UINT64_C(0),
           List<uint64_t>::cons(
@@ -188,16 +179,11 @@ struct RamBadState {
               List<uint64_t>::cons(
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
-      empty_ram,
-      default_sel,
+      empty_ram, default_sel,
       ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const state bad_state_wrong_reg_count =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(15)),
-            UINT64_C(0),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(0), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static inline const uint64_t overflow_acc = bad_state_acc_overflow.state_acc;

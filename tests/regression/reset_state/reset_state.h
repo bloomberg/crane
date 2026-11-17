@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,35 +94,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -156,12 +157,10 @@ struct ResetState {
   static state_full reset_state_full(const state_full &s);
   static inline const uint64_t memory_preserve_test = []() {
     state_full s = state_full{
-        UINT64_C(9),
-        List<uint64_t>::cons(
-            UINT64_C(1),
-            List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-        true,
-        UINT64_C(55),
+        UINT64_C(9), List<uint64_t>::cons(
+                         UINT64_C(1), List<uint64_t>::cons(
+                                          UINT64_C(2), List<uint64_t>::nil())),
+        true, UINT64_C(55),
         List<uint64_t>::cons(
             UINT64_C(8),
             List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())),
@@ -174,11 +173,11 @@ struct ResetState {
             UINT64_C(10),
             List<uint64_t>::cons(UINT64_C(11), List<uint64_t>::nil()))};
     state_full s_ = reset_state_full(std::move(s));
-    return (
-        ((s_.acc + ListDef::template nth<uint64_t>(UINT64_C(1), s_.ram_sys,
-                                                   UINT64_C(0))) +
-         ListDef::template nth<uint64_t>(UINT64_C(0), s_.rom, UINT64_C(0))) +
-        s_.stack.length());
+    return (((s_.acc + ListDef::template nth<uint64_t>(UINT64_C(1), s_.ram_sys,
+                                                       UINT64_C(0))) +
+             ListDef::template nth<uint64_t>(UINT64_C(0), s_.rom,
+                                             UINT64_C(0))) +
+            s_.stack.length());
   }();
   static state_minimal reset_state_minimal(const state_minimal &s);
   static inline const uint64_t pc_clear_test =
@@ -191,7 +190,8 @@ struct ResetState {
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
               List<uint64_t>::cons(
                   UINT64_C(4),
-                  List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))})
+                  List<uint64_t>::cons(UINT64_C(5),
+                                       List<uint64_t>::nil()))})
           .pc_minimal;
   static inline const std::pair<uint64_t, uint64_t> t =
       std::make_pair(memory_preserve_test, pc_clear_test);
@@ -203,7 +203,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -211,7 +211,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

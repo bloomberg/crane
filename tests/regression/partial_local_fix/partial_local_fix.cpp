@@ -3,10 +3,10 @@
 Nat PartialLocalFix::run(Bool0 x0_) {
   return []() {
     auto loop_impl = [](auto &_self_loop, Nat n, Bool0 b) -> Nat {
-      if (std::holds_alternative<typename Nat::O>(n.v())) {
+      if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
         return Nat::o();
       } else {
-        const auto &[a0] = std::get<typename Nat::S>(n.v());
+        auto &[a0] = std::get<typename Nat::S>(n.v_mut());
         switch (b) {
         case Bool0::TRUE_: {
           return Nat::s(_self_loop(_self_loop, *a0, b));
@@ -19,12 +19,13 @@ Nat PartialLocalFix::run(Bool0 x0_) {
         }
       }
     };
-    auto loop = [=](Nat n, Bool0 b) -> Nat {
-      return loop_impl(loop_impl, n, b);
-    };
+    auto loop =
+        [=, loop_impl = std::move(loop_impl)](Nat n,
+                                              Bool0 b)
+             -> Nat { return loop_impl(loop_impl, std::move(n), b); };
     return [=](Bool0 _pa0) {
-      return loop(Nat::s(Nat::s(Nat::s(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+      return loop(Nat::s(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
                   _pa0);
     };
   }()(x0_);

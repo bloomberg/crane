@@ -51,7 +51,8 @@ Definition isEmptySTM {E} `{stmVecE -< E} {A} (v : vector A) : itree E bool := e
 Crane Extract Inlined Constant atomically => "stm::atomically([&] { return %a0; })".
 Crane Extract Inlined Constant orElse => "stm::orElse<%t0>(%a0, %a1)".
 Crane Extract Inlined Constant retry => "stm::retry<%t0>()".
-Crane Extract Inlined Constant newTVar => "stm::newTVar(%a0)".
+(* At the TVar's element type, which a lambda's own closure type is not. *)
+Crane Extract Inlined Constant newTVar => "stm::newTVar<%t1>(%a0)".
 Crane Extract Inlined Constant getSTM => "%a0.at(%a1)".
 Crane Extract Inlined Constant isEmptySTM => "%a0.empty()".
 

@@ -11,7 +11,7 @@
    such as when trying to access fields out of bounds or with complex patterns.
 *)
 Require Import Crane.Mapping.NatIntStd.
-Require Import Lia.
+From Stdlib Require Import Lia.
 Require Crane.Extraction.
 
 Module RecordProj.

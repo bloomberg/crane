@@ -4,11 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
-#include <crane_itree.h>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -25,8 +24,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -79,8 +77,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -88,25 +86,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -132,13 +133,13 @@ public:
 
   explicit Err(Bad _v) : v_(_v) {}
 
-  template <typename _U>
-  Err(const Err<_U> &_other)
+  template <typename CraneU>
+  Err(const Err<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Err<_U>::Ok>(_other.v())) {
-            const auto &[x] = std::get<typename Err<_U>::Ok>(_other.v());
+          if (std::holds_alternative<typename Err<CraneU>::Ok>(_other.v())) {
+            const auto &[x] = std::get<typename Err<CraneU>::Ok>(_other.v());
             return Ok{[&]() -> X {
-              if constexpr (crane_convertible<X, const _U &>) {
+              if constexpr (crane_convertible<X, const CraneU &>) {
                 return crane_convert<X>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -162,19 +163,19 @@ public:
 };
 
 struct Monad_Err {
-  template <typename _A0> using m = Err<_A0>;
+  template <typename CraneA0> using m = Err<CraneA0>;
 
-  template <typename _A0> static Err<_A0> ret(_A0 x) {
-    return Err<_A0>::ok(std::move(x));
+  template <typename CraneA0> static Err<CraneA0> ret(CraneA0 x) {
+    return Err<CraneA0>::ok(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static Err<_A1> bind(Err<_A0> c, crane::fn<Err<_A1>(_A0)> k) {
-    if (std::holds_alternative<typename Err<_A0>::Ok>(c.v())) {
-      const auto &[x0] = std::get<typename Err<_A0>::Ok>(c.v());
-      return k(x0);
+  template <typename CraneA0, typename CraneA1>
+  static Err<CraneA1> bind(Err<CraneA0> c, crane::fn<Err<CraneA1>(CraneA0)> k) {
+    if (std::holds_alternative<typename Err<CraneA0>::Ok>(c.v_mut())) {
+      auto &[x0] = std::get<typename Err<CraneA0>::Ok>(c.v_mut());
+      return k(std::move(x0));
     } else {
-      return Err<_A1>::bad();
+      return Err<CraneA1>::bad();
     }
   }
 };

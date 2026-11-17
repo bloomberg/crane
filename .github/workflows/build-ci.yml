@@ -11,10 +11,10 @@ jobs:
       matrix:
         os:
           - ubuntu-24.04
-        coq_version:
-          - "9.0"
-        ocaml_version:
-          - "4.14-flambda"
+        ocaml-compiler:
+          - "ocaml-variants.5.4.1+options,ocaml-option-flambda"
+        rocq-version:
+          - "9.1.0"
 
     runs-on: ${{ matrix.os }}
 
@@ -22,45 +22,53 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Normalize Workspace Permissions
-        run: |
-          sudo chmod -R a+rwX "$GITHUB_WORKSPACE"
-
-      - name: Build and Extract
-        uses: coq-community/docker-coq-action@v1
+      # setup-ocaml caches the opam root and the switch, keyed on a hash that
+      # includes the full compiler string, so the flambda variant gets its own
+      # cache.  rocq-released comes first so its Rocq packages win over the
+      # older coq-released copies.
+      - name: Set up OCaml ${{ matrix.ocaml-compiler }}
+        uses: ocaml/setup-ocaml@v3
         with:
-          opam_file: 'rocq-crane.opam'
-          coq_version: ${{ matrix.coq_version }}
-          ocaml_version: ${{ matrix.ocaml_version }}
-          before_install: |
-            startGroup "Print opam config"
-              opam config list; opam repo list; opam list
-            endGroup
-          # A custom script replaces the action's default one, so it has to
-          # ask for the dependency installation itself.  One command per
-          # line: the script runs under `set -e`, which ignores a failure on
-          # the left of `&&` -- a build that never found coqc used to pass.
-          custom_script: |
-            {{before_install}}
-            {{install}}
-            {{after_install}}
-            startGroup "Build project"
-              opam exec -- dune build -p rocq-crane
-              opam exec -- dune install
-            endGroup
-            startGroup "OCaml unit tests"
-              opam exec -- dune build @unit_tests/runtest
-            endGroup
-            startGroup "Module dependency direction"
-              opam exec -- scripts/check-module-deps.sh
-            endGroup
+          ocaml-compiler: ${{ matrix.ocaml-compiler }}
+          opam-repositories: |
+            rocq-released: https://rocq-prover.org/opam/released
+            coq-released: https://coq.inria.fr/opam/released
+            default: https://opam.ocaml.org
+
+      # Rocq is installed at the exact version first: the package's own
+      # bounds (>= 9.1, < 9.2) would otherwise let opam pick a later 9.1.x.
+      - name: Install Rocq ${{ matrix.rocq-version }} and dependencies
+        run: |
+          opam install -y rocq-runtime.${{ matrix.rocq-version }} rocq-core.${{ matrix.rocq-version }} coq.${{ matrix.rocq-version }}
+          opam install -y . --deps-only --with-test
+          opam list
+
+      - name: Build project
+        run: |
+          opam exec -- dune build -p rocq-crane
+          opam exec -- dune install
+
+      - name: OCaml unit tests
+        run: opam exec -- dune build @unit_tests/runtest
+
+      - name: Module dependency direction
+        run: opam exec -- scripts/check-module-deps.sh
 
       - name: Install clang and GMP
         run: |
-          sudo apt-get update
-          sudo apt-get install -y clang-19 libc++-19-dev libc++abi-19-dev libgmp-dev
-          sudo update-alternatives --install /usr/bin/clang++ clang++ /usr/bin/clang++-19 100
-          clang++ --version
+          # clang-19 doesn't parse structured-binding packs (theories/cpp/shared_variant.h);
+          # pull a newer clang from LLVM's apt repo instead of Ubuntu noble's default.
+          # Point CXX at it directly for later steps rather than relying on
+          # update-alternatives, which left clang++ resolving to an older clang.
+          curl -fsSL https://apt.llvm.org/llvm.sh -o /tmp/llvm.sh
+          chmod +x /tmp/llvm.sh
+          sudo /tmp/llvm.sh 22
+          sudo apt-get install -y libc++-22-dev libc++abi-22-dev libgmp-dev
+          echo "CXX=clang++-22" >> "$GITHUB_ENV"
+          clang++-22 --version
+
+      - name: Generated headers compile standalone
+        run: scripts/check-headers-standalone.sh
 
       - name: Run C++ tests
         run: |
@@ -96,18 +104,40 @@ jobs:
                 compile_script="scripts/compile-gmp.sh"
               fi
 
-              # Collect all .cpp source files (excluding the .t.cpp driver).
-              # Separate extraction tests produce per-module .cpp files
-              # (e.g. Datatypes.cpp, List.cpp) instead of a single
-              # $test_name.cpp.
-              cpp_sources=()
-              for f in "$test_dir"/*.cpp; do
-                [ -f "$f" ] || continue
-                fname=$(basename "$f")
-                # Skip the test driver — it's added explicitly below
-                if [[ "$fname" == *.t.cpp ]]; then continue; fi
-                cpp_sources+=("$fname")
-              done
+              # Read the .cpp sources to link with the driver from this test's
+              # own dune rule, rather than globbing the directory: a test
+              # directory can hold other extraction targets' standalone
+              # outputs that are not part of this test's link (e.g.
+              # dependent_extraction_targets/*_a.cpp, present only for
+              # check-headers-standalone.sh), and some tests need
+              # $test_name.cpp plus named extras (e.g.
+              # erased_nested_type_args needs instance_in_record_literal.cpp
+              # too). A separate-extraction test with one .cpp per Rocq
+              # module (e.g. Datatypes.cpp, List.cpp) lists all of them in
+              # its rule the same way. A directory dune has no rule for (e.g.
+              # a template harness) falls back to collecting every .cpp, as
+              # before.
+              suite_dune="$(dirname "$test_dir")/dune"
+              if grep -q "(subdir $test_name\$" "$suite_dune" 2>/dev/null; then
+                cpp_sources=()
+                while IFS= read -r fname; do
+                  cpp_sources+=("$fname")
+                done < <(
+                  awk -v name="$test_name" '
+                    $0 ~ "\\(subdir " name "$" { found=1 }
+                    found && /\(subdir / && $0 !~ "\\(subdir " name "$" { exit }
+                    found && (/compile-std\.sh/ || /compile-gmp\.sh/ || /compile-bde\.sh/) { print; exit }
+                  ' "$suite_dune" | grep -oE '[A-Za-z0-9_./]+\.cpp' | grep -v '\.t\.cpp$'
+                )
+              else
+                cpp_sources=()
+                for f in "$test_dir"/*.cpp; do
+                  [ -f "$f" ] || continue
+                  fname=$(basename "$f")
+                  if [[ "$fname" == *.t.cpp ]]; then continue; fi
+                  cpp_sources+=("$fname")
+                done
+              fi
 
               # Compile the test
               if (

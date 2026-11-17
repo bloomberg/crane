@@ -7,7 +7,7 @@
     disagree about what the box holds. *)
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import NatIntStd.
-Require Import List.
+From Stdlib Require Import List.
 Import ListNotations.
 
 Module GadtIndexErasure.

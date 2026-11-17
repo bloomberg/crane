@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -134,8 +135,9 @@ struct NoMappingEventProbe {
   };
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 reproE_rect(F0 &&f, F1 &&f0, const reproE &r) {
     if (std::holds_alternative<typename reproE::Hidden>(r.v())) {
       const auto &[a0, a1] = std::get<typename reproE::Hidden>(r.v());
@@ -147,19 +149,11 @@ struct NoMappingEventProbe {
   }
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
   static T1 reproE_rec(F0 &&f, F1 &&f0, const reproE &r) {
-    if (std::holds_alternative<typename reproE::Hidden>(r.v())) {
-      const auto &[a0, a1] = std::get<typename reproE::Hidden>(r.v());
-      return f(a0, a1);
-    } else {
-      const auto &[a0, a1] = std::get<typename reproE::Revealed>(r.v());
-      return f0(a0, a1);
-    }
+    return reproE_rect<T1, crane::obj>(f, f0, r);
   }
 
-  static inline const uint64_t cell_size = UINT64_C(42);
+  static constexpr uint64_t cell_size = UINT64_C(42);
   static void draw_hidden_tile(uint64_t x, uint64_t y);
   static void draw_revealed_tile(uint64_t x, uint64_t y);
   static void loop(uint64_t x, uint64_t y, const List<bool> &cells);

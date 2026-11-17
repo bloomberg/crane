@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_TYPECLASS_REQUIRES
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>
@@ -11,7 +12,7 @@ concept Numeric = requires {
 
 struct TodoTypeclassRequires {
   struct NatNumeric {
-    static uint64_t to_nat_val(uint64_t n) { return n; }
+    constexpr static uint64_t to_nat_val(uint64_t n) { return n; }
   };
 
   static_assert(Numeric<NatNumeric, uint64_t>);

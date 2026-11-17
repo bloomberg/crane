@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -38,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -171,6 +171,35 @@ struct Matcher {
 
     // MANIPULATORS
     ~regexp() {
+      if (std::holds_alternative<Any>(v_mut())) {
+        return;
+      }
+      if (std::holds_alternative<Char>(v_mut())) {
+        return;
+      }
+      if (std::holds_alternative<Eps>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Cat>(&v_mut())) {
+        if (!((_alt->r1 && _alt->r1.use_count() == 1) ||
+              (_alt->r2 && _alt->r2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<Alt>(&v_mut())) {
+        if (!((_alt->r1 && _alt->r1.use_count() == 1) ||
+              (_alt->r2 && _alt->r2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (std::holds_alternative<Zero>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Star>(&v_mut())) {
+        if (!(_alt->r && _alt->r.use_count() == 1)) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<regexp>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Cat>(&_v)) {
@@ -208,8 +237,8 @@ struct Matcher {
 
     regexp(const regexp &) = default;
     regexp &operator=(const regexp &) = default;
-    regexp(regexp &&) noexcept = default;
-    regexp &operator=(regexp &&) noexcept = default;
+    regexp(regexp &&) = default;
+    regexp &operator=(regexp &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -218,10 +247,7 @@ struct Matcher {
   };
 
   template <typename T1, typename F1, typename F3, typename F4, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, int64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
+    requires std::is_invocable_r_v<T1, F1 &, const int64_t &>
   static T1 regexp_rect(T1 f, F1 &&f0, T1 f1, F3 &&f2, F4 &&f3, T1 f4, F6 &&f5,
                         const regexp &r) {
     if (std::holds_alternative<typename regexp::Any>(r.v())) {
@@ -249,41 +275,17 @@ struct Matcher {
   }
 
   template <typename T1, typename F1, typename F3, typename F4, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, int64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F4 &, regexp &, T1 &, regexp &, T1 &> &&
-             std::is_invocable_r_v<T1, F6 &, regexp &, T1 &>
   static T1 regexp_rec(T1 f, F1 &&f0, T1 f1, F3 &&f2, F4 &&f3, T1 f4, F6 &&f5,
                        const regexp &r) {
-    if (std::holds_alternative<typename regexp::Any>(r.v())) {
-      return f;
-    } else if (std::holds_alternative<typename regexp::Char>(r.v())) {
-      const auto &[c0] = std::get<typename regexp::Char>(r.v());
-      return f0(c0);
-    } else if (std::holds_alternative<typename regexp::Eps>(r.v())) {
-      return f1;
-    } else if (std::holds_alternative<typename regexp::Cat>(r.v())) {
-      const auto &[r4, r5] = std::get<typename regexp::Cat>(r.v());
-      return f2(*r4, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r4), *r5,
-                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r5));
-    } else if (std::holds_alternative<typename regexp::Alt>(r.v())) {
-      const auto &[r4, r5] = std::get<typename regexp::Alt>(r.v());
-      return f3(*r4, regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r4), *r5,
-                regexp_rec<T1>(f, f0, f1, f2, f3, f4, f5, *r5));
-    } else if (std::holds_alternative<typename regexp::Zero>(r.v())) {
-      return f4;
-    } else {
-      const auto &[r2] = std::get<typename regexp::Star>(r.v());
-      return f5(*r2, regexp_rec<T1>(std::move(f), f0, std::move(f1), f2, f3,
-                                    std::move(f4), f5, *r2));
-    }
+    return regexp_rect<T1>(std::move(f), f0, std::move(f1), f2, f3,
+                           std::move(f4), f5, r);
   }
 
   static bool regexp_eq(const regexp &r, const regexp &x);
   /// An optimized constructor for Cat.
-  static regexp OptCat(regexp r2, regexp r3);
+  static regexp OptCat(const regexp &r2, const regexp &r3);
   /// Optimized version of Alt.
-  static regexp OptAlt(regexp r2, regexp r3);
+  static regexp OptAlt(const regexp &r2, const regexp &r3);
   /// If r accepts the empty string, return Eps, else return Zero.
   static regexp null(const regexp &r);
   static bool accepts_null(const regexp &r);
@@ -295,13 +297,13 @@ struct Matcher {
   static regexp derivs(regexp r, const List<int64_t> &cs);
   /// To see if cs matches r, calculate the derivative of r with respect
   /// to s, and see if the resulting regexp accepts the empty string.
-  static bool deriv_parse(const regexp &r, const List<int64_t> &cs);
+  static bool deriv_parse(regexp r, const List<int64_t> &cs);
   /// null r returns Eps or Zero
   static bool NullEpsOrZero(const regexp &r);
   /// From this, we can build a decidable regexp matcher by running
   /// the derivative-based parser.
-  static bool parse(const regexp &r, const List<int64_t> &cs);
-  static bool parse_bool(const regexp &r, const List<int64_t> &cs);
+  static bool parse(regexp r, const List<int64_t> &cs);
+  static bool parse_bool(regexp r, const List<int64_t> &cs);
   static inline const regexp r1 = regexp::cat(
       regexp::star(regexp::Char_(INT64_C(0))), regexp::Char_(INT64_C(1)));
   static inline const List<int64_t> s1 = List<int64_t>::cons(
@@ -309,9 +311,9 @@ struct Matcher {
   static inline const List<int64_t> s2 =
       List<int64_t>::cons(INT64_C(1), List<int64_t>::nil());
   static inline const List<int64_t> s3 = List<int64_t>::cons(
-      INT64_C(0),
-      List<int64_t>::cons(
-          INT64_C(0), List<int64_t>::cons(INT64_C(1), List<int64_t>::nil())));
+      INT64_C(0), List<int64_t>::cons(
+                      INT64_C(0),
+                      List<int64_t>::cons(INT64_C(1), List<int64_t>::nil())));
   static inline const List<int64_t> s4 =
       List<int64_t>::cons(INT64_C(0), List<int64_t>::nil());
 };

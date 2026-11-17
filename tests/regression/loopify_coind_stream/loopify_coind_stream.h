@@ -5,10 +5,10 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -96,9 +97,9 @@ public:
 struct LoopifyCoindStream {
   template <typename A> struct stream {
     // TYPES
-    template <typename _S0 = stream<A>> struct Scons_ {
+    template <typename CraneS0 = stream<A>> struct Scons_ {
       A a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Scons = Scons_<>;
@@ -115,23 +116,25 @@ struct LoopifyCoindStream {
     explicit stream(Scons _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U>
-    stream(const stream<_U> &_other)
-        : lazy_v_(crane::lazy<variant_t>::converted_from(
-              _other.lazy_cell(), [=]() -> variant_t {
-                const auto &[a0, a1] =
-                    std::get<typename stream<_U>::Scons>(_other.v());
-                return Scons{[&]() -> A {
-                               if constexpr (crane_convertible<A, const _U &>) {
-                                 return crane_convert<A>(a0);
-                               } else {
-                                 throw std::logic_error(
-                                     "unreachable: inactive constructor field "
-                                     "at this instantiation");
-                               }
-                             }(),
-                             crane_convert<stream<A>>(a1)};
-              })) {}
+    template <typename CraneU>
+    stream(const stream<CraneU> &_other)
+        : lazy_v_(
+        crane::lazy<variant_t>::converted_from(
+            _other.lazy_cell(), [=]() -> variant_t {
+              const auto &[a0, a1] =
+                  std::get<typename stream<CraneU>::Scons>(_other.v());
+              return Scons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  crane_convert<stream<A>>(a1)};
+            })) {}
 
     explicit stream(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -144,8 +147,7 @@ struct LoopifyCoindStream {
     explicit stream(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
     template <typename F> static stream<A> lazy_(F &&thunk) {
-      return stream<A>(
-          crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+      return stream<A>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
     }
 
     // ACCESSORS
@@ -154,149 +156,77 @@ struct LoopifyCoindStream {
     const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
   };
 
-  template <typename T1> static T1 hd(stream<T1> s) {
-    const auto &[a0, a1] = std::get<typename stream<T1>::Scons>(s.v());
+  template <typename T1> static T1 hd(const stream<T1> &s) {
+    const auto &[a0, _] = std::get<typename stream<T1>::Scons>(s.v());
     return a0;
   }
 
-  template <typename T1> static stream<T1> tl(stream<T1> s) {
-    const auto &[a0, a1] = std::get<typename stream<T1>::Scons>(s.v());
+  template <typename T1> static stream<T1> tl(const stream<T1> &s) {
+    const auto &[_, a1] = std::get<typename stream<T1>::Scons>(s.v());
     return a1;
   }
 
-  template <typename T1> static List<T1> take(uint64_t n, stream<T1> s) {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
-    stream<T1> _loop_s = std::move(s);
-    uint64_t _loop_n = std::move(n);
+  template <typename T1> static List<T1> take(uint64_t n, const stream<T1> &s) {
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
+    stream<T1> _loop_s = s;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n_ = _loop_n - 1;
-        auto _cell = std::make_shared<List<T1>>(
-            typename List<T1>::Cons(hd<T1>(_loop_s), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(hd<T1>(_loop_s), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_s = tl<T1>(_loop_s);
         _loop_n = n_;
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   template <typename T1>
-  static stream<T1>
-  iterate(std::type_identity_t<crane::fn<T1(T1)>> f,
-          const T1 &x) { /// _Enter: captures varying parameters for each
-                         /// recursive call.
-
-    struct _Enter {
-      T1 x;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    stream<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{x});
-    /// Loopified iterate: _Enter.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const T1 x = std::move(_f.x);
-      _result = stream<T1>::lazy_([=]() -> stream<T1> {
-        return stream<T1>::scons(x, iterate<T1>(f, f(x)));
-      });
-    }
-    return _result;
+  static stream<T1> iterate(const std::type_identity_t<crane::fn<T1(T1)>> &f,
+                            const T1 &x) {
+    return stream<T1>::lazy_([=]() -> typename stream<T1>::Scons {
+      return {x, iterate<T1>(f, f(x))};
+    });
   }
 
   template <typename T1, typename T2>
-  static stream<T2> smap(std::type_identity_t<crane::fn<T2(T1)>> f,
-                         stream<T1> s) { /// _Enter: captures varying parameters
-                                         /// for each recursive call.
-
-    struct _Enter {
-      stream<T1> s;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    stream<T2> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(s)});
-    /// Loopified smap: _Enter.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      stream<T1> s = std::move(_f.s);
-      _result = stream<T2>::lazy_([=]() -> stream<T2> {
-        return stream<T2>::scons(f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s)));
-      });
-    }
-    return _result;
+  static stream<T2> smap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+                         const stream<T1> &s) {
+    return stream<T2>::lazy_([=]() -> typename stream<T2>::Scons {
+      return {f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s))};
+    });
   }
 
   template <typename T1, typename T2, typename T3>
   static stream<T3>
-  zipWith(std::type_identity_t<crane::fn<T3(T1, T2)>> f, stream<T1> s1,
-          stream<T2> s2) { /// _Enter: captures varying parameters for each
-                           /// recursive call.
-
-    struct _Enter {
-      stream<T2> s2;
-      stream<T1> s1;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    stream<T3> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{std::move(s2), std::move(s1)});
-    /// Loopified zipWith: _Enter.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      stream<T2> s2 = std::move(_f.s2);
-      stream<T1> s1 = std::move(_f.s1);
-      _result = stream<T3>::lazy_([=]() -> stream<T3> {
-        return stream<T3>::scons(
-            f(hd<T1>(s1), hd<T2>(s2)),
-            zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2)));
-      });
-    }
-    return _result;
+  zipWith(const std::type_identity_t<crane::fn<T3(T1, T2)>> &f,
+          const stream<T1> &s1, const stream<T2> &s2) {
+    return stream<T3>::lazy_([=]() -> typename stream<T3>::Scons {
+      return {f(hd<T1>(s1), hd<T2>(s2)),
+              zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2))};
+    });
   }
 
   template <typename T1, typename T2>
   static stream<T1>
-  unfold(std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> f,
-         const T2 &seed) { /// _Enter: captures varying parameters for each
-                           /// recursive call.
-
-    struct _Enter {
-      T2 seed;
-    };
-
-    using _Frame = std::variant<_Enter>;
-    stream<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{seed});
-    /// Loopified unfold: _Enter.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const T2 seed = std::move(_f.seed);
-      auto [a, s_] = f(seed);
-      _result = stream<T1>::lazy_([=]() -> stream<T1> {
-        return stream<T1>::scons(a, unfold<T1, T2>(f, s_));
-      });
-    }
-    return _result;
+  unfold(const std::type_identity_t<crane::fn<std::pair<T1, T2>(T2)>> &f,
+         const T2 &seed) {
+    auto [a, s_] = f(seed);
+    return stream<T1>::lazy_(
+        [=, a = std::move(a), s_ = std::move(s_)]() -> typename stream<T1>::Scons {
+          return {std::move(a), unfold<T1, T2>(f, std::move(s_))};
+        });
   }
 
   static inline const stream<uint64_t> nats =

@@ -108,8 +108,41 @@ crane_erase_fn_impl(crane::fn<R(A...)> *, F &&f) {
   };
 }
 
-template <class Ret = crane::obj, class F> auto crane_erase_fn(F &&f) {
-  if constexpr (requires { crane::fn{f}; }) {
+// [crane_erase_fn] without a result type adapts a callable that is boxed
+// whole into a [crane::obj].  Such a box is opened one argument at a time --
+// [crane::fn<crane::obj(crane::obj)>], whatever the callable's arity, since
+// nothing about a box says how many arguments it takes -- so a callable taking
+// several is curried, each partial application boxed in turn.  With a result
+// type, it adapts a callable to a slot that declares its signature, flat.
+struct crane_boxed_fn {};
+
+template <class Ret = crane_boxed_fn, class F> auto crane_erase_fn(F &&f);
+
+template <class R, class A0, class... A, class F> auto crane_curry_head(F &&f) {
+  return crane::fn<crane::obj(crane::obj)>(
+      [f = std::forward<F>(f)](crane::obj a0) -> crane::obj {
+        return crane::obj(crane_erase_fn(
+            [f, x = std::remove_cvref_t<A0>(crane_erase_fn_unbox<A0>(a0))](
+                A... as) -> R { return f(x, std::forward<A>(as)...); }));
+      });
+}
+
+template <class R, class... A, class F>
+auto crane_curry_boxed(crane::fn<R(A...)> *, F &&f) {
+  if constexpr (sizeof...(A) < 2)
+    return crane_erase_fn<crane::obj>(std::forward<F>(f));
+  else
+    return crane_curry_head<R, A...>(std::forward<F>(f));
+}
+
+template <class Ret, class F> auto crane_erase_fn(F &&f) {
+  if constexpr (std::is_same_v<Ret, crane_boxed_fn>) {
+    if constexpr (requires { crane::fn{f}; })
+      return crane_curry_boxed(static_cast<decltype(crane::fn{f}) *>(nullptr),
+                               std::forward<F>(f));
+    else
+      return crane_erase_fn<crane::obj>(std::forward<F>(f));
+  } else if constexpr (requires { crane::fn{f}; }) {
     return crane_erase_fn_impl<Ret>(
         static_cast<decltype(crane::fn{f}) *>(nullptr), std::forward<F>(f));
   } else if constexpr (!requires { f(std::declval<crane::obj>()); }) {
@@ -134,6 +167,16 @@ template <class Ret = crane::obj, class F> auto crane_erase_fn(F &&f) {
           }
         });
   }
+}
+
+// [crane_erase_fn<Ret>(F)] for a global -- a function, or a constant -- made
+// once and shared: the adapter of a value that never changes is itself one,
+// and building it at every use cost an allocation each time a subevent was
+// injected.  Per thread, as the [fn]'s count may not be atomic; and never
+// freed, so that no thread's exit runs after the heap it came from.
+template <auto &F, class Ret = crane_boxed_fn> const auto &crane_erase_global() {
+  static thread_local const auto *f = new auto(crane_erase_fn<Ret>(F));
+  return *f;
 }
 
 // Runtime helper for calling a genuinely-concrete callable [f] with
@@ -203,6 +246,11 @@ template <template <class...> class C, class... A>
 struct crane_all_any<C<A...>> {
   using type = C<std::conditional_t<true, crane::obj, A>...>;
 };
+// A pair, too, is boxed with each component boxed in turn: the shape
+// [crane_any_cast] reads a pair at when its components were erased.
+template <class X, class Y> struct crane_all_any<std::pair<X, Y>> {
+  using type = std::pair<crane::obj, crane::obj>;
+};
 
 // [crane::any_cast<T>], generalized to recover a pair [T = std::pair<X, Y>]
 // whose components were themselves boxed independently as
@@ -252,6 +300,16 @@ template <class T> T crane_any_cast(const crane::obj &a) {
     }
     return crane::any_cast<T>(a);
   }
+}
+
+// A value that was never boxed -- what a callable the callee deduces returns
+// at its caller's own type, a closure where the erased signature says
+// [crane::obj] -- is converted to [T], not unboxed.
+template <class T, class S>
+  requires(!std::is_same_v<std::remove_cvref_t<S>, crane::obj> &&
+           std::is_constructible_v<T, S &&>)
+T crane_any_cast(S &&s) {
+  return T(std::forward<S>(s));
 }
 
 // Converts a type-erased sequence container (element type [crane::obj], e.g. a
@@ -304,24 +362,12 @@ struct crane_is_boxlike<
 // one need not know the carrier exists.
 template <class T> struct crane_tag {};
 
-template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
+// Walks [src] into a [Dst], each element through [convert]: a container
+// built from a range, one appended to in place or by value, or a carrier
+// holding at most one element.
+template <class Dst, class Src, class Convert>
+Dst crane_container_walk(Src &&src, Convert &&_convert) {
   using Elt = typename Dst::value_type;
-  auto _convert = [](auto &&_e) -> Elt {
-    if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>)
-      return _e;
-    // The other direction: a concrete element going INTO an erased carrier
-    // ([std::optional<Nat>] handed to a dictionary method declared over
-    // [std::optional<crane::obj>]).  Boxing is the conversion; nothing is cast
-    // out.
-    else if constexpr (std::is_same_v<Elt, crane::obj>)
-      return crane::obj(_e);
-    else if constexpr (crane_is_boxlike<Elt>::value) {
-      using U = typename Elt::value_type;
-      const crane::obj &_a = _e; // box<any> -> const any&, or any -> any
-      return Elt(crane_any_cast<U>(_a));
-    } else
-      return crane_any_cast<Elt>(_e);
-  };
   // A carrier holding at most one element (std::optional) is not a range, so
   // no walk reaches its element: convert the contained value, if any.
   if constexpr (!requires(Src &_s) { _s.begin(); } &&
@@ -357,6 +403,27 @@ template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
     }
     return dst;
   }
+}
+
+template <class Dst, class Src> Dst crane_container_cast_impl(Src &&src) {
+  using Elt = typename Dst::value_type;
+  auto _convert = [](auto &&_e) -> Elt {
+    if constexpr (std::is_same_v<std::decay_t<decltype(_e)>, Elt>)
+      return _e;
+    // The other direction: a concrete element going INTO an erased carrier
+    // ([std::optional<Nat>] handed to a dictionary method declared over
+    // [std::optional<crane::obj>]).  Boxing is the conversion; nothing is cast
+    // out.
+    else if constexpr (std::is_same_v<Elt, crane::obj>)
+      return crane::obj(_e);
+    else if constexpr (crane_is_boxlike<Elt>::value) {
+      using U = typename Elt::value_type;
+      const crane::obj &_a = _e; // box<any> -> const any&, or any -> any
+      return Elt(crane_any_cast<U>(_a));
+    } else
+      return crane_any_cast<Elt>(_e);
+  };
+  return crane_container_walk<Dst>(std::forward<Src>(src), _convert);
 }
 
 template <class Dst, class Src> Dst crane_container_cast(Src &&src) {
@@ -440,8 +507,9 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
   else if constexpr (route == crane_route::box_all_any) {
     using S = std::remove_cvref_t<Src>;
     using E = typename crane_all_any<S>::type;
-    if constexpr (!std::is_same_v<E, S> && std::is_constructible_v<E, const S &>)
-      return crane::obj(E(src));
+    if constexpr (!std::is_same_v<E, S> &&
+                  crane_convert_route<E, const S &>() != crane_route::none)
+      return crane::obj(crane_convert<E>(src));
     else
       return crane::obj(std::forward<Src>(src));
   } else if constexpr (route == crane_route::hook)
@@ -454,6 +522,33 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
     // No route: let the conversion itself be the diagnostic, rather than a
     // failure inside machinery the reader did not write.
     return Dst(std::forward<Src>(src));
+}
+
+// A value boxed at the shape the generic consumers of a value-indexed family
+// ([den t]) read it at: every level boxed in turn, so a consumer that knows
+// nothing but [crane::obj] at each level can open each level, and a reader
+// at a concrete type still recovers it through [crane_any_cast].  Boxing does
+// that for a generated inductive and for a pair (see [crane_all_any]); a
+// mapped container -- the [std::deque] a [list] mapping makes -- is walked
+// into the same container at [crane::obj] elements.
+template <class T> struct crane_obj_elements {};
+template <template <class...> class C, class T, class... R>
+  requires requires { typename C<T, R...>::value_type; } &&
+           (!std::is_same_v<C<T, R...>, std::basic_string<T, R...>>)
+struct crane_obj_elements<C<T, R...>> {
+  using type = C<crane::obj>;
+};
+
+template <class T> crane::obj crane_deep_box(const T &v) {
+  if constexpr (requires { typename crane_obj_elements<T>::type; }) {
+    using D = typename crane_obj_elements<T>::type;
+    if constexpr (!std::is_same_v<D, T>)
+      return crane::obj(
+          crane_container_walk<D>(v, [](const auto &e) { return crane_deep_box(e); }));
+    else
+      return crane::obj(v);
+  } else
+    return crane_convert<crane::obj>(v);
 }
 
 // A composite carrier -- a Rocq carrier of the shape [fun T => (T * box T)] --
@@ -484,15 +579,39 @@ std::optional<A> crane_cast_to(crane_tag<std::optional<A>>,
   return std::optional<A>(crane_convert<A>(*src));
 }
 
-// A function at another result type -- a continuation built where the
+// A function at another instantiation -- a continuation built where the
 // result was erased, [crane::fn<Itree<crane::obj, crane::obj>(crane::obj)>],
-// stored where it is [crane::fn<Itree<E, R>(crane::obj)>] -- is read by
-// reading what it returns.  The arguments are the same, so only the result
-// is converted.
-template <class R, class... A, class S>
+// stored where it is [crane::fn<Itree<E, R>(crane::obj)>], or a method
+// [crane::fn<uint64_t(uint64_t)>] stored where its argument is erased -- is
+// read by converting what it is given into what it takes, and what it
+// returns into what the reader wants.  An argument already at the type it is
+// taken at passes through.
+template <class B, class A> decltype(auto) crane_convert_arg(A &&a) {
+  if constexpr (std::is_same_v<std::remove_cvref_t<A>, std::remove_cvref_t<B>>)
+    return std::forward<A>(a);
+  else
+    return crane_convert<std::remove_cvref_t<B>>(std::forward<A>(a));
+}
+
+template <class R, class... A, class S, class... B>
+  requires(sizeof...(A) == sizeof...(B))
 crane::fn<R(A...)> crane_cast_to(crane_tag<crane::fn<R(A...)>>,
-                                 const crane::fn<S(A...)> &src) {
+                                 const crane::fn<S(B...)> &src) {
   return [src](A... a) -> R {
-    return crane_convert<R>(src(std::forward<A>(a)...));
+    return crane_convert<R>(src(crane_convert_arg<B>(std::forward<A>(a))...));
   };
+}
+
+// A function whose arrows are grouped otherwise -- the curried
+// [crane::fn<crane::fn<R(B)>(A)>] a type variable is spelled at, reaching the
+// flat [crane::fn<R(A, B)>] a declaration writes, or the other way -- is read
+// by regrouping it ([crane::regroup]).  Through this hook a container of
+// functions converts element by element, as any [crane_convert] does.
+template <class R, class... A, class S, class... B>
+  requires(sizeof...(A) != sizeof...(B)) &&
+          crane::fn_detail::regroup<crane::fn<S(B...)>, R,
+                                    crane::fn_detail::types<A...>>::value
+crane::fn<R(A...)> crane_cast_to(crane_tag<crane::fn<R(A...)>>,
+                                 const crane::fn<S(B...)> &src) {
+  return crane::regroup<crane::fn<R(A...)>>(src);
 }

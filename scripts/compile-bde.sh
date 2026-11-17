@@ -145,6 +145,7 @@ exec clang++ \
     -Wno-unused-variable -Wno-unused-value \
     -Wno-constant-conversion -Wno-sign-conversion \
     -Wno-c11-extensions -Wno-dtor-name -Wno-nontrivial-memcall -Werror \
+    -DCRANE_STRICT_ARITY \
     "${SANITIZE_FLAGS[@]}" \
     "${BDE_CFLAGS[@]}" \
     "${SOURCES[@]}" \

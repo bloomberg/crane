@@ -20,9 +20,10 @@ ClosureRecursiveBuild::fn_list ClosureRecursiveBuild::build_adders(uint64_t n) {
         return (_self_adder(_self_adder, x_) + 1);
       }
     };
-    auto adder = [=](uint64_t x) -> uint64_t {
-      return adder_impl(adder_impl, x);
-    };
+    auto adder =
+        [=, adder_impl = std::move(adder_impl)](uint64_t x) -> uint64_t {
+          return adder_impl(adder_impl, x);
+        };
     return fn_list::fcons(std::move(adder), build_adders(n_));
   }
 }
@@ -34,7 +35,7 @@ ClosureRecursiveBuild::apply_first(const ClosureRecursiveBuild::fn_list &fl,
           fl.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename ClosureRecursiveBuild::fn_list::FCons>(fl.v());
     return a0(x);
   }

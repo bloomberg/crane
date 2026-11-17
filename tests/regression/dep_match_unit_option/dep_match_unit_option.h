@@ -1,7 +1,7 @@
 #ifndef INCLUDED_DEP_MATCH_UNIT_OPTION
 #define INCLUDED_DEP_MATCH_UNIT_OPTION
 
-#include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -44,7 +44,7 @@ struct DepMatchUnitOption {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::optional<uint64_t> &>
+    requires std::is_invocable_r_v<T1, F0 &, const std::optional<uint64_t> &>
   static T1 tg_rect(F0 &&f, T1 f0, bool, const tg &t) {
     if (std::holds_alternative<typename tg::TO>(t.v())) {
       const auto &[a0] = std::get<typename tg::TO>(t.v());
@@ -55,14 +55,8 @@ struct DepMatchUnitOption {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::optional<uint64_t> &>
-  static T1 tg_rec(F0 &&f, T1 f0, bool, const tg &t) {
-    if (std::holds_alternative<typename tg::TO>(t.v())) {
-      const auto &[a0] = std::get<typename tg::TO>(t.v());
-      return f(a0);
-    } else {
-      return f0;
-    }
+  static T1 tg_rec(F0 &&f, T1 f0, bool _x, const tg &t) {
+    return tg_rect<T1>(f, std::move(f0), _x, t);
   }
 
   static std::optional<uint64_t> get(const tg &t);

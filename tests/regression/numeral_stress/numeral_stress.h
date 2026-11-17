@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -39,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -85,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -105,13 +105,13 @@ struct NumeralStress {
       std::make_pair(UINT64_C(42), INT64_C(-7));
   /// 3. Numeral in a list
   static inline const List<int64_t> z_list = List<int64_t>::cons(
-      INT64_C(1),
-      List<int64_t>::cons(
-          INT64_C(-2), List<int64_t>::cons(INT64_C(3), List<int64_t>::nil())));
+      INT64_C(1), List<int64_t>::cons(
+                      INT64_C(-2),
+                      List<int64_t>::cons(INT64_C(3), List<int64_t>::nil())));
   /// 4. Numeral as argument to Nat.add
   static inline const uint64_t add_big = (UINT64_C(1000) + UINT64_C(2000));
   /// 5. Numeral in match scrutinee
-  static inline const uint64_t match_numeral = UINT64_C(1);
+  static constexpr uint64_t match_numeral = UINT64_C(1);
   /// 6. Numeral inside a fixpoint
   static uint64_t count_from(uint64_t n, uint64_t target);
   static inline const uint64_t test_count =

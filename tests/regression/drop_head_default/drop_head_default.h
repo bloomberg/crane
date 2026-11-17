@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -35,16 +35,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -81,8 +82,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,28 +92,27 @@ public:
 };
 
 struct DropHeadDefault {
-  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, const List<T1> &l) {
     if (n <= 0) {
       return l;
     } else {
       uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return drop<T1>(n_, *a1);
       }
     }
   }
 
   static uint64_t head_after_drop(const List<uint64_t> &rom, uint64_t addr);
-  static inline const uint64_t t = head_after_drop(
+  static inline const uint64_t t = head_after_drop(List<uint64_t>::cons(
+      UINT64_C(5),
       List<uint64_t>::cons(
-          UINT64_C(5),
-          List<uint64_t>::cons(
-              UINT64_C(7),
-              List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()))),
-      UINT64_C(1));
+          UINT64_C(7),
+          List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()))),
+                                                   UINT64_C(1));
 };
 
 #endif // INCLUDED_DROP_HEAD_DEFAULT

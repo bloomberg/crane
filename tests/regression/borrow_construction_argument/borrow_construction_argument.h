@@ -3,8 +3,9 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I>
@@ -43,19 +44,22 @@ struct BorrowConstructionArgument {
   template <typename a> using stateT = crane::fn<std::pair<big, a>(big)>;
 
   struct Monad_stateT {
-    template <typename _A0> using m = crane::fn<std::pair<big, _A0>(big)>;
+    template <typename CraneA0>
+    using m = crane::fn<std::pair<big, CraneA0>(big)>;
 
-    template <typename _A0>
-    static crane::fn<std::pair<big, _A0>(big)> ret(_A0 a) {
-      return [=](const big &s) { return std::make_pair(s, a); };
+    template <typename CraneA0>
+    static crane::fn<std::pair<big, CraneA0>(big)> ret(CraneA0 a) {
+      return [=, a = std::move(a)](const big &s) {
+        return std::make_pair(s, a);
+      };
     }
 
     static crane::fn<std::pair<big, crane::obj>(big)>
     bind(crane::fn<std::pair<big, crane::obj>(big)> t,
          crane::fn<crane::fn<std::pair<big, crane::obj>(big)>(crane::obj)> k) {
-      return [=](const big &s) {
+      return [=, k = std::move(k), t = std::move(t)](const big &s) {
         auto [s_, v] = t(s);
-        return k(v)(std::move(s_));
+        return crane::apply2(k, v, std::move(s_));
       };
     }
   };

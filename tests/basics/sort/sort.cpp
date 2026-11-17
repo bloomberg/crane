@@ -14,8 +14,8 @@ Sig<List<uint64_t>> Sort::sort_cons_prog(uint64_t a, const List<uint64_t> &,
       return Sig<List<uint64_t>>::exist(
           List<uint64_t>::cons(a, List<uint64_t>::cons(a0, *a1)));
     } else {
-      return Sig<List<uint64_t>>::exist(
-          List<uint64_t>::cons(a0, std::move(x0)));
+      return Sig<List<uint64_t>>::exist(List<uint64_t>::cons(a0,
+                                                             std::move(x0)));
     }
   }
 }
@@ -32,39 +32,40 @@ Sig<List<uint64_t>> Sort::isort(const List<uint64_t> &l) {
 }
 
 List<uint64_t> Sort::merge(List<uint64_t> l1, const List<uint64_t> &l2) {
-  auto merge_aux_impl = [&](auto &_self_merge_aux,
-                            List<uint64_t> l3) -> List<uint64_t> {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
-      return l3;
-    } else {
-      const auto &[a0, a2] = std::get<typename List<uint64_t>::Cons>(l1.v());
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(l3.v_mut())) {
-        return l1;
-      } else {
-        auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l3.v_mut());
-        if (a0 <= a00) {
-          return List<uint64_t>::cons(a0, merge(*a2, l3));
+  auto merge_aux_impl =
+      [&](auto &_self_merge_aux, const List<uint64_t> &l3) -> List<uint64_t> {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
+          return l3;
         } else {
-          return List<uint64_t>::cons(a00,
-                                      _self_merge_aux(_self_merge_aux, *a10));
+          const auto &[a0, a2] =
+              std::get<typename List<uint64_t>::Cons>(l1.v());
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(l3.v())) {
+            return l1;
+          } else {
+            const auto &[a00, a10] =
+                std::get<typename List<uint64_t>::Cons>(l3.v());
+            if (a0 <= a00) {
+              return List<uint64_t>::cons(a0, merge(*a2, l3));
+            } else {
+              return List<uint64_t>::cons(
+                  a00, _self_merge_aux(_self_merge_aux, *a10));
+            }
+          }
         }
-      }
-    }
-  };
-  auto merge_aux = [&](List<uint64_t> l3) -> List<uint64_t> {
-    return merge_aux_impl(merge_aux_impl, l3);
-  };
-  return merge_aux(l2);
+      };
+  {
+    const List<uint64_t> &_lc1_l3 = l2;
+    return merge_aux_impl(merge_aux_impl, _lc1_l3);
+  }
 }
 
-Sig<List<uint64_t>> Sort::merge_prog(const List<uint64_t> &,
-                                     const List<uint64_t> &l1,
+Sig<List<uint64_t>> Sort::merge_prog(const List<uint64_t> &, List<uint64_t> l1,
                                      const List<uint64_t> &l2) {
-  return Sig<List<uint64_t>>::exist(merge(l1, l2));
+  return Sig<List<uint64_t>>::exist(merge(std::move(l1), l2));
 }
 
 Sig<List<uint64_t>> Sort::msort(const List<uint64_t> &x0_) {
-  return div_conq_split(
+  return div_conq_split<uint64_t, Sig<List<uint64_t>>>(
       Sig<List<uint64_t>>::exist(List<uint64_t>::nil()),
       [](uint64_t a) {
         return Sig<List<uint64_t>>::exist(
@@ -79,21 +80,20 @@ Sig<List<uint64_t>> Sort::msort(const List<uint64_t> &x0_) {
       x0_);
 }
 
-Sig<List<uint64_t>> Sort::pair_merge_prog(uint64_t, uint64_t,
-                                          const List<uint64_t> &,
-                                          const List<uint64_t> &l_,
-                                          const List<uint64_t> &l_0) {
-  return Sig<List<uint64_t>>::exist(merge(l_0, l_));
+Sig<List<uint64_t>>
+Sort::pair_merge_prog(uint64_t, uint64_t, const List<uint64_t> &,
+                      const List<uint64_t> &l_, List<uint64_t> l_0) {
+  return Sig<List<uint64_t>>::exist(merge(std::move(l_0), l_));
 }
 
 Sig<List<uint64_t>> Sort::psort(const List<uint64_t> &x0_) {
-  return div_conq_pair(
+  return div_conq_pair<uint64_t, Sig<List<uint64_t>>>(
       Sig<List<uint64_t>>::exist(List<uint64_t>::nil()),
       [](uint64_t a) {
         return Sig<List<uint64_t>>::exist(
             List<uint64_t>::cons(a, List<uint64_t>::nil()));
       },
-      [](uint64_t a1, uint64_t a2) {
+      [](uint64_t a1, uint64_t a2) -> Sig<List<uint64_t>> {
         bool s = a1 <= a2;
         if (s) {
           return Sig<List<uint64_t>>::exist(List<uint64_t>::cons(
@@ -113,8 +113,9 @@ Sig<List<uint64_t>> Sort::psort(const List<uint64_t> &x0_) {
 }
 
 Sig<List<uint64_t>> Sort::qsort(const List<uint64_t> &x0_) {
-  return div_conq_pivot(
-      Compare_dec::le_dec, Sig<List<uint64_t>>::exist(List<uint64_t>::nil()),
+  return div_conq_pivot<uint64_t, Sig<List<uint64_t>>>(
+      Compare_dec::le_dec,
+      Sig<List<uint64_t>>::exist(List<uint64_t>::nil()),
       [](uint64_t a, List<uint64_t>, const Sig<List<uint64_t>> &x,
          const Sig<List<uint64_t>> &x0) {
         const auto &[x2] = x;

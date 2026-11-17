@@ -54,8 +54,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -65,18 +65,13 @@ public:
 
 struct FunctionReturnBranchProbe {
   /// A recursive function whose match branches return different lambda
-  /// expressions.  Crane generates an inner lambda with no explicit return
-  /// type, causing C++ to fail to deduce a common return type across the two
-  /// distinct closure types.
-  static Nat make_adder(const Nat &n, const Nat &x0_);
+  /// expressions. Crane generates an inner lambda with no explicit return type,
+  /// causing C++ to fail to deduce a common return type across the two distinct
+  /// closure types.
+  static Nat make_adder(const Nat &n, Nat x0_);
   static inline const Nat sample = make_adder(
       Nat::s(Nat::s(Nat::o())),
-      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                          Nat::o())))))))))))))))))))))))))))))))))))))))));
+      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))));
 };
 
 #endif // INCLUDED_FUNCTION_RETURN_BRANCH_PROBE

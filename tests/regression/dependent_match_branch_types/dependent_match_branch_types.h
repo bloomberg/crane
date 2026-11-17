@@ -4,7 +4,6 @@
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -57,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -123,8 +122,8 @@ struct DependentMatchBranchTypes {
 
     vec(const vec &) = default;
     vec &operator=(const vec &) = default;
-    vec(vec &&) noexcept = default;
-    vec &operator=(vec &&) noexcept = default;
+    vec(vec &&) = default;
+    vec &operator=(vec &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -133,7 +132,6 @@ struct DependentMatchBranchTypes {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, Nat &, vec &, T1 &>
   static T1 vec_rect(T1 f, F1 &&f0, const Nat &, const vec &v) {
     if (std::holds_alternative<typename vec::Vnil>(v.v())) {
       return f;
@@ -144,23 +142,15 @@ struct DependentMatchBranchTypes {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, Nat &, vec &, T1 &>
-  static T1 vec_rec(T1 f, F1 &&f0, const Nat &, const vec &v) {
-    if (std::holds_alternative<typename vec::Vnil>(v.v())) {
-      return f;
-    } else {
-      const auto &[n1, a1, a2] = std::get<typename vec::Vcons>(v.v());
-      return f0(n1, a1, *a2, vec_rec<T1>(std::move(f), f0, n1, *a2));
-    }
+  static T1 vec_rec(T1 f, F1 &&f0, const Nat &_x, const vec &v) {
+    return vec_rect<T1>(std::move(f), f0, _x, v);
   }
 
   static Nat hd(const Nat &_x, const vec &v);
-  static inline const Nat run =
-      hd(Nat::o(),
-         vec::vcons(
-             Nat::o(),
-             Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
-             vec::vnil()));
+  static inline const Nat run = hd(
+      Nat::o(), vec::vcons(Nat::o(), Nat::s(Nat::s(Nat::s(Nat::s(
+                                         Nat::s(Nat::s(Nat::s(Nat::o()))))))),
+                           vec::vnil()));
 };
 
 #endif // INCLUDED_DEPENDENT_MATCH_BRANCH_TYPES

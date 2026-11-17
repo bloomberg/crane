@@ -1,7 +1,7 @@
 #ifndef INCLUDED_FORWARD_SPEC_ASCII
 #define INCLUDED_FORWARD_SPEC_ASCII
 
-#include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -43,8 +43,8 @@ struct ForwardSpecAscii {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 node_rect(F0 &&f, F1 &&f0, const node &n) {
     if (std::holds_alternative<typename node::ANode>(n.v())) {
       const auto &[a0] = std::get<typename node::ANode>(n.v());
@@ -56,16 +56,8 @@ struct ForwardSpecAscii {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 node_rec(F0 &&f, F1 &&f0, const node &n) {
-    if (std::holds_alternative<typename node::ANode>(n.v())) {
-      const auto &[a0] = std::get<typename node::ANode>(n.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename node::BNode>(n.v());
-      return f0(a0);
-    }
+    return node_rect<T1>(f, f0, n);
   }
 
   static uint64_t helper_nat(uint64_t n);

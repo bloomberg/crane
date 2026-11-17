@@ -55,8 +55,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -140,17 +140,18 @@ public:
 };
 
 struct AstLib {
+  static Nat pick(Nat a, Nat b);
+
   struct RawIDOrd {
     using t = Raw_id;
-    static bool eq_dec(t x0_, t x1_);
+    static bool eq_dec(const t &x0_, const t &x1_);
   };
 
   static bool eq_dec_raw_id(const Raw_id &a, const Raw_id &b);
-  static Nat pick(Nat a, Nat b);
 };
 
 bool via_non_colliding(const Raw_id &a, const Raw_id &b);
-Nat via_colliding(const Nat &x0_, const Nat &x1_);
+Nat via_colliding(Nat x0_, Nat x1_);
 bool via_file(const Raw_id &x0_, const Raw_id &x1_);
 Nat keep_coll(const Collider &r);
 

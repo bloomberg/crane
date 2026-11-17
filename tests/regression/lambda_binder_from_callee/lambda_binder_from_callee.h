@@ -2,7 +2,6 @@
 #define INCLUDED_LAMBDA_BINDER_FROM_CALLEE
 
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -11,8 +10,8 @@
 #include <variant>
 
 struct Nat;
-using allocationId = crane::obj;
-/// A lambda whose binder type the enclosing declaration never mentions.  The
+using allocationId =
+    crane::obj; /// A lambda whose binder type the enclosing declaration never mentions.  The
 /// only witness is the callee's parameter type at that argument position, so
 /// the carrier guess is the one thing reaching the binder and it fills it with
 /// whichever associated type it happens to hold.
@@ -79,8 +78,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -90,8 +89,7 @@ public:
 
 struct LambdaBinderFromCallee {
   template <Params _tcI0, typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &,
-                                   typename _tcI0::PROV::allocationId &>
+    requires std::is_invocable_r_v<T1, F0 &, typename _tcI0::PROV::allocationId>
   static T1 with_aid(F0 &&f) {
     return f(_tcI0::PROV::mk_aid(Nat::o()));
   }

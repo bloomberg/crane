@@ -2,8 +2,8 @@
 #define INCLUDED_NAME_CLASH_NESTED_DEEP
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -58,8 +58,8 @@ struct NameClashNestedDeep {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -68,7 +68,6 @@ struct NameClashNestedDeep {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(T1 f, F1 &&f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
       return f;
@@ -79,14 +78,8 @@ struct NameClashNestedDeep {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(T1 f, F1 &&f0, const mylist &m) {
-    if (std::holds_alternative<typename mylist::MyNil>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist::MyCons>(m.v());
-      return f0(a0, *a1, mylist_rec<T1>(std::move(f), f0, *a1));
-    }
+    return mylist_rect<T1>(std::move(f), f0, m);
   }
 
   /// Four levels of nested matching.

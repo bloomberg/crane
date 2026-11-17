@@ -47,8 +47,7 @@ void UnitVoidStress::store_and_call(uint64_t x0_) {
 
 std::pair<uint64_t, std::monostate> UnitVoidStress::pair_via_let(uint64_t n) {
   consume(n);
-  std::monostate u = std::monostate{};
-  return std::make_pair(UINT64_C(42), u);
+  return std::make_pair(UINT64_C(42), std::monostate{});
 }
 
 void UnitVoidStress::cond_void(bool b, uint64_t n) {
@@ -73,12 +72,12 @@ void UnitVoidStress::match_nat_void(uint64_t n) {
 
 std::pair<std::pair<uint64_t, std::monostate>, uint64_t>
 UnitVoidStress::nested_pair_void(uint64_t n) {
-  return std::make_pair(std::make_pair(n,
-                                       [&]() {
-                                         consume(n);
-                                         return std::monostate{};
-                                       }()),
-                        UINT64_C(42));
+  return std::make_pair(
+      std::make_pair(n, [&]() {
+        consume(n);
+        return std::monostate{};
+      }()),
+      UINT64_C(42));
 }
 
 std::optional<std::pair<uint64_t, std::monostate>>
@@ -91,7 +90,7 @@ UnitVoidStress::option_pair_void(uint64_t n) {
 }
 
 std::pair<uint64_t, uint64_t> UnitVoidStress::let_void_then_pair(uint64_t n) {
-  return std::make_pair(std::move(n), UINT64_C(42));
+  return std::make_pair(n, UINT64_C(42));
 }
 
 uint64_t UnitVoidStress::seq_voids_value(uint64_t) { return UINT64_C(42); }

@@ -4,7 +4,6 @@
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -45,6 +44,9 @@ struct PairSelfDeepCopy {
 
     // MANIPULATORS
     ~chain() {
+      if (std::holds_alternative<Stop>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<chain>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Link>(&_v)) {
@@ -69,8 +71,8 @@ struct PairSelfDeepCopy {
 
     chain(const chain &) = default;
     chain &operator=(const chain &) = default;
-    chain(chain &&) noexcept = default;
-    chain &operator=(chain &&) noexcept = default;
+    chain(chain &&) = default;
+    chain &operator=(chain &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -79,7 +81,6 @@ struct PairSelfDeepCopy {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<chain, bool> &>
   static T1 chain_rect(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
@@ -90,14 +91,8 @@ struct PairSelfDeepCopy {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<chain, bool> &>
   static T1 chain_rec(T1 f, F1 &&f0, const chain &c) {
-    if (std::holds_alternative<typename chain::Stop>(c.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename chain::Link>(c.v());
-      return f0(*a0);
-    }
+    return chain_rect<T1>(std::move(f), f0, c);
   }
 
   static std::pair<chain, chain> dup_chain(const chain &c);

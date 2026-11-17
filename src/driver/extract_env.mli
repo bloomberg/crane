@@ -1,0 +1,176 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(************************************************************************)
+(*         *      The Rocq Prover / The Rocq Development Team           *)
+(*  v      *         Copyright INRIA, CNRS and contributors             *)
+(* <O___,, * (see version control and CREDITS file for authors & dates) *)
+(*   \VV/  **************************************************************)
+(*    //   *    This file is distributed under the terms of the         *)
+(*         *     GNU Lesser General Public License Version 2.1          *)
+(*         *     (see LICENSE file for the text of the license)         *)
+(************************************************************************)
+
+(** {1 Extraction Environment and Commands}
+
+    Top-level entry points for the [Crane Extraction] vernacular commands.
+    Coordinates the full extraction pipeline:
+    {v Rocq source  -->  Core  -->  CppIR  -->  C++ files v}
+
+    Also handles dependency resolution, file I/O, and extraction-test
+    coordination.
+
+    {2 The phases of one unit}
+
+    [print_structure_to_file] runs, in this order:
+
+    + {b Extraction} ([mono_environment], [optimize_struct]): Rocq terms to
+      the Core structure, simplified.
+    + {b Planning}, as values: the unit's {!Program_facts} and its
+      {!Target_plan} -- the unit's configuration, which the unit's context
+      hands to every later stage ({!Unit_plan.Context}), the inductive kinds, recorded in the
+      structure ({!Target_plan.record_kinds}), then, once the unit's
+      preparation has run, the template-parameter kinds.
+    + {b Layout} ([Base.Common.Plan]): {!Emit.Files.prepare_structure} runs
+      {!Core_plan.Structure.analyze} and decides the layout ({!Core_plan.Module_plan});
+      then the names of every global and module the unit declares and refers
+      to are decided ({!Emit.Files.plan_names}, {!Emit.Files.plan_referenced_names}), the
+      constructor structs' fields and storage, and every generated
+      function's callable plan ({!Emit.Files.plan_callables}).  All go into the
+      target plan; each decision a reader asks about is bound for the rest
+      of the unit as it is taken, over what the earlier units of a separate
+      extraction decided ({!Accumulated_plan}).
+    + {b Emission} ([Base.Common.Emit]): every declaration is generated and
+      finished ahead of the files ({!Emit.Files.generate_ahead}), what the files
+      write of it is planned ({!Emit.Files.plan_file_layout},
+      {!Emit.Files.plan_ctor_aliases}), and then each file is rendered once, taking
+      what was generated ({!Emit.Entities.generated_once}).  Emission decides
+      nothing but the names of the helpers it lifts out of bodies; the table
+      census taken after planning is compared after emission
+      ([check_no_late_decisions]), what it generated against what the unit
+      declares ({!Cpp_passes.Unit_program.check_against_plan}), and, under
+      [CRANE_CHECK_IR], what the tables and the renders record against the
+      target plan ([check_against_plan]: the inductive and
+      template-parameter kinds, the decided names, the promoted inductives
+      and nested structs rendered).
+    + {b Demands} are frozen ([Base.Table.freeze_demands]) and each file is written
+      with the preamble its body demanded, then formatted.
+
+    Each Core declaration is generated ahead of the files
+    ({!Emit.Entities.generate_ahead}, {!Core_to_cpp.Lower_decl}, which translate bodies through
+    {!Core_to_cpp.Lower_expr}, lowering control as they go), finished
+    ({!Cpp_passes.Pipeline.finish}: local closures, constants, temporaries,
+    simplification, depth flattening, constraint settling, and the
+    {!Cpp_passes.Erasure} seam's casts, free type variables, projections and
+    captures), and printed ({!Emit.Print.read_cpp_decl}, which accepts only a
+    {!Cpp_passes.Erasure.settled} declaration).
+
+    Mutable state is registered with {!Base.State} under one of two scopes:
+    [Extraction] (one command) and [Unit] (one generated file).
+    [CRANE_COUNT_GENERATION] reports how many bodies each phase translated;
+    [CRANE_TRACE_PASSES] reports what each finishing pass changed. *)
+
+open Names
+open Libnames
+
+(** [Extraction qualid]: extract a single definition and print to stdout.
+    @param opaque_access accessor for opaque constant bodies *)
+val simple_extraction : opaque_access:Global.indirect_accessor -> qualid -> unit
+
+(** [Crane Extraction "file" qualids]: extract listed definitions to a file.
+    @param validate reject an output filename that escapes the output directory
+      (default [true]); trusted callers with an internal path pass [false]
+    @param opaque_access accessor for opaque constant bodies
+    @param the optional output filename; [None] prints to stdout
+    @param the list of qualified names to extract *)
+val full_extraction :
+  ?validate:bool ->
+  opaque_access:Global.indirect_accessor ->
+  string option ->
+  qualid list ->
+  unit
+
+(** How C++ spells an extracted constant from where it is declared -- read
+    while the unit's naming tables were live. *)
+type export = {ref : Names.GlobRef.t; name : string}
+
+(** {!full_extraction}, returning an {!export} for each requested
+    constant. *)
+val full_extraction_exports :
+  ?validate:bool ->
+  opaque_access:Global.indirect_accessor ->
+  string option ->
+  qualid list ->
+  export list
+
+(** [Separate Extraction qualids]: extract each definition to its own file.
+    @param opaque_access accessor for opaque constant bodies
+    @param the list of qualified names to extract *)
+val separate_extraction :
+  opaque_access:Global.indirect_accessor -> qualid list -> unit
+
+(** [Extraction Library lib]: extract an entire library module.
+    @param opaque_access accessor for opaque constant bodies
+    @param the second argument is [true] for recursive (transitive) extraction
+    @param lib the library module identifier to extract *)
+val extraction_library :
+  opaque_access:Global.indirect_accessor -> bool -> lident -> unit
+
+(** Extract to file then compile with clang. Used by the test suite.
+    @param opaque_access accessor for opaque constant bodies
+    @param the optional output filename; [None] uses a temp file
+    @param the list of qualified names to extract and compile *)
+val extract_and_compile :
+  opaque_access:Global.indirect_accessor -> string option -> qualid list -> unit
+
+(** Build the complete Core structure for a set of definitions.
+    @param opaque_access accessor for opaque constant bodies
+    @param the list of global references to include
+    @param the list of module paths to include in full
+    @return the extracted Core structure *)
+val mono_environment :
+  opaque_access:Global.indirect_accessor ->
+  GlobRef.t list ->
+  ModPath.t list ->
+  Core.Program.extracted
+
+(** Pretty-print a single declaration. Used by the Relation Extraction plugin.
+    @param loops what loop lowering reads of the program's analysis
+    @param struc the full extraction structure (used for renaming context)
+    @param mp the module path under which the declaration lives
+    @param decl the declaration to render
+    @return a pretty-printed Pp.t document *)
+val print_one_decl : Core_to_cpp.Lowering_state.t -> Core_to_control.Loop_facts.t -> Core.Program.t -> ModPath.t -> Core.Decl.t -> Pp.t
+
+(** [Show Extraction]: show the extraction of the current ongoing proof.
+    @param pstate the current proof state *)
+val show_extraction : pstate:Declare.Proof.t -> unit
+
+(** {2 Pass order}
+
+    The names of the passes each stage runs, in order; see {!Base.Pipeline_trace}.
+    Read by [unit_tests/pipeline_manifest.ml]. *)
+
+(** Rewrites and analyses of the extracted structure, once per extraction. *)
+val core_pass_names : string list
+
+(** Putting the frozen program in the form control lowering reads, once per
+    extraction ({!Core_passes.Phase.normalize}). *)
+val normalize_pass_names : string list
+
+(** Analysing and planning one unit, before anything else of it runs. *)
+val plan_pass_names : string list
+
+(** The unit's remaining preparation, before its layout. *)
+val unit_pass_names : string list
+
+(** Deciding the unit's data representation once its preparation has run. *)
+val represent_pass_names : string list
+
+(** Settling the unit's layout, naming what it declares and refers to,
+    elaborating its calls, and planning its callables, before anything of it
+    is rendered. *)
+val layout_pass_names : string list
+
+(** The steps run on a unit's Core once its layout is planned
+    ({!Core_plan.Callable_abi.with_foreign}), in order. *)
+val elaborate_pass_names : string list

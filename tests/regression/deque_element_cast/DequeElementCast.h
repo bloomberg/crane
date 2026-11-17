@@ -2,8 +2,6 @@
 #define INCLUDED_DEQUEELEMENTCAST
 
 #include "obj.h"
-#include <any>
-#include <atomic>
 #include <cstdint>
 #include <deque>
 #include <utility>
@@ -12,7 +10,6 @@
 #include "Specif.h"
 
 namespace DequeElementCast {
-
 struct DequeElementCast {
   struct Val {
     // TYPES
@@ -48,6 +45,7 @@ struct DequeElementCast {
     // ACCESSORS
     const variant_t &v() const { return v_; }
   };
+
   enum class Nonterm { NT_ITEM, NT_ITEMS };
   using sem_ty = crane::obj;
   using grammar_entry = Specif::SigT<Nonterm, sem_ty>;
@@ -55,20 +53,16 @@ struct DequeElementCast {
   static const grammar_entry &items_value() {
     static const grammar_entry v =
         Specif::template SigT<Nonterm, crane::obj>::existt(
-            Nonterm::NT_ITEMS,
-            [](auto _a0, auto _a1) {
+            Nonterm::NT_ITEMS, [](auto _a0, auto _a1) {
               _a1.push_front(_a0);
               return _a1;
-            }(crane::obj(Val::vnum(UINT64_C(42))),
-              [](auto _a0, auto _a1) {
-                _a1.push_front(_a0);
-                return _a1;
-              }(crane::obj(Val::vstr(UINT64_C(7))),
-                [](auto _a0, auto _a1) {
-                  _a1.push_front(_a0);
-                  return _a1;
-                }(crane::obj(Val::vnum(UINT64_C(3))),
-                  std::deque<crane::obj>{}))));
+            }(crane::obj(Val::vnum(UINT64_C(42))), [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(crane::obj(Val::vstr(UINT64_C(7))), [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(crane::obj(Val::vnum(UINT64_C(3))), std::deque<crane::obj>{}))));
     return v;
   }
 
@@ -92,7 +86,6 @@ struct DequeElementCast {
     return v;
   }
 };
-
 } // namespace DequeElementCast
 
 #endif // INCLUDED_DEQUEELEMENTCAST

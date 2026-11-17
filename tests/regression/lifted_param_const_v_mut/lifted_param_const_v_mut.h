@@ -3,13 +3,11 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -20,18 +18,31 @@ template <typename ptr> struct Dvalue_base;
 template <typename ptr> struct Dvalue;
 struct natParams;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-    typename I::iptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+  typename I::iptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+}) &&
+  (requires {
+    {
+      I::zeroi()
+    }
+    -> std::convertible_to<typename I::iptr>;
   } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  }) && (requires {
-    { I::zeroi() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zeroi } -> std::convertible_to<typename I::iptr>;
+    {
+      I::zeroi
+    }
+    -> std::convertible_to<typename I::iptr>;
   });
 
 struct Nat {
@@ -79,8 +90,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -136,14 +147,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -152,9 +164,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -198,16 +210,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -244,8 +257,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -255,7 +268,6 @@ public:
 
 struct Datatypes {
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::optional<T2> option_map(F0 &&f, const std::optional<T1> &o);
 };
 
@@ -284,15 +296,16 @@ public:
 
   explicit Dvalue_base(DVALUE_I _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Dvalue_base(const Dvalue_base<_U> &_other)
+  template <typename CraneU>
+  Dvalue_base(const Dvalue_base<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Dvalue_base<_U>::DVALUE_Pointer>(
-                  _other.v())) {
+          if (std::holds_alternative<
+                  typename Dvalue_base<CraneU>::DVALUE_Pointer>(_other.v())) {
             const auto &[a0] =
-                std::get<typename Dvalue_base<_U>::DVALUE_Pointer>(_other.v());
+                std::get<typename Dvalue_base<CraneU>::DVALUE_Pointer>(
+                    _other.v());
             return DVALUE_Pointer{[&]() -> ptr {
-              if constexpr (crane_convertible<ptr, const _U &>) {
+              if constexpr (crane_convertible<ptr, const CraneU &>) {
                 return crane_convert<ptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -301,7 +314,7 @@ public:
             }()};
           } else {
             const auto &[a0, a1] =
-                std::get<typename Dvalue_base<_U>::DVALUE_I>(_other.v());
+                std::get<typename Dvalue_base<CraneU>::DVALUE_I>(_other.v());
             return DVALUE_I{a0, a1};
           }
         }()) {}
@@ -345,17 +358,17 @@ public:
 
   explicit Dvalue(DVALUE_Struct _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Dvalue(const Dvalue<_U> &_other)
+  template <typename CraneU>
+  Dvalue(const Dvalue<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Dvalue<_U>::DVALUE_Base>(
+          if (std::holds_alternative<typename Dvalue<CraneU>::DVALUE_Base>(
                   _other.v())) {
             const auto &[a0] =
-                std::get<typename Dvalue<_U>::DVALUE_Base>(_other.v());
+                std::get<typename Dvalue<CraneU>::DVALUE_Base>(_other.v());
             return DVALUE_Base{crane_convert<Dvalue_base<ptr>>(a0)};
           } else {
             const auto &[a0] =
-                std::get<typename Dvalue<_U>::DVALUE_Struct>(_other.v());
+                std::get<typename Dvalue<CraneU>::DVALUE_Struct>(_other.v());
             return DVALUE_Struct{
                 (a0 ? std::make_shared<List<Dvalue<ptr>>>(
                           crane_convert<List<Dvalue<ptr>>>(*a0))
@@ -363,7 +376,7 @@ public:
           }
         }()) {}
 
-  static Dvalue<ptr> dvalue_base(Dvalue_base<ptr> a0) {
+  static Dvalue<ptr> DVALUE_Base_(Dvalue_base<ptr> a0) {
     return Dvalue<ptr>(DVALUE_Base{std::move(a0)});
   }
 
@@ -380,14 +393,13 @@ public:
 
 template <Params _tcI0, typename T1>
 std::optional<std::pair<T1, Dvalue<typename _tcI0::ptr>>>
-_den_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
+den_crane_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
   if (std::holds_alternative<typename Dvalue<typename _tcI0::ptr>::DVALUE_Base>(
           u.v())) {
     const auto &[a0] =
         std::get<typename Dvalue<typename _tcI0::ptr>::DVALUE_Base>(u.v());
     if (std::holds_alternative<
-            typename Dvalue_base<typename _tcI0::ptr>::DVALUE_Pointer>(
-            a0.v())) {
+            typename Dvalue_base<typename _tcI0::ptr>::DVALUE_Pointer>(a0.v())) {
       if (u.template show_dvalue<_tcI0>().eqb(Nat::o())) {
         return std::optional<std::pair<T1, Dvalue<typename _tcI0::ptr>>>();
       } else {
@@ -397,14 +409,10 @@ _den_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
     } else {
       const auto &[a00, a10] =
           std::get<typename Dvalue_base<typename _tcI0::ptr>::DVALUE_I>(a0.v());
-      if (a00.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                          Nat::s(Nat::o())))))))))))))))))))))))))))))))))) {
+      if (a00.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))) {
         return std::make_optional<std::pair<T1, Dvalue<typename _tcI0::ptr>>>(
             std::make_pair(
-                tag, Dvalue<typename _tcI0::ptr>::dvalue_base(
+                tag, Dvalue<typename _tcI0::ptr>::DVALUE_Base_(
                          Dvalue_base<typename _tcI0::ptr>::dvalue_i(
                              Nat::s(Nat::s(Nat::s(Nat::s(
                                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
@@ -425,23 +433,24 @@ _den_body(const T1 tag, const Dvalue<typename _tcI0::ptr> u) {
 
 template <Params _tcI0>
 std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>
-den(List<Dvalue<typename _tcI0::ptr>> x0_) {
+den(const List<Dvalue<typename _tcI0::ptr>> &x0_) {
   if (std::holds_alternative<typename List<Dvalue<typename _tcI0::ptr>>::Nil>(
-          x0_.v_mut())) {
+          x0_.v())) {
     return std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>();
   } else {
-    auto &[a0, a1] =
-        std::get<typename List<Dvalue<typename _tcI0::ptr>>::Cons>(x0_.v_mut());
+    const auto &[a0, a1] =
+        std::get<typename List<Dvalue<typename _tcI0::ptr>>::Cons>(x0_.v());
     const List<Dvalue<typename _tcI0::ptr>> &a1_value = *a1;
     if (std::holds_alternative<typename List<Dvalue<typename _tcI0::ptr>>::Nil>(
             a1_value.v())) {
       return Datatypes::template option_map<
           std::pair<Nat, Dvalue<typename _tcI0::ptr>>,
           Sum<Nat, Dvalue<typename _tcI0::ptr>>>(
-          [](const std::pair<Nat, Dvalue<typename _tcI0::ptr>> &p) {
+          [](const std::pair<Nat,
+                             Dvalue<typename _tcI0::ptr>> &p) {
             return Sum<Nat, Dvalue<typename _tcI0::ptr>>::inr(p.second);
           },
-          _den_body<_tcI0>(Nat::o(), std::move(a0)));
+          den_crane_body<_tcI0>(Nat::o(), a0));
     } else {
       return std::optional<Sum<Nat, Dvalue<typename _tcI0::ptr>>>();
     }
@@ -460,20 +469,12 @@ struct natParams {
 static_assert(Params<natParams>);
 
 struct LiftedParamConstVMut {
-  static inline const std::optional<Sum<Nat, Dvalue<typename natParams::ptr>>>
-      run = den<natParams>(List<Dvalue<Nat>>::cons(
-          Dvalue<Nat>::dvalue_base(Dvalue_base<Nat>::dvalue_i(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                              Nat::s(Nat::o())))))))))))))))))))))))))))))))),
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))),
-          List<Dvalue<Nat>>::nil()));
+  static inline const std::optional<Sum<Nat,
+                                        Dvalue<typename natParams::ptr>>> run =
+      den<natParams>(List<Dvalue<Nat>>::cons(Dvalue<Nat>::DVALUE_Base_(Dvalue_base<Nat>::dvalue_i(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))), Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))), List<Dvalue<Nat>>::nil()));
 };
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
 std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
   if (o.has_value()) {
     const T1 &a = *o;
@@ -490,8 +491,7 @@ Dvalue<ptr> Dvalue<ptr>::dvalue_struct(List<Dvalue<ptr>> a0) {
 }
 
 template <typename ptr>
-template <Params _tcI0>
-Nat Dvalue<ptr>::show_dvalue() const {
+template <Params _tcI0> Nat Dvalue<ptr>::show_dvalue() const {
   if (std::holds_alternative<typename Dvalue<ptr>::DVALUE_Base>(this->v())) {
     return Nat::o();
   } else {

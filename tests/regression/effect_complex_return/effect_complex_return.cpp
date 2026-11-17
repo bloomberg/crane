@@ -6,7 +6,7 @@ std::pair<std::string, std::string> EffectComplexReturn::read_pair() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return std::make_pair(a, b);
+  return std::make_pair(std::move(a), std::move(b));
 }
 
 /// 2. Effect returning an option
@@ -14,7 +14,7 @@ std::optional<std::string> EffectComplexReturn::maybe_read(bool do_read) {
   if (do_read) {
     std::string line;
     std::getline(std::cin, line);
-    return std::make_optional<std::string>(line);
+    return std::make_optional<std::string>(std::move(line));
   } else {
     return std::optional<std::string>();
   }
@@ -22,7 +22,7 @@ std::optional<std::string> EffectComplexReturn::maybe_read(bool do_read) {
 
 /// 3. Void effect followed by value effect
 std::string EffectComplexReturn::print_then_read(std::string prompt) {
-  std::cout << prompt << '\n';
+  std::cout << std::move(prompt) << '\n';
   return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
@@ -38,7 +38,7 @@ EffectComplexReturn::mixed_effects(std::string name) {
           std::chrono::system_clock::now().time_since_epoch())
           .count());
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
@@ -48,7 +48,7 @@ EffectComplexReturn::mixed_effects(std::string name) {
   } else {
     std::string line;
     std::getline(std::cin, line);
-    return std::make_pair(t, line);
+    return std::make_pair(t, std::move(line));
   }
 }
 
@@ -76,7 +76,7 @@ List<std::string> EffectComplexReturn::read_n(uint64_t n) {
     if (n0 <= 0) {
       std::string x;
       std::getline(std::cin, x);
-      return List<std::string>::cons(x, List<std::string>::nil());
+      return List<std::string>::cons(std::move(x), List<std::string>::nil());
     } else {
       uint64_t n1 = n0 - 1;
       if (n1 <= 0) {
@@ -85,7 +85,8 @@ List<std::string> EffectComplexReturn::read_n(uint64_t n) {
         std::string y;
         std::getline(std::cin, y);
         return List<std::string>::cons(
-            x, List<std::string>::cons(y, List<std::string>::nil()));
+            std::move(x),
+            List<std::string>::cons(std::move(y), List<std::string>::nil()));
       } else {
         uint64_t _x = n1 - 1;
         return List<std::string>::nil();
@@ -104,7 +105,8 @@ std::string EffectComplexReturn::env_or_prompt(std::string name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << "Enter "s + name + ":"s << '\n';
+    std::cout << std::string("Enter ") + std::move(name) + std::string(":") <<
+    '\n';
     return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);

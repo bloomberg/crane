@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -41,16 +40,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -87,8 +87,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -98,22 +98,22 @@ public:
 
 struct NumeralEdge {
   /// 1. Zero
-  static inline const uint64_t nat_zero = UINT64_C(0);
-  static inline const unsigned int n_zero = 0u;
-  static inline const int64_t z_zero = INT64_C(0);
+  static constexpr uint64_t nat_zero = UINT64_C(0);
+  static constexpr unsigned int n_zero = 0u;
+  static constexpr int64_t z_zero = INT64_C(0);
   /// 2. Small values
-  static inline const uint64_t nat_one = UINT64_C(1);
-  static inline const uint64_t nat_ten = UINT64_C(10);
-  static inline const int64_t z_neg = INT64_C(-5);
-  static inline const int64_t z_neg_one = INT64_C(-1);
+  static constexpr uint64_t nat_one = UINT64_C(1);
+  static constexpr uint64_t nat_ten = UINT64_C(10);
+  static constexpr int64_t z_neg = INT64_C(-5);
+  static constexpr int64_t z_neg_one = INT64_C(-1);
   /// 3. Moderate values
-  static inline const uint64_t nat_hundred = UINT64_C(100);
-  static inline const int64_t z_thousand = INT64_C(1000);
-  static inline const unsigned int n_large = 65535u;
+  static constexpr uint64_t nat_hundred = UINT64_C(100);
+  static constexpr int64_t z_thousand = INT64_C(1000);
+  static constexpr unsigned int n_large = 65535u;
   /// 4. Powers of 2
-  static inline const uint64_t nat_pow2_8 = UINT64_C(256);
-  static inline const uint64_t nat_pow2_16 = UINT64_C(65536);
-  static inline const int64_t z_pow2_30 = INT64_C(1073741824);
+  static constexpr uint64_t nat_pow2_8 = UINT64_C(256);
+  static constexpr uint64_t nat_pow2_16 = UINT64_C(65536);
+  static constexpr int64_t z_pow2_30 = INT64_C(1073741824);
   /// 5. Numerals in arithmetic expressions
   static inline const uint64_t add_numerals = (UINT64_C(100) + UINT64_C(200));
   static inline const int64_t mul_numerals = static_cast<int64_t>(
@@ -125,9 +125,10 @@ struct NumeralEdge {
   static inline const uint64_t test_arg = take_nat(UINT64_C(42));
   /// 7. Numeral in list
   static inline const List<uint64_t> nat_list = List<uint64_t>::cons(
-      UINT64_C(1), List<uint64_t>::cons(
-                       UINT64_C(2), List<uint64_t>::cons(
-                                        UINT64_C(3), List<uint64_t>::nil())));
+      UINT64_C(1),
+      List<uint64_t>::cons(
+          UINT64_C(2),
+          List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())));
   /// 8. Numeral in option
   static inline const std::optional<uint64_t> some_nat =
       std::make_optional<uint64_t>(UINT64_C(99));
@@ -139,16 +140,16 @@ struct NumeralEdge {
   /// 11. Comparison with numeral
   static bool is_big(uint64_t n);
   /// 12. Multiple Z values in one function
-  static inline const int64_t z_arith =
-      static_cast<int64_t>(static_cast<uint64_t>(INT64_C(10)) +
-                           static_cast<uint64_t>(static_cast<int64_t>(
-                               static_cast<uint64_t>(INT64_C(3)) *
+  static inline const int64_t z_arith = static_cast<int64_t>(
+      static_cast<uint64_t>(INT64_C(10)) +
+      static_cast<uint64_t>(
+          static_cast<int64_t>(static_cast<uint64_t>(INT64_C(3)) *
                                static_cast<uint64_t>(INT64_C(7)))));
   /// 13. Negative Z in a pair
   static inline const std::pair<int64_t, int64_t> z_pair =
       std::make_pair(INT64_C(-42), INT64_C(42));
   /// 14. N conversion
-  static inline const uint64_t n_to_nat_test = static_cast<unsigned int>(255u);
+  static inline const uint64_t n_to_nat_test = static_cast<uint64_t>(255u);
 };
 
 #endif // INCLUDED_NUMERAL_EDGE

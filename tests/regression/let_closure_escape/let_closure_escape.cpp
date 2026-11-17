@@ -6,8 +6,9 @@
 /// When let_escape returns, t is destroyed → dangling reference in Box.
 LetClosureEscape::fn_box
 LetClosureEscape::let_escape(LetClosureEscape::tree t) {
-  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-    return std::move(t).sum_values(_x0);
-  };
+  crane::fn<uint64_t(uint64_t)> f =
+      [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+        return t.sum_values(_x0);
+      };
   return fn_box::box(std::move(f));
 }

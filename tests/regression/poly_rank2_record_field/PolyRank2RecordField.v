@@ -9,7 +9,7 @@
     v} *)
 
 Require Crane.Extraction.
-Require Import List.
+From Stdlib Require Import List.
 
 Module PolyRank2RecordField.
 

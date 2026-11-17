@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_CHAIN_BUILD
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct FixChainBuild {

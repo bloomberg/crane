@@ -3,11 +3,9 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -58,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -84,24 +82,24 @@ concept Fn = requires {
 
 struct HktPartialAppInstance {
   template <Fn _tcI0, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fm(F0 &&x,
                                            typename _tcI0::template F<T2> x0) {
     return _tcI0::template fm<T2, T3>(x, std::move(x0));
   }
 
   template <typename T1> struct pf {
-    template <typename _A0> using F = std::pair<T1, _A0>;
+    template <typename CraneA0> using F = std::pair<T1, CraneA0>;
 
-    template <typename _A0, typename _A1>
-    static std::pair<T1, _A1> fm(crane::fn<_A1(_A0)> f, std::pair<T1, _A0> p) {
-      return std::make_pair(p.first, f(p.second));
+    template <typename CraneA0, typename CraneA1>
+    static std::pair<T1, CraneA1> fm(crane::fn<CraneA1(CraneA0)> f,
+                                     std::pair<T1, CraneA0> p) {
+      return std::make_pair(std::move(p).first, f(std::move(p).second));
     }
   };
 
   static inline const std::pair<bool, Nat> ex =
-      fm<pf<bool>, Nat, Nat>([](const Nat &x) { return Nat::s(x); },
-                             std::make_pair(true, Nat::s(Nat::o())));
+      pf<bool>::template fm<Nat, Nat>([](const Nat &x) { return Nat::s(x); },
+                                      std::make_pair(true, Nat::s(Nat::o())));
 };
 
 #endif // INCLUDED_HKT_PARTIAL_APP_INSTANCE

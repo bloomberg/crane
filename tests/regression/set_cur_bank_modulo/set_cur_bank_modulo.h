@@ -1,10 +1,10 @@
 #ifndef INCLUDED_SET_CUR_BANK_MODULO
 #define INCLUDED_SET_CUR_BANK_MODULO
 
-#include <utility>
+#include <cstdint>
 
 struct SetCurBankModulo {
-  static inline const uint64_t NBANKS = UINT64_C(4);
+  static constexpr uint64_t NBANKS = UINT64_C(4);
 
   struct state {
     uint64_t cur_bank;

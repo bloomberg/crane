@@ -2,6 +2,7 @@
 #define INCLUDED_IND_SHADOWS_GENERATED_MEMBERS
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -38,7 +39,7 @@ struct IndShadowsGeneratedMembers {
 
     static variant_t0 V_mut_(uint64_t a0) { return variant_t0(V_mut{a0}); }
 
-    static variant_t0 V__(variant_t0 a0) {
+    static variant_t0 V_p(variant_t0 a0) {
       return variant_t0(V_{std::make_shared<variant_t0>(std::move(a0))});
     }
 
@@ -61,8 +62,8 @@ struct IndShadowsGeneratedMembers {
 
     variant_t0(const variant_t0 &) = default;
     variant_t0 &operator=(const variant_t0 &) = default;
-    variant_t0(variant_t0 &&) noexcept = default;
-    variant_t0 &operator=(variant_t0 &&) noexcept = default;
+    variant_t0(variant_t0 &&) = default;
+    variant_t0 &operator=(variant_t0 &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -71,8 +72,7 @@ struct IndShadowsGeneratedMembers {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, variant_t0 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 variant_t_rect(F0 &&f, F1 &&f0, const variant_t0 &v) {
     if (std::holds_alternative<typename variant_t0::V_mut>(v.v())) {
       const auto &[a0] = std::get<typename variant_t0::V_mut>(v.v());
@@ -84,21 +84,13 @@ struct IndShadowsGeneratedMembers {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, variant_t0 &, T1 &>
   static T1 variant_t_rec(F0 &&f, F1 &&f0, const variant_t0 &v) {
-    if (std::holds_alternative<typename variant_t0::V_mut>(v.v())) {
-      const auto &[a0] = std::get<typename variant_t0::V_mut>(v.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename variant_t0::V_>(v.v());
-      return f0(*a0, variant_t_rec<T1>(f, f0, *a0));
-    }
+    return variant_t_rect<T1>(f, f0, v);
   }
 
   static uint64_t depth(const variant_t0 &x);
   static inline const uint64_t run =
-      depth(variant_t0::V__(variant_t0::V__(variant_t0::V_mut_(UINT64_C(2)))));
+      depth(variant_t0::V_p(variant_t0::V_p(variant_t0::V_mut_(UINT64_C(2)))));
 };
 
 #endif // INCLUDED_IND_SHADOWS_GENERATED_MEMBERS

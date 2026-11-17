@@ -1,15 +1,12 @@
 #ifndef INCLUDED_IO
 #define INCLUDED_IO
 
-#include <crane_itree.h>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <string>
-#include <system_error>
+#include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct iotest {
   static void test1(std::string _x);

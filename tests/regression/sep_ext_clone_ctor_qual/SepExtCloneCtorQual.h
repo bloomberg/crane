@@ -7,9 +7,10 @@
 #include "Datatypes.h"
 
 namespace SepExtCloneCtorQual {
-
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 
 template <OrderedType X> struct FMapList {
   template <typename T1>
@@ -24,7 +25,6 @@ template <OrderedType X> struct FMapList {
     }
   }
 };
-
 } // namespace SepExtCloneCtorQual
 
 #endif // INCLUDED_SEPEXTCLONECTORQUAL

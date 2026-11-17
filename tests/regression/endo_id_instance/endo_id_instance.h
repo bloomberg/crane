@@ -2,15 +2,19 @@
 #define INCLUDED_ENDO_ID_INSTANCE
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
 struct Nat;
+
+struct Datatypes {
+  static crane::obj id(crane::obj x0);
+};
 
 struct Nat {
   // TYPES
@@ -57,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -90,38 +94,41 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
-struct Datatypes {
-  static crane::obj id(crane::obj x0);
+template <typename I, typename T>
+concept Endo = requires {
+  { I::endo(std::declval<T>()) } -> std::convertible_to<T>;
 };
 
 struct EndoIdInstance {
-  template <typename t> using Endo = crane::fn<t(t)>;
-
-  template <typename T1>
-  static T1 endo(std::type_identity_t<Endo<T1>> endo0, T1 x0_) {
-    return endo0(std::move(x0_));
+  template <typename _tcI0, typename T1>
+    requires Endo<_tcI0, T1>
+  static T1 endo(const T1 &x0_) {
+    return _tcI0::endo(x0_);
   }
 
   struct lit {
@@ -129,21 +136,26 @@ struct EndoIdInstance {
     Nat x;
   };
 
-  static inline const Endo<lit> Endo_lit = [](const lit &eta0_) {
-    return crane::any_cast<lit>(Datatypes::id(eta0_));
+  struct Endo_lit {
+    static lit endo(lit a0) {
+      return crane::any_cast<lit>(Datatypes::id(std::move(a0)));
+    }
   };
 
-  template <typename T1>
-  static T1 bump(std::type_identity_t<Endo<T1>> x0_, const T1 &x1_) {
-    return endo<T1>(std::move(x0_), x1_);
+  static_assert(Endo<Endo_lit, lit>);
+
+  template <typename _tcI0, typename T1>
+    requires Endo<_tcI0, T1>
+  static T1 bump(const T1 &x1_) {
+    return _tcI0::endo(x1_);
   }
 
   static inline const lit l1 =
-      bump<lit>(Endo_lit, lit{Nat::s(Nat::s(Nat::s(Nat::o()))),
+      bump<Endo_lit, lit>(lit{Nat::s(Nat::s(Nat::s(Nat::o()))),
                               Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))});
-
-  static inline const bool is_seven = l1.sz.add(l1.x).eqb(
-      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+  static inline const bool is_seven =
+      l1.sz.add(l1.x).eqb(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
 
 #endif // INCLUDED_ENDO_ID_INSTANCE

@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -62,6 +63,20 @@ struct MutualRecursion {
 
     // MANIPULATORS
     ~expr() {
+      if (std::holds_alternative<Val>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<BinOp>(&v_mut())) {
+        if (!((_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (auto *_alt = std::get_if<UnOp>(&v_mut())) {
+        if (!(_alt->a1 && _alt->a1.use_count() == 1)) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<BinOp>(&_v)) {
@@ -91,8 +106,8 @@ struct MutualRecursion {
 
     expr(const expr &) = default;
     expr &operator=(const expr &) = default;
-    expr(expr &&) noexcept = default;
-    expr &operator=(expr &&) noexcept = default;
+    expr(expr &&) = default;
+    expr &operator=(expr &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -101,10 +116,7 @@ struct MutualRecursion {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, expr &, T1 &, expr &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, expr &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
     if (std::holds_alternative<typename expr::Val>(e.v())) {
       const auto &[a0] = std::get<typename expr::Val>(e.v());
@@ -120,22 +132,8 @@ struct MutualRecursion {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, expr &, T1 &, expr &,
-                                   T1 &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &, expr &, T1 &>
   static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f4, const expr &e) {
-    if (std::holds_alternative<typename expr::Val>(e.v())) {
-      const auto &[a0] = std::get<typename expr::Val>(e.v());
-      return f(a0);
-    } else if (std::holds_alternative<typename expr::BinOp>(e.v())) {
-      const auto &[a0, a1, a2] = std::get<typename expr::BinOp>(e.v());
-      return f0(a0, *a1, expr_rec<T1>(f, f0, f4, *a1), *a2,
-                expr_rec<T1>(f, f0, f4, *a2));
-    } else {
-      const auto &[a0, a1] = std::get<typename expr::UnOp>(e.v());
-      return f4(a0, *a1, expr_rec<T1>(f, f0, f4, *a1));
-    }
+    return expr_rect<T1>(f, f0, f4, e);
   }
 
   static uint64_t eval_expr(const expr &e);
@@ -145,9 +143,9 @@ struct MutualRecursion {
   static inline const bool test_even = even(UINT64_C(10));
   static inline const uint64_t test_sum =
       sum_even_indices(UINT64_C(5), UINT64_C(0));
-
-  static inline const uint64_t test_eval = eval_expr(expr::binop(
-      UINT64_C(0), expr::val(UINT64_C(5)), expr::val(UINT64_C(10))));
+  static inline const uint64_t test_eval =
+      eval_expr(expr::binop(UINT64_C(0), expr::val(UINT64_C(5)),
+                            expr::val(UINT64_C(10))));
 };
 
 #endif // INCLUDED_MUTUAL_RECURSION

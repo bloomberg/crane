@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -11,10 +10,11 @@
 #include <variant>
 
 namespace SepExtUptrCloneQual {
-
 template <typename A> struct MyList;
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 
 template <typename A> struct MyList {
   // TYPES
@@ -39,17 +39,17 @@ public:
 
   explicit MyList(Mycons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  MyList(const MyList<_U> &_other)
+  template <typename CraneU>
+  MyList(const MyList<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename MyList<_U>::Mynil>(_other.v())) {
+          if (std::holds_alternative<typename MyList<CraneU>::Mynil>(_other.v())) {
             return Mynil{};
           } else {
             const auto &[a0, a1] =
-                std::get<typename MyList<_U>::Mycons>(_other.v());
+                std::get<typename MyList<CraneU>::Mycons>(_other.v());
             return Mycons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a0);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -87,8 +87,8 @@ public:
 
   MyList(const MyList &) = default;
   MyList &operator=(const MyList &) = default;
-  MyList(MyList &&) noexcept = default;
-  MyList &operator=(MyList &&) noexcept = default;
+  MyList(MyList &&) = default;
+  MyList &operator=(MyList &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -104,14 +104,12 @@ template <OrderedType X> struct FMap {
             typename MyList<std::pair<typename X::t, T1>>::Mynil>(l.v())) {
       return MyList<std::pair<typename X::t, T1>>::mynil();
     } else {
-      const auto &[a0, a1] =
-          std::get<typename MyList<std::pair<typename X::t, T1>>::Mycons>(
-              l.v());
+      const auto &[_, a1] = std::get<
+          typename MyList<std::pair<typename X::t, T1>>::Mycons>(l.v());
       return *a1;
     }
   }
 };
-
 } // namespace SepExtUptrCloneQual
 
 #endif // INCLUDED_SEPEXTUPTRCLONEQUAL

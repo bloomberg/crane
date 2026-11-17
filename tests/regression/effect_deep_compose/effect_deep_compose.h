@@ -2,16 +2,14 @@
 #define INCLUDED_EFFECT_DEEP_COMPOSE
 
 #include <chrono>
-#include <crane_itree.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct EffectDeepCompose {
   /// 1. Function using all three effects

@@ -3,8 +3,8 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -42,6 +42,9 @@ struct RecursiveUnderPair {
 
     // MANIPULATORS
     ~c() {
+      if (std::holds_alternative<Stop>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<c>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<N>(&_v)) {
@@ -65,8 +68,8 @@ struct RecursiveUnderPair {
 
     c(const c &) = default;
     c &operator=(const c &) = default;
-    c(c &&) noexcept = default;
-    c &operator=(c &&) noexcept = default;
+    c(c &&) = default;
+    c &operator=(c &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -75,7 +78,6 @@ struct RecursiveUnderPair {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<uint64_t, c> &>
   static T1 c_rect(T1 f, F1 &&f0, const c &c0) {
     if (std::holds_alternative<typename c::Stop>(c0.v())) {
       return f;
@@ -86,14 +88,8 @@ struct RecursiveUnderPair {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<uint64_t, c> &>
   static T1 c_rec(T1 f, F1 &&f0, const c &c0) {
-    if (std::holds_alternative<typename c::Stop>(c0.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename c::N>(c0.v());
-      return f0(*a0);
-    }
+    return c_rect<T1>(std::move(f), f0, c0);
   }
 
   static c build(uint64_t n);

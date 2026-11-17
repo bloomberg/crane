@@ -6,9 +6,8 @@ bool GeneratedVariantFactoryNameClash::is_variant(
           typename GeneratedVariantFactoryNameClash::token::Variant_t>(t.v())) {
     return true;
   } else {
-    const auto &[a0] =
-        std::get<typename GeneratedVariantFactoryNameClash::token::Other>(
-            t.v());
+    const auto &[a0] = std::get<
+        typename GeneratedVariantFactoryNameClash::token::Other>(t.v());
     return a0;
   }
 }

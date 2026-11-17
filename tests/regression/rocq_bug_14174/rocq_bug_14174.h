@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -24,6 +23,7 @@ enum class Sumbool;
 template <typename A> struct Sumor;
 
 struct SigTNotations {};
+
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -71,8 +71,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,13 +102,14 @@ public:
 
   explicit Option(None _v) : v_(_v) {}
 
-  template <typename _U>
-  Option(const Option<_U> &_other)
+  template <typename CraneU>
+  Option(const Option<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Option<_U>::Some>(_other.v())) {
-            const auto &[a] = std::get<typename Option<_U>::Some>(_other.v());
+          if (std::holds_alternative<typename Option<CraneU>::Some>(_other.v())) {
+            const auto &[a] =
+                std::get<typename Option<CraneU>::Some>(_other.v());
             return Some{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -139,18 +140,19 @@ template <typename A, typename B> struct Prod {
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
 
-  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(a0);
+  template <typename CraneU0, typename CraneU1>
+  operator Prod<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const B &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const B &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -162,12 +164,12 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    auto &[a0, a1] = *this;
+    const auto &[a0, _] = *this;
     return a0;
   }
 
   B snd() const {
-    auto &[a0, a1] = *this;
+    const auto &[_, a1] = *this;
     return a1;
   }
 };
@@ -179,13 +181,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -201,13 +203,13 @@ template <typename A> struct Sig2 {
   // ACCESSORS
   Sig2<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig2<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig2<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -224,18 +226,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -256,27 +259,27 @@ template <typename A, typename P, typename Q> struct SigT2 {
   // ACCESSORS
   SigT2<A, P, Q> clone() const { return {x, a1, a2}; }
 
-  template <typename _U0, typename _U1, typename _U2>
-  operator SigT2<_U0, _U1, _U2>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  operator SigT2<CraneU0, CraneU1, CraneU2>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U2 {
-              if constexpr (crane_convertible<_U2, const Q &>) {
-                return crane_convert<_U2>(a2);
+            [&]() -> CraneU2 {
+              if constexpr (crane_convertible<CraneU2, const Q &>) {
+                return crane_convert<CraneU2>(a2);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -289,6 +292,7 @@ template <typename A, typename P, typename Q> struct SigT2 {
     return {std::move(x), std::move(a1), std::move(a2)};
   }
 };
+
 enum class Sumbool { LEFT, RIGHT };
 
 template <typename A> struct Sumor {
@@ -313,13 +317,14 @@ public:
 
   explicit Sumor(Inright _v) : v_(_v) {}
 
-  template <typename _U>
-  Sumor(const Sumor<_U> &_other)
+  template <typename CraneU>
+  Sumor(const Sumor<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sumor<_U>::Inleft>(_other.v())) {
-            const auto &[a0] = std::get<typename Sumor<_U>::Inleft>(_other.v());
+          if (std::holds_alternative<typename Sumor<CraneU>::Inleft>(_other.v())) {
+            const auto &[a0] =
+                std::get<typename Sumor<CraneU>::Inleft>(_other.v());
             return Inleft{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -351,10 +356,10 @@ struct RocqBug14174 {
       // ACCESSORS
       sig<A> clone() const { return {x}; }
 
-      template <typename _U> operator sig<_U>() const {
-        return {[&]() -> _U {
-          if constexpr (crane_convertible<_U, const A &>) {
-            return crane_convert<_U>(x);
+      template <typename CraneU> operator sig<CraneU>() const {
+        return {[&]() -> CraneU {
+          if constexpr (crane_convertible<CraneU, const A &>) {
+            return crane_convert<CraneU>(x);
           } else {
             throw std::logic_error("unreachable: inactive constructor field at "
                                    "this instantiation");
@@ -366,28 +371,29 @@ struct RocqBug14174 {
       static sig<A> exist(A x) { return {std::move(x)}; }
 
       template <typename T1>
-      T1 eq_sig_rec_uncurried(const sig<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig_rect_uncurried<crane::obj>(x1_, x2_);
+      T1 eq_sig_rec_uncurried(const sig<A> &x1_, T1 x2_) const {
+        return this->template eq_sig_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>
       T1 eq_sig_rect_uncurried(const sig<A> &v, T1 f) const {
-        return this->template eq_sig_rect<crane::obj>(v, [=]() { return f; }());
+        return this->template eq_sig_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
       T1 eq_sig_rect_exist_r(const A &v1, const T1 &f) const {
-        return this->template eq_sig_rect<crane::obj>(sig<A>::exist(v1), f);
+        return this->template eq_sig_rect<T1>(sig<A>::exist(v1), f);
       }
 
       template <typename T1>
       T1 eq_sig_rect_exist_l(const A &u1, const T1 &f) const {
-        return sig<A>::exist(u1).template eq_sig_rect<crane::obj>(*this, f);
+        return sig<A>::exist(u1).template eq_sig_rect<T1>(*this, f);
       }
 
       template <typename T1>
       T1 eq_sig_rec(const sig<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig_rect<crane::obj>(x1_, x2_);
+        return this->template eq_sig_rect<T1>(x1_, x2_);
       }
 
       template <typename T1> T1 eq_sig_rect(const sig<A> &, const T1 &f) const {
@@ -399,15 +405,12 @@ struct RocqBug14174 {
         return x;
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
-      T1 sig_rec(F0 &&f) const {
-        const auto &[x0] = *this;
-        return f(x0);
+      template <typename T1, typename F0> T1 sig_rec(F0 &&f) const {
+        return this->template sig_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sig_rect(F0 &&f) const {
         const auto &[x0] = *this;
         return f(x0);
@@ -421,10 +424,10 @@ struct RocqBug14174 {
       // ACCESSORS
       sig2<A> clone() const { return {x}; }
 
-      template <typename _U> operator sig2<_U>() const {
-        return {[&]() -> _U {
-          if constexpr (crane_convertible<_U, const A &>) {
-            return crane_convert<_U>(x);
+      template <typename CraneU> operator sig2<CraneU>() const {
+        return {[&]() -> CraneU {
+          if constexpr (crane_convertible<CraneU, const A &>) {
+            return crane_convert<CraneU>(x);
           } else {
             throw std::logic_error("unreachable: inactive constructor field at "
                                    "this instantiation");
@@ -436,29 +439,29 @@ struct RocqBug14174 {
       static sig2<A> exist2(A x) { return {std::move(x)}; }
 
       template <typename T1>
-      T1 eq_sig2_rec_uncurried(const sig2<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig2_rect_uncurried<crane::obj>(x1_, x2_);
+      T1 eq_sig2_rec_uncurried(const sig2<A> &x1_, T1 x2_) const {
+        return this->template eq_sig2_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>
       T1 eq_sig2_rect_uncurried(const sig2<A> &v, T1 f) const {
-        return this->template eq_sig2_rect<crane::obj>(v,
-                                                       [=]() { return f; }());
+        return this->template eq_sig2_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
       T1 eq_sig2_rect_exist2_r(const A &v1, const T1 &f) const {
-        return this->template eq_sig2_rect<crane::obj>(sig2<A>::exist2(v1), f);
+        return this->template eq_sig2_rect<T1>(sig2<A>::exist2(v1), f);
       }
 
       template <typename T1>
       T1 eq_sig2_rect_exist2_l(const A &u1, const T1 &f) const {
-        return sig2<A>::exist2(u1).template eq_sig2_rect<crane::obj>(*this, f);
+        return sig2<A>::exist2(u1).template eq_sig2_rect<T1>(*this, f);
       }
 
       template <typename T1>
       T1 eq_sig2_rec(const sig2<A> &x1_, const T1 &x2_) const {
-        return this->template eq_sig2_rect<crane::obj>(x1_, x2_);
+        return this->template eq_sig2_rect<T1>(x1_, x2_);
       }
 
       template <typename T1>
@@ -473,15 +476,12 @@ struct RocqBug14174 {
         }());
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
-      T1 sig2_rec(F0 &&f) const {
-        const auto &[x0] = *this;
-        return f(x0);
+      template <typename T1, typename F0> T1 sig2_rec(F0 &&f) const {
+        return this->template sig2_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sig2_rect(F0 &&f) const {
         const auto &[x0] = *this;
         return f(x0);
@@ -496,18 +496,19 @@ struct RocqBug14174 {
       // ACCESSORS
       sigT<A, P> clone() const { return {x, a1}; }
 
-      template <typename _U0, typename _U1> operator sigT<_U0, _U1>() const {
-        return {[&]() -> _U0 {
-                  if constexpr (crane_convertible<_U0, const A &>) {
-                    return crane_convert<_U0>(x);
+      template <typename CraneU0, typename CraneU1>
+      operator sigT<CraneU0, CraneU1>() const {
+        return {[&]() -> CraneU0 {
+                  if constexpr (crane_convertible<CraneU0, const A &>) {
+                    return crane_convert<CraneU0>(x);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
                   }
                 }(),
-                [&]() -> _U1 {
-                  if constexpr (crane_convertible<_U1, const P &>) {
-                    return crane_convert<_U1>(a1);
+                [&]() -> CraneU1 {
+                  if constexpr (crane_convertible<CraneU1, const P &>) {
+                    return crane_convert<CraneU1>(a1);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
@@ -521,13 +522,14 @@ struct RocqBug14174 {
       }
 
       template <typename T1>
-      T1 eq_sigT_rec_uncurried(const sigT<A, P> &x1_, const T1 &x2_) const {
-        return this->template eq_sigT_rect_uncurried<T1>(x1_, x2_);
+      T1 eq_sigT_rec_uncurried(const sigT<A, P> &x1_, T1 x2_) const {
+        return this->template eq_sigT_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>
       T1 eq_sigT_rect_uncurried(const sigT<A, P> &v, T1 f) const {
-        return this->template eq_sigT_rect<T1>(v, [=]() { return f; }());
+        return this->template eq_sigT_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
@@ -555,24 +557,21 @@ struct RocqBug14174 {
       }
 
       P projT2() const {
-        const auto &[x0, a1] = *this;
+        const auto &[_, a1] = *this;
         return a1;
       }
 
       A projT1() const {
-        const auto &[x0, a1] = *this;
+        const auto &[x0, _] = *this;
         return x0;
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &>
-      T1 sigT_rec(F0 &&f) const {
-        const auto &[x0, a1] = *this;
-        return f(x0, a1);
+      template <typename T1, typename F0> T1 sigT_rec(F0 &&f) const {
+        return this->template sigT_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &>
       T1 sigT_rect(F0 &&f) const {
         const auto &[x0, a1] = *this;
         return f(x0, a1);
@@ -588,27 +587,27 @@ struct RocqBug14174 {
       // ACCESSORS
       sigT2<A, P, Q> clone() const { return {x, a1, a2}; }
 
-      template <typename _U0, typename _U1, typename _U2>
-      operator sigT2<_U0, _U1, _U2>() const {
-        return {[&]() -> _U0 {
-                  if constexpr (crane_convertible<_U0, const A &>) {
-                    return crane_convert<_U0>(x);
+      template <typename CraneU0, typename CraneU1, typename CraneU2>
+      operator sigT2<CraneU0, CraneU1, CraneU2>() const {
+        return {[&]() -> CraneU0 {
+                  if constexpr (crane_convertible<CraneU0, const A &>) {
+                    return crane_convert<CraneU0>(x);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
                   }
                 }(),
-                [&]() -> _U1 {
-                  if constexpr (crane_convertible<_U1, const P &>) {
-                    return crane_convert<_U1>(a1);
+                [&]() -> CraneU1 {
+                  if constexpr (crane_convertible<CraneU1, const P &>) {
+                    return crane_convert<CraneU1>(a1);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
                   }
                 }(),
-                [&]() -> _U2 {
-                  if constexpr (crane_convertible<_U2, const Q &>) {
-                    return crane_convert<_U2>(a2);
+                [&]() -> CraneU2 {
+                  if constexpr (crane_convertible<CraneU2, const Q &>) {
+                    return crane_convert<CraneU2>(a2);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
@@ -622,14 +621,14 @@ struct RocqBug14174 {
       }
 
       template <typename T1>
-      T1 eq_sigT2_rec_uncurried(const sigT2<A, P, Q> &x1_,
-                                const T1 &x2_) const {
-        return this->template eq_sigT2_rect_uncurried<T1>(x1_, x2_);
+      T1 eq_sigT2_rec_uncurried(const sigT2<A, P, Q> &x1_, T1 x2_) const {
+        return this->template eq_sigT2_rect_uncurried<T1>(x1_, std::move(x2_));
       }
 
       template <typename T1>
       T1 eq_sigT2_rect_uncurried(const sigT2<A, P, Q> &v, T1 f) const {
-        return this->template eq_sigT2_rect<T1>(v, [=]() { return f; }());
+        return this->template eq_sigT2_rect<T1>(
+            v, [=, f = std::move(f)]() { return f; }());
       }
 
       template <typename T1>
@@ -642,8 +641,8 @@ struct RocqBug14174 {
       template <typename T1>
       T1 eq_sigT2_rect_existT2_l(const A &u1, const P &u2, const Q &u3,
                                  const T1 &f) const {
-        return sigT2<A, P, Q>::existt2(u1, u2, u3)
-            .template eq_sigT2_rect<T1>(*this, f);
+        return sigT2<A, P, Q>::existt2(u1, u2, u3).template eq_sigT2_rect<T1>(
+            *this, f);
       }
 
       template <typename T1>
@@ -657,31 +656,29 @@ struct RocqBug14174 {
       }
 
       Q projT3() const {
-        const auto &[x, a1, a2] = *this;
+        const auto &[_, _, a2] = *this;
         return a2;
       }
 
       sigT<A, P> sigT_of_sigT2() const {
         return sigT<A, P>::existt(
             [&]() {
-              const auto &[x0, a1, a2] = *this;
+              const auto &[x0, _, _] = *this;
               return x0;
             }(),
             [&]() {
-              const auto &[x0, a10, a20] = *this;
+              const auto &[_, a10, _] = *this;
               return a10;
             }());
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
-      T1 sigT2_rec(F0 &&f) const {
-        const auto &[x0, a1, a2] = *this;
-        return f(x0, a1, a2);
+      template <typename T1, typename F0> T1 sigT2_rec(F0 &&f) const {
+        return this->template sigT2_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &, P &, Q &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &, const P &,
+                                       const Q &>
       T1 sigT2_rect(F0 &&f) const {
         const auto &[x0, a1, a2] = *this;
         return f(x0, a1, a2);
@@ -696,7 +693,8 @@ struct RocqBug14174 {
     }
 
     template <typename T1>
-    static sigT<T1, crane::obj> sigT_of_sig(const sig<T1> &x) {
+    static sigT<T1, crane::obj>
+    sigT_of_sig(const sig<T1> &x) { // Precondition: P
       return sigT<T1, crane::obj>::existt(x.proj1_sig(), crane::obj());
     }
 
@@ -732,9 +730,8 @@ struct RocqBug14174 {
     static T4 eq_sigT2_rect_existT2(const T1 &u1, const T2 &u2, const T3 &u3,
                                     const T1 &v1, const T2 &v2, const T3 &v3,
                                     const T4 &f) {
-      return sigT2<T1, T2, T3>::existt2(u1, u2, u3)
-          .template eq_sigT2_rect<T4>(sigT2<T1, T2, T3>::existt2(v1, v2, v3),
-                                      f);
+      return sigT2<T1, T2, T3>::existt2(u1, u2, u3).template eq_sigT2_rect<T4>(
+          sigT2<T1, T2, T3>::existt2(v1, v2, v3), f);
     }
 
     template <typename T1, typename T2>
@@ -742,6 +739,7 @@ struct RocqBug14174 {
       return sig2<T1>::exist2(u1).template eq_sig2_rect<T2>(
           sig2<T1>::exist2(v1), f);
     }
+
     enum class Sumbool { LEFT, RIGHT };
 
     template <typename T1>
@@ -760,16 +758,7 @@ struct RocqBug14174 {
 
     template <typename T1>
     static T1 sumbool_rec(const T1 &f, const T1 &f0, Sumbool s) {
-      switch (s) {
-      case Sumbool::LEFT: {
-        return f;
-      }
-      case Sumbool::RIGHT: {
-        return f0;
-      }
-      default:
-        std::unreachable();
-      }
+      return sumbool_rect<T1>(f, f0, s);
     }
 
     template <typename A> struct sumor {
@@ -794,15 +783,15 @@ struct RocqBug14174 {
 
       explicit sumor(Inright _v) : v_(_v) {}
 
-      template <typename _U>
-      sumor(const sumor<_U> &_other)
+      template <typename CraneU>
+      sumor(const sumor<CraneU> &_other)
           : v_([&]() -> variant_t {
-              if (std::holds_alternative<typename sumor<_U>::Inleft>(
+              if (std::holds_alternative<typename sumor<CraneU>::Inleft>(
                       _other.v())) {
                 const auto &[a0] =
-                    std::get<typename sumor<_U>::Inleft>(_other.v());
+                    std::get<typename sumor<CraneU>::Inleft>(_other.v());
                 return Inleft{[&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a0);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -825,18 +814,12 @@ struct RocqBug14174 {
       const variant_t &v() const { return v_; }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
       T1 sumor_rec(F0 &&f, const T1 &f0) const {
-        if (std::holds_alternative<typename sumor<A>::Inleft>(this->v())) {
-          const auto &[a0] = std::get<typename sumor<A>::Inleft>(this->v());
-          return f(a0);
-        } else {
-          return f0;
-        }
+        return this->template sumor_rect<T1>(f, f0);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, A &>
+        requires std::is_invocable_r_v<T1, F0 &, const A &>
       T1 sumor_rect(F0 &&f, const T1 &f0) const {
         if (std::holds_alternative<typename sumor<A>::Inleft>(this->v())) {
           const auto &[a0] = std::get<typename sumor<A>::Inleft>(this->v());
@@ -851,50 +834,56 @@ struct RocqBug14174 {
     static sig<crane::fn<T2(T1)>>
     Choice(std::type_identity_t<crane::fn<sig<T2>(T1)>> h) {
       return sig<crane::fn<T2(T1)>>::exist(
-          [=](const T1 &z) { return h(z).proj1_sig(); });
+          [=, h = std::move(h)](const T1 &z) { return h(z).proj1_sig(); });
     }
 
     template <typename T1, typename T2, typename T3>
     static sigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>
     Choice2(std::type_identity_t<crane::fn<sigT<T2, T3>(T1)>> h) {
       return sigT<crane::fn<T2(T1)>, crane::fn<T3(T1)>>::existt(
-          [=](const T1 &z) { return h(z).projT1(); },
-          [=](const T1 &z) {
+          [=](const T1 &z) { return h(z).projT1(); }, [=](const T1 &z) {
             sigT<T2, T3> s = h(z);
-            auto &[x, a1] = s;
-            return a1;
+            auto &[_, a1] = s;
+            return std::move(a1);
           });
     }
 
     template <typename T1>
     static sig<crane::fn<Bool0(T1)>>
     bool_choice(std::type_identity_t<crane::fn<Sumbool(T1)>> h) {
-      return sig<crane::fn<Bool0(T1)>>::exist([=](const T1 &z) {
-        switch (h(z)) {
-        case Sumbool::LEFT: {
-          return Bool0::TRUE_;
-        }
-        case Sumbool::RIGHT: {
-          return Bool0::FALSE_;
-        }
-        default:
-          std::unreachable();
-        }
-      });
+      return sig<crane::fn<Bool0(T1)>>::exist(
+          [=, h = std::move(h)](const T1 &z) {
+            switch (h(z)) {
+            case Sumbool::LEFT: {
+              return Bool0::TRUE_;
+            }
+            case Sumbool::RIGHT: {
+              return Bool0::FALSE_;
+            }
+            default:
+              std::unreachable();
+            }
+          });
     }
 
     template <typename T1>
     static sig<crane::fn<T1(Nat)>>
     dependent_choice(std::type_identity_t<crane::fn<sig<T1>(T1)>> h, T1 x0) {
-      auto f_impl = [=](auto &_self_f, Nat n) -> T1 {
-        if (std::holds_alternative<typename Nat::O>(n.v())) {
-          return x0;
-        } else {
-          const auto &[a0] = std::get<typename Nat::S>(n.v());
-          return h(_self_f(_self_f, *a0)).proj1_sig();
-        }
-      };
-      auto f = [=](Nat n) -> T1 { return f_impl(f_impl, n); };
+      auto f_impl =
+          [=, h = std::move(h), x0 = std::move(x0)](auto &_self_f,
+                                                    Nat n)
+               -> T1 {
+            if (std::holds_alternative<typename Nat::O>(n.v_mut())) {
+              return x0;
+            } else {
+              auto &[a0] = std::get<typename Nat::S>(n.v_mut());
+              return h(_self_f(_self_f, *a0)).proj1_sig();
+            }
+          };
+      auto f =
+          [=, f_impl = std::move(f_impl)](Nat n) -> T1 {
+            return f_impl(f_impl, std::move(n));
+          };
       return sig<crane::fn<T1(Nat)>>::exist(std::move(f));
     }
 
@@ -913,8 +902,9 @@ struct RocqBug14174 {
       throw std::logic_error("absurd case");
     }
 
-    template <typename T1> static T1 absurd_set() {
-      throw std::logic_error("absurd case");
+    template <typename T1> static const T1 &absurd_set() {
+      static const T1 v = [](crane::obj) { return except<T1>(); };
+      return v;
     }
   };
 };

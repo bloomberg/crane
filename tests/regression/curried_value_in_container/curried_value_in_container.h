@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,7 +93,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -134,7 +135,9 @@ struct CurriedValueInContainer {
               List<crane::fn<uint64_t(uint64_t, uint64_t)>>::nil()));
   static inline const uint64_t total =
       (use + stored.template fold_left<uint64_t>(
-                 [](uint64_t acc, crane::fn<uint64_t(uint64_t, uint64_t)> f) {
+                 [](uint64_t acc,
+                    const crane::fn<uint64_t(uint64_t,
+                                             uint64_t)> &f) {
                    return (acc + f(UINT64_C(3), UINT64_C(4)));
                  },
                  UINT64_C(0)));

@@ -5,7 +5,7 @@
 DeepMap::tree<uint64_t> DeepMap::build_right(uint64_t n,
                                              DeepMap::tree<uint64_t> acc) {
   DeepMap::tree<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_acc;
@@ -29,7 +29,7 @@ uint64_t DeepMap::root_or_zero(const DeepMap::tree<uint64_t> &t) {
   if (std::holds_alternative<typename DeepMap::tree<uint64_t>::Leaf>(t.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[_, a1, _] =
         std::get<typename DeepMap::tree<uint64_t>::Node>(t.v());
     return a1;
   }

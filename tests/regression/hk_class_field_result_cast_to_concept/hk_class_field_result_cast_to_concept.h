@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -20,30 +19,48 @@ using ptr = crane::obj;
 using provenance = crane::obj;
 using state = crane::obj;
 template <typename x = void> using memM = crane::obj;
-template <typename
-I>concept PtrC = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  });
-template <typename
-I>concept ProvC = requires {
-    typename I::provenance;
-  } && (requires {
-    { I::noprov() } -> std::convertible_to<typename I::provenance>;
-  } || requires {
-    { I::noprov } -> std::convertible_to<typename I::provenance>;
-  });
-template <typename
-I>concept StateC = requires {
-    typename I::state;
-  } && (requires {
-    { I::init() } -> std::convertible_to<typename I::state>;
-  } || requires {
-    { I::init } -> std::convertible_to<typename I::state>;
-  });
+template <typename I>
+concept PtrC = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
+template <typename I>
+concept ProvC = requires {
+  typename I::provenance;
+} && (requires {
+  {
+    I::noprov()
+  }
+  -> std::convertible_to<typename I::provenance>;
+} || requires {
+  {
+    I::noprov
+  }
+  -> std::convertible_to<typename I::provenance>;
+});
+template <typename I>
+concept StateC = requires {
+  typename I::state;
+} && (requires {
+  {
+    I::init()
+  }
+  -> std::convertible_to<typename I::state>;
+} || requires {
+  {
+    I::init
+  }
+  -> std::convertible_to<typename I::state>;
+});
 template <typename I, typename ptr, typename provenance, typename state>
 concept MMP = requires {
   typename I::PTR;
@@ -108,8 +125,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -130,7 +147,7 @@ template <typename _tcI0, typename T1 = void, typename T2 = void, typename F1>
                typename _tcI0::PROV::provenance,
                typename _tcI0::mm_state::state>
 memM<T2> mbind(memM<crane::obj> x, F1 &&x0) {
-  return _tcI0::mbind(std::move(x), crane_erase_fn(x0));
+  return _tcI0::mbind(std::move(x), crane_erase_fn<crane::obj>(x0));
 }
 
 template <typename _tcI0>

@@ -3,8 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
-#include <atomic>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -31,22 +30,10 @@ struct InductiveInModule {
     }
 
     template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-      switch (c) {
-      case Color::RED: {
-        return f;
-      }
-      case Color::GREEN: {
-        return f0;
-      }
-      case Color::BLUE: {
-        return f1;
-      }
-      default:
-        std::unreachable();
-      }
+      return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
     }
 
-    static inline const Color default_color = Color::RED;
+    static constexpr Color default_color = Color::RED;
     static uint64_t color_to_nat(Color c);
   };
 
@@ -77,22 +64,22 @@ struct InductiveInModule {
 
         explicit option(Some _v) : v_(std::move(_v)) {}
 
-        template <typename _U>
-        option(const option<_U> &_other)
+        template <typename CraneU>
+        option(const option<CraneU> &_other)
             : v_([&]() -> variant_t {
-                if (std::holds_alternative<typename option<_U>::None>(
+                if (std::holds_alternative<typename option<CraneU>::None>(
                         _other.v())) {
                   return None{};
                 } else {
                   const auto &[a] =
-                      std::get<typename option<_U>::Some>(_other.v());
+                      std::get<typename option<CraneU>::Some>(_other.v());
                   return Some{[&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }()};
                 }
@@ -110,7 +97,7 @@ struct InductiveInModule {
       };
 
       template <typename T1, typename T2, typename F1>
-        requires std::is_invocable_r_v<T2, F1 &, T1 &>
+        requires std::is_invocable_r_v<T2, F1 &, const T1 &>
       static T2 option_rect(T2 f, F1 &&f0, const option<T1> &o) {
         if (std::holds_alternative<typename option<T1>::None>(o.v())) {
           return f;
@@ -121,14 +108,8 @@ struct InductiveInModule {
       }
 
       template <typename T1, typename T2, typename F1>
-        requires std::is_invocable_r_v<T2, F1 &, T1 &>
       static T2 option_rec(T2 f, F1 &&f0, const option<T1> &o) {
-        if (std::holds_alternative<typename option<T1>::None>(o.v())) {
-          return f;
-        } else {
-          const auto &[a0] = std::get<typename option<T1>::Some>(o.v());
-          return f0(a0);
-        }
+        return option_rect<T1, T2>(std::move(f), f0, o);
       }
 
       template <typename T1>

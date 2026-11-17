@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -60,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,51 +93,65 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+
 struct TfunctorRecordOptionField {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
-
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
-  template <typename T1, typename F1>
-  static std::optional<T1> TFunctor_option(std::type_identity_t<TFunctor<T1>> h,
-                                           F1 &&f,
-                                           const std::optional<T1> &ot) {
-    if (ot.has_value()) {
-      const auto &t = *ot;
-      return std::make_optional<T1>(tfmap<T1, crane::obj, crane::obj>(h, f, t));
-    } else {
-      return std::optional<T1>();
+  template <TFunctor _tcI0> struct TFunctor_option {
+    template <typename CraneA0>
+    using T = std::optional<typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static std::optional<typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          std::optional<typename _tcI0::template T<CraneA0>> ot) {
+      if (ot.has_value()) {
+        const typename _tcI0::template T<CraneA0> &t = *ot;
+        return std::make_optional<typename _tcI0::template T<CraneA1>>(
+            _tcI0::template tfmap<CraneA0, CraneA1>(std::move(f), t));
+      } else {
+        return std::optional<typename _tcI0::template T<CraneA1>>();
+      }
     }
-  }
+  };
 
   template <typename T> struct exp {
     // TYPES
@@ -163,13 +177,13 @@ struct TfunctorRecordOptionField {
 
     explicit exp(Neg _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    exp(const exp<_U> &_other)
+    template <typename CraneU>
+    exp(const exp<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename exp<_U>::Lit>(_other.v())) {
-              const auto &[t] = std::get<typename exp<_U>::Lit>(_other.v());
+            if (std::holds_alternative<typename exp<CraneU>::Lit>(_other.v())) {
+              const auto &[t] = std::get<typename exp<CraneU>::Lit>(_other.v());
               return Lit{[&]() -> T {
-                if constexpr (crane_convertible<T, const _U &>) {
+                if constexpr (crane_convertible<T, const CraneU &>) {
                   return crane_convert<T>(t);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -177,7 +191,7 @@ struct TfunctorRecordOptionField {
                 }
               }()};
             } else {
-              const auto &[e] = std::get<typename exp<_U>::Neg>(_other.v());
+              const auto &[e] = std::get<typename exp<CraneU>::Neg>(_other.v());
               return Neg{
                   (e ? std::make_shared<exp<T>>(crane_convert<exp<T>>(*e))
                      : nullptr)};
@@ -209,8 +223,8 @@ struct TfunctorRecordOptionField {
 
     exp(const exp &) = default;
     exp &operator=(const exp &) = default;
-    exp(exp &&) noexcept = default;
-    exp &operator=(exp &&) noexcept = default;
+    exp(exp &&) = default;
+    exp &operator=(exp &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -219,8 +233,7 @@ struct TfunctorRecordOptionField {
   };
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
-             std::is_invocable_r_v<T2, F1 &, exp<T1> &, T2 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static T2 exp_rect(F0 &&f, F1 &&f0, const exp<T1> &e) {
     if (std::holds_alternative<typename exp<T1>::Lit>(e.v())) {
       const auto &[t0] = std::get<typename exp<T1>::Lit>(e.v());
@@ -232,16 +245,8 @@ struct TfunctorRecordOptionField {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
-             std::is_invocable_r_v<T2, F1 &, exp<T1> &, T2 &>
   static T2 exp_rec(F0 &&f, F1 &&f0, const exp<T1> &e) {
-    if (std::holds_alternative<typename exp<T1>::Lit>(e.v())) {
-      const auto &[t0] = std::get<typename exp<T1>::Lit>(e.v());
-      return f(t0);
-    } else {
-      const auto &[e1] = std::get<typename exp<T1>::Neg>(e.v());
-      return f0(*e1, exp_rec<T1, T2>(f, f0, *e1));
-    }
+    return exp_rect<T1, T2>(f, f0, e);
   }
 
   template <typename T> struct global {
@@ -249,31 +254,56 @@ struct TfunctorRecordOptionField {
     std::optional<exp<T>> g_exp;
 
     // ACCESSORS
-    template <typename _U> operator global<_U>() const {
-      return {[&]() -> _U {
-                if constexpr (crane_convertible<_U, const T &>) {
-                  return crane_convert<_U>(g_typ);
+    template <typename CraneU> operator global<CraneU>() const {
+      return {[&]() -> CraneU {
+                if constexpr (crane_convertible<CraneU, const T &>) {
+                  return crane_convert<CraneU>(g_typ);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              std::optional<exp<_U>>(g_exp)};
+              std::optional<exp<CraneU>>(g_exp)};
     }
   };
 
-  static exp<crane::obj> TFunctor_exp(crane::fn<crane::obj(crane::obj)> f,
-                                      const exp<crane::obj> &e);
-  static global<crane::obj> TFunctor_global(crane::fn<crane::obj(crane::obj)> f,
-                                            const global<crane::obj> &g);
+  struct TFunctor_exp {
+    template <typename CraneA0> using T = exp<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, exp<CraneA0> e) {
+      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v_mut())) {
+        auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v_mut());
+        return exp<CraneA1>::lit(f(std::move(t0)));
+      } else {
+        auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v_mut());
+        return exp<CraneA1>::neg(TFunctor_exp::tfmap(std::move(f), *e0));
+      }
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_exp>);
+
+  struct TFunctor_global {
+    template <typename CraneA0> using T = global<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static global<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                                 global<CraneA0> g) {
+      return global<CraneA1>{
+          f(g.g_typ),
+          TFunctor_option<TFunctor_exp>::template tfmap<CraneA0, CraneA1>(
+              f, g.g_exp)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_global>);
   static inline const global<Nat> g0 = global<Nat>{
       Nat::s(Nat::o()),
       std::make_optional<exp<Nat>>(exp<Nat>::lit(Nat::s(Nat::s(Nat::o()))))};
-  static inline const global<Nat> g1 = tfmap<global<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, global<crane::obj> _ec1) {
-        return TFunctor_global(_ec0, _ec1);
-      },
-      [](const Nat &x) { return Nat::s(x); }, g0);
+  static inline const global<Nat> g1 =
+      TFunctor_global::template tfmap<Nat, Nat>(
+          [](const Nat &x) { return Nat::s(x); }, g0);
   static inline const bool is_five = []() -> bool {
     if (g1.g_exp.has_value()) {
       const exp<Nat> &e = *g1.g_exp;

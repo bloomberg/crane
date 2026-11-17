@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -35,15 +35,15 @@ struct UserOptionWrapper {
 
     explicit opt(So _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    opt(const opt<_U> &_other)
+    template <typename CraneU>
+    opt(const opt<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename opt<_U>::Non>(_other.v())) {
+            if (std::holds_alternative<typename opt<CraneU>::Non>(_other.v())) {
               return Non{};
             } else {
-              const auto &[a0] = std::get<typename opt<_U>::So>(_other.v());
+              const auto &[a0] = std::get<typename opt<CraneU>::So>(_other.v());
               return So{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -63,19 +63,12 @@ struct UserOptionWrapper {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
-    T1 opt_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename opt<A>::Non>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename opt<A>::So>(this->v());
-        return f0(a0);
-      }
+    template <typename T1, typename F1> T1 opt_rec(T1 f, F1 &&f0) const {
+      return this->template opt_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
+      requires std::is_invocable_r_v<T1, F1 &, const A &>
     T1 opt_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename opt<A>::Non>(this->v())) {
         return f;
@@ -137,8 +130,8 @@ struct UserOptionWrapper {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -147,16 +140,11 @@ struct UserOptionWrapper {
 
     t wrap(uint64_t k) const { return t::node(k, opt<t>::so(*this)); }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, opt<t> &>
-    T1 t_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename t::Node>(this->v());
-      return f(a0, *a1);
+    template <typename T1, typename F0> T1 t_rec(F0 &&f) const {
+      return this->template t_rect<T1>(f);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, opt<t> &>
-    T1 t_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 t_rect(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename t::Node>(this->v());
       return f(a0, *a1);
     }

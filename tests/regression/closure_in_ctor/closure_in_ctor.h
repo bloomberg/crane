@@ -2,7 +2,7 @@
 #define INCLUDED_CLOSURE_IN_CTOR
 
 #include "fn.h"
-#include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -44,7 +44,8 @@ struct ClosureInCtor {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &,
+                                   const crane::fn<uint64_t(uint64_t)> &>
   static T1 box_rect(F0 &&f, T1 f0, const box &b) {
     if (std::holds_alternative<typename box::Box0>(b.v())) {
       const auto &[a0] = std::get<typename box::Box0>(b.v());
@@ -55,14 +56,8 @@ struct ClosureInCtor {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
   static T1 box_rec(F0 &&f, T1 f0, const box &b) {
-    if (std::holds_alternative<typename box::Box0>(b.v())) {
-      const auto &[a0] = std::get<typename box::Box0>(b.v());
-      return f(a0);
-    } else {
-      return f0;
-    }
+    return box_rect<T1>(f, std::move(f0), b);
   }
 
   /// A local fixpoint captures the function parameter n and is stored
@@ -95,7 +90,7 @@ struct ClosureInCtor {
     box b = make_box_fix(UINT64_C(42));
     if (std::holds_alternative<typename box::Box0>(b.v_mut())) {
       auto &[a0] = std::get<typename box::Box0>(b.v_mut());
-      return std::move(a0)(UINT64_C(10));
+      return a0(UINT64_C(10));
     } else {
       return UINT64_C(999);
     }
@@ -109,7 +104,7 @@ struct ClosureInCtor {
       auto &[a0] = std::get<typename box::Box0>(b1.v_mut());
       if (std::holds_alternative<typename box::Box0>(b2.v_mut())) {
         auto &[a00] = std::get<typename box::Box0>(b2.v_mut());
-        return (std::move(a0)(UINT64_C(0)) + std::move(a00)(UINT64_C(0)));
+        return (a0(UINT64_C(0)) + a00(UINT64_C(0)));
       } else {
         return UINT64_C(999);
       }

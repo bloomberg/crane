@@ -3,11 +3,10 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 
 /// A monad typeclass over a type constructor (`Mon (M : Type -> Type)`), with a
@@ -21,10 +20,11 @@ concept Mon = requires {
     I::template mret<crane::obj>(std::declval<crane::obj>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
   {
-    I::template mbind<crane::obj, crane::obj>(
-        std::declval<typename I::template M<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+    I::template mbind<crane::obj, crane::obj>(std::declval<
+        typename I::template M<crane::obj>>(),
+                                              std::declval<crane::fn<
+                                                  typename I::template M<
+                                                      crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
@@ -35,7 +35,6 @@ struct MonadClassTypeConstructor {
   }
 
   template <Mon _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> mbind(typename _tcI0::template M<T2> x,
                                               F1 &&x0) {
     return _tcI0::template mbind<T2, T3>(std::move(x), x0);
@@ -44,28 +43,31 @@ struct MonadClassTypeConstructor {
   template <typename a> using Opt = std::optional<a>;
 
   struct MOpt {
-    template <typename _A0> using M = std::optional<_A0>;
+    template <typename CraneA0> using M = std::optional<CraneA0>;
 
-    template <typename _A0> static std::optional<_A0> mret(_A0 a) {
-      return std::make_optional<_A0>(a);
+    template <typename CraneA0> static std::optional<CraneA0> mret(CraneA0 a) {
+      return std::make_optional<CraneA0>(std::move(a));
     }
 
-    template <typename _A0, typename _A1>
-    static std::optional<_A1> mbind(std::optional<_A0> m,
-                                    crane::fn<std::optional<_A1>(_A0)> f) {
+    template <typename CraneA0, typename CraneA1>
+    static std::optional<CraneA1>
+    mbind(std::optional<CraneA0> m,
+          crane::fn<std::optional<CraneA1>(CraneA0)> f) {
       if (m.has_value()) {
-        const _A0 &a = *m;
+        const CraneA0 &a = *m;
         return f(a);
       } else {
-        return std::optional<_A1>();
+        return std::optional<CraneA1>();
       }
     }
   };
 
   static_assert(Mon<MOpt>);
-  static inline const Opt<uint64_t> prog = mbind<MOpt, uint64_t, uint64_t>(
-      mret<MOpt, uint64_t>(UINT64_C(20)),
-      [](uint64_t a) { return mret<MOpt, uint64_t>((a + UINT64_C(22))); });
+  static inline const Opt<uint64_t> prog =
+      MOpt::template mbind<uint64_t, uint64_t>(
+          MOpt::template mret<uint64_t>(UINT64_C(20)), [](uint64_t a) {
+            return MOpt::template mret<uint64_t>((a + UINT64_C(22)));
+          });
   static inline const uint64_t go = []() -> uint64_t {
     if (prog.has_value()) {
       const uint64_t &n = *prog;

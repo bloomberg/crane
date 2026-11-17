@@ -4,7 +4,7 @@
 std::string EffectOptionMatch::show_or_default(std::string name,
                                                std::string default0) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
@@ -18,14 +18,14 @@ std::string EffectOptionMatch::show_or_default(std::string name,
 /// 2. get_env with effect in one branch
 std::string EffectOptionMatch::show_or_ask(std::string name) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << "Not set, enter value:"s << '\n';
+    std::cout << std::string("Not set, enter value:") << '\n';
     return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);
@@ -53,7 +53,7 @@ std::string EffectOptionMatch::get_first_set(const List<std::string> &names) {
       if (std::holds_alternative<typename List<std::string>::Nil>(_sv0.v())) {
         return "none";
       } else {
-        const auto &[a00, a10] =
+        const auto &[a00, _] =
             std::get<typename List<std::string>::Cons>(_sv0.v());
         std::optional<std::string> mv2 = [&]() -> std::optional<std::string> {
           auto *v = std::getenv(a00.c_str());
@@ -73,9 +73,9 @@ std::string EffectOptionMatch::get_first_set(const List<std::string> &names) {
 
 /// 4. set then get, match on result
 bool EffectOptionMatch::set_and_verify(std::string name, std::string value) {
-  setenv(name.c_str(), value.c_str(), 1);
+  setenv(name.c_str(), std::move(value).c_str(), 1);
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {

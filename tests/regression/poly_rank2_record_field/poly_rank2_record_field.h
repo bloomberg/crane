@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -62,8 +62,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -118,16 +118,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -164,8 +165,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -173,46 +174,50 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
 struct PolyRank2RecordField {
   struct mapper {
-    crane::fn<List<crane::obj>(crane::fn<crane::obj(crane::obj)>,
-                               List<crane::obj>)>
-        run;
+    crane::fn<
+        List<crane::obj>(crane::fn<crane::obj(crane::obj)>,
+                         List<crane::obj>)> run;
   };
 
   template <typename T1, typename T2, typename F1>
   static List<T2> run(const mapper &m0, F1 &&x, const List<T1> &x0) {
-    return m0.run(crane_erase_fn(x), x0);
+    return m0.run(crane_erase_fn<crane::obj>(x), x0);
   }
 
-  static inline const mapper m =
-      mapper{[]<typename _T1>(auto &&a0, const List<_T1> &a1)
-                 -> List<std::invoke_result_t<decltype(a0) &, _T1 &>> {
-        return a1.template map<std::invoke_result_t<decltype(a0) &, _T1 &>>(
+  [[gnu::used]] static inline const mapper m =
+      mapper{[]<typename CraneT1>(auto &&a0, const List<CraneT1> &a1) -> List<
+          std::invoke_result_t<decltype(a0)&,
+                               CraneT1 &>> {
+        return a1.template map<std::invoke_result_t<decltype(a0)&, CraneT1 &>>(
             std::forward<decltype(a0)>(a0));
       }};
   static List<Bool0> test1(const List<Nat> &l);

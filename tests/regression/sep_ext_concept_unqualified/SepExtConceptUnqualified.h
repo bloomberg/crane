@@ -4,11 +4,9 @@
 #include "ParamsDef.h"
 
 namespace SepExtConceptUnqualified {
-
 template <ParamsDef::Params _tcI0> ParamsDef::prov use_it(ParamsDef::prov x) {
   return x;
 }
-
 } // namespace SepExtConceptUnqualified
 
 #endif // INCLUDED_SEPEXTCONCEPTUNQUALIFIED

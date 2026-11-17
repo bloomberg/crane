@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -50,16 +50,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -96,8 +97,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -109,38 +110,38 @@ public:
   bool existsb(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     bool _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified existsb: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified existsb: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = false;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = (f(a0) || std::move(_result));
       }
@@ -149,42 +150,42 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a1], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          _stack.emplace_back(CraneCont_Cons{a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -197,38 +198,38 @@ public:
   List<T1> flat_map(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified flat_map: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified flat_map: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = f(a0).app(std::move(_result));
       }
@@ -237,61 +238,64 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -299,26 +303,28 @@ public:
   }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -385,8 +391,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -445,7 +451,7 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static bool eqb(const Z &x, const Z &y);
 };
 
@@ -469,19 +475,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1> static T1 Clan_rec(T1 f, T1 f0, T1 f1, Clan c) {
-    switch (c) {
-    case Clan::CLANWOLF: {
-      return f;
-    }
-    case Clan::CLANJADEFALCON: {
-      return f0;
-    }
-    case Clan::CLANGHOSTBEAR: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return Clan_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 
   static bool clan_eq_dec(Clan c1, Clan c2);
@@ -505,19 +499,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1> static T1 Rank_rec(T1 f, T1 f0, T1 f1, Rank r) {
-    switch (r) {
-    case Rank::WARRIOR: {
-      return f;
-    }
-    case Rank::STARCAPTAIN: {
-      return f0;
-    }
-    case Rank::STARCOLONEL: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return Rank_rect<T1>(std::move(f), std::move(f0), std::move(f1), r);
   }
 
   static uint64_t rank_to_nat(Rank r);
@@ -552,20 +534,9 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1>
   static T1 UnitClass_rec(T1 f, T1 f0, T1 f1, UnitClass u) {
-    switch (u) {
-    case UnitClass::OMNIMECH: {
-      return f;
-    }
-    case UnitClass::BATTLEMECH: {
-      return f0;
-    }
-    case UnitClass::ELEMENTAL: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return UnitClass_rect<T1>(std::move(f), std::move(f0), std::move(f1), u);
   }
+
   enum class WeightClass { LIGHT, HEAVY, ASSAULT };
 
   template <typename T1>
@@ -587,19 +558,7 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1>
   static T1 WeightClass_rec(T1 f, T1 f0, T1 f1, WeightClass w) {
-    switch (w) {
-    case WeightClass::LIGHT: {
-      return f;
-    }
-    case WeightClass::HEAVY: {
-      return f0;
-    }
-    case WeightClass::ASSAULT: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return WeightClass_rect<T1>(std::move(f), std::move(f0), std::move(f1), w);
   }
 
   static uint64_t weight_class_value(WeightClass w);
@@ -633,9 +592,9 @@ struct CoalitionBidHonorTraceCase {
     uint64_t fm_total_ecr;
   };
 
-  static inline const ForceMetrics empty_metrics =
-      ForceMetrics{UINT64_C(0), UINT64_C(0), UINT64_C(0),
-                   UINT64_C(0), UINT64_C(0), UINT64_C(0)};
+  [[gnu::used]] static inline const ForceMetrics empty_metrics =
+      ForceMetrics{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0),
+                   UINT64_C(0), UINT64_C(0)};
   static ForceMetrics unit_to_metrics(const Unit &u);
   static ForceMetrics metrics_add(const ForceMetrics &m1,
                                   const ForceMetrics &m2);
@@ -657,16 +616,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1> static T1 Side_rec(T1 f, T1 f0, Side s) {
-    switch (s) {
-    case Side::ATTACKER: {
-      return f;
-    }
-    case Side::DEFENDER: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return Side_rect<T1>(std::move(f), std::move(f0), s);
   }
 
   struct CoalitionMember {
@@ -688,9 +638,9 @@ struct CoalitionBidHonorTraceCase {
     Side cmb_side;
   };
 
-  static Coalition update_coalition_force(const List<CoalitionMember> &c,
-                                          uint64_t idx,
-                                          const List<Unit> &new_force);
+  static Coalition
+  update_coalition_force(const List<CoalitionMember> &c, uint64_t idx,
+                         const List<Unit> &new_force);
 
   struct ForceBid {
     Force bid_force;
@@ -723,16 +673,7 @@ struct CoalitionBidHonorTraceCase {
   }
 
   template <typename T1> static T1 TrialType_rec(T1 f, T1 f0, TrialType t) {
-    switch (t) {
-    case TrialType::TRIALOFPOSSESSION: {
-      return f;
-    }
-    case TrialType::TRIALOFANNIHILATION: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return TrialType_rect<T1>(std::move(f), std::move(f0), t);
   }
 
   struct Prize {
@@ -769,20 +710,12 @@ struct CoalitionBidHonorTraceCase {
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
-    T1 Prize_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename Prize::PrizeHonor>(this->v())) {
-        return f;
-      } else {
-        const auto &[enclave_id0] =
-            std::get<typename Prize::PrizeEnclave>(this->v());
-        return f0(enclave_id0);
-      }
+    template <typename T1, typename F1> T1 Prize_rec(T1 f, F1 &&f0) const {
+      return this->template Prize_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Prize_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename Prize::PrizeHonor>(this->v())) {
         return f;
@@ -834,27 +767,16 @@ struct CoalitionBidHonorTraceCase {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 Location_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename Location::LocPlanetSurface>(
-              this->v())) {
-        const auto &[world_id0, region_id0] =
-            std::get<typename Location::LocPlanetSurface>(this->v());
-        return f(world_id0, region_id0);
-      } else {
-        const auto &[enclave_id0] =
-            std::get<typename Location::LocEnclave>(this->v());
-        return f0(enclave_id0);
-      }
+      return this->template Location_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Location_rect(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename Location::LocPlanetSurface>(
-              this->v())) {
+      if (std::holds_alternative<typename Location::LocPlanetSurface>(this->v())) {
         const auto &[world_id0, region_id0] =
             std::get<typename Location::LocPlanetSurface>(this->v());
         return f(world_id0, region_id0);
@@ -927,20 +849,12 @@ struct CoalitionBidHonorTraceCase {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 RefusalReason_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<
-              typename RefusalReason::RefusalInsufficientRank>(this->v())) {
-        return f;
-      } else {
-        const auto &[note0] =
-            std::get<typename RefusalReason::RefusalOther>(this->v());
-        return f0(note0);
-      }
+      return this->template RefusalReason_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 RefusalReason_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<
               typename RefusalReason::RefusalInsufficientRank>(this->v())) {
@@ -1062,14 +976,14 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4, typename F5, typename F7, typename F8>
-    requires std::is_invocable_r_v<T1, F0 &, BatchallChallenge &> &&
-             std::is_invocable_r_v<T1, F1 &, BatchallResponse &> &&
-             std::is_invocable_r_v<T1, F2 &, RefusalReason &> &&
-             std::is_invocable_r_v<T1, F3 &, ForceBid &> &&
-             std::is_invocable_r_v<T1, F4 &, CoalitionMemberBid &> &&
-             std::is_invocable_r_v<T1, F5 &, Side &> &&
-             std::is_invocable_r_v<T1, F7 &, Side &> &&
-             std::is_invocable_r_v<T1, F8 &, Side &>
+    requires std::is_invocable_r_v<T1, F0 &, const BatchallChallenge &> &&
+             std::is_invocable_r_v<T1, F1 &, const BatchallResponse &> &&
+             std::is_invocable_r_v<T1, F2 &, const RefusalReason &> &&
+             std::is_invocable_r_v<T1, F3 &, const ForceBid &> &&
+             std::is_invocable_r_v<T1, F4 &, const CoalitionMemberBid &> &&
+             std::is_invocable_r_v<T1, F5 &, const Side &> &&
+             std::is_invocable_r_v<T1, F7 &, const Side &> &&
+             std::is_invocable_r_v<T1, F8 &, const Side &>
   static T1 ProtocolAction_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                 F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
                                 const ProtocolAction &p) {
@@ -1077,13 +991,13 @@ struct CoalitionBidHonorTraceCase {
       const auto &[chal0] =
           std::get<typename ProtocolAction::ActChallenge>(p.v());
       return f(chal0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
-                   p.v())) {
+    } else if (
+            std::holds_alternative<typename ProtocolAction::ActRespond>(p.v())) {
       const auto &[resp0] =
           std::get<typename ProtocolAction::ActRespond>(p.v());
       return f0(resp0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActRefuse>(
-                   p.v())) {
+    } else if (
+            std::holds_alternative<typename ProtocolAction::ActRefuse>(p.v())) {
       const auto &[reason0] =
           std::get<typename ProtocolAction::ActRefuse>(p.v());
       return f1(reason0);
@@ -1095,12 +1009,10 @@ struct CoalitionBidHonorTraceCase {
       const auto &[cbid0] =
           std::get<typename ProtocolAction::ActCoalitionBid>(p.v());
       return f3(cbid0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActPass>(
-                   p.v())) {
+    } else if (std::holds_alternative<typename ProtocolAction::ActPass>(p.v())) {
       const auto &[side0] = std::get<typename ProtocolAction::ActPass>(p.v());
       return f4(side0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActClose>(
-                   p.v())) {
+    } else if (std::holds_alternative<typename ProtocolAction::ActClose>(p.v())) {
       return f5;
     } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
                    p.v())) {
@@ -1116,57 +1028,13 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, typename F0, typename F1, typename F2, typename F3,
             typename F4, typename F5, typename F7, typename F8>
-    requires std::is_invocable_r_v<T1, F0 &, BatchallChallenge &> &&
-             std::is_invocable_r_v<T1, F1 &, BatchallResponse &> &&
-             std::is_invocable_r_v<T1, F2 &, RefusalReason &> &&
-             std::is_invocable_r_v<T1, F3 &, ForceBid &> &&
-             std::is_invocable_r_v<T1, F4 &, CoalitionMemberBid &> &&
-             std::is_invocable_r_v<T1, F5 &, Side &> &&
-             std::is_invocable_r_v<T1, F7 &, Side &> &&
-             std::is_invocable_r_v<T1, F8 &, Side &>
   static T1 ProtocolAction_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                F5 &&f4, T1 f5, F7 &&f6, F8 &&f7,
                                const ProtocolAction &p) {
-    if (std::holds_alternative<typename ProtocolAction::ActChallenge>(p.v())) {
-      const auto &[chal0] =
-          std::get<typename ProtocolAction::ActChallenge>(p.v());
-      return f(chal0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActRespond>(
-                   p.v())) {
-      const auto &[resp0] =
-          std::get<typename ProtocolAction::ActRespond>(p.v());
-      return f0(resp0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActRefuse>(
-                   p.v())) {
-      const auto &[reason0] =
-          std::get<typename ProtocolAction::ActRefuse>(p.v());
-      return f1(reason0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActBid>(p.v())) {
-      const auto &[bid0] = std::get<typename ProtocolAction::ActBid>(p.v());
-      return f2(bid0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActCoalitionBid>(
-                   p.v())) {
-      const auto &[cbid0] =
-          std::get<typename ProtocolAction::ActCoalitionBid>(p.v());
-      return f3(cbid0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActPass>(
-                   p.v())) {
-      const auto &[side0] = std::get<typename ProtocolAction::ActPass>(p.v());
-      return f4(side0);
-    } else if (std::holds_alternative<typename ProtocolAction::ActClose>(
-                   p.v())) {
-      return f5;
-    } else if (std::holds_alternative<typename ProtocolAction::ActWithdraw>(
-                   p.v())) {
-      const auto &[side0] =
-          std::get<typename ProtocolAction::ActWithdraw>(p.v());
-      return f6(side0);
-    } else {
-      const auto &[side0] =
-          std::get<typename ProtocolAction::ActBreakBid>(p.v());
-      return f7(side0);
-    }
+    return ProtocolAction_rect<T1>(f, f0, f1, f2, f3, f4, std::move(f5), f6, f7,
+                                   p);
   }
+
   enum class ReadyStatus {
     NEITHERREADY,
     ATTACKERREADY,
@@ -1196,22 +1064,8 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1>
   static T1 ReadyStatus_rec(T1 f, T1 f0, T1 f1, T1 f2, ReadyStatus r) {
-    switch (r) {
-    case ReadyStatus::NEITHERREADY: {
-      return f;
-    }
-    case ReadyStatus::ATTACKERREADY: {
-      return f0;
-    }
-    case ReadyStatus::DEFENDERREADY: {
-      return f1;
-    }
-    case ReadyStatus::BOTHREADY: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+    return ReadyStatus_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                std::move(f2), r);
   }
 
   static bool is_ready(ReadyStatus rs, Side side);
@@ -1312,10 +1166,9 @@ struct CoalitionBidHonorTraceCase {
           std::move(defender_coalition), std::move(bid_history), ready});
     }
 
-    static BatchallPhase phaseagreed(BatchallChallenge challenge,
-                                     BatchallResponse response,
-                                     ForceBid final_attacker,
-                                     ForceBid final_defender) {
+    static BatchallPhase
+    phaseagreed(BatchallChallenge challenge, BatchallResponse response,
+                ForceBid final_attacker, ForceBid final_defender) {
       return BatchallPhase(
           PhaseAgreed{std::move(challenge), std::move(response),
                       std::move(final_attacker), std::move(final_defender)});
@@ -1349,8 +1202,8 @@ struct CoalitionBidHonorTraceCase {
         const auto &[resp0] =
             std::get<typename ProtocolAction::ActRespond>(action.v());
         return std::make_optional<Commander>(resp0.resp_defender);
-      } else if (std::holds_alternative<typename ProtocolAction::ActBid>(
-                     action.v())) {
+      } else if (
+          std::holds_alternative<typename ProtocolAction::ActBid>(action.v())) {
         const auto &[bid0] =
             std::get<typename ProtocolAction::ActBid>(action.v());
         return std::make_optional<Commander>(bid0.bid_commander);
@@ -1372,9 +1225,7 @@ struct CoalitionBidHonorTraceCase {
     std::optional<Commander> get_side_commander(Side side) const {
       if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
               this->v())) {
-        const auto &[challenge, response, attacker_bid, defender_bid,
-                     attacker_coalition0, defender_coalition0, bid_history,
-                     ready] =
+        const auto &[_, _, attacker_bid, defender_bid, _, _, _, _] =
             std::get<typename BatchallPhase::PhaseBidding>(this->v());
         switch (side) {
         case Side::ATTACKER: {
@@ -1394,9 +1245,7 @@ struct CoalitionBidHonorTraceCase {
     uint64_t get_bidding_measure() const {
       if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
               this->v())) {
-        const auto &[challenge, response, attacker_bid, defender_bid,
-                     attacker_coalition0, defender_coalition0, bid_history,
-                     ready0] =
+        const auto &[_, _, attacker_bid, defender_bid, _, _, _, ready0] =
             std::get<typename BatchallPhase::PhaseBidding>(this->v());
         return ((bid_metrics(attacker_bid).fm_total_ecr +
                  bid_metrics(defender_bid).fm_total_ecr) +
@@ -1419,11 +1268,11 @@ struct CoalitionBidHonorTraceCase {
     }
 
     uint64_t phase_depth() const {
-      if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(
-              this->v())) {
+      if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(this->v())) {
         return UINT64_C(4);
-      } else if (std::holds_alternative<
-                     typename BatchallPhase::PhaseChallenged>(this->v())) {
+      } else if (
+          std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
+              this->v())) {
         return UINT64_C(3);
       } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
                      this->v())) {
@@ -1446,8 +1295,7 @@ struct CoalitionBidHonorTraceCase {
     }
 
     bool is_terminal() const {
-      if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
-              this->v())) {
+      if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(this->v())) {
         return true;
       } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
                      this->v())) {
@@ -1463,20 +1311,22 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, typename F1, typename F2, typename F3, typename F4,
             typename F5, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, BatchallChallenge &> &&
-             std::is_invocable_r_v<T1, F2 &, BatchallChallenge &,
-                                   BatchallResponse &> &&
-             std::is_invocable_r_v<T1, F3 &, BatchallChallenge &,
-                                   BatchallResponse &, ForceBid &, ForceBid &,
-                                   std::optional<List<CoalitionMember>> &,
-                                   std::optional<List<CoalitionMember>> &,
-                                   List<ForceBid> &, ReadyStatus &> &&
-             std::is_invocable_r_v<T1, F4 &, BatchallChallenge &,
-                                   BatchallResponse &, ForceBid &,
-                                   ForceBid &> &&
-             std::is_invocable_r_v<T1, F5 &, BatchallChallenge &,
-                                   RefusalReason &> &&
-             std::is_invocable_r_v<T1, F6 &, ProtocolAction &>
+    requires std::is_invocable_r_v<T1, F1 &, const BatchallChallenge &> &&
+             std::is_invocable_r_v<T1, F2 &, const BatchallChallenge &,
+                                   const BatchallResponse &> &&
+             std::is_invocable_r_v<T1, F3 &, const BatchallChallenge &,
+                                   const BatchallResponse &, const ForceBid &,
+                                   const ForceBid &,
+                                   const std::optional<List<CoalitionMember>> &,
+                                   const std::optional<List<CoalitionMember>> &,
+                                   const List<ForceBid> &,
+                                   const ReadyStatus &> &&
+             std::is_invocable_r_v<T1, F4 &, const BatchallChallenge &,
+                                   const BatchallResponse &, const ForceBid &,
+                                   const ForceBid &> &&
+             std::is_invocable_r_v<T1, F5 &, const BatchallChallenge &,
+                                   const RefusalReason &> &&
+             std::is_invocable_r_v<T1, F6 &, const ProtocolAction &>
   static T1 BatchallPhase_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3,
                                F5 &&f4, F6 &&f5, const BatchallPhase &b) {
     if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b.v())) {
@@ -1491,21 +1341,21 @@ struct CoalitionBidHonorTraceCase {
       const auto &[challenge0, response0] =
           std::get<typename BatchallPhase::PhaseResponded>(b.v());
       return f1(challenge0, response0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
-                   b.v())) {
+    } else if (
+            std::holds_alternative<typename BatchallPhase::PhaseBidding>(b.v())) {
       const auto &[challenge0, response0, attacker_bid0, defender_bid0,
                    attacker_coalition1, defender_coalition1, bid_history0,
                    ready0] =
           std::get<typename BatchallPhase::PhaseBidding>(b.v());
       return f2(challenge0, response0, attacker_bid0, defender_bid0,
                 attacker_coalition1, defender_coalition1, bid_history0, ready0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
-                   b.v())) {
+    } else if (
+            std::holds_alternative<typename BatchallPhase::PhaseAgreed>(b.v())) {
       const auto &[challenge0, response0, final_attacker0, final_defender0] =
           std::get<typename BatchallPhase::PhaseAgreed>(b.v());
       return f3(challenge0, response0, final_attacker0, final_defender0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
-                   b.v())) {
+    } else if (
+            std::holds_alternative<typename BatchallPhase::PhaseRefused>(b.v())) {
       const auto &[challenge0, reason0] =
           std::get<typename BatchallPhase::PhaseRefused>(b.v());
       return f4(challenge0, reason0);
@@ -1518,57 +1368,9 @@ struct CoalitionBidHonorTraceCase {
 
   template <typename T1, typename F1, typename F2, typename F3, typename F4,
             typename F5, typename F6>
-    requires std::is_invocable_r_v<T1, F1 &, BatchallChallenge &> &&
-             std::is_invocable_r_v<T1, F2 &, BatchallChallenge &,
-                                   BatchallResponse &> &&
-             std::is_invocable_r_v<T1, F3 &, BatchallChallenge &,
-                                   BatchallResponse &, ForceBid &, ForceBid &,
-                                   std::optional<List<CoalitionMember>> &,
-                                   std::optional<List<CoalitionMember>> &,
-                                   List<ForceBid> &, ReadyStatus &> &&
-             std::is_invocable_r_v<T1, F4 &, BatchallChallenge &,
-                                   BatchallResponse &, ForceBid &,
-                                   ForceBid &> &&
-             std::is_invocable_r_v<T1, F5 &, BatchallChallenge &,
-                                   RefusalReason &> &&
-             std::is_invocable_r_v<T1, F6 &, ProtocolAction &>
   static T1 BatchallPhase_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                               F6 &&f5, const BatchallPhase &b) {
-    if (std::holds_alternative<typename BatchallPhase::PhaseIdle>(b.v())) {
-      return f;
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseChallenged>(
-                   b.v())) {
-      const auto &[challenge0] =
-          std::get<typename BatchallPhase::PhaseChallenged>(b.v());
-      return f0(challenge0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseResponded>(
-                   b.v())) {
-      const auto &[challenge0, response0] =
-          std::get<typename BatchallPhase::PhaseResponded>(b.v());
-      return f1(challenge0, response0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseBidding>(
-                   b.v())) {
-      const auto &[challenge0, response0, attacker_bid0, defender_bid0,
-                   attacker_coalition1, defender_coalition1, bid_history0,
-                   ready0] =
-          std::get<typename BatchallPhase::PhaseBidding>(b.v());
-      return f2(challenge0, response0, attacker_bid0, defender_bid0,
-                attacker_coalition1, defender_coalition1, bid_history0, ready0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseAgreed>(
-                   b.v())) {
-      const auto &[challenge0, response0, final_attacker0, final_defender0] =
-          std::get<typename BatchallPhase::PhaseAgreed>(b.v());
-      return f3(challenge0, response0, final_attacker0, final_defender0);
-    } else if (std::holds_alternative<typename BatchallPhase::PhaseRefused>(
-                   b.v())) {
-      const auto &[challenge0, reason0] =
-          std::get<typename BatchallPhase::PhaseRefused>(b.v());
-      return f4(challenge0, reason0);
-    } else {
-      const auto &[reason0] =
-          std::get<typename BatchallPhase::PhaseAborted>(b.v());
-      return f5(reason0);
-    }
+    return BatchallPhase_rect<T1>(std::move(f), f0, f1, f2, f3, f4, f5, b);
   }
 
   using Honor = Z;
@@ -1601,46 +1403,21 @@ struct CoalitionBidHonorTraceCase {
       Commander{UINT64_C(2), Clan::CLANWOLF, Rank::STARCAPTAIN, true};
   static inline const Commander bear_ally =
       Commander{UINT64_C(3), Clan::CLANGHOSTBEAR, Rank::STARCAPTAIN, false};
-  static inline const Unit timberwolf = Unit{UINT64_C(101),
-                                             UnitClass::OMNIMECH,
-                                             WeightClass::HEAVY,
-                                             UINT64_C(75),
-                                             UINT64_C(2),
-                                             UINT64_C(3),
-                                             true,
-                                             true};
-  static inline const Unit direwolf = Unit{UINT64_C(102),
-                                           UnitClass::OMNIMECH,
-                                           WeightClass::ASSAULT,
-                                           UINT64_C(100),
-                                           UINT64_C(2),
-                                           UINT64_C(3),
-                                           true,
-                                           true};
-  static inline const Unit summoner = Unit{UINT64_C(103),
-                                           UnitClass::OMNIMECH,
-                                           WeightClass::HEAVY,
-                                           UINT64_C(70),
-                                           UINT64_C(3),
-                                           UINT64_C(4),
-                                           false,
-                                           true};
-  static inline const Unit mad_dog = Unit{UINT64_C(104),
-                                          UnitClass::OMNIMECH,
-                                          WeightClass::HEAVY,
-                                          UINT64_C(60),
-                                          UINT64_C(3),
-                                          UINT64_C(4),
-                                          false,
-                                          true};
-  static inline const Unit elementals = Unit{UINT64_C(105),
-                                             UnitClass::ELEMENTAL,
-                                             WeightClass::LIGHT,
-                                             UINT64_C(5),
-                                             UINT64_C(3),
-                                             UINT64_C(4),
-                                             false,
-                                             true};
+  static inline const Unit timberwolf =
+      Unit{UINT64_C(101), UnitClass::OMNIMECH, WeightClass::HEAVY, UINT64_C(75),
+           UINT64_C(2), UINT64_C(3), true, true};
+  static inline const Unit direwolf =
+      Unit{UINT64_C(102), UnitClass::OMNIMECH, WeightClass::ASSAULT,
+           UINT64_C(100), UINT64_C(2), UINT64_C(3), true, true};
+  static inline const Unit summoner =
+      Unit{UINT64_C(103), UnitClass::OMNIMECH, WeightClass::HEAVY, UINT64_C(70),
+           UINT64_C(3), UINT64_C(4), false, true};
+  static inline const Unit mad_dog =
+      Unit{UINT64_C(104), UnitClass::OMNIMECH, WeightClass::HEAVY, UINT64_C(60),
+           UINT64_C(3), UINT64_C(4), false, true};
+  static inline const Unit elementals =
+      Unit{UINT64_C(105), UnitClass::ELEMENTAL, WeightClass::LIGHT, UINT64_C(5),
+           UINT64_C(3), UINT64_C(4), false, true};
   static inline const Force falcon_trinary = List<Unit>::cons(
       direwolf,
       List<Unit>::cons(
@@ -1661,14 +1438,11 @@ struct CoalitionBidHonorTraceCase {
       List<CoalitionMember>::cons(
           CoalitionMember{Clan::CLANWOLF, radick, wolf_binary},
           List<CoalitionMember>::nil());
-  static inline const BatchallChallenge sample_challenge =
-      BatchallChallenge{malthus,
-                        Clan::CLANJADEFALCON,
-                        Prize::prizeenclave(UINT64_C(42)),
-                        coalition_force(attacker_coalition),
-                        Location::locplanetsurface(UINT64_C(7), UINT64_C(3)),
-                        TrialType::TRIALOFPOSSESSION,
-                        standard_possession_context};
+  static inline const BatchallChallenge sample_challenge = BatchallChallenge{
+      malthus, Clan::CLANJADEFALCON, Prize::prizeenclave(UINT64_C(42)),
+      coalition_force(attacker_coalition),
+      Location::locplanetsurface(UINT64_C(7), UINT64_C(3)),
+      TrialType::TRIALOFPOSSESSION, standard_possession_context};
   static inline const BatchallResponse sample_response = BatchallResponse{
       radick, Clan::CLANWOLF, coalition_force(defender_coalition)};
   static inline const ForceBid sample_attacker_bid = []() -> ForceBid {
@@ -1750,8 +1524,9 @@ struct CoalitionBidHonorTraceCase {
       coalition_tonnage(attacker_coalition);
   static inline const bool sample_attacker_ready_after_pass = is_ready(
       set_ready(ReadyStatus::NEITHERREADY, Side::ATTACKER), Side::ATTACKER);
-  static inline const bool sample_attacker_not_ready_after_clear = !(is_ready(
-      clear_ready(ReadyStatus::BOTHREADY, Side::ATTACKER), Side::ATTACKER));
+  static inline const bool sample_attacker_not_ready_after_clear =
+      !(is_ready(clear_ready(ReadyStatus::BOTHREADY, Side::ATTACKER),
+                 Side::ATTACKER));
   static inline const bool sample_phase_is_bidding =
       phase_after_initial_bid.is_bidding();
   static inline const bool sample_agreed_terminal = phase_agreed.is_terminal();
@@ -1798,7 +1573,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -1806,7 +1581,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

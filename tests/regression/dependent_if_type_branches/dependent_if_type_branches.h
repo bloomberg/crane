@@ -4,7 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
+#include <cstdint>
 #include <functional>
 
 /// A definition whose return type is a dependent if computing nat in one

@@ -2,20 +2,20 @@
 #define INCLUDED_STM
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
 #include <atomic>
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <stm_adapter.h>
-#include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
+static_assert(crane::rc_is_atomic,
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 template <typename A> struct List;
 
@@ -42,16 +42,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -88,8 +89,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -97,40 +98,41 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
 struct STMDefs {
-  template <typename T1>
-  static void modifyTVar(stm::TVar<T1> a,
-                         std::type_identity_t<crane::fn<T1(T1)>> f);
+  template <typename T1, typename F1>
+    requires std::is_invocable_r_v<T1, F1 &, T1 &&>
+  static void modifyTVar(stm::TVar<T1> a, F1 &&f);
 };
 
 struct stmtest {
-  template <typename T1>
-  static T1 readOrRetry(stm::TVar<T1> tv,
-                        std::type_identity_t<crane::fn<bool(T1)>> ok) {
-    T1 x = stm::readTVar(tv);
+  template <typename T1, typename F1>
+  static T1 readOrRetry(stm::TVar<T1> tv, F1 &&ok) {
+    T1 x = stm::readTVar(std::move(tv));
     if (ok(x)) {
       return x;
     } else {
@@ -138,7 +140,7 @@ struct stmtest {
     }
   }
 
-  static uint64_t stm_basic_counter(std::monostate _x);
+  static uint64_t stm_basic_counter();
   static uint64_t io_basic_counter();
   static uint64_t stm_inc(uint64_t x);
   static uint64_t io_inc(uint64_t x);
@@ -149,15 +151,15 @@ struct stmtest {
   static uint64_t stm_tryDequeue(stm::TVar<List<uint64_t>> q, uint64_t dflt);
   static uint64_t stm_queue_roundtrip(uint64_t x);
   static uint64_t io_queue_roundtrip(uint64_t x);
-  static uint64_t stm_orElse_retry_example(std::monostate _x);
+  static uint64_t stm_orElse_retry_example();
   static uint64_t io_orElse_retry_example();
 };
 
-template <typename T1>
-void STMDefs::modifyTVar(stm::TVar<T1> a,
-                         std::type_identity_t<crane::fn<T1(T1)>> f) {
+template <typename T1, typename F1>
+  requires std::is_invocable_r_v<T1, F1 &, T1 &&>
+void STMDefs::modifyTVar(stm::TVar<T1> a, F1 &&f) {
   T1 val = stm::readTVar(a);
-  stm::writeTVar(a, f(val));
+  stm::writeTVar(std::move(a), f(std::move(val)));
   return;
 }
 

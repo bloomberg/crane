@@ -3,7 +3,6 @@
 
 #include <cerrno>
 #include <chrono>
-#include <crane_itree.h>
 #include <cstdint>
 #include <cstdlib>
 #include <fcntl.h>
@@ -19,8 +18,6 @@
 #include <unistd.h>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct EffectWorkflow {
   /// 1. Use 5 different effect types in one function

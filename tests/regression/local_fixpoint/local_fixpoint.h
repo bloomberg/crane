@@ -9,29 +9,29 @@ struct Monadic {
   template <typename s, typename a> using State = crane::fn<std::pair<a, s>(s)>;
 
   template <typename T1, typename T2> static State<T1, T2> state_return(T2 x) {
-    return [=](const T1 &s) { return std::make_pair(x, s); };
+    return [=, x = std::move(x)](const T1 &s) { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3>
   static State<T1, T3>
   state_bind(std::type_identity_t<State<T1, T2>> ma,
              std::type_identity_t<crane::fn<State<T1, T3>(T2)>> f) {
-    return [=](const T1 &s) {
+    return [=, f = std::move(f), ma = std::move(ma)](const T1 &s) {
       auto [a, s_] = ma(s);
-      return f(a)(s_);
+      return crane::apply2(f, std::move(a), std::move(s_));
     };
   }
 
-  static State<bool, std::monostate> foo_state(std::monostate _x);
+  static State<bool, std::monostate> foo_state();
   static inline const bool foo = []() {
     crane::fn<State<bool, std::monostate>(std::monostate)> foo_state_ =
-        [](std::monostate u) {
+        [](std::monostate) {
           return state_bind<bool, std::monostate, std::monostate>(
-              foo_state(u), [](std::monostate) {
+              foo_state(), [](std::monostate) {
                 return state_return<bool, std::monostate>(std::monostate{});
               });
         };
-    auto [_x, a] = foo_state_(std::monostate{})(true);
+    auto [_x, a] = crane::apply2(foo_state_, std::monostate{}, true);
     return a;
   }();
 };

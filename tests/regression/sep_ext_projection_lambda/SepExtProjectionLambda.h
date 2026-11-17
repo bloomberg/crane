@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTPROJECTIONLAMBDA
 #define INCLUDED_SEPEXTPROJECTIONLAMBDA
 
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <variant>
@@ -9,9 +10,10 @@
 #include "ListDef.h"
 
 namespace SepExtProjectionLambda {
-
 template <typename M>
-concept Sig = requires { typename M::A; };
+concept Sig = requires {
+  typename M::A;
+};
 
 template <Sig S> struct Worker {
   struct item {
@@ -44,7 +46,6 @@ template <Sig S> struct Worker {
     }
   }
 };
-
 } // namespace SepExtProjectionLambda
 
 #endif // INCLUDED_SEPEXTPROJECTIONLAMBDA

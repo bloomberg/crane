@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -21,14 +20,20 @@ enum class CE;
 template <typename ptr> struct FailE;
 struct natParams;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct Nat {
   // TYPES
@@ -75,8 +80,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -106,13 +111,14 @@ public:
 
   explicit Dvalue(DU _v) : v_(_v) {}
 
-  template <typename _U>
-  Dvalue(const Dvalue<_U> &_other)
+  template <typename CraneU>
+  Dvalue(const Dvalue<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Dvalue<_U>::DP>(_other.v())) {
-            const auto &[a0] = std::get<typename Dvalue<_U>::DP>(_other.v());
+          if (std::holds_alternative<typename Dvalue<CraneU>::DP>(_other.v())) {
+            const auto &[a0] =
+                std::get<typename Dvalue<CraneU>::DP>(_other.v());
             return DP{[&]() -> ptr {
-              if constexpr (crane_convertible<ptr, const _U &>) {
+              if constexpr (crane_convertible<ptr, const CraneU &>) {
                 return crane_convert<ptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -134,6 +140,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class AE { A0 };
 enum class BE { B0 };
 enum class CE { C0 };
@@ -145,7 +152,7 @@ template <typename ptr> struct FailE {
   // ACCESSORS
   FailE<ptr> clone() const { return {a0}; }
 
-  template <typename _U> operator FailE<_U>() const { return {a0}; }
+  template <typename CraneU> operator FailE<CraneU>() const { return {a0}; }
 
   // CREATORS
   static FailE<ptr> fail(Dvalue<ptr> a0) { return {std::move(a0)}; }
@@ -157,11 +164,10 @@ using CFGEtop =
 
 template <Params _tcI0, typename T1>
 std::optional<Dvalue<typename _tcI0::ptr>>
-exc_of_event(CFGEtop<typename _tcI0::ptr, T1> e) {
+exc_of_event(const CFGEtop<typename _tcI0::ptr, T1> &e) {
   if (std::holds_alternative<typename Sum1<
-          AE,
-          Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
-               crane::obj>,
+          AE, Sum1<BE, Sum1<CE, FailE<typename _tcI0::ptr>, crane::obj>,
+                   crane::obj>,
           T1>::Inl1>(e.v())) {
     return std::optional<Dvalue<typename _tcI0::ptr>>();
   } else {

@@ -2,8 +2,8 @@
 #define INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL_LIB
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -56,8 +56,8 @@ struct Lib {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -66,7 +66,6 @@ struct Lib {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rect(T1 f, F1 &&f0, const lst &l) {
     if (std::holds_alternative<typename lst::Nil>(l.v())) {
       return f;
@@ -77,14 +76,8 @@ struct Lib {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rec(T1 f, F1 &&f0, const lst &l) {
-    if (std::holds_alternative<typename lst::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
-      return f0(a0, *a1, lst_rec<T1>(std::move(f), f0, *a1));
-    }
+    return lst_rect<T1>(std::move(f), f0, l);
   }
 
   static uint64_t len(const lst &l);

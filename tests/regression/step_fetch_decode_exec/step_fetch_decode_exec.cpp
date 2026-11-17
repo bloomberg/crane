@@ -23,7 +23,8 @@ StepFetchDecodeExec::execute(const StepFetchDecodeExec::state &s,
   } else {
     const auto &[a0] =
         std::get<typename StepFetchDecodeExec::instruction::ADD_ACC>(i.v());
-    return state{(UINT64_C(16) ? (s.acc + a0) % UINT64_C(16) : (s.acc + a0)),
+    auto &&_once1 = (s.acc + a0);
+    return state{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1),
                  (s.pc + UINT64_C(2)), s.rom};
   }
 }

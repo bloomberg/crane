@@ -5,9 +5,10 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -38,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,27 +95,30 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -151,6 +156,15 @@ struct MapPartialApp {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -175,8 +189,8 @@ struct MapPartialApp {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -185,8 +199,6 @@ struct MapPartialApp {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -198,16 +210,8 @@ struct MapPartialApp {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
-                tree_rec<T1>(f, f0, *a2));
-    }
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   static uint64_t tree_sum(const tree &t);
@@ -226,22 +230,26 @@ struct MapPartialApp {
   /// f = wrap t
   /// map (fun v => tree_sum (f v)) 1; 2; 3
   /// = tree_sum(Node(t,1,Leaf)); tree_sum(Node(t,2,Leaf));
-  /// tree_sum(Node(t,3,Leaf)) = 10+1; 10+2; 10+3 = 11; 12; 13 sum_list 11; 12;
-  /// 13 = 36
+  /// tree_sum(Node(t,3,Leaf))
+  /// = 10+1; 10+2; 10+3
+  /// = 11; 12; 13
+  /// sum_list 11; 12; 13 = 36
   static inline const uint64_t map_partial_bug = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
-        return wrap(std::move(t), _x0);
-      };
+      crane::fn<tree(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> tree {
+            return wrap(std::move(t), _x0);
+          };
       List<uint64_t> results =
           List<uint64_t>::cons(
               UINT64_C(1),
               List<uint64_t>::cons(
                   UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
+                  List<uint64_t>::cons(UINT64_C(3),
+                                       List<uint64_t>::nil())))
               .template map<uint64_t>(
-                  [=](uint64_t v) { return tree_sum(f(v)); });
+              [=, f = std::move(f)](uint64_t v) { return tree_sum(f(v)); });
       return sum_list(std::move(results));
     }();
   }();
@@ -250,19 +258,22 @@ struct MapPartialApp {
   static inline const uint64_t map_partial_pair = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-      crane::fn<tree(uint64_t)> f = [=](uint64_t _x0) -> tree {
-        return wrap(std::move(t), _x0);
-      };
+      crane::fn<tree(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> tree {
+            return wrap(std::move(t), _x0);
+          };
       std::pair<crane::fn<tree(uint64_t)>, uint64_t> p =
-          std::make_pair(f, UINT64_C(0));
+          std::make_pair(std::move(f), UINT64_C(0));
       List<uint64_t> results =
           List<uint64_t>::cons(
               UINT64_C(1),
               List<uint64_t>::cons(
                   UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
-              .template map<uint64_t>(
-                  [=](uint64_t v) { return tree_sum(p.first(v)); });
+                  List<uint64_t>::cons(UINT64_C(3),
+                                       List<uint64_t>::nil())))
+              .template map<uint64_t>([=, p = std::move(p)](uint64_t v) {
+            return tree_sum(p.first(v));
+          });
       return sum_list(std::move(results));
     }();
   }();
@@ -271,24 +282,28 @@ struct MapPartialApp {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-      crane::fn<tree(uint64_t)> f1 = [=](uint64_t _x0) -> tree {
-        return wrap(std::move(t1), _x0);
-      };
-      crane::fn<tree(uint64_t)> f2 = [=](uint64_t _x0) -> tree {
-        return wrap(std::move(t2), _x0);
-      };
+      crane::fn<tree(uint64_t)> f1 =
+          [=, t1 = std::move(t1)](uint64_t _x0) -> tree {
+            return wrap(std::move(t1), _x0);
+          };
+      crane::fn<tree(uint64_t)> f2 =
+          [=, t2 = std::move(t2)](uint64_t _x0) -> tree {
+            return wrap(std::move(t2), _x0);
+          };
       List<uint64_t> r1 =
           List<uint64_t>::cons(
               UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))
+              List<uint64_t>::cons(UINT64_C(2),
+                                   List<uint64_t>::nil()))
               .template map<uint64_t>(
-                  [=](uint64_t v) { return tree_sum(f1(v)); });
+              [=, f1 = std::move(f1)](uint64_t v) { return tree_sum(f1(v)); });
       List<uint64_t> r2 =
           List<uint64_t>::cons(
               UINT64_C(3),
-              List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))
+              List<uint64_t>::cons(UINT64_C(4),
+                                   List<uint64_t>::nil()))
               .template map<uint64_t>(
-                  [=](uint64_t v) { return tree_sum(f2(v)); });
+              [=, f2 = std::move(f2)](uint64_t v) { return tree_sum(f2(v)); });
       return (sum_list(std::move(r1)) + sum_list(std::move(r2)));
     }();
   }();

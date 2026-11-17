@@ -1,21 +1,21 @@
 #include "load_program_head_write.h"
 
 List<uint64_t> LoadProgramHeadWrite::update_nth(uint64_t n, uint64_t x,
-                                                List<uint64_t> l) {
+                                                const List<uint64_t> &l) {
   if (n <= 0) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return l;
     } else {
-      auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
+      const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       return List<uint64_t>::cons(x, *a1);
     }
   } else {
     uint64_t n_ = n - 1;
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return l;
     } else {
-      auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
-      return List<uint64_t>::cons(std::move(a00), update_nth(n_, x, *a10));
+      const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(l.v());
+      return List<uint64_t>::cons(a00, update_nth(n_, x, *a10));
     }
   }
 }
@@ -48,9 +48,9 @@ LoadProgramHeadWrite::load_program(LoadProgramHeadWrite::state s, uint64_t base,
     LoadProgramHeadWrite::state s1 =
         set_prom_params(std::move(s), base, a0, true);
     LoadProgramHeadWrite::state s2 = execute_wpm(std::move(s1));
-    return load_program(std::move(s2),
-                        (UINT64_C(4096) ? (base + UINT64_C(1)) % UINT64_C(4096)
-                                        : (base + UINT64_C(1))),
-                        *a1);
+    auto &&_once1 = (base + UINT64_C(1));
+    return load_program(
+        std::move(s2), (UINT64_C(4096) ? _once1 % UINT64_C(4096) : _once1),
+        *a1);
   }
 }

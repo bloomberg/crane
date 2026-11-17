@@ -11,10 +11,9 @@ Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
 
 std::optional<Nat> InterpParamsFamily::run(
     const Nat &fuel,
-    Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
-               InterpParamsFamily::noE, crane::obj>,
-          Nat>
-        t) {
+    const Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
+                     InterpParamsFamily::noE, crane::obj>,
+                Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {
@@ -23,32 +22,29 @@ std::optional<Nat> InterpParamsFamily::run(
     if (std::holds_alternative<typename ItreeF<
             Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
                  InterpParamsFamily::noE, crane::obj>,
-            Nat,
-            Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
-                       InterpParamsFamily::noE, crane::obj>,
-                  Nat>>::RetF>(_sv0.v())) {
+            Nat, Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
+                            InterpParamsFamily::noE, crane::obj>,
+                       Nat>>::RetF>(_sv0.v())) {
       const auto &[r0] = std::get<typename ItreeF<
           Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
                InterpParamsFamily::noE, crane::obj>,
-          Nat,
-          Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
-                     InterpParamsFamily::noE, crane::obj>,
-                Nat>>::RetF>(_sv0.v());
+          Nat, Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
+                          InterpParamsFamily::noE, crane::obj>,
+                     Nat>>::RetF>(_sv0.v());
       return std::make_optional<Nat>(r0);
-    } else if (std::holds_alternative<typename ItreeF<
-                   Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
-                        InterpParamsFamily::noE, crane::obj>,
-                   Nat,
-                   Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
-                              InterpParamsFamily::noE, crane::obj>,
-                         Nat>>::TauF>(_sv0.v())) {
+    } else if (
+        std::holds_alternative<typename ItreeF<
+            Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
+                 InterpParamsFamily::noE, crane::obj>,
+            Nat, Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
+                            InterpParamsFamily::noE, crane::obj>,
+                       Nat>>::TauF>(_sv0.v())) {
       const auto &[t0] = std::get<typename ItreeF<
           Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
                InterpParamsFamily::noE, crane::obj>,
-          Nat,
-          Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
-                     InterpParamsFamily::noE, crane::obj>,
-                Nat>>::TauF>(_sv0.v());
+          Nat, Itree<Sum1<InterpParamsFamily::putE<InterpParamsFamily::ptr>,
+                          InterpParamsFamily::noE, crane::obj>,
+                     Nat>>::TauF>(_sv0.v());
       return run(*a0, t0);
     } else {
       return std::optional<Nat>();

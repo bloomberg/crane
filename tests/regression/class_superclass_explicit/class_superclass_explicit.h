@@ -2,6 +2,7 @@
 #define INCLUDED_CLASS_SUPERCLASS_EXPLICIT
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>
@@ -16,7 +17,7 @@ concept Ext = requires {
 
 struct ClassSuperclassExplicit {
   struct bn {
-    static uint64_t base(uint64_t n) { return n; }
+    constexpr static uint64_t base(uint64_t n) { return n; }
   };
 
   static_assert(Base<bn, uint64_t>);
@@ -24,7 +25,7 @@ struct ClassSuperclassExplicit {
   struct en {
     using ext_base = bn;
 
-    static uint64_t ext(uint64_t n) { return (n + UINT64_C(1)); }
+    constexpr static uint64_t ext(uint64_t n) { return (n + UINT64_C(1)); }
   };
 
   static_assert(Ext<en, uint64_t>);

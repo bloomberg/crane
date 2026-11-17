@@ -2,7 +2,6 @@
 #define INCLUDED_PARTIAL_APP_ALIAS_VALUE_SLOT
 
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -15,14 +14,20 @@ template <typename iptr> struct Dval;
 template <typename iptr> struct TopE;
 struct natIPtr;
 using iptr = crane::obj;
-template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-  } && (requires {
-    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-  });
+template <typename I>
+concept IPtr = requires {
+  typename I::iptr;
+} && (requires {
+  {
+    I::zero_iptr()
+  }
+  -> std::convertible_to<typename I::iptr>;
+} || requires {
+  {
+    I::zero_iptr
+  }
+  -> std::convertible_to<typename I::iptr>;
+});
 
 struct Nat {
   // TYPES
@@ -69,8 +74,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -85,7 +90,7 @@ template <typename iptr> struct Dval {
   // ACCESSORS
   Dval<iptr> clone() const { return {i}; }
 
-  template <typename _U> operator Dval<_U>() const { return {i}; }
+  template <typename CraneU> operator Dval<CraneU>() const { return {i}; }
 
   // CREATORS
   static Dval<iptr> diptr(iptr i) { return {std::move(i)}; }
@@ -98,7 +103,7 @@ template <typename iptr> struct TopE {
   // ACCESSORS
   TopE<iptr> clone() const { return {a0}; }
 
-  template <typename _U> operator TopE<_U>() const { return {a0}; }
+  template <typename CraneU> operator TopE<CraneU>() const { return {a0}; }
 
   // CREATORS
   static TopE<iptr> fail(Dval<iptr> a0) { return {std::move(a0)}; }
@@ -120,8 +125,8 @@ struct natIPtr {
 static_assert(IPtr<natIPtr>);
 
 struct PartialAppAliasValueSlot {
-  static inline const Top<typename natIPtr::iptr, Dval<typename natIPtr::iptr>>
-      go = seed<natIPtr>();
+  static inline const Top<typename natIPtr::iptr,
+                          Dval<typename natIPtr::iptr>> go = seed<natIPtr>();
 };
 
 #endif // INCLUDED_PARTIAL_APP_ALIAS_VALUE_SLOT

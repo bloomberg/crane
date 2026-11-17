@@ -1,16 +1,13 @@
 #ifndef INCLUDED_ERASED_DVAL_IN_CONTAINER
 #define INCLUDED_ERASED_DVAL_IN_CONTAINER
 
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
-#include <optional>
-#include <utility>
-#include <memory>
 #include "obj.h"
 #include "crane_fn.h"
 
@@ -20,45 +17,39 @@
 
 struct Nat;
 template <typename A>struct List;
-template <typename ptr, typename
-iptr>struct Dval;
+template <typename ptr, typename iptr>struct Dval;
 struct natIPtr;
 struct ProvenanceV;
 struct PointerV;using iptr = crane::obj;
-using ptr = crane::obj;template <typename
-I>concept IPtr = requires {
-    typename I::iptr;
-    { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
-  });template <typename
-I>concept Provenance = requires {
-    typename I::prov;
-  } && (requires {
-    { I::nil_prov() } -> std::convertible_to<typename I::prov>;
-  } || requires {
-    { I::nil_prov } -> std::convertible_to<typename I::prov>;
-  });template <typename
-I>concept Pointer = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::null() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::null } -> std::convertible_to<typename I::ptr>;
-  });template <typename
-I>concept Params = requires {
-    typename I::ADDR;
-    typename I::PROV;
-    typename I::PTR;
-    typename I::IPTR;
-  } && (requires {
-    { I::zero_addr() } -> std::convertible_to<typename I::ADDR>;
-  } || requires {
-    { I::zero_addr } -> std::convertible_to<typename I::ADDR>;
-  });
-struct Nat {
+using ptr = crane::obj;template <typename I>concept IPtr = requires {
+                                              typename I::iptr;
+                                              { I::to_Z(std::declval<typename I::iptr>()) } -> std::convertible_to<Nat>;
+                                            } && (requires {
+                                              { I::zero_iptr() } -> std::convertible_to<typename I::iptr>;
+                                            } || requires {
+                                              { I::zero_iptr } -> std::convertible_to<typename I::iptr>;
+                                            });template <typename I>concept Provenance = requires {
+                                                                      typename I::prov;
+                                                                    } && (requires {
+                                                                      { I::nil_prov() } -> std::convertible_to<typename I::prov>;
+                                                                    } || requires {
+                                                                      { I::nil_prov } -> std::convertible_to<typename I::prov>;
+                                                                    });template <typename I>concept Pointer = requires {
+                                                                                              typename I::ptr;
+                                                                                            } && (requires {
+                                                                                              { I::null() } -> std::convertible_to<typename I::ptr>;
+                                                                                            } || requires {
+                                                                                              { I::null } -> std::convertible_to<typename I::ptr>;
+                                                                                            });template <typename I>concept Params = requires {
+                                                                                                                      typename I::ADDR;
+                                                                                                                      typename I::PROV;
+                                                                                                                      typename I::PTR;
+                                                                                                                      typename I::IPTR;
+                                                                                                                    } && (requires {
+                                                                                                                      { I::zero_addr() } -> std::convertible_to<typename I::ADDR>;
+                                                                                                                    } || requires {
+                                                                                                                      { I::zero_addr } -> std::convertible_to<typename I::ADDR>;
+                                                                                                                    });struct Nat {
   // TYPES
 struct O {
 
@@ -97,35 +88,34 @@ _cur = _next(_cur->v_mut());
 }
 Nat(const Nat&) = default;
 Nat& operator=(const Nat&) = default;
-Nat(Nat&&) noexcept = default;
-Nat& operator=(Nat&&) noexcept = default;
+Nat(Nat&&) = default;
+Nat& operator=(Nat&&) = default;
 inline variant_t& v_mut() {
 return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
 Nat add(Nat m) const {
-std::shared_ptr<Nat> _head{};
-std::shared_ptr<Nat>* _write = &_head;
+std::optional<Nat> _root{};
+std::shared_ptr<Nat>* _write = nullptr;
 const Nat* _loop_self = this;
-Nat _loop_m = std::move(m);
 while (true) {
 auto&& _sv = *_loop_self;
 if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-*_write = std::make_shared<Nat>(std::move(_loop_m));
+auto _value = std::move(m);
+(_write ? *(*_write = std::make_shared<Nat>(std::move(_value))) : _root.emplace(std::move(_value)));
 break;
 } else {
 const auto& [a0] = std::get<typename Nat::S>(_sv.v());
-auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-*_write = std::move(_cell);
-_write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+auto _cell = typename Nat::S(nullptr);
+Nat& _node = (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell))) : _root.emplace(std::move(_cell)));
+_write = &std::get<typename Nat::S>(_node.v_mut()).a0;
 _loop_self = crane_raw(a0);
 continue;
 }
 }
-return std::move(*_head);}
-};template <typename
-A>struct List {
+return std::move(*_root);}
+};template <typename A>struct List {
   // TYPES
 struct Nil {
 
@@ -143,28 +133,25 @@ public:
 List() {}
 explicit List(Nil _v) : v_(_v) {}
 explicit List(Cons _v) : v_(std::move(_v)) {}
-template <typename
-_U>
-List(const List<_U>& _other) : v_([&]() -> variant_t {
-if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+template <typename CraneU>
+List(const List<CraneU>& _other) : v_([&]() -> variant_t {
+if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
 return Nil{};
 } else {
-const auto& [a, l] = std::get<typename List<_U>::Cons>(_other.v());
+const auto& [a, l] = std::get<typename List<CraneU>::Cons>(_other.v());
 return Cons{[&]() -> A {
-if constexpr (crane_convertible<A, const _U&>) {
+if constexpr (crane_convertible<A, const CraneU&>) {
 return crane_convert<A>(a);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
-}(),
-(l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l)) : nullptr)};
+}(), (l ? std::make_shared<List<A>>(crane_convert<List<A>>(*l)) : nullptr)};
 }
 }()) {}
 static List<A> nil() {
 return List<A>(Nil{});}
 static List<A> cons(A a, List<A> l) {
-return List<A>(Cons{std::move(a),
-std::make_shared<List<A>>(std::move(l))});}
+return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});}
   // MANIPULATORS
 ~List() {
 auto _next = [&](variant_t& _v) -> std::shared_ptr<List<A>> {
@@ -183,15 +170,14 @@ _cur = _next(_cur->v_mut());
 }
 List(const List&) = default;
 List& operator=(const List&) = default;
-List(List&&) noexcept = default;
-List& operator=(List&&) noexcept = default;
+List(List&&) = default;
+List& operator=(List&&) = default;
 inline variant_t& v_mut() {
 return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-};template <typename ptr, typename
-iptr>struct Dval {
+};template <typename ptr, typename iptr>struct Dval {
   // TYPES
 struct DPtr {
 ptr p;
@@ -208,25 +194,21 @@ public:
 Dval() {}
 explicit Dval(DPtr _v) : v_(std::move(_v)) {}
 explicit Dval(DIptr _v) : v_(std::move(_v)) {}
-template <typename _U0, typename _U1>
-Dval(const Dval<_U0,
-_U1>& _other) : v_([&]() -> variant_t {
-if (std::holds_alternative<typename Dval<_U0,
-_U1>::DPtr>(_other.v())) {
-const auto& [p] = std::get<typename Dval<_U0,
-_U1>::DPtr>(_other.v());
+template <typename CraneU0, typename CraneU1>
+Dval(const Dval<CraneU0, CraneU1>& _other) : v_([&]() -> variant_t {
+if (std::holds_alternative<typename Dval<CraneU0, CraneU1>::DPtr>(_other.v())) {
+const auto& [p] = std::get<typename Dval<CraneU0, CraneU1>::DPtr>(_other.v());
 return DPtr{[&]() -> ptr {
-if constexpr (crane_convertible<ptr, const _U0&>) {
+if constexpr (crane_convertible<ptr, const CraneU0&>) {
 return crane_convert<ptr>(p);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
 }
 }()};
 } else {
-const auto& [i] = std::get<typename Dval<_U0,
-_U1>::DIptr>(_other.v());
+const auto& [i] = std::get<typename Dval<CraneU0, CraneU1>::DIptr>(_other.v());
 return DIptr{[&]() -> iptr {
-if constexpr (crane_convertible<iptr, const _U1&>) {
+if constexpr (crane_convertible<iptr, const CraneU1&>) {
 return crane_convert<iptr>(i);
 } else {
 throw std::logic_error("unreachable: inactive constructor field at this instantiation");
@@ -235,66 +217,48 @@ throw std::logic_error("unreachable: inactive constructor field at this instanti
 }
 }()) {}
 static Dval<ptr, iptr> dptr(ptr p) {
-return Dval<ptr,
-iptr>(DPtr{std::move(p)});}
+return Dval<ptr, iptr>(DPtr{std::move(p)});}
 static Dval<ptr, iptr> diptr(iptr i) {
-return Dval<ptr,
-iptr>(DIptr{std::move(i)});}
+return Dval<ptr, iptr>(DIptr{std::move(i)});}
   // MANIPULATORS
 inline variant_t& v_mut() {
 return v_;}
   // ACCESSORS
 const variant_t& v() const {
 return v_;}
-template <Params
-_tcI0>
+template <Params _tcI0>
 std::optional<List<Dval<ptr, iptr>>> wrap() const {
-return std::make_optional<List<Dval<ptr, iptr>>>(List<Dval<ptr,
-iptr>>::cons(*this, List<Dval<ptr, iptr>>::nil()));}
-};template <Params
-_tcI0>List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> dlist(){return List<Dval<typename _tcI0::PTR::ptr,
-typename _tcI0::IPTR::iptr>>::cons(Dval<typename _tcI0::PTR::ptr,
-typename _tcI0::IPTR::iptr>::diptr(_tcI0::IPTR::zero_iptr()),
-List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::nil());}
-template <Params
-_tcI0>Nat sum_list(const List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>& l){if (std::holds_alternative<typename List<Dval<typename _tcI0::PTR::ptr,
-typename _tcI0::IPTR::iptr>>::Nil>(l.v())) {
+return std::make_optional<List<Dval<ptr, iptr>>>(List<Dval<ptr, iptr>>::cons(*this, List<Dval<ptr, iptr>>::nil()));}
+};template <Params _tcI0>List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> dlist(){return List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::cons(Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>::diptr(_tcI0::IPTR::zero_iptr()), List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::nil());}template <Params _tcI0>Nat sum_list(const List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>& l){if (std::holds_alternative<typename List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Nil>(l.v())) {
 return Nat::o();
 } else {
-const auto& [a0, a1] = std::get<typename List<Dval<typename _tcI0::PTR::ptr,
-typename _tcI0::IPTR::iptr>>::Cons>(l.v());
+const auto& [a0, a1] = std::get<typename List<Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::Cons>(l.v());
 return [&]() {
-if (std::holds_alternative<typename Dval<typename _tcI0::PTR::ptr,
-typename _tcI0::IPTR::iptr>::DPtr>(a0.v())) {
+if (std::holds_alternative<typename Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>::DPtr>(a0.v())) {
 return Nat::o();
 } else {
-const auto& [i0] = std::get<typename Dval<typename _tcI0::PTR::ptr,
-typename _tcI0::IPTR::iptr>::DIptr>(a0.v());
+const auto& [i0] = std::get<typename Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>::DIptr>(a0.v());
 return _tcI0::IPTR::to_Z(i0);
 }
 }().add(sum_list<_tcI0>(*a1));
-}}
-struct natIPtr {
+}}struct natIPtr {
 using iptr = Nat;
 static Nat zero_iptr() {
 return Nat::o();}
 static Nat to_Z(Nat n) {
 return n;}
 };
-static_assert(IPtr<natIPtr>);
-struct ProvenanceV {
+static_assert(IPtr<natIPtr>);struct ProvenanceV {
 using prov = bool;
 constexpr static bool nil_prov() {
 return false;}
 };
-static_assert(Provenance<ProvenanceV>);
-struct PointerV {
+static_assert(Provenance<ProvenanceV>);struct PointerV {
 using ptr = std::pair<Nat, bool>;
 static std::pair<Nat, bool> null() {
 return std::make_pair(Nat::o(), false);}
 };
-static_assert(Pointer<PointerV>);template <IPtr
-_tcI0>struct ParamsV {
+static_assert(Pointer<PointerV>);template <IPtr _tcI0>struct ParamsV {
 using PROV = ProvenanceV;
 using PTR = PointerV;
 using IPTR = _tcI0;
@@ -304,10 +268,8 @@ using prov = typename PROV::prov;
 using ptr = typename PTR::ptr;
 static Nat zero_addr() {
 return Nat::o();}
-};
-struct ErasedDvalInContainer {
-static inline const List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>> l0 = dlist<ParamsV<natIPtr>>();
-static Nat s0(const List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>>& x0_);static std::optional<List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>>> w0(const Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>& x0_);
+};struct ErasedDvalInContainer {
+static inline const List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>> l0 = dlist<ParamsV<natIPtr>>();static Nat s0(const List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>>& x0_);static std::optional<List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>>> w0(const Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>& x0_);
 static inline const Nat run = s0(l0).add([]() -> Nat {
 auto _cs = w0(Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr>::diptr(natIPtr::zero_iptr()));
 if (_cs.has_value()) { const List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr>>& l = *_cs; return s0(l); } else { return Nat::o(); }

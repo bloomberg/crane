@@ -3,8 +3,8 @@
 
 #include "fn.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -54,8 +54,8 @@ struct LiftedLambdaTwoUsers {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -64,7 +64,6 @@ struct LiftedLambdaTwoUsers {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, t &, T1 &>
   static T1 t_rect(T1 f, F1 &&f0, const t &t0) {
     if (std::holds_alternative<typename t::L>(t0.v())) {
       return f;
@@ -75,28 +74,24 @@ struct LiftedLambdaTwoUsers {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, t &, T1 &>
   static T1 t_rec(T1 f, F1 &&f0, const t &t0) {
-    if (std::holds_alternative<typename t::L>(t0.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename t::N>(t0.v());
-      return f0(*a0, t_rec<T1>(std::move(f), f0, *a0));
-    }
+    return t_rect<T1>(std::move(f), f0, t0);
   }
 
   static uint64_t depth(const t &x);
   static inline const uint64_t one = []() {
     return []() {
       t x = t::n(t::l());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) { return depth(x); };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, x = std::move(x)](uint64_t) { return depth(x); };
       return (f(UINT64_C(0)) + f(UINT64_C(1)));
     }();
   }();
   static inline const uint64_t two = []() {
     return []() {
       t y = t::n(t::n(t::l()));
-      crane::fn<uint64_t(uint64_t)> g = [=](uint64_t) { return depth(y); };
+      crane::fn<uint64_t(uint64_t)> g =
+          [=, y = std::move(y)](uint64_t) { return depth(y); };
       return (g(UINT64_C(0)) + g(UINT64_C(1)));
     }();
   }();

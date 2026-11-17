@@ -3,10 +3,9 @@
 
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -80,8 +79,8 @@ struct MutualIndexed {
 
     EvenTree(const EvenTree &) = default;
     EvenTree &operator=(const EvenTree &) = default;
-    EvenTree(EvenTree &&) noexcept = default;
-    EvenTree &operator=(EvenTree &&) noexcept = default;
+    EvenTree(EvenTree &&) = default;
+    EvenTree &operator=(EvenTree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -149,8 +148,8 @@ struct MutualIndexed {
 
     OddTree(const OddTree &) = default;
     OddTree &operator=(const OddTree &) = default;
-    OddTree(OddTree &&) noexcept = default;
-    OddTree &operator=(OddTree &&) noexcept = default;
+    OddTree(OddTree &&) = default;
+    OddTree &operator=(OddTree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -159,7 +158,6 @@ struct MutualIndexed {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &, OddTree &>
   static T1 EvenTree_rect(T1 f, F1 &&f0, uint64_t, const EvenTree &e) {
     if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
       return f;
@@ -170,28 +168,19 @@ struct MutualIndexed {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &, OddTree &>
-  static T1 EvenTree_rec(T1 f, F1 &&f0, uint64_t, const EvenTree &e) {
-    if (std::holds_alternative<typename EvenTree::ELeaf>(e.v())) {
-      return f;
-    } else {
-      const auto &[n1, a1, a2] = std::get<typename EvenTree::ENode>(e.v());
-      return f0(n1, a1, *a2);
-    }
+  static T1 EvenTree_rec(T1 f, F1 &&f0, uint64_t _x, const EvenTree &e) {
+    return EvenTree_rect<T1>(std::move(f), f0, _x, e);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &, EvenTree &>
   static T1 OddTree_rect(F0 &&f, uint64_t, const OddTree &o) {
     const auto &[n1, a1, a2] = std::get<typename OddTree::ONode>(o.v());
     return f(n1, a1, *a2);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &, EvenTree &>
-  static T1 OddTree_rec(F0 &&f, uint64_t, const OddTree &o) {
-    const auto &[n1, a1, a2] = std::get<typename OddTree::ONode>(o.v());
-    return f(n1, a1, *a2);
+  static T1 OddTree_rec(F0 &&f, uint64_t _x, const OddTree &o) {
+    return OddTree_rect<T1>(f, _x, o);
   }
 
   static uint64_t even_val(uint64_t _x, const EvenTree &t);

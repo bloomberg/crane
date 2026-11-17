@@ -1,6 +1,8 @@
 #ifndef INCLUDED_VALID_LAYOUT_WINDOW
 #define INCLUDED_VALID_LAYOUT_WINDOW
 
+#include <cstdint>
+
 struct ValidLayoutWindow {
   struct layout {
     uint64_t base_addr;

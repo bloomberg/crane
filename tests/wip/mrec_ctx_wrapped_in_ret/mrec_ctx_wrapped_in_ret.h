@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -18,14 +17,20 @@ template <typename A, typename B> struct Sum;
 template <typename ptr> struct CountE;
 struct natParams;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct MrecCtxWrappedInRet {
   static std::shared_ptr<ITree<Nat>> run();
@@ -76,8 +81,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -109,14 +114,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -125,9 +131,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -150,10 +156,10 @@ public:
 
 struct Recursion {
   template <typename T1, typename T2 = void, typename T3>
-  static std::shared_ptr<ITree<T3>> interp_mrec(
-      std::type_identity_t<crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>>
-          ctx0,
-      std::shared_ptr<ITree<T3>> x0_);
+  static std::shared_ptr<ITree<T3>>
+  interp_mrec(const std::type_identity_t<
+      crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
+              const std::shared_ptr<ITree<T3>> &x0_);
   template <typename T1, typename T2 = void, typename T3, typename F0>
   static std::shared_ptr<ITree<T3>> mrec(F0 &&ctx0, crane::rebind_t<T1, T3> d);
 };
@@ -168,7 +174,9 @@ template <typename ptr> struct CountE {
   // ACCESSORS
   CountE<ptr> clone() const { return {a0, a1}; }
 
-  template <typename _U> operator CountE<_U>() const { return {a0, a1}; }
+  template <typename CraneU> operator CountE<CraneU>() const {
+    return {a0, a1};
+  }
 
   // CREATORS
   static CountE<ptr> count(Nat a0, ptr a1) {
@@ -184,10 +192,8 @@ template <typename ptr> struct CountE {
 template <Params _tcI0> std::shared_ptr<ITree<Nat>> run_mrec() {
   return Recursion::template mrec<CountE<typename _tcI0::ptr>, crane::obj, Nat>(
       []() {
-        return [](CountE<typename _tcI0::ptr> _x0)
-                   -> std::shared_ptr<ITree<crane::obj>> {
-          return _x0.template ctx<crane::obj>(false);
-        };
+        return [](CountE<typename _tcI0::ptr> _x0) -> std::shared_ptr<
+            ITree<crane::obj>> { return _x0.template ctx<crane::obj>(false); };
       }(),
       CountE<typename _tcI0::ptr>::count(Nat::s(Nat::s(Nat::s(Nat::o()))),
                                          _tcI0::nullp()));
@@ -202,13 +208,13 @@ struct natParams {
 static_assert(Params<natParams>);
 
 template <typename T1, typename T2, typename T3>
-std::shared_ptr<ITree<T3>> Recursion::interp_mrec(
-    std::type_identity_t<crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>>
-        ctx0,
-    std::shared_ptr<ITree<T3>> x0_) {
+std::shared_ptr<ITree<T3>>
+Recursion::interp_mrec(const std::type_identity_t<
+    crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
+                       const std::shared_ptr<ITree<T3>> &x0_) {
   return itree_iter(
-      [=](const std::shared_ptr<ITree<T3>> &t)
-          -> std::shared_ptr<ITree<Sum<std::shared_ptr<ITree<T3>>, T3>>> {
+      [=](const std::shared_ptr<ITree<T3>> &t) -> std::shared_ptr<
+          ITree<Sum<std::shared_ptr<ITree<T3>>, T3>>> {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
@@ -238,21 +244,20 @@ std::shared_ptr<ITree<T3>> Recursion::interp_mrec(
           }
         }
       },
-      std::move(x0_));
+      x0_);
 }
 
 template <typename T1, typename T2, typename T3, typename F0>
 std::shared_ptr<ITree<T3>> Recursion::mrec(F0 &&ctx0,
                                            crane::rebind_t<T1, T3> d) {
   return Recursion::template interp_mrec<T1, T2, T3>(ctx0, ctx0(std::move(d)));
-}
+} /// Takes a bool first, so it stays a function rather than becoming a
 
-/// Takes a bool first, so it stays a function rather than becoming a
 /// member template of CountE -- that shape has a defect of its own
 /// (tests/wip/eta_handler_event_as_template).
 template <typename ptr>
-template <Params _tcI0>
-std::shared_ptr<ITree<ptr>> CountE<ptr>::ctx(bool) const {
+template <Params _tcI0> std::shared_ptr<ITree<ptr>>
+CountE<ptr>::ctx(bool) const {
   const auto &[a0, a1] = *this;
   if (std::holds_alternative<typename Nat::O>(a0.v())) {
     return itree_ret(Nat::o());

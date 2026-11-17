@@ -3,9 +3,9 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -62,8 +62,8 @@ struct RecursiveUnderOption {
 
     c(const c &) = default;
     c &operator=(const c &) = default;
-    c(c &&) noexcept = default;
-    c &operator=(c &&) noexcept = default;
+    c(c &&) = default;
+    c &operator=(c &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -71,18 +71,13 @@ struct RecursiveUnderOption {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::optional<c> &>
-  static T1 c_rect(F0 &&f, const c &c0) {
+  template <typename T1, typename F0> static T1 c_rect(F0 &&f, const c &c0) {
     const auto &[a0] = std::get<typename c::N>(c0.v());
     return f(*a0);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::optional<c> &>
-  static T1 c_rec(F0 &&f, const c &c0) {
-    const auto &[a0] = std::get<typename c::N>(c0.v());
-    return f(*a0);
+  template <typename T1, typename F0> static T1 c_rec(F0 &&f, const c &c0) {
+    return c_rect<T1>(f, c0);
   }
 
   static c build(uint64_t n);

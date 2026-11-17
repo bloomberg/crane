@@ -21,17 +21,14 @@ struct ModuleTypeNameClashProbe {
     };
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
+      requires std::is_invocable_r_v<T1, F0 &, const Bool0 &>
     static T1 t_rect(F0 &&f, const t &t0) {
       const auto &[a0] = t0;
       return f(a0);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
-    static T1 t_rec(F0 &&f, const t &t0) {
-      const auto &[a0] = t0;
-      return f(a0);
+    template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
+      return t_rect<T1>(f, t0);
     }
   };
 
@@ -47,20 +44,17 @@ struct ModuleTypeNameClashProbe {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
+    requires std::is_invocable_r_v<T1, F0 &, const Bool0 &>
   static T1 M_rect(F0 &&f, const M &m) {
     const auto &[a0] = m;
     return f(a0);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, Bool0 &>
-  static T1 M_rec(F0 &&f, const M &m) {
-    const auto &[a0] = m;
-    return f(a0);
+  template <typename T1, typename F0> static T1 M_rec(F0 &&f, const M &m) {
+    return M_rect<T1>(f, m);
   }
 
-  static inline const Bool0 sample = Bool0::TRUE_;
+  static constexpr Bool0 sample = Bool0::TRUE_;
 };
 
 #endif // INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE

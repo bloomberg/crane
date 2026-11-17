@@ -14,5 +14,5 @@ uint64_t double_n(uint64_t n) {
     };
     return __self(n);
     ;
-  }();
+  }() ;
 }

@@ -1,0 +1,377 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** LowerControl: the {!Control_ir} of a normalized program.  See
+    [lower_control.mli]. *)
+
+open Control_ir
+open Control_ir.Term
+
+type t = (Loop.t * Term.t) list
+
+let empty = []
+
+let rec strip =
+  function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _}
+    | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e
+
+(* The occurrence of the call headed by [f]: the global's use, or the read
+   of the member. *)
+let occurrence f =
+  match strip f with
+  | Core.Expr.Global use -> Some (Core.Global_use.occurrence use)
+  | Core.Expr.Bound_variable {occurrence = read; _} -> Some read
+  | _ -> None
+
+(* [body], under the parameters of the loop [target], as that loop:
+   [callee ~depth f] is the number of parameters of the loop's function
+   where [f], under [depth] binders inside them, names it.  A machine
+   adopting the local fixpoint at [adopted] has that entry too. *)
+let tail_loop ?(modulo_cons = false) ?(frames = false) ?adopted ~effects ~target ~callee body =
+  let effect_ = Core_plan.Recursion.sequential effects in
+  (* The loops a read names, by the binders it stands under: the loop it
+     continues, and its number of parameters. *)
+  let own ~depth f = Option.map (fun n -> (target, n)) (callee ~depth f) in
+  let adopts o = Option.cata (Core.Occurrence.equal o) false adopted in
+  let rec lower ?(bound = false) callee depth e =
+    match recognise ~bound callee depth e with
+    | t when continues t = [] -> Return e
+    | t -> t
+  (* The loop [f] names, under [depth] binders, where it takes [n]
+     arguments. *)
+  and named callee ~depth f n =
+    match callee ~depth f with Some (l, n') when n = n' -> Some l | Some _ | None -> None
+  and call callee ~depth = function
+    | Core.Expr.Apply {callee = f; arguments = args} ->
+      Option.bind (named callee ~depth f (List.length args)) (fun l ->
+          Option.map (fun o -> (l, o, args)) (occurrence f) )
+    | _ -> None
+  (* The constructors [e] builds around one call of the loop's function,
+     outermost first, as {!Core_plan.Recursion.strategy} reads a chain: each
+     holds the next in the one argument that calls the function, the
+     innermost holding the call itself, and none calls it elsewhere. *)
+  and chain callee depth e =
+    match e with
+    | Core.Expr.Construct {constructor; arguments = args; _} -> (
+      let calling = List.filteri (fun _ (_, a) -> calls callee ~depth a > 0) (List.mapi (fun i a -> (i, a)) args) in
+      match calling with
+      | [(hole, a)] when calls callee ~depth a = 1 -> (
+        let cell = {constructor; hole; arguments = List.filteri (fun i _ -> i <> hole) args} in
+        match call callee ~depth a with
+        | Some (target, occurrence, arguments) -> Some {cells = [cell]; next = {target; occurrence; arguments}}
+        | None -> Option.map (fun c -> {c with cells = cell :: c.cells}) (chain callee depth a) )
+      | _ -> None )
+    | _ -> None
+  (* The calls of the loops [callee] names in [e], under [depth] binders,
+     the fixpoint adopted counting as one where it is applied. *)
+  and calls callee ~depth e =
+    let n = ref 0 in
+    let rec walk depth e =
+      if Option.has_some (callee ~depth e) then incr n
+      else
+        match e with
+        | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {occurrence = o; _} | Core.Expr.Cofixpoint {occurrence = o; _});
+                           arguments = args} when adopts o ->
+          incr n;
+          List.iter (walk depth) args
+        | Core.Expr.Apply {callee = f; arguments = args} ->
+          walk depth f;
+          List.iter (walk depth) args
+        | Core.Expr.Lambda {body = b; _} -> walk (depth + 1) b
+        | Core.Expr.Let {value = a; body = b; _} ->
+          walk depth a;
+          walk (depth + 1) b
+        | Core.Expr.Match {scrutinee = s; branches; _} ->
+          walk depth s;
+          Array.iter (fun {Core.Match.Branch.binders = ids; body = b; _} -> walk (depth + List.length ids) b) branches
+        | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+          let ids = Core.Recursion.Group.functions rec_group
+          and funs = Core.Recursion.Group.bodies rec_group in
+          Array.iter (walk (depth + Array.length ids)) funs
+        | e -> Base.Core_util.ast_iter (walk depth) e
+    in
+    walk depth e;
+    !n
+  (* The function of the fixpoint [fix] adopted at [occurrence], in the
+     scope [callee] reads under [depth] binders, as an entry's loop: its
+     body, under the fixpoint's name and its parameters, continuing itself
+     and every loop the scope does. *)
+  and entered callee depth occurrence fix =
+    let parameters, inner = Base.Core_util.collect_lams fix in
+    let arity = List.length parameters in
+    let target = Loop.Member (occurrence, 0) in
+    let callee ~depth:d f =
+      match strip f with
+      | Core.Expr.Bound_variable {index = db; _} when db = arity + 1 + d -> Some (target, arity)
+      | _ -> callee ~depth:(depth + 1 + arity + d) f
+    in
+    {loop = target; parameters = List.rev parameters; body = lower callee 0 inner}
+  (* [bound] says [e] is a let's value, or a bind's action: a match there
+     that translation does not generate as statements each assigning the
+     binder ({!Core_plan.Recursion.match_bound_in_place}) runs in a lambda
+     invoked in place, where no call is a turn. *)
+  and recognise ~bound callee depth e =
+    let lower ?(bound = bound) = lower ~bound in
+    let continue_ f target arguments =
+      match occurrence f with
+      | Some occurrence -> Continue {target; occurrence; arguments}
+      | None -> Return e
+    in
+    match e with
+    | Core.Expr.Apply {callee = (Core.Expr.Fixpoint {selected = 0;
+                                                     members = [|{body = fix; _}|];
+                                                     occurrence = o}
+                                                       | Core.Expr.Cofixpoint
+                                                         {selected = 0; members = [|{body = fix; _}|];
+                                                                                             occurrence = o});
+                       arguments = args}
+      when adopts o ->
+      let entered = entered callee depth o fix in
+      if List.compare_lengths args entered.parameters <> 0 then Return e
+      else Entry {entered; name = None; scope = Continue {target = entered.loop; occurrence = o; arguments = args}}
+    | Core.Expr.Let {binder = x;
+                     binder_type = ty;
+                     value = (Core.Expr.Fixpoint {selected = 0;
+                                                  members = [|{body = fix; _}|];
+                                                  occurrence = o} | Core.Expr.Cofixpoint {selected = 0;
+                                                                                          members = [|{body = fix; _}|];
+                                                                                          occurrence = o} as a);
+                     body = b; _}
+      when adopts o -> (
+      let entered = entered callee depth o fix in
+      let arity = List.length entered.parameters in
+      (* The let's binder, under [d] binders, names the entry. *)
+      let entering ~depth:d f =
+        match strip f with
+        | Core.Expr.Bound_variable {index = db; _} when db = d - depth -> Some (entered.loop, arity)
+        | _ -> callee ~depth:d f
+      in
+      (* A fixpoint the scope enters by no turn -- applied only in a
+         closure, or named as a value -- is no way into the machine. *)
+      match lower entering (depth + 1) b with
+      | scope when Control_ir.Term.continues_of entered.loop scope <> [] -> Entry {entered; name = Some (x, ty); scope}
+      | _ -> Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b} )
+    | f when Option.has_some (named callee ~depth f 0) -> continue_ f (Option.get (named callee ~depth f 0)) []
+    | Core.Expr.Apply {callee = f; arguments = args} when Option.has_some (named callee ~depth f (List.length args)) ->
+      continue_ f (Option.get (named callee ~depth f (List.length args))) args
+    | Core.Expr.Construct {constructor = c; arguments = [a]; _} when Core_plan.Recursion.identity c -> lower callee depth a
+    | Core.Expr.Apply {callee = Core.Expr.Global use;
+                       arguments = [a]} when Core_plan.Recursion.identity use.callee && Base.Table.to_inline use.callee ->
+      lower callee depth a
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_plan.Effects.Bind -> (
+      match List.rev args with
+      | Core.Expr.Lambda {parameter = x;
+                          parameter_type = ty;
+                          body = k} :: action :: _ when frames && calls callee ~depth action > 0 ->
+        Resume {binder = x;
+                binder_type = ty;
+                value = lower ~bound:true callee depth action;
+                body = lower callee (depth + 1) k}
+      | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = k} :: action :: _ ->
+        Let {binder = x; binder_type = ty; value = action; body = lower callee (depth + 1) k}
+      | _ -> Return e )
+    | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Core_plan.Effects.Return -> (
+      match List.rev args with value :: _ -> lower callee depth value | [] -> Return e )
+    | Core.Expr.Apply {callee = (Core.Expr.Lambda _ as f); arguments = args} ->
+      let rec enter depth f args =
+        match (f, args) with
+        | Core.Expr.Lambda {parameter = x; parameter_type = ty; body = b}, a :: rest ->
+          Let {binder = x; binder_type = ty; value = a; body = enter (depth + 1) b rest}
+        | Core.Expr.Lambda _, [] -> Return e
+        | b, [] -> lower callee depth b
+        | _, _ :: _ -> Return e
+      in
+      enter depth f args
+    | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} when frames && calls callee ~depth a > 0 ->
+      Resume {binder = x; binder_type = ty; value = lower ~bound:true callee depth a; body = lower callee (depth + 1) b}
+    | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
+      Let {binder = x; binder_type = ty; value = a; body = lower callee (depth + 1) b}
+    | Core.Expr.Match {scrutinee_type = ty;
+                       branches; _} when bound && not (Core_plan.Recursion.match_bound_in_place ty branches) -> Return e
+    | Core.Expr.Match {scrutinee_type = ty; scrutinee = s; branches; _} ->
+      Match
+        { scrutinee_type = ty;
+          scrutinee = s;
+          branches =
+            Array.to_list
+              (Array.map
+                 (fun {Core.Match.Branch.binders = ids; result_type = result_type; pattern = pattern; body = b} ->
+                   {binders = ids; result_type; pattern; body = lower callee (depth + List.length ids) b} )
+                 branches ) }
+    | Core.Expr.Coerce {source_type = from; target_type = into; value = a; occurrence = mocc} ->
+      map_returns (fun v -> Core.Expr.Coerce {source_type = from;
+                                              target_type = into;
+                                              value = v;
+                                              occurrence = mocc}) (lower callee depth a)
+    | Core.Expr.Boxed_value {value = a; occurrence = mocc} ->
+      map_returns (fun v -> Core.Expr.Boxed_value {value = v; occurrence = mocc}) (lower callee depth a)
+    | Core.Expr.Lambda_group_barrier {value = a; occurrence = mocc} ->
+      map_returns (fun v -> Core.Expr.Lambda_group_barrier {value = v; occurrence = mocc}) (lower callee depth a)
+    | Core.Expr.Construct _ when modulo_cons -> (
+      match chain callee depth e with Some c -> Continue_into c | None -> Return e )
+    | e -> Return e
+  in
+  lower own 0 body
+
+(* The fixpoints in [e] whose occurrence [wanted] holds, with the types of
+   their functions. *)
+let rec fixpoints wanted acc e =
+  let acc =
+    match e with
+    | (Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g) when List.exists (Core.Occurrence.equal g.occurrence) wanted ->
+      (g.occurrence, Array.map (fun (m : Core.Recursion.Member.t) -> m.type_) g.members, Core.Recursion.Group.bodies g)
+      :: acc
+    | _ -> acc
+  in
+  let acc = ref acc in
+  Base.Core_util.ast_iter (fun e -> acc := fixpoints wanted !acc e) e;
+  !acc
+
+let lower ~methods plan program =
+  let struc = Core_passes.Phase.structure program in
+  let effects = Core_plan.Effects.analyze struc in
+  let functions, locals = Core_plan.Recursion.tail_loops plan in
+  let modulo_cons, local_modulo_cons = Core_plan.Recursion.modulo_cons_loops plan in
+  let frame_functions, frame_locals = Core_plan.Recursion.frame_loops plan in
+  let defs = ref Names.GlobRef.Map_env.empty in
+  Core_passes.Modutil.struct_iter
+    (fun d ->
+      List.iter
+        (fun (fd : Core.Recursion.Definition.t) -> defs := Names.GlobRef.Map_env.add fd.entity fd !defs)
+        (Base.Core_util.term_defs d) )
+    (fun _ -> ())
+    (fun _ -> ())
+    struc;
+  let generated (fd : Core.Recursion.Definition.t) =
+    Base.Type_util.declared_parameters (Base.Core_util.type_simpl fd.type_) fd.body
+  in
+  (* The body of a function lowered tail modulo cons is read with
+     Normalize's temporaries put back, as the plan reads its chains. *)
+  let read ~builds fd =
+    let parameters, inner = generated fd in
+    (parameters, if builds then Core_plan.Recursion.restore_temporaries inner else inner)
+  in
+  (* What the machine of the function [r], whose body is [inner], adopts:
+     the first fixpoint of one member the plan has it adopt
+     ({!Control_to_cpp.Frame.find_adopted}), where it returns what [r] does: a
+     machine has one result. *)
+  let adoption r inner =
+    let single (_, _, funs) = Array.length funs = 1 in
+    let first o = List.find_opt single (fixpoints [o] [] inner) in
+    let yields_own ty =
+      match Names.GlobRef.Map_env.find_opt r !defs with
+      | Some own -> Core_plan.Recursion.yields_alike own.type_ ty
+      | None -> false
+    in
+    match List.find_map first (Core_plan.Recursion.adoptable_in plan r) with
+    | Some (o, types, _) when yields_own types.(0) -> Some o
+    | Some _ | None -> None
+  in
+  (* A partner's copy spliced into the body of [r] is entered by the
+     machine [lowered] lowers it as ({!Core_passes.Splices.entered_copy}). *)
+  let check_entered r lowered =
+    match Core_passes.Splices.entered_copy (Core_passes.Phase.splices program) r with
+    | Some o when Base.Probe.checking () ->
+      let enters t =
+        List.exists (fun (e : loop) -> Loop.equal e.loop (Loop.Member (o, 0))) (Control_ir.Term.entries t) in
+      if not (Option.cata enters false lowered) then
+        Base.Probe.violation "entered partner"
+          Pp.(str "the machine of " ++ str (Base.Table.kername_of_global r)
+              ++ str " does not enter the partner spliced into its body")
+    | Some _ | None -> ()
+  in
+  let loops = ref [] in
+  let add target parameters body =
+    if not (List.exists (fun (l, _) -> Loop.equal l target) !loops) then
+      loops := (target, Loop {loop = target; parameters = List.rev parameters; body}) :: !loops
+  in
+  Core_passes.Modutil.struct_iter
+    (fun d ->
+      List.iter
+        (fun (fd : Core.Recursion.Definition.t) ->
+          let body = fd.body in
+          let builds = List.exists (Names.GlobRef.UserOrd.equal fd.entity) modulo_cons in
+          let frames = List.exists (Names.GlobRef.UserOrd.equal fd.entity) frame_functions in
+          if builds || frames || List.exists (Names.GlobRef.UserOrd.equal fd.entity) functions then begin
+            let parameters, inner = read ~builds fd in
+            let arity = List.length parameters in
+            let callee ~depth:_ = function
+              | Core.Expr.Global (use : Core.Global_use.t) when Names.GlobRef.UserOrd.equal use.callee fd.entity ->
+                Some arity
+              | _ -> None
+            in
+            let target = Loop.Function fd.entity in
+            let adopted = if frames && not (methods fd.entity) then adoption fd.entity inner else None in
+            let lowered = tail_loop ~modulo_cons:builds ~frames ?adopted ~effects ~target ~callee inner in
+            add target parameters lowered;
+            check_entered fd.entity (Some lowered)
+          end
+          else check_entered fd.entity None;
+          List.iter
+            (fun (occ, funs) ->
+              let builds = List.exists (Core.Occurrence.equal occ) local_modulo_cons in
+              let frames = List.exists (Core.Occurrence.equal occ) frame_locals in
+              let parameters, inner = Base.Core_util.collect_lams funs.(0) in
+              let inner = if builds then Core_plan.Recursion.restore_temporaries inner else inner in
+              let arity = List.length parameters in
+              let callee ~depth f =
+                match strip f with
+                | Core.Expr.Bound_variable {index = db; _} when db = arity + 1 + depth -> Some arity
+                | _ -> None
+              in
+              let target = Loop.Member (occ, 0) in
+              add target parameters (tail_loop ~modulo_cons:builds ~frames ~effects ~target ~callee inner) )
+            (List.rev_map
+               (fun (occ, _, funs) -> (occ, funs))
+               (fixpoints (locals @ local_modulo_cons @ frame_locals) [] body) ) )
+        (Base.Core_util.term_defs d) )
+    (fun _ -> ())
+    (fun _ -> ())
+    struc;
+  List.rev !loops
+
+let loop t l = List.find_map (fun (l', t) -> if Loop.equal l l' then Some t else None) t
+
+(* The occurrences of the global uses and variable reads in the Core terms
+   [t] holds -- what it returns, binds, matches on, and passes a turn or a
+   cell -- each once per copy: what stays a call in the code made of [t]
+   where it is one. *)
+let held_occurrences t =
+  let found = ref [] in
+  let rec ast = function
+    | Core.Expr.Bound_variable {occurrence = o; _} -> found := o :: !found
+    | Core.Expr.Global {occurrence; _} -> found := occurrence :: !found
+    | e -> Base.Core_util.ast_iter ast e
+  in
+  let continue_ (c : Control_ir.Term.continue_) = List.iter ast c.arguments in
+  let rec go : Control_ir.Term.t -> unit = function
+    | Loop l -> go l.body
+    | Let l ->
+      ast l.value;
+      go l.body
+    | Match m ->
+      ast m.scrutinee;
+      List.iter (fun (b : Control_ir.Term.branch) -> go b.body) m.branches
+    | Return v -> ast v
+    | Continue c -> continue_ c
+    | Continue_into c ->
+      List.iter (fun (cell : Control_ir.Term.cell) -> List.iter ast cell.arguments) c.cells;
+      continue_ c.next
+    | Resume r ->
+      go r.value;
+      go r.body
+    | Entry e ->
+      go e.entered.body;
+      go e.scope
+  in
+  go t;
+  !found
+
+(* The Continues of [t] no code made of [t] keeps a call of: each made of an
+   occurrence no other Continue and no term [t] holds shares
+   (held_occurrences).  A copied call shares its occurrence with its
+   copies, and only these are told apart from them. *)
+let taken_continues t =
+  let continues = Control_ir.Term.continues t and held = held_occurrences t in
+  let count o l = List.length (List.filter (Core.Occurrence.equal o) l) in
+  List.filter (fun o -> count o continues = 1 && count o held = 0) continues

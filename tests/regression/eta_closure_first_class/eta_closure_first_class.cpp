@@ -6,11 +6,11 @@
 /// std::function<uint64_t(uint64_t)>.
 uint64_t EtaClosureFirstClass::mkclosure(uint64_t n, uint64_t x0_) {
   List<uint64_t> big = ListDef::template repeat<uint64_t>(n, UINT64_C(100));
-  return (x0_ + std::move(big).template fold_left<uint64_t>(
-                    [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                      return (_x0 + _x1);
-                    },
-                    UINT64_C(0)));
+  return (
+      x0_ +
+      big.template fold_left<uint64_t>(
+          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+          UINT64_C(0)));
 }
 
 uint64_t EtaClosureFirstClass::run(uint64_t k) {
@@ -19,10 +19,12 @@ uint64_t EtaClosureFirstClass::run(uint64_t k) {
           UINT64_C(1),
           List<uint64_t>::cons(
               UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))
+              List<uint64_t>::cons(UINT64_C(3),
+                                   List<uint64_t>::nil())))
           .template map<crane::fn<uint64_t(uint64_t)>>([](uint64_t _ec0) {
-            return [=](uint64_t _ec1) { return mkclosure(_ec0, _ec1); };
-          });
-  return std::move(fs).template fold_left<uint64_t>(
-      [](uint64_t a, crane::fn<uint64_t(uint64_t)> f) { return f(a); }, k);
+        return [=](uint64_t _ec1) { return mkclosure(_ec0, _ec1); };
+      });
+  return fs.template fold_left<uint64_t>(
+      [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
+      k);
 }

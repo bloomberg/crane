@@ -2,6 +2,7 @@
 #define INCLUDED_PRIMITIVE_REC_TYPECLASS
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>

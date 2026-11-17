@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -35,16 +35,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -81,8 +82,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -95,6 +96,7 @@ struct SuperfluousMoves {
   struct position {
     uint64_t px;
   };
+
   /// Small mode enum to force a switch in the extracted C++.
   enum class Mode { CHASE, FRIGHTENED };
 
@@ -112,16 +114,7 @@ struct SuperfluousMoves {
   }
 
   template <typename T1> static T1 mode_rec(T1 f, T1 f0, Mode m) {
-    switch (m) {
-    case Mode::CHASE: {
-      return f;
-    }
-    case Mode::FRIGHTENED: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return mode_rect<T1>(std::move(f), std::move(f0), m);
   }
 
   /// Minimal source state carrying the projected fields that trigger the bug.
@@ -144,7 +137,7 @@ struct SuperfluousMoves {
   /// Life loss used to create the branch-local gs3 value.
   static game_state lose_one_life(const game_state &gs);
   /// Forces the same control-flow path as the original bug.
-  static inline const Mode forced_mode = Mode::CHASE;
+  static constexpr Mode forced_mode = Mode::CHASE;
   /// Concrete state that makes the game-over branch fire after lose_one_life.
   static inline const game_state sample_state = game_state{
       position{UINT64_C(7)},

@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -55,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -88,25 +89,28 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -145,7 +149,7 @@ struct TailCallSameNameOtherModule {
       const variant_t &v() const { return v_; }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
+        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
       T1 t1_rect(T1 f, F1 &&f0) const {
         if (std::holds_alternative<typename t1::Z1>(this->v())) {
           return f;
@@ -155,15 +159,8 @@ struct TailCallSameNameOtherModule {
         }
       }
 
-      template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
-      T1 t1_rec(T1 f, F1 &&f0) const {
-        if (std::holds_alternative<typename t1::Z1>(this->v())) {
-          return f;
-        } else {
-          const auto &[a0] = std::get<typename t1::C1>(this->v());
-          return f0(a0);
-        }
+      template <typename T1, typename F1> T1 t1_rec(T1 f, F1 &&f0) const {
+        return this->template t1_rect<T1>(std::move(f), f0);
       }
 
       Nat cmp(const t1 &y) const {
@@ -216,7 +213,7 @@ struct TailCallSameNameOtherModule {
       const variant_t &v() const { return v_; }
 
       template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
+        requires std::is_invocable_r_v<T1, F1 &, const Nat &>
       T1 t2_rect(T1 f, F1 &&f0) const {
         if (std::holds_alternative<typename t2::Z2>(this->v())) {
           return f;
@@ -226,15 +223,8 @@ struct TailCallSameNameOtherModule {
         }
       }
 
-      template <typename T1, typename F1>
-        requires std::is_invocable_r_v<T1, F1 &, Nat &>
-      T1 t2_rec(T1 f, F1 &&f0) const {
-        if (std::holds_alternative<typename t2::Z2>(this->v())) {
-          return f;
-        } else {
-          const auto &[a0] = std::get<typename t2::C2>(this->v());
-          return f0(a0);
-        }
+      template <typename T1, typename F1> T1 t2_rec(T1 f, F1 &&f0) const {
+        return this->template t2_rect<T1>(std::move(f), f0);
       }
 
       T1::t1 to1() const {
@@ -252,7 +242,6 @@ struct TailCallSameNameOtherModule {
 
   static inline const Nat go =
       T2::t2::c2(Nat::s(Nat::o())).cmp(T2::t2::c2(Nat::s(Nat::s(Nat::o()))));
-
   static inline const bool ok = go.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
 

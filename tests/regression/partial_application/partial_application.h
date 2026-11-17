@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -13,6 +13,7 @@
 #include <variant>
 
 struct Nat;
+template <typename T1> struct Endo_id;
 template <typename T> struct Box;
 
 struct PartialApplication {
@@ -64,8 +65,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -97,23 +98,36 @@ public:
   }
 };
 
-template <typename t> using Endo = crane::fn<t(t)>;
+template <typename I, typename T>
+concept Endo = requires {
+  { I::endo(std::declval<T>()) } -> std::convertible_to<T>;
+};
 
-template <typename T1> T1 endo(std::type_identity_t<Endo<T1>> endo0, T1 x0_) {
-  return endo0(std::move(x0_));
+template <typename _tcI0, typename T1>
+  requires Endo<_tcI0, T1>
+T1 endo(const T1 &x0_) {
+  return _tcI0::endo(x0_);
 }
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
 }
 
-template <typename T1> const Endo<T1> Endo_id = [](const auto &x) { return x; };
+template <typename T1> struct Endo_id {
+  static T1 endo(T1 x) { return x; }
+};
 
 template <typename T> struct Box {
   // DATA
@@ -123,15 +137,15 @@ template <typename T> struct Box {
   // ACCESSORS
   Box<T> clone() const { return {tag, t}; }
 
-  template <typename _U> operator Box<_U>() const {
-    return {tag, [&]() -> _U {
-              if constexpr (crane_convertible<_U, const T &>) {
-                return crane_convert<_U>(t);
-              } else {
-                throw std::logic_error("unreachable: inactive constructor "
-                                       "field at this instantiation");
-              }
-            }()};
+  template <typename CraneU> operator Box<CraneU>() const {
+    return {tag, [&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const T &>) {
+        return crane_convert<CraneU>(t);
+      } else {
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
+      }
+    }()};
   }
 
   // CREATORS
@@ -139,26 +153,37 @@ template <typename T> struct Box {
 };
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
+  requires std::is_invocable_r_v<T2, F0 &, const T1 &>
 Box<T2> ft_box(F0 &&f, const Box<T1> &b) {
   const auto &[tag, t0] = b;
-  return Box<T2>::mk(endo<Nat>(Endo_id<Nat>, tag), f(t0));
+  return Box<T2>::mk(Endo_id<Nat>::endo(tag), f(t0));
 }
 
-Box<crane::obj> TFunctor_box(Endo<Nat> _x,
-                             crane::fn<crane::obj(crane::obj)> x0_,
-                             const Box<crane::obj> &x1_);
+template <typename _tcI0>
+  requires Endo<_tcI0, Nat>
+struct TFunctor_box {
+  template <typename CraneA0> using T = Box<CraneA0>;
 
-template <typename T1, typename T2, typename F1>
-  requires std::is_invocable_r_v<T2, F1 &, T1 &>
-std::pair<T2, Box<T2>> ft_pair(TFunctor<Box<crane::obj>> h, F1 &&f,
-                               const std::pair<T1, Box<T1>> &p) {
+  template <typename CraneA0, typename CraneA1>
+  static Box<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, Box<CraneA0> a1) {
+    return ft_box<CraneA0, CraneA1>(std::move(a0), std::move(a1));
+  }
+};
+
+template <TFunctor _tcI0, typename T1, typename T2, typename F0>
+std::pair<T2, Box<T2>> ft_pair(F0 &&f, const std::pair<T1, Box<T1>> &p) {
   const auto &[u, b] = p;
-  return std::make_pair(f(u), tfmap<Box<crane::obj>, T1, T2>(h, f, b));
+  return std::make_pair(f(u), _tcI0::template tfmap<T1, T2>(f, b));
 }
 
-std::pair<crane::obj, Box<crane::obj>>
-TFunctor_pair(TFunctor<Box<crane::obj>> h, crane::fn<crane::obj(crane::obj)> f,
-              std::pair<crane::obj, Box<crane::obj>> x0_);
+template <TFunctor _tcI0> struct TFunctor_pair {
+  template <typename CraneA0> using T = std::pair<CraneA0, Box<CraneA0>>;
+
+  template <typename CraneA0, typename CraneA1>
+  static std::pair<CraneA1, Box<CraneA1>>
+  tfmap(crane::fn<CraneA1(CraneA0)> a0, std::pair<CraneA0, Box<CraneA0>> a1) {
+    return ft_pair<_tcI0, CraneA0, CraneA1>(std::move(a0), std::move(a1));
+  }
+};
 
 #endif // INCLUDED_PARTIAL_APPLICATION

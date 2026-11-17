@@ -10,9 +10,11 @@ From Crane Require Extraction.
 From Crane Require Import Mapping.Std.
 From Crane Require Export Monads.ParDefs.
 
+(* A [future] is a value: copied, kept in data, read any number of times.  A
+   [std::shared_future] is that; a [std::future] is read once and moved. *)
 Crane Extract Inductive parE => ""
-  [ "std::async(std::launch::async, %a0, %a1)" "%a0.get()" ].
+  [ "std::async(std::launch::async, %a0, %a1).share()" "%a0.get()" ].
 
-Crane Extract Inlined Constant future => "std::future<%t0>" From "future".
+Crane Extract Inlined Constant future => "std::shared_future<%t0>" From "future".
 Crane Extract Inlined Constant async =>
-  "std::async(std::launch::async, %a0, %a1)".
+  "std::async(std::launch::async, %a0, %a1).share()".

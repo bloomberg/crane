@@ -4,12 +4,11 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -26,8 +25,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -80,8 +78,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -89,25 +87,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -135,14 +136,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -151,9 +153,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -197,16 +199,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -243,8 +246,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -256,7 +259,6 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
@@ -265,28 +267,30 @@ template <typename a> using EOUP = Sum<Nat, a>;
 
 struct MemoryBytes {
   template <Monad _tcI0, typename T2, typename T3>
-  static typename _tcI0::template m<List<T3>> map_monad(
-      std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
-      const List<T2> &l);
+  static typename _tcI0::template m<List<T3>>
+  map_monad(const std::type_identity_t<
+      crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
+            const List<T2> &l);
   static Nat helper0(Nat n);
   static EOUP<List<Nat>> bump_all(const List<Nat> &bs);
 };
 
 struct EOUP_Monad {
-  template <typename _A0> using m = Sum<Nat, _A0>;
+  template <typename CraneA0> using m = Sum<Nat, CraneA0>;
 
-  template <typename _A0> static Sum<Nat, _A0> ret(_A0 a) {
-    return Sum<Nat, _A0>::inr(std::move(a));
+  template <typename CraneA0> static Sum<Nat, CraneA0> ret(CraneA0 a) {
+    return Sum<Nat, CraneA0>::inr(std::move(a));
   }
 
-  template <typename _A0, typename _A1>
-  static Sum<Nat, _A1> bind(Sum<Nat, _A0> m, crane::fn<Sum<Nat, _A1>(_A0)> k) {
-    if (std::holds_alternative<typename Sum<Nat, _A0>::Inl>(m.v())) {
-      const auto &[a0] = std::get<typename Sum<Nat, _A0>::Inl>(m.v());
-      return Sum<Nat, _A1>::inl(a0);
+  template <typename CraneA0, typename CraneA1>
+  static Sum<Nat, CraneA1> bind(Sum<Nat, CraneA0> m,
+                                crane::fn<Sum<Nat, CraneA1>(CraneA0)> k) {
+    if (std::holds_alternative<typename Sum<Nat, CraneA0>::Inl>(m.v_mut())) {
+      auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inl>(m.v_mut());
+      return Sum<Nat, CraneA1>::inl(std::move(a0));
     } else {
-      const auto &[a0] = std::get<typename Sum<Nat, _A0>::Inr>(m.v());
-      return k(a0);
+      auto &[a0] = std::get<typename Sum<Nat, CraneA0>::Inr>(m.v_mut());
+      return k(std::move(a0));
     }
   }
 };
@@ -303,26 +307,26 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
 }
 
 template <Monad _tcI0, typename T2, typename T3>
-typename _tcI0::template m<List<T3>> MemoryBytes::map_monad(
-    std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
-    const List<T2> &l) {
+typename _tcI0::template m<List<T3>>
+MemoryBytes::map_monad(const std::type_identity_t<
+    crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
+                       const List<T2> &l) {
   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-    return Monad0::template ret<_tcI0, List<T3>>(List<T3>::nil());
+    return _tcI0::template ret<List<T3>>(List<T3>::nil());
   } else {
     const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
     const List<T2> &a1_value = *a1;
-    return Monad0::template bind<_tcI0, T3, List<T3>>(f(a0), [=](const T3 &y) {
-      return Monad0::template bind<_tcI0, List<T3>, List<T3>>(
+    return _tcI0::template bind<T3, List<T3>>(f(a0), [=](const T3 &y) {
+      return _tcI0::template bind<List<T3>, List<T3>>(
           MemoryBytes::template map_monad<_tcI0, T2, T3>(f, a1_value),
           [=](const List<T3> &ys) {
-            return Monad0::template ret<_tcI0, List<T3>>(List<T3>::cons(y, ys));
+            return _tcI0::template ret<List<T3>>(List<T3>::cons(y, ys));
           });
     });
   }

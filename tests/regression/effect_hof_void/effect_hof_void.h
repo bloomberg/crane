@@ -2,10 +2,9 @@
 #define INCLUDED_EFFECT_HOF_VOID
 
 #include "fn.h"
-#include <crane_itree.h>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
-#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -14,7 +13,7 @@
 struct EffectHofVoid {
   /// 1. Apply a void callback
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, std::string &>
+    requires std::is_invocable_r_v<void, F0 &, std::string &&>
   static void apply_void(F0 &&f, std::string x0_) {
     f(std::move(x0_));
     return;
@@ -30,15 +29,14 @@ struct EffectHofVoid {
 
   /// 3. Apply a value callback
   template <typename F0> static std::string apply_value(F0 &&f, std::string x) {
-    return f(x);
+    return f(std::move(x));
   }
 
   /// 4. Apply callback conditionally
   template <typename F1>
-    requires std::is_invocable_r_v<void, F1 &, std::string &>
   static void apply_if(bool flag, F1 &&f, std::string x) {
     if (flag) {
-      f(x);
+      f(std::move(x));
       return;
     } else {
       return;
@@ -46,24 +44,24 @@ struct EffectHofVoid {
   }
 
   /// 5. Chain two void callbacks
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, std::string &>
-  static void chain_void(F0 &&f, crane::fn<void(std::string)> g,
-                         std::string x) {
+  template <typename F0, typename F1>
+    requires std::is_invocable_r_v<void, F0 &, std::string &> &&
+             std::is_invocable_r_v<void, F1 &, std::string &&>
+  static void chain_void(F0 &&f, F1 &&g, std::string x) {
     f(x);
-    g(x);
+    g(std::move(x));
     return;
   }
 
   /// 6. Apply a callback N times
-  static uint64_t apply_n(crane::fn<void(std::string)> f, std::string x,
-                          uint64_t n) {
+  template <typename F0>
+  static uint64_t apply_n(F0 &&f, std::string x, uint64_t n) {
     if (n <= 0) {
       return UINT64_C(0);
     } else {
       uint64_t n_ = n - 1;
       f(x);
-      uint64_t rest = apply_n(std::move(f), x, n_);
+      uint64_t rest = apply_n(f, std::move(x), n_);
       return (rest + 1);
     }
   }

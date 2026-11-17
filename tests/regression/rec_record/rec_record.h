@@ -4,12 +4,11 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -37,22 +36,22 @@ struct RecRecord {
 
     explicit rlist(Rcons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    rlist(const rlist<_U> &_other)
+    template <typename CraneU>
+    rlist(const rlist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename rlist<_U>::Rnil>(_other.v())) {
+            if (std::holds_alternative<typename rlist<CraneU>::Rnil>(_other.v())) {
               return Rnil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename rlist<_U>::Rcons>(_other.v());
+                  std::get<typename rlist<CraneU>::Rcons>(_other.v());
               return Rcons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<rlist<A>>(crane_convert<rlist<A>>(*a1))
@@ -86,8 +85,8 @@ struct RecRecord {
 
     rlist(const rlist &) = default;
     rlist &operator=(const rlist &) = default;
-    rlist(rlist &&) noexcept = default;
-    rlist &operator=(rlist &&) noexcept = default;
+    rlist(rlist &&) = default;
+    rlist &operator=(rlist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -97,125 +96,81 @@ struct RecRecord {
     uint64_t rlist_length() const {
       const rlist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const rlist<A> *_self;
       };
 
-      /// _Cont_Rcons: resumes after recursive call, then processes rest.
-      struct _Cont_Rcons {};
+      /// CraneCont_Rcons: resumes after recursive call, then processes rest.
+      struct CraneCont_Rcons {};
 
-      using _Frame = std::variant<_Enter, _Cont_Rcons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Rcons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified rlist_length: _Enter -> _Cont_Rcons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified rlist_length: CraneEnter -> CraneCont_Rcons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const rlist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
-            _stack.emplace_back(_Cont_Rcons{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            const auto &[_, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
+            _stack.emplace_back(CraneCont_Rcons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Rcons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Rcons>(_frame));
           _result = (std::move(_result) + 1);
         }
       }
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
-    T1 rlist_rec(T1 f, F1 &&f0) const {
-      const rlist<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const rlist<A> *_self;
-      };
-
-      /// _Cont_Rcons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Rcons {
-        A a0;
-        std::shared_ptr<rlist<A>> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Rcons>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified rlist_rec: _Enter -> _Cont_Rcons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const rlist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
-            _stack.emplace_back(_Cont_Rcons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Rcons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<rlist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 rlist_rec(T1 f, F1 &&f0) const {
+      return this->template rlist_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, rlist<A> &, T1 &>
-    T1 rlist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 rlist_rect(T1 f, F1 &&f0) const {
       const rlist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const rlist<A> *_self;
       };
 
-      /// _Cont_Rcons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Rcons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Rcons {
+      struct CraneCont_Rcons {
         A a0;
         std::shared_ptr<rlist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Rcons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Rcons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified rlist_rect: _Enter -> _Cont_Rcons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified rlist_rect: CraneEnter -> CraneCont_Rcons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const rlist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename rlist<A>::Rnil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename rlist<A>::Rcons>(_sv.v());
-            _stack.emplace_back(_Cont_Rcons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Rcons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Rcons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Rcons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<rlist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -245,8 +200,9 @@ struct RecRecord {
     explicit RNode(MkRNode _v) : v_(std::move(_v)) {}
 
     static RNode mkrnode(uint64_t rn_value, std::optional<RNode> rn_next) {
-      return RNode(MkRNode{rn_value, std::make_shared<std::optional<RNode>>(
-                                         std::move(rn_next))});
+      return RNode(MkRNode{
+          rn_value,
+          std::make_shared<std::optional<RNode>>(std::move(rn_next))});
     }
 
     // MANIPULATORS
@@ -277,8 +233,8 @@ struct RecRecord {
 
     RNode(const RNode &) = default;
     RNode &operator=(const RNode &) = default;
-    RNode(RNode &&) noexcept = default;
-    RNode &operator=(RNode &&) noexcept = default;
+    RNode(RNode &&) = default;
+    RNode &operator=(RNode &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -296,30 +252,20 @@ struct RecRecord {
     }
 
     std::optional<RNode> rn_next() const {
-      const auto &[rn_value0, rn_next1] =
-          std::get<typename RNode::MkRNode>(this->v());
+      const auto &[_, rn_next1] = std::get<typename RNode::MkRNode>(this->v());
       return *rn_next1;
     }
 
     uint64_t rn_value() const {
-      const auto &[rn_value1, rn_next0] =
-          std::get<typename RNode::MkRNode>(this->v());
+      const auto &[rn_value1, _] = std::get<typename RNode::MkRNode>(this->v());
       return rn_value1;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
-                                     std::optional<RNode> &>
-    T1 RNode_rec(F0 &&f) const {
-      const auto &[rn_value1, rn_next1] =
-          std::get<typename RNode::MkRNode>(this->v());
-      return f(rn_value1, *rn_next1);
+    template <typename T1, typename F0> T1 RNode_rec(F0 &&f) const {
+      return this->template RNode_rect<T1>(f);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
-                                     std::optional<RNode> &>
-    T1 RNode_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 RNode_rect(F0 &&f) const {
       const auto &[rn_value1, rn_next1] =
           std::get<typename RNode::MkRNode>(this->v());
       return f(rn_value1, *rn_next1);
@@ -345,10 +291,10 @@ struct RecRecord {
   static inline const uint64_t test_rlist_len = test_rlist.rlist_length();
   static inline const uint64_t test_rlist_sum = rlist_sum(test_rlist);
   static inline const RNode test_rnode = RNode::mkrnode(
-      UINT64_C(1),
-      std::make_optional<RNode>(RNode::mkrnode(
-          UINT64_C(2), std::make_optional<RNode>(RNode::mkrnode(
-                           UINT64_C(3), std::optional<RNode>())))));
+      UINT64_C(1), std::make_optional<RNode>(RNode::mkrnode(
+                       UINT64_C(2), std::make_optional<RNode>(RNode::mkrnode(
+                                        UINT64_C(3),
+                                        std::optional<RNode>())))));
   static inline const uint64_t test_rnode_depth = test_rnode.rnode_depth();
   static inline const Employee test_emp = Employee{UINT64_C(42), UINT64_C(7)};
   static inline const Department test_dept =

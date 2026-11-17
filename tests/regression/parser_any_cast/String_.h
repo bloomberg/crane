@@ -9,7 +9,6 @@
 #include "Ascii.h"
 
 namespace String {
-
 struct String;
 
 struct String {
@@ -61,15 +60,14 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
 } // namespace String
 
 #endif // INCLUDED_STRING_

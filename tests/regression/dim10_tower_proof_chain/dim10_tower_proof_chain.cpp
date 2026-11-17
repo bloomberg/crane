@@ -5,10 +5,10 @@ Dim10TowerProofChainCase::nat_le_of_lt(uint64_t n, uint64_t m,
                                        Dim10TowerProofChainCase::nat_lt h_) {
   if (n <= 0) {
     if (m <= 0) {
-      throw std::logic_error("unreachable: impossible dependent match branch");
+      return std::monostate{};
     } else {
       uint64_t _x = m - 1;
-      throw std::logic_error("unreachable: impossible dependent match branch");
+      return std::monostate{};
     }
   } else {
     uint64_t n0 = n - 1;
@@ -96,11 +96,11 @@ Dim10TowerProofChainCase::make_graded_goodwillie_tower(uint64_t base_dim) {
       [=](uint64_t n) { return D_n_obj(base_dim, n); }};
 }
 
-SigT<uint64_t, crane::obj>
-Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
+SigT<uint64_t,
+     crane::obj> Dim10TowerProofChainCase::graded_goodwillie_layers_stabilize(
     uint64_t base_dim) {
   auto e = D_n_measure_eventually_zero(base_dim);
-  auto &[x0, a1] = e;
+  auto &[x0, _] = e;
   return SigT<uint64_t, crane::obj>::existt(std::move(x0), crane::obj());
 }
 

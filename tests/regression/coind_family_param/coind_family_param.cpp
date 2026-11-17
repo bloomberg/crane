@@ -10,45 +10,46 @@ CoindFamilyParam::count(const Nat &n, const Nat &acc) {
     const auto &[a0] = std::get<typename Nat::S>(n.v());
     const Nat &a0_value = *a0;
     return tree<CoindFamilyParam::voidE, Nat>::lazy_(
-        [=]() -> CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat> {
-          return tree<CoindFamilyParam::voidE, Nat>::go(
+        [=]() -> typename CoindFamilyParam::tree<CoindFamilyParam::voidE,
+                                                 Nat>::Go {
+          return {
               treeF<CoindFamilyParam::voidE, Nat,
-                    CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::
-                  tauf(count(a0_value, Nat::s(acc))));
+                    CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::tauf(
+                  count(a0_value, Nat::s(acc)))};
         });
   }
 }
 
-std::optional<Nat>
-CoindFamilyParam::run(const Nat &fuel,
-                      CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat> t) {
+std::optional<Nat> CoindFamilyParam::run(
+    const Nat &fuel,
+    const CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {
     const auto &[a0] = std::get<typename Nat::S>(fuel.v());
-    return [&]() {
-      auto &&_sv0 = observe<CoindFamilyParam::voidE, Nat>(t);
-      if (std::holds_alternative<typename CoindFamilyParam::treeF<
-              CoindFamilyParam::voidE, Nat,
-              CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::RetF>(
-              _sv0.v())) {
-        const auto &[r0] = std::get<typename CoindFamilyParam::treeF<
+    auto &&_sv0 = observe<CoindFamilyParam::voidE, Nat>(t);
+    if (std::holds_alternative<typename CoindFamilyParam::treeF<
             CoindFamilyParam::voidE, Nat,
             CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::RetF>(
-            _sv0.v());
-        return std::make_optional<Nat>(r0);
-      } else if (std::holds_alternative<typename CoindFamilyParam::treeF<
-                     CoindFamilyParam::voidE, Nat,
-                     CoindFamilyParam::tree<CoindFamilyParam::voidE,
-                                            Nat>>::TauF>(_sv0.v())) {
-        const auto &[t0] = std::get<typename CoindFamilyParam::treeF<
-            CoindFamilyParam::voidE, Nat,
-            CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::TauF>(
-            _sv0.v());
-        return run(*a0, t0);
-      } else {
-        throw std::logic_error("absurd case");
-      }
-    }();
+            _sv0.v())) {
+      const auto &[r0] =
+          std::get<typename CoindFamilyParam::treeF<
+              CoindFamilyParam::voidE, Nat,
+              CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::RetF>(
+              _sv0.v());
+      return std::make_optional<Nat>(r0);
+    } else if (std::holds_alternative<typename CoindFamilyParam::treeF<
+                   CoindFamilyParam::voidE, Nat,
+                   CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::TauF>(
+                   _sv0.v())) {
+      const auto &[t0] =
+          std::get<typename CoindFamilyParam::treeF<
+              CoindFamilyParam::voidE, Nat,
+              CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::TauF>(
+              _sv0.v());
+      return run(*a0, t0);
+    } else {
+      throw std::logic_error("absurd case");
+    }
   }
 }

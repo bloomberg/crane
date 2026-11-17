@@ -9,8 +9,8 @@ List<uint64_t> LoopifyPolymorphic::nat_reverse(const List<uint64_t> &x0_) {
 }
 
 List<uint64_t> LoopifyPolymorphic::nat_append(const List<uint64_t> &x0_,
-                                              const List<uint64_t> &x1_) {
-  return poly_append<uint64_t>(x0_, x1_);
+                                              List<uint64_t> x1_) {
+  return poly_append<uint64_t>(x0_, std::move(x1_));
 }
 
 std::optional<uint64_t>

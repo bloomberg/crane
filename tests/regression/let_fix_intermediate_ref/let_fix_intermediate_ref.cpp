@@ -1,29 +1,32 @@
 #include "let_fix_intermediate_ref.h"
 
 uint64_t LetFixIntermediateRef::sum_heads(const List<List<uint64_t>> &ll) {
-  auto go_impl = [](auto &_self_go, const List<List<uint64_t>> &xss,
-                    uint64_t acc) -> uint64_t {
-    if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(xss.v())) {
-      return acc;
-    } else {
-      const auto &[a0, a1] =
-          std::get<typename List<List<uint64_t>>::Cons>(xss.v());
-      uint64_t hd = [&]() {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
-          return UINT64_C(0);
-        } else {
-          const auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(a0.v());
-          return a00;
-        }
-      }();
-      return _self_go(_self_go, *a1, (acc + hd));
+  {
+    const List<List<uint64_t>> &_lc1_xss = ll;
+    uint64_t _lc1_acc = UINT64_C(0);
+    uint64_t _lc1_loop_acc = _lc1_acc;
+    const List<List<uint64_t>> *_lc1_loop_xss = &_lc1_xss;
+    while (true) {
+      if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
+              _lc1_loop_xss->v())) {
+        return _lc1_loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<List<uint64_t>>::Cons>(_lc1_loop_xss->v());
+        uint64_t hd = [&]() {
+          if (std::holds_alternative<typename List<uint64_t>::Nil>(a0.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, _] =
+                std::get<typename List<uint64_t>::Cons>(a0.v());
+            return a00;
+          }
+        }();
+        _lc1_loop_acc = (_lc1_loop_acc + hd);
+        _lc1_loop_xss = crane_raw(a1);
+      }
     }
-  };
-  auto go = [&](const List<List<uint64_t>> &xss, uint64_t acc) -> uint64_t {
-    return go_impl(go_impl, xss, acc);
-  };
-  return go(ll, UINT64_C(0));
+  }
 }
 
 uint64_t LetFixIntermediateRef::zip_sum(const List<uint64_t> &l1,

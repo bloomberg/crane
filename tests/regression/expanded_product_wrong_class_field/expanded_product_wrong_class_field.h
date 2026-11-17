@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -17,33 +16,58 @@ struct state;
 using provenance = crane::obj;
 using allocationId = crane::obj;
 using ptr = crane::obj;
-template <typename
-I>concept Prov = requires {
-    typename I::provenance;
-    typename I::allocationId;
-    typename I::prov;
-  } && (requires {
-    { I::no_prov() } -> std::convertible_to<typename I::prov>;
+template <typename I>
+concept Prov = requires {
+  typename I::provenance;
+  typename I::allocationId;
+  typename I::prov;
+} && (requires {
+  {
+    I::no_prov()
+  }
+  -> std::convertible_to<typename I::prov>;
+} || requires {
+  {
+    I::no_prov
+  }
+  -> std::convertible_to<typename I::prov>;
+}) &&
+  (requires {
+    {
+      I::a_provenance()
+    }
+    -> std::convertible_to<typename I::provenance>;
   } || requires {
-    { I::no_prov } -> std::convertible_to<typename I::prov>;
-  }) && (requires {
-    { I::a_provenance() } -> std::convertible_to<typename I::provenance>;
+    {
+      I::a_provenance
+    }
+    -> std::convertible_to<typename I::provenance>;
+  }) &&
+  (requires {
+    {
+      I::an_allocationId()
+    }
+    -> std::convertible_to<typename I::allocationId>;
   } || requires {
-    { I::a_provenance } -> std::convertible_to<typename I::provenance>;
-  }) && (requires {
-    { I::an_allocationId() } -> std::convertible_to<typename I::allocationId>;
-  } || requires {
-    { I::an_allocationId } -> std::convertible_to<typename I::allocationId>;
+    {
+      I::an_allocationId
+    }
+    -> std::convertible_to<typename I::allocationId>;
   });
-template <typename
-I>concept Ptr = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-  });
-/// The fields are themselves instances: the wrong spelling in Vellvm is
+template <typename I>
+concept Ptr = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero_ptr()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero_ptr
+  }
+  -> std::convertible_to<typename I::ptr>;
+}); /// The fields are themselves instances: the wrong spelling in Vellvm is
 /// typename _tcI0::PROV::prov, a sibling field of an {e inner} class.
 template <typename I>
 concept ParamsV = requires {
@@ -74,16 +98,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -120,8 +145,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -143,8 +168,7 @@ using fused = std::pair<state<provenance, allocationId, ptr>, frame<ptr>>;
 /// Reads the expanded product, so the caller's parameter is inferred at it
 /// rather than at the alias.
 template <ParamsV _tcI0>
-typename _tcI0::PTR::ptr
-top(const std::pair<
+typename _tcI0::PTR::ptr top(const std::pair<
     state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
           typename _tcI0::PTR::ptr>,
     List<typename _tcI0::PTR::ptr>> &p) {
@@ -155,18 +179,16 @@ top(const std::pair<
 /// still names fused.
 template <ParamsV _tcI0>
 fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
-      typename _tcI0::PTR::ptr>
-step(const std::pair<
-     state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
-           typename _tcI0::PTR::ptr>,
-     List<typename _tcI0::PTR::ptr>> &s) {
+      typename _tcI0::PTR::ptr> step(const std::pair<
+    state<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
+          typename _tcI0::PTR::ptr>,
+    List<typename _tcI0::PTR::ptr>> &s) {
   return std::make_pair(s.first, s.second);
 }
 
 template <ParamsV _tcI0>
 fused<typename _tcI0::PROV::provenance, typename _tcI0::PROV::allocationId,
-      typename _tcI0::PTR::ptr>
-initial() {
+      typename _tcI0::PTR::ptr> initial() {
   return std::make_pair(
       state<typename _tcI0::PROV::provenance,
             typename _tcI0::PROV::allocationId, typename _tcI0::PTR::ptr>{

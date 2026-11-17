@@ -37,7 +37,7 @@ Crane Extract Inductive fileE => ""
 }()"
     "bdls::FilesystemUtil::exists(%a0)"
     "bdls::FilesystemUtil::remove(%a0)" ]
-  From "fstream" "bdls_filesystemutil.h".
+  From "fstream" "bsl_iostream.h" "bdls_filesystemutil.h".
 
 Crane Extract Inlined Constant print => "bsl::cout << %a0" From "bsl_iostream.h".
 Crane Extract Inlined Constant print_endline => "bsl::cout << %a0 << '\n'" From "bsl_iostream.h".
@@ -54,7 +54,7 @@ Crane Extract Inlined Constant read =>
   return bsl::string(
       bsl::istreambuf_iterator<char>(file),
       bsl::istreambuf_iterator<char>());
-}()" From "fstream".
+}()" From "fstream" "bsl_iostream.h".
 
 Crane Extract Inlined Constant write_file =>
 "[&]() {

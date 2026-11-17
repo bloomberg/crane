@@ -3,9 +3,9 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -107,13 +108,13 @@ concept Ord = requires {
 
 struct Typeclasses {
   struct numNat {
-    static uint64_t to_nat(uint64_t n) { return n; }
+    constexpr static uint64_t to_nat(uint64_t n) { return n; }
   };
 
   static_assert(Numeric<numNat, uint64_t>);
 
   struct numBool {
-    static uint64_t to_nat(bool b) {
+    constexpr static uint64_t to_nat(bool b) {
       if (b) {
         return UINT64_C(1);
       } else {
@@ -149,10 +150,10 @@ struct Typeclasses {
           return (_tcI0::to_nat(a1) + _self_sum(_self_sum, *a2));
         }
       };
-      auto sum = [&](const List<T1> &l) -> uint64_t {
-        return sum_impl(sum_impl, l);
-      };
-      return sum(std::move(a0));
+      {
+        const List<T1> &_lc1_l = std::move(a0);
+        return sum_impl(sum_impl, _lc1_l);
+      }
     }
   };
 
@@ -169,13 +170,13 @@ struct Typeclasses {
   }
 
   struct eqNat {
-    static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
+    constexpr static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
   };
 
   static_assert(Eq<eqNat, uint64_t>);
 
   struct ordNat {
-    static bool leb(uint64_t a0, uint64_t a1) { return a0 <= a1; }
+    constexpr static bool leb(uint64_t a0, uint64_t a1) { return a0 <= a1; }
   };
 
   static_assert(Ord<ordNat, uint64_t>);

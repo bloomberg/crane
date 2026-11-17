@@ -2,7 +2,7 @@
 
 String LoopifyFrameReceiverPtr::f(const List<String> &l) {
   return String::string0(
-             Ascii::ascii0(false, false, true, true, false, true, false, false),
-             String::emptystring())
-      .concat(l);
+      Ascii::ascii0(false, false, true, true, false, true, false, false),
+      String::emptystring())
+             .concat(l);
 }

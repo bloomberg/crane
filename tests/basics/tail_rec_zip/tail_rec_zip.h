@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -22,18 +22,19 @@ template <typename A, typename B> struct Prod {
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
 
-  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(a0);
+  template <typename CraneU0, typename CraneU1>
+  operator Prod<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const B &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const B &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -68,16 +69,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -114,8 +116,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -125,92 +127,99 @@ public:
   List<A> rev() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<A> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified rev: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified rev: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = List<A>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        _result = std::move(_result).app(List<A>::cons(a0, List<A>::nil()));
+        _result = _result.app(List<A>::cons(a0, List<A>::nil()));
       }
     }
     return _result;
   }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
 template <typename T1, typename T2>
 List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
-  auto go_impl = [](auto &_self_go, const List<T1> &la0, const List<T2> &lb0,
-                    const List<Prod<T1, T2>> &acc) -> List<Prod<T1, T2>> {
-    if (std::holds_alternative<typename List<T1>::Nil>(la0.v())) {
-      return acc.rev();
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(la0.v());
-      if (std::holds_alternative<typename List<T2>::Nil>(lb0.v())) {
-        return acc.rev();
+  {
+    const List<T1> &_lc1_la0 = la;
+    const List<T2> &_lc1_lb0 = lb;
+    const List<Prod<T1, T2>> &_lc1_acc = List<Prod<T1, T2>>::nil();
+    List<Prod<T1, T2>> _lc1_loop_acc = _lc1_acc;
+    const List<T2> *_lc1_loop_lb0 = &_lc1_lb0;
+    const List<T1> *_lc1_loop_la0 = &_lc1_la0;
+    while (true) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_la0->v())) {
+        return _lc1_loop_acc.rev();
       } else {
-        const auto &[a00, a10] = std::get<typename List<T2>::Cons>(lb0.v());
-        return _self_go(
-            _self_go, *a1, *a10,
-            List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00), acc));
+        const auto &[a0, a1] =
+            std::get<typename List<T1>::Cons>(_lc1_loop_la0->v());
+        if (std::holds_alternative<typename List<T2>::Nil>(_lc1_loop_lb0->v())) {
+          return _lc1_loop_acc.rev();
+        } else {
+          const auto &[a00, a10] =
+              std::get<typename List<T2>::Cons>(_lc1_loop_lb0->v());
+          _lc1_loop_acc = List<Prod<T1, T2>>::cons(Prod<T1, T2>::pair(a0, a00),
+                                                   std::move(_lc1_loop_acc));
+          _lc1_loop_lb0 = crane_raw(a10);
+          _lc1_loop_la0 = crane_raw(a1);
+        }
       }
     }
-  };
-  auto go = [&](const List<T1> &la0, const List<T2> &lb0,
-                const List<Prod<T1, T2>> &acc) -> List<Prod<T1, T2>> {
-    return go_impl(go_impl, la0, lb0, acc);
-  };
-  return go(la, lb, List<Prod<T1, T2>>::nil());
+  }
 }
 
 #endif // INCLUDED_TAIL_REC_ZIP

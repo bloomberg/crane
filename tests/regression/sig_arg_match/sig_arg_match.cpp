@@ -6,9 +6,8 @@ Nat SigArgMatch::addp(const Sig<Nat> &p,
   return [&]() {
     const auto &[x] = p;
     return x;
-  }()
-             .add([&]() {
-               const auto &[x0] = q;
-               return x0;
-             }());
+  }().add([&]() {
+    const auto &[x0] = q;
+    return x0;
+  }());
 }

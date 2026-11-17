@@ -8,18 +8,17 @@ uint64_t OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
     const auto &[a0, a1, a2] =
         std::get<typename OptionSomeEscape::tree::Node>(t.v());
     auto &&_sv0 = *a0;
-    if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(
-            _sv0.v())) {
+    if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(_sv0.v())) {
       return (a1 + x);
     } else {
-      const auto &[a00, a10, a20] =
+      const auto &[_, a10, _] =
           std::get<typename OptionSomeEscape::tree::Node>(_sv0.v());
       auto &&_sv1 = *a2;
       if (std::holds_alternative<typename OptionSomeEscape::tree::Leaf>(
               _sv1.v())) {
         return (a10 + x);
       } else {
-        const auto &[a01, a11, a21] =
+        const auto &[_, a11, _] =
             std::get<typename OptionSomeEscape::tree::Node>(_sv1.v());
         return (((a10 + a11) + a1) + x);
       }
@@ -34,7 +33,9 @@ uint64_t OptionSomeEscape::sum_values(const OptionSomeEscape::tree &t,
 std::optional<crane::fn<uint64_t(uint64_t)>>
 OptionSomeEscape::option_escape(OptionSomeEscape::tree t) {
   return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-      [=](uint64_t _x0) -> uint64_t { return sum_values(std::move(t), _x0); });
+      [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+        return sum_values(std::move(t), _x0);
+      });
 }
 
 uint64_t OptionSomeEscape::apply_option(

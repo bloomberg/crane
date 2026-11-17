@@ -3,6 +3,7 @@
 
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -11,13 +12,17 @@
 template <typename M>
 concept Elem = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::dflt } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::dflt() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::dflt
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::dflt()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 template <Elem E> struct Container {
@@ -55,7 +60,7 @@ template <Elem E> struct Container {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 maybe_rect(T1 f, F1 &&f0, const maybe &m) {
     if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
       return f;
@@ -66,14 +71,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 maybe_rec(T1 f, F1 &&f0, const maybe &m) {
-    if (std::holds_alternative<typename maybe::Nothing>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename maybe::Just>(m.v());
-      return f0(a0);
-    }
+    return maybe_rect<T1>(std::move(f), f0, m);
   }
 
   struct mlist {
@@ -102,8 +101,8 @@ template <Elem E> struct Container {
     static mlist mnil() { return mlist(MNil{}); }
 
     static mlist mcons(maybe a0, mlist a1) {
-      return mlist(
-          MCons{std::move(a0), std::make_shared<mlist>(std::move(a1))});
+      return mlist(MCons{std::move(a0),
+                         std::make_shared<mlist>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -125,8 +124,8 @@ template <Elem E> struct Container {
 
     mlist(const mlist &) = default;
     mlist &operator=(const mlist &) = default;
-    mlist(mlist &&) noexcept = default;
-    mlist &operator=(mlist &&) noexcept = default;
+    mlist(mlist &&) = default;
+    mlist &operator=(mlist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -135,7 +134,6 @@ template <Elem E> struct Container {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
   static T1 mlist_rect(T1 f, F1 &&f0, const mlist &m) {
     if (std::holds_alternative<typename mlist::MNil>(m.v())) {
       return f;
@@ -146,14 +144,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, maybe &, mlist &, T1 &>
   static T1 mlist_rec(T1 f, F1 &&f0, const mlist &m) {
-    if (std::holds_alternative<typename mlist::MNil>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename mlist::MCons>(m.v());
-      return f0(a0, *a1, mlist_rec<T1>(std::move(f), f0, *a1));
-    }
+    return mlist_rect<T1>(std::move(f), f0, m);
   }
 
   struct mtree {
@@ -192,8 +184,8 @@ template <Elem E> struct Container {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, maybe &> &&
-             std::is_invocable_r_v<T1, F1 &, mlist &>
+    requires std::is_invocable_r_v<T1, F0 &, const maybe &> &&
+             std::is_invocable_r_v<T1, F1 &, const mlist &>
   static T1 mtree_rect(F0 &&f, F1 &&f0, const mtree &m) {
     if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
       const auto &[a0] = std::get<typename mtree::Leaf>(m.v());
@@ -205,16 +197,8 @@ template <Elem E> struct Container {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, maybe &> &&
-             std::is_invocable_r_v<T1, F1 &, mlist &>
   static T1 mtree_rec(F0 &&f, F1 &&f0, const mtree &m) {
-    if (std::holds_alternative<typename mtree::Leaf>(m.v())) {
-      const auto &[a0] = std::get<typename mtree::Leaf>(m.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename mtree::Node>(m.v());
-      return f0(a0);
-    }
+    return mtree_rect<T1>(f, f0, m);
   }
 
   static bool is_nothing(const maybe &m) {
@@ -229,7 +213,7 @@ template <Elem E> struct Container {
     if (std::holds_alternative<typename mlist::MNil>(l.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename mlist::MCons>(l.v());
+      const auto &[_, a1] = std::get<typename mlist::MCons>(l.v());
       return (mlist_length(*a1) + 1);
     }
   }
@@ -273,7 +257,7 @@ template <Elem E> struct Container {
 
 struct NatElem {
   using t = uint64_t;
-  static inline const uint64_t dflt = UINT64_C(42);
+  static constexpr uint64_t dflt = UINT64_C(42);
 };
 
 static_assert(Elem<NatElem>);

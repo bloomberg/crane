@@ -2,10 +2,9 @@
 #define INCLUDED_EQ_ORD_SHOW
 
 #include <concepts>
+#include <cstdint>
 #include <string>
 #include <utility>
-
-using namespace std::string_literals;
 
 struct NatEq;
 struct NatOrd;
@@ -31,21 +30,21 @@ concept Show = requires {
 };
 
 struct NatEq {
-  static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
+  constexpr static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
 
-  static bool neqb(uint64_t x, uint64_t y) { return !(x == y); }
+  constexpr static bool neqb(uint64_t x, uint64_t y) { return !(x == y); }
 };
 
 static_assert(Eq<NatEq, uint64_t>);
 
 struct NatOrd {
-  static bool lt(uint64_t a0, uint64_t a1) { return a0 < a1; }
+  constexpr static bool lt(uint64_t a0, uint64_t a1) { return a0 < a1; }
 
-  static bool le(uint64_t a0, uint64_t a1) { return a0 <= a1; }
+  constexpr static bool le(uint64_t a0, uint64_t a1) { return a0 <= a1; }
 
-  static bool gt(uint64_t x, uint64_t y) { return y < x; }
+  constexpr static bool gt(uint64_t x, uint64_t y) { return y < x; }
 
-  static bool ge(uint64_t x, uint64_t y) { return y <= x; }
+  constexpr static bool ge(uint64_t x, uint64_t y) { return y <= x; }
 };
 
 static_assert(Ord<NatOrd, uint64_t>);
@@ -79,6 +78,7 @@ template <typename _tcI0, typename _tcI1, typename T1>
 bool is_less_or_equal(const T1 &x, const T1 &y) {
   return _tcI0::le(x, y);
 }
+
 enum class Ordering { LT, EQ, GT };
 
 template <typename _tcI0, typename _tcI1, typename T1>
@@ -115,12 +115,12 @@ template <typename _tcI0, typename _tcI1, typename _tcI2, typename T1>
   requires Show<_tcI0, T1> && Ord<_tcI1, T1> && Eq<_tcI2, T1>
 std::string show_comparison(const T1 &x, const T1 &y) {
   if (_tcI1::lt(x, y)) {
-    return _tcI0::show(x) + " < "s + _tcI0::show(y);
+    return _tcI0::show(x) + std::string(" < ") + _tcI0::show(y);
   } else {
     if (_tcI2::eqb(x, y)) {
-      return _tcI0::show(x) + " = "s + _tcI0::show(y);
+      return _tcI0::show(x) + std::string(" = ") + _tcI0::show(y);
     } else {
-      return _tcI0::show(x) + " > "s + _tcI0::show(y);
+      return _tcI0::show(x) + std::string(" > ") + _tcI0::show(y);
     }
   }
 }

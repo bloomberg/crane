@@ -4,6 +4,7 @@
 #include "small_vector.h"
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <utility>
@@ -14,9 +15,12 @@ enum class Comparison;
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
+
 enum class Comparison { EQ, LT, GT };
 template <typename M>
-concept BaseType = requires { typename M::t; };
+concept BaseType = requires {
+  typename M::t;
+};
 template <typename M>
 concept OrderedType = requires {
   typename M::t;
@@ -29,13 +33,17 @@ concept Map = requires {
   typename M::key;
   typename M::value;
   typename M::t;
-  requires(
-      requires {
-        { M::empty } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::empty() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::empty
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::empty()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
   {
     M::add(std::declval<typename M::key>(), std::declval<typename M::value>(),
            std::declval<typename M::t>())
@@ -85,6 +93,15 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Empty>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -109,8 +126,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 

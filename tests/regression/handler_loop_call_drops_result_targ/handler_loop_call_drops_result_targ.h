@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -16,14 +15,20 @@ struct Nat;
 template <typename A, typename B> struct Sum;
 struct natParams;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct Nat {
   // TYPES
@@ -70,8 +75,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,14 +108,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -119,9 +125,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -165,13 +171,14 @@ struct Denot {
 
     explicit dvalue(DU _v) : v_(_v) {}
 
-    template <typename _U>
-    dvalue(const dvalue<_U> &_other)
+    template <typename CraneU>
+    dvalue(const dvalue<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename dvalue<_U>::DP>(_other.v())) {
-              const auto &[a0] = std::get<typename dvalue<_U>::DP>(_other.v());
+            if (std::holds_alternative<typename dvalue<CraneU>::DP>(_other.v())) {
+              const auto &[a0] =
+                  std::get<typename dvalue<CraneU>::DP>(_other.v());
               return DP{[&]() -> ptr {
-                if constexpr (crane_convertible<ptr, const _U &>) {
+                if constexpr (crane_convertible<ptr, const CraneU &>) {
                   return crane_convert<ptr>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -203,7 +210,7 @@ struct Denot {
     // ACCESSORS
     FailE<ptr> clone() const { return {a0}; }
 
-    template <typename _U> operator FailE<_U>() const { return {a0}; }
+    template <typename CraneU> operator FailE<CraneU>() const { return {a0}; }
 
     // CREATORS
     static FailE<ptr> fail(dvalue<ptr> a0) { return {std::move(a0)}; }
@@ -225,10 +232,9 @@ struct Denot {
   template <typename ptr, typename r> using CFGtop = std::shared_ptr<ITree<r>>;
 
   template <Params _tcI0, typename T1>
-  static Sum<Nat, T1> handle_bot(CFGEtop<typename _tcI0::ptr, T1> e) {
+  static Sum<Nat, T1> handle_bot(const CFGEtop<typename _tcI0::ptr, T1> &e) {
     if (std::holds_alternative<
-            typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(
-            e.v())) {
+            typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(e.v())) {
       const auto &[a0] =
           std::get<typename Sum1<OtherE, FailE<typename _tcI0::ptr>, T1>::Inl1>(
               e.v());
@@ -241,26 +247,23 @@ struct Denot {
 
   template <Params _tcI0, typename T1>
   static CFGtop<typename _tcI0::ptr, Sum<exc<typename _tcI0::ptr>, T1>>
-  run_exc(CFGtop<typename _tcI0::ptr, T1> t) {
+  run_exc(const CFGtop<typename _tcI0::ptr, T1> &t) {
     return itree_iter(
-        [](const std::shared_ptr<ITree<T1>> &u)
-            -> std::shared_ptr<
-                ITree<Sum<std::shared_ptr<ITree<T1>>,
-                          Sum<dvalue<typename _tcI0::ptr>, T1>>>> {
+        [](const std::shared_ptr<ITree<T1>> &u) -> std::shared_ptr<ITree<Sum<
+            std::shared_ptr<ITree<T1>>,
+            Sum<dvalue<typename _tcI0::ptr>, T1>>>> {
           auto _cs = u->observe();
           if (std::holds_alternative<typename ITree<T1>::Ret>(_cs)) {
             const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&_cs);
             auto a = _itf.value;
-            return itree_ret(
-                Sum<std::shared_ptr<ITree<T1>>,
-                    Sum<dvalue<typename _tcI0::ptr>, T1>>::
-                    inr(Sum<dvalue<typename _tcI0::ptr>, T1>::inr(a)));
+            return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
+                                 Sum<dvalue<typename _tcI0::ptr>, T1>>::inr(
+                Sum<dvalue<typename _tcI0::ptr>, T1>::inr(a)));
           } else if (std::holds_alternative<typename ITree<T1>::Tau>(_cs)) {
             const auto &_itf = *std::get_if<typename ITree<T1>::Tau>(&_cs);
             auto u_ = _itf.next;
-            return itree_ret(
-                Sum<std::shared_ptr<ITree<T1>>,
-                    Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(u_));
+            return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
+                                 Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(u_));
           } else {
             const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&_cs);
             auto e = crane_event_as<
@@ -270,17 +273,16 @@ struct Denot {
             auto &&_sv = handle_bot<_tcI0, crane::obj>(e);
             if (std::holds_alternative<typename Sum<Nat, crane::obj>::Inl>(
                     _sv.v())) {
-              return itree_ret(
-                  Sum<std::shared_ptr<ITree<T1>>,
-                      Sum<dvalue<typename _tcI0::ptr>, T1>>::
-                      inr(Sum<dvalue<typename _tcI0::ptr>, T1>::inl(
-                          dvalue<typename _tcI0::ptr>::du())));
+              return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
+                                   Sum<dvalue<typename _tcI0::ptr>, T1>>::inr(
+                  Sum<dvalue<typename _tcI0::ptr>, T1>::inl(
+                      dvalue<typename _tcI0::ptr>::du())));
             } else {
               const auto &[a0] =
                   std::get<typename Sum<Nat, crane::obj>::Inr>(_sv.v());
               return itree_ret(Sum<std::shared_ptr<ITree<T1>>,
-                                   Sum<dvalue<typename _tcI0::ptr>,
-                                       T1>>::inl(crane_call_erased(k, a0)));
+                                   Sum<dvalue<typename _tcI0::ptr>, T1>>::inl(
+                  crane_call_erased(k, a0)));
             }
           }
         },
@@ -298,8 +300,7 @@ static_assert(Params<natParams>);
 
 struct HandlerLoopCallDropsResultTarg {
   static std::shared_ptr<
-      ITree<Sum<Denot::template exc<typename natParams::ptr>, Nat>>>
-  run();
+      ITree<Sum<Denot::template exc<typename natParams::ptr>, Nat>>> run();
 };
 
 #endif // INCLUDED_HANDLER_LOOP_CALL_DROPS_RESULT_TARG

@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -35,16 +34,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -81,8 +81,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,19 +91,22 @@ public:
 };
 
 template <typename T1> List<T1> better_rev(const List<T1> &l) {
-  auto go_impl = [](auto &_self_go, const List<T1> &l0,
-                    List<T1> acc) -> List<T1> {
-    if (std::holds_alternative<typename List<T1>::Nil>(l0.v())) {
-      return acc;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l0.v());
-      return _self_go(_self_go, *a1, List<T1>::cons(a0, std::move(acc)));
+  {
+    const List<T1> &_lc1_l0 = l;
+    List<T1> _lc1_acc = List<T1>::nil();
+    List<T1> _lc1_loop_acc = std::move(_lc1_acc);
+    const List<T1> *_lc1_loop_l0 = &_lc1_l0;
+    while (true) {
+      if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_l0->v())) {
+        return _lc1_loop_acc;
+      } else {
+        const auto &[a0, a1] =
+            std::get<typename List<T1>::Cons>(_lc1_loop_l0->v());
+        _lc1_loop_acc = List<T1>::cons(a0, std::move(_lc1_loop_acc));
+        _lc1_loop_l0 = crane_raw(a1);
+      }
     }
-  };
-  auto go = [&](const List<T1> &l0, List<T1> acc) -> List<T1> {
-    return go_impl(go_impl, l0, acc);
-  };
-  return go(l, List<T1>::nil());
+  }
 }
 
 #endif // INCLUDED_TAIL_REC_REV

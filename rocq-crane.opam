@@ -5,12 +5,11 @@ homepage: "https://github.com/bloomberg/crane"
 license: "LGPL-2.1"
 bug-reports: "https://github.com/bloomberg/crane/issues"
 depends: [
-  "ocaml"
-  "coq" {>= "9.0.0" & < "9.1"}
+  "ocaml" {>= "5.4.1" & < "5.5"}
+  "coq" {>= "9.1" & < "9.2"}
   "rocq-runtime"
   "conf-clang"
-  "conf-clang-format"
-  "coq-equations" {with-test}
+  "rocq-equations" {with-test}
   "coq-itree"
   "coq-paco"
   "coq-color"

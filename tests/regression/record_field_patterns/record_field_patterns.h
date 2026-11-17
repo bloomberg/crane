@@ -3,10 +3,11 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -37,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,7 +94,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -109,27 +111,30 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -156,7 +161,7 @@ struct RecordFieldPatterns {
 
   /// Apply a polymorphic function to a record — the record type flows
   /// through a type variable.
-  static Point id_point(const Point &x0_);
+  static Point id_point(Point x0_);
 
   /// Polymorphic projection: the match happens inside a polymorphic context
   /// where the scrutinee's type might not be Tglob.
@@ -240,8 +245,9 @@ struct RecordFieldPatterns {
       zero_x(Point{UINT64_C(5), UINT64_C(10)});
   static inline const Point test_id =
       id_point(Point{UINT64_C(99), UINT64_C(1)});
-  static inline const uint64_t test_seg = segment_length_sq(Segment{
-      Point{UINT64_C(1), UINT64_C(2)}, Point{UINT64_C(4), UINT64_C(6)}});
+  static inline const uint64_t test_seg =
+      segment_length_sq(Segment{Point{UINT64_C(1), UINT64_C(2)},
+                                Point{UINT64_C(4), UINT64_C(6)}});
   static inline const uint64_t test_sum = sum_px(List<Point>::cons(
       Point{UINT64_C(10), UINT64_C(0)},
       List<Point>::cons(Point{UINT64_C(20), UINT64_C(0)},

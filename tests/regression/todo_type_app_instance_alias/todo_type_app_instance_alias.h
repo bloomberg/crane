@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
 
 #include <concepts>
+#include <cstdint>
 
 template <typename I, typename A>
 concept Boxed = requires {
@@ -10,7 +11,7 @@ concept Boxed = requires {
 
 struct TodoTypeAppInstanceAlias {
   struct natBoxed {
-    static uint64_t boxed_default() { return UINT64_C(7); }
+    constexpr static uint64_t boxed_default() { return UINT64_C(7); }
   };
 
   static_assert(Boxed<natBoxed, uint64_t>);
@@ -21,9 +22,8 @@ struct TodoTypeAppInstanceAlias {
     return _tcI0::boxed_default();
   }
 
-  static inline const uint64_t test_value = []() {
-    return (pick<natBoxed, uint64_t>() + pick<natBoxed, uint64_t>());
-  }();
+  static inline const uint64_t test_value =
+      (pick<natBoxed, uint64_t>() + pick<natBoxed, uint64_t>());
 };
 
 #endif // INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS

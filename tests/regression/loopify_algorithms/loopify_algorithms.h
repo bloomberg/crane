@@ -4,14 +4,62 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
 
-template <typename A> struct List;
+template <typename A>
+struct List; /// Consolidated UNIQUE list/sequence algorithms.
+
+struct LoopifyAlgorithms {
+  static uint64_t len_impl(const List<uint64_t> &l);
+  /// sieve l Sieve of Eratosthenes - filters out multiples.
+  static List<uint64_t> sieve_fuel(uint64_t fuel, const List<uint64_t> &l);
+  static List<uint64_t> sieve(const List<uint64_t> &l);
+  /// run_length_encode l encodes consecutive runs: 1,1,2,3,3,3 ->
+  /// (1,2),(2,1),(3,3).
+  static List<std::pair<uint64_t, uint64_t>>
+  run_length_encode(const List<uint64_t> &l);
+  /// prefix_sums acc l cumulative sums: 1,2,3 with acc=0 -> 0,1,3,6.
+  static List<uint64_t> prefix_sums(uint64_t acc, const List<uint64_t> &l);
+  /// differences l consecutive differences: 5,3,8,2 -> -2,5,-6.
+  static List<uint64_t> differences(const List<uint64_t> &l);
+  /// rotate_left n l rotates list left by n positions.
+  static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
+                                         const List<uint64_t> &l);
+  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
+  /// nub l removes ALL duplicates (not just consecutive): 1,2,1,3,2 -> 1,2,3.
+  static List<uint64_t> nub_aux(const List<uint64_t> &l, uint64_t fuel);
+  static List<uint64_t> nub(const List<uint64_t> &l);
+  /// Internal helpers for palindrome check.
+  static List<uint64_t> rev_impl(List<uint64_t> acc, const List<uint64_t> &l);
+  static bool list_eq_impl(const List<uint64_t> &l1, const List<uint64_t> &l2);
+  /// is_palindrome l checks if list reads same forwards and backwards.
+  static bool is_palindrome(const List<uint64_t> &l);
+  /// windows n l sliding windows of size n: windows 2 1,2,3,4 ->
+  /// [1,2],[2,3],[3,4].
+  static List<uint64_t> take_impl(uint64_t k, const List<uint64_t> &l);
+  static List<List<uint64_t>> windows_aux(uint64_t n, const List<uint64_t> &l,
+                                          uint64_t fuel);
+  static List<List<uint64_t>> windows(uint64_t n, const List<uint64_t> &l);
+  /// sliding_pairs l returns consecutive pairs: 1,2,3,4 -> (1,2),(2,3),(3,4).
+  static List<std::pair<uint64_t, uint64_t>>
+  sliding_pairs(const List<uint64_t> &l);
+  /// max_prefix_sum l maximum sum of prefix (Kadane-like pattern).
+  static uint64_t max_prefix_sum(const List<uint64_t> &l);
+  /// weighted_sum i l computes weighted sum with increasing index.
+  static uint64_t weighted_sum(uint64_t i, const List<uint64_t> &l);
+  /// step_sum l sums with conditional doubling for odd numbers.
+  static uint64_t step_sum(const List<uint64_t> &l);
+  /// Helper: get head with default value.
+  static uint64_t head_nat(uint64_t d, const List<uint64_t> &l);
+  /// suffix_sums l computes suffix sums (reverse of prefix sums).
+  static List<uint64_t> suffix_sums(const List<uint64_t> &l);
+};
 
 template <typename A> struct List {
   // TYPES
@@ -36,16 +84,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +131,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,75 +140,29 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
-};
-
-/// Consolidated UNIQUE list/sequence algorithms.
-struct LoopifyAlgorithms {
-  static uint64_t len_impl(const List<uint64_t> &l);
-  /// sieve l Sieve of Eratosthenes - filters out multiples.
-  static List<uint64_t> sieve_fuel(uint64_t fuel, List<uint64_t> l);
-  static List<uint64_t> sieve(const List<uint64_t> &l);
-  /// run_length_encode l encodes consecutive runs: 1,1,2,3,3,3 ->
-  /// (1,2),(2,1),(3,3).
-  static List<std::pair<uint64_t, uint64_t>>
-  run_length_encode(const List<uint64_t> &l);
-  /// prefix_sums acc l cumulative sums: 1,2,3 with acc=0 -> 0,1,3,6.
-  static List<uint64_t> prefix_sums(uint64_t acc, const List<uint64_t> &l);
-  /// differences l consecutive differences: 5,3,8,2 -> -2,5,-6.
-  static List<uint64_t> differences(const List<uint64_t> &l);
-  /// rotate_left n l rotates list left by n positions.
-  static List<uint64_t> rotate_left_fuel(uint64_t fuel, uint64_t n,
-                                         List<uint64_t> l);
-  static List<uint64_t> rotate_left(uint64_t n, const List<uint64_t> &l);
-  /// nub l removes ALL duplicates (not just consecutive): 1,2,1,3,2 -> 1,2,3.
-  static List<uint64_t> nub_aux(const List<uint64_t> &l, uint64_t fuel);
-  static List<uint64_t> nub(const List<uint64_t> &l);
-  /// Internal helpers for palindrome check.
-  static List<uint64_t> rev_impl(List<uint64_t> acc, const List<uint64_t> &l);
-  static bool list_eq_impl(const List<uint64_t> &l1, const List<uint64_t> &l2);
-  /// is_palindrome l checks if list reads same forwards and backwards.
-  static bool is_palindrome(const List<uint64_t> &l);
-  /// windows n l sliding windows of size n: windows 2 1,2,3,4 ->
-  /// [1,2],[2,3],[3,4].
-  static List<uint64_t> take_impl(uint64_t k, const List<uint64_t> &l);
-  static List<List<uint64_t>> windows_aux(uint64_t n, const List<uint64_t> &l,
-                                          uint64_t fuel);
-
-  static List<List<uint64_t>> windows(uint64_t n, const List<uint64_t> &l);
-  /// sliding_pairs l returns consecutive pairs: 1,2,3,4 -> (1,2),(2,3),(3,4).
-  static List<std::pair<uint64_t, uint64_t>>
-  sliding_pairs(const List<uint64_t> &l);
-  /// max_prefix_sum l maximum sum of prefix (Kadane-like pattern).
-  static uint64_t max_prefix_sum(const List<uint64_t> &l);
-  /// weighted_sum i l computes weighted sum with increasing index.
-  static uint64_t weighted_sum(uint64_t i, const List<uint64_t> &l);
-  /// step_sum l sums with conditional doubling for odd numbers.
-  static uint64_t step_sum(const List<uint64_t> &l);
-  /// Helper: get head with default value.
-  static uint64_t head_nat(uint64_t d, const List<uint64_t> &l);
-  /// suffix_sums l computes suffix sums (reverse of prefix sums).
-  static List<uint64_t> suffix_sums(const List<uint64_t> &l);
 };
 
 #endif // INCLUDED_LOOPIFY_ALGORITHMS

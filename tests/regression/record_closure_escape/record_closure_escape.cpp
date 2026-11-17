@@ -12,14 +12,14 @@ uint64_t RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
             _sv0.v())) {
       return (a1 + x);
     } else {
-      const auto &[a00, a10, a20] =
+      const auto &[_, a10, _] =
           std::get<typename RecordClosureEscape::tree::Node>(_sv0.v());
       auto &&_sv1 = *a2;
       if (std::holds_alternative<typename RecordClosureEscape::tree::Leaf>(
               _sv1.v())) {
         return (a10 + x);
       } else {
-        const auto &[a01, a11, a21] =
+        const auto &[_, a11, _] =
             std::get<typename RecordClosureEscape::tree::Node>(_sv1.v());
         return (((a10 + a11) + a1) + x);
       }
@@ -33,7 +33,9 @@ uint64_t RecordClosureEscape::sum_values(const RecordClosureEscape::tree &t,
 /// record constructor arguments.
 RecordClosureEscape::fn_record
 RecordClosureEscape::record_escape(RecordClosureEscape::tree t) {
-  return fn_record{[=](uint64_t _x0) -> uint64_t { return sum_values(t, _x0); },
+  return fn_record{[=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+    return sum_values(std::move(t), _x0);
+  },
                    UINT64_C(42)};
 }
 

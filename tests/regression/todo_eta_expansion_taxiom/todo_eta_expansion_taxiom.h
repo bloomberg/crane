@@ -3,7 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -18,18 +18,19 @@ struct TodoEtaExpansionTaxiom {
     // ACCESSORS
     Pair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator Pair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator Pair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -44,17 +45,15 @@ struct TodoEtaExpansionTaxiom {
   };
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 Pair_rect(F0 &&f, const Pair<T1, T2> &p) {
     const auto &[a0, a1] = p;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 Pair_rec(F0 &&f, const Pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return Pair_rect<T1, T2, T3>(f, p);
   }
 
   template <typename T1, typename T2>
@@ -65,14 +64,13 @@ struct TodoEtaExpansionTaxiom {
 
   template <typename T1, typename T2>
   static T1 fst_pair(const Pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
+    const auto &[a0, _] = p;
     return a0;
   }
 
   static inline const Pair<bool, uint64_t> test_swap =
-      swap_pair<uint64_t, bool>(
-          Pair<uint64_t, bool>::mkpair(UINT64_C(3), true));
-
+      swap_pair<uint64_t, bool>(Pair<uint64_t, bool>::mkpair(UINT64_C(3),
+                                                             true));
   static inline const uint64_t test_fst = fst_pair<uint64_t, bool>(
       Pair<uint64_t, bool>::mkpair(UINT64_C(42), true));
 };

@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -61,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,23 +93,24 @@ struct List {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const typename List::template list<_U> &_other)
+    template <typename CraneU>
+    list(const typename List::template list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename List::template list<_U>::Nil>(
-                    _other.v())) {
+            if (std::holds_alternative<
+                    typename List::template list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
-                  std::get<typename List::template list<_U>::Cons>(_other.v());
+                  std::get<typename List::template list<CraneU>::Cons>(
+                      _other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<typename List::template list<A>>(
@@ -124,23 +124,23 @@ struct List {
     }
 
     static typename List::template list<A> cons(A a, List::list<A> l) {
-      return typename List::template list<A>(Cons{
-          std::move(a),
-          std::make_shared<typename List::template list<A>>(std::move(l))});
+      return typename List::template list<A>(
+          Cons{std::move(a),
+               std::make_shared<typename List::template list<A>>(std::move(l))});
     }
 
     // MANIPULATORS
     ~list() {
-      auto _next = [&](variant_t &_v)
-          -> std::shared_ptr<typename List::template list<A>> {
-        if (auto *_alt = std::get_if<Cons>(&_v)) {
-          if (_alt->l && _alt->l.use_count() == 1) {
-            std::atomic_thread_fence(std::memory_order_acquire);
-            return std::move(_alt->l);
-          }
-        }
-        return nullptr;
-      };
+      auto _next =
+          [&](variant_t &_v) -> std::shared_ptr<typename List::template list<A>> {
+            if (auto *_alt = std::get_if<Cons>(&_v)) {
+              if (_alt->l && _alt->l.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                return std::move(_alt->l);
+              }
+            }
+            return nullptr;
+          };
       std::shared_ptr<typename List::template list<A>> _cur = _next(v_mut());
       while (_cur) {
         _cur = _next(_cur->v_mut());
@@ -149,8 +149,8 @@ struct List {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -201,7 +201,7 @@ std::optional<T1> List::nth_error(const List::list<T1> &l, const Nat &n) {
     if (std::holds_alternative<typename List::list<T1>::Nil>(l.v())) {
       return std::optional<T1>();
     } else {
-      const auto &[a00, a10] = std::get<typename List::list<T1>::Cons>(l.v());
+      const auto &[a00, _] = std::get<typename List::list<T1>::Cons>(l.v());
       return std::make_optional<T1>(a00);
     }
   } else {
@@ -209,7 +209,7 @@ std::optional<T1> List::nth_error(const List::list<T1> &l, const Nat &n) {
     if (std::holds_alternative<typename List::list<T1>::Nil>(l.v())) {
       return std::optional<T1>();
     } else {
-      const auto &[a00, a10] = std::get<typename List::list<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List::list<T1>::Cons>(l.v());
       return List::template nth_error<T1>(*a10, *a0);
     }
   }

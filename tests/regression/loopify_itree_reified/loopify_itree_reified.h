@@ -4,9 +4,9 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <crane_itree.h>
+#include <cstdint>
 #include <memory>
 #include <utility>
 #include <variant>
@@ -24,11 +24,9 @@ struct LoopifyItreeReified {
   /// The guardedness checker unfolds this transparent definition to verify
   /// that recursive calls are under Tau/Vis constructors.
   template <typename T1>
-  static std::shared_ptr<ITree<T1>> pass_body(
-      std::type_identity_t<
-          crane::fn<std::shared_ptr<ITree<T1>>(std::shared_ptr<ITree<T1>>)>>
-          rec,
-      const itreeF_t<T1> &ot) {
+  static std::shared_ptr<ITree<T1>> pass_body(const std::type_identity_t<
+      crane::fn<std::shared_ptr<ITree<T1>>(std::shared_ptr<ITree<T1>>)>> &rec,
+                                              const itreeF_t<T1> &ot) {
     if (std::holds_alternative<typename ITree<T1>::Ret>(ot)) {
       const auto &_itf = *std::get_if<typename ITree<T1>::Ret>(&ot);
       auto r = _itf.value;

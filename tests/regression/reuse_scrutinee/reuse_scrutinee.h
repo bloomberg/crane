@@ -3,8 +3,8 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -42,6 +42,15 @@ struct ReuseScrutinee {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -66,8 +75,8 @@ struct ReuseScrutinee {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -76,8 +85,6 @@ struct ReuseScrutinee {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -89,16 +96,8 @@ struct ReuseScrutinee {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
-                tree_rec<T1>(f, f0, *a2));
-    }
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   /// Extract the value from the left subtree.
@@ -134,7 +133,7 @@ struct ReuseScrutinee {
     if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
       return tree::leaf();
     } else {
-      auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v_mut());
+      auto &[_, _, a2] = std::get<typename tree::Node>(t.v_mut());
       return tree::node(tree::leaf(), subtree_sum(t), *a2);
     }
   }();

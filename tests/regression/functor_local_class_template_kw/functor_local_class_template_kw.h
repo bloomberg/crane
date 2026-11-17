@@ -2,17 +2,22 @@
 #define INCLUDED_FUNCTOR_LOCAL_CLASS_TEMPLATE_KW
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept S = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::z } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::z() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::z
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::z()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 template <S X> struct F {
@@ -30,7 +35,7 @@ template <S X> struct F {
 
 struct N {
   using t = uint64_t;
-  static inline const uint64_t z = UINT64_C(0);
+  static constexpr uint64_t z = UINT64_C(0);
 };
 
 using FN = F<N>;

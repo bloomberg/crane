@@ -3,18 +3,17 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
 namespace SepExtQualifiedRaw {
-
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 
 template <OrderedType X> struct Make {
   template <typename A> struct Fmap {
@@ -41,23 +40,23 @@ template <OrderedType X> struct Make {
 
     explicit Fmap(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    Fmap(const Fmap<_U> &_other)
+    template <typename CraneU>
+    Fmap(const Fmap<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Fmap<_U>::Empty>(_other.v())) {
+            if (std::holds_alternative<typename Fmap<CraneU>::Empty>(_other.v())) {
               return Empty{};
             } else {
               const auto &[a0, a1, a2] =
-                  std::get<typename Fmap<_U>::Node>(_other.v());
+                  std::get<typename Fmap<CraneU>::Node>(_other.v());
               return Node{
                   a0,
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a2 ? std::make_shared<Fmap<A>>(crane_convert<Fmap<A>>(*a2))
@@ -91,8 +90,8 @@ template <OrderedType X> struct Make {
 
     Fmap(const Fmap &) = default;
     Fmap &operator=(const Fmap &) = default;
-    Fmap(Fmap &&) noexcept = default;
-    Fmap &operator=(Fmap &&) noexcept = default;
+    Fmap(Fmap &&) = default;
+    Fmap &operator=(Fmap &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -101,8 +100,6 @@ template <OrderedType X> struct Make {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Fmap<T1> &,
-                                   T2 &>
   static T2 fmap_rect(T2 f, F1 &&f0, const Fmap<T1> &f1) {
     if (std::holds_alternative<typename Fmap<T1>::Empty>(f1.v())) {
       return f;
@@ -113,15 +110,8 @@ template <OrderedType X> struct Make {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Fmap<T1> &,
-                                   T2 &>
   static T2 fmap_rec(T2 f, F1 &&f0, const Fmap<T1> &f1) {
-    if (std::holds_alternative<typename Fmap<T1>::Empty>(f1.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename Fmap<T1>::Node>(f1.v());
-      return f0(a0, a1, *a2, fmap_rec<T1, T2>(std::move(f), f0, *a2));
-    }
+    return fmap_rect<T1, T2>(std::move(f), f0, f1);
   }
 
   template <typename T1> static bool is_empty(const Fmap<T1> &m) {
@@ -132,7 +122,6 @@ template <OrderedType X> struct Make {
     }
   }
 };
-
 } // namespace SepExtQualifiedRaw
 
 #endif // INCLUDED_SEPEXTQUALIFIEDRAW

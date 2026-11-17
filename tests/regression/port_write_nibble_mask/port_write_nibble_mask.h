@@ -1,7 +1,7 @@
 #ifndef INCLUDED_PORT_WRITE_NIBBLE_MASK
 #define INCLUDED_PORT_WRITE_NIBBLE_MASK
 
-#include <utility>
+#include <cstdint>
 
 struct PortWriteNibbleMask {
   struct ram_chip {

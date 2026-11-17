@@ -5,8 +5,8 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -47,16 +47,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -93,8 +94,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -106,38 +107,38 @@ public:
   bool existsb(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     bool _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified existsb: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified existsb: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = false;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = (f(a0) || std::move(_result));
       }
@@ -146,7 +147,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -167,38 +168,38 @@ public:
   List<T1> flat_map(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified flat_map: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified flat_map: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = f(a0).app(std::move(_result));
       }
@@ -209,35 +210,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -245,26 +246,28 @@ public:
   }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -290,19 +293,7 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 HLALocus_rec(T1 f, T1 f0, T1 f1, HLALocus h) {
-    switch (h) {
-    case HLALocus::LOCUS_A: {
-      return f;
-    }
-    case HLALocus::LOCUS_B: {
-      return f0;
-    }
-    case HLALocus::LOCUS_DR: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return HLALocus_rect<T1>(std::move(f), std::move(f0), std::move(f1), h);
   }
 
   static bool hla_locus_eq_dec(HLALocus x, HLALocus y);
@@ -327,13 +318,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   static bool epitope_eq_dec(const HLAEpitope &x, const HLAEpitope &y);
   static bool epitope_eqb(const HLAEpitope &x, const HLAEpitope &y);
-  static inline const HLAEpitope eplet_62GE =
+  [[gnu::used]] static inline const HLAEpitope eplet_62GE =
       HLAEpitope{UINT64_C(62), HLALocus::LOCUS_A, true};
-  static inline const HLAEpitope eplet_65QIA =
+  [[gnu::used]] static inline const HLAEpitope eplet_65QIA =
       HLAEpitope{UINT64_C(65), HLALocus::LOCUS_A, true};
-  static inline const HLAEpitope eplet_142T =
+  [[gnu::used]] static inline const HLAEpitope eplet_142T =
       HLAEpitope{UINT64_C(142), HLALocus::LOCUS_B, true};
-  static inline const HLAEpitope eplet_77N =
+  [[gnu::used]] static inline const HLAEpitope eplet_77N =
       HLAEpitope{UINT64_C(77), HLALocus::LOCUS_DR, true};
   static List<HLAEpitope> allele_epitopes(const HLAAllele &a);
   static List<HLAEpitope> typing_epitopes(const HLATyping &t);
@@ -363,8 +354,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   static bool mfi_config_valid(const MFIThresholdConfig &cfg);
   static inline const MFIThresholdConfig example_luminex_thresholds =
-      MFIThresholdConfig{UINT64_C(1000),  UINT64_C(3000), UINT64_C(8000),
-                         UINT64_C(12000), UINT64_C(1),    true};
+      MFIThresholdConfig{UINT64_C(1000), UINT64_C(3000), UINT64_C(8000),
+                         UINT64_C(12000), UINT64_C(1), true};
 
   struct ValidatedMFIConfig {
     MFIThresholdConfig vmc_config;
@@ -405,32 +396,15 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 MFIStrength_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, MFIStrength m) {
-    switch (m) {
-    case MFIStrength::MFI_NEGATIVE: {
-      return f;
-    }
-    case MFIStrength::MFI_WEAKPOSITIVE: {
-      return f0;
-    }
-    case MFIStrength::MFI_MODERATE: {
-      return f1;
-    }
-    case MFIStrength::MFI_STRONG: {
-      return f2;
-    }
-    case MFIStrength::MFI_VERYSTRONG: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+    return MFIStrength_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                std::move(f2), std::move(f3), m);
   }
 
   static MFIStrength classify_mfi_with_config(const MFIThresholdConfig &cfg,
                                               uint64_t mfi);
   static MFIStrength classify_mfi_safe(const ValidatedMFIConfig &vcfg,
                                        uint64_t mfi);
-  static inline const uint64_t mfi_negative_threshold = UINT64_C(1000);
+  static constexpr uint64_t mfi_negative_threshold = UINT64_C(1000);
   static uint64_t max_dsa_mfi(const VirtualXMProfile &recipient,
                               const HLATyping &donor);
   static bool has_complement_fixing_dsa(const VirtualXMProfile &recipient,
@@ -464,22 +438,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 VirtualXMResult_rec(T1 f, T1 f0, T1 f1, T1 f2, VirtualXMResult v) {
-    switch (v) {
-    case VirtualXMResult::VXM_NEGATIVE: {
-      return f;
-    }
-    case VirtualXMResult::VXM_WEAKPOSITIVE: {
-      return f0;
-    }
-    case VirtualXMResult::VXM_POSITIVE: {
-      return f1;
-    }
-    case VirtualXMResult::VXM_STRONGPOSITIVE: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+    return VirtualXMResult_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                    std::move(f2), v);
   }
 
   static VirtualXMResult
@@ -517,22 +477,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 TransplantAcceptability_rec(T1 f, T1 f0, T1 f1, T1 f2,
                                         TransplantAcceptability t) {
-    switch (t) {
-    case TransplantAcceptability::ACCEPTABLE: {
-      return f;
-    }
-    case TransplantAcceptability::ACCEPTABLE_WITH_DESENSITIZATION: {
-      return f0;
-    }
-    case TransplantAcceptability::UNACCEPTABLE_HIGH_RISK: {
-      return f1;
-    }
-    case TransplantAcceptability::ABSOLUTE_CONTRAINDICATION: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+    return TransplantAcceptability_rect<T1>(std::move(f), std::move(f0),
+                                            std::move(f1), std::move(f2), t);
   }
 
   static TransplantAcceptability
@@ -566,20 +512,10 @@ struct ValidatedVirtualCrossmatchTraceCase {
 
   template <typename T1>
   static T1 TestConfidence_rec(T1 f, T1 f0, T1 f1, TestConfidence t) {
-    switch (t) {
-    case TestConfidence::CONFIDENCE_HIGH: {
-      return f;
-    }
-    case TestConfidence::CONFIDENCE_MEDIUM: {
-      return f0;
-    }
-    case TestConfidence::CONFIDENCE_LOW: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return TestConfidence_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                   t);
   }
+
   enum class CrossmatchResult {
     XM_COMPATIBLE,
     XM_INCOMPATIBLE,
@@ -611,22 +547,8 @@ struct ValidatedVirtualCrossmatchTraceCase {
   template <typename T1>
   static T1 CrossmatchResult_rec(T1 f, T1 f0, T1 f1, T1 f2,
                                  CrossmatchResult c) {
-    switch (c) {
-    case CrossmatchResult::XM_COMPATIBLE: {
-      return f;
-    }
-    case CrossmatchResult::XM_INCOMPATIBLE: {
-      return f0;
-    }
-    case CrossmatchResult::XM_INCONCLUSIVE: {
-      return f1;
-    }
-    case CrossmatchResult::XM_NOT_DONE: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+    return CrossmatchResult_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                     std::move(f2), c);
   }
 
   struct CrossmatchWithUncertainty {
@@ -663,13 +585,13 @@ struct ValidatedVirtualCrossmatchTraceCase {
               HLAAllele{HLALocus::LOCUS_B, UINT64_C(7)},
               List<HLAAllele>::cons(HLAAllele{HLALocus::LOCUS_DR, UINT64_C(4)},
                                     List<HLAAllele>::nil()))))};
-  static inline const VirtualXMProfile weak_profile =
-      VirtualXMProfile{List<EpitopeAntibody>::cons(
-                           EpitopeAntibody{eplet_65QIA, UINT64_C(2500), false},
-                           List<EpitopeAntibody>::cons(
-                               EpitopeAntibody{eplet_77N, UINT64_C(800), false},
-                               List<EpitopeAntibody>::nil())),
-                       UINT64_C(32), UINT64_C(40), UINT64_C(2)};
+  static inline const VirtualXMProfile weak_profile = VirtualXMProfile{
+      List<EpitopeAntibody>::cons(
+          EpitopeAntibody{eplet_65QIA, UINT64_C(2500), false},
+          List<EpitopeAntibody>::cons(
+              EpitopeAntibody{eplet_77N, UINT64_C(800), false},
+              List<EpitopeAntibody>::nil())),
+      UINT64_C(32), UINT64_C(40), UINT64_C(2)};
   static inline const VirtualXMProfile strong_profile = VirtualXMProfile{
       List<EpitopeAntibody>::cons(
           EpitopeAntibody{eplet_65QIA, UINT64_C(9000), true},
@@ -740,8 +662,9 @@ struct ValidatedVirtualCrossmatchTraceCase {
   static inline const bool sample_order_blocked = []() -> bool {
     auto _cs = create_safe_transfusion_order(
         UINT64_C(100), UINT64_C(201),
-        risk_acceptable(full_virtual_crossmatch_safe(
-            validated_luminex, strong_profile, donor_hla)),
+        risk_acceptable(full_virtual_crossmatch_safe(validated_luminex,
+                                                     strong_profile,
+                                                     donor_hla)),
         bad_crossmatch, UINT64_C(0), UINT64_C(1000), UINT64_C(77), false);
     if (_cs.has_value()) {
       const SafeTransfusionOrder &_x = *_cs;
@@ -752,16 +675,16 @@ struct ValidatedVirtualCrossmatchTraceCase {
   }();
   static inline const bool sample_authorized_order_stays_authorized =
       []() -> bool {
-    auto _cs = create_safe_transfusion_order(
-        UINT64_C(100), UINT64_C(202), true, good_crossmatch, UINT64_C(100),
-        UINT64_C(200), UINT64_C(88), false);
-    if (_cs.has_value()) {
-      const SafeTransfusionOrder &order = *_cs;
-      return transfusion_order_authorized(order, UINT64_C(200));
-    } else {
-      return false;
-    }
-  }();
+        auto _cs = create_safe_transfusion_order(
+            UINT64_C(100), UINT64_C(202), true, good_crossmatch, UINT64_C(100),
+            UINT64_C(200), UINT64_C(88), false);
+        if (_cs.has_value()) {
+          const SafeTransfusionOrder &order = *_cs;
+          return transfusion_order_authorized(order, UINT64_C(200));
+        } else {
+          return false;
+        }
+      }();
 };
 
 #endif // INCLUDED_VALIDATED_VIRTUAL_CROSSMATCH_TRACE

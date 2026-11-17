@@ -8,7 +8,37 @@
 
 struct Nat;
 enum class Comparison;
-template <typename X> struct Compare;
+template <typename X>
+struct Compare; /// Regression test for the `Crane Guard Compare` Label-keying bug (see
+
+/// docs/scan/117-guard-compare-directives-are-keyed-by-final-label-and-can-affect-unrelated-functions.md).
+///
+/// `guard_compare_table` in src/table.ml used to be keyed by `Label.t`
+/// (`KerName.label`, i.e. just the trailing identifier, dropping the module
+/// path), so two constants named compare in unrelated modules would
+/// collide in the table: registering a guard for one would silently guard
+/// the other too, even though it was never named in any Crane Guard
+/// Compare directive. It is now keyed by full GlobRef.t (via Refmap',
+/// matching the customs table's convention), so only the exact constant
+/// named in a directive is affected.
+///
+/// OK.compare is an ordinary Fixpoint-recursive comparator returning the
+/// plain extraction-primitive comparison type -- the shape Crane Guard
+/// Compare's codegen supports. Ordered.compare mimics a
+/// UsualOrderedType-module-style comparator (used throughout FSet/FMap-
+/// backed structures, e.g. `SllSubparserAsUOT`/`CacheKeyAsUOT` in
+/// parse-a-lot's `SLLPrediction.v`), returning the dependent
+/// OrderedType.Compare lt eq x y sig -- a different C++ type. Only
+/// OK.compare is guarded below; Ordered.compare must extract and compile
+/// unaffected.
+struct OK {
+  /// An ordinary structural comparator returning the plain extraction
+  /// primitive comparison -- the only shape `Crane Guard Compare`'s
+  /// codegen actually supports. Guarding this one is fine: physical
+  /// identity of the two arguments trivially implies structural equality
+  /// for pure/immutable values.
+  static Comparison compare(const Nat &x, const Nat &y);
+};
 
 struct Nat {
   // TYPES
@@ -55,14 +85,15 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 template <typename X> struct Compare {
@@ -102,36 +133,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-/// Regression test for the `Crane Guard Compare` Label-keying bug (see
-/// docs/scan/117-guard-compare-directives-are-keyed-by-final-label-and-can-affect-unrelated-functions.md).
-///
-/// `guard_compare_table` in src/table.ml used to be keyed by `Label.t`
-/// (`KerName.label`, i.e. just the trailing identifier, dropping the module
-/// path), so two constants named compare in unrelated modules would
-/// collide in the table: registering a guard for one would silently guard
-/// the other too, even though it was never named in any Crane Guard
-/// Compare directive. It is now keyed by full GlobRef.t (via Refmap',
-/// matching the customs table's convention), so only the exact constant
-/// named in a directive is affected.
-///
-/// OK.compare is an ordinary Fixpoint-recursive comparator returning the
-/// plain extraction-primitive comparison type -- the shape Crane Guard
-/// Compare's codegen supports. Ordered.compare mimics a
-/// UsualOrderedType-module-style comparator (used throughout FSet/FMap-
-/// backed structures, e.g. `SllSubparserAsUOT`/`CacheKeyAsUOT` in
-/// parse-a-lot's `SLLPrediction.v`), returning the dependent
-/// OrderedType.Compare lt eq x y sig -- a different C++ type. Only
-/// OK.compare is guarded below; Ordered.compare must extract and compile
-/// unaffected.
-struct OK {
-  /// An ordinary structural comparator returning the plain extraction
-  /// primitive comparison -- the only shape `Crane Guard Compare`'s
-  /// codegen actually supports. Guarding this one is fine: physical
-  /// identity of the two arguments trivially implies structural equality
-  /// for pure/immutable values.
-  static Comparison compare(const Nat &x, const Nat &y);
-};
-
 struct Ordered {
   /// Unrelated type and module -- never mentioned in the Crane Guard
   /// Compare directive below. Its compare happens to share the trailing
@@ -154,16 +155,7 @@ struct Ordered {
   }
 
   template <typename T1> static T1 t_rec(T1 f, T1 f0, T t0) {
-    switch (t0) {
-    case T::A: {
-      return f;
-    }
-    case T::B: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return t_rect<T1>(std::move(f), std::move(f0), t0);
   }
 
   /// An ordinary structural comparator returning the plain extraction

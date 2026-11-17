@@ -20,8 +20,7 @@ FetchOps::fetch_pair(const List<uint64_t> &rom_data, uint64_t addr) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv0.v())) {
       return std::make_pair(UINT64_C(0), UINT64_C(0));
     } else {
-      const auto &[a00, a10] =
-          std::get<typename List<uint64_t>::Cons>(_sv0.v());
+      const auto &[a00, _] = std::get<typename List<uint64_t>::Cons>(_sv0.v());
       return std::make_pair(a0, a00);
     }
   }

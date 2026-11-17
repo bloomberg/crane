@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_BINDING_REUSE
 #define INCLUDED_NAME_CLASH_BINDING_REUSE
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 
@@ -49,15 +50,13 @@ struct NameClashBindingReuse {
       return (((a0 + a2) + a00) + a10);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
-    T1 pair_nat_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 pair_nat_rec(F0 &&f) const {
+      return this->template pair_nat_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 pair_nat_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -98,17 +97,13 @@ struct NameClashBindingReuse {
       return ((((a0 + a1) + a2) + a00) + a10);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
-                                     uint64_t &>
-    T1 triple_nat_rec(F0 &&f) const {
-      const auto &[a0, a1, a2] = *this;
-      return f(a0, a1, a2);
+    template <typename T1, typename F0> T1 triple_nat_rec(F0 &&f) const {
+      return this->template triple_nat_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &,
-                                     uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &, const uint64_t &>
     T1 triple_nat_rect(F0 &&f) const {
       const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);

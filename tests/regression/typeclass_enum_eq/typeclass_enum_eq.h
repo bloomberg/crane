@@ -32,19 +32,7 @@ struct TypeclassEnumEq {
   }
 
   template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-    switch (c) {
-    case Color::RED: {
-      return f;
-    }
-    case Color::GREEN: {
-      return f0;
-    }
-    case Color::BLUE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 
   /// Returns true when x and y are the same colour.
@@ -65,7 +53,6 @@ struct TypeclassEnumEq {
 
   static inline const bool test_same =
       is_equal<ColorEq, Color>(Color::RED, Color::RED);
-
   static inline const bool test_diff =
       is_equal<ColorEq, Color>(Color::RED, Color::BLUE);
 };

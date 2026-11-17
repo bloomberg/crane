@@ -3,7 +3,7 @@
 void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
                                 const List<bool> &cells) {
   const List<bool> *_loop_cells = &cells;
-  uint64_t _loop_x = std::move(x);
+  uint64_t _loop_x = x;
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_cells->v())) {
       return;

@@ -55,8 +55,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -127,8 +127,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -143,12 +143,13 @@ struct Pos {
   static T1 peano_rect(T1 a,
                        std::type_identity_t<crane::fn<T1(Positive, T1)>> f,
                        const Positive &p) {
+    auto _lc1_pa0 = f(Positive::xh(), a);
     crane::fn<T1(Positive)> f2 = [=](Positive _x0) -> T1 {
       return peano_rect<T1>(
-          f(Positive::xh(), a),
-          [=](const Positive &p0, const T1 &x) {
-            return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
-          },
+          _lc1_pa0, [=](const Positive &p0,
+                        const T1 &x) {
+                      return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
+                    },
           _x0);
     };
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
@@ -164,7 +165,7 @@ struct Pos {
 };
 
 struct SelfPartialAppInLet {
-  static inline const Nat run = Pos::peano_rect(
+  static inline const Nat run = Pos::template peano_rect<Nat>(
       Nat::o(), [](Positive, const Nat &n) { return Nat::s(n); },
       Positive::xi(Positive::xo(Positive::xh())));
 };

@@ -5,9 +5,9 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -39,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -85,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,42 +95,42 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a1], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          _stack.emplace_back(CraneCont_Cons{a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -139,10 +140,9 @@ public:
 };
 
 /// A class method is emitted as a static member function of the instance
-/// struct, so it has a fixed arity.  Supplying fewer arguments than that --
-/// here storing sz 2 in a list of nat -> nat -- is emitted as a call rather
-/// than eta-expanded into a closure, giving "too few arguments to function
-/// call".
+/// struct, so it has a fixed arity. Supplying fewer arguments than that -- here
+/// storing sz 2 in a list of nat -> nat -- is emitted as a call rather than
+/// eta-expanded into a closure, giving "too few arguments to function call".
 
 template <typename I, typename A>
 concept Sz = requires {
@@ -153,7 +153,7 @@ concept Sz = requires {
 
 struct ClassMethodPartialApp {
   struct SzNat {
-    static uint64_t sz(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t sz(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Sz<SzNat, uint64_t>);
@@ -164,10 +164,9 @@ struct ClassMethodPartialApp {
               [](uint64_t _sat0) { return SzNat::sz(UINT64_C(3), _sat0); },
               List<crane::fn<uint64_t(uint64_t)>>::nil()))
           .template fold_right<uint64_t>(
-              [](crane::fn<uint64_t(uint64_t)> f, uint64_t n) {
-                return (f(UINT64_C(1)) + n);
-              },
-              UINT64_C(0));
+          [](const crane::fn<uint64_t(uint64_t)> &f,
+             uint64_t n) { return (f(UINT64_C(1)) + n); },
+          UINT64_C(0));
 };
 
 #endif // INCLUDED_CLASS_METHOD_PARTIAL_APP

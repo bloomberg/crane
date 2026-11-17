@@ -2,90 +2,101 @@
 
 List<uint64_t> LoopifyListCombining::append(const List<uint64_t> &a,
                                             List<uint64_t> b) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  List<uint64_t> _loop_b = std::move(b);
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_a = &a;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_a->v())) {
-      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_b));
+      auto _value = std::move(b);
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_a->v());
-      auto _cell = std::make_shared<List<uint64_t>>(
-          typename List<uint64_t>::Cons(a0, nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename List<uint64_t>::Cons>((*_write)->v_mut()).l;
+      auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
+      List<uint64_t> &_node =
+          (_write ? *(*_write =
+                          std::make_shared<List<uint64_t>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
       _loop_a = crane_raw(a1);
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 List<uint64_t> LoopifyListCombining::intersperse(uint64_t sep,
                                                  const List<uint64_t> &l) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-      *_write = std::make_shared<List<uint64_t>>(List<uint64_t>::nil());
+      auto _value = List<uint64_t>::nil();
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<uint64_t>>(
-            List<uint64_t>::cons(a0, List<uint64_t>::nil()));
+        auto _value = List<uint64_t>::cons(a0, List<uint64_t>::nil());
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
         auto _cell1 = std::make_shared<List<uint64_t>>(
             typename List<uint64_t>::Cons(sep, nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
-            std::move(_cell1);
-        *_write = std::move(_cell);
+        auto _cell = typename List<uint64_t>::Cons(a0, std::move(_cell1));
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename List<uint64_t>::Cons>(
-                 std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .l->v_mut())
-                 .l;
+            &std::get<typename List<uint64_t>::Cons>(std::get<
+                typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
         _loop_l = crane_raw(a1);
         continue;
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListCombining::intercalate(
-    const List<uint64_t> &sep,
-    const List<List<uint64_t>>
-        &ll) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+List<uint64_t>
+LoopifyListCombining::intercalate(const List<uint64_t> &sep,
+                                  const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                                    /// captures
+                                                                    /// varying
+                                                                    /// parameters
+                                                                    /// for each
+                                                                    /// recursive
+                                                                    /// call.
+  struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
 
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     List<uint64_t> a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&ll});
-  /// Loopified intercalate: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&ll});
+  /// Loopified intercalate: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -93,172 +104,185 @@ List<uint64_t> LoopifyListCombining::intercalate(
         const auto &[a0, a1] =
             std::get<typename List<List<uint64_t>>::Cons>(ll.v());
         auto &&_sv = *a1;
-        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-                _sv.v())) {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = append(a0, append(sep, std::move(_result)));
+      _result = append(std::move(a0), append(sep, std::move(_result)));
     }
   }
   return _result;
 }
 
-List<uint64_t> LoopifyListCombining::concat(
-    const List<List<uint64_t>>
-        &ll) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+List<uint64_t>
+LoopifyListCombining::concat(const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                               /// captures
+                                                               /// varying
+                                                               /// parameters
+                                                               /// for each
+                                                               /// recursive
+                                                               /// call.
+  struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
 
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     List<uint64_t> a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&ll});
-  /// Loopified concat: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&ll});
+  /// Loopified concat: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] =
             std::get<typename List<List<uint64_t>>::Cons>(ll.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Cons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = append(a0, std::move(_result));
+      _result = append(std::move(a0), std::move(_result));
     }
   }
   return _result;
 }
 
-List<uint64_t> LoopifyListCombining::mapcat(
-    const List<uint64_t>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+List<uint64_t>
+LoopifyListCombining::mapcat(const List<uint64_t> &l) { /// CraneEnter: captures
+                                                        /// varying parameters
+                                                        /// for each recursive
+                                                        /// call.
+  struct CraneEnter {
     const List<uint64_t> *l;
   };
 
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified mapcat: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified mapcat: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(_Cont_Cons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Cons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       uint64_t a0 = _f.a0;
       _result = append(List<uint64_t>::cons(
-                           a0, List<uint64_t>::cons(a0, List<uint64_t>::nil())),
+          a0, List<uint64_t>::cons(a0, List<uint64_t>::nil())),
                        std::move(_result));
     }
   }
   return _result;
 }
 
-List<uint64_t> LoopifyListCombining::interleave_two(List<uint64_t> l1,
-                                                    List<uint64_t> l2) {
-  std::shared_ptr<List<uint64_t>> _head{};
-  std::shared_ptr<List<uint64_t>> *_write = &_head;
-  List<uint64_t> _loop_l2 = std::move(l2);
-  List<uint64_t> _loop_l1 = std::move(l1);
+List<uint64_t> LoopifyListCombining::interleave_two(const List<uint64_t> &l1,
+                                                    const List<uint64_t> &l2) {
+  std::optional<List<uint64_t>> _root{};
+  std::shared_ptr<List<uint64_t>> *_write = nullptr;
+  const List<uint64_t> *_loop_l2 = &l2;
+  const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
-    if (std::holds_alternative<typename List<uint64_t>::Nil>(
-            _loop_l1.v_mut())) {
-      *_write = std::make_shared<List<uint64_t>>(std::move(_loop_l2));
+    if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l1->v())) {
+      auto _value = *_loop_l2;
+      (_write ? *(*_write = std::make_shared<List<uint64_t>>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<uint64_t>::Cons>(_loop_l1.v_mut());
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              _loop_l2.v_mut())) {
-        *_write = std::make_shared<List<uint64_t>>(_loop_l1);
+      const auto &[a0, a1] =
+          std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2->v())) {
+        auto _value = *_loop_l1;
+        (_write ? *(*_write =
+                        std::make_shared<List<uint64_t>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        auto &[a00, a10] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
-        auto _cell = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(a0, nullptr));
+        const auto &[a00, a10] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l2->v());
         auto _cell1 = std::make_shared<List<uint64_t>>(
-            typename List<uint64_t>::Cons(std::move(a00), nullptr));
-        std::get<typename List<uint64_t>::Cons>(_cell->v_mut()).l =
-            std::move(_cell1);
-        *_write = std::move(_cell);
+            typename List<uint64_t>::Cons(a00, nullptr));
+        auto _cell = typename List<uint64_t>::Cons(a0, std::move(_cell1));
+        List<uint64_t> &_node =
+            (_write ? *(*_write =
+                            std::make_shared<List<uint64_t>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
         _write =
-            &std::get<typename List<uint64_t>::Cons>(
-                 std::get<typename List<uint64_t>::Cons>((*_write)->v_mut())
-                     .l->v_mut())
-                 .l;
-        _loop_l2 = List<uint64_t>(*a10);
-        _loop_l1 = List<uint64_t>(*a1);
+            &std::get<typename List<uint64_t>::Cons>(std::get<
+                typename List<uint64_t>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
+        _loop_l2 = crane_raw(a10);
+        _loop_l1 = crane_raw(a1);
         continue;
       }
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
-List<uint64_t> LoopifyListCombining::concat_sep(
-    uint64_t sep,
-    const List<List<uint64_t>>
-        &ll) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+List<uint64_t>
+LoopifyListCombining::concat_sep(uint64_t sep,
+                                 const List<List<uint64_t>> &ll) { /// CraneEnter:
+                                                                   /// captures
+                                                                   /// varying
+                                                                   /// parameters
+                                                                   /// for each
+                                                                   /// recursive
+                                                                   /// call.
+  struct CraneEnter {
     const List<List<uint64_t>> *ll;
   };
 
-  /// _Cont_Cons: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Cons {
+  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Cons {
     List<uint64_t> a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&ll});
-  /// Loopified concat_sep: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&ll});
+  /// Loopified concat_sep: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
@@ -266,18 +290,18 @@ List<uint64_t> LoopifyListCombining::concat_sep(
         const auto &[a0, a1] =
             std::get<typename List<List<uint64_t>>::Cons>(ll.v());
         auto &&_sv = *a1;
-        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(
-                _sv.v())) {
+        if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
       List<uint64_t> a0 = std::move(_f.a0);
-      _result = append(a0, List<uint64_t>::cons(sep, std::move(_result)));
+      _result =
+          append(std::move(a0), List<uint64_t>::cons(sep, std::move(_result)));
     }
   }
   return _result;

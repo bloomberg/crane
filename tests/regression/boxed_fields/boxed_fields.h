@@ -5,8 +5,8 @@
 #include "field.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -39,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(crane::unbox(a));
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -86,8 +87,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -95,7 +96,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, A>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -125,24 +126,22 @@ struct BoxedFields {
     static point pt(uint64_t a0, uint64_t a1) { return {a0, a1}; }
 
     uint64_t py() const {
-      const auto &[a0, a1] = *this;
+      const auto &[_, a1] = *this;
       return a1;
     }
 
     uint64_t px() const {
-      const auto &[a0, a1] = *this;
+      const auto &[a0, _] = *this;
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
-    T1 point_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 point_rec(F0 &&f) const {
+      return this->template point_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 point_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -190,9 +189,8 @@ struct BoxedFields {
       return shape(Poly{std::make_shared<List<point>>(std::move(a0))});
     }
 
-    /// Fields typed by a parameter: boxed or not per instantiation.
-    static shape tagged(std::optional<point> a0,
-                        std::pair<uint64_t, point> a1) {
+    static shape Tagged_(std::optional<point> a0,
+                         std::pair<uint64_t, point> a1) {
       return shape(
           Tagged{std::make_shared<std::optional<point>>(std::move(a0)),
                  std::make_shared<std::pair<uint64_t, point>>(std::move(a1))});
@@ -212,9 +210,8 @@ struct BoxedFields {
         const auto &[a0] = std::get<typename shape::Poly>(this->v());
         const List<point> &a0_value = *a0;
         return a0_value.template fold_left<uint64_t>(
-            [](uint64_t acc, const point &p) {
-              return ((acc + p.px()) + p.py());
-            },
+            [](uint64_t acc,
+               const point &p) { return ((acc + p.px()) + p.py()); },
             UINT64_C(0));
       } else {
         const auto &[a0, a1] = std::get<typename shape::Tagged>(this->v());
@@ -232,10 +229,6 @@ struct BoxedFields {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, point &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, List<point> &> &&
-             std::is_invocable_r_v<T1, F2 &, std::optional<point> &,
-                                   std::pair<uint64_t, point> &>
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0, a1] = std::get<typename shape::Circle>(s.v());
@@ -250,21 +243,8 @@ struct BoxedFields {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, point &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, List<point> &> &&
-             std::is_invocable_r_v<T1, F2 &, std::optional<point> &,
-                                   std::pair<uint64_t, point> &>
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
-    if (std::holds_alternative<typename shape::Circle>(s.v())) {
-      const auto &[a0, a1] = std::get<typename shape::Circle>(s.v());
-      return f(*a0, a1);
-    } else if (std::holds_alternative<typename shape::Poly>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Poly>(s.v());
-      return f0(*a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename shape::Tagged>(s.v());
-      return f1(*a0, *a1);
-    }
+    return shape_rect<T1>(f, f0, f1, s);
   }
 
   static List<point> shift(uint64_t d, const List<point> &ps);
@@ -318,8 +298,8 @@ struct BoxedFields {
 
     scene(const scene &) = default;
     scene &operator=(const scene &) = default;
-    scene(scene &&) noexcept = default;
-    scene &operator=(scene &&) noexcept = default;
+    scene(scene &&) = default;
+    scene &operator=(scene &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -327,13 +307,15 @@ struct BoxedFields {
     const variant_t &v() const { return v_; }
 
     scene move_all(uint64_t d) const {
-      std::shared_ptr<scene> _head{};
-      std::shared_ptr<scene> *_write = &_head;
+      std::optional<scene> _root{};
+      std::shared_ptr<scene> *_write = nullptr;
       const scene *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
-          *_write = std::make_shared<scene>(scene::empty());
+          auto _value = scene::empty();
+          (_write ? *(*_write = std::make_shared<scene>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
@@ -342,74 +324,78 @@ struct BoxedFields {
             const auto &[a00, a10] = std::get<typename shape::Circle>(_sv0.v());
             const auto &_sv1 = *a00;
             const auto &[a01, a11] = _sv1;
-            auto _cell = std::make_shared<scene>(typename scene::Layer(
-                std::make_shared<std::decay_t<decltype(shape::circle(
-                    point::pt((a01 + d), a11), a10))>>(
-                    shape::circle(point::pt((a01 + d), a11), a10)),
-                nullptr));
-            *_write = std::move(_cell);
-            _write = &std::get<typename scene::Layer>((*_write)->v_mut()).a1;
+            auto _cell = typename scene::Layer(std::make_shared<std::decay_t<
+                decltype(shape::circle(point::pt((a01 + d), a11), a10))>>(
+                shape::circle(point::pt((a01 + d), a11), a10)),
+                                               nullptr);
+            scene &_node =
+                (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename scene::Layer>(_node.v_mut()).a1;
             _loop_self = crane_raw(a1);
             continue;
           } else if (std::holds_alternative<typename shape::Poly>(_sv0.v())) {
             const auto &[a00] = std::get<typename shape::Poly>(_sv0.v());
-            auto _cell = std::make_shared<scene>(typename scene::Layer(
-                std::make_shared<
-                    std::decay_t<decltype(shape::poly(shift(d, *a00)))>>(
-                    shape::poly(shift(d, *a00))),
-                nullptr));
-            *_write = std::move(_cell);
-            _write = &std::get<typename scene::Layer>((*_write)->v_mut()).a1;
+            auto _cell = typename scene::Layer(std::make_shared<
+                std::decay_t<decltype(shape::poly(shift(d, *a00)))>>(
+                shape::poly(shift(d, *a00))),
+                                               nullptr);
+            scene &_node =
+                (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename scene::Layer>(_node.v_mut()).a1;
             _loop_self = crane_raw(a1);
             continue;
           } else {
-            auto _cell = std::make_shared<scene>(typename scene::Layer(
-                std::make_shared<std::decay_t<decltype(*a0)>>(*a0), nullptr));
-            *_write = std::move(_cell);
-            _write = &std::get<typename scene::Layer>((*_write)->v_mut()).a1;
+            auto _cell = typename scene::Layer(
+                std::make_shared<std::decay_t<decltype(*a0)>>(*a0), nullptr);
+            scene &_node =
+                (_write ? *(*_write = std::make_shared<scene>(std::move(_cell)))
+                        : _root.emplace(std::move(_cell)));
+            _write = &std::get<typename scene::Layer>(_node.v_mut()).a1;
             _loop_self = crane_raw(a1);
             continue;
           }
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     uint64_t total() const {
       const scene *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const scene *_self;
       };
 
-      /// _Cont_Layer: saves [a0], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_Layer {
+      /// CraneCont_Layer: saves [a0], resumes after recursive call, then
+      /// processes rest.
+      struct CraneCont_Layer {
         std::shared_ptr<shape> a0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Layer>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Layer>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified total: _Enter -> _Cont_Layer.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified total: CraneEnter -> CraneCont_Layer.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const scene *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
             const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
-            _stack.emplace_back(_Cont_Layer{a0});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Layer{a0});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Layer>(_frame));
+          auto _f = std::move(std::get<CraneCont_Layer>(_frame));
           std::shared_ptr<shape> a0 = std::move(_f.a0);
           _result = (a0->weight() + std::move(_result));
         }
@@ -417,90 +403,46 @@ struct BoxedFields {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, shape &, scene &, T1 &>
-    T1 scene_rec(T1 f, F1 &&f0) const {
-      const scene *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const scene *_self;
-      };
-
-      /// _Cont_Layer: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Layer {
-        std::shared_ptr<shape> a0;
-        std::shared_ptr<scene> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Layer>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified scene_rec: _Enter -> _Cont_Layer.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const scene *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
-            _stack.emplace_back(_Cont_Layer{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Layer>(_frame));
-          std::shared_ptr<shape> a0 = std::move(_f.a0);
-          std::shared_ptr<scene> a1 = std::move(_f.a1);
-          _result = f0(*a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 scene_rec(T1 f, F1 &&f0) const {
+      return this->template scene_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, shape &, scene &, T1 &>
-    T1 scene_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 scene_rect(T1 f, F1 &&f0) const {
       const scene *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const scene *_self;
       };
 
-      /// _Cont_Layer: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Layer: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Layer {
+      struct CraneCont_Layer {
         std::shared_ptr<shape> a0;
         std::shared_ptr<scene> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Layer>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Layer>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified scene_rect: _Enter -> _Cont_Layer.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified scene_rect: CraneEnter -> CraneCont_Layer.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const scene *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
-            _stack.emplace_back(_Cont_Layer{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Layer{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Layer>(_frame));
+          auto _f = std::move(std::get<CraneCont_Layer>(_frame));
           std::shared_ptr<shape> a0 = std::move(_f.a0);
           std::shared_ptr<scene> a1 = std::move(_f.a1);
           _result = f0(*a0, *a1, std::move(_result));
@@ -512,19 +454,18 @@ struct BoxedFields {
 
   static inline const scene sample = scene::layer(
       shape::circle(point::pt(UINT64_C(1), UINT64_C(2)), UINT64_C(3)),
-      scene::layer(
-          shape::poly(List<point>::cons(
-              point::pt(UINT64_C(1), UINT64_C(1)),
-              List<point>::cons(
-                  point::pt(UINT64_C(2), UINT64_C(2)),
-                  List<point>::cons(point::pt(UINT64_C(3), UINT64_C(3)),
-                                    List<point>::nil())))),
-          scene::layer(shape::tagged(
-                           std::make_optional<point>(
-                               point::pt(UINT64_C(4), UINT64_C(5))),
-                           std::make_pair(UINT64_C(6),
-                                          point::pt(UINT64_C(7), UINT64_C(8)))),
-                       scene::empty())));
+      scene::layer(shape::poly(List<point>::cons(
+          point::pt(UINT64_C(1), UINT64_C(1)),
+          List<point>::cons(
+              point::pt(UINT64_C(2), UINT64_C(2)),
+              List<point>::cons(point::pt(UINT64_C(3), UINT64_C(3)),
+                                List<point>::nil())))),
+                   scene::layer(shape::Tagged_(
+                       std::make_optional<point>(
+                           point::pt(UINT64_C(4), UINT64_C(5))),
+                       std::make_pair(UINT64_C(6),
+                                      point::pt(UINT64_C(7), UINT64_C(8)))),
+                                scene::empty())));
   static inline const uint64_t sample_total = sample.total();
   static inline const uint64_t moved_total =
       sample.move_all(UINT64_C(10)).total();
@@ -538,39 +479,36 @@ struct BoxedFields {
     // ACCESSORS
     tagged<A> clone() const { return {a0, a1}; }
 
-    template <typename _U> operator tagged<_U>() const {
-      return {a0, [&]() -> _U {
-                if constexpr (crane_convertible<_U, const A &>) {
-                  return crane_convert<_U>(a1);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
+    template <typename CraneU> operator tagged<CraneU>() const {
+      return {a0, [&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(a1);
+        } else {
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
+        }
+      }()};
     }
 
     // CREATORS
     static tagged<A> tag(uint64_t a0, A a1) { return {a0, std::move(a1)}; }
 
     uint64_t tag_of() const {
-      const auto &[a0, a1] = *this;
+      const auto &[a0, _] = *this;
       return a0;
     }
 
     A untag() const {
-      const auto &[a0, a1] = *this;
+      const auto &[_, a1] = *this;
       return crane::unbox(a1);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, A &>
-    T1 tagged_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, crane::unbox(a1));
+    template <typename T1, typename F0> T1 tagged_rec(F0 &&f) const {
+      return this->template tagged_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &, A>
     T1 tagged_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, crane::unbox(a1));

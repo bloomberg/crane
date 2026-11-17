@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -53,17 +52,15 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
-  T1 nat_rect(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 nat_rect(T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename Nat::O>(this->v())) {
       return f;
     } else {
@@ -72,15 +69,8 @@ public:
     }
   }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
-  T1 nat_rec(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename Nat::O>(this->v())) {
-      return f;
-    } else {
-      const auto &[n1] = std::get<typename Nat::S>(this->v());
-      return f0(*n1, n1->template nat_rec<T1>(std::move(f), f0));
-    }
+  template <typename T1, typename F1> T1 nat_rec(T1 f, F1 &&f0) const {
+    return this->template nat_rect<T1>(std::move(f), f0);
   }
 
   /// add m n computes the sum of m and n by recursion on m.

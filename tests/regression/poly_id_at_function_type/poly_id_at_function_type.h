@@ -2,6 +2,9 @@
 #define INCLUDED_POLY_ID_AT_FUNCTION_TYPE
 
 #include "fn.h"
+#include "shared_block.h"
+#include <cstdint>
+#include <utility>
 
 struct PolyIdAtFunctionType {
   /// A polymorphic identity instantiated at a function type collapses the

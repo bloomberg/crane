@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -28,19 +29,7 @@ struct PatternImpossible {
   }
 
   template <typename T1> static T1 three_rec(T1 f, T1 f0, T1 f1, Three t) {
-    switch (t) {
-    case Three::ONE: {
-      return f;
-    }
-    case Three::TWO: {
-      return f0;
-    }
-    case Three::THREE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return three_rect<T1>(std::move(f), std::move(f0), std::move(f1), t);
   }
 
   struct nested {
@@ -77,6 +66,15 @@ struct PatternImpossible {
 
     // MANIPULATORS
     ~nested() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<nested>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -101,8 +99,8 @@ struct PatternImpossible {
 
     nested(const nested &) = default;
     nested &operator=(const nested &) = default;
-    nested(nested &&) noexcept = default;
-    nested &operator=(nested &&) noexcept = default;
+    nested(nested &&) = default;
+    nested &operator=(nested &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -111,8 +109,7 @@ struct PatternImpossible {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 nested_rect(F0 &&f, F1 &&f0, const nested &n) {
     if (std::holds_alternative<typename nested::Leaf>(n.v())) {
       const auto &[a0] = std::get<typename nested::Leaf>(n.v());
@@ -125,17 +122,8 @@ struct PatternImpossible {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, nested &, T1 &, nested &, T1 &>
   static T1 nested_rec(F0 &&f, F1 &&f0, const nested &n) {
-    if (std::holds_alternative<typename nested::Leaf>(n.v())) {
-      const auto &[a0] = std::get<typename nested::Leaf>(n.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename nested::Node>(n.v());
-      return f0(*a0, nested_rec<T1>(f, f0, *a0), *a1,
-                nested_rec<T1>(f, f0, *a1));
-    }
+    return nested_rect<T1>(f, f0, n);
   }
 
   static uint64_t complex_match(Three x);
@@ -145,7 +133,6 @@ struct PatternImpossible {
   static inline const uint64_t test1 = complex_match(Three::ONE);
   static inline const uint64_t test2 = nested_match(
       nested::node(nested::leaf(UINT64_C(5)), nested::leaf(UINT64_C(10))));
-
   static inline const uint64_t test3 = double_match(Three::ONE, Three::TWO);
 };
 

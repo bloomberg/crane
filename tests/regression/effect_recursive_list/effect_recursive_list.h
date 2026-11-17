@@ -2,21 +2,18 @@
 #define INCLUDED_EFFECT_RECURSIVE_LIST
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
-#include <crane_itree.h>
+#include <cstdint>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 template <typename A> struct List;
 
@@ -43,16 +40,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -89,8 +87,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,14 +101,15 @@ struct EffectRecursiveList {
   static List<std::string> read_n_lines(uint64_t n);
 
   /// 2. Map a function over a list with effects
-  static void map_effect(crane::fn<void(std::string)> f,
-                         const List<std::string> &xs) {
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, const std::string &>
+  static void map_effect(F0 &&f, const List<std::string> &xs) {
     if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
       return;
     } else {
       const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
       f(a0);
-      map_effect(std::move(f), *a1);
+      map_effect(f, *a1);
       return;
     }
   }

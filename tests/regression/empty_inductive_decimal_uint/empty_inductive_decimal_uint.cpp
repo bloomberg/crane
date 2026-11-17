@@ -41,10 +41,9 @@ String NilEmpty::string_of_uint(const Uint &d) {
     return String::emptystring();
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D0>(d.v());
-    return String::string0(Ascii::ascii0(Bool0::FALSE_, Bool0::FALSE_,
-                                         Bool0::FALSE_, Bool0::FALSE_,
-                                         Bool0::TRUE_, Bool0::TRUE_,
-                                         Bool0::FALSE_, Bool0::FALSE_),
+    return String::string0(Ascii::ascii0(
+        Bool0::FALSE_, Bool0::FALSE_, Bool0::FALSE_, Bool0::FALSE_,
+        Bool0::TRUE_, Bool0::TRUE_, Bool0::FALSE_, Bool0::FALSE_),
                            string_of_uint(*a0));
   } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D1>(d.v());
@@ -105,10 +104,9 @@ String NilEmpty::string_of_uint(const Uint &d) {
 
 String NilZero::string_of_uint(const Uint &d) {
   if (std::holds_alternative<typename Uint::Nil>(d.v())) {
-    return String::string0(Ascii::ascii0(Bool0::FALSE_, Bool0::FALSE_,
-                                         Bool0::FALSE_, Bool0::FALSE_,
-                                         Bool0::TRUE_, Bool0::TRUE_,
-                                         Bool0::FALSE_, Bool0::FALSE_),
+    return String::string0(Ascii::ascii0(
+        Bool0::FALSE_, Bool0::FALSE_, Bool0::FALSE_, Bool0::FALSE_,
+        Bool0::TRUE_, Bool0::TRUE_, Bool0::FALSE_, Bool0::FALSE_),
                            String::emptystring());
   } else {
     return NilEmpty::string_of_uint(d);

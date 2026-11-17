@@ -3,10 +3,8 @@
 
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -14,8 +12,8 @@ struct MutualValueDeepDestruct {
   /// Same mutual-recursive ownership shape as the copy test, but this test does
   /// not copy the value.  It isolates destruction: dropping a deep alternating
   /// a/b value currently recurses through the default unique_ptr destructor
-  /// chain.  The generated classes do not get an iterative mutual destructor,
-  /// so leaving scope after building a deep value overflows the C++ stack.
+  /// chain. The generated classes do not get an iterative mutual destructor, so
+  /// leaving scope after building a deep value overflows the C++ stack.
   struct a;
   struct b;
 
@@ -84,8 +82,8 @@ struct MutualValueDeepDestruct {
 
     a(const a &) = default;
     a &operator=(const a &) = default;
-    a(a &&) noexcept = default;
-    a &operator=(a &&) noexcept = default;
+    a(a &&) = default;
+    a &operator=(a &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -151,8 +149,8 @@ struct MutualValueDeepDestruct {
 
     b(const b &) = default;
     b &operator=(const b &) = default;
-    b(b &&) noexcept = default;
-    b &operator=(b &&) noexcept = default;
+    b(b &&) = default;
+    b &operator=(b &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -161,7 +159,6 @@ struct MutualValueDeepDestruct {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &, b &>
   static T1 a_rect(T1 f, F1 &&f0, const a &a0) {
     if (std::holds_alternative<typename a::AEnd>(a0.v())) {
       return f;
@@ -172,28 +169,17 @@ struct MutualValueDeepDestruct {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &, b &>
   static T1 a_rec(T1 f, F1 &&f0, const a &a0) {
-    if (std::holds_alternative<typename a::AEnd>(a0.v())) {
-      return f;
-    } else {
-      const auto &[a1, a2] = std::get<typename a::ANode>(a0.v());
-      return f0(a1, *a2);
-    }
+    return a_rect<T1>(std::move(f), f0, a0);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, a &>
-  static T1 b_rect(F0 &&f, const b &b0) {
+  template <typename T1, typename F0> static T1 b_rect(F0 &&f, const b &b0) {
     const auto &[a1] = std::get<typename b::BNode>(b0.v());
     return f(*a1);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, a &>
-  static T1 b_rec(F0 &&f, const b &b0) {
-    const auto &[a1] = std::get<typename b::BNode>(b0.v());
-    return f(*a1);
+  template <typename T1, typename F0> static T1 b_rec(F0 &&f, const b &b0) {
+    return b_rect<T1>(f, b0);
   }
 
   static a keep_a(a x);

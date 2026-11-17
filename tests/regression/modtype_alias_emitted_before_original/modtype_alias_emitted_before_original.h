@@ -54,8 +54,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -81,7 +81,7 @@ concept Dec = DecOrig<M>;
 
 template <Dec X> struct Make {
   static bool same(typename X::t a, typename X::t b) {
-    if (X::eq_dec(a, b)) {
+    if (X::eq_dec(std::move(a), std::move(b))) {
       return true;
     } else {
       return false;
@@ -91,7 +91,7 @@ template <Dec X> struct Make {
 
 struct NatDec {
   using t = Nat;
-  static bool eq_dec(t x0_, t x1_);
+  static bool eq_dec(const t &x0_, const t &x1_);
 };
 
 using MN = Make<NatDec>;

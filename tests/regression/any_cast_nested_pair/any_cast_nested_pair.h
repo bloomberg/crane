@@ -2,7 +2,7 @@
 #define INCLUDED_ANY_CAST_NESTED_PAIR
 
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <utility>
 #include <variant>
 

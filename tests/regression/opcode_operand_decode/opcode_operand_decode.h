@@ -1,6 +1,7 @@
 #ifndef INCLUDED_OPCODE_OPERAND_DECODE
 #define INCLUDED_OPCODE_OPERAND_DECODE
 
+#include <cstdint>
 #include <utility>
 
 struct OpcodeOperandDecode {
@@ -31,25 +32,8 @@ struct OpcodeOperandDecode {
 
   template <typename T1>
   static T1 instruction_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instruction i) {
-    switch (i) {
-    case Instruction::NOP_: {
-      return f;
-    }
-    case Instruction::WRM_: {
-      return f0;
-    }
-    case Instruction::WRR_: {
-      return f1;
-    }
-    case Instruction::RDM_: {
-      return f2;
-    }
-    case Instruction::DCL_: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+    return instruction_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                std::move(f2), std::move(f3), i);
   }
 
   static Instruction decode(uint64_t b1, uint64_t _x);

@@ -3,7 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -18,18 +18,19 @@ struct BenchLetIn {
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator pair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -42,15 +43,12 @@ struct BenchLetIn {
       return {std::move(a0), std::move(a1)};
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
-    T1 pair_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 pair_rec(F0 &&f) const {
+      return this->template pair_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 pair_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -71,27 +69,27 @@ struct BenchLetIn {
     // ACCESSORS
     triple<A, B, C> clone() const { return {a0, a1, a2}; }
 
-    template <typename _U0, typename _U1, typename _U2>
-    operator triple<_U0, _U1, _U2>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1, typename CraneU2>
+    operator triple<CraneU0, CraneU1, CraneU2>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U2 {
-                if constexpr (crane_convertible<_U2, const C &>) {
-                  return crane_convert<_U2>(a2);
+              [&]() -> CraneU2 {
+                if constexpr (crane_convertible<CraneU2, const C &>) {
+                  return crane_convert<CraneU2>(a2);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -104,15 +102,12 @@ struct BenchLetIn {
       return {std::move(a0), std::move(a1), std::move(a2)};
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
-    T1 triple_rec(F0 &&f) const {
-      const auto &[a0, a1, a2] = *this;
-      return f(a0, a1, a2);
+    template <typename T1, typename F0> T1 triple_rec(F0 &&f) const {
+      return this->template triple_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &, C &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &, const C &>
     T1 triple_rect(F0 &&f) const {
       const auto &[a0, a1, a2] = *this;
       return f(a0, a1, a2);

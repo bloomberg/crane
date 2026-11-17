@@ -2,24 +2,24 @@
 #define INCLUDED_CLASS_IN_NESTED_MODULE
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>
 concept Show = requires {
   { I::sz(std::declval<A>()) } -> std::convertible_to<uint64_t>;
   { I::tag() } -> std::convertible_to<uint64_t>;
-};
+}; /// A typeclass becomes a C++ concept, and a module becomes a struct.  A class
 
-/// A typeclass becomes a C++ concept, and a module becomes a struct.  A class
 /// declared inside a module therefore emits a concept inside a struct, which
 /// C++ allows only at namespace scope; every later reference to the class then
 /// fails to resolve as well.
 struct ClassInNestedModule {
   struct Cls {
     struct SN {
-      static uint64_t sz(uint64_t x) { return x; }
+      constexpr static uint64_t sz(uint64_t x) { return x; }
 
-      static uint64_t tag() { return UINT64_C(1); }
+      constexpr static uint64_t tag() { return UINT64_C(1); }
     };
 
     static_assert(Show<SN, uint64_t>);

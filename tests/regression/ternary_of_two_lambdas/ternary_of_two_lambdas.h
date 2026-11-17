@@ -5,6 +5,7 @@
 #include "small_vector.h"
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -55,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -66,35 +67,35 @@ public:
   Nat mul(const Nat &m) const {
     const Nat *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const Nat *_self;
     };
 
-    /// _Cont_S: resumes after recursive call, then processes rest.
-    struct _Cont_S {};
+    /// CraneCont_S: resumes after recursive call, then processes rest.
+    struct CraneCont_S {};
 
-    using _Frame = std::variant<_Enter, _Cont_S>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_S>;
     Nat _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified mul: _Enter -> _Cont_S.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified mul: CraneEnter -> CraneCont_S.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const Nat *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Nat::O>(_sv.v())) {
           _result = Nat::o();
         } else {
           const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-          _stack.emplace_back(_Cont_S{});
-          _stack.emplace_back(_Enter{crane_raw(a0)});
+          _stack.emplace_back(CraneCont_S{});
+          _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_S>(_frame));
+        auto _f = std::move(std::get<CraneCont_S>(_frame));
         _result = m.add(std::move(_result));
       }
     }
@@ -102,25 +103,28 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -128,11 +132,11 @@ struct PeanoNat {
   static bool even(const Nat &n);
 };
 
-Nat f_even(const Nat &x0_, const Nat &x1_);
+Nat f_even(const Nat &x0_, Nat x1_);
 Nat f_odd(const Nat &x0_, const Nat &x1_);
 /// Point-free: the body is an if whose branches are functions, and no
 /// argument is written.
 Nat pick(const Nat &n, Nat x0_);
-Nat go(const Nat &x0_, const Nat &x1_);
+Nat go(const Nat &x0_, Nat x1_);
 
 #endif // INCLUDED_TERNARY_OF_TWO_LAMBDAS

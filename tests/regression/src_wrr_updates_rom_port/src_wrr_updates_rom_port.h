@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -35,16 +35,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -81,8 +82,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,7 +103,7 @@ struct SrcWrrUpdatesRomPort {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return List<T1>::cons(x, *a1);
       }
     } else {
@@ -137,9 +138,9 @@ struct SrcWrrUpdatesRomPort {
                   List<uint64_t>::cons(
                       UINT64_C(11),
                       List<uint64_t>::cons(
-                          UINT64_C(0),
-                          List<uint64_t>::cons(UINT64_C(0),
-                                               List<uint64_t>::nil())))))),
+                          UINT64_C(0), List<uint64_t>::cons(
+                                           UINT64_C(0),
+                                           List<uint64_t>::nil())))))),
       UINT64_C(13),
       List<uint64_t>::cons(
           UINT64_C(1),
@@ -151,9 +152,9 @@ struct SrcWrrUpdatesRomPort {
       UINT64_C(0)};
   static inline const state after =
       execute_wrr(execute_src(sample, UINT64_C(3)));
-  static inline const bool t =
-      ListDef::template nth<uint64_t>(UINT64_C(2), after.rom_ports,
-                                      UINT64_C(0)) == UINT64_C(13);
+  static inline const bool t = ListDef::template nth<uint64_t>(
+      UINT64_C(2), after.rom_ports, UINT64_C(0)) ==
+                               UINT64_C(13);
 };
 
 template <typename T1>
@@ -162,7 +163,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -170,7 +171,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

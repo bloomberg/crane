@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -23,6 +24,7 @@ struct NilEmpty {
 struct NilZero {
   static String string_of_uint(const Uint &d);
 };
+
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -73,8 +75,8 @@ struct Nat {
 
     nat(const nat &) = default;
     nat &operator=(const nat &) = default;
-    nat(nat &&) noexcept = default;
-    nat &operator=(nat &&) noexcept = default;
+    nat(nat &&) = default;
+    nat &operator=(nat &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -277,8 +279,8 @@ public:
 
   Uint(const Uint &) = default;
   Uint &operator=(const Uint &) = default;
-  Uint(Uint &&) noexcept = default;
-  Uint &operator=(Uint &&) noexcept = default;
+  Uint(Uint &&) = default;
+  Uint &operator=(Uint &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -409,8 +411,8 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -418,43 +420,35 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat::nat length() const {
-    std::shared_ptr<Nat::nat> _head{};
-    std::shared_ptr<Nat::nat> *_write = &_head;
+    std::optional<Nat::nat> _root{};
+    std::shared_ptr<Nat::nat> *_write = nullptr;
     const String *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        *_write = std::make_shared<Nat::nat>(Nat::nat::o());
+        auto _value = Nat::nat::o();
+        (_write ? *(*_write = std::make_shared<Nat::nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
-        auto _cell = std::make_shared<Nat::nat>(typename Nat::nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::nat::S>((*_write)->v_mut()).a0;
+        const auto &[_, a1] = std::get<typename String::String0>(_sv.v());
+        auto _cell = typename Nat::nat::S(nullptr);
+        Nat::nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat::nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
 struct EmptyInductiveDecimalUint {
   static String s(const Nat::nat &n);
   static inline const Nat::nat test =
-      s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                    Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                        Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                    Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                        Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                            Nat::nat::s(Nat::nat::s(Nat::nat::s(
-                                                Nat::nat::
-                                                    o())))))))))))))))))))))))))))))))))))))))))))
-          .length();
+      s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))))))))))))))))))))))))))))))))))))))).length();
 };
 
 #endif // INCLUDED_EMPTY_INDUCTIVE_DECIMAL_UINT

@@ -2,10 +2,8 @@
 #define INCLUDED_TOKENIZER
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -17,8 +15,6 @@
 #include <utility>
 #include <variant>
 #include <vector>
-
-using namespace std::string_literals;
 
 template <typename A> struct List;
 
@@ -45,16 +41,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -91,8 +88,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,81 +99,82 @@ public:
   List<A> rev() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<A> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified rev: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified rev: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = List<A>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        _result = std::move(_result).app(List<A>::cons(a0, List<A>::nil()));
+        _result = _result.app(List<A>::cons(a0, List<A>::nil()));
       }
     }
     return _result;
   }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
 struct ToString {
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<std::string, F0 &, T1 &> &&
-             std::is_invocable_r_v<std::string, F1 &, T2 &>
   static std::string pair_to_string(F0 &&p1, F1 &&p2,
                                     const std::pair<T1, T2> &x) {
     const auto &[a, b] = x;
-    return "("s + p1(a) + ", "s + p2(b) + ")"s;
+    return std::string("(") + p1(a) + std::string(", ") + p2(b) +
+           std::string(")");
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<std::string, F0 &, T1 &>
+    requires std::is_invocable_r_v<std::string, F0 &, const T1 &>
   static std::string intersperse(F0 &&p, std::string sep, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
@@ -184,7 +182,7 @@ struct ToString {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return sep + p(a0);
+        return std::move(sep) + p(a0);
       } else {
         return sep + p(a0) + intersperse<T1>(p, sep, *a1);
       }
@@ -192,7 +190,7 @@ struct ToString {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<std::string, F0 &, T1 &>
+    requires std::is_invocable_r_v<std::string, F0 &, const T1 &>
   static std::string list_to_string(F0 &&p, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "[]";
@@ -200,9 +198,10 @@ struct ToString {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return "["s + p(a0) + "]"s;
+        return std::string("[") + p(a0) + std::string("]");
       } else {
-        return "["s + p(a0) + intersperse<T1>(p, "; ", *a1) + "]"s;
+        return std::string("[") + p(a0) + intersperse<T1>(p, "; ", *a1) +
+               std::string("]");
       }
     }
   }
@@ -235,10 +234,9 @@ struct Tokenizer {
     return list_to_vec_h<T1>(l.rev());
   }
 
-  template <typename T1, typename T2>
-  static std::vector<T2>
-  list_to_vec_map_h(std::type_identity_t<crane::fn<T2(T1)>> f,
-                    const List<T1> &l) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
+  static std::vector<T2> list_to_vec_map_h(F0 &&f, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return {};
     } else {
@@ -250,7 +248,6 @@ struct Tokenizer {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::vector<T2> list_to_vec_map(F0 &&f, const List<T1> &l) {
     return list_to_vec_map_h<T1, T2>(f, l.rev());
   }

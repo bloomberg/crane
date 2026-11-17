@@ -1,0 +1,1437 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(************************************************************************)
+(*         *      The Rocq Prover / The Rocq Development Team           *)
+(*  v      *         Copyright INRIA, CNRS and contributors             *)
+(* <O___,, * (see version control and CREDITS file for authors & dates) *)
+(*   \VV/  **************************************************************)
+(*    //   *    This file is distributed under the terms of the         *)
+(*         *     GNU Lesser General Public License Version 2.1          *)
+(*         *     (see LICENSE file for the text of the license)         *)
+(************************************************************************)
+
+(** Extraction environment tables, custom extraction mappings, and configuration
+    parameters.
+
+    This module is the plugin's central mutable registry: it holds the custom
+    [Extract Inductive]/[Extract Constant] mappings, cached inductive metadata,
+    the global extraction flags, and the per-run reset hooks that clear all of
+    the above between extractions.  Most other modules read and write this state
+    rather than threading it explicitly.  It sits below extraction, translation
+    and the printer: all three read it, and it depends on none of them.
+
+    {2 What its cells hold}
+
+    Every cell is private to this module and is one of:
+
+    - {b Configuration}, set by vernacular commands and options and only read
+      while extracting: the [Summary]-backed mappings ([customs],
+      [custom_matchs], [boxed_wrappers], [custom_drains], [ref_imports],
+      [inline_table], [foreign_set], [callback_map], [implicits_table],
+      [blacklist_table], [loopify_table], [loopify_suffix_table],
+      [reuse_table], [no_arena_table], [lang_ref], [trivially_copyable_heads],
+      [trivially_copyable_refs], [monads], [binds], [rets], [void_ty],
+      [ghost_tm], [skip_module_set], [numeral_table], [converter_table]); the
+      plain refs a functor body's directives must survive [End] in
+      ([no_arena_suffix_table], [guard_compare_table]); the [Goptions] flags;
+      and the mode of the running command ([modular_ref], [library_ref],
+      [extrcompute], [int_flag_ref], [opt_flag_ref]).
+    - {b The extracted environment}, written by {!Rocq_to_core.Extraction} as it extracts
+      each global and read by every later phase: [typedefs], [cst_types] and
+      [inductives] (memos checked against the kernel body, read unchecked
+      afterwards), [glob_tys], [inductive_kinds], [projs], [recursors],
+      [promoted_type_vars], [instance_class_shapes], [context_instance_apps],
+      [ind_class_arg_shapes], [type_alias_bodies], [hkt_params_table],
+      [type_scheme_arities], [sigma_assertions], [cofixpoints],
+      [erased_type_consts], [value_dep_type_schemes], [erased_fix_groups].
+      A phase result: its owner is the extracted program.
+    - {b Plan facts}: none is kept here; a unit's are fields of its context
+      ([Unit_plan.Context]).  The plan's decided kinds are recorded in
+      [inductive_kinds] ([Driver.Target_plan.record_kinds]).
+    - {b Analysis results registered while a later phase runs}: [flat_inductives]
+      and [enum_inductives] (registered by layout and generation, with a
+      structural fallback), [shared_variants] (by a Core pass),
+      [boxed_recursive_inds] (by generation, read by finishing), and
+      [written_refs] (by the walk ahead of the files, read by the preamble).
+    - {b Caches}, pure memos safe to drop: [promoted_type_params_cache],
+      [unit_type_cache], [tt_ctor_cache].
+    - {b Diagnostics}: [info_axioms], [log_axioms], [opaques], [symbols]
+      (end-of-run warnings), [operations_checked] (a check made once a
+      session), [census_entries] (table sizes for the late-decision check).
+    - {b State a run needs}: the unit's demands ([raised_demands],
+      [standard_headers], [demands_frozen], and [written_needs] under
+      [CRANE_CHECK_IR]), the declaration being generated
+      ([current_decl_ref]), the file names given out ([modfile_ids],
+      [modfile_mps]), the targets claimed this session
+      ([claimed_output_targets]), and the units earlier libraries were
+      extracted into ([extracted_units], kept in the [.vo]).
+
+    Every cell but configuration, the session-long ones and the bound plan
+    facts is emptied with {!State}. *)
+
+open Names
+open Libnames
+open Declarations
+
+(** Get a safe basename identifier from a global reference. *)
+val safe_basename_of_global : GlobRef.t -> Id.t
+
+(** A global's shortest qualified name, or its basename where the name table
+    has none -- a functor's member, named through its bound parameter. *)
+val safe_pr_global : GlobRef.t -> Pp.t
+
+(** The kernel name of a global, spelled out in full -- for debug diagnostics,
+    where two constants printing the same name is the difficulty rather than a
+    tidiness question.  User-facing messages want a short name instead. *)
+val kername_of_global : GlobRef.t -> string
+
+(** {2 Warning and Error messages} *)
+
+(** Issue warning about axioms. *)
+val warning_axioms : unit -> unit
+
+(** Issue warning about opaques.
+    @param accessed [true] if opaque bodies were accessed (bypass-opacity mode),
+                    [false] if they were extracted as axioms (default mode). *)
+val warning_opaques : bool -> unit
+
+(** Issue warning about ambiguous name.
+    @param loc    optional source location for quickfix attachment
+    @param (q, mp, r) the ambiguous qualid, the module path it may refer to,
+                       and the global reference it may refer to *)
+val warning_ambiguous_name :
+  ?loc:Loc.t -> qualid * ModPath.t * GlobRef.t -> unit
+
+
+(** Report error for axiom scheme.
+    @param loc optional source location
+    @param r   the axiom global reference
+    @param i   the required number of type variables *)
+val error_axiom_scheme : ?loc:Loc.t -> GlobRef.t -> int -> 'a
+
+(** Report error for constant. *)
+val error_constant : ?loc:Loc.t -> GlobRef.t -> 'a
+
+(** Report error for inductive. *)
+val error_inductive : ?loc:Loc.t -> GlobRef.t -> 'a
+
+(** Report error for number of constructors. *)
+val error_nb_cons : unit -> 'a
+
+
+(** Report error for missing module expression. *)
+val error_no_module_expr : ModPath.t -> 'a
+
+(** Report error for singleton becoming prop. *)
+val error_singleton_become_prop : inductive -> 'a
+
+(** Report error for unknown module. *)
+val error_unknown_module : ?loc:Loc.t -> qualid -> 'a
+
+(** Report error for non-visible reference. *)
+val error_not_visible : GlobRef.t -> 'a
+
+(** Report error for MPfile used as module.
+    @param mp the module file path being extracted
+    @param b  [true] if the module was explicitly asked for (extraction
+              directive), [false] if it was pulled in as a dependency *)
+val error_MPfile_as_mod : ModPath.t -> bool -> 'a
+
+(** Check if inside section. *)
+val check_inside_section : unit -> unit
+
+(** Check if module file is loaded. *)
+val check_loaded_modfile : ModPath.t -> unit
+
+(** Get message for implicit kill reason. *)
+val msg_of_implicit : Core.Erasure_reason.t -> string
+
+(** Issue error or warning for remaining implicit. *)
+val err_or_warn_remaining_implicit : Core.Erasure_reason.t -> unit
+
+(** Print info message about file. *)
+val info_file : string -> unit
+
+(** {2 Utilities about module_path, kernel_names, and GlobRef.t} *)
+
+(** Check if kernel name occurs in reference.
+    @param kn the mutual inductive name to search for
+    @param r  the global reference to inspect (only [IndRef]/[ConstructRef] can match)
+    @return [true] iff [r] is an inductive or constructor of [kn] *)
+val occur_kn_in_ref : MutInd.t -> GlobRef.t -> bool
+
+(** Get kernel name representation of reference. *)
+val repr_of_r : GlobRef.t -> KerName.t
+
+(** Get module path of reference. *)
+val modpath_of_r : GlobRef.t -> ModPath.t
+
+(** Get label of reference. *)
+val label_of_r : GlobRef.t -> Label.t
+
+(** Get base module path. *)
+val base_mp : ModPath.t -> ModPath.t
+
+(** Check if module path is a module file. *)
+val is_modfile : ModPath.t -> bool
+
+(** Get string representation of module file. *)
+val string_of_modfile : ModPath.t -> string
+
+(** Claim a name against {!string_of_modfile}, so a file of that name is
+    emitted under a fresh one.  Must be called before the file is first
+    spelled. *)
+val reserve_modfile_name : string -> unit
+
+
+(** Get file name from module file. Escapes C standard header collisions. *)
+val file_of_modfile : ModPath.t -> string
+
+(** Get namespace name from module file. No filename escaping applied. *)
+val ns_of_modfile : ModPath.t -> string
+
+(** Check if module path is toplevel. *)
+val is_toplevel : ModPath.t -> bool
+
+(** Check if at toplevel. *)
+val at_toplevel : ModPath.t -> bool
+
+(** Get length of module path. *)
+val mp_length : ModPath.t -> int
+
+(** Get all prefixes of module path. *)
+val prefixes_mp : ModPath.t -> MPset.t
+
+(** Find common prefix from list of module paths.
+    @param mp0 the reference module path whose prefixes are candidates
+    @param mpl a list of module paths; the first one that is also a prefix of
+               [mp0] is returned
+    @return the first element of [mpl] that is a prefix of [mp0], or [None] *)
+val common_prefix_from_list : ModPath.t -> ModPath.t list -> ModPath.t option
+
+(** Get labels of reference. *)
+val labels_of_ref : GlobRef.t -> ModPath.t * Label.t list
+
+(** {2 Table-related operations} *)
+
+(** For avoiding repeated extraction of the same constant or inductive, we use
+    cache functions below. Indexing by constant name isn't enough, due to
+    modules we could have a same constant name but different content. So we
+    check that the [constant_body] hasn't changed from recording time to
+    retrieving time. Same for inductive: we store [mutual_inductive_body] as
+    checksum. In both case, we should ideally also check the env *)
+
+(** Add type definition to cache.
+    @param kn the constant being cached
+    @param cb the constant body used as a checksum to detect stale entries
+    @param t  the extracted Core type to store *)
+val add_typedef : Constant.t -> constant_body -> Core.Type.t -> unit
+
+(** Lookup type definition from cache.
+    @param kn the constant to look up
+    @param cb the current constant body; [None] is returned if this doesn't
+              match the body stored when the entry was created
+    @return [Some t] if found and the checksum matches, [None] otherwise *)
+val lookup_typedef : Constant.t -> constant_body -> Core.Type.t option
+
+(** Lookup type definition without checksum validation.
+    @return [Some t] if any entry for [kn] exists, regardless of staleness *)
+val lookup_typedef_unchecked : Constant.t -> Core.Type.t option
+
+(** Add constant type schema to cache.
+    @param kn the constant being cached
+    @param cb the constant body used as a checksum to detect stale entries
+    @param s  the extracted Core type scheme to store *)
+val add_cst_type : Constant.t -> constant_body -> Core.Schema.t -> unit
+
+(** Lookup constant type schema from cache.
+    @param kn the constant to look up
+    @param cb the current constant body; [None] is returned on checksum mismatch
+    @return [Some s] if found and the checksum matches, [None] otherwise *)
+val lookup_cst_type : Constant.t -> constant_body -> Core.Schema.t option
+
+(** The scheme recorded for a constant, without the checksum: for a
+    reference synthesised after extraction, which has no body to check
+    against. *)
+val constant_schema : Constant.t -> Core.Schema.t option
+
+(** Add inductive to cache.
+    @param kn    the mutual inductive name being cached
+    @param mib   the inductive body used as a checksum to detect stale entries
+    @param Core.Inductive.t the extracted Core inductive to store *)
+val add_ind : MutInd.t -> mutual_inductive_body -> Core.Inductive.t -> unit
+
+(** Lookup inductive from cache.
+    @param kn  the mutual inductive name to look up
+    @param mib the current inductive body; [None] is returned on checksum mismatch
+    @return [Some ind] if found and the checksum matches, [None] otherwise *)
+val lookup_ind : MutInd.t -> mutual_inductive_body -> Core.Inductive.t option
+
+(** Get number of parameters for inductive if available. *)
+val get_ind_nparams_opt : MutInd.t -> int option
+
+(** The type variable a type argument is, where it is one: a bare [Core.Type.Variable], or
+    a higher-kinded variable applied at nothing but placeholders ([E _]), which
+    is how Core writes one. *)
+val type_var_of_arg : 'p Core.Type.at -> int option
+
+(** Get number of parameter variables for inductive if available. *)
+val get_ind_num_param_vars_opt : MutInd.t -> int option
+
+(** Compute the kept type-variable names among an inductive packet's
+    PARAMETER positions only (the first [parameter_count] entries of [signature]),
+    excluding type INDICES.  Used to distinguish a scheme's own parameters
+    (e.g. [List (A:Type)]) from indices it is applied to (e.g. the [A] in
+    [wrap : Set -> Type]), which are not template-representable in C++.
+    @param ind the inductive body
+    @param p the packet (one constructor group) to compute parameter vars for
+    @return the kept parameter variable names, and their count *)
+val ind_param_vars :
+  Core.Inductive.t -> Core.Inductive.Packet.t -> Names.Id.t list * int
+
+(** Add inductive kind to table. *)
+val add_inductive_kind : MutInd.t -> Core.Inductive.Kind.t -> unit
+
+(** The recorded kind of the inductive a reference belongs to, if any.  Every
+    question about an inductive's kind is answered from this. *)
+val inductive_kind_of : GlobRef.t -> Core.Inductive.Kind.t option
+
+(** Check if reference is coinductive. *)
+val is_coinductive : GlobRef.t -> bool
+
+(** Check if any coinductive types exist. *)
+val has_any_coinductive : unit -> bool
+
+(** Check if a Core type is coinductive. *)
+val is_coinductive_type : 'p Core.Type.at -> bool
+
+(** {2 Demands}
+
+    A demand is something the preamble of the generated file must provide -- a
+    standard or runtime header, a directive -- that only code generation can
+    discover.  It is raised before either file is rendered, from what was
+    generated ahead of them ({!Cpp_passes.Demands}), and read when the preamble is
+    emitted, which comes first in the file.  The printer raises none: what it
+    writes is only checked against them ({!written_needs_header}). *)
+
+(** Enrol a table in the census under [name]: [size] reports how many decisions
+    it currently holds. *)
+val register_census : string -> (unit -> int) -> unit
+
+(** Every enrolled table's current size.
+
+    Comparing a census taken before output is generated with one taken after it
+    says which decisions are still being made *by* generating output, which a
+    use rendered before them could not have seen; see the comparison in
+    [extract_env.ml]. *)
+val census : unit -> (string * int) list
+
+(** [mark_demand d] records that the file being generated needs [d]. *)
+val mark_demand : string -> unit
+
+(** A header a generated file includes: a standard one, written [<h>], or one
+    of Crane's runtime headers, written ["h"]. *)
+type header = Standard of string | Runtime of string
+
+(** Record that the file being generated includes this header. *)
+val demand_header : header -> unit
+
+(** Every standard header demanded so far, sorted.  The preamble includes all
+    of them. *)
+val required_standard_headers : unit -> string list
+
+(** Whether [d] has been demanded for the file being generated. *)
+val demanded : string -> bool
+
+(** Every demand raised so far, sorted. *)
+val demanded_list : unit -> string list
+
+(** Start collecting demands afresh, for a new output file. *)
+val reset_demands : unit -> unit
+
+(** [written_needs_header h] records that what a file being rendered writes
+    needs [h].  It demands nothing: a unit's demands are read off what is
+    generated ahead of its files ({!Cpp_passes.Demands}).  Recorded under
+    [CRANE_CHECK_IR] only, for {!freeze_demands} to check. *)
+val written_needs_header : header -> unit
+
+(** Close collection: from here on the preamble may be written. A demand raised
+    afterwards is reported under [CRANE_CHECK_IR], since the preamble that has
+    already gone out is missing it; so is a header what the files write needs
+    ({!written_needs_header}) that was not demanded. *)
+val freeze_demands : unit -> unit
+
+(** The [crane_erase_fn] runtime helper, as a demand. *)
+val erase_fn_header : header
+
+(** Check whether the [crane_erase_fn] runtime helper is needed. *)
+val needs_erase_fn : unit -> bool
+
+(** The [arena.h] runtime header (arena-mode codegen), as a demand. *)
+val arena_header : header
+
+(** Check whether the [arena.h] runtime header is needed. *)
+val needs_arena : unit -> bool
+
+(** [small_vector.h] (the destructor drain's small-buffer worklist), as a
+    demand. *)
+val small_vector_header : header
+
+(** Check whether [small_vector.h] is needed. *)
+val needs_small_vector : unit -> bool
+
+(** [crane_itree.h] (reified ITree types in output), as a demand. *)
+val itree_header : header
+
+(** Check whether [crane_itree.h] is needed. *)
+val needs_itree_header : unit -> bool
+
+(** The field references of a record or type class, [None] for an anonymous
+    field; empty for anything else. *)
+val get_record_fields : GlobRef.t -> GlobRef.t option list
+
+(** Get record fields from a Core type. *)
+val record_fields_of_type : 'p Core.Type.at -> GlobRef.t option list
+
+(** The fields of a record or type class, each paired with its Core type.  Use
+    this rather than zipping {!get_record_fields} against
+    {!record_field_types}, which can disagree in length. *)
+val get_record_field_bindings : GlobRef.t -> Core.Record.Field.t list
+
+(** {!get_record_field_bindings} for a record named by a Core type. *)
+val record_field_bindings_of_type : 'p Core.Type.at -> Core.Record.Field.t list
+
+(** Get types of record fields. *)
+val record_field_types : GlobRef.t -> Core.Type.t list
+
+(** Get inductive type parameter variables. *)
+val get_ind_ip_vars : GlobRef.t -> Names.Id.t list
+
+(** How many constructors the given packet of an inductive has. *)
+val get_ind_nb_ctors_opt : MutInd.t -> int -> int option
+
+(** Get number of significant type parameters. *)
+val get_ind_nb_sign_keeps : GlobRef.t -> int
+
+(** {3 Higher-kinded class parameters}
+
+    A class parameter that is itself a type constructor ([Class Mon (M : Type ->
+    Type)]) cannot be a C++ template type parameter — [M A] is not a type C++
+    can form from a [typename M].  It is demoted to an associated type of the
+    instance ([typename I::M]), reusing the representation of promoted
+    [Type]-valued record fields. *)
+
+(** Record which of an inductive's [Core.Signature.Argument.Runtime] parameters (0-based) are type
+    constructors, each with its arity.  Called by extraction; a no-op for the
+    empty list. *)
+val add_ind_hkt_params : GlobRef.t -> (int * int) list -> unit
+
+(** Positions (0-based among the [Core.Signature.Argument.Runtime] parameters) of the type-constructor
+    parameters of [r]. *)
+val get_ind_hkt_params : GlobRef.t -> int list
+
+(** Arity of [r]'s type-constructor parameter at position [i], [0] when that
+    parameter is an ordinary type. *)
+val get_ind_hkt_arity : GlobRef.t -> int -> int
+
+(** True when parameter [i] (0-based among the [Core.Signature.Argument.Runtime] parameters) of [r] is a
+    type constructor. *)
+val is_hkt_param : GlobRef.t -> int -> bool
+
+(** Number of [r]'s parameters that remain real C++ template parameters. *)
+val get_ind_nb_tparams : GlobRef.t -> int
+
+(** Drop the entries of a class's type-argument list that sit at its
+    higher-kinded parameter positions. *)
+val drop_hkt_args : GlobRef.t -> 'a list -> 'a list
+
+(** Record the arity of an extracted type-scheme constant (the [A] of
+    [Definition Opt (A : Type) := option A]).  A no-op for arity 0. *)
+val add_type_scheme_arity : GlobRef.t -> int -> unit
+
+(** Arity of an extracted type-scheme constant; 0 when [r] takes no type
+    parameters or is unknown. *)
+val get_type_scheme_arity : GlobRef.t -> int
+
+(** Get the Core field types for a constructor, as stored in [constructor_argument_types].
+    Returns [None] if the inductive is not in the extraction table.
+    The list order matches the constructor argument order. *)
+val get_ctor_ip_types_opt : GlobRef.t -> Core.Type.t list option
+
+(** [is_non_uniform_inductive r] holds when the inductive [r] is nested
+    (non-uniform): a constructor field mentions the inductive at instantiated
+    parameters, as in [NS : nest (A * A) -> nest A]. *)
+val is_non_uniform_inductive : Names.GlobRef.t -> bool
+
+(** Get the number of C++ parameter type variables for the inductive
+    containing the given constructor.  Only [Core.Signature.Argument.Runtime] entries in the PARAMETER
+    portion of [signature] (first [parameter_count] positions) are counted —
+    type indices are excluded.  Mirrors the [param_vars] computation in
+    [gen_ind_header_v2].  Returns 0 on lookup failure. *)
+val get_ctor_num_param_vars : GlobRef.t -> int
+
+(** Check if reference is a typeclass. *)
+val is_typeclass : GlobRef.t -> bool
+
+(** [Some m] when [r] is a singleton class -- a class defined as one method's
+    type, [Class C := m : T], so that an instance is the method itself -- and
+    [m] is that method; [None] for a record class, for a singleton class that
+    is mapped or skipped, and for one with a parameter that is not a type or
+    a type constructor -- a category's [C : obj -> obj -> Type] -- which
+    stays the type it is declared as. *)
+val singleton_class_method : GlobRef.t -> GlobRef.t option
+
+(** The singleton class whose one method [m] is, if it is one. *)
+val singleton_method_class : GlobRef.t -> GlobRef.t option
+
+(** The singleton class [r] is an instance of, if it is one, read off [r]'s
+    type in [env] (by default the global one; a functor body's constants
+    are only in the environment it is extracted in). *)
+val singleton_instance_class : ?env:Environ.env -> GlobRef.t -> GlobRef.t option
+
+(** Whether [r] builds an instance of some class -- record or singleton,
+    kept or skipped -- read off its Rocq type: the head of what it returns,
+    its arguments applied, is a class. *)
+val builds_instance : ?env:Environ.env -> GlobRef.t -> bool
+
+(** Check if a Core type is a typeclass. *)
+val is_typeclass_type : 'p Core.Type.at -> bool
+
+(** Mark inductive as flat (single-ctor, no variant wrapper). *)
+val add_flat_inductive : GlobRef.t -> unit
+
+(** Check if inductive is flat. *)
+val is_flat_inductive : GlobRef.t -> bool
+
+(** The arity the template template parameter at 0-based position [i] is
+    declared at, or [None] where that position is not one.  A variable handed
+    to such a position is higher-kinded whether or not anything applies it. *)
+val hkt_ind_param_arity : GlobRef.t -> int -> int option
+
+(** Whether the template parameter at 0-based position [i] of this inductive is
+    a template template parameter, so a use of the inductive must pass a bare
+    template name rather than an instantiation ({!Cpp_ir.Tparam_kinds}). *)
+val is_hkt_ind_param : GlobRef.t -> int -> bool
+
+(** Whether the parameter at 0-based position [i] of an inductive or alias is
+    a family position -- applied in its definition and still declared a plain
+    [typename] -- so a variable handed to it is a family, not a higher-kinded
+    variable. *)
+val is_family_ind_param : GlobRef.t -> int -> bool
+
+(** Whether position [i] of [r] is a parameter [r]'s definition never
+    spells. *)
+val is_phantom_type_param : GlobRef.t -> int -> bool
+
+(** Mark inductive as enum. *)
+val add_enum_inductive : GlobRef.t -> unit
+
+(** Check if inductive is enum. *)
+val is_enum_inductive : GlobRef.t -> bool
+
+(** Check if the inductive has any constructor field whose type refers
+    back to the same MutInd (recursive self-reference).  Such inductives
+    store self-refs as [shared_ptr] internally. *)
+val has_recursive_fields : GlobRef.t -> bool
+
+(** Check whether an inductive type has dependent parameters — i.e., the type
+    of some parameter references an earlier parameter (via de Bruijn index). *)
+val has_dependent_params : GlobRef.t -> bool
+
+(** Check if an inductive packet qualifies as an enum based on its structure.
+    Returns true if all constructors are nullary, no type parameters are kept,
+    and at least one constructor exists.
+    @param ind the extracted Core inductive (contains all packets)
+    @param i   0-based index of the packet within [ind] to test *)
+val is_enum_inductive_packet : Core.Inductive.t -> int -> bool
+
+(** Check if an inductive packet qualifies as flat (single constructor, no kept
+    type parameters, not coinductive, not mutual, no self-referencing fields).
+    Mirrors the [is_flat] check in [gen_ind_header_v2]. *)
+val is_flat_inductive_packet : Names.MutInd.t -> Core.Inductive.t -> int -> bool
+
+(** The constructor names of packet [i] of the extracted inductive [kn], in
+    declaration order, if it has been extracted. *)
+val ind_consnames : MutInd.t -> int -> Id.t array option
+
+(** A precondition a sigma-typed parameter carries, emitted at the top of the
+    function that takes it. *)
+type sigma_assertion =
+  | AssertExpr of string
+      (** a C++ expression template, [%0] standing for the parameter name *)
+  | AssertComment of string
+      (** a Rocq predicate with no C++ translation, emitted as a comment *)
+
+(** Add sigma assertion for a field.
+    @param r   the function global reference the assertion belongs to
+    @param idx 0-based parameter index the assertion is attached to
+    @param a   the assertion to record *)
+val add_sigma_assertion : GlobRef.t -> int -> sigma_assertion -> unit
+
+(** Get all sigma assertions for a reference. *)
+val get_sigma_assertions : GlobRef.t -> (int * sigma_assertion) list
+
+(** Add recursors for mutual inductive.
+    @param env the global environment used to look up the inductive body
+    @param ind the mutual inductive whose [_rec]/[_rect] recursors to register *)
+val add_recursors : Environ.env -> MutInd.t -> unit
+
+(** Check if reference is a recursor. *)
+val is_recursor : GlobRef.t -> bool
+
+(** Add projection to table.
+    @param n    the arity (number of type parameters) of the projection
+    @param kn   the constant representing the projection function
+    @param ip   the inductive type the projection belongs to *)
+val add_projection : int -> Constant.t -> inductive -> unit
+
+(** Check if reference is a projection. *)
+val is_projection : GlobRef.t -> bool
+
+(** Get projection arity. *)
+val projection_arity : GlobRef.t -> int
+
+(** Get projection info (inductive and arity). *)
+val projection_info : GlobRef.t -> inductive * int (* arity *)
+
+(** Add promoted type variable. *)
+val add_promoted_type_var : GlobRef.t -> Names.Id.t -> unit
+
+(** Check if reference has promoted type variable. *)
+val is_promoted_type_var : GlobRef.t -> bool
+
+(** Get promoted type variable name if exists. *)
+val promoted_type_var_name : GlobRef.t -> Names.Id.t option
+
+(** The field a promoted type variable of this name stands for. *)
+val promoted_type_var_field : Names.Id.t -> GlobRef.t option
+
+(** Every field promoted to a type variable. *)
+val promoted_type_var_fields : unit -> GlobRef.t list
+
+(** Register an erased type constant: a type-valued record field that is not
+    promoted (a family such as [Hom : Obj -> Obj -> Type]), or a type
+    definition or axiom whose body extracts to no type.  Either is spelled
+    [std::any]. *)
+val add_erased_type_const : GlobRef.t -> unit
+
+(** Check if reference is an erased type constant. *)
+val is_erased_type_const : GlobRef.t -> bool
+
+(** Register a value-dependent type scheme (kind takes a value argument, e.g.
+    [sym_semty : sym -> Type]).  Applied to a value it erases to [std::any]. *)
+val add_value_dep_type_scheme : GlobRef.t -> unit
+
+(** Check whether a reference is a value-dependent type scheme. *)
+val is_value_dep_type_scheme : GlobRef.t -> bool
+
+(** An applied instance, as the Rocq type writes it: a head and what it is
+    applied to, recursively.  [Carg_unknown] is an argument whose head is not a
+    constant -- a context variable, typically -- which the reader fills
+    positionally from the instances it is holding. *)
+type class_arg = Carg of GlobRef.t * class_arg list | Carg_unknown
+
+(** [add_instance_class_shape r (class_ref, args)] records the class [r] is an
+    instance of and the instances that class is applied to, each with its own
+    arguments.
+
+    A class argument is erased from the Core type -- [PIV : @PI ProvenanceV
+    PointerV] reaches translation as an instance of [PI] and nothing more -- so
+    the promoted type variables that belong to those arguments arrive with no
+    way back to them.  The Rocq type is the only place the connection is still
+    written down. *)
+val add_instance_class_shape : GlobRef.t -> GlobRef.t * class_arg list -> unit
+
+(** The shape recorded by {!add_instance_class_shape}, if any. *)
+val get_instance_class_shape : GlobRef.t -> (GlobRef.t * class_arg list) option
+
+(** [add_context_instance_apps r apps] records the instances [r]'s Rocq type
+    applies to [r]'s own class-typed binders: each is the instance and, for
+    each argument, the ordinal of the binder among those binders.  Like
+    {!add_instance_class_shape}, it records what the Core type drops. *)
+val add_context_instance_apps : GlobRef.t -> (GlobRef.t * int list) list -> unit
+
+(** The applications recorded by {!add_context_instance_apps}, or [[]]. *)
+val get_context_instance_apps : GlobRef.t -> (GlobRef.t * int list) list
+
+(** [ind_promoted_params kn] -- the promoted type variables the constructor
+    payloads of [kn] mention, in order of first appearance.
+
+    An inductive declared under a [Context] may carry a field whose type is a
+    field of that context variable.  The dictionary is erased, so the Core
+    inductive has no parameter for it and the field falls back to the
+    file-scope alias: the emitted struct claims to be one type when it is one
+    per instance.  These names are what it is really parameterised by, and
+    they become its remaining template parameters. *)
+val ind_promoted_params : MutInd.t -> Id.t list
+
+(** {!ind_promoted_params} for any type global: an inductive, or a type-level
+    [Definition] whose body was recorded by {!add_type_alias_body}.  The
+    property is transitive -- a type that reaches such a type depends on the
+    same variables. *)
+val promoted_type_params : GlobRef.t -> Id.t list
+
+(** [add_type_alias_body r t] records the right-hand side of the type-level
+    [Definition] [r], which is otherwise nowhere the closure above can read.
+    An alias has no constructor payloads, so its body is what it reaches. *)
+val add_type_alias_body : GlobRef.t -> Core.Type.t -> unit
+
+(** Whether {!add_type_alias_body} has recorded a body for [r], i.e. whether
+    [r] is a type-level [Definition] rather than a term. *)
+val has_type_alias_body : GlobRef.t -> bool
+
+(** The global a chain of type aliases from [r] ends in; [r] itself when it
+    is not an alias of an applied global. *)
+val type_alias_head : GlobRef.t -> GlobRef.t
+
+(** [add_ind_class_arg r arg] records that a constructor field type of
+    [r] names the applied instance [arg] -- the same shape
+    {!add_instance_class_shape} records, and read by the same rule.  The Rocq
+    constructor type is the only place an inductive's dependence on an instance
+    is written down; the Core inductive keeps no parameter for it. *)
+val add_ind_class_arg : GlobRef.t -> class_arg -> unit
+
+(** The shapes recorded by {!add_ind_class_arg}, in order of first
+    appearance. *)
+val get_type_class_args : GlobRef.t -> class_arg list
+
+(** Add info axiom. *)
+val add_info_axiom : GlobRef.t -> unit
+
+(** Remove info axiom. *)
+val remove_info_axiom : GlobRef.t -> unit
+
+(** Add log axiom. *)
+val add_log_axiom : GlobRef.t -> unit
+
+(** Add cofixpoint definition. *)
+val add_cofixpoint : GlobRef.t -> unit
+
+(** Check if a definition is a cofixpoint. *)
+val is_cofixpoint : GlobRef.t -> bool
+
+
+(** Add symbol. *)
+val add_symbol : GlobRef.t -> unit
+
+(** Add symbol rule. *)
+val add_symbol_rule : GlobRef.t -> Label.t -> unit
+
+(** Mark reference as opaque. *)
+val add_opaque : GlobRef.t -> unit
+
+(** Remove opaque marking from reference. *)
+val remove_opaque : GlobRef.t -> unit
+
+(** Reset all extraction tables. *)
+val reset_tables : unit -> unit
+
+(** {2 Output Directory parameter} *)
+
+(** Get base output directory. *)
+val output_directory : unit -> string
+
+(** [output_directory_for_module ()] returns the output directory with the
+    module's subdirectory appended, mirroring the source file's location.
+    Creates the subdirectory if it doesn't exist. Falls back to base output
+    directory on error. *)
+val output_directory_for_module : unit -> string
+
+(** [claim_output_target target] vets a user-supplied extraction target
+    filename and takes it for this extraction. Absolute paths and [..]
+    components raise a Rocq user error; ordinary relative subpaths are accepted.
+    Guards against path traversal / arbitrary file write (CWE-22/CWE-73).
+
+    Taking the target is what makes a second extraction to it -- which would
+    overwrite this one's files -- a user error in turn, so the call belongs at
+    the boundary and happens exactly once per extraction. *)
+val claim_output_target : string -> unit
+
+(** [claim_extracted_unit mp target] records that the Rocq library [mp] was
+    extracted into the C++ unit [target], unless some unit already claims it.
+    The claim is persisted in the [.vo], so a later extraction in a file that
+    [Require]s [mp] can see it. *)
+val claim_extracted_unit : ModPath.t -> string -> unit
+
+(** [extracted_unit_of mp] is the C++ unit another file's extraction put the
+    Rocq library [mp] into, if one has claimed it.  A unit of the file being
+    compiled is never one: it emits that file's own modules, as each of the
+    file's units does, so no other of them can include its header. *)
+val extracted_unit_of : ModPath.t -> string option
+
+(** {2 AccessOpaque parameter} *)
+
+(** Check if accessing opaque definitions is enabled. *)
+val access_opaque : unit -> bool
+
+(** {2 AutoInline parameter} *)
+
+(** Check if auto-inline is enabled. *)
+val auto_inline : unit -> bool
+
+(** {2 TypeExpand parameter} *)
+
+(** Check if type expansion is enabled. *)
+val type_expand : unit -> bool
+
+(** {2 Optimize parameter} *)
+
+(** Optimization flags. *)
+type opt_flag = {
+  opt_kill_dum : bool;  (** 1: Kill dummy arguments *)
+  opt_fix_fun : bool;  (** 2: Optimize fixpoint functions *)
+  opt_case_iot : bool;  (** 4: Case optimization - iota *)
+  opt_case_idr : bool;  (** 8: Case optimization - identity *)
+  opt_case_idg : bool;  (** 16: Case optimization - general identity *)
+  opt_case_cst : bool;  (** 32: Case optimization - constant *)
+  opt_case_fun : bool;  (** 64: Case optimization - function *)
+  opt_case_app : bool;  (** 128: Case optimization - application *)
+  opt_let_app : bool;  (** 256: Let-application optimization *)
+  opt_lin_let : bool;  (** 512: Linear let optimization *)
+  opt_lin_beta : bool;  (** 1024: Linear beta reduction *)
+}
+
+(** Get current optimization flags. *)
+val optims : unit -> opt_flag
+
+(** Get code formatting style. *)
+val format_style : unit -> string
+
+(** Get standard library path. *)
+val std_lib : unit -> string
+
+(** Get BDE directory path. *)
+val bde_dir : unit -> string
+
+(** {2 Controls whether dummy lambdas are removed} *)
+
+(** Check if conservative types mode is enabled. *)
+val conservative_types : unit -> bool
+
+(** {2 Loopify pass} *)
+
+(** Check if the loopify pass is enabled (recursive → iterative transformation):
+    by [Crane Loopify], or for a {!Probe.census}. *)
+val loopify : unit -> bool
+
+(** Whether the loopify pass should report, for every recursive function it
+    sees, the strategy that fired or the reason it declined
+    ([Set Crane Loopify Diagnostics]). Diagnostic only; does not affect
+    emitted code. *)
+val loopify_diagnostics : unit -> bool
+
+(** Whether a declined loopification (or a residual self-call surviving the
+    transform) is a hard error rather than a silent fallback to C++ recursion
+    ([Set Crane Loopify Strict]). *)
+val loopify_strict : unit -> bool
+
+(** Check whether a specific function should be loopified: a per-function
+    override ([Crane Loopify] / [Crane NoLoopify]) first, then [default], then
+    the global setting.  Pass [~default:true] for code the user cannot name in
+    an override, such as the methods generated on an inductive. *)
+val should_loopify : ?default:bool -> GlobRef.t -> bool
+
+(** Whether the method made from a function is loopified where its
+    inductive's methods are: its own [Crane Loopify] / [Crane NoLoopify]
+    setting, and yes by default. *)
+val loopifies_method : GlobRef.t -> bool
+
+(** Whether the methods generated on inductive [r] are loopified.  They are
+    structural recursion over [r], one C++ frame per cell, and the user has
+    no name to hang [Crane Loopify] on, so they are by default -- except on a
+    coinductive, whose recursion sits under a lazy thunk and never builds a
+    deep C++ stack.  A [Crane Loopify] / [Crane NoLoopify] on [r] overrides
+    the default. *)
+val loopifies_methods_of : GlobRef.t -> bool
+
+(** Declaration currently being translated; consulted by {!reuse_loopify_ok}
+    and {!reuse_here}. *)
+val current_decl_ref : GlobRef.t option ref
+
+(** Whether the Perceus reuse rewrite may apply inside the declaration being
+    translated: true exactly when loopify will not rewrite it. *)
+val reuse_loopify_ok : unit -> bool
+
+(** [with_decl_ref r f] runs [f] with {!current_decl_ref} set to [r]. *)
+val with_decl_ref : GlobRef.t -> (unit -> 'a) -> 'a
+
+(** Mark references for loopify (true) or noloopify (false).
+    @param b [true] to force loopification of the listed functions,
+             [false] to opt them out (override the global [Crane Loopify] setting)
+    @param l list of qualified identifiers to configure *)
+val extraction_loopify : bool -> qualid list -> unit
+
+(** Reset per-function loopify table. *)
+val reset_extraction_loopify : unit -> unit
+
+(** {2 Reuse pass (Perceus-style in-place reuse)} *)
+
+(** The global [Set Crane Reuse] flag (default off).  A per-function
+    [Crane Reuse] / [Crane NoReuse] overrides it, so a decision about one
+    function asks {!should_reuse} or {!reuse_here} instead. *)
+val reuse : unit -> bool
+
+(** Check whether a specific function should reuse (per-function override first,
+    then global setting). *)
+val should_reuse : GlobRef.t -> bool
+
+(** {!should_reuse} of the declaration being generated ({!current_decl_ref});
+    outside any declaration, the global setting. *)
+val reuse_here : unit -> bool
+
+(** Whether some function may reuse: the global setting, or a [Crane Reuse]
+    naming a function.  For what is generated per type rather than per
+    function, such as an inductive's [__reuse] factories. *)
+val reuse_anywhere : unit -> bool
+
+(** Mark references for reuse (true) or noreuse (false), overriding the global
+    [Crane Reuse] setting. *)
+val extraction_reuse : bool -> qualid list -> unit
+
+(** Reset per-function reuse table. *)
+val reset_extraction_reuse : unit -> unit
+
+(** Whether an inductive's recursive-field factory should contain the runtime
+    [in_arena_scope()] branch (bump-allocate when a scope is open).  Arena
+    allocation is a property of whether a scope is open at run time, not of
+    the type, so this is true for every type except those opted out via
+    [Crane NoArena]. *)
+val should_use_arena_at_runtime : GlobRef.t -> bool
+
+(** Whether [Set Crane BoxedFields] is in effect: constructor fields of
+    inductive type stored behind the recursive-field smart pointer. *)
+val boxed_fields : unit -> bool
+
+(** Whether [Set Crane SharedVariant] is in effect. *)
+val shared_variant : unit -> bool
+
+(** Whether an inductive is stored as a shared variant: one word per value,
+    an alternative with fields in a counted block, a recursive field holding
+    the value itself ([crane::shared_box]).  Under [Set Crane SharedVariant],
+    for an ordinary inductive that is recursive or holds something; see
+    {!is_shared_variant_packet}. *)
+val is_shared_variant : GlobRef.t -> bool
+
+(** Whether packet [i] of the extracted inductive [kn] qualifies as a shared
+    variant: under [Set Crane SharedVariant], an ordinary, non-custom
+    inductive that is recursive (directly or through a sibling of its block)
+    or is a tagged union with a constructor holding something.  The
+    structural test {!add_shared_variant} is fed from; readers ask
+    {!is_shared_variant}. *)
+val is_shared_variant_packet : Names.MutInd.t -> Core.Inductive.t -> int -> bool
+
+(** Record that an inductive is stored as a shared variant; done by
+    [Core_plan.Structure] for every packet {!is_shared_variant_packet}
+    accepts, before rendering. *)
+val add_shared_variant : GlobRef.t -> unit
+
+(** Whether [Set Crane FastVariant] is in effect: inductives' alternatives in
+    [crane::variant] rather than [std::variant].  Never in the BDE flavor. *)
+val fast_variant : unit -> bool
+
+(** The raw [Set Crane NonAtomicRc] request, before {!non_atomic_rc_for} withholds
+    it from a concurrent unit.  It is program-wide, so a decision that has to
+    agree across the units of one extraction reads it rather than the per-unit
+    answer: the parameter ownership {!Core_plan.Ownership} settles for the whole program
+    in [Driver.Extract_env.freeze], before any unit's configuration is decided, and
+    {!Core_plan.Escape.is_reuse_scrutinee}'s analysis runs before any unit's concurrency
+    is decided too.  Everything a unit generates reads {!non_atomic_rc_for}. *)
+val non_atomic_rc_requested : unit -> bool
+
+(** A unit's configuration: what it decides, from the customs its program
+    names, about the runtime it is written against.  [concurrent]: whether
+    it runs on several threads -- its program names a custom extraction
+    from a header that starts threads ([<thread>], [<future>],
+    [crane_thread.h], their BDE spellings) or from Crane's transactional
+    memory ([stm_adapter.h]), whose values are shared by threads the caller
+    starts. *)
+type unit_config = {concurrent : bool}
+
+(** The configuration of a unit whose program names the customs [names]
+    (the [used_customs] of {!Driver.Program_facts.t}). *)
+val unit_config : names:Core.Ref.User.Set.t -> unit_config
+
+(** Whether non-atomic reference counting ([crane::rc]) is in effect for a
+    unit of the configuration given, swapping
+    [std::shared_ptr]/[std::make_shared] for [crane::rc]/[crane::make_rc].
+    This is the resolved answer, not the raw [Set Crane NonAtomicRc]
+    request: the request is a promise that the extracted program is
+    single-threaded, and it is withheld from a unit that runs on several
+    threads. *)
+val non_atomic_rc_for : unit_config -> bool
+
+(** Whether the runtime's block heap is one global ([Set Crane
+    SingleThreaded]) in a unit of the configuration given: the request, a
+    promise that Crane values are used from one thread at a time, withheld
+    from a unit that runs on several threads like {!non_atomic_rc_for}. *)
+val single_threaded_for : unit_config -> bool
+
+(** Whether [CRANE_COUNT_RC=1] is set and the unit of the configuration
+    given keeps [std::shared_ptr]: spell every shared pointer
+    [crane::counting_ptr] (count_rc.h) so the run reports its
+    reference-count traffic.  Measurement-only; never true in ordinary
+    extraction. *)
+val count_rc_for : unit_config -> bool
+
+(** Warn, once per unit, if [Set Crane NonAtomicRc] was requested but withheld
+    because the unit, configured as given, is concurrent.  Call before any
+    code generation. *)
+val check_non_atomic_rc_request : unit_config -> unit
+
+(** [Set Crane Arena]: whether the runtime scoped-arena factory
+    ([crane::arena_make_shared] / [crane::rc<T>::make]) is emitted for recursive
+    fields.  Off by default, in which case generated code uses the plain
+    [std::make_shared] / [crane::make_rc] and pulls in no arena runtime.  Only
+    swaps the factory, never the pointer representation. *)
+val arena_enabled : unit -> bool
+
+
+val stamp_build : unit -> bool
+(** Whether [CRANE_STAMP=1] is set: print a digest of the plugin binary as a
+    comment at the top of every generated file, so the artifact witnesses which
+    binary produced it instead of leaving that to a filesystem check made
+    alongside the run. Measurement-only; off by default because on, it would
+    change every committed test output. *)
+
+val plugin_build_stamp : unit -> string
+(** The digest of the loaded plugin [.cmxs], resolved through findlib so the
+    answer is the file Rocq actually loaded. Computed once. A failure to find
+    or read it yields a marker string ([unavailable], [no-cmxs-found],
+    [ambiguous-cmxs]) rather than an exception: a missing witness must not stop
+    an extraction, and must not read as a present one. *)
+
+(** Opt inductive types out of runtime arena allocation ([Crane NoArena <ind>]):
+    the listed types never bump-allocate, even inside an open arena scope.
+    @param l list of qualified inductive identifiers to exclude *)
+val extraction_no_arena : qualid list -> unit
+
+(** {2 File comment} *)
+
+(** Get comment to print at the beginning of files. *)
+val file_comment : unit -> string
+
+(** {2 Target language} *)
+
+(** Target language for extraction. *)
+type lang = Cpp
+
+(** Get current target language. *)
+val lang : unit -> lang
+
+(** {2 Extraction modes}
+
+    Extraction modes: modular or monolithic, library or minimal.
+
+    Nota:
+    - Recursive Extraction: monolithic, minimal
+    - Separate Extraction: modular, minimal
+    - Extraction Library: modular, library *)
+
+(** Set modular extraction mode. *)
+val set_modular : bool -> unit
+
+(** Check if modular extraction is enabled. *)
+val modular : unit -> bool
+
+(** Set library extraction mode. *)
+val set_library : bool -> unit
+
+(** Check if library extraction is enabled. *)
+val library : unit -> bool
+
+(** Set extraction compute mode. *)
+val set_extrcompute : bool -> unit
+
+(** Check if extraction compute mode is enabled. *)
+val is_extrcompute : unit -> bool
+
+(** {2 Custom inlining table} *)
+
+(** Check if reference should be inlined. *)
+val to_inline : GlobRef.t -> bool
+
+(** Check if reference should be kept (not inlined). *)
+val to_keep : GlobRef.t -> bool
+
+(** {2 Implicit arguments table} *)
+
+(** Get set of implicit argument positions for global reference. *)
+val implicits_of_global : GlobRef.t -> Int.Set.t
+
+(** {2 Custom extractions table} *)
+
+
+(** [same_mutual_block r1 r2] holds when both are inductive types from the
+    same mutual block, which the backend generates into one enclosing scope. *)
+val same_mutual_block : GlobRef.t -> GlobRef.t -> bool
+
+(** Check if reference has custom extraction. *)
+val is_custom : GlobRef.t -> bool
+
+(** Check if reference has inline custom extraction. *)
+val is_inline_custom : GlobRef.t -> bool
+
+(** The replacement text of the inline custom [r], read to reason about it
+    rather than to write it ({!written_custom_text}). *)
+val inline_custom_text : GlobRef.t -> string option
+
+(** Check if reference has foreign custom extraction. *)
+val is_foreign_custom : GlobRef.t -> bool
+
+(** Find callback name for reference if any. *)
+val find_callback : GlobRef.t -> string option
+
+(** Find custom extraction code for reference. *)
+val find_custom : GlobRef.t -> string
+
+(** Find custom extraction code if exists. *)
+val find_custom_opt : GlobRef.t -> string option
+
+(** Under [CRANE_CHECK_IR], once the customs the files write are planned
+    ({!plan_written_customs}), that [r] is one of them: the header includes
+    the imports of those only. *)
+val check_written_custom : GlobRef.t -> unit
+
+(** The replacement text of the custom [r], read to write it
+    ({!check_written_custom}). *)
+val written_custom_text : GlobRef.t -> string option
+
+(** True when [s] names a C++ scalar type that is trivially copyable
+    (integers, floats, char variants, fixed-width aliases, [std::nullptr_t]),
+    or names a type declared with {!extraction_trivially_copyable}. *)
+val is_trivially_copyable_cpp_name : string -> bool
+
+(** True when the type was declared trivially copyable with
+    [Crane TriviallyCopyable].  Conditional on the type arguments, which the
+    caller must check. *)
+val is_trivially_copyable_ref : GlobRef.t -> bool
+
+(** [Crane TriviallyCopyable r] declares that the C++ type [r] is mapped to is
+    trivially copyable whenever its type arguments are (as [std::pair] is).
+    Errors when [r] has no custom mapping to take a C++ name from. *)
+val extraction_trivially_copyable : qualid list -> unit
+
+(** True when [r] is a custom-extracted inductive whose C++ representation is
+    a trivially-copyable scalar (e.g. [nat] → [unsigned int]). *)
+val is_custom_scalar_ref : GlobRef.t -> bool
+
+(** The global names generated code spells unqualified or as namespaces:
+    [std], [crane], [persistent_array]. *)
+val reserved_global_cpp_names : string list
+
+(** Append [_] to struct names that collide with {!reserved_global_cpp_names}. *)
+val escape_reserved_struct_name : string -> string
+
+(** Find custom type extraction (imports and code). *)
+val find_type_custom : GlobRef.t -> string list * string
+
+(** Check if branch array has custom match extraction. *)
+val is_custom_match : 'p Core.Match.Branch.at array -> bool
+
+(** The inductive a match's first branch belongs to.
+    @raise Not_found when the branch has no constructor pattern. *)
+val indref_of_match : 'p Core.Match.Branch.at array -> GlobRef.t
+
+(** Find custom match extraction code. *)
+val find_custom_match : 'p Core.Match.Branch.at array -> string
+
+(** Look up the [Boxed Element] wrapper template (e.g. ["immer::box<%t0>"])
+    for a custom container.  The wrapper is applied to the container's element
+    only where the element type is incomplete at the point the container is
+    named, i.e. where the element recurses through the container
+    ({!is_boxed_recursive_ind}). *)
+val find_boxed_wrapper_opt : GlobRef.t -> string option
+
+(** Look up the [Drain "..."] iterative-destructor template for a custom
+    container. Placeholders: [%scrut] = container field expression, [%yield(e)] =
+    push child [e] onto the destructor worklist. *)
+val find_custom_drain_opt : GlobRef.t -> string option
+
+(** Record an inductive that recurses through a boxed-element container. *)
+val add_boxed_recursive_ind : GlobRef.t -> unit
+
+(** Whether an inductive recurses through a boxed-element container, so that any
+    element type mentioning it must be boxed for C++ type-consistency. *)
+val is_boxed_recursive_ind : GlobRef.t -> bool
+
+(** Get the constructor template strings for an inductive, in constructor order. *)
+val find_custom_ctor_templates : Names.inductive -> string list
+
+(** Get the header import list registered for a GlobRef via [From] declarations. *)
+val get_ref_import_list : GlobRef.t -> string list
+
+(** Check if reference is a monad. *)
+val is_monad : GlobRef.t -> bool
+
+(** Check if reference is a bind operation. *)
+val is_bind : GlobRef.t -> bool
+
+(** Check if reference is a return operation. *)
+val is_ret : GlobRef.t -> bool
+
+(** Get monad template string if reference is a registered monad. *)
+val get_monad_template_opt : GlobRef.t -> string option
+
+(** Whether a monad's C++ spelling names [ITree], i.e. it is reified. *)
+val is_monad_reified : GlobRef.t -> bool
+
+(** Check if reference is void type. *)
+val is_void : GlobRef.t -> bool
+
+(** Check if reference is ghost (erased). *)
+val is_ghost : GlobRef.t -> bool
+
+(** Check if reference is Rocq's [unit] type. *)
+val is_unit_type : GlobRef.t -> bool
+
+(** Check if reference is Rocq's [tt] constructor. *)
+val is_tt_constructor : GlobRef.t -> bool
+
+(** Resolve the GlobRef for Rocq's [unit] type. *)
+val resolve_unit_type : unit -> GlobRef.t option
+
+(** Resolve the GlobRef for Rocq's [tt] constructor. *)
+val resolve_tt_ctor : unit -> GlobRef.t option
+
+(** Check if reference has any kind of custom extraction. *)
+val is_any_custom : GlobRef.t -> bool
+
+(** Check if reference has any kind of inline custom extraction. *)
+val is_any_inline_custom : GlobRef.t -> bool
+
+(** The frozen type registered for a reference; raises [Not_found] when
+    there is none, and is an anomaly before {!freeze_types} froze it. *)
+val find_type : GlobRef.t -> Core.Type.t
+
+(** The type registered for a reference, as the extracted program reads
+    it: one {!freeze_types} froze already is widened back
+    ({!Core.Widen}).  Raises [Not_found] when there is none. *)
+val find_extracted_type : GlobRef.t -> Core.Type.extracted
+
+(** A reader of a registered type that answers alike at either phase. *)
+type 'a type_reader = { read : 'p. 'p Core.Type.at -> 'a }
+
+(** [inspect_type r reader] is [reader.read] of the type registered for
+    [r], frozen or not: for a question whose answer does not depend on the
+    phase, asked before freezing and after.  Raises [Not_found] when there
+    is none. *)
+val inspect_type : GlobRef.t -> 'a type_reader -> 'a
+
+(** [add_frozen_type r ty] registers the frozen [ty] for [r]: for a reader
+    that builds the table a frozen program is read against. *)
+val add_frozen_type : GlobRef.t -> Core.Type.t -> unit
+
+(** [freeze_types f] freezes every type registered since the last call with
+    [f], which {!Core_passes.Phase.freeze} gives: from then on {!find_type}
+    answers it. *)
+val freeze_types : (Core.Type.extracted -> Core.Type.t) -> unit
+
+(** [add_type r ty] records [ty] as the type registered for [r], in the
+    current session only: the cache {!register_glob_def} fills, without the
+    library object that makes it persist. *)
+val add_type : GlobRef.t -> Core.Type.extracted -> unit
+
+(** {2 Extraction commands} *)
+
+(** Set extraction target language. *)
+val extraction_language : lang -> unit
+
+(** Configure inline/keep for qualified identifiers.
+    @param b  [true] to mark the identifiers for inlining, [false] to mark
+              them as NoInline (keep)
+    @param l  the list of qualified identifiers to configure *)
+val extraction_inline : bool -> qualid list -> unit
+
+(** Print current inline extraction table. *)
+val print_extraction_inline : unit -> Pp.t
+
+(** Print foreign extraction table. *)
+val print_extraction_foreign : unit -> Pp.t
+
+(** Print callback extraction table. *)
+val print_extraction_callback : unit -> Pp.t
+
+(** Reset inline extraction table. *)
+val reset_extraction_inline : unit -> unit
+
+(** Reset foreign extraction table. *)
+val reset_extraction_foreign : unit -> unit
+
+(** Reset callback extraction table. *)
+val reset_extraction_callback : unit -> unit
+
+(** Extract callback with optional name.
+    @param optstr optional alias string to use instead of the default name
+    @param x      the qualified identifier of the function to register as a callback *)
+val extract_callback : string option -> qualid -> unit
+
+(** The imports of the customs the unit's files write. *)
+val get_custom_imports : unit -> string list
+
+(** Plan the custom references the unit's files write, from what was
+    generated ahead of them: their imports are {!get_custom_imports}. *)
+val plan_written_customs : Core.Ref.User.Set.t -> unit
+
+(** The planned custom references the unit's files write (none before they
+    are planned). *)
+val written_customs : unit -> Core.Ref.User.Set.t
+
+(** Warns ([crane-mapping-standard-header]), once a session per mapping,
+    where an operation mapping the unit writes -- a constant's, a
+    constructor's or a match template -- writes a standard-library name
+    ({!Cpp_ir.Foreign_template.standard_names_written}) whose header neither its
+    own [From] clause nor that of a mapped type in its signature names.  A
+    mapping leaning on a header outside the standard library is not judged.
+    Made once the written customs are planned, when every mapping a
+    signature names is declared. *)
+val check_written_mapping_headers : unit -> unit
+
+(** Under [CRANE_CHECK_IR], that the files write no custom starting a thread
+    unless the program was decided to start one, in the unit configuration
+    given. *)
+val check_concurrency_decided : unit_config -> unit
+
+(** Extract constant with import custom code.
+    @param inline  [true] to mark as Inline, [false] for NoInline
+    @param r       the qualified identifier of the constant to extract
+    @param ids     type parameter names for type-scheme axioms (usually [[]])
+    @param s       the C++ replacement expression or type string
+    @param imports list of C++ headers to [#include] when this constant is used
+
+    A constant standing for a type with no [imports] is warned about where
+    its text writes a name C++ does not declare: see {!extract_inductive}. *)
+val extract_constant_import :
+  bool -> qualid -> string list -> string -> string list -> unit
+
+(** Extract constant with foreign code.
+    @param r the qualified identifier of the constant (must be a function)
+    @param s the C++ foreign function name to call at extraction sites *)
+val extract_constant_foreign : qualid -> string -> unit
+
+(** Extract inductive with custom representation.
+    @param r       the qualified identifier of the inductive type
+    @param s       the C++ type name replacing the inductive
+    @param l       list of C++ constructor representation strings, one per
+                   constructor (length must match the number of constructors)
+    @param optstr  optional C++ match template string for custom pattern matching
+    @param imports list of C++ headers to [#include] when this type is used
+
+    Warns ([crane-mapping-without-header]) when [imports] is empty and [s]
+    writes a name C++ does not declare
+    ({!Cpp_ir.Foreign_template.declared_type_names}): the header a unit includes for
+    a mapped type is the mapping's own, never another's. *)
+val extract_inductive :
+  ?boxed:string ->
+  ?drain:string ->
+  qualid -> string -> string list -> string option -> string list -> unit
+
+(** Extract monad with bind and return operations.
+    @param m       the qualified identifier of the monad type constructor
+    @param b       the qualified identifier of the bind operation
+    @param r       the qualified identifier of the return operation
+    @param s       the C++ template string for the monad type
+    @param imports list of C++ headers to [#include] when this monad is used *)
+val extract_monad : qualid -> qualid -> qualid -> string -> string list -> unit
+
+(** Extract void type.
+    @param v the qualified identifier of the void type (maps to [void] in C++)
+    @param g the qualified identifier of the ghost term (the single constructor,
+             erased to nothing at call sites) *)
+val extract_void : qualid -> qualid -> unit
+
+(** Register a pointer-equality guard for a comparison function.
+    [Crane Guard Compare f => Eq] inserts [if (&p1 == &p2) return Eq;]
+    at the top of [f], where [p1] and [p2] are the first two [const T&]
+    parameters of the same type. *)
+val extract_guard_compare : qualid -> qualid -> unit
+
+(** Look up the guard-compare return constructor for a function, if any. *)
+val find_guard_compare : GlobRef.t -> GlobRef.t option
+
+(** Skip extraction for qualified identifier. *)
+val extract_skip : qualid -> unit
+
+(** Check if module should be skipped. *)
+val is_skip_module : ModPath.t -> bool
+
+(** Skip entire module extraction. *)
+val extract_skip_module : qualid -> unit
+
+(** Skip extraction or module (OR combinator). *)
+val extract_skip_or_module : qualid -> unit
+
+(** Numeral information for numeric inductives. *)
+type numeral_info = {
+  zero_ctor : int;  (** Index of zero constructor *)
+  succ_ctor : int;  (** Index of successor constructor *)
+  fmt : string;  (** Format string for the literal, with one [%n] placeholder *)
+  converters : GlobRef.t list;
+    (** Converter functions (e.g. [Nat.of_num_uint]) that parse digit chains
+        into this numeral type.  Resolved by name when [Crane Extract
+        Numeral] is processed: in the module named after the type ([Nat] for
+        [nat]), or else in the inductive's own directory. *)
+  ind : GlobRef.t;
+    (** The numeral inductive itself, so a rendering site holding only the
+        info can still ask what C++ type the literal has to fit in. *)
+}
+
+(** Check if inductive is numeric. *)
+val is_numeral_inductive : GlobRef.t -> bool
+
+(** Get numeral information if available. *)
+val get_numeral_info : GlobRef.t -> numeral_info option
+
+(** Check if a function is a registered numeral converter (e.g.
+    [Nat.of_num_uint]), as resolved during [Crane Extract Numeral]
+    processing ({!numeral_info}). *)
+val is_numeral_converter : GlobRef.t -> bool
+
+(** Return the numeral inductive targeted by a converter function, if any. *)
+val numeral_ind_of_converter : GlobRef.t -> GlobRef.t option
+
+(** Extract numeral inductive.
+    @param r   the qualified identifier of the inductive type (e.g. [nat])
+    @param fmt the C++ format string for numeral literals (e.g. ["%nu"]) *)
+val extract_numeral : qualid -> string -> unit
+
+(** Register global definition with type.
+    @param id the global reference of the definition being registered
+    @param ty the Core type to associate with it, used for type-directed
+              code generation at call sites *)
+val register_glob_def : GlobRef.t -> Core.Type.extracted -> unit
+
+(** Argument specifier for implicit extraction. *)
+type int_or_id =
+  | ArgInt of int
+  | ArgId of Id.t
+
+(** Configure implicit arguments for extraction.
+    @param r the qualified identifier of the function
+    @param l list of argument specifiers (by position [ArgInt] or name [ArgId])
+             indicating which arguments should be treated as implicit and dropped
+             during extraction *)
+val extraction_implicit : qualid -> int_or_id list -> unit
+
+(** {2 Blacklisted filenames table} *)
+
+(** Add filenames to blacklist. *)
+val extraction_blacklist : string list -> unit
+
+(** Reset filename blacklist. *)
+val reset_extraction_blacklist : unit -> unit
+
+(** Print current blacklist. *)
+val print_extraction_blacklist : unit -> Pp.t
+
+
+(** {2 Local fixpoint groups recursing at a ground instance} *)
+
+(** Record the local fixpoint group [occ] as one whose members' type binders
+    extraction erased because a call recurses at a ground instance
+    ([Rocq_to_core.Extraction.erased_fix_types]): its calls are written at their own
+    instance, and translation adapts their arguments to the erased
+    parameters. *)
+val add_erased_fix_group : Core.Occurrence.t -> unit
+
+(** Whether {!add_erased_fix_group} recorded [occ]. *)
+val is_erased_fix_group : Core.Occurrence.t -> bool

@@ -4,7 +4,6 @@
 #include "Datatypes.h"
 
 namespace SepExtNsAlias {
-
 struct Foo {
   static const Datatypes::Nat &x() {
     static const Datatypes::Nat v = Datatypes::Nat::o();
@@ -13,7 +12,6 @@ struct Foo {
 };
 
 using FooAlias = Foo;
-
 } // namespace SepExtNsAlias
 
 #endif // INCLUDED_SEPEXTNSALIAS

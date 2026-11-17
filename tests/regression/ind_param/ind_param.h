@@ -1,8 +1,8 @@
 #ifndef INCLUDED_IND_PARAM
 #define INCLUDED_IND_PARAM
 
-#include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -54,8 +54,8 @@ struct IndParam {
     };
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const typename C::t &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     static T1 result_rect(F0 &&f, F1 &&f0, const result &r) {
       if (std::holds_alternative<typename result::Ok>(r.v())) {
         const auto &[a0] = std::get<typename result::Ok>(r.v());
@@ -67,16 +67,8 @@ struct IndParam {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, typename C::t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     static T1 result_rec(F0 &&f, F1 &&f0, const result &r) {
-      if (std::holds_alternative<typename result::Ok>(r.v())) {
-        const auto &[a0] = std::get<typename result::Ok>(r.v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename result::Err>(r.v());
-        return f0(a0);
-      }
+      return result_rect<T1>(f, f0, r);
     }
 
     static result make_single(typename C::elem e) {
@@ -155,8 +147,9 @@ struct IndParam {
     };
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &,
+                                     const uint64_t &>
     static T1 t_rect(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
       if (std::holds_alternative<typename t::Empty>(t0.v())) {
         return f;
@@ -170,18 +163,8 @@ struct IndParam {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &>
     static T1 t_rec(T1 f, F1 &&f0, F2 &&f1, const t &t0) {
-      if (std::holds_alternative<typename t::Empty>(t0.v())) {
-        return f;
-      } else if (std::holds_alternative<typename t::Single>(t0.v())) {
-        const auto &[a0] = std::get<typename t::Single>(t0.v());
-        return f0(a0);
-      } else {
-        const auto &[a0, a1] = std::get<typename t::Pair>(t0.v());
-        return f1(a0, a1);
-      }
+      return t_rect<T1>(std::move(f), f0, f1, t0);
     }
 
     static uint64_t size(const t &c);

@@ -2,6 +2,7 @@
 #define INCLUDED_MULTI_ARG_FUNCTION_VALUE
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
 

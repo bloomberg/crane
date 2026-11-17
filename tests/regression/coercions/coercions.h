@@ -2,6 +2,7 @@
 #define INCLUDED_COERCIONS
 
 #include "fn.h"
+#include <cstdint>
 
 struct Coercions {
   static uint64_t bool_to_nat(bool b);

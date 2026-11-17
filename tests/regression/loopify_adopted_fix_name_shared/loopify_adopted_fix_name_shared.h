@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -62,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -113,25 +112,28 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -158,16 +160,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -204,8 +207,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -267,14 +270,16 @@ struct LoopifyAdoptedFixNameShared {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->ts && _alt->ts.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->ts.get();
-            while (
-                std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<tree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<tree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -291,8 +296,7 @@ struct LoopifyAdoptedFixNameShared {
           if (_alt->ts && _alt->ts.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->ts.get();
-            while (
-                std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<tree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<tree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -319,8 +323,8 @@ struct LoopifyAdoptedFixNameShared {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -329,9 +333,7 @@ struct LoopifyAdoptedFixNameShared {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-             std::is_invocable_r_v<T1, F1 &, List<tree> &> &&
-             std::is_invocable_r_v<T1, F2 &, List<tree> &>
+    requires std::is_invocable_r_v<T1, F0 &, const Nat &>
   static T1 tree_rect(F0 &&f0, F1 &&f1, F2 &&f2, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[n0] = std::get<typename tree::Leaf>(t.v());
@@ -346,36 +348,23 @@ struct LoopifyAdoptedFixNameShared {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-             std::is_invocable_r_v<T1, F1 &, List<tree> &> &&
-             std::is_invocable_r_v<T1, F2 &, List<tree> &>
   static T1 tree_rec(F0 &&f0, F1 &&f1, F2 &&f2, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      const auto &[n0] = std::get<typename tree::Leaf>(t.v());
-      return f0(n0);
-    } else if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[ts0] = std::get<typename tree::Node>(t.v());
-      return f1(*ts0);
-    } else {
-      const auto &[ts0] = std::get<typename tree::Arr>(t.v());
-      return f2(*ts0);
-    }
+    return tree_rect<T1>(f0, f1, f2, t);
   }
 
-  static std::optional<Nat> f(const tree &t, const Nat &i);
+  static std::optional<Nat> f(const tree &t, Nat i);
   /// The struct loop skips Leaf 1 (4 >= 3), enters the array at 1, and
   /// the array loop reaches Leaf 7 at 1.
   static inline const std::optional<Nat> r1 =
       f(tree::node(List<tree>::cons(
-            tree::leaf(Nat::s(Nat::o())),
-            List<tree>::cons(
-                tree::arr(List<tree>::cons(
-                    tree::leaf(Nat::s(Nat::s(
-                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
-                    List<tree>::cons(tree::leaf(Nat::s(Nat::s(
-                                         Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                                     List<tree>::nil()))),
-                List<tree>::nil()))),
+          tree::leaf(Nat::s(Nat::o())),
+          List<tree>::cons(tree::arr(List<tree>::cons(
+              tree::leaf(Nat::s(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
+              List<tree>::cons(
+                  tree::leaf(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                  List<tree>::nil()))),
+                           List<tree>::nil()))),
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
 

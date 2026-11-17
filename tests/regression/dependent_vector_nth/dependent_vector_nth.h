@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -64,8 +64,8 @@ public:
 
   T(const T &) = default;
   T &operator=(const T &) = default;
-  T(T &&) noexcept = default;
-  T &operator=(T &&) noexcept = default;
+  T(T &&) = default;
+  T &operator=(T &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -97,26 +97,26 @@ public:
 
   explicit T0(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  T0(const T0<_U> &_other)
+  template <typename CraneU>
+  T0(const T0<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename T0<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
             const auto &[h, n, a2] =
-                std::get<typename T0<_U>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
-                            return crane_convert<A>(h);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        n,
-                        (a2 ? std::make_shared<T0<A>>(crane_convert<T0<A>>(*a2))
-                            : nullptr)};
+                std::get<typename T0<CraneU>::Cons>(_other.v());
+            return Cons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(h);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                n,
+                (a2 ? std::make_shared<T0<A>>(crane_convert<T0<A>>(*a2))
+                    : nullptr)};
           }
         }()) {}
 
@@ -137,7 +137,7 @@ struct Vector {
   template <typename T1>
   static T1 nth(uint64_t _x, const T0<T1> &v0, const T &p);
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T2 &&, const T1 &>
   static T2 fold_left(F0 &&f, T2 b, uint64_t _x, const T0<T1> &v0);
 };
 
@@ -161,24 +161,23 @@ struct DependentVectorNth {
 };
 
 template <typename T1> T1 Vector::nth(uint64_t, const T0<T1> &v0, const T &p) {
-  return [&]() {
-    if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
-      throw std::logic_error("absurd case");
+  if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
+    throw std::logic_error("absurd case");
+  } else {
+    const auto &[h, _, a2] = std::get<typename T0<T1>::Cons>(v0.v());
+    if (std::holds_alternative<typename T::F1>(p.v())) {
+      return h;
     } else {
-      const auto &[h, n, a2] = std::get<typename T0<T1>::Cons>(v0.v());
-      if (std::holds_alternative<typename T::F1>(p.v())) {
-        return h;
-      } else {
-        const auto &[n1, a10] = std::get<typename T::FS>(p.v());
-        return Vector::template nth<T1>(((n1 + 1) ? (n1 + 1) - 1 : (n1 + 1)),
-                                        *a2, *a10);
-      }
+      const auto &[n1, a10] = std::get<typename T::FS>(p.v());
+      auto &&_once1 = (n1 + 1);
+      return Vector::template nth<T1>((_once1 ? _once1 - 1 : _once1), *a2,
+                                      *a10);
     }
-  }();
+  }
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T2 &, T1 &>
+  requires std::is_invocable_r_v<T2, F0 &, T2 &&, const T1 &>
 T2 Vector::fold_left(F0 &&f, T2 b, uint64_t, const T0<T1> &v0) {
   if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
     return b;

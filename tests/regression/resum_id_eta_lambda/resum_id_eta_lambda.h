@@ -5,7 +5,7 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -64,8 +64,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -84,40 +84,35 @@ template <typename obj, typename c> using ReSum = c;
 
 struct CategoryOps {
   template <typename T1, typename T2>
-  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_);
+  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
   template <typename T1, typename T2>
   static T2 cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
-                const T1 &x1_, const T1 &x2_, const T2 &x3_, T2 x4_);
+                const T1 &x1_, const T1 &x2_, const T2 &x3_, const T2 &x4_);
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T2 case_(F0 &&_x, std::type_identity_t<Case<T1, T2>> case0,
                   const T1 &x0_, const T1 &x1_, const T1 &x2_, const T2 &x3_,
-                  T2 x4_);
+                  const T2 &x4_);
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T2 inl_(F0 &&_x, std::type_identity_t<Inl<T1, T2>> inl, const T1 &x0_,
-                 T1 x1_);
+                 const T1 &x1_);
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T2 inr_(F0 &&_x, std::type_identity_t<Inr<T1, T2>> inr, const T1 &x0_,
-                 T1 x1_);
+                 const T1 &x1_);
   template <typename T1, typename T2>
   static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
   template <typename T1, typename T2>
   static ReSum<T1, T2> ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
                                 const T1 &x1_);
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const T1 &, const T1 &>
   static ReSum<T1, T2> ReSum_inl(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
                                  std::type_identity_t<Inl<T1, T2>> h2,
-                                 const T1 &a, const T1 &b, const T1 &c,
-                                 const T2 &h4);
+                                 const T1 &a, const T1 &b, const T1 &c, T2 h4);
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const T1 &, const T1 &>
   static ReSum<T1, T2> ReSum_inr(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
                                  std::type_identity_t<Inr<T1, T2>> h3,
-                                 const T1 &a, const T1 &b, const T1 &c,
-                                 const T2 &h4);
+                                 const T1 &a, const T1 &b, const T1 &c, T2 h4);
 };
 
 template <typename E, typename R, typename itree> struct ItreeF {
@@ -152,15 +147,16 @@ public:
 
   explicit ItreeF(VisF _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1, typename _U2>
-  ItreeF(const ItreeF<_U0, _U1, _U2> &_other)
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  ItreeF(const ItreeF<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename ItreeF<_U0, _U1, _U2>::RetF>(
-                  _other.v())) {
+          if (std::holds_alternative<
+                  typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
             const auto &[r] =
-                std::get<typename ItreeF<_U0, _U1, _U2>::RetF>(_other.v());
+                std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                    _other.v());
             return RetF{[&]() -> R {
-              if constexpr (crane_convertible<R, const _U1 &>) {
+              if constexpr (crane_convertible<R, const CraneU1 &>) {
                 return crane_convert<R>(r);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -168,12 +164,14 @@ public:
               }
             }()};
           } else {
-            if (std::holds_alternative<typename ItreeF<_U0, _U1, _U2>::TauF>(
+            if (std::holds_alternative<
+                    typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
                     _other.v())) {
               const auto &[t] =
-                  std::get<typename ItreeF<_U0, _U1, _U2>::TauF>(_other.v());
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                      _other.v());
               return TauF{[&]() -> itree {
-                if constexpr (crane_convertible<itree, const _U2 &>) {
+                if constexpr (crane_convertible<itree, const CraneU2 &>) {
                   return crane_convert<itree>(t);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -182,17 +180,19 @@ public:
               }()};
             } else {
               const auto &[x, e] =
-                  std::get<typename ItreeF<_U0, _U1, _U2>::VisF>(_other.v());
-              return VisF{[&]() -> E {
-                            if constexpr (crane_convertible<E, const _U0 &>) {
-                              return crane_convert<E>(x);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          crane_convert<crane::fn<itree(crane::obj)>>(e)};
+                  std::get<typename ItreeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                      _other.v());
+              return VisF{
+                  [&]() -> E {
+                    if constexpr (crane_convertible<E, const CraneU0 &>) {
+                      return crane_convert<E>(x);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  crane_convert<crane::fn<itree(crane::obj)>>(e)};
             }
           }
         }()) {}
@@ -218,8 +218,8 @@ public:
 
 template <typename E, typename R> struct Itree {
   // TYPES
-  template <typename _S0 = Itree<E, R>> struct Go_ {
-    ItreeF<E, R, _S0> _observe;
+  template <typename CraneS0 = Itree<E, R>> struct Go_ {
+    ItreeF<E, R, CraneS0> _observe;
   };
 
   using Go = Go_<>;
@@ -237,14 +237,14 @@ public:
   explicit Itree(Go _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  template <typename _U0, typename _U1>
-  Itree(const Itree<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Itree(const Itree<CraneU0, CraneU1> &_other)
       : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              const auto &[_observe] =
-                  std::get<typename Itree<_U0, _U1>::Go>(_other.v());
-              return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
-            })) {}
+      _other.lazy_cell(), [=]() -> variant_t {
+        const auto &[_observe] =
+            std::get<typename Itree<CraneU0, CraneU1>::Go>(_other.v());
+        return Go{crane_convert<ItreeF<E, R, Itree<E, R>>>(_observe)};
+      })) {}
 
   explicit Itree(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -257,8 +257,7 @@ public:
   explicit Itree(crane::lazy<variant_t> _cell) : lazy_v_(std::move(_cell)) {}
 
   template <typename F> static Itree<E, R> lazy_(F &&thunk) {
-    return Itree<E, R>(
-        crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
+    return Itree<E, R>(crane::lazy<variant_t>::delegate(std::forward<F>(thunk)));
   }
 
   // ACCESSORS
@@ -280,27 +279,32 @@ public:
 struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k, Itree<T1, T2> u) {
+  subst(std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k,
+        const Itree<T1, T2> &u) {
     auto &&_sv = u.observe();
     if (std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(
             _sv.v())) {
       const auto &[r0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::RetF>(_sv.v());
       return k(r0);
-    } else if (std::holds_alternative<
-                   typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v())) {
+    } else if (
+        std::holds_alternative<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(
+            _sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> Itree<T1, T3> {
-        return Itree<T1, T3>::go(
-            ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0)));
-      });
+      return Itree<T1, T3>::lazy_(
+          [=, k = std::move(k)]() -> typename Itree<T1,
+                                                    T3>::Go {
+            return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
+                subst<T1, T2, T3>(std::move(k), t0))};
+          });
     } else {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
           x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=](const crane::obj &x0) -> Itree<T1, T3> {
+                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1,
+                                                                      T3> {
                    return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
                  })));
     }
@@ -308,7 +312,8 @@ struct ITree {
 
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3>
-  bind(Itree<T1, T2> u, std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
+  bind(const Itree<T1, T2> &u,
+       std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
     return subst<T1, T2, T3>(std::move(k), u);
   }
 
@@ -317,7 +322,8 @@ struct ITree {
     return Itree<T1, T2>::go(ItreeF<T1, T2, Itree<T1, T2>>::visf(
         std::move(e),
         crane::fn<Itree<T1, T2>(crane::obj)>(
-            [](const crane::obj &x) -> Itree<T1, T2> {
+            [](const crane::obj &x) -> Itree<T1,
+                                             T2> {
               return Itree<T1, T2>::go(
                   ItreeF<T1, T2, Itree<T1, T2>>::retf(crane_any_cast<T2>(x)));
             })));
@@ -349,15 +355,16 @@ public:
 
   explicit Sum1(Inr1 _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1, typename _U2>
-  Sum1(const Sum1<_U0, _U1, _U2> &_other)
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  Sum1(const Sum1<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum1<_U0, _U1, _U2>::Inl1>(
-                  _other.v())) {
+          if (std::holds_alternative<
+                  typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
             const auto &[a0] =
-                std::get<typename Sum1<_U0, _U1, _U2>::Inl1>(_other.v());
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
+                    _other.v());
             return Inl1{[&]() -> E1 {
-              if constexpr (crane_convertible<E1, const _U0 &>) {
+              if constexpr (crane_convertible<E1, const CraneU0 &>) {
                 return crane_convert<E1>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -366,9 +373,10 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum1<_U0, _U1, _U2>::Inr1>(_other.v());
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
+                    _other.v());
             return Inr1{[&]() -> E2 {
-              if constexpr (crane_convertible<E2, const _U1 &>) {
+              if constexpr (crane_convertible<E2, const CraneU1 &>) {
                 return crane_convert<E2>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -415,14 +423,20 @@ struct Subevent {
            crane::rebind_t<T1, T3> x);
 };
 
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct ResumIdEtaLambda {
   template <typename s, template <typename> class m, typename a>
@@ -436,240 +450,233 @@ struct ResumIdEtaLambda {
     // ACCESSORS
     aE<ptr> clone() const { return {a0}; }
 
-    template <typename _U> operator aE<_U>() const { return {a0}; }
+    template <typename CraneU> operator aE<CraneU>() const { return {a0}; }
 
     // CREATORS
     static aE<ptr> a(ptr a0) { return {std::move(a0)}; }
   };
+
   enum class BE { B };
   enum class CE { C };
   template <typename ptr, typename x>
   using BotE = Sum1<aE<ptr>, Sum1<BE, CE, crane::obj>, x>;
 
-  template <typename _P0> struct _crane_carrier_tch {
-    template <typename _CraneTcArg>
-    using c = Itree<BotE<typename _P0::ptr, crane::obj>, _CraneTcArg>;
+  template <typename CraneP0> struct crane_carrier_tch_6c159993d2c4c06f {
+    template <typename CraneTcArg>
+    using c = Itree<BotE<typename CraneP0::ptr, crane::obj>, CraneTcArg>;
   };
 
-  template <Params _tcI0, typename T1 = void, typename T2, typename _P0>
-  static stateT<Nat, _crane_carrier_tch<_tcI0>::template c, T2>
-  fused_trigger(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0, _P0 e) {
-    return [=](const Nat &s) {
+  template <Params _tcI0, typename T1 = void, typename T2, typename CraneP0>
+  static stateT<Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T2>
+  fused_trigger(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0, CraneP0 e) {
+    return [=, e = std::move(e), h0 = std::move(h0)](const Nat &s) {
       return ITree::template bind<BotE<typename _tcI0::ptr, crane::obj>, T2,
                                   std::pair<Nat, T2>>(
           ITree::template trigger<BotE<typename _tcI0::ptr, crane::obj>, T2>(
               Subevent::template subevent<
-                  crane::obj,
-                  Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>,
-                       crane::obj>,
+                  crane::obj, Sum1<aE<typename _tcI0::ptr>,
+                                   Sum1<BE, CE, crane::obj>, crane::obj>,
                   T2>(h0, e)),
           [=](const T2 &r) {
             return Itree<BotE<typename _tcI0::ptr, crane::obj>,
-                         std::pair<Nat, T2>>::
-                go(ItreeF<crane::obj, std::pair<Nat, T2>,
-                          Itree<crane::obj, std::pair<Nat, T2>>>::
-                       retf(std::make_pair(s, r)));
+                         std::pair<Nat, T2>>::go(ItreeF<
+                BotE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, T2>,
+                Itree<BotE<typename _tcI0::ptr, crane::obj>,
+                      std::pair<Nat, T2>>>::retf(std::make_pair(s, r)));
           });
     };
   }
 
   template <Params _tcI0, typename T1>
-  static stateT<Nat, _crane_carrier_tch<_tcI0>::template c, T1>
+  static stateT<Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T1>
   h(Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, T1> x) {
-    return [=](Nat x0) {
-      return crane_convert<
-          Itree<BotE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, T1>>>(
-          crane::any_cast<crane::fn<Itree<BotE<typename _tcI0::ptr, crane::obj>,
-                                          std::pair<Nat, crane::obj>>(
-              Nat)>>(CategoryOps::template case_<crane::obj,
-                                                 crane::fn<crane::obj(
-                                                     crane::obj)>>(
+    static const auto case_1 = crane::immortal(CategoryOps::template case_<
+        crane::obj, crane::fn<crane::obj(crane::obj)>>(
+        [](const auto &, const auto &) { return crane::obj(); },
+        [](crane::obj, crane::obj, crane::obj, const auto &x1,
+           crane::fn<crane::obj(crane::obj)> x2) {
+          return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
+            return Function::Case_sum1(
+                x1,
+                crane::any_cast<IFun<crane::obj, crane::obj>>(std::move(x2)),
+                _x0);
+          };
+        },
+        crane::obj(),
+        crane::obj(),
+        crane::obj(),
+        []() {
+          auto _pa0 = CategoryOps::template ReSum_inl<
+              crane::obj, crane::fn<crane::obj(crane::obj)>>(
               [](const auto &, const auto &) { return crane::obj(); },
               [](crane::obj, crane::obj, crane::obj, const auto &x1,
                  crane::fn<crane::obj(crane::obj)> x2) {
-                return [=](crane::obj _x0) -> crane::obj {
-                  return Function::Case_sum1(
-                      x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
+                return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
+                  return Function::Cat_IFun(
+                      x1, crane::any_cast<IFun<crane::obj, crane::obj>>(
+                              std::move(x2)),
                       _x0);
                 };
               },
-              crane::obj(), crane::obj(), crane::obj(),
-              []() {
-                return [](crane::obj _x0)
-                           -> stateT<Nat, _crane_carrier_tch<_tcI0>::template c,
-                                     crane::obj> {
-                  return fused_trigger<_tcI0, void, crane::obj>(
-                      CategoryOps::template ReSum_inl<
-                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                          [](const auto &, const auto &) {
-                            return crane::obj();
-                          },
-                          [](crane::obj, crane::obj, crane::obj, const auto &x1,
-                             crane::fn<crane::obj(crane::obj)> x2) {
-                            return [=](crane::obj _x0) -> crane::obj {
-                              return Function::Cat_IFun(
-                                  x1,
-                                  crane::any_cast<IFun<crane::obj, crane::obj>>(
-                                      x2),
-                                  _x0);
-                            };
-                          },
-                          [](crane::obj, crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Inl_sum1);
-                          },
-                          crane::obj(), crane::obj(), crane::obj(),
-                          CategoryOps::template ReSum_id<
-                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                              [](crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Id_IFun);
-                              },
-                              crane::obj())),
-                      _x0);
-                };
-              }(),
-              CategoryOps::template case_<crane::obj,
-                                          crane::fn<crane::obj(crane::obj)>>(
+              [](crane::obj,
+                 crane::obj) {
+                return crane_erase_global<Function::Inl_sum1, crane::obj>();
+              },
+              crane::obj(),
+              crane::obj(),
+              crane::obj(),
+              CategoryOps::template ReSum_id<crane::obj,
+                                             crane::fn<crane::obj(crane::obj)>>(
+                  [](crane::obj) {
+                    return crane_erase_global<Function::Id_IFun, crane::obj>();
+                  },
+                  crane::obj()));
+          return [=](const auto &_x0) -> stateT<
+              Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c,
+              crane::obj> {
+            return fused_trigger<_tcI0, void, crane::obj>(
+                _pa0, crane_convert<T1>(_x0));
+          };
+        }(),
+        CategoryOps::template case_<crane::obj,
+                                    crane::fn<crane::obj(crane::obj)>>(
+            [](const auto &, const auto &) { return crane::obj(); },
+            [](crane::obj, crane::obj, crane::obj, const auto &x1,
+               crane::fn<crane::obj(crane::obj)> x2) {
+              return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
+                return Function::Case_sum1(
+                    x1, crane::any_cast<IFun<crane::obj, crane::obj>>(
+                            std::move(x2)),
+                    _x0);
+              };
+            },
+            crane::obj(),
+            crane::obj(),
+            crane::obj(),
+            crane_erase_fn<crane::obj>([]() {
+              auto _pa0 = CategoryOps::template ReSum_inr<
+                  crane::obj, crane::fn<crane::obj(crane::obj)>>(
                   [](const auto &, const auto &) { return crane::obj(); },
                   [](crane::obj, crane::obj, crane::obj, const auto &x1,
                      crane::fn<crane::obj(crane::obj)> x2) {
-                    return [=](crane::obj _x0) -> crane::obj {
-                      return Function::Case_sum1(
-                          x1, crane::any_cast<IFun<crane::obj, crane::obj>>(x2),
+                    return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
+                      return Function::Cat_IFun(
+                          x1, crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                  std::move(x2)),
                           _x0);
                     };
                   },
-                  crane::obj(), crane::obj(), crane::obj(),
-                  crane_erase_fn([]() {
-                    return [](BE _x0)
-                               -> stateT<Nat,
-                                         _crane_carrier_tch<_tcI0>::template c,
-                                         crane::obj> {
-                      return fused_trigger<_tcI0, void, crane::obj>(
-                          CategoryOps::template ReSum_inr<
-                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                              [](const auto &, const auto &) {
-                                return crane::obj();
-                              },
-                              [](crane::obj, crane::obj, crane::obj,
-                                 const auto &x1,
-                                 crane::fn<crane::obj(crane::obj)> x2) {
-                                return [=](crane::obj _x0) -> crane::obj {
-                                  return Function::Cat_IFun(
-                                      x1,
-                                      crane::any_cast<
-                                          IFun<crane::obj, crane::obj>>(x2),
-                                      _x0);
-                                };
-                              },
-                              [](crane::obj, crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Inr_sum1);
-                              },
-                              crane::obj(), crane::obj(), crane::obj(),
-                              CategoryOps::template ReSum_inl<
-                                  crane::obj,
-                                  crane::fn<crane::obj(crane::obj)>>(
-                                  [](const auto &, const auto &) {
-                                    return crane::obj();
-                                  },
-                                  [](crane::obj, crane::obj, crane::obj,
-                                     const auto &x1,
-                                     crane::fn<crane::obj(crane::obj)> x2) {
-                                    return [=](crane::obj _x0) -> crane::obj {
-                                      return Function::Cat_IFun(
-                                          x1,
-                                          crane::any_cast<
-                                              IFun<crane::obj, crane::obj>>(x2),
-                                          _x0);
-                                    };
-                                  },
-                                  [](crane::obj, crane::obj) {
-                                    return crane_erase_fn<crane::obj>(
-                                        Function::Inl_sum1);
-                                  },
-                                  crane::obj(), crane::obj(), crane::obj(),
-                                  CategoryOps::template ReSum_id<
-                                      crane::obj,
-                                      crane::fn<crane::obj(crane::obj)>>(
-                                      [](crane::obj) {
-                                        return crane_erase_fn<crane::obj>(
-                                            Function::Id_IFun);
-                                      },
-                                      crane::obj()))),
+                  [](crane::obj,
+                     crane::obj) {
+                    return crane_erase_global<Function::Inr_sum1, crane::obj>();
+                  },
+                  crane::obj(),
+                  crane::obj(),
+                  crane::obj(),
+                  CategoryOps::template ReSum_inl<
+                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                      [](const auto &, const auto &) { return crane::obj(); },
+                      [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                         crane::fn<crane::obj(crane::obj)> x2) {
+                        return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
+                          return Function::Cat_IFun(
+                              x1, crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                      std::move(x2)),
+                              _x0);
+                        };
+                      },
+                      [](crane::obj,
+                         crane::obj) {
+                        return crane_erase_global<Function::Inl_sum1,
+                                                  crane::obj>();
+                      },
+                      crane::obj(),
+                      crane::obj(),
+                      crane::obj(),
+                      CategoryOps::template ReSum_id<
+                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                          [](crane::obj) {
+                            return crane_erase_global<Function::Id_IFun,
+                                                      crane::obj>();
+                          },
+                          crane::obj())));
+              return [=](BE _x0) -> stateT<
+                  Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c,
+                  crane::obj> {
+                return fused_trigger<_tcI0, void, crane::obj>(_pa0, _x0);
+              };
+            }()),
+            crane_erase_fn<crane::obj>([]() {
+              auto _pa0 = CategoryOps::template ReSum_inr<
+                  crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                  [](const auto &, const auto &) { return crane::obj(); },
+                  [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                     crane::fn<crane::obj(crane::obj)> x2) {
+                    return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
+                      return Function::Cat_IFun(
+                          x1, crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                  std::move(x2)),
                           _x0);
                     };
-                  }()),
-                  crane_erase_fn([]() {
-                    return [](CE _x0)
-                               -> stateT<Nat,
-                                         _crane_carrier_tch<_tcI0>::template c,
-                                         crane::obj> {
-                      return fused_trigger<_tcI0, void, crane::obj>(
-                          CategoryOps::template ReSum_inr<
-                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                              [](const auto &, const auto &) {
-                                return crane::obj();
-                              },
-                              [](crane::obj, crane::obj, crane::obj,
-                                 const auto &x1,
-                                 crane::fn<crane::obj(crane::obj)> x2) {
-                                return [=](crane::obj _x0) -> crane::obj {
-                                  return Function::Cat_IFun(
-                                      x1,
-                                      crane::any_cast<
-                                          IFun<crane::obj, crane::obj>>(x2),
-                                      _x0);
-                                };
-                              },
-                              [](crane::obj, crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Inr_sum1);
-                              },
-                              crane::obj(), crane::obj(), crane::obj(),
-                              CategoryOps::template ReSum_inr<
-                                  crane::obj,
-                                  crane::fn<crane::obj(crane::obj)>>(
-                                  [](const auto &, const auto &) {
-                                    return crane::obj();
-                                  },
-                                  [](crane::obj, crane::obj, crane::obj,
-                                     const auto &x1,
-                                     crane::fn<crane::obj(crane::obj)> x2) {
-                                    return [=](crane::obj _x0) -> crane::obj {
-                                      return Function::Cat_IFun(
-                                          x1,
-                                          crane::any_cast<
-                                              IFun<crane::obj, crane::obj>>(x2),
-                                          _x0);
-                                    };
-                                  },
-                                  [](crane::obj, crane::obj) {
-                                    return crane_erase_fn<crane::obj>(
-                                        Function::Inr_sum1);
-                                  },
-                                  crane::obj(), crane::obj(), crane::obj(),
-                                  CategoryOps::template ReSum_id<
-                                      crane::obj,
-                                      crane::fn<crane::obj(crane::obj)>>(
-                                      [](crane::obj) {
-                                        return crane_erase_fn<crane::obj>(
-                                            Function::Id_IFun);
-                                      },
-                                      crane::obj()))),
-                          _x0);
-                    };
-                  }())))(Sum1<crane::obj, crane::obj, crane::obj>(x)))(x0));
+                  },
+                  [](crane::obj,
+                     crane::obj) {
+                    return crane_erase_global<Function::Inr_sum1, crane::obj>();
+                  },
+                  crane::obj(),
+                  crane::obj(),
+                  crane::obj(),
+                  CategoryOps::template ReSum_inr<
+                      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                      [](const auto &, const auto &) { return crane::obj(); },
+                      [](crane::obj, crane::obj, crane::obj, const auto &x1,
+                         crane::fn<crane::obj(crane::obj)> x2) {
+                        return [=, x2 = std::move(x2)](crane::obj _x0) -> crane::obj {
+                          return Function::Cat_IFun(
+                              x1, crane::any_cast<IFun<crane::obj, crane::obj>>(
+                                      std::move(x2)),
+                              _x0);
+                        };
+                      },
+                      [](crane::obj,
+                         crane::obj) {
+                        return crane_erase_global<Function::Inr_sum1,
+                                                  crane::obj>();
+                      },
+                      crane::obj(),
+                      crane::obj(),
+                      crane::obj(),
+                      CategoryOps::template ReSum_id<
+                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
+                          [](crane::obj) {
+                            return crane_erase_global<Function::Id_IFun,
+                                                      crane::obj>();
+                          },
+                          crane::obj())));
+              return [=](CE _x0) -> stateT<
+                  Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c,
+                  crane::obj> {
+                return fused_trigger<_tcI0, void, crane::obj>(_pa0, _x0);
+              };
+            }()))));
+    return [=, x = std::move(x)](Nat x0) {
+      return crane_convert<
+          Itree<BotE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, T1>>>(
+          crane::any_cast<crane::fn<Itree<BotE<typename _tcI0::ptr, crane::obj>,
+                                          std::pair<Nat, crane::obj>>(Nat)>>(
+              case_1(Sum1<crane::obj, crane::obj, crane::obj>(x)))(
+              std::move(x0)));
     };
   }
 
   template <Params _tcI0>
   static Itree<BotE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>>
   use_c(const Nat &s) {
-    return h<_tcI0, Nat>(
-        Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, Nat>::inr1(
-            Sum1<BE, CE, Nat>::inr1(CE::C)))(s);
+    static const auto h_1 =
+        crane::immortal(h<_tcI0, Nat>(
+            Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, Nat>::inr1(
+                Sum1<BE, CE, Nat>::inr1(CE::C))));
+    return h_1(s);
   }
 
   struct natParams {
@@ -681,24 +688,22 @@ struct ResumIdEtaLambda {
   static_assert(Params<natParams>);
   static inline const bool is_cc = []() {
     auto &&_sv = use_c<natParams>(Nat::s(Nat::o())).observe();
-    if (std::holds_alternative<
-            typename ItreeF<Sum1<aE<typename natParams::ptr>,
-                                 Sum1<BE, CE, crane::obj>, crane::obj>,
-                            std::pair<Nat, Nat>,
-                            Itree<Sum1<aE<typename natParams::ptr>,
-                                       Sum1<BE, CE, crane::obj>, crane::obj>,
-                                  std::pair<Nat, Nat>>>::VisF>(_sv.v())) {
-      const auto &[x, e0] = std::get<
-          typename ItreeF<Sum1<aE<typename natParams::ptr>,
-                               Sum1<BE, CE, crane::obj>, crane::obj>,
-                          std::pair<Nat, Nat>,
-                          Itree<Sum1<aE<typename natParams::ptr>,
-                                     Sum1<BE, CE, crane::obj>, crane::obj>,
-                                std::pair<Nat, Nat>>>::VisF>(_sv.v());
+    if (std::holds_alternative<typename ItreeF<
+            Sum1<aE<typename natParams::ptr>, Sum1<BE, CE, crane::obj>,
+                 crane::obj>,
+            std::pair<Nat, Nat>,
+            Itree<Sum1<aE<typename natParams::ptr>, Sum1<BE, CE, crane::obj>,
+                       crane::obj>,
+                  std::pair<Nat, Nat>>>::VisF>(_sv.v())) {
+      const auto &[x, _] = std::get<typename ItreeF<
+          Sum1<aE<typename natParams::ptr>, Sum1<BE, CE, crane::obj>,
+               crane::obj>,
+          std::pair<Nat, Nat>, Itree<Sum1<aE<typename natParams::ptr>,
+                                          Sum1<BE, CE, crane::obj>, crane::obj>,
+                                     std::pair<Nat, Nat>>>::VisF>(_sv.v());
       if (std::holds_alternative<
               typename Sum1<aE<typename natParams::ptr>,
-                            Sum1<BE, CE, crane::obj>, crane::obj>::Inl1>(
-              x.v())) {
+                            Sum1<BE, CE, crane::obj>, crane::obj>::Inl1>(x.v())) {
         return false;
       } else {
         const auto &[a00] =
@@ -719,36 +724,34 @@ struct ResumIdEtaLambda {
 };
 
 template <typename T1, typename T2>
-T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, T1 x0_) {
-  return id_0(std::move(x0_));
+T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
+  return id_0(x0_);
 }
 
 template <typename T1, typename T2>
 T2 CategoryOps::cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
-                    const T1 &x1_, const T1 &x2_, const T2 &x3_, T2 x4_) {
-  return cat0(x0_, x1_, x2_, x3_, std::move(x4_));
+                    const T1 &x1_, const T1 &x2_, const T2 &x3_,
+                    const T2 &x4_) {
+  return cat0(x0_, x1_, x2_, x3_, x4_);
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
 T2 CategoryOps::case_(F0 &&, std::type_identity_t<Case<T1, T2>> case0,
                       const T1 &x0_, const T1 &x1_, const T1 &x2_,
-                      const T2 &x3_, T2 x4_) {
-  return case0(x0_, x1_, x2_, x3_, std::move(x4_));
+                      const T2 &x3_, const T2 &x4_) {
+  return case0(x0_, x1_, x2_, x3_, x4_);
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
 T2 CategoryOps::inl_(F0 &&, std::type_identity_t<Inl<T1, T2>> inl,
-                     const T1 &x0_, T1 x1_) {
-  return inl(x0_, std::move(x1_));
+                     const T1 &x0_, const T1 &x1_) {
+  return inl(x0_, x1_);
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
 T2 CategoryOps::inr_(F0 &&, std::type_identity_t<Inr<T1, T2>> inr,
-                     const T1 &x0_, T1 x1_) {
-  return inr(x0_, std::move(x1_));
+                     const T1 &x0_, const T1 &x1_) {
+  return inr(x0_, x1_);
 }
 
 template <typename T1, typename T2>
@@ -763,26 +766,26 @@ ReSum<T1, T2> CategoryOps::ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+  requires std::is_invocable_r_v<T1, F0 &, const T1 &, const T1 &>
 ReSum<T1, T2>
 CategoryOps::ReSum_inl(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
                        std::type_identity_t<Inl<T1, T2>> h2, const T1 &a,
-                       const T1 &b, const T1 &c, const T2 &h4) {
+                       const T1 &b, const T1 &c, T2 h4) {
   return CategoryOps::template cat<T1, T2>(
       std::move(h0), a, b, bif(b, c),
-      CategoryOps::template resum<T1, T2>(a, b, h4),
+      CategoryOps::template resum<T1, T2>(a, b, std::move(h4)),
       CategoryOps::template inl_<T1, T2>(bif, std::move(h2), b, c));
 }
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+  requires std::is_invocable_r_v<T1, F0 &, const T1 &, const T1 &>
 ReSum<T1, T2>
 CategoryOps::ReSum_inr(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
                        std::type_identity_t<Inr<T1, T2>> h3, const T1 &a,
-                       const T1 &b, const T1 &c, const T2 &h4) {
+                       const T1 &b, const T1 &c, T2 h4) {
   return CategoryOps::template cat<T1, T2>(
       std::move(h0), a, b, bif(c, b),
-      CategoryOps::template resum<T1, T2>(a, b, h4),
+      CategoryOps::template resum<T1, T2>(a, b, std::move(h4)),
       CategoryOps::template inr_<T1, T2>(bif, std::move(h3), c, b));
 }
 
@@ -802,8 +805,8 @@ template <typename T1, typename T2, typename T3>
 crane::rebind_t<T2, T3>
 Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
                    crane::rebind_t<T1, T3> x) {
-  return crane_any_cast<crane::rebind_t<T2, T3>>(
-      CategoryOps::resum(crane::obj(), crane::obj(), h0)(std::move(x)));
+  return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
+      crane::obj(), crane::obj(), std::move(h0))(std::move(x)));
 }
 
 #endif // INCLUDED_RESUM_ID_ETA_LAMBDA

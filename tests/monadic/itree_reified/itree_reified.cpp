@@ -17,13 +17,13 @@ ITreeReified::sequence_trees(const std::shared_ptr<ITree<std::monostate>> &t1,
 std::shared_ptr<ITree<std::monostate>> ITreeReified::test_direct() {
   return itree_bind(
       []() -> std::shared_ptr<ITree<std::monostate>> {
-        std::cout << "direct1"s << '\n';
+        std::cout << std::string("direct1") << '\n';
         return ITree<std::monostate>::ret(std::monostate{});
       }(),
       [](std::monostate) {
         return itree_bind(
             []() -> std::shared_ptr<ITree<std::monostate>> {
-              std::cout << "direct2"s << '\n';
+              std::cout << std::string("direct2") << '\n';
               return ITree<std::monostate>::ret(std::monostate{});
             }(),
             [](std::monostate) {
@@ -36,7 +36,7 @@ std::shared_ptr<ITree<std::monostate>> ITreeReified::test_direct() {
 std::shared_ptr<ITree<std::monostate>> ITreeReified::greet() {
   return itree_bind(
       []() -> std::shared_ptr<ITree<std::monostate>> {
-        std::cout << "Hello!"s << '\n';
+        std::cout << std::string("Hello!") << '\n';
         return ITree<std::monostate>::ret(std::monostate{});
       }(),
       [](std::monostate) {
@@ -53,30 +53,30 @@ std::shared_ptr<ITree<std::monostate>> ITreeReified::test_logging() {
 std::shared_ptr<ITree<std::monostate>> ITreeReified::main() {
   return itree_bind(
       []() -> std::shared_ptr<ITree<std::monostate>> {
-        std::cout << "=== Starting ==="s << '\n';
+        std::cout << std::string("=== Starting ===") << '\n';
         return ITree<std::monostate>::ret(std::monostate{});
       }(),
       [](std::monostate) {
         return itree_bind(
             run_tree([]() -> std::shared_ptr<ITree<std::monostate>> {
-              std::cout << "Hello from reified mode!"s << '\n';
+              std::cout << std::string("Hello from reified mode!") << '\n';
               return ITree<std::monostate>::ret(std::monostate{});
             }()),
             [](std::monostate) {
               return itree_bind(
                   sequence_trees(
                       []() -> std::shared_ptr<ITree<std::monostate>> {
-                        std::cout << "First"s << '\n';
+                        std::cout << std::string("First") << '\n';
                         return ITree<std::monostate>::ret(std::monostate{});
                       }(),
                       []() -> std::shared_ptr<ITree<std::monostate>> {
-                        std::cout << "Second"s << '\n';
+                        std::cout << std::string("Second") << '\n';
                         return ITree<std::monostate>::ret(std::monostate{});
                       }()),
                   [](std::monostate) {
                     return itree_bind(
                         []() -> std::shared_ptr<ITree<std::monostate>> {
-                          std::cout << "=== Done ==="s << '\n';
+                          std::cout << std::string("=== Done ===") << '\n';
                           return ITree<std::monostate>::ret(std::monostate{});
                         }(),
                         [](std::monostate) {

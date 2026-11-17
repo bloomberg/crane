@@ -1,6 +1,7 @@
 #ifndef INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB
 #define INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB
 
+#include <cstdint>
 #include <utility>
 
 enum class Comparison;
@@ -8,6 +9,7 @@ enum class Comparison;
 struct Nat {
   static Comparison compare(uint64_t n, uint64_t m);
 };
+
 enum class Comparison { EQ, LT, GT };
 
 /// A user inductive called Comparison and the standard library's
@@ -38,19 +40,7 @@ struct UserInductiveShadowsStdlib {
 
   template <typename T1>
   static T1 Comparison_rec(T1 f, T1 f0, T1 f1, Comparison c) {
-    switch (c) {
-    case Comparison::LT_: {
-      return f;
-    }
-    case Comparison::EQ_: {
-      return f0;
-    }
-    case Comparison::GT_: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return Comparison_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 
   static uint64_t mine(Comparison c);

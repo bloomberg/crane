@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -29,6 +29,18 @@ struct Ascii0 {
   static N N_of_digits(const List<bool> &l);
   static N N_of_ascii(char a);
   static uint64_t nat_of_ascii(char a);
+}; /// With Mapping.AsciiChar, a character is a C++ char: identifier
+
+/// comparison compares bytes instead of building a binary natural per
+/// character.  The constructor packs bits and a match unpacks them, so
+/// code that looks inside a character still works.
+struct AsciiAsChar {
+  static Comparison cmp(const String &a, const String &b);
+  static bool same(const String &a, const String &b);
+  /// Looks inside a character: its low bit.
+  static bool odd_code(char c);
+  static bool decide(char a, char b);
+  static bool check();
 };
 
 template <typename A> struct List {
@@ -54,16 +66,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -100,14 +113,15 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct Positive {
@@ -173,8 +187,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -217,7 +231,8 @@ public:
 
 struct Pos {
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -234,7 +249,7 @@ struct Pos {
 };
 
 struct BinNat {
-  static N add(N n, N m);
+  static N add(const N &n, const N &m);
   static N mul(const N &n, const N &m);
   static uint64_t to_nat(const N &a);
 };
@@ -287,26 +302,13 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-/// With Mapping.AsciiChar, a character is a C++ char: identifier
-/// comparison compares bytes instead of building a binary natural per
-/// character.  The constructor packs bits and a match unpacks them, so
-/// code that looks inside a character still works.
-struct AsciiAsChar {
-  static Comparison cmp(const String &a, const String &b);
-  static bool same(const String &a, const String &b);
-  /// Looks inside a character: its low bit.
-  static bool odd_code(char c);
-  static bool decide(char a, char b);
-  static bool check(std::monostate _x);
 };
 
 #endif // INCLUDED_ASCII_AS_CHAR

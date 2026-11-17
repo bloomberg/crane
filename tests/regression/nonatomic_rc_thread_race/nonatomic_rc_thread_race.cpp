@@ -13,7 +13,7 @@ uint64_t NonatomicRcThreadRace::len(const NonatomicRcThreadRace::lst &l) {
   if (std::holds_alternative<typename NonatomicRcThreadRace::lst::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename NonatomicRcThreadRace::lst::Cons>(l.v());
     return (len(*a1) + 1);
   }
@@ -40,7 +40,7 @@ void NonatomicRcThreadRace::worker(uint64_t n) {
     uint64_t k = n - 1;
     []() -> void {
       if (churn(UINT64_C(2000), shared) == UINT64_C(0)) {
-        std::cout << "unreachable"s << '\n';
+        std::cout << std::string("unreachable") << '\n';
         return;
       } else {
         return;
@@ -52,14 +52,14 @@ void NonatomicRcThreadRace::worker(uint64_t n) {
 }
 
 void NonatomicRcThreadRace::test() {
-  std::thread t1 = std::thread(worker, UINT64_C(200));
-  std::thread t2 = std::thread(worker, UINT64_C(200));
-  t1.join();
-  t2.join();
+  crane::thread t1 = crane::thread(worker, UINT64_C(200));
+  crane::thread t2 = crane::thread(worker, UINT64_C(200));
+  std::move(t1).join();
+  std::move(t2).join();
   return;
 }
 
-void NonatomicRcThreadRace::run(std::monostate) {
+void NonatomicRcThreadRace::run() {
   {
     test();
     return;

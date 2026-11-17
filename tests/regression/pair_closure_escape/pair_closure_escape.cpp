@@ -8,18 +8,17 @@ uint64_t PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
     const auto &[a0, a1, a2] =
         std::get<typename PairClosureEscape::tree::Node>(t.v());
     auto &&_sv0 = *a0;
-    if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(
-            _sv0.v())) {
+    if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(_sv0.v())) {
       return (a1 + x);
     } else {
-      const auto &[a00, a10, a20] =
+      const auto &[_, a10, _] =
           std::get<typename PairClosureEscape::tree::Node>(_sv0.v());
       auto &&_sv1 = *a2;
       if (std::holds_alternative<typename PairClosureEscape::tree::Leaf>(
               _sv1.v())) {
         return (a10 + x);
       } else {
-        const auto &[a01, a11, a21] =
+        const auto &[_, a11, _] =
             std::get<typename PairClosureEscape::tree::Node>(_sv1.v());
         return (((a10 + a11) + a1) + x);
       }
@@ -31,9 +30,10 @@ uint64_t PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
 /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 PairClosureEscape::pair_escape(PairClosureEscape::tree t) {
-  return std::make_pair(
-      [=](uint64_t _x0) -> uint64_t { return sum_values(std::move(t), _x0); },
-      UINT64_C(0));
+  return std::make_pair([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+    return sum_values(std::move(t), _x0);
+  },
+                        UINT64_C(0));
 }
 
 uint64_t PairClosureEscape::use_pair(

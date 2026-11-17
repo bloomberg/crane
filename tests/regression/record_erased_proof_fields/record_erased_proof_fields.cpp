@@ -109,18 +109,16 @@ List<uint64_t> RecordErasedProofFieldsCase::trace_codes_of(
           right_kind_code_of(primary),
           List<uint64_t>::cons(
               tag_code_of(primary),
-              List<uint64_t>::cons(
-                  bucket_code_of(erased),
-                  List<uint64_t>::cons(
-                      tag_code(bucket_to_tag(erased.erased_bucket)),
-                      List<uint64_t>::nil())))));
+              List<uint64_t>::cons(bucket_code_of(erased),
+                                   List<uint64_t>::cons(tag_code(
+                                       bucket_to_tag(erased.erased_bucket)),
+                                                        List<uint64_t>::nil())))));
 }
 
 uint64_t RecordErasedProofFieldsCase::trace_checksum_of(
     const RecordErasedProofFieldsCase::PrimaryRecord &primary,
     const RecordErasedProofFieldsCase::ErasedProofRecord &erased) {
-  return trace_codes_of(primary, erased)
-      .template fold_left<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          UINT64_C(0));
+  return trace_codes_of(primary, erased).template fold_left<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
+      UINT64_C(0));
 }

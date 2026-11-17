@@ -1,7 +1,6 @@
 #ifndef INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
 #define INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
 
-#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -46,8 +45,8 @@ struct GeneratedStorageFieldNameClash {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &>
-  static T1 d_v__rect(T1 f, F1 &&f0, const d_v_ &d) {
+    requires std::is_invocable_r_v<T1, F1 &, const bool &>
+  static T1 d_v_prect(T1 f, F1 &&f0, const d_v_ &d) {
     if (std::holds_alternative<typename d_v_::Empty>(d.v())) {
       return f;
     } else {
@@ -57,14 +56,8 @@ struct GeneratedStorageFieldNameClash {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &>
-  static T1 d_v__rec(T1 f, F1 &&f0, const d_v_ &d) {
-    if (std::holds_alternative<typename d_v_::Empty>(d.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename d_v_::Flag>(d.v());
-      return f0(a0);
-    }
+  static T1 d_v_prec(T1 f, F1 &&f0, const d_v_ &d) {
+    return d_v_prect<T1>(std::move(f), f0, d);
   }
 
   static bool is_flag(const d_v_ &x);

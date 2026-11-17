@@ -3,24 +3,18 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
-using namespace std::string_literals;
-
 struct UnitVoidEdge2 {
-  static uint64_t take_unit(std::monostate _x);
+  static uint64_t take_unit();
   static void opaque_unit(uint64_t _x);
   static uint64_t let_use_as_arg(uint64_t n);
   static void let_return_unit(uint64_t x0_);
@@ -33,16 +27,13 @@ struct UnitVoidEdge2 {
   static uint64_t mono_bind_match();
   static uint64_t mono_bind_opaque();
   static void count_down_unit(uint64_t n);
-  static inline const uint64_t call_fixpoint = UINT64_C(7);
+  static constexpr uint64_t call_fixpoint = UINT64_C(7);
   static inline const uint64_t fixpoint_result_used = []() {
     count_down_unit(UINT64_C(50));
-    std::monostate x = std::monostate{};
-    return take_unit(x);
+    return take_unit();
   }();
 
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static uint64_t call_and_discard(F0 &&, uint64_t n) {
+  template <typename F0> static uint64_t call_and_discard(F0 &&, uint64_t n) {
     return n;
   }
 
@@ -50,18 +41,18 @@ struct UnitVoidEdge2 {
     requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static uint64_t call_and_use(F0 &&f, uint64_t n) {
     f(n);
-    std::monostate x = std::monostate{};
-    return take_unit(x);
+    return take_unit();
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply(F0 &&f, T1 x0_) {
-    return f(std::move(x0_));
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
+  static T2 apply(F0 &&f, const T1 &x0_) {
+    return f(x0_);
   }
 
   static inline const uint64_t apply_take_unit =
-      apply<std::monostate, uint64_t>(take_unit, std::monostate{});
+      apply<std::monostate, uint64_t>([](const auto &) { return take_unit(); },
+                                      std::monostate{});
   static std::optional<std::monostate> make_some_unit(bool b);
   static uint64_t use_option_unit(const std::optional<std::monostate> &o);
   static uint64_t compose_option_unit(bool b1, bool b2);
@@ -74,18 +65,19 @@ struct UnitVoidEdge2 {
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator pair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -100,23 +92,21 @@ struct UnitVoidEdge2 {
   };
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[a0, a1] = p;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return pair_rect<T1, T2, T3>(f, p);
   }
 
   static pair<uint64_t, std::monostate> make_nat_unit_pair(uint64_t n);
 
   template <typename T1, typename T2> static T1 get_fst(const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
+    const auto &[a0, _] = p;
     return a0;
   }
 

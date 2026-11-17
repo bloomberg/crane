@@ -2,8 +2,8 @@
 #define INCLUDED_REUSE_SELF_CYCLE
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -57,8 +57,8 @@ struct ReuseSelfCycle {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -67,7 +67,6 @@ struct ReuseSelfCycle {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -78,14 +77,8 @@ struct ReuseSelfCycle {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
-    if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
-      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(a0, *a1, mylist_rec<T1>(f, std::move(f0), *a1));
-    } else {
-      return f0;
-    }
+    return mylist_rect<T1>(f, std::move(f0), m);
   }
 
   static uint64_t length(const mylist &l);
@@ -104,7 +97,7 @@ struct ReuseSelfCycle {
   /// 2. mycons branch tail is mycons with arity 2 = 2
   /// 3. mycons is index 0 -> List.hd picks it
   /// 4. use_count() == 1 for fresh values
-  static mylist prepend_self(mylist l, bool b);
+  static mylist prepend_self(const mylist &l, bool b);
   /// test1: prepend_self(1, 2, true) should produce 1, 1, 2.
   /// In Rocq: mycons 1 (mycons 1 (mycons 2 mynil)), length = 3.
   /// With reuse bug: mycons 1 -> itself (cycle), length = infinite loop.

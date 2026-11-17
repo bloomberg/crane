@@ -1,12 +1,13 @@
 #include "block_template_semicolon.h"
 
 /// String argument with semicolons in expression position (monad right
-/// identity) Tests gen_block_iife semicolon splitting
+/// identity)
+/// Tests gen_block_iife semicolon splitting
 std::string BlockTemplateSemicolon::read_semicolon_expr() {
   return []() -> std::string {
     std::string _r;
     {
-      std::ifstream _f("path;with;semicolons"s);
+      std::ifstream _f(std::string("path;with;semicolons"));
       std::getline(_f, _r);
     };
     return _r;
@@ -14,22 +15,23 @@ std::string BlockTemplateSemicolon::read_semicolon_expr() {
 }
 
 /// String argument with semicolons in statement position (bind with
-/// computation) Tests Sblock_custom semicolon splitting
+/// computation)
+/// Tests Sblock_custom semicolon splitting
 std::string BlockTemplateSemicolon::read_semicolon_stmt() {
   std::string s;
   {
-    std::ifstream _f("path;with;semicolons"s);
+    std::ifstream _f(std::string("path;with;semicolons"));
     std::getline(_f, s);
   };
-  return s + " done"s;
+  return std::move(s) + std::string(" done");
 }
 
 /// String argument with no semicolons (control case)
 std::string BlockTemplateSemicolon::read_normal() {
   std::string s;
   {
-    std::ifstream _f("normal_path.txt"s);
+    std::ifstream _f(std::string("normal_path.txt"));
     std::getline(_f, s);
   };
-  return s + " ok"s;
+  return std::move(s) + std::string(" ok");
 }

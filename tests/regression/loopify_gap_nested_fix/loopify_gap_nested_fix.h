@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -123,8 +124,7 @@ struct LoopifyGapNestedFix {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (
-                std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<rose>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -151,8 +151,8 @@ struct LoopifyGapNestedFix {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -163,18 +163,15 @@ struct LoopifyGapNestedFix {
   static uint64_t rose_sum(const rose &r);
   /// A fixed sample tree so the test driver need not build list rose in C++.
   /// Sum of all labels: 1 + 2 + 3 + 4 = 10.
-  static inline const rose sample_tree = rose::rose0(
-      UINT64_C(1),
-      List<rose>::cons(
-          rose::rose0(UINT64_C(2), List<rose>::nil()),
-          List<rose>::cons(
-              rose::rose0(
-                  UINT64_C(3),
-                  List<rose>::cons(rose::rose0(UINT64_C(4), List<rose>::nil()),
-                                   List<rose>::nil())),
-              List<rose>::nil())));
-
-  static uint64_t rose_sum_sample(std::monostate _x);
+  [[gnu::used]] static inline const rose sample_tree = rose::rose0(
+      UINT64_C(1), List<rose>::cons(rose::rose0(UINT64_C(2), List<rose>::nil()),
+                                    List<rose>::cons(rose::rose0(
+                                        UINT64_C(3),
+                                        List<rose>::cons(rose::rose0(
+                                            UINT64_C(4), List<rose>::nil()),
+                                                         List<rose>::nil())),
+                                                     List<rose>::nil())));
+  static uint64_t rose_sum_sample();
 };
 
 #endif // INCLUDED_LOOPIFY_GAP_NESTED_FIX

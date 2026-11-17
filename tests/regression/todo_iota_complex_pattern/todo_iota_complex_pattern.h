@@ -3,7 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -19,27 +19,27 @@ struct TodoIotaComplexPattern {
     // ACCESSORS
     Triple<A, B, C> clone() const { return {a0, a1, a2}; }
 
-    template <typename _U0, typename _U1, typename _U2>
-    operator Triple<_U0, _U1, _U2>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1, typename CraneU2>
+    operator Triple<CraneU0, CraneU1, CraneU2>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U2 {
-                if constexpr (crane_convertible<_U2, const C &>) {
-                  return crane_convert<_U2>(a2);
+              [&]() -> CraneU2 {
+                if constexpr (crane_convertible<CraneU2, const C &>) {
+                  return crane_convert<CraneU2>(a2);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -54,17 +54,15 @@ struct TodoIotaComplexPattern {
   };
 
   template <typename T1, typename T2, typename T3, typename T4, typename F0>
-    requires std::is_invocable_r_v<T4, F0 &, T1 &, T2 &, T3 &>
+    requires std::is_invocable_r_v<T4, F0 &, const T1 &, const T2 &, const T3 &>
   static T4 Triple_rect(F0 &&f, const Triple<T1, T2, T3> &t) {
     const auto &[a0, a1, a2] = t;
     return f(a0, a1, a2);
   }
 
   template <typename T1, typename T2, typename T3, typename T4, typename F0>
-    requires std::is_invocable_r_v<T4, F0 &, T1 &, T2 &, T3 &>
   static T4 Triple_rec(F0 &&f, const Triple<T1, T2, T3> &t) {
-    const auto &[a0, a1, a2] = t;
-    return f(a0, a1, a2);
+    return Triple_rect<T1, T2, T3, T4>(f, t);
   }
 
   static uint64_t sum_triple(const Triple<uint64_t, uint64_t, uint64_t> &t);
@@ -78,7 +76,6 @@ struct TodoIotaComplexPattern {
   static inline const uint64_t test1 =
       sum_triple(Triple<uint64_t, uint64_t, uint64_t>::mktriple(
           UINT64_C(1), UINT64_C(2), UINT64_C(3)));
-
   static inline const Triple<bool, uint64_t, uint64_t> test2 =
       rotate_triple<uint64_t, bool, uint64_t>(
           Triple<uint64_t, bool, uint64_t>::mktriple(UINT64_C(10), true,

@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -131,26 +132,27 @@ struct RegFile {
   template <typename T1>
   static std::optional<List<T1>> replace_nth(const List<T1> &l, uint64_t i,
                                              const T1 &x);
-  static std::optional<rfile> write_r(rfile x0_, uint64_t x1_, const Rv &x2_);
+  static std::optional<rfile> write_r(const rfile &x0_, uint64_t x1_,
+                                      const Rv &x2_);
 };
 
-const std::optional<rfile> written = RegFile::write_r(
-    List<Rv>::cons(Rv::ru(),
-                   List<Rv>::cons(Rv::rs(UINT64_C(1)),
-                                  List<Rv>::cons(Rv::ru(), List<Rv>::nil()))),
-    UINT64_C(1), Rv::rs(UINT64_C(7)));
+const std::optional<rfile> written =
+    RegFile::write_r(List<Rv>::cons(
+        Rv::ru(), List<Rv>::cons(Rv::rs(UINT64_C(1)),
+                                 List<Rv>::cons(Rv::ru(), List<Rv>::nil()))),
+                     UINT64_C(1), Rv::rs(UINT64_C(7)));
 const uint64_t written_second = []() -> uint64_t {
   if (written.has_value()) {
     const List<Rv> &r = *written;
     if (std::holds_alternative<typename List<Rv>::Nil>(r.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<Rv>::Cons>(r.v());
+      const auto &[_, a1] = std::get<typename List<Rv>::Cons>(r.v());
       auto &&_sv0 = *a1;
       if (std::holds_alternative<typename List<Rv>::Nil>(_sv0.v())) {
         return UINT64_C(0);
       } else {
-        const auto &[a00, a10] = std::get<typename List<Rv>::Cons>(_sv0.v());
+        const auto &[a00, _] = std::get<typename List<Rv>::Cons>(_sv0.v());
         if (std::holds_alternative<typename Rv::RU>(a00.v())) {
           return UINT64_C(0);
         } else {

@@ -4,11 +4,12 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -26,8 +27,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 template <typename I>
@@ -84,8 +84,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -117,25 +117,28 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -144,25 +147,31 @@ struct Monads {
   using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 
   template <Monad _tcI0, typename T1> struct Monad_stateT {
-    template <typename _A0>
-    using m = crane::fn<typename _tcI0::template m<std::pair<T1, _A0>>(T1)>;
+    template <typename CraneA0>
+    using m = crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>;
 
-    template <typename _A0>
-    static crane::fn<typename _tcI0::template m<std::pair<T1, _A0>>(T1)>
-    ret(_A0 a) {
-      return [=](const T1 &s) { return itree_ret(std::make_pair(s, a)); };
+    template <typename CraneA0>
+    static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)>
+    ret(CraneA0 a) {
+      return [=, a = std::move(a)](const T1 &s) {
+        return _tcI0::template ret<std::pair<T1, CraneA0>>(std::make_pair(s,
+                                                                          a));
+      };
     }
 
-    template <typename _A0, typename _A1>
-    static crane::fn<typename _tcI0::template m<std::pair<T1, _A1>>(T1)>
-    bind(crane::fn<typename _tcI0::template m<std::pair<T1, _A0>>(T1)> t,
-         crane::fn<
-             crane::fn<typename _tcI0::template m<std::pair<T1, _A1>>(T1)>(_A0)>
-             k) {
-      return [=](const T1 &s) {
-        return itree_bind(t(s), [=](const std::pair<T1, _A0> &sa) {
-          return k(sa.second)(sa.first);
-        });
+    template <typename CraneA0, typename CraneA1>
+    static crane::fn<typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>
+    bind(
+        crane::fn<typename _tcI0::template m<std::pair<T1, CraneA0>>(T1)> t,
+        crane::fn<crane::fn<
+            typename _tcI0::template m<std::pair<T1, CraneA1>>(T1)>(CraneA0)> k) {
+      return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
+        return _tcI0::template bind<std::pair<T1, CraneA0>,
+                                    std::pair<T1, CraneA1>>(
+            t(s), [=](const std::pair<T1,
+                                      CraneA0> &sa) {
+                    return crane::apply2(k, sa.second, sa.first);
+                  });
       };
     }
   };
@@ -178,25 +187,27 @@ struct FailE {
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
 };
+
 enum class Ev { EV0 };
 using env = Nat;
-template <typename _CraneTcArg>
-using itree_tc_296b3b7af4bd1a71 = std::shared_ptr<ITree<_CraneTcArg>>;
+template <typename CraneTcArg>
+using itree_tc_609e8855cd7ad294 = std::shared_ptr<ITree<CraneTcArg>>;
 
 template <Params _tcI0, typename T1>
-Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, Nat> step(Nat n) {
-  return [=](const Nat &s) {
+Monads::template stateT<env, itree_tc_609e8855cd7ad294, Nat> step(Nat n) {
+  return [=, n = std::move(n)](const Nat &s) {
     return itree_ret(std::make_pair(s, n.add(_tcI0::width())));
   };
 }
 
 template <typename T1, typename T2>
-Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> handle(Ev) {
-  return [](const Nat &s) -> itree_tc_296b3b7af4bd1a71<std::pair<env, T2>> {
+Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> handle(Ev) {
+  return [](const Nat &s) -> itree_tc_609e8855cd7ad294<std::pair<env, T2>> {
     if (s.eqb(Nat::o())) {
       return itree_vis(
           FailE::Throw_(std::monostate{}),
-          [](crane::obj) -> std::shared_ptr<ITree<std::pair<Nat, T2>>> {
+          [](crane::obj) -> std::shared_ptr<ITree<std::pair<Nat,
+                                                            T2>>> {
             throw std::logic_error("absurd case");
           });
     } else {
@@ -206,21 +217,25 @@ Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> handle(Ev) {
 }
 
 template <Params _tcI0, typename T1, typename T2>
-Monads::template stateT<env, itree_tc_296b3b7af4bd1a71, T2> twice(Ev e) {
-  return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
-      T2, T2>(handle<T1, T2>(e), [](const T2 &res) {
-    return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<
-        Nat, T2>(step<_tcI0, T1>(Nat::s(Nat::o())), [=](Nat) {
-      return Monads::template Monad_stateT<Monad_itree<T1>,
-                                           env>::template ret<T2>(res);
-    });
-  });
+Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> twice(Ev e) {
+  return Monads::template Monad_stateT<Monad_itree<T1>, env>::template bind<T2,
+                                                                            T2>(
+      handle<T1, T2>(e), [](const T2 &res) {
+        return Monads::template Monad_stateT<Monad_itree<T1>,
+                                             env>::template bind<Nat, T2>(
+            step<_tcI0, T1>(Nat::s(Nat::o())), [=](Nat) {
+              return Monads::template Monad_stateT<Monad_itree<T1>,
+                                                   env>::template ret<T2>(res);
+            });
+      });
 }
 
 struct Qf {
   template <Params _tcI0>
   static std::shared_ptr<ITree<std::pair<Nat, env>>> use(const Nat &n) {
-    return twice<_tcI0, FailE, Nat>(Ev::EV0)(n);
+    static const auto twice_1 =
+        crane::immortal(twice<_tcI0, FailE, Nat>(Ev::EV0));
+    return twice_1(n);
   }
 };
 

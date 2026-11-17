@@ -9,7 +9,7 @@
 
 int main() {
   // sample_tree = Rose 1 [Rose 2 []; Rose 3 [Rose 4 []]]; sum = 1+2+3+4 = 10.
-  auto total = LoopifyGapNestedFix::rose_sum_sample({});
+  auto total = LoopifyGapNestedFix::rose_sum_sample();
   assert(total == 10);
   std::cout << "loopify_gap_nested_fix: rose_sum(sample) = " << total
             << " PASSED" << std::endl;

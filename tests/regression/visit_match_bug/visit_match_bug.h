@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -44,6 +45,15 @@ struct VisitMatchBug {
 
     // MANIPULATORS
     ~Tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<Tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -68,8 +78,8 @@ struct VisitMatchBug {
 
     Tree(const Tree &) = default;
     Tree &operator=(const Tree &) = default;
-    Tree(Tree &&) noexcept = default;
-    Tree &operator=(Tree &&) noexcept = default;
+    Tree(Tree &&) = default;
+    Tree &operator=(Tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -78,9 +88,7 @@ struct VisitMatchBug {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
-                                   T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 Tree_rect(F0 &&f, F1 &&f0, const Tree &t) {
     if (std::holds_alternative<typename Tree::Leaf>(t.v())) {
       const auto &[a0] = std::get<typename Tree::Leaf>(t.v());
@@ -93,25 +101,15 @@ struct VisitMatchBug {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
-                                   T1 &>
   static T1 Tree_rec(F0 &&f, F1 &&f0, const Tree &t) {
-    if (std::holds_alternative<typename Tree::Leaf>(t.v())) {
-      const auto &[a0] = std::get<typename Tree::Leaf>(t.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree::Node>(t.v());
-      return f0(*a0, Tree_rec<T1>(f, f0, *a0), a1, *a2,
-                Tree_rec<T1>(f, f0, *a2));
-    }
+    return Tree_rect<T1>(f, f0, t);
   }
 
   static Tree consume(Tree t);
-  static uint64_t match_after_consume(const Tree &t);
+  static uint64_t match_after_consume(Tree t);
   static uint64_t match_last_use(const Tree &t);
-  static uint64_t nested_match_consume(const Tree &t);
-  static uint64_t chain_then_match(const Tree &t1);
+  static uint64_t nested_match_consume(Tree t);
+  static uint64_t chain_then_match(Tree t1);
 
   struct State {
     uint64_t value;

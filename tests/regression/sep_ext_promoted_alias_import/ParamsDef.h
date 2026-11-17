@@ -2,12 +2,10 @@
 #define INCLUDED_PARAMSDEF
 
 #include "obj.h"
-#include <any>
 #include <concepts>
 #include <utility>
 
 namespace ParamsDef {
-
 using ptr = crane::obj;
 template <typename I, typename prov>
 concept Pointer = requires {
@@ -19,7 +17,6 @@ concept Params = requires {
   typename I::PROV;
   typename I::PTR;
 };
-
 } // namespace ParamsDef
 
 #endif // INCLUDED_PARAMSDEF

@@ -7,8 +7,9 @@ uint64_t EtaMatchReturnsFun::lookup(
           std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::Nil>(l.v())) {
     return x0_;
   } else {
-    const auto &[a0, a1] = std::get<typename List<
-        std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::Cons>(l.v());
+    const auto &[a0, a1] =
+        std::get<typename List<
+            std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>>::Cons>(l.v());
     if (a0.first == k) {
       return a0.second(x0_);
     } else {

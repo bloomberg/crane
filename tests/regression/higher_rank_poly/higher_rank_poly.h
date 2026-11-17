@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -57,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -70,9 +69,10 @@ public:
 /// Crane emits the two results without casting them back from std::any, and
 /// emits a bogus body for the identity lambda passed in.
 struct HigherRankPoly {
-  static std::pair<Nat, bool> apply_id(crane::fn<crane::obj(crane::obj)> f);
+  static std::pair<Nat, bool>
+  apply_id(const crane::fn<crane::obj(crane::obj)> &f);
   static inline const std::pair<Nat, bool> ex =
-      apply_id(crane_erase_fn([](const auto &x) { return x; }));
+      apply_id(crane_erase_fn<crane::obj>([](const auto &x) { return x; }));
 };
 
 #endif // INCLUDED_HIGHER_RANK_POLY

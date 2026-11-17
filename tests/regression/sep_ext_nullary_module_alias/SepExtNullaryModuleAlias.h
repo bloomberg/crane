@@ -2,30 +2,38 @@
 #define INCLUDED_SEPEXTNULLARYMODULEALIAS
 
 #include <concepts>
+#include <cstdint>
 
 namespace SepExtNullaryModuleAlias {
-
 template <typename M>
 concept HasVal = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::empty } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::empty() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::empty
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::empty()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 template <typename M>
 concept Config = requires {
   requires HasVal<typename M::V>;
-  requires(
-      requires {
-        { M::default_val } -> std::convertible_to<uint64_t>;
-      } ||
-      requires {
-        { M::default_val() } -> std::convertible_to<uint64_t>;
-      });
+  requires (requires {
+    {
+      M::default_val
+    }
+    -> std::convertible_to<uint64_t>;
+  } || requires {
+    {
+      M::default_val()
+    }
+    -> std::convertible_to<uint64_t>;
+  });
 };
 
 template <Config C> struct Worker {
@@ -38,15 +46,12 @@ template <Config C> struct Worker {
 
   static const uint64_t &get_default() {
     static const uint64_t v = [] {
-      if constexpr (requires { C::default_val(); })
-        return C::default_val();
-      else
-        return C::default_val;
+      if constexpr (requires { C::default_val(); }) return C::default_val();
+      else return C::default_val;
     }();
     return v;
   }
 };
-
 } // namespace SepExtNullaryModuleAlias
 
 #endif // INCLUDED_SEPEXTNULLARYMODULEALIAS

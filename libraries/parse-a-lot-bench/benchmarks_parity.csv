@@ -1,0 +1,14 @@
+format,input_bytes,file,ocaml_parity_time_s,ocaml_parity_stddev_s,crane_O2_time_s,crane_sharedvariant_lto_time_s,crane_best_time_over_ocaml_parity,parse_result,parse_nodes
+json,580,000_legislators_0001.json,0.107,0.001,0.286,0.202,1.88,unique,23
+json,4445,003_legislators_0008.json,0.132,0.003,0.335,0.241,1.83,unique,177
+json,38793,006_legislators_0064.json,0.428,0.003,0.822,0.603,1.41,unique,1534
+json,183988,008_legislators_0256.json,2.484,0.085,3.550,2.847,1.15,unique,7270
+csv,818,000_iris.csv,0.042,0.000,0.092,0.064,1.51,unique,156
+csv,1615,002_products-with-quoting.csv,0.043,0.001,0.093,0.065,1.49,unique,95
+csv,98334,007_slice_98334.csv,0.331,0.002,0.591,0.464,1.40,unique,6445
+csv,166921,009_slice_166921.csv,0.636,0.016,1.020,0.793,1.25,unique,10999
+xml,148,000_sw2078-ms98-a-trans-NE.xml,0.059,0.000,0.153,0.101,1.71,unique,1
+xml,1495,048_115CVL035-NE.xml,0.068,0.001,0.169,0.110,1.62,unique,27
+xml,14649,063_ENRON-pearson-email-25jul02-mpqa.xml,0.151,0.001,0.310,0.214,1.42,unique,332
+xml,144307,078_Bro008-vp.xml,1.568,0.028,2.220,1.742,1.11,unique,3215
+xml,196329,080_Bed002-np.xml,2.394,0.063,3.192,2.521,1.05,unique,4195

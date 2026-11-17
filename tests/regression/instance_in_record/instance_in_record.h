@@ -4,7 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 
 struct InstanceInRecord {
@@ -13,23 +13,22 @@ struct InstanceInRecord {
     crane::fn<A(A, A)> op;
 
     // ACCESSORS
-    template <typename _U> operator Monoid<_U>() const {
-      return {[&]() -> _U {
-                if constexpr (crane_convertible<_U, const A &>) {
-                  return crane_convert<_U>(unit_);
+    template <typename CraneU> operator Monoid<CraneU>() const {
+      return {[&]() -> CraneU {
+                if constexpr (crane_convertible<CraneU, const A &>) {
+                  return crane_convert<CraneU>(unit_);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              crane_convert<crane::fn<_U(_U, _U)>>(op)};
+              crane_convert<crane::fn<CraneU(CraneU, CraneU)>>(op)};
     }
   };
 
-  static inline const Monoid<uint64_t> MNat =
-      Monoid<uint64_t>{UINT64_C(0), [](uint64_t _x0, uint64_t _x1) -> uint64_t {
-                         return (_x0 + _x1);
-                       }};
+  static inline const Monoid<uint64_t> MNat = Monoid<uint64_t>{
+      UINT64_C(0),
+      [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); }};
 
   struct bundle {
     Monoid<uint64_t> carrierDict;

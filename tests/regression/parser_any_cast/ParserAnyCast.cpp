@@ -8,8 +8,7 @@
 #include "String_.h"
 
 namespace ParserAnyCast {
-
-ParserAnyCast::Tag ParserAnyCast::get_tag(ParserAnyCast::entry x0_) {
+ParserAnyCast::Tag ParserAnyCast::get_tag(const ParserAnyCast::entry &x0_) {
   return x0_.projT1();
 }
 
@@ -37,15 +36,12 @@ uint64_t ParserAnyCast::get_a_value(
 uint64_t ParserAnyCast::sum_a_entries(
     const Datatypes::List<Specif::SigT<ParserAnyCast::Tag, crane::obj>> &es) {
   return List::template fold_left<uint64_t, ParserAnyCast::entry>(
-      [](uint64_t acc, ParserAnyCast::entry e) {
-        return (acc + get_a_value(e));
-      },
-      es, UINT64_C(0));
+      [](uint64_t acc, const auto &e) { return (acc + get_a_value(e)); }, es,
+      UINT64_C(0));
 }
 
 ParserAnyCast::Label
-ParserAnyCast::get_entry_label(ParserAnyCast::labeled_entry x0_) {
+ParserAnyCast::get_entry_label(const ParserAnyCast::labeled_entry &x0_) {
   return x0_.projT1();
 }
-
 } // namespace ParserAnyCast

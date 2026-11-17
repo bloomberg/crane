@@ -9,6 +9,7 @@
 #include <string>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <utility>
 
 struct TempFile {
   static std::string make_temp_file(std::string prefix);

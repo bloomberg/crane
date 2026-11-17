@@ -3,21 +3,21 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 struct LetIn {
-  static inline const uint64_t simple_let = UINT64_C(5);
-  static inline const uint64_t nested_let = UINT64_C(3);
+  static constexpr uint64_t simple_let = UINT64_C(5);
+  static constexpr uint64_t nested_let = UINT64_C(3);
   static inline const uint64_t let_with_add = []() {
     uint64_t x = UINT64_C(3);
     uint64_t y = UINT64_C(4);
     return (x + y);
   }();
-  static inline const uint64_t shadowed_let = UINT64_C(3);
+  static constexpr uint64_t shadowed_let = UINT64_C(3);
   static uint64_t let_in_fun(uint64_t n);
   static inline const uint64_t let_fun = []() {
     uint64_t x = UINT64_C(5);
@@ -32,18 +32,19 @@ struct LetIn {
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator pair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -58,24 +59,22 @@ struct LetIn {
   };
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[a0, a1] = p;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return pair_rect<T1, T2, T3>(f, p);
   }
 
   static inline const uint64_t let_destruct = []() {
     pair<uint64_t, uint64_t> p =
         pair<uint64_t, uint64_t>::pair0(UINT64_C(3), UINT64_C(4));
-    auto &[a0, a1] = p;
-    return a0;
+    auto &[a0, _] = p;
+    return std::move(a0);
   }();
   static inline const uint64_t multi_let = []() {
     uint64_t a = UINT64_C(1);

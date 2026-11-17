@@ -24,7 +24,7 @@ uint64_t MemSafetyProbe26::apply_first_closure(
           crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
     return x;
   } else {
-    const auto &[a0, a1] = std::get<typename MemSafetyProbe26::mylist<
+    const auto &[a0, _] = std::get<typename MemSafetyProbe26::mylist<
         crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
     return a0(x);
   }

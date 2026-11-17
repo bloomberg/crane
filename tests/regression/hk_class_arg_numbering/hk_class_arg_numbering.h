@@ -1,20 +1,18 @@
 #ifndef INCLUDED_HK_CLASS_ARG_NUMBERING
 #define INCLUDED_HK_CLASS_ARG_NUMBERING
 
-#include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
 struct Monad_option;
 struct Nat;
+struct Iter_option;
 template <typename I>
 concept Functor = requires {
   typename I::template F<crane::obj>;
@@ -32,8 +30,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -86,8 +83,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -99,18 +96,17 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
   template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<T3>
-  liftM(std::type_identity_t<crane::fn<T3(T2)>> f,
+  liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
         typename _tcI0::template m<T2> x);
 };
 
 template <Monad _tcI0> struct Functor_Monad {
-  template <typename _A0> using m = typename _tcI0::template m<_A0>;
-  template <typename _A0> using F = typename _tcI0::template m<_A0>;
+  template <typename CraneA0> using m = typename _tcI0::template m<CraneA0>;
+  template <typename CraneA0> using F = typename _tcI0::template m<CraneA0>;
 
   static typename _tcI0::template m<crane::obj>
   fmap(crane::fn<crane::obj(crane::obj)> a0,
@@ -121,47 +117,57 @@ template <Monad _tcI0> struct Functor_Monad {
 };
 
 struct Monad_option {
-  template <typename _A0> using m = std::optional<_A0>;
+  template <typename CraneA0> using m = std::optional<CraneA0>;
 
-  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-    return std::make_optional<_A0>(x);
+  template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
+    return std::make_optional<CraneA0>(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static std::optional<_A1> bind(std::optional<_A0> c1,
-                                 crane::fn<std::optional<_A1>(_A0)> c2) {
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<CraneA1>
+  bind(std::optional<CraneA0> c1,
+       crane::fn<std::optional<CraneA1>(CraneA0)> c2) {
     if (c1.has_value()) {
-      const _A0 &v = *c1;
+      const CraneA0 &v = *c1;
       return c2(v);
     } else {
-      return std::optional<_A1>();
+      return std::optional<CraneA1>();
     }
   }
 };
 
 static_assert(Monad<Monad_option>);
-template <typename m>
-using Iter = crane::fn<m(crane::fn<m(crane::obj)>, crane::obj)>;
+template <typename I>
+concept Iter = requires {
+  typename I::template M<crane::obj>;
+  {
+    I::template iter<crane::obj>(std::declval<
+        crane::fn<typename I::template M<crane::obj>(crane::obj)>>(),
+                                 std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename F1>
-crane::rebind_t<T1, T2> iter(std::type_identity_t<Iter<T1>> iter0, F1 &&x,
-                             const T2 &x0) {
-  return crane_container_cast<crane::rebind_t<T1, T2>>(
-      iter0(crane_erase_fn<T1>(x), x0));
+template <Iter _tcI0, typename T2, typename F0>
+typename _tcI0::template M<T2> iter(F0 &&x, const T2 &x0) {
+  return _tcI0::template iter<T2>(x, x0);
 }
 
-template <Functor _tcI0, Monad _tcI1, typename T2, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template F<T2>, F1 &, T2 &>
-typename _tcI0::template F<T2>
-run(Iter<typename _tcI0::template F<crane::obj>> x0_, F1 &&x1_, const T2 &x2_) {
-  return iter<typename _tcI0::template F<crane::obj>, T2>(std::move(x0_), x1_,
-                                                          x2_);
+template <Iter _tcI0, Functor _tcI1, Monad _tcI2, typename T2, typename F0>
+typename _tcI0::template M<T2> run(F0 &&x1_, const T2 &x2_) {
+  return _tcI0::template iter<T2>(x1_, x2_);
 }
 
-template <typename F0>
-std::optional<crane::obj> Iter_option(F0 &&f, crane::obj x0_) {
-  return f(x0_);
-}
+struct Iter_option {
+  template <typename CraneA0> using M = std::optional<CraneA0>;
+
+  template <typename CraneA0>
+  static std::optional<CraneA0>
+  iter(crane::fn<std::optional<CraneA0>(CraneA0)> f, CraneA0 a0) {
+    return f(std::move(a0));
+  }
+};
+
+static_assert(Iter<Iter_option>);
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
@@ -169,7 +175,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
@@ -177,10 +182,10 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
 
 template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3>
-Monad0::liftM(std::type_identity_t<crane::fn<T3(T2)>> f,
+Monad0::liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
               typename _tcI0::template m<T2> x) {
-  return Monad0::template bind<_tcI0, T2, T3>(std::move(x), [=](const T2 &x0) {
-    return Monad0::template ret<_tcI0, T3>(f(x0));
+  return _tcI0::template bind<T2, T3>(std::move(x), [=](const T2 &x0) {
+    return _tcI0::template ret<T3>(f(x0));
   });
 }
 

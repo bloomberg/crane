@@ -4,11 +4,11 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
+#include "small_vector.h"
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -59,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,6 +103,43 @@ struct ErasedIndexFunType {
     }
 
     // MANIPULATORS
+    ~ty() {
+      if (std::holds_alternative<TN>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<TF>(&v_mut())) {
+        if (!((_alt->a && _alt->a.use_count() == 1) ||
+              (_alt->b && _alt->b.use_count() == 1))) {
+          return;
+        }
+      }
+      crane::small_vector<std::shared_ptr<ty>> _stack = {};
+      auto _drain = [&](variant_t &_v) {
+        if (auto *_alt = std::get_if<TF>(&_v)) {
+          if (_alt->a && _alt->a.use_count() == 1) {
+            _stack.push_back(std::move(_alt->a));
+          }
+          if (_alt->b && _alt->b.use_count() == 1) {
+            _stack.push_back(std::move(_alt->b));
+          }
+        }
+      };
+      _drain(v_mut());
+      while (!_stack.empty()) {
+        auto _cur = std::move(_stack.back());
+        _stack.pop_back();
+        if (_cur.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          _drain(_cur->v_mut());
+        }
+      }
+    }
+
+    ty(const ty &) = default;
+    ty &operator=(const ty &) = default;
+    ty(ty &&) = default;
+    ty &operator=(ty &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -110,7 +147,6 @@ struct ErasedIndexFunType {
   };
 
   template <typename T1, typename T2 = void, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rect(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return f;
@@ -122,7 +158,6 @@ struct ErasedIndexFunType {
   }
 
   template <typename T1, typename T2 = void, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return f;
@@ -137,9 +172,10 @@ struct ErasedIndexFunType {
     if (std::holds_alternative<typename ty::TN>(t.v())) {
       return Nat::o();
     } else {
-      const auto &[a, b0] = std::get<typename ty::TF>(t.v());
-      return crane_erase_fn(
-          [=](const auto &) { return dflt<crane::obj>(*b0); });
+      const auto &[_, b0] = std::get<typename ty::TF>(t.v());
+      return crane_erase_fn([=](const auto &) {
+        return dflt<crane::obj>(*b0);
+      });
     }
   }
 

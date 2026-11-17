@@ -13,14 +13,13 @@ uint64_t PartialAppMove::sum_values(const PartialAppMove::tree &t, uint64_t x) {
     if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(_sv0.v())) {
       return (a1 + x);
     } else {
-      const auto &[a00, a10, a20] =
+      const auto &[_, a10, _] =
           std::get<typename PartialAppMove::tree::Node>(_sv0.v());
       auto &&_sv1 = *a2;
-      if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(
-              _sv1.v())) {
+      if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(_sv1.v())) {
         return (a10 + x);
       } else {
-        const auto &[a01, a11, a21] =
+        const auto &[_, a11, _] =
             std::get<typename PartialAppMove::tree::Node>(_sv1.v());
         return (((a10 + a11) + a1) + x);
       }
@@ -39,9 +38,8 @@ PartialAppMove::tree PartialAppMove::wrap(const PartialAppMove::tree &t) {
 /// then t is passed to a constructor (actually moved via rvalue ref),
 /// then the lambda accesses the moved-from t.
 uint64_t PartialAppMove::trigger_bug(PartialAppMove::tree t) {
-  crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-    return sum_values(t, _x0);
-  };
+  crane::fn<uint64_t(uint64_t)> f =
+      [=](uint64_t _x0) -> uint64_t { return sum_values(t, _x0); };
   PartialAppMove::tree w = wrap(std::move(t));
   if (std::holds_alternative<typename PartialAppMove::tree::Leaf>(w.v_mut())) {
     return f(UINT64_C(0));

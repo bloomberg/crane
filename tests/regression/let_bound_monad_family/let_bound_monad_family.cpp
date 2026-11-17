@@ -9,72 +9,63 @@ Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
       crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
 }
 
-Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat> LetBoundMonadFamily::gen(
-    Itree<
-        Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE, crane::obj>,
-        Nat>
-        arg) {
-  auto t = Monad0::template bind<
+Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat>
+LetBoundMonadFamily::gen(const Itree<
+    Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE, crane::obj>,
+    Nat> &arg) {
+  auto t =
       Monad_itree<Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE,
-                       crane::obj>>,
-      Nat, Nat>(arg, [](const Nat &x) {
-    return Monad0::template ret<
-        Monad_itree<Sum1<LetBoundMonadFamily::getE, LetBoundMonadFamily::outE,
-                         crane::obj>>,
-        Nat>(Nat::s(x));
-  });
+                       crane::obj>>::template bind<Nat, Nat>(
+          arg, [](const Nat &x) {
+            return Monad_itree<Sum1<LetBoundMonadFamily::getE,
+                                    LetBoundMonadFamily::outE,
+                                    crane::obj>>::template ret<Nat>(Nat::s(x));
+          });
   return Interp::template interp<
+      MonadIter_itree<LetBoundMonadFamily::BotE<crane::obj>>,
       Monad_itree<LetBoundMonadFamily::BotE<crane::obj>>,
-      Functor_itree<LetBoundMonadFamily::BotE<crane::obj>>>(
-      [](auto &&_ec0, crane::obj _ec1) {
-        return ::template MonadIter_itree<
-            LetBoundMonadFamily::BotE<crane::obj>>(_ec0, _ec1);
-      },
-      [](const auto &a0)
-          -> Itree<LetBoundMonadFamily::BotE<crane::obj>, crane::obj> {
+      Functor_itree<LetBoundMonadFamily::BotE<crane::obj>>,
+      LetBoundMonadFamily::TopE<crane::obj>, Nat>(
+      [](const auto &a0) -> Itree<LetBoundMonadFamily::BotE<crane::obj>,
+                                  crane::obj> {
         return h<crane::obj>(
             crane_convert<LetBoundMonadFamily::TopE<crane::obj>>(a0));
       },
-      std::move(t));
+      t);
 }
 
 std::optional<Nat> LetBoundMonadFamily::run(
-    const Nat &fuel,
-    Itree<Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE, crane::obj>,
-          Nat>
-        t) {
+    const Nat &fuel, const Itree<Sum1<LetBoundMonadFamily::outE,
+                                      LetBoundMonadFamily::noE, crane::obj>,
+                                 Nat> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {
     const auto &[a0] = std::get<typename Nat::S>(fuel.v());
     auto &&_sv0 = t.observe();
-    if (std::holds_alternative<
-            typename ItreeF<Sum1<LetBoundMonadFamily::outE,
-                                 LetBoundMonadFamily::noE, crane::obj>,
-                            Nat,
-                            Itree<Sum1<LetBoundMonadFamily::outE,
-                                       LetBoundMonadFamily::noE, crane::obj>,
-                                  Nat>>::RetF>(_sv0.v())) {
+    if (std::holds_alternative<typename ItreeF<
+            Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE,
+                 crane::obj>,
+            Nat, Itree<Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE,
+                            crane::obj>,
+                       Nat>>::RetF>(_sv0.v())) {
       const auto &[r0] = std::get<typename ItreeF<
           Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE, crane::obj>,
-          Nat,
-          Itree<Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE,
-                     crane::obj>,
-                Nat>>::RetF>(_sv0.v());
+          Nat, Itree<Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE,
+                          crane::obj>,
+                     Nat>>::RetF>(_sv0.v());
       return std::make_optional<Nat>(r0);
     } else if (std::holds_alternative<typename ItreeF<
                    Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE,
                         crane::obj>,
-                   Nat,
-                   Itree<Sum1<LetBoundMonadFamily::outE,
-                              LetBoundMonadFamily::noE, crane::obj>,
-                         Nat>>::TauF>(_sv0.v())) {
+                   Nat, Itree<Sum1<LetBoundMonadFamily::outE,
+                                   LetBoundMonadFamily::noE, crane::obj>,
+                              Nat>>::TauF>(_sv0.v())) {
       const auto &[t0] = std::get<typename ItreeF<
           Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE, crane::obj>,
-          Nat,
-          Itree<Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE,
-                     crane::obj>,
-                Nat>>::TauF>(_sv0.v());
+          Nat, Itree<Sum1<LetBoundMonadFamily::outE, LetBoundMonadFamily::noE,
+                          crane::obj>,
+                     Nat>>::TauF>(_sv0.v());
       return run(*a0, t0);
     } else {
       return std::optional<Nat>();

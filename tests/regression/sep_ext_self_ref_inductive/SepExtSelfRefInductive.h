@@ -4,18 +4,17 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
 namespace SepExtSelfRefInductive {
-
 template <typename M>
-concept S = requires { typename M::t; };
+concept S = requires {
+  typename M::t;
+};
 
 template <S X> struct HashTrie {
   template <typename V> struct Trie {
@@ -43,30 +42,31 @@ template <S X> struct HashTrie {
 
     explicit Trie(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    Trie(const Trie<_U> &_other)
+    template <typename CraneU>
+    Trie(const Trie<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Trie<_U>::Empty>(_other.v())) {
+            if (std::holds_alternative<typename Trie<CraneU>::Empty>(_other.v())) {
               return Empty{};
             } else {
               const auto &[k, v_1, left, right] =
-                  std::get<typename Trie<_U>::Node>(_other.v());
-              return Node{k,
-                          [&]() -> V {
-                            if constexpr (crane_convertible<V, const _U &>) {
-                              return crane_convert<V>(v_1);
-                            } else {
-                              throw std::logic_error(
-                                  "unreachable: inactive constructor field at "
-                                  "this instantiation");
-                            }
-                          }(),
-                          (left ? std::make_shared<Trie<V>>(
-                                      crane_convert<Trie<V>>(*left))
-                                : nullptr),
-                          (right ? std::make_shared<Trie<V>>(
-                                       crane_convert<Trie<V>>(*right))
-                                 : nullptr)};
+                  std::get<typename Trie<CraneU>::Node>(_other.v());
+              return Node{
+                  k,
+                  [&]() -> V {
+                    if constexpr (crane_convertible<V, const CraneU &>) {
+                      return crane_convert<V>(v_1);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (left ? std::make_shared<Trie<V>>(
+                              crane_convert<Trie<V>>(*left))
+                        : nullptr),
+                  (right ? std::make_shared<Trie<V>>(
+                               crane_convert<Trie<V>>(*right))
+                         : nullptr)};
             }
           }()) {}
 
@@ -80,6 +80,15 @@ template <S X> struct HashTrie {
 
     // MANIPULATORS
     ~Trie() {
+      if (std::holds_alternative<Empty>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->left && _alt->left.use_count() == 1) ||
+              (_alt->right && _alt->right.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<Trie<V>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -104,8 +113,8 @@ template <S X> struct HashTrie {
 
     Trie(const Trie &) = default;
     Trie &operator=(const Trie &) = default;
-    Trie(Trie &&) noexcept = default;
-    Trie &operator=(Trie &&) noexcept = default;
+    Trie(Trie &&) = default;
+    Trie &operator=(Trie &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -114,8 +123,6 @@ template <S X> struct HashTrie {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Trie<T1> &,
-                                   T2 &, Trie<T1> &, T2 &>
   static T2 Trie_rect(T2 f, F1 &&f0, const Trie<T1> &t0) {
     if (std::holds_alternative<typename Trie<T1>::Empty>(t0.v())) {
       return f;
@@ -128,17 +135,8 @@ template <S X> struct HashTrie {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, typename X::t &, T1 &, Trie<T1> &,
-                                   T2 &, Trie<T1> &, T2 &>
   static T2 Trie_rec(T2 f, F1 &&f0, const Trie<T1> &t0) {
-    if (std::holds_alternative<typename Trie<T1>::Empty>(t0.v())) {
-      return f;
-    } else {
-      const auto &[k0, v_1, left0, right0] =
-          std::get<typename Trie<T1>::Node>(t0.v());
-      return f0(k0, v_1, *left0, Trie_rec<T1, T2>(f, f0, *left0), *right0,
-                Trie_rec<T1, T2>(f, f0, *right0));
-    }
+    return Trie_rect<T1, T2>(std::move(f), f0, t0);
   }
 
   template <typename T1> static const Trie<T1> &empty() {
@@ -154,7 +152,6 @@ template <S X> struct HashTrie {
     }
   }
 };
-
 } // namespace SepExtSelfRefInductive
 
 #endif // INCLUDED_SEPEXTSELFREFINDUCTIVE

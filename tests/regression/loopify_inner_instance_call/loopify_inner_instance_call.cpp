@@ -13,24 +13,23 @@
 /// errors).  Even where it compiled, a call to another instance's method
 /// treated as recursion would be a wrong program, not just a slow one.
 Itree<LoopifyInnerInstanceCall::Ev, std::pair<uint64_t, uint64_t>>
-LoopifyInnerInstanceCall::bumped(std::monostate) {
+LoopifyInnerInstanceCall::bumped() {
+  static const auto fmap = crane::immortal(Monads::template Functor_stateT<
+      Functor_itree<LoopifyInnerInstanceCall::Ev>, uint64_t>::template fmap<
+      uint64_t, uint64_t>([](uint64_t x) { return (x + UINT64_C(1)); }, st));
   return crane_any_cast<
       Itree<LoopifyInnerInstanceCall::Ev, std::pair<uint64_t, uint64_t>>>(
-      Functor0::template fmap<
-          Monads::template Functor_stateT<
-              Functor_itree<LoopifyInnerInstanceCall::Ev>, uint64_t>,
-          uint64_t, uint64_t>([](uint64_t x) { return (x + UINT64_C(1)); },
-                              st)(UINT64_C(5)));
+      fmap(UINT64_C(5)));
 }
 
 /// 5 is the state, 41 + 1 the value.
-Itree<LoopifyInnerInstanceCall::Ev, bool>
-LoopifyInnerInstanceCall::check(std::monostate) {
-  return Monad0::template bind<Monad_itree<LoopifyInnerInstanceCall::Ev>,
-                               std::pair<uint64_t, uint64_t>, bool>(
-      bumped(std::monostate{}), [](const std::pair<uint64_t, uint64_t> &p) {
-        return Monad0::template ret<Monad_itree<LoopifyInnerInstanceCall::Ev>,
-                                    bool>(
+Itree<LoopifyInnerInstanceCall::Ev, bool> LoopifyInnerInstanceCall::check() {
+  return Monad_itree<LoopifyInnerInstanceCall::Ev>::template bind<
+      std::pair<uint64_t, uint64_t>, bool>(
+      bumped(),
+      [](const std::pair<uint64_t,
+                         uint64_t> &p) {
+        return Monad_itree<LoopifyInnerInstanceCall::Ev>::template ret<bool>(
             (p.first == UINT64_C(5) && p.second == UINT64_C(42)));
       });
 }

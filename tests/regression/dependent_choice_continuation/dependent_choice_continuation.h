@@ -4,8 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
-#include <atomic>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -27,16 +25,7 @@ struct DependentChoiceContinuation {
   }
 
   template <typename T1> static T1 MemC_rec(T1 f, T1 f0, MemC m) {
-    switch (m) {
-    case MemC::CNEXT_KEY: {
-      return f;
-    }
-    case MemC::CFRESH_PROV: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return MemC_rect<T1>(std::move(f), std::move(f0), m);
   }
 
   using memCType = crane::obj;
@@ -66,13 +55,14 @@ struct DependentChoiceContinuation {
 
     explicit MemS(Mchoose _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    MemS(const MemS<_U> &_other)
+    template <typename CraneU>
+    MemS(const MemS<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename MemS<_U>::MRet>(_other.v())) {
-              const auto &[a] = std::get<typename MemS<_U>::MRet>(_other.v());
+            if (std::holds_alternative<typename MemS<CraneU>::MRet>(_other.v())) {
+              const auto &[a] =
+                  std::get<typename MemS<CraneU>::MRet>(_other.v());
               return MRet{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -81,7 +71,7 @@ struct DependentChoiceContinuation {
               }()};
             } else {
               const auto &[c, k] =
-                  std::get<typename MemS<_U>::Mchoose>(_other.v());
+                  std::get<typename MemS<CraneU>::Mchoose>(_other.v());
               return Mchoose{c, crane_convert<crane::fn<MemS<A>(memCType)>>(k)};
             }
           }()) {}
@@ -100,39 +90,26 @@ struct DependentChoiceContinuation {
   };
 
   template <typename T1, typename T2>
-  static T2 MemS_rect(
-      std::type_identity_t<crane::fn<T2(T1)>> f,
-      std::type_identity_t<crane::fn<T2(MemC, crane::fn<MemS<T1>(memCType)>,
-                                        crane::fn<T2(memCType)>)>>
-          f0,
-      const MemS<T1> &m) {
+  static T2 MemS_rect(const std::type_identity_t<crane::fn<T2(T1)>> &f,
+                      const std::type_identity_t<
+                          crane::fn<T2(MemC, crane::fn<MemS<T1>(memCType)>,
+                                       crane::fn<T2(memCType)>)>> &f0,
+                      const MemS<T1> &m) {
     if (std::holds_alternative<typename MemS<T1>::MRet>(m.v())) {
       const auto &[a0] = std::get<typename MemS<T1>::MRet>(m.v());
       return f(a0);
     } else {
       const auto &[c0, k0] = std::get<typename MemS<T1>::Mchoose>(m.v());
-      return f0(c0, k0, [=](const auto &m0) {
-        return MemS_rect<T1, T2>(f, crane_erase_fn<T2>(f0), k0(m0));
+      return f0(c0, k0, [=](memCType m0) {
+        return MemS_rect<T1, T2>(f, crane_erase_fn<T2>(f0),
+                                 crane_call_erased(k0, std::move(m0)));
       });
     }
   }
 
-  template <typename T1, typename T2>
-  static T2 MemS_rec(
-      std::type_identity_t<crane::fn<T2(T1)>> f,
-      std::type_identity_t<crane::fn<T2(MemC, crane::fn<MemS<T1>(memCType)>,
-                                        crane::fn<T2(memCType)>)>>
-          f0,
-      const MemS<T1> &m) {
-    if (std::holds_alternative<typename MemS<T1>::MRet>(m.v())) {
-      const auto &[a0] = std::get<typename MemS<T1>::MRet>(m.v());
-      return f(a0);
-    } else {
-      const auto &[c0, k0] = std::get<typename MemS<T1>::Mchoose>(m.v());
-      return f0(c0, k0, [=](const auto &m0) {
-        return MemS_rec<T1, T2>(f, crane_erase_fn<T2>(f0), k0(m0));
-      });
-    }
+  template <typename T1, typename T2, typename F0, typename F1>
+  static T2 MemS_rec(F0 &&f, F1 &&f0, const MemS<T1> &m) {
+    return MemS_rect<T1, T2>(f, crane_erase_fn<T2>(f0), m);
   }
 
   template <typename T1, typename F0> static MemS<T1> Mfresh_prov(F0 &&k) {

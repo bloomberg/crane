@@ -3,9 +3,9 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -30,8 +30,9 @@ struct DoubleOptionNest {
     explicit t(Node _v) : v_(std::move(_v)) {}
 
     static t node(uint64_t a0, std::optional<std::optional<t>> a1) {
-      return t(Node{a0, std::make_shared<std::optional<std::optional<t>>>(
-                            std::move(a1))});
+      return t(Node{
+          a0,
+          std::make_shared<std::optional<std::optional<t>>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -64,8 +65,8 @@ struct DoubleOptionNest {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -73,26 +74,18 @@ struct DoubleOptionNest {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
-                                   std::optional<std::optional<t>> &>
-  static T1 t_rect(F0 &&f, const t &t0) {
+  template <typename T1, typename F0> static T1 t_rect(F0 &&f, const t &t0) {
     const auto &[a0, a1] = std::get<typename t::Node>(t0.v());
     return f(a0, *a1);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &,
-                                   std::optional<std::optional<t>> &>
-  static T1 t_rec(F0 &&f, const t &t0) {
-    const auto &[a0, a1] = std::get<typename t::Node>(t0.v());
-    return f(a0, *a1);
+  template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
+    return t_rect<T1>(f, t0);
   }
 
   static t wrap(uint64_t k, const t &acc);
   static inline const t empty =
       t::node(UINT64_C(0), std::optional<std::optional<t>>());
-
   static uint64_t peek(const t &x);
 };
 

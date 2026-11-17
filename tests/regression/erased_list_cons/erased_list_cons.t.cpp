@@ -10,8 +10,14 @@
 
 #include "erased_list_cons.h"
 
+#include <cassert>
+
 int main() {
   // Reference the global so its initializer (the erased action) is required.
   (void)&entries;
+  // No symbols assemble the empty tuple from any stack.  The custom pair's
+  // type arguments once reached extraction as terms too, which steered this
+  // branch to "unreachable: impossible dependent match branch".
+  assert(MyDefs::assemble(List<MyDefs::symbol>::nil(), List<SigT<MyDefs::symbol, crane::obj>>::nil()).has_value());
   return 0;
 }

@@ -8,7 +8,7 @@
     v} *)
 
 Require Crane.Extraction.
-Require Import Vector.
+From Stdlib Require Import Vector.
 
 Module VectorCasesDeduction.
 

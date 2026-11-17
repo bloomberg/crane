@@ -1,16 +1,10 @@
 #ifndef INCLUDED_UNIT_MONOSTATE_ERASE
 #define INCLUDED_UNIT_MONOSTATE_ERASE
 
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct UnitMonostateErase {
   /// --- Example 1: sequenced if returning unit ---
@@ -45,19 +39,7 @@ struct UnitMonostateErase {
   }
 
   template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-    switch (c) {
-    case Color::RED: {
-      return f;
-    }
-    case Color::GREEN: {
-      return f0;
-    }
-    case Color::BLUE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 
   static void match_unit_tail(Color c);

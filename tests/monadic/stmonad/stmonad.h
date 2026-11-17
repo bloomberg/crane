@@ -6,10 +6,10 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -17,8 +17,7 @@
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
+#include <vector>
 
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
@@ -77,16 +76,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -123,32 +123,33 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, A &>
-  List<A> filter(F0 &&f) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+  template <typename F0> List<A> filter(F0 &&f) const {
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(List<A>::nil());
+        auto _value = List<A>::nil();
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
         if (f(a0)) {
-          auto _cell =
-              std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<A>::Cons(a0, nullptr);
+          List<A> &_node =
+              (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a1);
           continue;
         } else {
@@ -157,41 +158,41 @@ public:
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -199,26 +200,28 @@ public:
   }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -229,13 +232,13 @@ template <typename Err> struct ExceptE {
   // ACCESSORS
   ExceptE<Err> clone() const { return {a0}; }
 
-  template <typename _U> operator ExceptE<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const Err &>) {
-        return crane_convert<_U>(a0);
+  template <typename CraneU> operator ExceptE<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const Err &>) {
+        return crane_convert<CraneU>(a0);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -257,7 +260,7 @@ struct Err {
 
 struct STMonadExamples {
   template <typename F1>
-    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
   static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
                                                  F1 &&quicksort_fun0);
 };
@@ -278,9 +281,8 @@ struct STRefNat {
 struct STMonadTests {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-      return ListDef::seq(fp, ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                                    ? 0
-                                    : ((UINT64_C(1) + sp) - fp))));
+      auto &&_once1 = (UINT64_C(1) + sp);
+      return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
     }
 
     static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
@@ -291,25 +293,26 @@ struct STMonadTests {
       }
     }
 
-    static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-      return ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                   ? 0
-                   : ((UINT64_C(1) + sp) - fp)));
+    constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
+      auto &&_once2 = (UINT64_C(1) + sp);
+      return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
     }
 
-    static uint64_t toNat(uint64_t n) { return n; }
+    constexpr static uint64_t toNat(uint64_t n) { return n; }
 
-    static uint64_t fromNat(uint64_t n) { return n; }
+    constexpr static uint64_t fromNat(uint64_t n) { return n; }
 
-    static uint64_t suc(uint64_t x) { return (x + 1); }
+    constexpr static uint64_t suc(uint64_t x) { return (x + 1); }
 
-    static uint64_t sub(uint64_t a0, uint64_t a1) {
+    constexpr static uint64_t sub(uint64_t a0, uint64_t a1) {
       return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
     }
 
-    static uint64_t max(uint64_t a0, uint64_t a1) { return std::max(a0, a1); }
+    constexpr static uint64_t max(uint64_t a0, uint64_t a1) {
+      return std::max(a0, a1);
+    }
 
-    static uint64_t zero() { return UINT64_C(0); }
+    constexpr static uint64_t zero() { return UINT64_C(0); }
   };
 
   static_assert(Ix<nat_idx, uint64_t>);
@@ -338,29 +341,26 @@ struct STMonadTests {
       x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
       std::shared_ptr<uint64_t> y;
       y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
-      auto fib_loop_impl = [](auto &, uint64_t k, std::shared_ptr<uint64_t> x0,
-                              std::shared_ptr<uint64_t> y0, uint64_t,
-                              uint64_t) -> uint64_t {
-        uint64_t _loop_k = std::move(k);
-        while (true) {
-          if (_loop_k <= 0) {
-            return *x0;
-          } else {
-            uint64_t k_ = _loop_k - 1;
-            uint64_t x_ = *x0;
-            uint64_t y_ = *y0;
-            *x0 = y_;
-            *y0 = (x_ + y_);
-            _loop_k = k_;
-          }
-        }
-      };
-      auto fib_loop = [&](uint64_t k, std::shared_ptr<uint64_t> x0,
-                          std::shared_ptr<uint64_t> y0, uint64_t idx_x,
-                          uint64_t idx_y) -> uint64_t {
-        return fib_loop_impl(fib_loop_impl, k, x0, y0, idx_x, idx_y);
-      };
-      return fib_loop(n, x, y, _tcI1::zero(), _tcI1::suc(_tcI1::zero()));
+      auto fib_loop =
+          [](uint64_t k, std::shared_ptr<uint64_t> x0,
+             std::shared_ptr<uint64_t> y0, uint64_t, uint64_t)
+               -> uint64_t {
+            uint64_t _loop_k = k;
+            while (true) {
+              if (_loop_k <= 0) {
+                return *x0;
+              } else {
+                uint64_t k_ = _loop_k - 1;
+                uint64_t x_ = *x0;
+                uint64_t y_ = *y0;
+                *x0 = y_;
+                *y0 = (x_ + y_);
+                _loop_k = k_;
+              }
+            }
+          };
+      return fib_loop(n, std::move(x), std::move(y), _tcI1::zero(),
+                      _tcI1::suc(_tcI1::zero()));
     }
   }
 
@@ -374,8 +374,8 @@ struct STMonadTests {
     r1 = std::make_shared<decltype(false)>(false);
     std::shared_ptr<bool> r2;
     r2 = std::make_shared<decltype(true)>(true);
-    bool x1 = *r1;
-    bool x2 = *r2;
+    bool x1 = *std::move(r1);
+    bool x2 = *std::move(r2);
     return std::make_pair(x1, x2);
   }
 
@@ -386,8 +386,8 @@ struct STMonadTests {
     r1 = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
     std::shared_ptr<uint64_t> r2;
     r2 = std::make_shared<decltype(UINT64_C(6))>(UINT64_C(6));
-    uint64_t x1 = *r1;
-    uint64_t x2 = *r2;
+    uint64_t x1 = *std::move(r1);
+    uint64_t x2 = *std::move(r2);
     return std::make_pair(x1, x2);
   }
 
@@ -397,7 +397,7 @@ struct STMonadTests {
     std::shared_ptr<uint64_t> v;
     v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
     *v = UINT64_C(6);
-    return *v;
+    return *std::move(v);
   }
 
   template <typename _tcI0, typename _tcI1>
@@ -421,33 +421,34 @@ struct STMonadTests {
   static std::string list_to_string_helper(const List<uint64_t> &l);
   static std::string list_to_string(const List<uint64_t> &l);
   static List<uint64_t> rep_list_nat(List<uint64_t> l, uint64_t n);
-  static inline const List<uint64_t> input_lst1 = List<uint64_t>::cons(
-      UINT64_C(212498),
+  [[gnu::used]] static inline const List<uint64_t> input_lst1 =
       List<uint64_t>::cons(
-          UINT64_C(127),
+          UINT64_C(212498),
           List<uint64_t>::cons(
-              UINT64_C(5981),
+              UINT64_C(127),
               List<uint64_t>::cons(
-                  UINT64_C(2749812),
+                  UINT64_C(5981),
                   List<uint64_t>::cons(
-                      UINT64_C(74879),
+                      UINT64_C(2749812),
                       List<uint64_t>::cons(
-                          UINT64_C(126),
+                          UINT64_C(74879),
                           List<uint64_t>::cons(
-                              UINT64_C(4),
+                              UINT64_C(126),
                               List<uint64_t>::cons(
-                                  UINT64_C(51),
+                                  UINT64_C(4),
                                   List<uint64_t>::cons(
-                                      UINT64_C(2412),
+                                      UINT64_C(51),
                                       List<uint64_t>::cons(
-                                          UINT64_C(10645),
-                                          List<uint64_t>::nil()))))))))));
-  static std::string test_quicksort_ST(std::monostate _x);
-  static std::string test_quicksort_fun(std::monostate _x);
+                                          UINT64_C(2412),
+                                          List<uint64_t>::cons(
+                                              UINT64_C(10645),
+                                              List<uint64_t>::nil()))))))))));
+  static std::string test_quicksort_ST();
+  static std::string test_quicksort_fun();
 };
 
 template <typename F1>
-  requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t> &>
+  requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
 List<uint64_t>
 STMonadExamples::quicksort_fun_functional(const List<uint64_t> &l,
                                           F1 &&quicksort_fun0) {
@@ -456,10 +457,11 @@ STMonadExamples::quicksort_fun_functional(const List<uint64_t> &l,
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     const List<uint64_t> &a1_value = *a1;
-    return quicksort_fun0(a1_value.filter([=](uint64_t x) { return x < a0; }))
-        .app(List<uint64_t>::cons(a0, List<uint64_t>::nil())
-                 .app(quicksort_fun0(
-                     a1_value.filter([=](uint64_t x) { return a0 <= x; }))));
+    return quicksort_fun0(a1_value.filter([=](uint64_t x) {
+      return x < a0;
+    }))
+               .app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
+        quicksort_fun0(a1_value.filter([=](uint64_t x) { return a0 <= x; }))));
   }
 }
 

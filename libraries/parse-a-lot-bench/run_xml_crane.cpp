@@ -14,6 +14,10 @@
 #include "conslist.h"
 #include "XML.h"
 
+// Unqualified, so it finds crane::get_if for a shared variant
+// ([Set Crane SharedVariant]) and std::get_if for a std::variant.
+using std::get_if;
+
 struct RunArgs { int argc; char **argv; int result; };
 
 // Mirrors run_xml.ml's count_xml_nodes:
@@ -22,7 +26,7 @@ struct RunArgs { int argc; char **argv; int result; };
 static long count_xml_nodes(const XML::Xml_tree &t) {
     using XT = XML::Xml_tree;
     const auto &v = t.v();
-    if (const auto *node = std::get_if<XT::XmlNode>(&v)) {
+    if (const auto *node = get_if<XT::XmlNode>(&v)) {
         long c = 1;
         for (const auto &ch : node->children) c += count_xml_nodes(ch);
         return c;
@@ -70,9 +74,9 @@ static void *run_main(void *arg) {
     using PR = XML::XML_Parser::ParserAndProofs::PEF::PS::P::Parse_result;
     const char *kind = nullptr;
     const crane::obj *val = nullptr;
-    if (const auto *u = std::get_if<PR::Unique>(&pr.v())) {
+    if (const auto *u = get_if<PR::Unique>(&pr.v())) {
         kind = "unique"; val = &u->a0;
-    } else if (const auto *am = std::get_if<PR::Ambig>(&pr.v())) {
+    } else if (const auto *am = get_if<PR::Ambig>(&pr.v())) {
         kind = "ambig";  val = &am->a0;
     }
     if (kind) {

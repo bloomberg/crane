@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -72,8 +71,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -104,16 +103,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -150,14 +150,15 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct Positive {
@@ -223,8 +224,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -367,7 +368,7 @@ struct Pos {
 struct BinNat {
   static N succ_double(const N &x);
   static N double_(const N &n);
-  static N sub(N n, const N &m);
+  static N sub(const N &n, const N &m);
   static Comparison compare(const N &n, const N &m);
   static bool leb(const N &x, const N &y);
   static std::pair<N, N> pos_div_eucl(const Positive &a, const N &b);
@@ -381,7 +382,7 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static Z mul(const Z &x, const Z &y);
   static bool eqb(const Z &x, const Z &y);
   static Z of_nat(const Nat &n);
@@ -456,6 +457,14 @@ struct BfmTypes {
 
     // MANIPULATORS
     ~ty() {
+      if (std::holds_alternative<TB>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<TA>(&v_mut())) {
+        if (!(_alt->t && _alt->t.use_count() == 1)) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<ty>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TS>(&_v)) {
@@ -494,8 +503,8 @@ struct BfmTypes {
 
     ty(const ty &) = default;
     ty &operator=(const ty &) = default;
-    ty(ty &&) noexcept = default;
-    ty &operator=(ty &&) noexcept = default;
+    ty(ty &&) = default;
+    ty &operator=(ty &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -521,8 +530,7 @@ struct BorrowedFieldMovedIntoMethod {
       const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(vs.v());
       Z k = BinInt::of_nat(a0);
       if (std::holds_alternative<typename BfmTypes::ty::TA>(t.v())) {
-        const auto &[vector0, sz0, t0] =
-            std::get<typename BfmTypes::ty::TA>(t.v());
+        const auto &[_, _, t0] = std::get<typename BfmTypes::ty::TA>(t.v());
         return walk<_tcI0>(
             *t0,
             BinInt::add(off, BinInt::mul(std::move(k),
@@ -549,14 +557,13 @@ struct BorrowedFieldMovedIntoMethod {
   };
 
   static_assert(Size<SizeI>);
-  static inline const BfmTypes::ty arr = BfmTypes::ty::ta(
+  [[gnu::used]] static inline const BfmTypes::ty arr = BfmTypes::ty::ta(
       false, N::npos(Positive::xo(Positive::xo(Positive::xh()))),
       BfmTypes::ty::tb(Positive::xo(Positive::xo(Positive::xo(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))));
-
   static Z get(const std::optional<Z> &o);
   /// Each walk is 3 * 8 = 24.
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 #endif // INCLUDED_BORROWED_FIELD_MOVED_INTO_METHOD

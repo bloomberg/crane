@@ -194,30 +194,30 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
+Z BinInt::add(const Z &x, const Z &y) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
-    auto &[a0] = std::get<typename Z::Zpos>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(a0, std::move(a00)));
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zpos(Pos::add(a0, a00));
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(a0, std::move(a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return BinInt::pos_sub(a0, a00);
     }
   } else {
-    auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(std::move(a00), a0);
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return BinInt::pos_sub(a00, a0);
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(a0, std::move(a00)));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zneg(Pos::add(a0, a00));
     }
   }
 }
@@ -248,8 +248,9 @@ bool BinInt::eqb(const Z &x, const Z &y) {
   }
 }
 
-bool CoalitionBidHonorTraceCase::clan_eq_dec(
-    CoalitionBidHonorTraceCase::Clan c1, CoalitionBidHonorTraceCase::Clan c2) {
+bool
+CoalitionBidHonorTraceCase::clan_eq_dec(CoalitionBidHonorTraceCase::Clan c1,
+                                        CoalitionBidHonorTraceCase::Clan c2) {
   switch (c1) {
   case Clan::CLANWOLF: {
     switch (c2) {
@@ -398,9 +399,9 @@ uint64_t CoalitionBidHonorTraceCase::unit_tech_bv(
 uint64_t CoalitionBidHonorTraceCase::unit_battle_value(
     const CoalitionBidHonorTraceCase::Unit &u) {
   uint64_t tech_bv = unit_tech_bv(u);
-  return (UINT64_C(4)
-              ? (tech_bv * skill_bv_multiplier_num(unit_skill(u))) / UINT64_C(4)
-              : 0);
+  return (UINT64_C(4) ? (tech_bv * skill_bv_multiplier_num(unit_skill(u))) /
+                        UINT64_C(4)
+                      : 0);
 }
 
 uint64_t CoalitionBidHonorTraceCase::unit_effective_combat_rating(
@@ -411,24 +412,21 @@ uint64_t CoalitionBidHonorTraceCase::unit_effective_combat_rating(
 CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::unit_to_metrics(
     const CoalitionBidHonorTraceCase::Unit &u) {
-  return ForceMetrics{UINT64_C(1),
-                      u.unit_tonnage,
+  return ForceMetrics{UINT64_C(1), u.unit_tonnage,
                       (u.unit_is_elite ? UINT64_C(1) : UINT64_C(0)),
                       (u.unit_is_clan ? UINT64_C(1) : UINT64_C(0)),
-                      unit_battle_value(u),
-                      unit_effective_combat_rating(u)};
+                      unit_battle_value(u), unit_effective_combat_rating(u)};
 }
 
 CoalitionBidHonorTraceCase::ForceMetrics
 CoalitionBidHonorTraceCase::metrics_add(
     const CoalitionBidHonorTraceCase::ForceMetrics &m1,
     const CoalitionBidHonorTraceCase::ForceMetrics &m2) {
-  return ForceMetrics{(m1.fm_count + m2.fm_count),
-                      (m1.fm_tonnage + m2.fm_tonnage),
-                      (m1.fm_elite_count + m2.fm_elite_count),
-                      (m1.fm_clan_count + m2.fm_clan_count),
-                      (m1.fm_total_bv + m2.fm_total_bv),
-                      (m1.fm_total_ecr + m2.fm_total_ecr)};
+  return ForceMetrics{
+      (m1.fm_count + m2.fm_count), (m1.fm_tonnage + m2.fm_tonnage),
+      (m1.fm_elite_count + m2.fm_elite_count),
+      (m1.fm_clan_count + m2.fm_clan_count), (m1.fm_total_bv + m2.fm_total_bv),
+      (m1.fm_total_ecr + m2.fm_total_ecr)};
 }
 
 CoalitionBidHonorTraceCase::ForceMetrics
@@ -484,9 +482,10 @@ CoalitionBidHonorTraceCase::update_coalition_force(
           c.v())) {
     return List<CoalitionBidHonorTraceCase::CoalitionMember>::nil();
   } else {
-    const auto &[a0, a1] = std::get<
-        typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
-        c.v());
+    const auto &[a0, a1] =
+        std::get<
+            typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
+            c.v());
     if (idx <= 0) {
       return List<CoalitionBidHonorTraceCase::CoalitionMember>::cons(
           CoalitionMember{a0.cm_clan, a0.cm_commander, new_force}, *a1);
@@ -512,9 +511,10 @@ CoalitionBidHonorTraceCase::coalition_lead_commander(
           c.v())) {
     return std::optional<CoalitionBidHonorTraceCase::Commander>();
   } else {
-    const auto &[a0, a1] = std::get<
-        typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
-        c.v());
+    const auto &[a0, _] =
+        std::get<
+            typename List<CoalitionBidHonorTraceCase::CoalitionMember>::Cons>(
+            c.v());
     return std::make_optional<CoalitionBidHonorTraceCase::Commander>(
         a0.cm_commander);
   }
@@ -547,18 +547,19 @@ bool CoalitionBidHonorTraceCase::valid_coalition_member_bid_b(
   return (cbid.cmb_member_index < c.length() &&
           metrics_total_lt(
               force_metrics(cbid.cmb_new_force),
-              force_metrics(
-                  ListDef::template nth<CoalitionBidHonorTraceCase::Force>(
-                      cbid.cmb_member_index,
-                      c.template map<CoalitionBidHonorTraceCase::Force>(
-                          [](const CoalitionBidHonorTraceCase::CoalitionMember
-                                 &c0) { return c0.cm_force; }),
-                      List<CoalitionBidHonorTraceCase::Unit>::nil()))));
+              force_metrics(ListDef::template nth<
+                  CoalitionBidHonorTraceCase::Force>(
+                  cbid.cmb_member_index,
+                  c.template map<CoalitionBidHonorTraceCase::Force>([](
+                      const CoalitionBidHonorTraceCase::CoalitionMember &c0) {
+                    return c0.cm_force;
+                  }),
+                  List<CoalitionBidHonorTraceCase::Unit>::nil()))));
 }
 
-bool CoalitionBidHonorTraceCase::is_ready(
-    CoalitionBidHonorTraceCase::ReadyStatus rs,
-    CoalitionBidHonorTraceCase::Side side) {
+bool
+CoalitionBidHonorTraceCase::is_ready(CoalitionBidHonorTraceCase::ReadyStatus rs,
+                                     CoalitionBidHonorTraceCase::Side side) {
   switch (rs) {
   case ReadyStatus::NEITHERREADY: {
     return false;
@@ -765,8 +766,8 @@ CoalitionBidHonorTraceCase::update_honor(
 CoalitionBidHonorTraceCase::Honor
 CoalitionBidHonorTraceCase::refusal_honor_delta(
     const CoalitionBidHonorTraceCase::RefusalReason &r) {
-  if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
-                                 RefusalReason::RefusalInsufficientRank>(
+  if (std::holds_alternative<
+          typename CoalitionBidHonorTraceCase::RefusalReason::RefusalInsufficientRank>(
           r.v())) {
     return Z::z0();
   } else {
@@ -781,13 +782,15 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
           typename CoalitionBidHonorTraceCase::ProtocolAction::ActChallenge>(
           action.v())) {
     return Z::zpos(Positive::xh());
-  } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
-                                        ProtocolAction::ActRespond>(
-                 action.v())) {
+  } else if (
+      std::holds_alternative<
+          typename CoalitionBidHonorTraceCase::ProtocolAction::ActRespond>(
+          action.v())) {
     return Z::zpos(Positive::xh());
-  } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
-                                        ProtocolAction::ActRefuse>(
-                 action.v())) {
+  } else if (
+      std::holds_alternative<
+          typename CoalitionBidHonorTraceCase::ProtocolAction::ActRefuse>(
+          action.v())) {
     const auto &[reason0] = std::get<
         typename CoalitionBidHonorTraceCase::ProtocolAction::ActRefuse>(
         action.v());
@@ -796,13 +799,15 @@ CoalitionBidHonorTraceCase::protocol_honor_delta(
                  typename CoalitionBidHonorTraceCase::ProtocolAction::ActClose>(
                  action.v())) {
     return Z::zpos(Positive::xh());
-  } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
-                                        ProtocolAction::ActWithdraw>(
-                 action.v())) {
+  } else if (
+      std::holds_alternative<
+          typename CoalitionBidHonorTraceCase::ProtocolAction::ActWithdraw>(
+          action.v())) {
     return Z::zneg(Positive::xo(Positive::xh()));
-  } else if (std::holds_alternative<typename CoalitionBidHonorTraceCase::
-                                        ProtocolAction::ActBreakBid>(
-                 action.v())) {
+  } else if (
+      std::holds_alternative<
+          typename CoalitionBidHonorTraceCase::ProtocolAction::ActBreakBid>(
+          action.v())) {
     return Z::zneg(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))));
   } else {
     return Z::z0();

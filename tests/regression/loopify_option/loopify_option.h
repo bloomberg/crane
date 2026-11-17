@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -37,22 +37,22 @@ struct LoopifyOption {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const list<_U> &_other)
+    template <typename CraneU>
+    list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
-                  std::get<typename list<_U>::Cons>(_other.v());
+                  std::get<typename list<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
@@ -86,8 +86,8 @@ struct LoopifyOption {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -96,43 +96,41 @@ struct LoopifyOption {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
-            const list<T1> &l) { /// _Enter: captures varying parameters for
+            const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
-    struct _Enter {
+    struct CraneEnter {
       const list<T1> *l;
     };
 
-    /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
+    /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons {
       T1 a0;
       std::shared_ptr<list<T1>> a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     T2 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified list_rect: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&l});
+    /// Loopified list_rect: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, a1});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0, a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
         _result = f0(a0, *a1, std::move(_result));
@@ -142,54 +140,12 @@ struct LoopifyOption {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2
-  list_rec(T2 f, F1 &&f0,
-           const list<T1> &l) { /// _Enter: captures varying parameters for each
-                                /// recursive call.
-
-    struct _Enter {
-      const list<T1> *l;
-    };
-
-    /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
-      T1 a0;
-      std::shared_ptr<list<T1>> a1;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
-    T2 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified list_rec: _Enter -> _Cont_Cons.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *_f.l;
-        if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = f;
-        } else {
-          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, a1});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        auto a0 = std::move(_f.a0);
-        std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
-        _result = f0(a0, *a1, std::move(_result));
-      }
-    }
-    return _result;
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(std::move(f), f0, l);
   }
 
   /// find_opt p l returns the first element satisfying p, or None.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<T1> find_opt(F0 &&p, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
     while (true) {
@@ -228,7 +184,7 @@ struct LoopifyOption {
   template <typename T1>
   static std::optional<T1> nth_opt(uint64_t n, const list<T1> &l) {
     const list<T1> *_loop_l = &l;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
         return std::optional<T1>();
@@ -238,8 +194,9 @@ struct LoopifyOption {
           return std::make_optional<T1>(a0);
         } else {
           _loop_l = crane_raw(a1);
-          _loop_n = ((
-              (_loop_n - UINT64_C(1)) > _loop_n ? 0 : (_loop_n - UINT64_C(1))));
+          _loop_n =
+              (((_loop_n - UINT64_C(1)) > _loop_n ? 0
+                                                  : (_loop_n - UINT64_C(1))));
         }
       }
     }
@@ -251,24 +208,27 @@ struct LoopifyOption {
 
   /// map_opt f l applies f and keeps only Some results.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<std::optional<T2>, F0 &, T1 &>
+    requires std::is_invocable_r_v<std::optional<T2>, F0 &, const T1 &>
   static list<T2> map_opt(F0 &&f, const list<T1> &l) {
-    std::shared_ptr<list<T2>> _head{};
-    std::shared_ptr<list<T2>> *_write = &_head;
+    std::optional<list<T2>> _root{};
+    std::shared_ptr<list<T2>> *_write = nullptr;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<list<T2>>(list<T2>::nil());
+        auto _value = list<T2>::nil();
+        (_write ? *(*_write = std::make_shared<list<T2>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         auto _cs = f(a0);
         if (_cs.has_value()) {
           const T2 &y = *_cs;
-          auto _cell =
-              std::make_shared<list<T2>>(typename list<T2>::Cons(y, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename list<T2>::Cons(y, nullptr);
+          list<T2> &_node = (
+              _write ? *(*_write = std::make_shared<list<T2>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename list<T2>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
         } else {
@@ -277,15 +237,14 @@ struct LoopifyOption {
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// find_index p l returns the index of the first match, or None.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<uint64_t> find_index_aux(F0 &&p, const list<T1> &l,
                                                 uint64_t i) {
-    uint64_t _loop_i = std::move(i);
+    uint64_t _loop_i = i;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
@@ -303,7 +262,6 @@ struct LoopifyOption {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static std::optional<uint64_t> find_index(F0 &&p, const list<T1> &l) {
     return find_index_aux<T1>(p, l, UINT64_C(0));
   }

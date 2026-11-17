@@ -4,9 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -15,6 +16,8 @@
 struct Nat;
 template <typename A> struct List;
 template <typename T> struct Exp0;
+struct TFunctor_list;
+struct TFunctor_exp;
 template <typename T> struct Phi;
 
 struct PatternLambdaBinderOverErased {
@@ -67,8 +70,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -99,16 +102,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -145,8 +149,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -154,38 +158,47 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
-template <typename t>
-using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3, typename F1>
-crane::rebind_t<T1, T3> tfmap(std::type_identity_t<TFunctor<T1>> tFunctor,
-                              F1 &&x, crane::rebind_t<T1, T2> x0) {
-  return crane_container_cast<crane::rebind_t<T1, T3>>(
-      tFunctor(crane_erase_fn(x), crane_convert<T1>(std::move(x0))));
+template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template T<T3> tfmap(F0 &&x,
+                                     typename _tcI0::template T<T2> x0) {
+  return _tcI0::template tfmap<T2, T3>(x, std::move(x0));
 }
 
 template <typename T> struct Exp0 {
@@ -212,13 +225,13 @@ public:
 
   explicit Exp0(Lit _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Exp0(const Exp0<_U> &_other)
+  template <typename CraneU>
+  Exp0(const Exp0<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Exp0<_U>::Var>(_other.v())) {
-            const auto &[t] = std::get<typename Exp0<_U>::Var>(_other.v());
+          if (std::holds_alternative<typename Exp0<CraneU>::Var>(_other.v())) {
+            const auto &[t] = std::get<typename Exp0<CraneU>::Var>(_other.v());
             return Var{[&]() -> T {
-              if constexpr (crane_convertible<T, const _U &>) {
+              if constexpr (crane_convertible<T, const CraneU &>) {
                 return crane_convert<T>(t);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -226,7 +239,7 @@ public:
               }
             }()};
           } else {
-            const auto &[n] = std::get<typename Exp0<_U>::Lit>(_other.v());
+            const auto &[n] = std::get<typename Exp0<CraneU>::Lit>(_other.v());
             return Lit{n};
           }
         }()) {}
@@ -240,20 +253,35 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
 
-  template <typename F0> Exp0<crane::obj> TFunctor_exp(F0 &&f) const {
-    if (std::holds_alternative<typename Exp0<crane::obj>::Var>(this->v())) {
-      const auto &[t0] = std::get<typename Exp0<crane::obj>::Var>(this->v());
-      return Exp0<crane::obj>::var(crane_call_erased(f, t0));
+struct TFunctor_list {
+  template <typename CraneA0> using T = List<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0, List<CraneA0> a1) {
+    return a1.template map<CraneA1>(std::move(a0));
+  }
+};
+
+static_assert(TFunctor<TFunctor_list>);
+
+struct TFunctor_exp {
+  template <typename CraneA0> using T = Exp0<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Exp0<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Exp0<CraneA0> e) {
+    if (std::holds_alternative<typename Exp0<CraneA0>::Var>(e.v_mut())) {
+      auto &[t0] = std::get<typename Exp0<CraneA0>::Var>(e.v_mut());
+      return Exp0<CraneA1>::var(f(std::move(t0)));
     } else {
-      const auto &[n0] = std::get<typename Exp0<crane::obj>::Lit>(this->v());
-      return Exp0<crane::obj>::lit(n0);
+      auto &[n0] = std::get<typename Exp0<CraneA0>::Lit>(e.v_mut());
+      return Exp0<CraneA1>::lit(std::move(n0));
     }
   }
 };
 
-List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                               const List<crane::obj> &x1_);
+static_assert(TFunctor<TFunctor_exp>);
 
 template <typename T> struct Phi {
   // DATA
@@ -262,8 +290,8 @@ template <typename T> struct Phi {
   // ACCESSORS
   Phi<T> clone() const { return {es}; }
 
-  template <typename _U> operator Phi<_U>() const {
-    return {crane_convert<List<std::pair<Nat, Exp0<_U>>>>(es)};
+  template <typename CraneU> operator Phi<CraneU>() const {
+    return {crane_convert<List<std::pair<Nat, Exp0<CraneU>>>>(es)};
   }
 
   // CREATORS
@@ -272,8 +300,22 @@ template <typename T> struct Phi {
   }
 };
 
-Phi<crane::obj> TFunctor_phi(TFunctor<Exp0<crane::obj>> h,
-                             crane::fn<crane::obj(crane::obj)> f,
-                             const Phi<crane::obj> &p);
+template <TFunctor _tcI0> struct TFunctor_phi {
+  template <typename CraneA0> using T = Phi<CraneA0>;
+
+  template <typename CraneA0, typename CraneA1>
+  static Phi<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, Phi<CraneA0> p) {
+    auto &[es0] = p;
+    return Phi<CraneA1>::phi0(TFunctor_list::template tfmap<
+        std::pair<Nat, Exp0<CraneA0>>, std::pair<Nat, Exp0<CraneA1>>>(
+        [=, f = std::move(f)](std::pair<Nat, Exp0<CraneA0>> ie) {
+          auto [i, e] = std::move(ie);
+          return std::make_pair(
+              std::move(i),
+              _tcI0::template tfmap<CraneA0, CraneA1>(f, std::move(e)));
+        },
+        std::move(es0)));
+  }
+};
 
 #endif // INCLUDED_PATTERN_LAMBDA_BINDER_OVER_ERASED

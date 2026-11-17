@@ -12,9 +12,9 @@ struct Byte0 {
           bool,
           std::pair<
               bool,
-              std::pair<
-                  bool,
-                  std::pair<bool, std::pair<bool, std::pair<bool, bool>>>>>>>
+              std::pair<bool,
+                        std::pair<bool,
+                                  std::pair<bool, std::pair<bool, bool>>>>>>>
   to_bits(Byte b0);
 };
 
@@ -25,6 +25,7 @@ struct Bool {
 struct Byte1 {
   static bool eqb0(Byte a, Byte b0);
 };
+
 enum class Byte {
   X00,
   X01,
@@ -288,7 +289,7 @@ enum class Byte {
 /// generated code also declares a struct Byte for the module wrapping it and
 /// then reaches into it with Byte::x41, so the two spellings disagree.
 struct StdlibByte {
-  static inline const Byte b = Byte::X41;
+  static constexpr Byte b = Byte::X41;
   static inline const bool isA = Byte1::eqb0(b, Byte::X41);
 };
 

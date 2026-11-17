@@ -5,8 +5,8 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -96,9 +97,9 @@ public:
 /// Module name "Sseq" matches coinductive "sseq" -> eponymous
 template <typename A> struct Sseq {
   // TYPES
-  template <typename _S0 = Sseq<A>> struct SCons_ {
+  template <typename CraneS0 = Sseq<A>> struct SCons_ {
     A shead;
-    _S0 stail;
+    CraneS0 stail;
   };
 
   using SCons = SCons_<>;
@@ -115,23 +116,24 @@ public:
   explicit Sseq(SCons _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  template <typename _U>
-  Sseq(const Sseq<_U> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              const auto &[shead, stail] =
-                  std::get<typename Sseq<_U>::SCons>(_other.v());
-              return SCons{[&]() -> A {
-                             if constexpr (crane_convertible<A, const _U &>) {
-                               return crane_convert<A>(shead);
-                             } else {
-                               throw std::logic_error(
-                                   "unreachable: inactive constructor field at "
-                                   "this instantiation");
-                             }
-                           }(),
-                           crane_convert<Sseq<A>>(stail)};
-            })) {}
+  template <typename CraneU>
+  Sseq(const Sseq<CraneU> &_other)
+      : lazy_v_(
+      crane::lazy<variant_t>::converted_from(
+          _other.lazy_cell(), [=]() -> variant_t {
+            const auto &[shead, stail] =
+                std::get<typename Sseq<CraneU>::SCons>(_other.v());
+            return SCons{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(shead);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                crane_convert<Sseq<A>>(stail)};
+          })) {}
 
   explicit Sseq(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -152,42 +154,48 @@ public:
 
   const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
-  A shead() const {
-    const auto &[shead1, stail0] = std::get<typename Sseq<A>::SCons>(this->v());
+  const A &shead() const & {
+    const auto &[shead1, _] = std::get<typename Sseq<A>::SCons>(this->v());
     return shead1;
   }
 
-  Sseq<A> stail() const {
-    const auto &[shead0, stail1] = std::get<typename Sseq<A>::SCons>(this->v());
+  A shead() const && {
+    const auto &[shead1, _] = std::get<typename Sseq<A>::SCons>(this->v());
+    return shead1;
+  }
+
+  const Sseq<A> &stail() const & {
+    const auto &[_, stail1] = std::get<typename Sseq<A>::SCons>(this->v());
+    return stail1;
+  }
+
+  Sseq<A> stail() const && {
+    const auto &[_, stail1] = std::get<typename Sseq<A>::SCons>(this->v());
     return stail1;
   }
 
   /// This will be methodified on sseq because first arg is sseq A
   /// and the module is eponymous.
   template <typename F0>
-    requires std::is_invocable_r_v<A, F0 &, A &>
+    requires std::is_invocable_r_v<A, F0 &, A>
   A double_head(F0 &&f) const {
     return f(this->shead());
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<A, F0 &, A &>
-  Sseq<A> smap(F0 &&f) const {
+  Sseq<A> smap(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() -> Sseq<A> {
-      return Sseq<A>::scons(_self_val.double_head(f),
-                            _self_val.stail().smap(f));
-    });
+    return Sseq<A>::lazy_(
+        [=, _self_val = std::move(_self_val)]() -> typename Sseq<A>::SCons {
+          return {_self_val.double_head(f), _self_val.stail().smap(f)};
+        });
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<A, F0 &, A &>
-  Sseq<A> smap_direct(F0 &&f) const {
+  Sseq<A> smap_direct(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
-    return Sseq<A>::lazy_([=]() -> Sseq<A> {
-      return Sseq<A>::scons(f(_self_val.shead()),
-                            _self_val.stail().smap_direct(f));
-    });
+    return Sseq<A>::lazy_(
+        [=, _self_val = std::move(_self_val)]() -> typename Sseq<A>::SCons {
+          return {f(_self_val.shead()), _self_val.stail().smap_direct(f)};
+        });
   }
 
   /// Take n elements
@@ -201,8 +209,8 @@ public:
   }
 
   static Sseq<uint64_t> nats_from(uint64_t n) {
-    return Sseq<uint64_t>::lazy_([=]() -> Sseq<uint64_t> {
-      return Sseq<uint64_t>::scons(n, nats_from((n + 1)));
+    return Sseq<uint64_t>::lazy_([=]() -> typename Sseq<uint64_t>::SCons {
+      return {n, nats_from((n + 1))};
     });
   }
 
@@ -231,9 +239,10 @@ public:
   /// take 4 -> 1, 2, 3, 4 -> sum = 10
   static const uint64_t &test2() {
     static const uint64_t v = []() {
-      Sseq<uint64_t> s = nats_from(UINT64_C(0)).smap_direct([](uint64_t x) {
-        return (x + 1);
-      });
+      Sseq<uint64_t> s =
+          nats_from(UINT64_C(0)).smap_direct([](uint64_t x) {
+            return (x + 1);
+          });
       return sum(s.take(UINT64_C(4)));
     }();
     return v;

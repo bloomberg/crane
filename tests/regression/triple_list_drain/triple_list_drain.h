@@ -4,11 +4,10 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -37,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -130,8 +130,8 @@ struct TripleListDrain {
               if (auto *_ha30 = std::get_if<typename List<List<t>>::Cons>(
                       &_ha20->a.v_mut())) {
                 crane::small_vector<std::shared_ptr<List<t>>> _hw31;
-                if (auto *_ha35 = std::get_if<typename List<t>::Cons>(
-                        &_ha30->a.v_mut())) {
+                if (auto *_ha35 =
+                        std::get_if<typename List<t>::Cons>(&_ha30->a.v_mut())) {
                   _stack.push_back(std::make_shared<t>(std::move(_ha35->a)));
                   _hw31.push_back(std::move(_ha35->l));
                 }
@@ -143,8 +143,8 @@ struct TripleListDrain {
                   }
                   std::atomic_thread_fence(std::memory_order_acquire);
                   auto &_hw31e = *_hw31p;
-                  if (auto *_ha33 = std::get_if<typename List<t>::Cons>(
-                          &_hw31e.v_mut())) {
+                  if (auto *_ha33 =
+                          std::get_if<typename List<t>::Cons>(&_hw31e.v_mut())) {
                     _stack.push_back(std::make_shared<t>(std::move(_ha33->a)));
                     _hw31.push_back(std::move(_ha33->l));
                   }
@@ -177,8 +177,7 @@ struct TripleListDrain {
                     auto &_hw24e = *_hw24p;
                     if (auto *_ha26 = std::get_if<typename List<t>::Cons>(
                             &_hw24e.v_mut())) {
-                      _stack.push_back(
-                          std::make_shared<t>(std::move(_ha26->a)));
+                      _stack.push_back(std::make_shared<t>(std::move(_ha26->a)));
                       _hw24.push_back(std::move(_ha26->l));
                     }
                   }
@@ -216,8 +215,7 @@ struct TripleListDrain {
                     auto &_hw14e = *_hw14p;
                     if (auto *_ha16 = std::get_if<typename List<t>::Cons>(
                             &_hw14e.v_mut())) {
-                      _stack.push_back(
-                          std::make_shared<t>(std::move(_ha16->a)));
+                      _stack.push_back(std::make_shared<t>(std::move(_ha16->a)));
                       _hw14.push_back(std::move(_ha16->l));
                     }
                   }
@@ -236,8 +234,7 @@ struct TripleListDrain {
                     crane::small_vector<std::shared_ptr<List<t>>> _hw7;
                     if (auto *_ha11 = std::get_if<typename List<t>::Cons>(
                             &_ha6->a.v_mut())) {
-                      _stack.push_back(
-                          std::make_shared<t>(std::move(_ha11->a)));
+                      _stack.push_back(std::make_shared<t>(std::move(_ha11->a)));
                       _hw7.push_back(std::move(_ha11->l));
                     }
                     while (!_hw7.empty()) {
@@ -278,8 +275,8 @@ struct TripleListDrain {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -287,18 +284,13 @@ struct TripleListDrain {
     const variant_t &v() const { return v_; }
   };
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<List<List<t>>> &>
-  static T1 t_rect(F0 &&f, const t &t0) {
+  template <typename T1, typename F0> static T1 t_rect(F0 &&f, const t &t0) {
     const auto &[a0, a1] = std::get<typename t::Node>(t0.v());
     return f(a0, *a1);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<List<List<t>>> &>
-  static T1 t_rec(F0 &&f, const t &t0) {
-    const auto &[a0, a1] = std::get<typename t::Node>(t0.v());
-    return f(a0, *a1);
+  template <typename T1, typename F0> static T1 t_rec(F0 &&f, const t &t0) {
+    return t_rect<T1>(f, t0);
   }
 
   static t wrap(uint64_t k, const t &acc);

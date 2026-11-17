@@ -52,15 +52,14 @@ uint64_t InstructionCycles::cycles_max(InstructionCycles::Instr4 i) {
 }
 
 uint64_t InstructionCycles::program_cycles5(
-    const InstructionCycles::state5 &s,
+    InstructionCycles::state5 s,
     const List<InstructionCycles::instruction5> &prog) {
   if (std::holds_alternative<
           typename List<InstructionCycles::instruction5>::Nil>(prog.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
-        std::get<typename List<InstructionCycles::instruction5>::Cons>(
-            prog.v());
+    const auto &[a0, a1] = std::get<
+        typename List<InstructionCycles::instruction5>::Cons>(prog.v());
     return (a0.cycles_sum(s) + program_cycles5(a0.execute5(s), *a1));
   }
 }
@@ -77,9 +76,8 @@ uint64_t InstructionCycles::program_cycles6(
           typename List<InstructionCycles::Instruction6>::Nil>(prog.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
-        std::get<typename List<InstructionCycles::Instruction6>::Cons>(
-            prog.v());
+    const auto &[a0, a1] = std::get<
+        typename List<InstructionCycles::Instruction6>::Cons>(prog.v());
     return (cycles6(s, a0) + program_cycles6(s, *a1));
   }
 }
@@ -96,9 +94,8 @@ uint64_t InstructionCycles::program_cycles7(
           typename List<InstructionCycles::Instruction7>::Nil>(prog.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
-        std::get<typename List<InstructionCycles::Instruction7>::Cons>(
-            prog.v());
+    const auto &[a0, a1] = std::get<
+        typename List<InstructionCycles::Instruction7>::Cons>(prog.v());
     return (cycles7(s, a0) + program_cycles7(s, *a1));
   }
 }

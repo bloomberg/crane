@@ -4,9 +4,10 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -39,22 +40,22 @@ struct LoopifyTmc {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const list<_U> &_other)
+    template <typename CraneU>
+    list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a, l] =
-                  std::get<typename list<_U>::Cons>(_other.v());
+                  std::get<typename list<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<list<A>>(crane_convert<list<A>>(*l))
@@ -88,8 +89,8 @@ struct LoopifyTmc {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -98,43 +99,41 @@ struct LoopifyTmc {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2
   list_rect(T2 f, F1 &&f0,
-            const list<T1> &l) { /// _Enter: captures varying parameters for
+            const list<T1> &l) { /// CraneEnter: captures varying parameters for
                                  /// each recursive call.
-
-    struct _Enter {
+    struct CraneEnter {
       const list<T1> *l;
     };
 
-    /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
+    /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Cons {
       T1 a0;
       std::shared_ptr<list<T1>> a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     T2 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified list_rect: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&l});
+    /// Loopified list_rect: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const list<T1> &l = *_f.l;
         if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
           _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, a1});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0, a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
         _result = f0(a0, *a1, std::move(_result));
@@ -144,116 +143,82 @@ struct LoopifyTmc {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
-  static T2
-  list_rec(T2 f, F1 &&f0,
-           const list<T1> &l) { /// _Enter: captures varying parameters for each
-                                /// recursive call.
-
-    struct _Enter {
-      const list<T1> *l;
-    };
-
-    /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then processes
-    /// rest.
-    struct _Cont_Cons {
-      T1 a0;
-      std::shared_ptr<list<T1>> a1;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
-    T2 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&l});
-    /// Loopified list_rec: _Enter -> _Cont_Cons.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const list<T1> &l = *_f.l;
-        if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-          _result = f;
-        } else {
-          const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-          _stack.emplace_back(_Cont_Cons{a0, a1});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        }
-      } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        auto a0 = std::move(_f.a0);
-        std::shared_ptr<list<T1>> a1 = std::move(_f.a1);
-        _result = f0(a0, *a1, std::move(_result));
-      }
-    }
-    return _result;
+  static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
+    return list_rect<T1, T2>(std::move(f), f0, l);
   }
 
   /// app l1 l2 appends two lists. Basic TMC pattern: cons head (app tail l2).
   template <typename T1> static list<T1> app(const list<T1> &l1, list<T1> l2) {
-    std::shared_ptr<list<T1>> _head{};
-    std::shared_ptr<list<T1>> *_write = &_head;
-    list<T1> _loop_l2 = std::move(l2);
+    std::optional<list<T1>> _root{};
+    std::shared_ptr<list<T1>> *_write = nullptr;
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *_write = std::make_shared<list<T1>>(std::move(_loop_l2));
+        auto _value = std::move(l2);
+        (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l1->v());
-        auto _cell =
-            std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename list<T1>::Cons(a0, nullptr);
+        list<T1> &_node =
+            (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename list<T1>::Cons>(_node.v_mut()).l;
         _loop_l1 = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// map f l applies f to every element. TMC with element transform.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static list<T2> map(F0 &&f, const list<T1> &l) {
-    std::shared_ptr<list<T2>> _head{};
-    std::shared_ptr<list<T2>> *_write = &_head;
+    std::optional<list<T2>> _root{};
+    std::shared_ptr<list<T2>> *_write = nullptr;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<list<T2>>(list<T2>::nil());
+        auto _value = list<T2>::nil();
+        (_write ? *(*_write = std::make_shared<list<T2>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        auto _cell =
-            std::make_shared<list<T2>>(typename list<T2>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename list<T2>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename list<T2>::Cons(f(a0), nullptr);
+        list<T2> &_node =
+            (_write ? *(*_write = std::make_shared<list<T2>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename list<T2>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// filter f l keeps elements satisfying f. Mixed tail + TMC branches.
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &>
   static list<T1> filter(F0 &&f, const list<T1> &l) {
-    std::shared_ptr<list<T1>> _head{};
-    std::shared_ptr<list<T1>> *_write = &_head;
+    std::optional<list<T1>> _root{};
+    std::shared_ptr<list<T1>> *_write = nullptr;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<list<T1>>(list<T1>::nil());
+        auto _value = list<T1>::nil();
+        (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
         if (f(a0)) {
-          auto _cell =
-              std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename list<T1>::Cons(a0, nullptr);
+          list<T1> &_node = (
+              _write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename list<T1>::Cons>(_node.v_mut()).l;
           _loop_l = crane_raw(a1);
           continue;
         } else {
@@ -262,52 +227,57 @@ struct LoopifyTmc {
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// snoc l x appends x at the end. TMC, base case allocates a cell.
   template <typename T1> static list<T1> snoc(const list<T1> &l, const T1 &x) {
-    std::shared_ptr<list<T1>> _head{};
-    std::shared_ptr<list<T1>> *_write = &_head;
+    std::optional<list<T1>> _root{};
+    std::shared_ptr<list<T1>> *_write = nullptr;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write =
-            std::make_shared<list<T1>>(list<T1>::cons(x, list<T1>::nil()));
+        auto _value = list<T1>::cons(x, list<T1>::nil());
+        (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        auto _cell =
-            std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename list<T1>::Cons(a0, nullptr);
+        list<T1> &_node =
+            (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename list<T1>::Cons>(_node.v_mut()).l;
         _loop_l = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// replicate n x creates n copies of x. Nat recursion producing list.
   template <typename T1> static list<T1> replicate(uint64_t n, const T1 &x) {
-    std::shared_ptr<list<T1>> _head{};
-    std::shared_ptr<list<T1>> *_write = &_head;
-    uint64_t _loop_n = std::move(n);
+    std::optional<list<T1>> _root{};
+    std::shared_ptr<list<T1>> *_write = nullptr;
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        *_write = std::make_shared<list<T1>>(list<T1>::nil());
+        auto _value = list<T1>::nil();
+        (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t m = _loop_n - 1;
-        auto _cell =
-            std::make_shared<list<T1>>(typename list<T1>::Cons(x, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename list<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename list<T1>::Cons(x, nullptr);
+        list<T1> &_node =
+            (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename list<T1>::Cons>(_node.v_mut()).l;
         _loop_n = m;
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// range lo hi creates lo, lo+1, ..., hi-1.
@@ -315,35 +285,40 @@ struct LoopifyTmc {
 
   /// zip_with f l1 l2 combines two lists element-wise. Two varying params.
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static list<T3> zip_with(F0 &&f, const list<T1> &l1, const list<T2> &l2) {
-    std::shared_ptr<list<T3>> _head{};
-    std::shared_ptr<list<T3>> *_write = &_head;
+    std::optional<list<T3>> _root{};
+    std::shared_ptr<list<T3>> *_write = nullptr;
     const list<T2> *_loop_l2 = &l2;
     const list<T1> *_loop_l1 = &l1;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l1->v())) {
-        *_write = std::make_shared<list<T3>>(list<T3>::nil());
+        auto _value = list<T3>::nil();
+        (_write ? *(*_write = std::make_shared<list<T3>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l1->v());
         if (std::holds_alternative<typename list<T2>::Nil>(_loop_l2->v())) {
-          *_write = std::make_shared<list<T3>>(list<T3>::nil());
+          auto _value = list<T3>::nil();
+          (_write ? *(*_write = std::make_shared<list<T3>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a00, a10] =
               std::get<typename list<T2>::Cons>(_loop_l2->v());
-          auto _cell = std::make_shared<list<T3>>(
-              typename list<T3>::Cons(f(a0, a00), nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename list<T3>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename list<T3>::Cons(f(a0, a00), nullptr);
+          list<T3> &_node = (
+              _write ? *(*_write = std::make_shared<list<T3>>(std::move(_cell)))
+                     : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename list<T3>::Cons>(_node.v_mut()).l;
           _loop_l2 = crane_raw(a10);
           _loop_l1 = crane_raw(a1);
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   /// prefix_sums acc l computes running prefix sums.
@@ -351,30 +326,32 @@ struct LoopifyTmc {
 
   /// stutter l duplicates each element: 1,2 -> 1,1,2,2. Nested TMC.
   template <typename T1> static list<T1> stutter(const list<T1> &l) {
-    std::shared_ptr<list<T1>> _head{};
-    std::shared_ptr<list<T1>> *_write = &_head;
+    std::optional<list<T1>> _root{};
+    std::shared_ptr<list<T1>> *_write = nullptr;
     const list<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename list<T1>::Nil>(_loop_l->v())) {
-        *_write = std::make_shared<list<T1>>(list<T1>::nil());
+        auto _value = list<T1>::nil();
+        (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename list<T1>::Cons>(_loop_l->v());
-        auto _cell =
-            std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr));
         auto _cell1 =
             std::make_shared<list<T1>>(typename list<T1>::Cons(a0, nullptr));
-        std::get<typename list<T1>::Cons>(_cell->v_mut()).l = std::move(_cell1);
-        *_write = std::move(_cell);
-        _write = &std::get<typename list<T1>::Cons>(
-                      std::get<typename list<T1>::Cons>((*_write)->v_mut())
-                          .l->v_mut())
-                      .l;
+        auto _cell = typename list<T1>::Cons(a0, std::move(_cell1));
+        list<T1> &_node =
+            (_write ? *(*_write = std::make_shared<list<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write =
+            &std::get<typename list<T1>::Cons>(
+                std::get<typename list<T1>::Cons>(_node.v_mut()).l->v_mut())
+                .l;
         _loop_l = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 

@@ -10,7 +10,9 @@ uint64_t AssocPairList::count(const AssocPairList::t &x) {
   const auto &[a0] = std::get<typename AssocPairList::t::Node>(x.v());
   const List<std::pair<uint64_t, AssocPairList::t>> &a0_value = *a0;
   return (a0_value.template fold_left<uint64_t>(
-              [](uint64_t a, const std::pair<uint64_t, AssocPairList::t> &p) {
+              [](uint64_t a,
+                 const std::pair<uint64_t,
+                                 AssocPairList::t> &p) {
                 return (a + count(p.second));
               },
               UINT64_C(0)) +

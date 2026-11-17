@@ -1,6 +1,8 @@
 #ifndef INCLUDED_WRAPPER_DECL_MERGE
 #define INCLUDED_WRAPPER_DECL_MERGE
 
+#include <cstdint>
+
 struct WrapperDeclMerge {
   struct A {
     struct Nat {

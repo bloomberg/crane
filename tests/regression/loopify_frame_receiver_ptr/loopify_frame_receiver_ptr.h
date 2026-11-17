@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -42,16 +42,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -88,8 +89,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -167,8 +168,8 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -176,55 +177,54 @@ public:
   const variant_t &v() const { return v_; }
 
   String append(String s2) const {
-    std::shared_ptr<String> _head{};
-    std::shared_ptr<String> *_write = &_head;
+    std::optional<String> _root{};
+    std::shared_ptr<String> *_write = nullptr;
     const String *_loop_self = this;
-    String _loop_s2 = std::move(s2);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        *_write = std::make_shared<String>(std::move(_loop_s2));
+        auto _value = std::move(s2);
+        (_write ? *(*_write = std::make_shared<String>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
-        auto _cell =
-            std::make_shared<String>(typename String::String0(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename String::String0>((*_write)->v_mut()).a1;
+        auto _cell = typename String::String0(a0, nullptr);
+        String &_node =
+            (_write ? *(*_write = std::make_shared<String>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename String::String0>(_node.v_mut()).a1;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   String concat(const List<String> &ls) const {
     const String *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
-      const String *_self;
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<String> *ls;
     };
 
-    /// _Cont_Cons: saves [_self, a0], resumes after recursive call, then
-    /// processes rest.
-    struct _Cont_Cons {
-      const String *_self;
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
+    /// rest.
+    struct CraneCont_Cons {
       String a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     String _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self, &ls});
-    /// Loopified concat: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&ls});
+    /// Loopified concat: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const String *_self = _f._self;
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<String> &ls = *_f.ls;
         if (std::holds_alternative<typename List<String>::Nil>(ls.v())) {
           _result = String::emptystring();
@@ -234,13 +234,12 @@ public:
           if (std::holds_alternative<typename List<String>::Nil>(_sv.v())) {
             _result = std::move(a0);
           } else {
-            _stack.emplace_back(_Cont_Cons{_self, a0});
-            _stack.emplace_back(_Enter{crane_raw(_self), crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
-        const String *_self = _f._self;
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         String a0 = std::move(_f.a0);
         _result = a0.append(_self->append(std::move(_result)));
       }

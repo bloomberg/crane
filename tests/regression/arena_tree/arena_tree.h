@@ -1,11 +1,10 @@
 #ifndef INCLUDED_ARENA_TREE
 #define INCLUDED_ARENA_TREE
 
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #define CRANE_ARENA 1
@@ -65,8 +64,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -74,25 +73,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -120,19 +122,19 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Tree(const Tree<_U> &_other)
+  template <typename CraneU>
+  Tree(const Tree<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
+          if (std::holds_alternative<typename Tree<CraneU>::Leaf>(_other.v())) {
             return Leaf{};
           } else {
             const auto &[t1, x, t2] =
-                std::get<typename Tree<_U>::Node>(_other.v());
+                std::get<typename Tree<CraneU>::Node>(_other.v());
             return Node{
                 (t1 ? std::make_shared<Tree<A>>(crane_convert<Tree<A>>(*t1))
                     : nullptr),
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(x);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -147,13 +149,22 @@ public:
   static Tree<A> leaf() { return Tree<A>(Leaf{}); }
 
   static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree<A>(Node{crane::arena_make_shared<Tree<A>>(std::move(t1)),
-                        std::move(x),
-                        crane::arena_make_shared<Tree<A>>(std::move(t2))});
+    return Tree<A>(
+        Node{crane::arena_make_shared<Tree<A>>(std::move(t1)), std::move(x),
+             crane::arena_make_shared<Tree<A>>(std::move(t2))});
   }
 
   // MANIPULATORS
   ~Tree() {
+    if (std::holds_alternative<Leaf>(v_mut())) {
+      return;
+    }
+    if (auto *_alt = std::get_if<Node>(&v_mut())) {
+      if (!((_alt->t1 && _alt->t1.use_count() == 1) ||
+            (_alt->t2 && _alt->t2.use_count() == 1))) {
+        return;
+      }
+    }
     crane::small_vector<std::shared_ptr<Tree<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -178,18 +189,15 @@ public:
 
   Tree(const Tree &) = default;
   Tree &operator=(const Tree &) = default;
-  Tree(Tree &&) noexcept = default;
-  Tree &operator=(Tree &&) noexcept = default;
+  Tree(Tree &&) = default;
+  Tree &operator=(Tree &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
-                                   T1 &>
-  T1 tree_rect(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return f;
     } else {
@@ -199,17 +207,8 @@ public:
     }
   }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Tree<A> &, T1 &, A &, Tree<A> &,
-                                   T1 &>
-  T1 tree_rec(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
-      return f0(*a0, a0->template tree_rec<T1>(f, f0), a1, *a2,
-                a2->template tree_rec<T1>(f, f0));
-    }
+  template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+    return this->template tree_rect<T1>(std::move(f), f0);
   }
 
   Bool0 is_leaf() const {
@@ -224,7 +223,7 @@ public:
     if (std::holds_alternative<typename Tree<A>::Leaf>(this->v())) {
       return Nat::s(Nat::o());
     } else {
-      const auto &[a0, a1, a2] = std::get<typename Tree<A>::Node>(this->v());
+      const auto &[a0, _, a2] = std::get<typename Tree<A>::Node>(this->v());
       return Nat::s(Nat::o()).add(a0->size()).add(a2->size());
     }
   }

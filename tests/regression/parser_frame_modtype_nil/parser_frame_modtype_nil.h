@@ -2,7 +2,6 @@
 #define INCLUDED_PARSER_FRAME_MODTYPE_NIL
 
 #include "obj.h"
-#include <any>
 #include <cstdint>
 #include <deque>
 #include <type_traits>
@@ -38,21 +37,17 @@ template <SymbolTypes Ty> struct DefsFn {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::deque<typename Ty::symbol> &,
-                                   symbols_semty &,
-                                   std::deque<typename Ty::symbol> &>
+    requires std::is_invocable_r_v<
+      T1, F0 &, const std::deque<typename Ty::symbol> &, const symbols_semty &,
+      const std::deque<typename Ty::symbol> &>
   static T1 frame_rect(F0 &&f, const frame &f0) {
     const auto &[pre0, sem0, suf0] = f0;
     return f(pre0, sem0, suf0);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, std::deque<typename Ty::symbol> &,
-                                   symbols_semty &,
-                                   std::deque<typename Ty::symbol> &>
   static T1 frame_rec(F0 &&f, const frame &f0) {
-    const auto &[pre0, sem0, suf0] = f0;
-    return f(pre0, sem0, suf0);
+    return frame_rect<T1>(f, f0);
   }
 
   using stack = std::pair<frame, std::deque<frame>>;
@@ -63,7 +58,7 @@ template <SymbolTypes Ty> struct DefsFn {
     return std::make_pair(f, [](auto _a0, auto _a1) {
       _a1.push_front(_a0);
       return _a1;
-    }(std::move(top), rest));
+    }(std::move(top), std::move(rest)));
   }
 
   static uint64_t tail_lengths(const std::deque<frame> &frs) {
@@ -71,38 +66,41 @@ template <SymbolTypes Ty> struct DefsFn {
       return UINT64_C(0);
     } else {
       const auto &f = frs.front();
-      std::deque<frame> frs_(frs.begin() + 1, frs.end());
-      const auto &[pre, sem, suf0] = f;
+      std::deque<frame> frs_(frs.begin()+1, frs.end());
+      const auto &[_, _, suf0] = f;
       return (static_cast<uint64_t>(suf0.size()) + tail_lengths(frs_));
     }
   }
 };
 
 template <typename M>
-concept T = requires { requires SymbolTypes<typename M::SymTy>; };
+concept T = requires {
+  requires SymbolTypes<typename M::SymTy>;
+};
 
 template <T D> struct ParserFn {
   static uint64_t
   step_stack(const std::pair<typename D::Defs::frame,
                              std::deque<typename D::Defs::frame>> &s) {
     const auto &[f, frs] = s;
-    const auto &[pre, sem, suf0] = f;
+    const auto &[_, _, suf0] = f;
     return (static_cast<uint64_t>(suf0.size()) + D::Defs::tail_lengths(frs));
   }
 
   static uint64_t parse(typename D::SymTy::symbol x) {
-    std::pair<typename D::Defs::frame, std::deque<typename D::Defs::frame>>
-        sk0 = std::make_pair(
-            D::Defs::frame::fr(std::deque<typename D::SymTy::symbol>{},
-                               std::monostate{},
-                               [](auto _a0, auto _a1) {
-                                 _a1.push_front(_a0);
-                                 return _a1;
-                               }(x, std::deque<typename D::SymTy::symbol>{})),
-            std::deque<typename D::Defs::frame>{});
+    std::pair<typename D::Defs::frame,
+              std::deque<typename D::Defs::frame>> sk0 = std::make_pair(
+        D::Defs::frame::fr(
+            std::deque<typename D::SymTy::symbol>{}, std::monostate{},
+            [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(std::move(x), std::deque<typename D::SymTy::symbol>{})),
+        std::deque<typename D::Defs::frame>{});
     return step_stack(std::move(sk0));
   }
 };
+
 enum class Concrete_symbol { SA, SB };
 
 struct ConcreteSymTypes {

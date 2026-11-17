@@ -2,8 +2,10 @@
 #define INCLUDED_CLOSURE_LET_ESCAPE
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <utility>
 
 struct ClosureLetEscape {
   /// A local fixpoint captures a LET-BINDING (not a function parameter)

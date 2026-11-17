@@ -3,9 +3,9 @@
 /// Works: literal argument — no capture needed
 std::string ReadVariableCapture::read_literal() {
   return [&]() -> std::string {
-    std::ifstream file("file.txt"s);
+    std::ifstream file(std::string("file.txt"));
     if (!file) {
-      std::cerr << "Failed to open file " << "file.txt"s << '\n';
+      std::cerr << "Failed to open file " << std::string("file.txt") << '\n';
       return std::string{};
     }
     return std::string(std::istreambuf_iterator<char>(file),
@@ -15,10 +15,11 @@ std::string ReadVariableCapture::read_literal() {
 
 /// Bug: variable argument — path not captured by []() { ... path ... }()
 std::string ReadVariableCapture::read_variable(std::string path) {
+  auto &&_once1 = std::move(path);
   return [&]() -> std::string {
-    std::ifstream file(path);
+    std::ifstream file(_once1);
     if (!file) {
-      std::cerr << "Failed to open file " << path << '\n';
+      std::cerr << "Failed to open file " << _once1 << '\n';
       return std::string{};
     }
     return std::string(std::istreambuf_iterator<char>(file),
@@ -35,10 +36,11 @@ std::string ReadVariableCapture::read_and_check(std::string path) {
     return std::filesystem::exists(std::filesystem::path(path), _ec);
   }();
   if (ok) {
+    auto &&_once1 = std::move(path);
     return [&]() -> std::string {
-      std::ifstream file(path);
+      std::ifstream file(_once1);
       if (!file) {
-        std::cerr << "Failed to open file " << path << '\n';
+        std::cerr << "Failed to open file " << _once1 << '\n';
         return std::string{};
       }
       return std::string(std::istreambuf_iterator<char>(file),

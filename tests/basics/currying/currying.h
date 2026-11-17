@@ -3,7 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -22,18 +22,19 @@ struct Currying {
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator pair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -48,30 +49,26 @@ struct Currying {
   };
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[a0, a1] = p;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return pair_rect<T1, T2, T3>(f, p);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, pair<T1, T2> &>
+    requires std::is_invocable_r_v<T3, F0 &, pair<T1, T2>>
   static T3 curry(F0 &&f, const T1 &a, const T2 &b) {
     return f(pair<T1, T2>::pair0(a, b));
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 uncurry(F0 &&f, const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return pair_rect<T1, T2, T3>(f, p);
   }
 
   static uint64_t pair_add(const pair<uint64_t, uint64_t> &p);
@@ -80,7 +77,7 @@ struct Currying {
   uncurried_add3(const pair<uint64_t, pair<uint64_t, uint64_t>> &p);
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 flip(F0 &&f, const T2 &b, const T1 &a) {
     return f(a, b);
   }

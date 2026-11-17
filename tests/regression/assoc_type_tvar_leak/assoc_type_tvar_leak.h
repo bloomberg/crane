@@ -3,9 +3,9 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,7 +93,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -113,16 +114,24 @@ public:
 /// embedded types must be resolved to the instance's concrete choice, or
 /// they would render as the class's template parameter T1, which is not
 /// in scope inside the instance struct.
-template <typename
-I>concept Elt = requires {
-    typename I::E;
-    { I::elist() } -> std::convertible_to<List<typename I::E>>;
-    { I::ecount(std::declval<List<typename I::E>>()) } -> std::convertible_to<uint64_t>;
-  } && (requires {
-    { I::e0() } -> std::convertible_to<typename I::E>;
-  } || requires {
-    { I::e0 } -> std::convertible_to<typename I::E>;
-  });
+template <typename I>
+concept Elt = requires {
+  typename I::E;
+  { I::elist() } -> std::convertible_to<List<typename I::E>>;
+  {
+    I::ecount(std::declval<List<typename I::E>>())
+  } -> std::convertible_to<uint64_t>;
+} && (requires {
+  {
+    I::e0()
+  }
+  -> std::convertible_to<typename I::E>;
+} || requires {
+  {
+    I::e0
+  }
+  -> std::convertible_to<typename I::E>;
+});
 
 struct AssocTypeTvarLeak {
   using E = crane::obj;
@@ -130,7 +139,7 @@ struct AssocTypeTvarLeak {
   struct EN {
     using E = uint64_t;
 
-    static uint64_t e0() { return UINT64_C(0); }
+    constexpr static uint64_t e0() { return UINT64_C(0); }
 
     static List<uint64_t> elist() {
       return List<uint64_t>::cons(
@@ -149,7 +158,7 @@ struct AssocTypeTvarLeak {
 
   static_assert(Elt<EN>);
 
-  template <Elt _tcI0> static uint64_t go() {
+  template <Elt _tcI0> constexpr static uint64_t go() {
     return _tcI0::ecount(
         List<typename _tcI0::E>::cons(_tcI0::e0(), _tcI0::elist()));
   }

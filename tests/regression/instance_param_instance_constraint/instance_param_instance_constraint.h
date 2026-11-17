@@ -2,6 +2,7 @@
 #define INCLUDED_INSTANCE_PARAM_INSTANCE_CONSTRAINT
 
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
 
@@ -17,7 +18,7 @@ concept Def = requires {
 
 struct InstanceParamInstanceConstraint {
   struct DNat {
-    static uint64_t dflt() { return UINT64_C(9); }
+    constexpr static uint64_t dflt() { return UINT64_C(9); }
   };
 
   static_assert(Def<DNat, uint64_t>);

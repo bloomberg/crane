@@ -7,7 +7,7 @@
 int main() {
   static_assert(std::is_same_v<decltype(AsciiAsChar::odd_code('a')), bool>);
   assert(AsciiAsChar::odd_code('a'));
-  assert(AsciiAsChar::check(std::monostate{}));
+  assert(AsciiAsChar::check());
   std::cout << "All ascii_as_char tests passed!" << std::endl;
   return 0;
 }

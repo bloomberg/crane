@@ -1,4 +1,4 @@
-.PHONY: build install clean test test-quick test-verbose test-sequential test-raw test-one test-one-verbose test-folder test-folder-verbose test-list theories plugin all extract format
+.PHONY: build install clean test test-quick test-verbose test-sequential test-raw test-one test-one-verbose test-folder test-folder-verbose test-list check-headers loopify-compile-census theories plugin all extract format
 
 # Default target: build plugin and theories only (not tests)
 build: plugin theories
@@ -22,7 +22,14 @@ extract: build
 		fi; \
 	done; \
 	if [ -n "$$vo_targets" ]; then \
-		dune build $$vo_targets 2>/dev/null || true; \
+		mkdir -p _build; \
+		dune build $$vo_targets 2> _build/extract-errors.log || true; \
+		n=$$(grep -c '^Error' _build/extract-errors.log || true); \
+		if [ "$$n" != 0 ]; then \
+			echo "Extraction: $$n errors, see _build/extract-errors.log"; \
+			grep -B1 '^Error' _build/extract-errors.log | grep '^File' || true; \
+			grep '^Error: Crane IR check' _build/extract-errors.log || true; \
+		fi; \
 	fi
 
 # Build just the plugin
@@ -43,6 +50,7 @@ install:
 test: extract
 	@dune build @unit_tests/runtest
 	@scripts/check-module-deps.sh
+	@scripts/loopify-census.sh
 	@dune build bin/test_runner/main.exe
 	@./_build/default/bin/test_runner/main.exe
 
@@ -186,10 +194,17 @@ test-list:
 		fi; \
 	done | sort
 
+# Compile every generated header on its own, as a consumer would include it
+check-headers:
+	@scripts/check-headers-standalone.sh
+
+# Extract, compile and run the corpus with Loopify on everywhere, against
+# tests/loopify-compile-census.golden (about 10-20 minutes)
+loopify-compile-census: build
+	@scripts/loopify-census.sh --compile
+
 # Format source code
 format:
-	@echo "Formatting C++ test files..."
-	@find tests -name '*.t.cpp' -exec clang-format -i {} +
 	@echo "Formatting OCaml files..."
 	@failed=""; \
 	for f in $$(find src bin -name '*.ml' -o -name '*.mli'); do \
@@ -233,6 +248,8 @@ help:
 	@echo "  make test-folder FOLDER=x       - Run all tests in a folder (e.g., FOLDER=wip)"
 	@echo "  make test-folder-verbose FOLDER - Run folder tests with error details"
 	@echo "  make test-list                  - List all available tests"
+	@echo "  make check-headers        - Compile each generated header standalone"
+	@echo "  make loopify-compile-census - Compile and run the corpus with Loopify forced on"
 	@echo "  make all                  - Build everything including test executables"
 	@echo "  make install              - Install the plugin"
 	@echo "  make format               - Format C++ test files and OCaml source"

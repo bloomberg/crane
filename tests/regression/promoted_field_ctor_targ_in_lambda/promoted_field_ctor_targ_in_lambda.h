@@ -4,13 +4,11 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -25,8 +23,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -75,8 +72,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -131,16 +128,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -177,8 +175,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -186,24 +184,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat length() const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<Nat>(Nat::o());
+        auto _value = Nat::o();
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -211,28 +213,39 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
 
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::zero() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::ptr>;
-  });
-template <typename
-I>concept MemState = requires {
-    typename I::state;
-    { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::initial_state() } -> std::convertible_to<typename I::state>;
-  } || requires {
-    { I::initial_state } -> std::convertible_to<typename I::state>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::zero()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
+template <typename I>
+concept MemState = requires {
+  typename I::state;
+  { I::size_of(std::declval<typename I::state>()) } -> std::convertible_to<Nat>;
+} && (requires {
+  {
+    I::initial_state()
+  }
+  -> std::convertible_to<typename I::state>;
+} || requires {
+  {
+    I::initial_state
+  }
+  -> std::convertible_to<typename I::state>;
+});
 
 struct PromotedFieldCtorTargInLambda {
   using ptr = crane::obj;
@@ -268,15 +281,15 @@ struct PromotedFieldCtorTargInLambda {
 
     explicit memS(Mget _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
-    memS(const memS<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    memS(const memS<CraneU0, CraneU1> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename memS<_U0, _U1>::Mret>(
+            if (std::holds_alternative<typename memS<CraneU0, CraneU1>::Mret>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename memS<_U0, _U1>::Mret>(_other.v());
+                  std::get<typename memS<CraneU0, CraneU1>::Mret>(_other.v());
               return Mret{[&]() -> X {
-                if constexpr (crane_convertible<X, const _U1 &>) {
+                if constexpr (crane_convertible<X, const CraneU1 &>) {
                   return crane_convert<X>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -284,14 +297,14 @@ struct PromotedFieldCtorTargInLambda {
                 }
               }()};
             } else {
-              if (std::holds_alternative<typename memS<_U0, _U1>::Mub>(
+              if (std::holds_alternative<typename memS<CraneU0, CraneU1>::Mub>(
                       _other.v())) {
                 const auto &[a0] =
-                    std::get<typename memS<_U0, _U1>::Mub>(_other.v());
+                    std::get<typename memS<CraneU0, CraneU1>::Mub>(_other.v());
                 return Mub{a0};
               } else {
                 const auto &[a0] =
-                    std::get<typename memS<_U0, _U1>::Mget>(_other.v());
+                    std::get<typename memS<CraneU0, CraneU1>::Mget>(_other.v());
                 return Mget{crane_convert<crane::fn<memS<S, X>(S)>>(a0)};
               }
             }
@@ -313,13 +326,12 @@ struct PromotedFieldCtorTargInLambda {
   };
 
   template <typename T1, typename T2, typename T3>
-  static T3
-  memS_rect(std::type_identity_t<crane::fn<T3(T2)>> f,
-            std::type_identity_t<crane::fn<T3(Nat)>> f0,
-            std::type_identity_t<
-                crane::fn<T3(crane::fn<memS<T1, T2>(T1)>, crane::fn<T3(T1)>)>>
-                f1,
-            const memS<T1, T2> &m) {
+  static T3 memS_rect(
+      const std::type_identity_t<crane::fn<T3(T2)>> &f,
+      const std::type_identity_t<crane::fn<T3(Nat)>> &f0,
+      const std::type_identity_t<
+          crane::fn<T3(crane::fn<memS<T1, T2>(T1)>, crane::fn<T3(T1)>)>> &f1,
+      const memS<T1, T2> &m) {
     if (std::holds_alternative<typename memS<T1, T2>::Mret>(m.v())) {
       const auto &[a0] = std::get<typename memS<T1, T2>::Mret>(m.v());
       return f(a0);
@@ -334,26 +346,10 @@ struct PromotedFieldCtorTargInLambda {
     }
   }
 
-  template <typename T1, typename T2, typename T3>
-  static T3
-  memS_rec(std::type_identity_t<crane::fn<T3(T2)>> f,
-           std::type_identity_t<crane::fn<T3(Nat)>> f0,
-           std::type_identity_t<
-               crane::fn<T3(crane::fn<memS<T1, T2>(T1)>, crane::fn<T3(T1)>)>>
-               f1,
-           const memS<T1, T2> &m) {
-    if (std::holds_alternative<typename memS<T1, T2>::Mret>(m.v())) {
-      const auto &[a0] = std::get<typename memS<T1, T2>::Mret>(m.v());
-      return f(a0);
-    } else if (std::holds_alternative<typename memS<T1, T2>::Mub>(m.v())) {
-      const auto &[a0] = std::get<typename memS<T1, T2>::Mub>(m.v());
-      return f0(a0);
-    } else {
-      const auto &[a0] = std::get<typename memS<T1, T2>::Mget>(m.v());
-      return f1(a0, [=](const T1 &y) {
-        return memS_rec<T1, T2, T3>(f, f0, f1, a0(y));
-      });
-    }
+  template <typename T1, typename T2, typename T3, typename F0, typename F1,
+            typename F2>
+  static T3 memS_rec(F0 &&f, F1 &&f0, F2 &&f1, const memS<T1, T2> &m) {
+    return memS_rect<T1, T2, T3>(f, f0, f1, m);
   }
 
   template <typename T1, typename T2, typename T3>
@@ -368,22 +364,23 @@ struct PromotedFieldCtorTargInLambda {
       return memS<T1, T3>::mub(a0);
     } else {
       const auto &[a0] = std::get<typename memS<T1, T2>::Mget>(c.v());
-      return memS<T1, T3>::mget(
-          [=](const T1 &s) { return memS_bind<T1, T2, T3>(a0(s), k); });
+      return memS<T1, T3>::mget([=, k = std::move(k)](const T1 &s) {
+        return memS_bind<T1, T2, T3>(a0(s), k);
+      });
     }
   }
 
   template <typename T1> struct memS_mon {
-    template <typename _A0> using m = memS<T1, _A0>;
+    template <typename CraneA0> using m = memS<T1, CraneA0>;
 
-    template <typename _A0> static memS<T1, _A0> ret(_A0 x) {
-      return memS<T1, _A0>::mret(std::move(x));
+    template <typename CraneA0> static memS<T1, CraneA0> ret(CraneA0 x) {
+      return memS<T1, CraneA0>::mret(std::move(x));
     }
 
-    template <typename _A0, typename _A1>
-    static memS<T1, _A1> bind(memS<T1, _A0> a0,
-                              crane::fn<memS<T1, _A1>(_A0)> a1) {
-      return memS_bind<T1, _A0, _A1>(std::move(a0), std::move(a1));
+    template <typename CraneA0, typename CraneA1>
+    static memS<T1, CraneA1> bind(memS<T1, CraneA0> a0,
+                                  crane::fn<memS<T1, CraneA1>(CraneA0)> a1) {
+      return memS_bind<T1, CraneA0, CraneA1>(std::move(a0), std::move(a1));
     }
   };
 
@@ -407,23 +404,24 @@ struct PromotedFieldCtorTargInLambda {
       return St<typename _tcI0::ptr>{List<typename _tcI0::ptr>::nil()};
     }
 
-    static Nat size_of(St<typename _tcI0::ptr> s) { return s.mem.length(); }
+    static Nat size_of(St<typename _tcI0::ptr> s) {
+      return std::move(s).mem.length();
+    }
   };
 
   template <Params _tcI0>
   static memM<typename StateV<_tcI0>::state, Nat> read_size(const Nat &msg) {
-    return Monad0::template bind<memS_mon<St<typename _tcI0::ptr>>,
-                                 St<typename _tcI0::ptr>, Nat>(
+    return memS_mon<St<typename _tcI0::ptr>>::template bind<
+        St<typename _tcI0::ptr>, Nat>(
         get<St<typename _tcI0::ptr>>(),
-        [=](const St<typename _tcI0::ptr> &s)
-            -> memS<typename StateV<_tcI0>::state, Nat> {
+        [=](const St<typename _tcI0::ptr> &s) -> memS<
+            typename StateV<_tcI0>::state, Nat> {
           auto &&_sv = StateV<_tcI0>::size_of(s);
           if (std::holds_alternative<typename Nat::O>(_sv.v())) {
             return memS<typename StateV<_tcI0>::state, Nat>::mub(msg);
           } else {
             const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-            return Monad0::template ret<memS_mon<St<typename _tcI0::ptr>>, Nat>(
-                *a0);
+            return memS_mon<St<typename _tcI0::ptr>>::template ret<Nat>(*a0);
           }
         });
   }
@@ -481,7 +479,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);

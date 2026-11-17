@@ -47,6 +47,10 @@ case "$OPT_LEVEL" in
         ;;
 esac
 
+# The language standard the generated code is written to.  It names the
+# precompiled header too: a header built under another standard is refused.
+CXX_STD=c++2c
+
 # Precompiled header support
 PCH_SRC="$THEORIES_CPP/crane_pch.h"
 DEFAULT_PCH_DIR="$PROJECT_ROOT/_build/pch"
@@ -54,13 +58,37 @@ if [ "${GITHUB_ACTIONS:-}" = "true" ]; then
     DEFAULT_PCH_DIR="${RUNNER_TEMP:-${TMPDIR:-/tmp}}/crane-pch"
 fi
 PCH_DIR="${CRANE_PCH_DIR:-$DEFAULT_PCH_DIR}"
-PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}.h.pch"
+PCH_FILE="$PCH_DIR/crane_pch_${CXX_STD}_${OPT_LEVEL}.h.pch"
 
 # Detect Homebrew LLVM
 HB_LLVM="${HB_LLVM:-/opt/homebrew/opt/llvm}"
 
+# The test suite compiles with CRANE_STRICT_ARITY, which takes away
+# [crane::fn]'s implicit conversion between the two groupings of a chain of
+# arrows (theories/cpp/fn.h): generated code writes every such crossing
+# itself, and one it misses is a compile error here rather than a silent
+# adapter in a user's build.
+
 # Build the compiler command
-if [ -d "$HB_LLVM" ]; then
+if [ -n "${CXX:-}" ]; then
+    CXX_FLAGS=(
+        -std="$CXX_STD"
+        -"$OPT_LEVEL"
+        -fbracket-depth=1024
+        -I .
+        -I "$THEORIES_CPP"
+        -Wall -Wextra -Wpedantic -Wconversion -Wfloat-conversion
+        -Wsign-conversion -Wstring-compare -Wformat-overflow
+        -Wno-stringop-overflow -Wstringop-overflow -Wstringop-overflow=4
+        -Wno-unknown-warning-option -Wno-unused-function
+        -Wno-unused-local-typedef -Wno-shorten-64-to-32
+        -Wno-unused-variable -Wno-unused-value
+        -Wno-constant-conversion -Wno-sign-conversion
+        -Wno-implicit-int-conversion -Werror
+        -DCRANE_STRICT_ARITY
+    )
+    LINK_FLAGS=()
+elif [ -d "$HB_LLVM" ]; then
     CXX="$HB_LLVM/bin/clang++"
     # On macOS, Homebrew clang may not find the SDK automatically
     SYSROOT_FLAGS=()
@@ -71,7 +99,7 @@ if [ -d "$HB_LLVM" ]; then
         fi
     fi
     CXX_FLAGS=(
-        -std=c++23
+        -std="$CXX_STD"
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         "${SYSROOT_FLAGS[@]}"
@@ -88,6 +116,7 @@ if [ -d "$HB_LLVM" ]; then
         -Wno-unused-variable -Wno-unused-value
         -Wno-constant-conversion -Wno-sign-conversion
         -Wno-implicit-int-conversion -Werror
+        -DCRANE_STRICT_ARITY
     )
     LINK_FLAGS=(
         -L"$HB_LLVM/lib"
@@ -99,7 +128,7 @@ if [ -d "$HB_LLVM" ]; then
 else
     CXX="clang++"
     CXX_FLAGS=(
-        -std=c++23
+        -std="$CXX_STD"
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         -I .
@@ -112,6 +141,7 @@ else
         -Wno-unused-variable -Wno-unused-value
         -Wno-constant-conversion -Wno-sign-conversion
         -Wno-implicit-int-conversion -Werror
+        -DCRANE_STRICT_ARITY
     )
     LINK_FLAGS=()
 fi
@@ -139,7 +169,7 @@ case "$SANITIZE_SPEC" in
             -fno-omit-frame-pointer
         )
         # Use a separate PCH for sanitizer builds (different flags = different PCH)
-        PCH_FILE="$PCH_DIR/crane_pch_${OPT_LEVEL}_san.h.pch"
+        PCH_FILE="$PCH_DIR/crane_pch_${CXX_STD}_${OPT_LEVEL}_san.h.pch"
         ;;
     *)
         echo "Error: invalid CRANE_CPP_SANITIZE='$CRANE_CPP_SANITIZE' (expected address, undefined, address,undefined, 1, or empty)" >&2

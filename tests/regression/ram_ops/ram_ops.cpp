@@ -78,9 +78,9 @@ RamOps::chip_port RamOps::upd_port_in_chip(const RamOps::chip_port &,
   return chip_port{(UINT64_C(16) ? v % UINT64_C(16) : v)};
 }
 
-RamOps::bank_port RamOps::upd_chip_in_bank_port(const RamOps::bank_port &bk,
-                                                uint64_t c,
-                                                const RamOps::chip_port &ch) {
+RamOps::bank_port
+RamOps::upd_chip_in_bank_port(const RamOps::bank_port &bk, uint64_t c,
+                              const RamOps::chip_port &ch) {
   return bank_port{
       update_nth_port<RamOps::chip_port>(c, ch, bk.bank_chips_port)};
 }
@@ -232,9 +232,9 @@ RamOps::reg_frame RamOps::upd_main_in_reg_frame(const List<uint64_t> &rg,
   return update_nth_frame<uint64_t>(i, v, rg);
 }
 
-RamOps::chip_frame RamOps::upd_reg_in_chip_frame(const List<List<uint64_t>> &ch,
-                                                 uint64_t r,
-                                                 const List<uint64_t> &rg) {
+RamOps::chip_frame
+RamOps::upd_reg_in_chip_frame(const List<List<uint64_t>> &ch, uint64_t r,
+                              const List<uint64_t> &rg) {
   return update_nth_frame<RamOps::reg_frame>(r, rg, ch);
 }
 

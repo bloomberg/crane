@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TODO_INLINE_CUSTOM_SYMBOL
 #define INCLUDED_TODO_INLINE_CUSTOM_SYMBOL
 
+#include <cstdint>
 #include <todo_inline_custom_symbol_support.h>
 
 struct TodoInlineCustomSymbol {

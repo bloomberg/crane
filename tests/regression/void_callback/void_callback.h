@@ -2,24 +2,17 @@
 #define INCLUDED_VOID_CALLBACK
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
+#include <cstdint>
 #include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 template <typename A> struct List;
 
@@ -46,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -92,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -104,12 +98,11 @@ public:
 struct VoidCallback {
   /// 1. Pure HOF with void callback — the callback returns unit
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static void for_each(F0 &&f, const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return;
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+      const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       for_each(f, *a1);
       return;
     }
@@ -125,14 +118,15 @@ struct VoidCallback {
   }();
 
   /// 2. Monadic for-each: callback returns itree ioE unit
-  static void for_each_m(crane::fn<void(uint64_t)> f,
-                         const List<uint64_t> &xs) {
+  template <typename F0>
+    requires std::is_invocable_r_v<void, F0 &, const uint64_t &>
+  static void for_each_m(F0 &&f, const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return;
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       f(a0);
-      for_each_m(std::move(f), *a1);
+      for_each_m(f, *a1);
       return;
     }
   }
@@ -140,27 +134,26 @@ struct VoidCallback {
   static void test_for_each_m();
   /// 3. Pure function returning unit, used in let
   static void side_effect_pure(uint64_t _x);
-  static inline const uint64_t use_side_effect = UINT64_C(42);
+  static constexpr uint64_t use_side_effect = UINT64_C(42);
 
   /// 4. Callback that ignores argument and returns nat
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
   static uint64_t ignore_and_count(F0 &&f, const List<uint64_t> &xs) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+      const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
       return (ignore_and_count(f, *a1) + 1);
     }
   }
 
   static inline const uint64_t test_ignore = ignore_and_count(
-      print_nat,
-      List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
+      print_nat, List<uint64_t>::cons(
+                     UINT64_C(1),
+                     List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3),
+                                          List<uint64_t>::nil()))));
 
   /// 5. Nested void callbacks
   template <typename F0>
@@ -177,9 +170,9 @@ struct VoidCallback {
 
   /// 6. Void function as argument to polymorphic function
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
-  static T2 apply_to(F0 &&f, T1 x0_) {
-    return f(std::move(x0_));
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
+  static T2 apply_to(F0 &&f, const T1 &x0_) {
+    return f(x0_);
   }
 
   static inline const std::monostate test_apply_to_void = []() {

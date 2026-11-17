@@ -1,16 +1,11 @@
 #ifndef INCLUDED_COUNT_DOWN
 #define INCLUDED_COUNT_DOWN
 
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
+#include <cstdint>
 #include <iostream>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 enum class Comparison;
 enum class Comparison { EQ, LT, GT };

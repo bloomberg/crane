@@ -5,6 +5,7 @@
 #include "small_vector.h"
 #include <algorithm>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -56,6 +57,17 @@ struct LoopifyMultiRecursion {
 
     // MANIPULATORS
     ~quadtree() {
+      if (std::holds_alternative<QLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<QQuad>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<quadtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<QQuad>(&_v)) {
@@ -86,8 +98,8 @@ struct LoopifyMultiRecursion {
 
     quadtree(const quadtree &) = default;
     quadtree &operator=(const quadtree &) = default;
-    quadtree(quadtree &&) noexcept = default;
-    quadtree &operator=(quadtree &&) noexcept = default;
+    quadtree(quadtree &&) = default;
+    quadtree &operator=(quadtree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -96,72 +108,70 @@ struct LoopifyMultiRecursion {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
-                                   quadtree &, T1 &, quadtree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1
   quadtree_rect(F0 &&f, F1 &&f0,
-                const quadtree &q) { /// _Enter: captures varying parameters for
-                                     /// each recursive call.
-
-    struct _Enter {
+                const quadtree &q) { /// CraneEnter: captures varying parameters
+                                     /// for each recursive call.
+    struct CraneEnter {
       const quadtree *q;
     };
 
-    /// _Cont_QQuad: saves [a0, a1, a2, a3], resumes after recursive call, then
-    /// processes rest.
-    struct _Cont_QQuad {
+    /// CraneCont_QQuad: saves [a0, a1, a2, a3], resumes after recursive call,
+    /// then processes rest.
+    struct CraneCont_QQuad {
       std::shared_ptr<quadtree> a0;
       const quadtree *a1;
       const quadtree *a2;
       const quadtree *a3;
     };
 
-    /// _Cont_QQuad_1: saves [_tmp4, a0, a1, a2, a3], resumes after recursive
-    /// call, then processes rest.
-    struct _Cont_QQuad_1 {
-      T1 _tmp4;
-      std::shared_ptr<quadtree> a0;
-      const quadtree *a1;
-      const quadtree *a2;
-      const quadtree *a3;
-    };
-
-    /// _Cont_QQuad_2: saves [_tmp3, _tmp4, a0, a1, a2, a3], resumes after
+    /// CraneCont_QQuad_1: saves [a0, a1, a2, a3, _tmp4], resumes after
     /// recursive call, then processes rest.
-    struct _Cont_QQuad_2 {
-      T1 _tmp3;
-      T1 _tmp4;
+    struct CraneCont_QQuad_1 {
       std::shared_ptr<quadtree> a0;
       const quadtree *a1;
       const quadtree *a2;
       const quadtree *a3;
+      T1 _tmp4;
     };
 
-    /// _Cont_QQuad_3: saves [_tmp2, _tmp3, _tmp4, a0, a1, a2, a3], resumes
+    /// CraneCont_QQuad_2: saves [a0, a1, a2, a3, _tmp4, _tmp3], resumes after
+    /// recursive call, then processes rest.
+    struct CraneCont_QQuad_2 {
+      std::shared_ptr<quadtree> a0;
+      const quadtree *a1;
+      const quadtree *a2;
+      const quadtree *a3;
+      T1 _tmp4;
+      T1 _tmp3;
+    };
+
+    /// CraneCont_QQuad_3: saves [a0, a1, a2, a3, _tmp4, _tmp3, _tmp2], resumes
     /// after recursive call, then processes rest.
-    struct _Cont_QQuad_3 {
-      T1 _tmp2;
-      T1 _tmp3;
-      T1 _tmp4;
+    struct CraneCont_QQuad_3 {
       std::shared_ptr<quadtree> a0;
       const quadtree *a1;
       const quadtree *a2;
       const quadtree *a3;
+      T1 _tmp4;
+      T1 _tmp3;
+      T1 _tmp2;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_QQuad, _Cont_QQuad_1,
-                                _Cont_QQuad_2, _Cont_QQuad_3>;
+    using CraneFrame =
+        std::variant<CraneEnter, CraneCont_QQuad, CraneCont_QQuad_1,
+                     CraneCont_QQuad_2, CraneCont_QQuad_3>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&q});
-    /// Loopified quadtree_rect: _Enter -> _Cont_QQuad -> _Cont_QQuad_1 ->
-    /// _Cont_QQuad_2 -> _Cont_QQuad_3.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&q});
+    /// Loopified quadtree_rect: CraneEnter -> CraneCont_QQuad ->
+    /// CraneCont_QQuad_1 -> CraneCont_QQuad_2 -> CraneCont_QQuad_3.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const quadtree &q = *_f.q;
         if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
           const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
@@ -170,40 +180,41 @@ struct LoopifyMultiRecursion {
           const auto &[a0, a1, a2, a3] =
               std::get<typename quadtree::QQuad>(q.v());
           _stack.emplace_back(
-              _Cont_QQuad{a0, crane_raw(a1), crane_raw(a2), crane_raw(a3)});
-          _stack.emplace_back(_Enter{crane_raw(a0)});
+              CraneCont_QQuad{a0, crane_raw(a1), crane_raw(a2), crane_raw(a3)});
+          _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<_Cont_QQuad>(_frame)) {
-        auto _f = std::move(std::get<_Cont_QQuad>(_frame));
+      } else if (std::holds_alternative<CraneCont_QQuad>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_QQuad>(_frame));
         std::shared_ptr<quadtree> a0 = std::move(_f.a0);
         const quadtree &a1 = *_f.a1;
         const quadtree &a2 = *_f.a2;
         const quadtree &a3 = *_f.a3;
         _stack.emplace_back(
-            _Cont_QQuad_1{std::move(_result), std::move(a0), &a1, &a2, &a3});
-        _stack.emplace_back(_Enter{&a1});
-      } else if (std::holds_alternative<_Cont_QQuad_1>(_frame)) {
-        auto _f = std::move(std::get<_Cont_QQuad_1>(_frame));
-        std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-        const quadtree &a1 = *_f.a1;
-        const quadtree &a2 = *_f.a2;
-        const quadtree &a3 = *_f.a3;
-        _stack.emplace_back(_Cont_QQuad_2{std::move(_result),
-                                          std::move(_f._tmp4), std::move(a0),
-                                          &a1, &a2, &a3});
-        _stack.emplace_back(_Enter{&a2});
-      } else if (std::holds_alternative<_Cont_QQuad_2>(_frame)) {
-        auto _f = std::move(std::get<_Cont_QQuad_2>(_frame));
+            CraneCont_QQuad_1{std::move(a0), &a1, &a2, &a3,
+                              std::move(_result)});
+        _stack.emplace_back(CraneEnter{&a1});
+      } else if (std::holds_alternative<CraneCont_QQuad_1>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_QQuad_1>(_frame));
         std::shared_ptr<quadtree> a0 = std::move(_f.a0);
         const quadtree &a1 = *_f.a1;
         const quadtree &a2 = *_f.a2;
         const quadtree &a3 = *_f.a3;
         _stack.emplace_back(
-            _Cont_QQuad_3{std::move(_result), std::move(_f._tmp3),
-                          std::move(_f._tmp4), std::move(a0), &a1, &a2, &a3});
-        _stack.emplace_back(_Enter{&a3});
+            CraneCont_QQuad_2{std::move(a0), &a1, &a2, &a3, std::move(_f._tmp4),
+                              std::move(_result)});
+        _stack.emplace_back(CraneEnter{&a2});
+      } else if (std::holds_alternative<CraneCont_QQuad_2>(_frame)) {
+        auto _f = std::move(std::get<CraneCont_QQuad_2>(_frame));
+        std::shared_ptr<quadtree> a0 = std::move(_f.a0);
+        const quadtree &a1 = *_f.a1;
+        const quadtree &a2 = *_f.a2;
+        const quadtree &a3 = *_f.a3;
+        _stack.emplace_back(
+            CraneCont_QQuad_3{std::move(a0), &a1, &a2, &a3, std::move(_f._tmp4),
+                              std::move(_f._tmp3), std::move(_result)});
+        _stack.emplace_back(CraneEnter{&a3});
       } else {
-        auto _f = std::move(std::get<_Cont_QQuad_3>(_frame));
+        auto _f = std::move(std::get<CraneCont_QQuad_3>(_frame));
         std::shared_ptr<quadtree> a0 = std::move(_f.a0);
         const quadtree &a1 = *_f.a1;
         const quadtree &a2 = *_f.a2;
@@ -216,123 +227,8 @@ struct LoopifyMultiRecursion {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, quadtree &, T1 &, quadtree &, T1 &,
-                                   quadtree &, T1 &, quadtree &, T1 &>
-  static T1
-  quadtree_rec(F0 &&f, F1 &&f0,
-               const quadtree &q) { /// _Enter: captures varying parameters for
-                                    /// each recursive call.
-
-    struct _Enter {
-      const quadtree *q;
-    };
-
-    /// _Cont_QQuad: saves [a0, a1, a2, a3], resumes after recursive call, then
-    /// processes rest.
-    struct _Cont_QQuad {
-      std::shared_ptr<quadtree> a0;
-      const quadtree *a1;
-      const quadtree *a2;
-      const quadtree *a3;
-    };
-
-    /// _Cont_QQuad_1: saves [_tmp4, a0, a1, a2, a3], resumes after recursive
-    /// call, then processes rest.
-    struct _Cont_QQuad_1 {
-      T1 _tmp4;
-      std::shared_ptr<quadtree> a0;
-      const quadtree *a1;
-      const quadtree *a2;
-      const quadtree *a3;
-    };
-
-    /// _Cont_QQuad_2: saves [_tmp3, _tmp4, a0, a1, a2, a3], resumes after
-    /// recursive call, then processes rest.
-    struct _Cont_QQuad_2 {
-      T1 _tmp3;
-      T1 _tmp4;
-      std::shared_ptr<quadtree> a0;
-      const quadtree *a1;
-      const quadtree *a2;
-      const quadtree *a3;
-    };
-
-    /// _Cont_QQuad_3: saves [_tmp2, _tmp3, _tmp4, a0, a1, a2, a3], resumes
-    /// after recursive call, then processes rest.
-    struct _Cont_QQuad_3 {
-      T1 _tmp2;
-      T1 _tmp3;
-      T1 _tmp4;
-      std::shared_ptr<quadtree> a0;
-      const quadtree *a1;
-      const quadtree *a2;
-      const quadtree *a3;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont_QQuad, _Cont_QQuad_1,
-                                _Cont_QQuad_2, _Cont_QQuad_3>;
-    T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&q});
-    /// Loopified quadtree_rec: _Enter -> _Cont_QQuad -> _Cont_QQuad_1 ->
-    /// _Cont_QQuad_2 -> _Cont_QQuad_3.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const quadtree &q = *_f.q;
-        if (std::holds_alternative<typename quadtree::QLeaf>(q.v())) {
-          const auto &[a0] = std::get<typename quadtree::QLeaf>(q.v());
-          _result = f(a0);
-        } else {
-          const auto &[a0, a1, a2, a3] =
-              std::get<typename quadtree::QQuad>(q.v());
-          _stack.emplace_back(
-              _Cont_QQuad{a0, crane_raw(a1), crane_raw(a2), crane_raw(a3)});
-          _stack.emplace_back(_Enter{crane_raw(a0)});
-        }
-      } else if (std::holds_alternative<_Cont_QQuad>(_frame)) {
-        auto _f = std::move(std::get<_Cont_QQuad>(_frame));
-        std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-        const quadtree &a1 = *_f.a1;
-        const quadtree &a2 = *_f.a2;
-        const quadtree &a3 = *_f.a3;
-        _stack.emplace_back(
-            _Cont_QQuad_1{std::move(_result), std::move(a0), &a1, &a2, &a3});
-        _stack.emplace_back(_Enter{&a1});
-      } else if (std::holds_alternative<_Cont_QQuad_1>(_frame)) {
-        auto _f = std::move(std::get<_Cont_QQuad_1>(_frame));
-        std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-        const quadtree &a1 = *_f.a1;
-        const quadtree &a2 = *_f.a2;
-        const quadtree &a3 = *_f.a3;
-        _stack.emplace_back(_Cont_QQuad_2{std::move(_result),
-                                          std::move(_f._tmp4), std::move(a0),
-                                          &a1, &a2, &a3});
-        _stack.emplace_back(_Enter{&a2});
-      } else if (std::holds_alternative<_Cont_QQuad_2>(_frame)) {
-        auto _f = std::move(std::get<_Cont_QQuad_2>(_frame));
-        std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-        const quadtree &a1 = *_f.a1;
-        const quadtree &a2 = *_f.a2;
-        const quadtree &a3 = *_f.a3;
-        _stack.emplace_back(
-            _Cont_QQuad_3{std::move(_result), std::move(_f._tmp3),
-                          std::move(_f._tmp4), std::move(a0), &a1, &a2, &a3});
-        _stack.emplace_back(_Enter{&a3});
-      } else {
-        auto _f = std::move(std::get<_Cont_QQuad_3>(_frame));
-        std::shared_ptr<quadtree> a0 = std::move(_f.a0);
-        const quadtree &a1 = *_f.a1;
-        const quadtree &a2 = *_f.a2;
-        const quadtree &a3 = *_f.a3;
-        _result = f0(*a0, std::move(_f._tmp4), a1, std::move(_f._tmp3), a2,
-                     std::move(_f._tmp2), a3, std::move(_result));
-      }
-    }
-    return _result;
+  static T1 quadtree_rec(F0 &&f, F1 &&f0, const quadtree &q) {
+    return quadtree_rect<T1>(f, f0, q);
   }
 
   static uint64_t quad_count_leaves(const quadtree &t);

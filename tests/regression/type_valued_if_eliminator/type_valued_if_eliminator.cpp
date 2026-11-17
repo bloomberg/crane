@@ -12,6 +12,6 @@ Nat TypeValuedIfEliminator::size(bool b, TypeValuedIfEliminator::sel x) {
   if (b) {
     return crane::any_cast<Nat>(std::move(x));
   } else {
-    return List<Nat>(crane::any_cast<List<crane::obj>>(x)).length();
+    return List<Nat>(crane::any_cast<List<crane::obj>>(std::move(x))).length();
   }
 }

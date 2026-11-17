@@ -4,10 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -78,8 +78,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -87,25 +87,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -138,18 +141,19 @@ public:
 
   explicit EOU(Raise_ret _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  EOU(const EOU<_U> &_other)
+  template <typename CraneU>
+  EOU(const EOU<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename EOU<_U>::Raise_error>(
+          if (std::holds_alternative<typename EOU<CraneU>::Raise_error>(
                   _other.v())) {
             const auto &[s] =
-                std::get<typename EOU<_U>::Raise_error>(_other.v());
+                std::get<typename EOU<CraneU>::Raise_error>(_other.v());
             return Raise_error{s};
           } else {
-            const auto &[x] = std::get<typename EOU<_U>::Raise_ret>(_other.v());
+            const auto &[x] =
+                std::get<typename EOU<CraneU>::Raise_ret>(_other.v());
             return Raise_ret{[&]() -> X {
-              if constexpr (crane_convertible<X, const _U &>) {
+              if constexpr (crane_convertible<X, const CraneU &>) {
                 return crane_convert<X>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -171,20 +175,20 @@ public:
 };
 
 struct EOU_monad {
-  template <typename _A0> using m = EOU<_A0>;
+  template <typename CraneA0> using m = EOU<CraneA0>;
 
-  template <typename _A0> static EOU<_A0> ret(_A0 x) {
-    return EOU<_A0>::raise_ret(std::move(x));
+  template <typename CraneA0> static EOU<CraneA0> ret(CraneA0 x) {
+    return EOU<CraneA0>::raise_ret(std::move(x));
   }
 
   static EOU<crane::obj> bind(EOU<crane::obj> c,
                               crane::fn<EOU<crane::obj>(crane::obj)> k) {
-    if (std::holds_alternative<typename EOU<crane::obj>::Raise_error>(c.v())) {
-      const auto &[s0] = std::get<typename EOU<crane::obj>::Raise_error>(c.v());
-      return EOU<crane::obj>::raise_error(s0);
+    if (std::holds_alternative<typename EOU<crane::obj>::Raise_error>(c.v_mut())) {
+      auto &[s0] = std::get<typename EOU<crane::obj>::Raise_error>(c.v_mut());
+      return EOU<crane::obj>::raise_error(std::move(s0));
     } else {
-      const auto &[x0] = std::get<typename EOU<crane::obj>::Raise_ret>(c.v());
-      return k(x0);
+      auto &[x0] = std::get<typename EOU<crane::obj>::Raise_ret>(c.v_mut());
+      return k(std::move(x0));
     }
   }
 };
@@ -196,10 +200,11 @@ template <typename I> struct Arith {
   I mzero;
 
   // ACCESSORS
-  template <typename _U> operator Arith<_U>() const {
-    return {crane_convert<crane::fn<EOU<_U>(_U, _U)>>(madd), [&]() -> _U {
-              if constexpr (crane_convertible<_U, const I &>) {
-                return crane_convert<_U>(mzero);
+  template <typename CraneU> operator Arith<CraneU>() const {
+    return {crane_convert<crane::fn<EOU<CraneU>(CraneU, CraneU)>>(madd),
+            [&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const I &>) {
+                return crane_convert<CraneU>(mzero);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -209,11 +214,10 @@ template <typename I> struct Arith {
 };
 
 struct Ops {
-  static inline const Arith<Nat> Arith_nat =
-      Arith<Nat>{[](const Nat &x, const Nat &y) {
-                   return Monad0::template ret<EOU_monad, Nat>(x.add(y));
-                 },
-                 Nat::o()};
+  [[gnu::used]] static inline const Arith<Nat> Arith_nat = Arith<Nat>{
+      [](const Nat &x,
+         Nat y) { return EOU_monad::template ret<Nat>(x.add(std::move(y))); },
+      Nat::o()};
 };
 
 template <Monad _tcI0, typename T2>

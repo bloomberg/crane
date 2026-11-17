@@ -5,7 +5,7 @@
 /// can overflow.
 List<uint64_t> ListFoldRightStackOverflow::bld(uint64_t n, List<uint64_t> acc) {
   List<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_acc;
@@ -18,8 +18,9 @@ List<uint64_t> ListFoldRightStackOverflow::bld(uint64_t n, List<uint64_t> acc) {
 }
 
 uint64_t ListFoldRightStackOverflow::run(uint64_t k) {
-  return bld((k + UINT64_C(200000)), List<uint64_t>::nil())
-      .template fold_right<uint64_t>(
-          [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
-          UINT64_C(0));
+  return bld((k + UINT64_C(200000)), List<uint64_t>::nil()).template fold_right<
+                      uint64_t>([](uint64_t _x0,
+                                   uint64_t _x1)
+                                     -> uint64_t { return (_x0 + _x1); },
+                                UINT64_C(0));
 }

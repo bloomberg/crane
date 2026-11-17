@@ -2,6 +2,7 @@
 #define INCLUDED_MODULE_PARAM_CLASS_INSTANCE
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A module-type Parameter whose type is a typeclass instance produces an
@@ -16,13 +17,17 @@ concept CARRIER = requires {
   typename M::t;
   typename M::inst;
   requires Weigh<typename M::inst, typename M::t>;
-  requires(
-      requires {
-        { M::sample } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::sample() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::sample
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::sample()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct ModuleParamClassInstance {
@@ -41,7 +46,7 @@ struct ModuleParamClassInstance {
     using t = uint64_t;
 
     struct inst {
-      static uint64_t weigh(uint64_t n) { return n; }
+      constexpr static uint64_t weigh(uint64_t n) { return n; }
     };
 
     static_assert(Weigh<inst, uint64_t>);

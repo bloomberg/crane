@@ -16,15 +16,19 @@ FixChainBuild::build_chain(uint64_t n) {
   } else {
     uint64_t n_ = n - 1;
     auto [_x, prev] = build_chain(n_);
-    auto step_impl = [=](auto &_self_step, uint64_t x) -> uint64_t {
-      if (x <= 0) {
-        return n;
-      } else {
-        uint64_t x_ = x - 1;
-        return (prev(_self_step(_self_step, x_)) + 1);
-      }
-    };
-    auto step = [=](uint64_t x) -> uint64_t { return step_impl(step_impl, x); };
-    return std::make_pair(std::move(n), step);
+    auto step_impl =
+        [=, prev = std::move(prev)](auto &_self_step, uint64_t x) -> uint64_t {
+          if (x <= 0) {
+            return n;
+          } else {
+            uint64_t x_ = x - 1;
+            return (prev(_self_step(_self_step, x_)) + 1);
+          }
+        };
+    auto step =
+        [=, step_impl = std::move(step_impl)](uint64_t x) -> uint64_t {
+          return step_impl(step_impl, x);
+        };
+    return std::make_pair(n, std::move(step));
   }
 }

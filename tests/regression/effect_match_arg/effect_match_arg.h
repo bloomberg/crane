@@ -1,7 +1,6 @@
 #ifndef INCLUDED_EFFECT_MATCH_ARG
 #define INCLUDED_EFFECT_MATCH_ARG
 
-#include <crane_itree.h>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -9,8 +8,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct EffectMatchArg {
   /// 1. Bool match as value argument to set_env

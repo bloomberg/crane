@@ -23,9 +23,9 @@ RamWrite::ram_reg RamWrite::get_regRAM(const RamWrite::ram_chip &ch,
   return ListDef::template nth<RamWrite::ram_reg>(r, ch.chip_regs, empty_reg);
 }
 
-RamWrite::ram_chip RamWrite::upd_reg_in_chip(const RamWrite::ram_chip &ch,
-                                             uint64_t r,
-                                             const RamWrite::ram_reg &rg) {
+RamWrite::ram_chip
+RamWrite::upd_reg_in_chip(const RamWrite::ram_chip &ch, uint64_t r,
+                          const RamWrite::ram_reg &rg) {
   return ram_chip{update_nth<RamWrite::ram_reg>(r, rg, ch.chip_regs),
                   ch.chip_port};
 }
@@ -36,9 +36,9 @@ RamWrite::ram_chip RamWrite::get_chip(const RamWrite::ram_bank &bk,
                                                    empty_chip);
 }
 
-RamWrite::ram_bank RamWrite::upd_chip_in_bank(const RamWrite::ram_bank &bk,
-                                              uint64_t c,
-                                              const RamWrite::ram_chip &ch) {
+RamWrite::ram_bank
+RamWrite::upd_chip_in_bank(const RamWrite::ram_bank &bk, uint64_t c,
+                           const RamWrite::ram_chip &ch) {
   return ram_bank{update_nth<RamWrite::ram_chip>(c, ch, bk.bank_chips)};
 }
 

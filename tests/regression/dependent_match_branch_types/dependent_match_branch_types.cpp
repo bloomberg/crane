@@ -12,7 +12,7 @@ Nat DependentMatchBranchTypes::hd(const Nat &,
           v.v())) {
     throw std::logic_error("unreachable: impossible dependent match branch");
   } else {
-    const auto &[n, a1, a2] =
+    const auto &[_, a1, _] =
         std::get<typename DependentMatchBranchTypes::vec::Vcons>(v.v());
     return a1;
   }

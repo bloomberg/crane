@@ -2,12 +2,11 @@
 #define INCLUDED_INSTANCE_METHOD_IGNORES_ARG
 
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
-struct ic;
-/// An instance method that discards its argument (fun _ => 1) loses the
+struct ic; /// An instance method that discards its argument (fun _ => 1) loses the
 /// argument on the way out: the method is emitted nullary while the concept
 /// still requires the one-argument shape, so the instance fails the concept's
 /// static_assert and its own body mentions the now-unbound template

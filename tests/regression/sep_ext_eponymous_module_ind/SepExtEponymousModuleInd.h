@@ -12,7 +12,6 @@
 #include "Datatypes.h"
 
 namespace SepExtEponymousModuleInd {
-
 template <typename A> struct Trie {
   // TYPES
   struct Leaf {};
@@ -37,14 +36,14 @@ public:
 
   explicit Trie(Branch _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Trie(const Trie<_U> &_other)
+  template <typename CraneU>
+  Trie(const Trie<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Trie<_U>::Leaf>(_other.v())) {
+          if (std::holds_alternative<typename Trie<CraneU>::Leaf>(_other.v())) {
             return Leaf{};
           } else {
             const auto &[t, t0, t1] =
-                std::get<typename Trie<_U>::Branch>(_other.v());
+                std::get<typename Trie<CraneU>::Branch>(_other.v());
             return Branch{
                 std::optional<A>(t),
                 (t0 ? std::make_shared<Trie<A>>(crane_convert<Trie<A>>(*t0))
@@ -57,13 +56,22 @@ public:
   static Trie<A> leaf() { return Trie<A>(Leaf{}); }
 
   static Trie<A> branch(std::optional<A> t, Trie<A> t0, Trie<A> t1) {
-    return Trie<A>(Branch{std::move(t),
-                          std::make_shared<Trie<A>>(std::move(t0)),
-                          std::make_shared<Trie<A>>(std::move(t1))});
+    return Trie<A>(
+        Branch{std::move(t), std::make_shared<Trie<A>>(std::move(t0)),
+               std::make_shared<Trie<A>>(std::move(t1))});
   }
 
   // MANIPULATORS
   ~Trie() {
+    if (std::holds_alternative<Leaf>(v_mut())) {
+      return;
+    }
+    if (auto *_alt = std::get_if<Branch>(&v_mut())) {
+      if (!((_alt->t0 && _alt->t0.use_count() == 1) ||
+            (_alt->t1 && _alt->t1.use_count() == 1))) {
+        return;
+      }
+    }
     crane::small_vector<std::shared_ptr<Trie<A>>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<Branch>(&_v)) {
@@ -88,8 +96,8 @@ public:
 
   Trie(const Trie &) = default;
   Trie &operator=(const Trie &) = default;
-  Trie(Trie &&) noexcept = default;
-  Trie &operator=(Trie &&) noexcept = default;
+  Trie(Trie &&) = default;
+  Trie &operator=(Trie &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -100,7 +108,6 @@ public:
 struct UseTrie {
   using memo = Trie<std::optional<Datatypes::Nat>>;
 };
-
 } // namespace SepExtEponymousModuleInd
 
 #endif // INCLUDED_SEPEXTEPONYMOUSMODULEIND

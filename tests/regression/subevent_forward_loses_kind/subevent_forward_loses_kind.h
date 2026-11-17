@@ -2,11 +2,11 @@
 #define INCLUDED_SUBEVENT_FORWARD_LOSES_KIND
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -62,8 +62,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,16 +94,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -140,8 +141,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -149,24 +150,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat length() const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<Nat>(Nat::o());
+        auto _value = Nat::o();
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -177,36 +182,49 @@ template <typename A> struct UBE {
   // ACCESSORS
   UBE<A> clone() const { return {a0}; }
 
-  template <typename _U> operator UBE<_U>() const { return {a0}; }
+  template <typename CraneU> operator UBE<CraneU>() const { return {a0}; }
 
   // CREATORS
   static UBE<A> throwub(Unit a0) { return {a0}; }
 };
 
-template <typename f, typename g> using Sub = crane::fn<g(f)>;
+template <typename I>
+concept Sub = requires {
+  typename I::template F<crane::obj>;
+  typename I::template G<crane::obj>;
+  {
+    I::template inj<crane::obj>(
+        std::declval<typename I::template F<crane::obj>>())
+  } -> std::convertible_to<typename I::template G<crane::obj>>;
+};
 
-template <typename T1, typename T2, typename T3>
-crane::rebind_t<T2, T3> inj(std::type_identity_t<Sub<T1, T2>> sub,
-                            crane::rebind_t<T1, T3> x) {
-  return crane_container_cast<crane::rebind_t<T2, T3>>(
-      sub(crane_convert<T1>(std::move(x))));
+template <Sub _tcI0, typename T3>
+typename _tcI0::template G<T3> inj(typename _tcI0::template F<T3> x) {
+  return _tcI0::template inj<T3>(std::move(x));
 }
 
-template <typename T1 = void, typename T2, typename _P0>
-List<T2> trigger_cast(_P0) {
+template <typename T1 = void, typename T2, typename CraneP0>
+List<T2> trigger_cast(CraneP0) {
   return List<T2>::nil();
 }
 
 struct SubeventForwardLosesKind {
-  template <typename T1, typename T2>
-  static List<T2> raiseUB(std::type_identity_t<Sub<UBE<crane::obj>, T1>> s) {
-    return trigger_cast<void, T2>(inj<UBE<crane::obj>, T1, Nat>(
-        std::move(s), UBE<crane::obj>::throwub(Unit::TT)));
+  template <Sub _tcI0, typename T2> static List<T2> raiseUB() {
+    return trigger_cast<void, T2>(
+        _tcI0::template inj<Nat>(UBE<crane::obj>::throwub(Unit::TT)));
   }
 
-  static UBE<crane::obj> sub_refl(UBE<crane::obj> e);
-  static inline const Nat run =
-      raiseUB<UBE<crane::obj>, Nat>(sub_refl).length();
+  struct sub_refl {
+    template <typename CraneA0> using F = UBE<CraneA0>;
+    template <typename CraneA0> using G = UBE<CraneA0>;
+
+    template <typename CraneA0> static UBE<CraneA0> inj(UBE<CraneA0> e) {
+      return e;
+    }
+  };
+
+  static_assert(Sub<sub_refl>);
+  static inline const Nat run = raiseUB<sub_refl, Nat>().length();
 };
 
 #endif // INCLUDED_SUBEVENT_FORWARD_LOSES_KIND

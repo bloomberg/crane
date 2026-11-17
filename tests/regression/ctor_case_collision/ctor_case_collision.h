@@ -53,8 +53,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -65,8 +65,8 @@ public:
 struct CtorCaseCollision {
   /// Constructors are emitted as PascalCase nested structs, so two constructors
   /// of the same inductive that differ only in the case of their first letter
-  /// compete for one C++ name.  Sibling reservation is done on that spelling,
-  /// so the second one is renamed:
+  /// compete for one C++ name. Sibling reservation is done on that spelling, so
+  /// the second one is renamed:
   ///
   /// using variant_t = std::variant<Foo, Foo0>;
   struct c {

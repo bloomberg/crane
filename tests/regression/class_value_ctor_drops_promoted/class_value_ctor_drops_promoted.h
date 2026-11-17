@@ -4,12 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -19,18 +17,31 @@ template <typename ptr, typename iptr, typename I> struct ToDvalueBase;
 struct natParams;
 using ptr = crane::obj;
 using iptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-    typename I::iptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+  typename I::iptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+}) &&
+  (requires {
+    {
+      I::zeroi()
+    }
+    -> std::convertible_to<typename I::iptr>;
   } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  }) && (requires {
-    { I::zeroi() } -> std::convertible_to<typename I::iptr>;
-  } || requires {
-    { I::zeroi } -> std::convertible_to<typename I::iptr>;
+    {
+      I::zeroi
+    }
+    -> std::convertible_to<typename I::iptr>;
   });
 
 struct Nat {
@@ -78,8 +89,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -111,16 +122,17 @@ public:
 
   explicit Dvalue_base(DVALUE_Iptr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Dvalue_base(const Dvalue_base<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Dvalue_base(const Dvalue_base<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
           if (std::holds_alternative<
-                  typename Dvalue_base<_U0, _U1>::DVALUE_Pointer>(_other.v())) {
-            const auto &[a0] =
-                std::get<typename Dvalue_base<_U0, _U1>::DVALUE_Pointer>(
-                    _other.v());
+                  typename Dvalue_base<CraneU0, CraneU1>::DVALUE_Pointer>(
+                  _other.v())) {
+            const auto &[a0] = std::get<
+                typename Dvalue_base<CraneU0, CraneU1>::DVALUE_Pointer>(
+                _other.v());
             return DVALUE_Pointer{[&]() -> ptr {
-              if constexpr (crane_convertible<ptr, const _U0 &>) {
+              if constexpr (crane_convertible<ptr, const CraneU0 &>) {
                 return crane_convert<ptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -129,10 +141,10 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Dvalue_base<_U0, _U1>::DVALUE_Iptr>(
+                std::get<typename Dvalue_base<CraneU0, CraneU1>::DVALUE_Iptr>(
                     _other.v());
             return DVALUE_Iptr{[&]() -> iptr {
-              if constexpr (crane_convertible<iptr, const _U1 &>) {
+              if constexpr (crane_convertible<iptr, const CraneU1 &>) {
                 return crane_convert<iptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -161,8 +173,8 @@ template <typename ptr, typename iptr, typename I> struct ToDvalueBase {
   crane::fn<Dvalue_base<ptr, iptr>(I)> tdb;
 
   // ACCESSORS
-  template <typename _U> operator ToDvalueBase<ptr, iptr, _U>() const {
-    return {crane_convert<crane::fn<Dvalue_base<ptr, iptr>(_U)>>(tdb)};
+  template <typename CraneU> operator ToDvalueBase<ptr, iptr, CraneU>() const {
+    return {crane_convert<crane::fn<Dvalue_base<ptr, iptr>(CraneU)>>(tdb)};
   }
 };
 
@@ -180,8 +192,6 @@ static_assert(Params<natParams>);
 /// Built and returned, so the class is data here and the struct is
 /// constructed in an expression position.
 template <Params _tcI0, typename T1, typename F0>
-  requires std::is_invocable_r_v<
-      Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr>, F0 &, T1 &>
 ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, T1> mk_to_base(F0 &&f) {
   return ToDvalueBase<typename _tcI0::ptr, typename _tcI0::iptr, T1>{f};
 }
@@ -195,12 +205,11 @@ Dvalue_base<typename _tcI0::ptr, typename _tcI0::iptr> apply_to_base(
 
 struct ClassValueCtorDropsPromoted {
   static inline const Dvalue_base<typename natParams::ptr,
-                                  typename natParams::iptr>
-      run = apply_to_base<natParams, Nat>(
-          mk_to_base<natParams, Nat>([](const Nat &n) {
-            return Dvalue_base<Nat, Nat>::dvalue_iptr(n);
-          }),
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+                                  typename natParams::iptr> run =
+      apply_to_base<natParams, Nat>(mk_to_base<natParams, Nat>(
+          [](const Nat &n) { return Dvalue_base<Nat, Nat>::dvalue_iptr(n); }),
+                                    Nat::s(Nat::s(Nat::s(Nat::s(
+                                        Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
 
 #endif // INCLUDED_CLASS_VALUE_CTOR_DROPS_PROMOTED

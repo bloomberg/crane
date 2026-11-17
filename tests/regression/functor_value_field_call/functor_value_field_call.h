@@ -1,10 +1,8 @@
 #ifndef INCLUDED_FUNCTOR_VALUE_FIELD_CALL
 #define INCLUDED_FUNCTOR_VALUE_FIELD_CALL
 
-#include "crane_fn.h"
-#include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// Nested functor application: a field a functor reads through its module
@@ -14,48 +12,46 @@
 template <typename M>
 concept CARRIER = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::zero } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::zero() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::zero
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::zero()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 struct FunctorValueFieldCall {
   struct NatC {
     using t = uint64_t;
-    static inline const uint64_t zero = UINT64_C(0);
+    static constexpr uint64_t zero = UINT64_C(0);
   };
 
   template <CARRIER C> struct Pairify {
     using t = std::pair<typename C::t, typename C::t>;
 
     static const std::pair<typename C::t, typename C::t> &zero() {
-      static const std::pair<typename C::t, typename C::t> v = std::make_pair(
-          [] {
-            if constexpr (requires { C::zero(); })
-              return C::zero();
-            else
-              return C::zero;
-          }(),
-          [] {
-            if constexpr (requires { C::zero(); })
-              return C::zero();
-            else
-              return C::zero;
-          }());
+      static const std::pair<typename C::t, typename C::t> v =
+          std::make_pair(
+              [] {
+                if constexpr (requires { C::zero(); }) return C::zero();
+                else return C::zero;
+              }(),
+              [] {
+                if constexpr (requires { C::zero(); }) return C::zero();
+                else return C::zero;
+              }());
       return v;
     }
   };
 
   using PN = Pairify<NatC>;
   using Q = Pairify<PN>;
-  static inline const uint64_t go =
-      crane_any_cast<std::pair<NatC::t, NatC::t>>(
-          crane_any_cast<std::pair<PN::t, PN::t>>(Q::zero()).first)
-          .first;
+  static inline const uint64_t go = (Q::zero().first).first;
 };
 
 #endif // INCLUDED_FUNCTOR_VALUE_FIELD_CALL

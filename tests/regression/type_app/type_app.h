@@ -3,9 +3,9 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -15,13 +15,17 @@
 template <typename M>
 concept Monoid = requires {
   typename M::T;
-  requires(
-      requires {
-        { M::empty } -> std::convertible_to<typename M::T>;
-      } ||
-      requires {
-        { M::empty() } -> std::convertible_to<typename M::T>;
-      });
+  requires (requires {
+    {
+      M::empty
+    }
+    -> std::convertible_to<typename M::T>;
+  } || requires {
+    {
+      M::empty()
+    }
+    -> std::convertible_to<typename M::T>;
+  });
   {
     M::append(std::declval<typename M::T>(), std::declval<typename M::T>())
   } -> std::same_as<typename M::T>;
@@ -34,14 +38,14 @@ struct TypeApp {
   static inline const bool id_bool = id<bool>(true);
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &> &&
-             std::is_invocable_r_v<T2, F1 &, T1 &>
+    requires std::is_invocable_r_v<T3, F0 &, T2> &&
+             std::is_invocable_r_v<T2, F1 &, const T1 &>
   static T3 compose(F0 &&g, F1 &&f, const T1 &x) {
     return g(f(x));
   }
 
-  template <typename T1> static T1 nested_poly(const T1 &x) {
-    return id<T1>(id<T1>(id<T1>(x)));
+  template <typename T1> static T1 nested_poly(T1 x) {
+    return id<T1>(id<T1>(id<T1>(std::move(x))));
   }
 
   template <typename A> struct list {
@@ -67,22 +71,22 @@ struct TypeApp {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const list<_U> &_other)
+    template <typename CraneU>
+    list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename list<_U>::Cons>(_other.v());
+                  std::get<typename list<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<list<A>>(crane_convert<list<A>>(*a1))
@@ -116,8 +120,8 @@ struct TypeApp {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -126,7 +130,6 @@ struct TypeApp {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rect(T2 f, F1 &&f0, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return f;
@@ -137,18 +140,12 @@ struct TypeApp {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, list<T1> &, T2 &>
   static T2 list_rec(T2 f, F1 &&f0, const list<T1> &l) {
-    if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename list<T1>::Cons>(l.v());
-      return f0(a0, *a1, list_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+    return list_rect<T1, T2>(std::move(f), f0, l);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static list<T2> map(F0 &&f, const list<T1> &l) {
     if (std::holds_alternative<typename list<T1>::Nil>(l.v())) {
       return list<T2>::nil();
@@ -172,7 +169,8 @@ struct TypeApp {
           list<uint64_t>::cons(UINT64_C(6), list<uint64_t>::nil())));
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, const T1 &>
   static T1 twice(F0 &&f, const T1 &x) {
     return f(f(x));
   }
@@ -182,7 +180,7 @@ struct TypeApp {
 
   struct NatMonoid {
     using T = uint64_t;
-    static inline const uint64_t empty = UINT64_C(0);
+    static constexpr uint64_t empty = UINT64_C(0);
     static uint64_t append(uint64_t x0_, uint64_t x1_);
   };
 

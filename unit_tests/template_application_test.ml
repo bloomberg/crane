@@ -1,0 +1,82 @@
+(* The legal-prefix planner over generated heads: every result is a prefix
+   of the head, kind-correct, written by identity, never longer than the
+   head, and it covers every parameter a value or a phantom requires unless
+   a parameter nothing can stand in for comes first. *)
+
+open Crane_plugin
+open Core_plan.Callable_abi
+
+let check name cond =
+  if not cond then (
+    Printf.eprintf "template_application: %s\n" name;
+    exit 1 )
+
+let callee = Names.GlobRef.VarRef (Names.Id.of_string "f")
+let ty name : Core_plan.Callable_abi.ty = External (name, [])
+
+let () =
+  Random.init 20261013;
+  for _ = 1 to 500 do
+    let arity = Random.int 5 in
+    let scheme = Core.Scheme.Id.fresh callee ~arity in
+    let vars = Core.Scheme.Var.all scheme in
+    (* A head: dictionaries, the variables in a shuffled order with random
+       kinds, some deduced callables, some defaults. *)
+    let shuffled =
+      List.map snd
+        (List.sort compare (List.map (fun v -> (Random.bits (), v)) vars))
+    in
+    let entries =
+      List.init (Random.int 2) (fun k ->
+          ((Typename : Core_plan.Callable_abi.kind), Base.Common.tc_instance_id k, Instance_param k) )
+      @ List.concat_map
+          (fun v ->
+            let i = Core.Scheme.Var.ordinal v in
+            let kind =
+              match Random.int 4 with
+              | 0 -> (Template 1 : Core_plan.Callable_abi.kind)
+              | 1 -> Typename_default Void
+              | _ -> Typename
+            in
+            (kind, Base.Common.tvar_id i, Scheme_param i)
+            :: ( if Random.int 4 = 0 then
+                   [(Callable_declared ([], Void), Base.Common.fun_tparam_id i, Callable_param i)]
+                 else [] ) )
+          shuffled
+    in
+    let abi =
+      of_head ~phantom_prefix:(Random.int 2) ~callee ~scheme:(Some scheme)
+        ~minted:(List.map (fun (_, name, m) -> (name, m)) entries)
+        (List.map (fun (kind, name, _) -> (kind, name)) entries)
+    in
+    let value_of v = if Random.bool () then Some (ty ("V" ^ string_of_int (Core.Scheme.Var.ordinal v))) else None in
+    let values = List.map (fun v -> (v, value_of v)) vars in
+    let app =
+      Core_plan.Template_application.plan abi
+        ~instance:(fun k -> Some (ty ("D" ^ string_of_int k)))
+        ~scheme:(fun v -> Option.flatten (List.assoc_opt v values))
+    in
+    let args = Core_plan.Template_application.to_list app in
+    let head = template_head abi in
+    check "valid" (Core_plan.Template_application.validate abi app = []);
+    check "no longer than the head" (List.length args <= List.length head);
+    (* Written by identity: an argument at a variable's parameter is that
+       variable's value, or the parameter's filler. *)
+    List.iteri
+      (fun k a ->
+        let p = List.nth head k in
+        match p.origin with
+        | From_scheme v -> (
+          match Option.flatten (List.assoc_opt v values) with
+          | Some t ->
+            check "a value lands at its own variable"
+              (a = t || a = Type_constructor t)
+          | None ->
+            check "a missing value is filled only as the plan allows"
+              ( match p.write with
+              | Defaulted d | Phantom d -> a = d
+              | Writable | Deduce_only -> false ) )
+        | From_callable _ -> check "a deduced callable is never written" false
+        | From_instance _ | Derived _ -> () )
+      args
+  done

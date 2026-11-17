@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,35 +95,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -146,19 +147,17 @@ struct StackOps {
   static uint64_t option_or_zero(const std::optional<uint64_t> &o);
   static inline const bool empty_is_none =
       is_none(pop_stack(state_basic{List<uint64_t>::nil()}).first);
-  static inline const uint64_t some_addr = option_or_zero(
-      pop_stack(state_basic{List<uint64_t>::cons(
-                    UINT64_C(9),
-                    List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil()))})
-          .first);
+  static inline const uint64_t some_addr =
+      option_or_zero(pop_stack(state_basic{List<uint64_t>::cons(
+          UINT64_C(9),
+          List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil()))})
+                         .first);
   static std::pair<std::optional<uint64_t>, state_with_acc>
   pop_stack_acc(const state_with_acc &s);
   static inline const uint64_t pop_acc_test = []() -> uint64_t {
-    auto [o, s_] = pop_stack_acc(state_with_acc{
-        List<uint64_t>::cons(
-            UINT64_C(9),
-            List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())),
-        UINT64_C(3)});
+    auto [o, s_] = pop_stack_acc(state_with_acc{List<uint64_t>::cons(
+        UINT64_C(9), List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())),
+                                                UINT64_C(3)});
     if (o.has_value()) {
       const uint64_t &a = *o;
       return ((a + s_.stack_with_acc.length()) + s_.acc);
@@ -169,47 +168,42 @@ struct StackOps {
   static state_basic push_stack(const state_basic &s, uint64_t addr);
   static uint64_t top_or_zero(const state_basic &s);
   static inline const uint64_t empty_len =
-      push_stack(state_basic{List<uint64_t>::nil()}, UINT64_C(12))
+      push_stack(state_basic{List<uint64_t>::nil()},
+                 UINT64_C(12))
           .stack_basic.length();
-  static inline const uint64_t overflow_head = top_or_zero(push_stack(
-      state_basic{List<uint64_t>::cons(
+  static inline const uint64_t overflow_head =
+      top_or_zero(push_stack(state_basic{List<uint64_t>::cons(
           UINT64_C(1),
           List<uint64_t>::cons(
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))},
-      UINT64_C(9)));
+                             UINT64_C(9)));
   static inline const uint64_t overflow_len =
-      push_stack(
-          state_basic{List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))},
-          UINT64_C(9))
+      push_stack(state_basic{List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))},
+                 UINT64_C(9))
           .stack_basic.length();
   static state_basic push_stack_cap(const state_basic &s, uint64_t addr);
   static inline const uint64_t push_cap_test =
       push_stack_cap(state_basic{List<uint64_t>::cons(
-                         UINT64_C(10),
-                         List<uint64_t>::cons(
-                             UINT64_C(20),
-                             List<uint64_t>::cons(
-                                 UINT64_C(30),
-                                 List<uint64_t>::cons(
-                                     UINT64_C(40), List<uint64_t>::nil()))))},
+          UINT64_C(10),
+          List<uint64_t>::cons(
+              UINT64_C(20),
+              List<uint64_t>::cons(
+                  UINT64_C(30),
+                  List<uint64_t>::cons(UINT64_C(40), List<uint64_t>::nil()))))},
                      UINT64_C(7))
           .stack_basic.length();
   static inline const std::pair<
       std::pair<std::pair<std::pair<uint64_t, bool>, uint64_t>,
                 std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>,
-      uint64_t>
-      t = std::make_pair(
-          std::make_pair(
-              std::make_pair(std::make_pair(some_addr, empty_is_none),
-                             pop_acc_test),
-              std::make_pair(std::make_pair(empty_len, overflow_head),
-                             overflow_len)),
-          push_cap_test);
+      uint64_t> t = std::make_pair(std::make_pair(
+      std::make_pair(std::make_pair(some_addr, empty_is_none), pop_acc_test),
+      std::make_pair(std::make_pair(empty_len, overflow_head), overflow_len)),
+                                   push_cap_test);
 };
 
 #endif // INCLUDED_STACK_OPS

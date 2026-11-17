@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,7 +103,7 @@ struct ClosureCopyShares {
 
   /// Captures two closures.
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &> &&
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
              std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
   static uint64_t compose(F0 &&f, F1 &&g, uint64_t x) {
     return f(g(x));
@@ -111,8 +112,8 @@ struct ClosureCopyShares {
   /// Stored in a list, so they are function values rather than functions.
   static inline const List<crane::fn<uint64_t(uint64_t)>> closures = []() {
     return []() {
-      crane::fn<uint64_t(uint64_t)> a = [](uint64_t _x0) -> uint64_t {
-        return adder(
+      crane::fn<uint64_t(uint64_t)> a = []() {
+        auto _pa0 =
             List<uint64_t>::cons(
                 UINT64_C(1),
                 List<uint64_t>::cons(
@@ -129,9 +130,9 @@ struct ClosureCopyShares {
                                         UINT64_C(7),
                                         List<uint64_t>::cons(
                                             UINT64_C(8),
-                                            List<uint64_t>::nil())))))))),
-            _x0);
-      };
+                                            List<uint64_t>::nil()))))))));
+        return [=](uint64_t _x0) -> uint64_t { return adder(_pa0, _x0); };
+      }();
       return List<crane::fn<uint64_t(uint64_t)>>::cons(
           a, List<crane::fn<uint64_t(uint64_t)>>::cons(
                  [=](uint64_t _x0) -> uint64_t {

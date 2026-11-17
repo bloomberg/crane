@@ -3,7 +3,6 @@
 
 #include <atomic>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -56,8 +55,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -113,8 +112,8 @@ struct ShadowRuntimeNat {
 
     Nat(const Nat &) = default;
     Nat &operator=(const Nat &) = default;
-    Nat(Nat &&) noexcept = default;
-    Nat &operator=(Nat &&) noexcept = default;
+    Nat(Nat &&) = default;
+    Nat &operator=(Nat &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -123,7 +122,6 @@ struct ShadowRuntimeNat {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
   static T1 Nat_rect(T1 f, F1 &&f0, const Nat &n) {
     if (std::holds_alternative<typename Nat::O2>(n.v())) {
       return f;
@@ -134,14 +132,8 @@ struct ShadowRuntimeNat {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Nat &, T1 &>
   static T1 Nat_rec(T1 f, F1 &&f0, const Nat &n) {
-    if (std::holds_alternative<typename Nat::O2>(n.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename Nat::S2>(n.v());
-      return f0(*a0, Nat_rec<T1>(std::move(f), f0, *a0));
-    }
+    return Nat_rect<T1>(std::move(f), f0, n);
   }
 
   static inline const Nat two = Nat::s2(Nat::s2(Nat::o2()));

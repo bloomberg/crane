@@ -9,8 +9,7 @@ Levenshtein::chain Levenshtein::same_chain(const String &s) {
   }
 }
 
-Levenshtein::chain Levenshtein::inserts_chain(const String &s1,
-                                              const String &s2) {
+Levenshtein::chain Levenshtein::inserts_chain(const String &s1, String s2) {
   if (std::holds_alternative<typename String::EmptyString>(s1.v())) {
     auto f_impl = [](auto &_self_f, const String &s) -> Levenshtein::chain {
       if (std::holds_alternative<typename String::EmptyString>(s.v())) {
@@ -20,10 +19,11 @@ Levenshtein::chain Levenshtein::inserts_chain(const String &s1,
         return chain::skip(a00, *a10, *a10, Nat::o(), _self_f(_self_f, *a10));
       }
     };
-    auto f = [&](const String &s) -> Levenshtein::chain {
-      return f_impl(f_impl, s);
-    };
-    return f(s2);
+    auto f =
+        [&](const String &s) -> Levenshtein::chain {
+          return f_impl(f_impl, s);
+        };
+    return f(std::move(s2));
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
     return inserts_chain(*a1, s2).insert_chain(a0, s2, a1->append(s2),
@@ -41,10 +41,9 @@ Levenshtein::chain Levenshtein::inserts_chain_empty(const String &s) {
   }
 }
 
-Levenshtein::chain Levenshtein::deletes_chain(const String &s1,
-                                              const String &s2) {
+Levenshtein::chain Levenshtein::deletes_chain(const String &s1, String s2) {
   if (std::holds_alternative<typename String::EmptyString>(s1.v())) {
-    return same_chain(s2);
+    return same_chain(std::move(s2));
   } else {
     const auto &[a0, a1] = std::get<typename String::String0>(s1.v());
     return deletes_chain(*a1, s2).delete_chain(a0, a1->append(s2), s2,
@@ -66,71 +65,80 @@ Levenshtein::chain Levenshtein::aux_both_empty(const String &, const String &) {
   return chain::empty();
 }
 
-SigT<Nat, Levenshtein::chain> Levenshtein::levenshtein_chain(const String &s,
-                                                             String x0_) {
+SigT<Nat, Levenshtein::chain>
+Levenshtein::levenshtein_chain(String s, const String &x0_) {
   auto levenshtein_chain1_impl =
-      [&](auto &_self_levenshtein_chain1,
-          const String &t) -> SigT<Nat, Levenshtein::chain> {
-    if (std::holds_alternative<typename String::EmptyString>(s.v())) {
-      if (std::holds_alternative<typename String::EmptyString>(t.v())) {
-        return SigT<Nat, Levenshtein::chain>::existt(Nat::o(),
-                                                     aux_both_empty(s, t));
-      } else {
-        return SigT<Nat, Levenshtein::chain>::existt(t.length(),
-                                                     inserts_chain_empty(t));
-      }
-    } else {
-      const auto &[a0, a1] = std::get<typename String::String0>(s.v());
-      if (std::holds_alternative<typename String::EmptyString>(t.v())) {
-        return SigT<Nat, Levenshtein::chain>::existt(
-            s.length(), deletes_chain_empty(String::string0(a0, *a1)));
-      } else {
-        const auto &[a00, a10] = std::get<typename String::String0>(t.v());
-        switch (a0.ascii_dec(a00)) {
-        case Sumbool::LEFT: {
-          const auto &_sv1 = levenshtein_chain(*a1, *a10);
-          const auto &[x1, a11] = _sv1;
-          return SigT<Nat, Levenshtein::chain>::existt(
-              x1, a11.aux_eq_char(s, t, a0, *a1, a00, *a10, x1));
-          break;
+      [&](auto &_self_levenshtein_chain1, const String &t) -> SigT<
+          Nat, Levenshtein::chain> {
+        if (std::holds_alternative<typename String::EmptyString>(s.v())) {
+          if (std::holds_alternative<typename String::EmptyString>(t.v())) {
+            return SigT<Nat, Levenshtein::chain>::existt(Nat::o(),
+                                                         aux_both_empty(s, t));
+          } else {
+            return SigT<Nat, Levenshtein::chain>::existt(t.length(),
+                                                         inserts_chain_empty(t));
+          }
+        } else {
+          const auto &[a0, a1] = std::get<typename String::String0>(s.v());
+          if (std::holds_alternative<typename String::EmptyString>(t.v())) {
+            return SigT<Nat, Levenshtein::chain>::existt(
+                s.length(), deletes_chain_empty(String::string0(a0, *a1)));
+          } else {
+            const auto &[a00, a10] = std::get<typename String::String0>(t.v());
+            switch (a0.ascii_dec(a00)) {
+            case Sumbool::LEFT: {
+              const auto &_sv1 = levenshtein_chain(*a1, *a10);
+              const auto &[x1, a11] = _sv1;
+              return SigT<Nat, Levenshtein::chain>::existt(
+                  x1, a11.aux_eq_char(s, t, a0, *a1, a00, *a10, x1));
+              break;
+            }
+            case Sumbool::RIGHT: {
+              const auto &_sv2 =
+                  _self_levenshtein_chain1(_self_levenshtein_chain1, *a10);
+              const auto &[x2, a12] = _sv2;
+              const auto &_sv3 =
+                  levenshtein_chain(*a1, String::string0(a00, *a10));
+              const auto &[x3, a13] = _sv3;
+              const auto &_sv4 = levenshtein_chain(*a1, *a10);
+              const auto &[x4, a14] = _sv4;
+              Levenshtein::chain r1_ =
+                  a12.aux_insert(s, t, a0, *a1, a00, *a10, x2);
+              Levenshtein::chain r2_ =
+                  a13.aux_delete(s, t, a0, *a1, a00, *a10, x3);
+              Levenshtein::chain r3_ =
+                  a14.aux_update(s, t, a0, *a1, a00, *a10, x4);
+              return min3_app<SigT<Nat, Levenshtein::chain>>(
+                  SigT<Nat, Levenshtein::chain>::existt(Nat::s(x2),
+                                                        std::move(r1_)),
+                  SigT<Nat, Levenshtein::chain>::existt(Nat::s(x3),
+                                                        std::move(r2_)),
+                  SigT<Nat, Levenshtein::chain>::existt(Nat::s(x4),
+                                                        std::move(r3_)),
+                  [](const SigT<Nat,
+                                Levenshtein::chain> &_x) {
+                    return _x.projT1();
+                  });
+              break;
+            }
+            default:
+              std::unreachable();
+            }
+          }
         }
-        case Sumbool::RIGHT: {
-          const auto &_sv2 =
-              _self_levenshtein_chain1(_self_levenshtein_chain1, *a10);
-          const auto &[x2, a12] = _sv2;
-          const auto &_sv3 = levenshtein_chain(*a1, String::string0(a00, *a10));
-          const auto &[x3, a13] = _sv3;
-          const auto &_sv4 = levenshtein_chain(*a1, *a10);
-          const auto &[x4, a14] = _sv4;
-          Levenshtein::chain r1_ = a12.aux_insert(s, t, a0, *a1, a00, *a10, x2);
-          Levenshtein::chain r2_ = a13.aux_delete(s, t, a0, *a1, a00, *a10, x3);
-          Levenshtein::chain r3_ = a14.aux_update(s, t, a0, *a1, a00, *a10, x4);
-          return min3_app<SigT<Nat, Levenshtein::chain>>(
-              SigT<Nat, Levenshtein::chain>::existt(Nat::s(x2), std::move(r1_)),
-              SigT<Nat, Levenshtein::chain>::existt(Nat::s(x3), std::move(r2_)),
-              SigT<Nat, Levenshtein::chain>::existt(Nat::s(x4), std::move(r3_)),
-              [](const auto &_x) { return _x.projT1(); });
-          break;
-        }
-        default:
-          std::unreachable();
-        }
-      }
-    }
-  };
-  auto levenshtein_chain1 =
-      [&](const String &t) -> SigT<Nat, Levenshtein::chain> {
-    return levenshtein_chain1_impl(levenshtein_chain1_impl, t);
-  };
-  return levenshtein_chain1(std::move(x0_));
+      };
+  {
+    const String &_lc1_t = x0_;
+    return levenshtein_chain1_impl(levenshtein_chain1_impl, _lc1_t);
+  }
 }
 
-Nat Levenshtein::levenshtein_computed(const String &s, const String &t) {
-  return levenshtein_chain(s, t).projT1();
+Nat Levenshtein::levenshtein_computed(String s, const String &t) {
+  return levenshtein_chain(std::move(s), t).projT1();
 }
 
-Nat Levenshtein::levenshtein(const String &x0_, const String &x1_) {
-  return levenshtein_computed(x0_, x1_);
+Nat Levenshtein::levenshtein(String x0_, const String &x1_) {
+  return levenshtein_computed(std::move(x0_), x1_);
 }
 
 Sumbool Bool::bool_dec(Bool0 b1, Bool0 b2) {

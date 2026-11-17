@@ -1,14 +1,14 @@
 #ifndef INCLUDED_DELIFTED_BINARY_FIXPOINT
 #define INCLUDED_DELIFTED_BINARY_FIXPOINT
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <utility>
 #include <variant>
 
-struct Positive;
+struct Positive; /// A local fixpoint of two arguments that is not lifted to a helper, because
 
-/// A local fixpoint of two arguments that is not lifted to a helper, because
 /// its return type is recovered from its body.  Every other de-lifted
 /// fixpoint in the suite is unary, and a unary one cannot show whether the
 /// self-call passes all of its arguments: _self_go(_self_go, p)(x) and
@@ -84,8 +84,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

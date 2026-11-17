@@ -3,15 +3,16 @@
 
 #include "fn.h"
 #include "lazy.h"
+#include <cstdint>
 #include <utility>
 #include <variant>
 
 struct Coinductive {
   struct stream {
     // TYPES
-    template <typename _S0 = stream> struct Cons_ {
+    template <typename CraneS0 = stream> struct Cons_ {
       uint64_t a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cons = Cons_<>;
@@ -50,16 +51,16 @@ struct Coinductive {
 
   static stream zeros();
   static stream count_from(uint64_t n);
-  static uint64_t hd(stream s);
-  static stream tl(stream s);
+  static uint64_t hd(const stream &s);
+  static stream tl(const stream &s);
 
-  static stream smap(crane::fn<uint64_t(uint64_t)> f, stream s) {
+  static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s) {
     const auto &[a0, a1] = std::get<typename stream::Cons>(s.v());
     return stream::lazy_(
-        [=]() -> stream { return stream::cons(f(a0), smap(f, a1)); });
+        [=]() -> typename stream::Cons { return {f(a0), smap(f, a1)}; });
   }
 
-  static stream interleave(stream s1, stream s2);
+  static stream interleave(const stream &s1, const stream &s2);
   static inline const stream get_zeros = zeros();
   static inline const stream get_count = count_from(UINT64_C(0));
   static inline const uint64_t test_hd = hd(get_zeros);
@@ -71,10 +72,10 @@ struct Coinductive {
       uint64_t a0;
     };
 
-    template <typename _S0 = tree> struct Node_ {
+    template <typename CraneS0 = tree> struct Node_ {
       uint64_t a0;
-      _S0 a1;
-      _S0 a2;
+      CraneS0 a1;
+      CraneS0 a2;
     };
 
     using Node = Node_<>;

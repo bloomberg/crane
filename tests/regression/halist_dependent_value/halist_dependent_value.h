@@ -5,12 +5,11 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -45,16 +44,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -91,32 +91,33 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, A &>
-  List<A> filter(F0 &&f) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+  template <typename F0> List<A> filter(F0 &&f) const {
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(List<A>::nil());
+        auto _value = List<A>::nil();
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
         if (f(a0)) {
-          auto _cell =
-              std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<A>::Cons(a0, nullptr);
+          List<A> &_node =
+              (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a1);
           continue;
         } else {
@@ -125,41 +126,41 @@ public:
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -174,13 +175,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -197,18 +198,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -220,7 +222,7 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
   A projT1() const {
-    const auto &[x0, a1] = *this;
+    const auto &[x0, _] = *this;
     return x0;
   }
 };
@@ -230,7 +232,7 @@ template <typename a> using EqDec = crane::fn<bool(a, a)>;
 struct EquivDec {
   template <typename T1>
   static bool equiv_dec(std::type_identity_t<EqDec<T1>> eqDec, const T1 &x0_,
-                        T1 x1_);
+                        const T1 &x1_);
 };
 
 template <typename k, typename v> using halist = List<SigT<k, v>>;
@@ -271,16 +273,7 @@ struct HalistDependentValue {
   }
 
   template <typename T1> static T1 key_rec(T1 f, T1 f0, Key k) {
-    switch (k) {
-    case Key::KNAT: {
-      return f;
-    }
-    case Key::KLIST: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return key_rect<T1>(std::move(f), std::move(f0), k);
   }
 
   using vty = crane::obj;
@@ -348,18 +341,18 @@ struct HalistDependentValue {
 
 template <typename T1>
 bool EquivDec::equiv_dec(std::type_identity_t<EqDec<T1>> eqDec, const T1 &x0_,
-                         T1 x1_) {
-  return eqDec(x0_, std::move(x1_));
+                         const T1 &x1_) {
+  return eqDec(x0_, x1_);
 }
 
 template <typename T1, typename T2>
 halist<T1, T2> HAList0::halist_remove(std::type_identity_t<EqDec<T1>> eq,
                                       const T1 &k,
                                       const List<SigT<T1, T2>> &m) {
-  return m.filter([=](const SigT<T1, T2> &k_v) {
+  return m.filter([=, eq = std::move(eq)](const SigT<T1, T2> &k_v) {
     return !([&]() {
-      const auto &_sv =
-          Sumbool::bool_of_sumbool(EquivDec::equiv_dec(eq, k_v.projT1(), k));
+      const auto &_sv = Sumbool::bool_of_sumbool(
+          EquivDec::template equiv_dec<T1>(eq, k_v.projT1(), k));
       const auto &[x] = _sv;
       return x;
     }());
@@ -384,10 +377,10 @@ std::optional<T2> HAList0::halist_lookup(std::type_identity_t<EqDec<T1>> eq,
   } else {
     const auto &[a0, a1] = std::get<typename List<SigT<T1, T2>>::Cons>(l.v());
     const auto &[x0, a10] = a0;
-    if (EquivDec::equiv_dec(eq, x0, k)) {
+    if (EquivDec::template equiv_dec<T1>(eq, x0, k)) {
       return std::make_optional<T2>(a10);
     } else {
-      return HAList0::template halist_lookup<T1, T2>(eq, k, *a1);
+      return HAList0::template halist_lookup<T1, T2>(std::move(eq), k, *a1);
     }
   }
 }

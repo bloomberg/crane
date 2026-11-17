@@ -4,12 +4,11 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -37,27 +36,28 @@ struct ClosureEscapeMatch {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    mylist(const mylist<_U> &_other)
+    template <typename CraneU>
+    mylist(const mylist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+            if (std::holds_alternative<typename mylist<CraneU>::Mynil>(
                     _other.v())) {
               return Mynil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename mylist<_U>::Mycons>(_other.v());
-              return Mycons{[&]() -> A {
-                              if constexpr (crane_convertible<A, const _U &>) {
-                                return crane_convert<A>(a0);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            (a1 ? std::make_shared<mylist<A>>(
-                                      crane_convert<mylist<A>>(*a1))
-                                : nullptr)};
+                  std::get<typename mylist<CraneU>::Mycons>(_other.v());
+              return Mycons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<mylist<A>>(
+                            crane_convert<mylist<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -87,8 +87,8 @@ struct ClosureEscapeMatch {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -97,7 +97,6 @@ struct ClosureEscapeMatch {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
@@ -108,21 +107,15 @@ struct ClosureEscapeMatch {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+    return mylist_rect<T1, T2>(std::move(f), f0, m);
   }
 
   template <typename T1> static uint64_t length(const mylist<T1> &l) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(l.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
+      const auto &[_, a1] = std::get<typename mylist<T1>::Mycons>(l.v());
       return (length<T1>(*a1) + 1);
     }
   }

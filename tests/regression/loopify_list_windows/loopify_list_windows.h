@@ -4,9 +4,10 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -17,7 +18,7 @@ struct LoopifyListWindows {
   static uint64_t len(const List<uint64_t> &l);
   static List<List<uint64_t>> map_cons_helper(uint64_t x,
                                               const List<List<uint64_t>> &ll);
-  static List<uint64_t> drop(uint64_t m, List<uint64_t> xs);
+  static List<uint64_t> drop(uint64_t m, const List<uint64_t> &xs);
   static std::pair<List<uint64_t>, List<uint64_t>>
   span_eq(uint64_t first, const List<uint64_t> &lst);
   static List<uint64_t> differences(const List<uint64_t> &l);
@@ -60,16 +61,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -106,8 +108,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 

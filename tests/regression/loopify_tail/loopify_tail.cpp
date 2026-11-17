@@ -23,7 +23,7 @@ bool LoopifyTail::member(uint64_t x, const LoopifyTail::list<uint64_t> &l) {
 uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
                           uint64_t default0) {
   const LoopifyTail::list<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<uint64_t>::Nil>(
             _loop_l->v())) {
@@ -32,7 +32,7 @@ uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
       const auto &[a0, a1] =
           std::get<typename LoopifyTail::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        return a0;
+        return std::move(a0);
       } else {
         _loop_l = crane_raw(a1);
         _loop_n =

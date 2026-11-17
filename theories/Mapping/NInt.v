@@ -61,8 +61,10 @@ Crane Extract Inlined Constant N.max => "std::max(%a0, %a1)" From "algorithm".
 Crane Extract Inlined Constant N.double => "(%a0 * 2u)".
 Crane Extract Inlined Constant N.succ_double => "(%a0 * 2u + 1u)".
 
-(* Conversions *)
+(* Conversions.  A [nat] is whatever the [nat] mapping in force makes it
+   ([uint64_t] under [Mapping.NatIntStd]), so the conversions into it name
+   the type their call yields, [%ret], rather than this mapping's width. *)
 Crane Extract Inlined Constant N.of_nat => "static_cast<unsigned int>(%a0)".
-Crane Extract Inlined Constant N.to_nat => "static_cast<unsigned int>(%a0)".
+Crane Extract Inlined Constant N.to_nat => "static_cast<%ret>(%a0)".
 Crane Extract Inlined Constant Pos.of_nat => "static_cast<unsigned int>(%a0 == 0u ? 1u : %a0)".
-Crane Extract Inlined Constant Pos.to_nat => "static_cast<unsigned int>(%a0)".
+Crane Extract Inlined Constant Pos.to_nat => "static_cast<%ret>(%a0)".

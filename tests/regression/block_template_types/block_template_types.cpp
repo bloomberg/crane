@@ -28,7 +28,7 @@ uint64_t BlockTemplateTypes::test_parse_nat() {
   std::string s;
   std::getline(std::cin, s);
   uint64_t n;
-  n = static_cast<unsigned int>(std::stoul(s));
+  n = static_cast<unsigned int>(std::stoul(std::move(s)));
   return (n + UINT64_C(2));
 }
 
@@ -41,7 +41,7 @@ std::string BlockTemplateTypes::test_mixed() {
   std::cin >> n;
   bool b;
   b = (n > 0u);
-  return name + [&]() -> std::string {
+  return std::move(name) + [&]() -> std::string {
     if (b) {
       return " wins";
     } else {

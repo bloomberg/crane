@@ -1,6 +1,7 @@
 #ifndef INCLUDED_COMPARISON
 #define INCLUDED_COMPARISON
 
+#include <cstdint>
 #include <utility>
 
 struct Comparison {
@@ -23,19 +24,7 @@ struct Comparison {
   }
 
   template <typename T1> static T1 cmp_rec(T1 f, T1 f0, T1 f1, Cmp c) {
-    switch (c) {
-    case Cmp::CMPLT: {
-      return f;
-    }
-    case Cmp::CMPEQ: {
-      return f0;
-    }
-    case Cmp::CMPGT: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return cmp_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 
   static uint64_t cmp_to_nat(Cmp c);

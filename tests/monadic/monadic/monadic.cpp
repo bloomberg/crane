@@ -5,7 +5,8 @@ std::optional<uint64_t> Monadic::safe_div(uint64_t n, uint64_t m) {
     return std::optional<uint64_t>();
   } else {
     uint64_t m_ = m - 1;
-    return std::make_optional<uint64_t>(((m_ + 1) ? n / (m_ + 1) : 0));
+    auto &&_once1 = (m_ + 1);
+    return std::make_optional<uint64_t>((_once1 ? n / _once1 : 0));
   }
 }
 
@@ -27,27 +28,25 @@ std::optional<uint64_t> Monadic::div_then_sub(uint64_t a, uint64_t b,
 
 Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>
 Monadic::fib_state(uint64_t n) {
-  return ListDef::seq(UINT64_C(0), n)
-      .template fold_left<
-          Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>>(
-          [](crane::fn<std::pair<std::monostate, std::pair<uint64_t, uint64_t>>(
-                 std::pair<uint64_t, uint64_t>)>
-                 acc,
-             uint64_t) {
-            return state_bind<std::pair<uint64_t, uint64_t>, std::monostate,
-                              std::monostate>(acc, [](std::monostate) {
-              return state_bind<std::pair<uint64_t, uint64_t>,
-                                std::pair<uint64_t, uint64_t>, std::monostate>(
-                  state_get<std::pair<uint64_t, uint64_t>>(),
-                  [](std::pair<uint64_t, uint64_t> pat) {
-                    const auto &[a, b] = pat;
-                    return state_put<std::pair<uint64_t, uint64_t>>(
-                        std::make_pair(b, (a + b)));
-                  });
-            });
-          },
-          state_return<std::pair<uint64_t, uint64_t>, std::monostate>(
-              std::monostate{}));
+  return ListDef::seq(UINT64_C(0), n).template fold_left<
+      Monadic::State<std::pair<uint64_t, uint64_t>, std::monostate>>(
+      [](crane::fn<std::pair<std::monostate, std::pair<uint64_t, uint64_t>>(
+          std::pair<uint64_t, uint64_t>)> acc,
+         uint64_t) {
+        return state_bind<std::pair<uint64_t, uint64_t>, std::monostate,
+                          std::monostate>(std::move(acc), [](std::monostate) {
+          return state_bind<std::pair<uint64_t, uint64_t>,
+                            std::pair<uint64_t, uint64_t>, std::monostate>(
+              state_get<std::pair<uint64_t, uint64_t>>(),
+              [](std::pair<uint64_t, uint64_t> pat) {
+                const auto &[a, b] = pat;
+                return state_put<std::pair<uint64_t, uint64_t>>(
+                    std::make_pair(b, (a + b)));
+              });
+        });
+      },
+      state_return<std::pair<uint64_t, uint64_t>, std::monostate>(
+          std::monostate{}));
 }
 
 uint64_t Monadic::fib(uint64_t n) {
@@ -55,7 +54,7 @@ uint64_t Monadic::fib(uint64_t n) {
     return n;
   } else {
     auto [_x, p] = fib_state(n)(std::make_pair(UINT64_C(0), UINT64_C(1)));
-    auto [a, _x0] = std::move(p);
+    const auto &[a, _x0] = p;
     return a;
   }
 }

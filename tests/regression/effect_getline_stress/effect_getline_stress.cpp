@@ -73,7 +73,7 @@ std::string EffectGetlineStress::concat_two_lines() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return a + b;
+  return std::move(a) + std::move(b);
 }
 
 /// 7. get_line inside a monadic map
@@ -81,16 +81,16 @@ std::pair<std::string, int64_t> EffectGetlineStress::get_and_measure() {
   std::string line;
   std::getline(std::cin, line);
   int64_t len = static_cast<int64_t>(line.length());
-  return std::make_pair(line, len);
+  return std::make_pair(std::move(line), len);
 }
 
 /// 8. Conditional get_line with print
 std::string EffectGetlineStress::interactive_prompt(bool ask) {
   if (ask) {
-    std::cout << "Enter input:"s << '\n';
+    std::cout << std::string("Enter input:") << '\n';
     std::string line;
     std::getline(std::cin, line);
-    std::cout << "Got it"s << '\n';
+    std::cout << std::string("Got it") << '\n';
     return line;
   } else {
     return "skipped";

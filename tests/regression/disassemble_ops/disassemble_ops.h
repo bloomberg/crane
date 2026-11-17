@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -95,35 +96,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -184,8 +185,8 @@ struct DisassembleOps {
   };
 
   template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, const uint64_t &>
   static T1 instruction_rect(T1 f, T1 f0, F2 &&f1, F3 &&f2,
                              const instruction &i) {
     if (std::holds_alternative<typename instruction::NOP>(i.v())) {
@@ -202,40 +203,29 @@ struct DisassembleOps {
   }
 
   template <typename T1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &>
   static T1 instruction_rec(T1 f, T1 f0, F2 &&f1, F3 &&f2,
                             const instruction &i) {
-    if (std::holds_alternative<typename instruction::NOP>(i.v())) {
-      return f;
-    } else if (std::holds_alternative<typename instruction::NOP2>(i.v())) {
-      return f0;
-    } else if (std::holds_alternative<typename instruction::LDM>(i.v())) {
-      const auto &[a0] = std::get<typename instruction::LDM>(i.v());
-      return f1(a0);
-    } else {
-      const auto &[a0] = std::get<typename instruction::LDM2>(i.v());
-      return f2(a0);
-    }
+    return instruction_rect<T1>(std::move(f), std::move(f0), f1, f2, i);
   }
 
   static instruction decode1(uint64_t b1, uint64_t b2);
-  static List<uint64_t> drop_(uint64_t n, List<uint64_t> l);
+  static List<uint64_t> drop_(uint64_t n, const List<uint64_t> &l);
   static std::optional<std::pair<instruction, uint64_t>>
   disassemble1(const List<uint64_t> &rom0, uint64_t addr);
   static inline const uint64_t test_disassemble_drop_window = []() -> uint64_t {
-    auto _cs = disassemble1(
-        List<uint64_t>::cons(
-            UINT64_C(1),
+    auto _cs =
+        disassemble1(
             List<uint64_t>::cons(
-                UINT64_C(2),
+                UINT64_C(1),
                 List<uint64_t>::cons(
-                    UINT64_C(3),
+                    UINT64_C(2),
                     List<uint64_t>::cons(
-                        UINT64_C(4),
-                        List<uint64_t>::cons(UINT64_C(5),
-                                             List<uint64_t>::nil()))))),
-        UINT64_C(1));
+                        UINT64_C(3),
+                        List<uint64_t>::cons(
+                            UINT64_C(4),
+                            List<uint64_t>::cons(UINT64_C(5),
+                                                 List<uint64_t>::nil()))))),
+            UINT64_C(1));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
       const auto &[_x, next] = p;
@@ -246,15 +236,15 @@ struct DisassembleOps {
   }();
   static instruction decode2(uint64_t b1, uint64_t b2);
 
-  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, const List<T1> &l) {
     if (n <= 0) {
       return l;
     } else {
       uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return drop<T1>(n_, *a1);
       }
     }
@@ -264,23 +254,23 @@ struct DisassembleOps {
   disassemble2(const List<uint64_t> &rom0, uint64_t addr);
   static inline const uint64_t test_disassemble_next_address =
       []() -> uint64_t {
-    auto _cs = disassemble2(
-        List<uint64_t>::cons(
-            UINT64_C(0),
-            List<uint64_t>::cons(
-                UINT64_C(7),
+        auto _cs =
+            disassemble2(List<uint64_t>::cons(
+                UINT64_C(0),
                 List<uint64_t>::cons(
-                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
+                    UINT64_C(7), List<uint64_t>::cons(
+                                     UINT64_C(9), List<uint64_t>::cons(
+                                                      UINT64_C(11),
                                                       List<uint64_t>::nil())))),
-        UINT64_C(0));
-    if (_cs.has_value()) {
-      const std::pair<instruction, uint64_t> &p = *_cs;
-      const auto &[_x, next] = p;
-      return next;
-    } else {
-      return UINT64_C(0);
-    }
-  }();
+                         UINT64_C(0));
+        if (_cs.has_value()) {
+          const std::pair<instruction, uint64_t> &p = *_cs;
+          const auto &[_x, next] = p;
+          return next;
+        } else {
+          return UINT64_C(0);
+        }
+      }();
   static instruction decode3(uint64_t b1, uint64_t b2);
   static std::optional<std::pair<instruction, uint64_t>>
   disassemble3(const List<uint64_t> &rom0, uint64_t addr);
@@ -311,15 +301,16 @@ struct DisassembleOps {
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(4096))};
   static inline const uint64_t test_decode_disassemble_1 = []() -> uint64_t {
-    auto _cs = disassemble4(
-        List<uint64_t>::cons(
-            UINT64_C(0),
+    auto _cs =
+        disassemble4(
             List<uint64_t>::cons(
-                UINT64_C(7),
+                UINT64_C(0),
                 List<uint64_t>::cons(
-                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
+                    UINT64_C(7), List<uint64_t>::cons(
+                                     UINT64_C(9), List<uint64_t>::cons(
+                                                      UINT64_C(11),
                                                       List<uint64_t>::nil())))),
-        UINT64_C(0));
+            UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
       const auto &[_x, next] = p;
@@ -329,15 +320,16 @@ struct DisassembleOps {
     }
   }();
   static inline const uint64_t test_decode_disassemble_2 = []() -> uint64_t {
-    auto _cs = disassemble4(
-        List<uint64_t>::cons(
-            UINT64_C(0),
+    auto _cs =
+        disassemble4(
             List<uint64_t>::cons(
-                UINT64_C(7),
+                UINT64_C(0),
                 List<uint64_t>::cons(
-                    UINT64_C(9), List<uint64_t>::cons(UINT64_C(11),
+                    UINT64_C(7), List<uint64_t>::cons(
+                                     UINT64_C(9), List<uint64_t>::cons(
+                                                      UINT64_C(11),
                                                       List<uint64_t>::nil())))),
-        UINT64_C(0));
+            UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<instruction, uint64_t> &p = *_cs;
       const auto &[_x, next] = p;
@@ -348,25 +340,19 @@ struct DisassembleOps {
   }();
   static inline const uint64_t test_init_state_regs = init_state.regs.length();
   static inline const uint64_t test_init_state_rom = init_state.rom.length();
-  static inline const std::pair<
-      std::pair<
-          std::pair<std::pair<std::pair<std::pair<uint64_t, uint64_t>, bool>,
-                              uint64_t>,
-                    uint64_t>,
-          uint64_t>,
-      uint64_t>
-      t = std::make_pair(
-          std::make_pair(
-              std::make_pair(
-                  std::make_pair(
-                      std::make_pair(
-                          std::make_pair(test_disassemble_drop_window,
-                                         test_disassemble_next_address),
-                          test_disassemble_short_rom_none),
-                      test_decode_disassemble_1),
-                  test_decode_disassemble_2),
-              test_init_state_regs),
-          test_init_state_rom);
+  static inline const std::pair<std::pair<std::pair<
+      std::pair<std::pair<std::pair<uint64_t, uint64_t>, bool>, uint64_t>,
+      uint64_t>,
+                                          uint64_t>,
+                                uint64_t> t =
+      std::make_pair(std::make_pair(std::make_pair(
+          std::make_pair(std::make_pair(std::make_pair(
+              test_disassemble_drop_window, test_disassemble_next_address),
+                                        test_disassemble_short_rom_none),
+                         test_decode_disassemble_1),
+          test_decode_disassemble_2),
+                                    test_init_state_regs),
+                     test_init_state_rom);
 };
 
 template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {

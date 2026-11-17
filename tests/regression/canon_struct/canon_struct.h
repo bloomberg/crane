@@ -2,8 +2,8 @@
 #define INCLUDED_CANON_STRUCT
 
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 struct Bool {
@@ -25,7 +25,7 @@ struct CanonStruct {
   struct nat_eqType {
     using carrier = uint64_t;
 
-    static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
+    constexpr static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
   };
 
   static_assert(EqType<nat_eqType>);
@@ -46,7 +46,6 @@ struct CanonStruct {
 
   static inline const bool test_nat =
       same<nat_eqType>(UINT64_C(3), UINT64_C(5));
-
   static inline const bool test_bool = same<bool_eqType>(true, false);
 };
 

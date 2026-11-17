@@ -4,11 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -69,25 +68,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -114,16 +116,17 @@ public:
 
   explicit Lst(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Lst(const Lst<_U> &_other)
+  template <typename CraneU>
+  Lst(const Lst<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Lst<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename Lst<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[x, xs] = std::get<typename Lst<_U>::Cons>(_other.v());
+            const auto &[x, xs] =
+                std::get<typename Lst<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(x);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -160,8 +163,8 @@ public:
 
   Lst(const Lst &) = default;
   Lst &operator=(const Lst &) = default;
-  Lst(Lst &&) noexcept = default;
-  Lst &operator=(Lst &&) noexcept = default;
+  Lst(Lst &&) = default;
+  Lst &operator=(Lst &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -169,41 +172,44 @@ public:
   const variant_t &v() const { return v_; }
 
   /// The callable takes a membership proof, so the recursive call cannot pass
-  /// it through unchanged.
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
-  Lst<T1> map_In(F0 &&f) const {
-    std::shared_ptr<Lst<T1>> _head{};
-    std::shared_ptr<Lst<T1>> *_write = &_head;
+  /// it
+  /// through unchanged.
+  template <typename T1> Lst<T1> map_In(crane::fn<T1(A)> f) const {
+    std::optional<Lst<T1>> _root{};
+    std::shared_ptr<Lst<T1>> *_write = nullptr;
     const Lst<A> *_loop_self = this;
-    crane::fn<T1(A)> _loop_f = f;
+    crane::fn<T1(A)> _loop_f = std::move(f);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Lst<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<Lst<T1>>(Lst<T1>::nil());
+        auto _value = Lst<T1>::nil();
+        (_write ? *(*_write = std::make_shared<Lst<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[x0, xs0] = std::get<typename Lst<A>::Cons>(_sv.v());
         const Lst<A> &xs0_value = *xs0;
-        auto _cell = std::make_shared<Lst<T1>>(
-            typename Lst<T1>::Cons(_loop_f(x0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Lst<T1>::Cons>((*_write)->v_mut()).xs;
+        auto _cell = typename Lst<T1>::Cons(_loop_f(x0), nullptr);
+        Lst<T1> &_node =
+            (_write ? *(*_write = std::make_shared<Lst<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Lst<T1>::Cons>(_node.v_mut()).xs;
         _loop_self = &xs0_value;
         _loop_f = [=](const A &y) { return _loop_f(y); };
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   Lst<Nat> go(Nat n) const {
-    return this->template map_In<Nat>([=](const Nat &x) { return x.add(n); });
+    return this->template map_In<Nat>(
+        [=, n = std::move(n)](const Nat &x) { return x.add(n); });
   }
 };
 
 /// Takes a unit so that Crane leaves it a free function and something
 /// concrete instantiates map_In.
-Lst<Nat> run(std::monostate _x);
+Lst<Nat> run();
 
 #endif // INCLUDED_LOOP_TRANSFORM_REASSIGNS_CLOSURE_TYPED_VAR

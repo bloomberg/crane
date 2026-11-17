@@ -2,7 +2,6 @@
 #define INCLUDED_APPLIED_TYPENAME_NOT_HK
 
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -61,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -80,8 +79,7 @@ struct AE {
   // CREATORS
   static AE a0(Nat a0_0) { return {std::move(a0_0)}; }
 
-  template <typename T1, typename T2>
-  std::shared_ptr<ITree<T2>> handle() const {
+  template <typename T2> std::shared_ptr<ITree<T2>> handle() const {
     const auto &[a0] = *this;
     return itree_ret(a0);
   }
@@ -89,21 +87,20 @@ struct AE {
 
 template <typename T1, typename T2 = void>
 std::shared_ptr<ITree<crane::obj>> E_trigger(T1 e) {
-  return itree_trigger(e);
+  return itree_trigger(std::move(e));
 }
 
 template <typename T1 = void, typename T2>
 std::shared_ptr<ITree<crane::obj>> F_trigger(T2 e) {
-  return itree_trigger(e);
+  return itree_trigger(std::move(e));
 }
 
 template <typename T1 = void, typename T2 = void>
 std::shared_ptr<ITree<crane::obj>>
 h(Sum1<crane::obj, Sum1<AE, crane::obj, crane::obj>, crane::obj> x) {
-  return itree_case(
-      E_trigger<crane::obj, crane::obj>,
-      itree_case([](const auto &_x) { return _x.template handle<void>(); },
-                 F_trigger<crane::obj, crane::obj>))(std::move(x));
+  return itree_case(E_trigger<crane::obj, crane::obj>,
+                    itree_case([](const auto &_x) { return _x.handle(); },
+                               F_trigger<crane::obj, crane::obj>))(std::move(x));
 }
 
 #endif // INCLUDED_APPLIED_TYPENAME_NOT_HK

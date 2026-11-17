@@ -13,7 +13,6 @@
 #include <bsl_cassert.h>
 #include <bsl_type_traits.h>
 #include <bsl_utility.h>
-#include <variant>
 
 namespace stm {
 
@@ -72,22 +71,12 @@ void writeTVar(const TVar<T>& tv, T val) {
 
 template <typename F>
 auto atomically(F&& f) -> decltype(f()) {
+    // [R] may be [void]: a transaction run for its effects alone.
     using R = decltype(f());
-    if constexpr (bsl::is_void_v<R>) {
-        // Transaction::with<void> is not legal; wrap with std::monostate and
-        // discard the result.  This handles monadic functions whose extracted
-        // C++ return type is void (e.g. pure side-effecting STM actions).
-        Transaction::with<std::monostate>([&](Transaction& tx) -> std::monostate {
-            compat::TxScope scope(tx);
-            f();
-            return {};
-        });
-    } else {
-        return Transaction::with<R>([&](Transaction& tx) -> R {
-            compat::TxScope scope(tx);
-            return f();
-        });
-    }
+    return Transaction::with<R>([&](Transaction& tx) -> R {
+        compat::TxScope scope(tx);
+        return f();
+    });
 }
 
 // ---- orElse for eagerly-evaluated values ------------------------------------

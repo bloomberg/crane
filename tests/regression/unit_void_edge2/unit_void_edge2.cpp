@@ -1,13 +1,12 @@
 #include "unit_void_edge2.h"
 
-uint64_t UnitVoidEdge2::take_unit(std::monostate) { return UINT64_C(42); }
+uint64_t UnitVoidEdge2::take_unit() { return UINT64_C(42); }
 
 void UnitVoidEdge2::opaque_unit(uint64_t) { return; }
 
 uint64_t UnitVoidEdge2::let_use_as_arg(uint64_t n) {
   opaque_unit(n);
-  std::monostate x = std::monostate{};
-  return take_unit(x);
+  return take_unit();
 }
 
 void UnitVoidEdge2::let_return_unit(uint64_t x0_) {
@@ -17,54 +16,47 @@ void UnitVoidEdge2::let_return_unit(uint64_t x0_) {
 
 uint64_t UnitVoidEdge2::let_match_unit(uint64_t n) {
   opaque_unit(n);
-  std::monostate x = std::monostate{};
   {
     return n;
   }
 }
 
-uint64_t UnitVoidEdge2::let_chain_use(uint64_t n) {
-  opaque_unit(n);
-  std::monostate a = std::monostate{};
-  return take_unit(a);
-}
+uint64_t UnitVoidEdge2::let_chain_use(uint64_t n) { return let_use_as_arg(n); }
 
 uint64_t UnitVoidEdge2::let_use_in_if(uint64_t n, bool flag) {
   opaque_unit(n);
-  std::monostate x = std::monostate{};
   if (flag) {
-    return take_unit(x);
+    return take_unit();
   } else {
     return UINT64_C(0);
   }
 }
 
 void UnitVoidEdge2::mono_bind_return() {
-  std::cout << "hello"s;
+  std::cout << std::string("hello");
   return;
 }
 
 void UnitVoidEdge2::mono_bind_rebind() {
-  std::cout << "hi"s;
+  std::cout << std::string("hi");
   return;
 }
 
 void UnitVoidEdge2::mono_chain() {
-  std::cout << "a"s;
-  std::cout << "b"s;
+  std::cout << std::string("a");
+  std::cout << std::string("b");
   return;
 }
 
 uint64_t UnitVoidEdge2::mono_bind_match() {
-  std::cout << "test"s;
-  std::monostate x = std::monostate{};
+  std::cout << std::string("test");
   {
     return UINT64_C(42);
   }
 }
 
 uint64_t UnitVoidEdge2::mono_bind_opaque() {
-  std::cout << "setup"s;
+  std::cout << std::string("setup");
   return UINT64_C(99);
 }
 
@@ -90,7 +82,7 @@ uint64_t
 UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> &o) {
   if (o.has_value()) {
     const std::monostate &u = *o;
-    return take_unit(u);
+    return take_unit();
   } else {
     return UINT64_C(0);
   }
@@ -99,7 +91,7 @@ UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> &o) {
 uint64_t UnitVoidEdge2::compose_option_unit(bool b1, bool b2) {
   std::optional<std::monostate> o1 = make_some_unit(b1);
   std::optional<std::monostate> o2 = make_some_unit(b2);
-  return (use_option_unit(std::move(o1)) + use_option_unit(std::move(o2)));
+  return (use_option_unit(o1) + use_option_unit(o2));
 }
 
 UnitVoidEdge2::pair<uint64_t, std::monostate>

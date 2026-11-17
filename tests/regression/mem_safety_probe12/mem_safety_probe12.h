@@ -4,7 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <utility>
 #include <variant>
 
@@ -67,7 +67,8 @@ struct MemSafetyProbe12 {
 
   /// TEST 5: Pack a composed closure (let-bound, safe path).
   static wrap pack_composed(crane::fn<uint64_t(uint64_t)> f, uint64_t base) {
-    crane::fn<uint64_t(uint64_t)> g = [=](uint64_t x) { return (f(x) + base); };
+    crane::fn<uint64_t(uint64_t)> g =
+        [=, f = std::move(f)](uint64_t x) { return (f(x) + base); };
     return wrap::wrap0(std::move(g));
   }
 
@@ -85,7 +86,7 @@ struct MemSafetyProbe12 {
   /// TEST 7: Wrap a pair of nats.
   static inline const uint64_t test_wrap_pair = []() {
     std::pair<uint64_t, uint64_t> p = std::make_pair(UINT64_C(3), UINT64_C(7));
-    wrap w = wrap::wrap0(std::move(p));
+    wrap w = wrap::wrap0(p);
     std::pair<uint64_t, uint64_t> p2 =
         unwrap<std::pair<uint64_t, uint64_t>>(std::move(w));
     return (p2.first + p2.second);

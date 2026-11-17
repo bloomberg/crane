@@ -5,9 +5,9 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -24,8 +24,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -52,16 +51,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -98,8 +98,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -107,7 +107,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -126,35 +126,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -166,7 +166,6 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
@@ -209,15 +208,15 @@ struct LoopifyFrameLambdaType {
 
     explicit res(Ok _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    res(const res<_U> &_other)
+    template <typename CraneU>
+    res(const res<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename res<_U>::Err>(_other.v())) {
+            if (std::holds_alternative<typename res<CraneU>::Err>(_other.v())) {
               return Err{};
             } else {
-              const auto &[x] = std::get<typename res<_U>::Ok>(_other.v());
+              const auto &[x] = std::get<typename res<CraneU>::Ok>(_other.v());
               return Ok{[&]() -> X {
-                if constexpr (crane_convertible<X, const _U &>) {
+                if constexpr (crane_convertible<X, const CraneU &>) {
                   return crane_convert<X>(x);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -239,19 +238,20 @@ struct LoopifyFrameLambdaType {
   };
 
   struct Monad_res {
-    template <typename _A0> using m = res<_A0>;
+    template <typename CraneA0> using m = res<CraneA0>;
 
-    template <typename _A0> static res<_A0> ret(_A0 x) {
-      return res<_A0>::ok(std::move(x));
+    template <typename CraneA0> static res<CraneA0> ret(CraneA0 x) {
+      return res<CraneA0>::ok(std::move(x));
     }
 
-    template <typename _A0, typename _A1>
-    static res<_A1> bind(res<_A0> c, crane::fn<res<_A1>(_A0)> k) {
-      if (std::holds_alternative<typename res<_A0>::Err>(c.v())) {
-        return res<_A1>::err();
+    template <typename CraneA0, typename CraneA1>
+    static res<CraneA1> bind(res<CraneA0> c,
+                             crane::fn<res<CraneA1>(CraneA0)> k) {
+      if (std::holds_alternative<typename res<CraneA0>::Err>(c.v_mut())) {
+        return res<CraneA1>::err();
       } else {
-        const auto &[x0] = std::get<typename res<_A0>::Ok>(c.v());
-        return k(x0);
+        auto &[x0] = std::get<typename res<CraneA0>::Ok>(c.v_mut());
+        return k(std::move(x0));
       }
     }
   };
@@ -261,44 +261,42 @@ struct LoopifyFrameLambdaType {
   template <typename T1, typename T2>
   static res<std::pair<List<std::pair<T1, T2>>, List<T2>>>
   comb(const List<T1> &l1,
-       const List<T2> &l2) { /// _Enter: captures varying parameters for each
-                             /// recursive call.
-
-    struct _Enter {
+       const List<T2> &l2) { /// CraneEnter: captures varying parameters for
+                             /// each recursive call.
+    struct CraneEnter {
       const List<T2> *l2;
       const List<T1> *l1;
     };
 
-    /// _Cont_Cons: saves [a0, a00], resumes after recursive call, then
+    /// CraneCont_Cons: saves [a0, a00], resumes after recursive call, then
     /// processes rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       T1 a0;
       T2 a00;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     res<std::pair<List<std::pair<T1, T2>>, List<T2>>> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&l2, &l1});
-    /// Loopified comb: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&l2, &l1});
+    /// Loopified comb: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<T2> &l2 = *_f.l2;
         const List<T1> &l1 = *_f.l1;
         if (std::holds_alternative<typename List<T1>::Nil>(l1.v())) {
           if (std::holds_alternative<typename List<T2>::Nil>(l2.v())) {
-            _result = Monad0::template ret<
-                Monad_res, std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+            _result = Monad_res::template ret<
+                std::pair<List<std::pair<T1, T2>>, List<T2>>>(
                 std::make_pair(List<std::pair<crane::obj, crane::obj>>::nil(),
-                               List<crane::obj>::nil()));
+                               List<T2>::nil()));
           } else {
-            _result = Monad0::template ret<
-                Monad_res, std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::make_pair(List<std::pair<crane::obj, crane::obj>>::nil(),
-                               l2));
+            _result = Monad_res::template ret<
+                std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
+                List<std::pair<crane::obj, crane::obj>>::nil(), l2));
           }
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l1.v());
@@ -308,33 +306,33 @@ struct LoopifyFrameLambdaType {
           } else {
             const auto &[a00, a10] = std::get<typename List<T2>::Cons>(l2.v());
             const List<T2> &a10_value = *a10;
-            _stack.emplace_back(_Cont_Cons{a0, a00});
-            _stack.emplace_back(_Enter{crane_raw(a10), crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0, a00});
+            _stack.emplace_back(CraneEnter{crane_raw(a10), crane_raw(a1)});
           }
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         auto a00 = std::move(_f.a00);
-        _result =
-            Monad0::template bind<Monad_res,
-                                  std::pair<List<std::pair<T1, T2>>, List<T2>>,
-                                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::move(_result),
-                [=](std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
-                  const auto &[l, rest] = x0;
-                  return Monad0::template ret<
-                      Monad_res, std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                      std::make_pair(List<std::pair<T1, T2>>::cons(
-                                         std::make_pair(a0, a00), l),
-                                     rest));
-                });
+        _result = Monad_res::template bind<
+            std::pair<List<std::pair<T1, T2>>, List<T2>>,
+            std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+            std::move(_result),
+            [=, a0 = std::move(a0), a00 = std::move(a00)](
+                std::pair<List<std::pair<T1, T2>>, List<T2>> x0) {
+              auto [l, rest] = std::move(x0);
+              return Monad_res::template ret<
+                  std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+                  std::make_pair(List<std::pair<T1, T2>>::cons(
+                      std::make_pair(a0, a00), std::move(l)),
+                                 std::move(rest)));
+            });
       }
     }
     return _result;
   }
 
-  static bool check(std::monostate _x);
+  static bool check();
 };
 
 template <Monad _tcI0, typename T2>
@@ -343,7 +341,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);

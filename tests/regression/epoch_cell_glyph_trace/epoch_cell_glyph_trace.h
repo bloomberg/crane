@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -48,16 +48,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -94,14 +95,15 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct Positive {
@@ -167,8 +169,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -229,7 +231,8 @@ struct Pos {
   static bool eqb(const Positive &p, const Positive &q);
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -250,7 +253,7 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static Z opp(const Z &x);
   static Z sub(const Z &m, const Z &n);
   static Z mul(const Z &x, const Z &y);
@@ -296,22 +299,8 @@ struct EpochCellGlyphTraceCase {
 
   template <typename T1>
   static T1 LunarPhase_rec(T1 f, T1 f0, T1 f1, T1 f2, LunarPhase l) {
-    switch (l) {
-    case LunarPhase::NEWMOON: {
-      return f;
-    }
-    case LunarPhase::FIRSTQUARTER: {
-      return f0;
-    }
-    case LunarPhase::FULLMOON: {
-      return f1;
-    }
-    case LunarPhase::LASTQUARTER: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+    return LunarPhase_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                               std::move(f2), l);
   }
 
   static uint64_t phase_code(LunarPhase p);
@@ -379,46 +368,10 @@ struct EpochCellGlyphTraceCase {
   template <typename T1>
   static T1 ZodiacSign_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                            T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, ZodiacSign z) {
-    switch (z) {
-    case ZodiacSign::ARIES: {
-      return f;
-    }
-    case ZodiacSign::TAURUS: {
-      return f0;
-    }
-    case ZodiacSign::GEMINI: {
-      return f1;
-    }
-    case ZodiacSign::CANCER: {
-      return f2;
-    }
-    case ZodiacSign::LEO: {
-      return f3;
-    }
-    case ZodiacSign::VIRGO: {
-      return f4;
-    }
-    case ZodiacSign::LIBRA: {
-      return f5;
-    }
-    case ZodiacSign::SCORPIO: {
-      return f6;
-    }
-    case ZodiacSign::SAGITTARIUS: {
-      return f7;
-    }
-    case ZodiacSign::CAPRICORN: {
-      return f8;
-    }
-    case ZodiacSign::AQUARIUS: {
-      return f9;
-    }
-    case ZodiacSign::PISCES: {
-      return f10;
-    }
-    default:
-      std::unreachable();
-    }
+    return ZodiacSign_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                               std::move(f2), std::move(f3), std::move(f4),
+                               std::move(f5), std::move(f6), std::move(f7),
+                               std::move(f8), std::move(f9), std::move(f10), z);
   }
 
   static uint64_t zodiac_code(ZodiacSign z);
@@ -434,21 +387,23 @@ struct EpochCellGlyphTraceCase {
     Z zodiac_position;
   };
 
-  static inline const MechanismState initial_state = MechanismState{
-      Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0()};
-  static inline const Z metonic_modulus =
+  [[gnu::used]] static inline const MechanismState initial_state =
+      MechanismState{Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(), Z::z0(),
+                     Z::z0()};
+  [[gnu::used]] static inline const Z metonic_modulus =
       Z::zpos(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
           Positive::xo(Positive::xi(Positive::xi(Positive::xh()))))))));
-  static inline const Z saros_modulus =
+  [[gnu::used]] static inline const Z saros_modulus =
       Z::zpos(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))))));
-  static inline const Z callippic_modulus = Z::zpos(Positive::xo(Positive::xo(
-      Positive::xi(Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
-  static inline const Z exeligmos_modulus =
+  [[gnu::used]] static inline const Z callippic_modulus =
+      Z::zpos(Positive::xo(Positive::xo(Positive::xi(
+          Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
+  [[gnu::used]] static inline const Z exeligmos_modulus =
       Z::zpos(Positive::xi(Positive::xh()));
-  static inline const Z games_modulus =
+  [[gnu::used]] static inline const Z games_modulus =
       Z::zpos(Positive::xo(Positive::xo(Positive::xh())));
-  static inline const Z zodiac_modulus =
+  [[gnu::used]] static inline const Z zodiac_modulus =
       Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))))));
   static MechanismState step(const MechanismState &s);
@@ -493,25 +448,8 @@ struct EpochCellGlyphTraceCase {
   template <typename T1>
   static T1 EclipseCategory_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3,
                                 EclipseCategory e) {
-    switch (e) {
-    case EclipseCategory::EC_TOTALLUNAR: {
-      return f;
-    }
-    case EclipseCategory::EC_PARTIALLUNAR: {
-      return f0;
-    }
-    case EclipseCategory::EC_TOTALSOLAR: {
-      return f1;
-    }
-    case EclipseCategory::EC_ANNULARSOLAR: {
-      return f2;
-    }
-    case EclipseCategory::EC_PARTIALSOLAR: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+    return EclipseCategory_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                                    std::move(f2), std::move(f3), e);
   }
 
   static uint64_t eclipse_category_code(EclipseCategory c);
@@ -526,6 +464,7 @@ struct EpochCellGlyphTraceCase {
     Q he_magnitude;
     bool he_visible_mediterranean;
   };
+
   enum class DialGlyph {
     GLYPH_SIGMA,
     GLYPH_ETA,
@@ -559,25 +498,8 @@ struct EpochCellGlyphTraceCase {
 
   template <typename T1>
   static T1 DialGlyph_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, DialGlyph d) {
-    switch (d) {
-    case DialGlyph::GLYPH_SIGMA: {
-      return f;
-    }
-    case DialGlyph::GLYPH_ETA: {
-      return f0;
-    }
-    case DialGlyph::GLYPH_SIGMATOTAL: {
-      return f1;
-    }
-    case DialGlyph::GLYPH_ETAANNULAR: {
-      return f2;
-    }
-    case DialGlyph::GLYPH_EMPTY: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+    return DialGlyph_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                              std::move(f2), std::move(f3), d);
   }
 
   static uint64_t glyph_code(DialGlyph g);
@@ -594,7 +516,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xo(Positive::xi(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
       Q{Z::zpos(Positive::xi(Positive::xo(Positive::xi(Positive::xo(
-            Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
+          Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
@@ -610,7 +532,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
       Q{Z::zpos(Positive::xo(Positive::xi(Positive::xi(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
@@ -618,14 +540,13 @@ struct EpochCellGlyphTraceCase {
       Z::zneg(Positive::xi(Positive::xi(Positive::xo(Positive::xi(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
       Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
-      Z::zpos(Positive::xh()),
-      EclipseCategory::EC_PARTIALSOLAR,
+      Z::zpos(Positive::xh()), EclipseCategory::EC_PARTIALSOLAR,
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))),
       Z::zpos(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
       Q{Z::zpos(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
         Positive::xo(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
@@ -641,7 +562,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xi(
           Positive::xi(Positive::xo(Positive::xi(Positive::xh()))))),
       Q{Z::zpos(Positive::xo(Positive::xo(Positive::xo(Positive::xi(
-            Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
+          Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
@@ -656,7 +577,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xi(Positive::xi(
           Positive::xo(Positive::xo(Positive::xo(Positive::xh())))))),
       Q{Z::zpos(Positive::xi(Positive::xo(Positive::xo(Positive::xo(
-            Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
+          Positive::xo(Positive::xi(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
@@ -672,7 +593,7 @@ struct EpochCellGlyphTraceCase {
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))),
       Q{Z::zpos(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
-            Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))))),
+          Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))))),
         Positive::xo(Positive::xo(Positive::xi(
             Positive::xo(Positive::xo(Positive::xi(Positive::xh()))))))},
       true};
@@ -706,9 +627,9 @@ struct EpochCellGlyphTraceCase {
     DialGlyph reading_glyph;
   };
 
-  static EpochReading build_epoch_reading(const Z &epoch_year,
-                                          const Z &epoch_month,
-                                          const HistoricalEclipse &e);
+  static EpochReading
+  build_epoch_reading(const Z &epoch_year, const Z &epoch_month,
+                      const HistoricalEclipse &e);
   static bool reading_matches(const EpochReading &reading);
   static uint64_t reading_phase_code(const EpochReading &reading);
   static uint64_t reading_zodiac_code(const EpochReading &reading);
@@ -744,10 +665,10 @@ struct EpochCellGlyphTraceCase {
       reading_zodiac_code(sample_epoch_reading);
   static inline const bool sample_valid_epoch_visible =
       epoch_205_bc_valid.ve_eclipse.he_visible_mediterranean;
-  static inline const bool sample_valid_epoch_series_44 =
-      BinInt::eqb(epoch_205_bc_valid.ve_eclipse.he_saros_series,
-                  Z::zpos(Positive::xo(Positive::xo(Positive::xi(
-                      Positive::xi(Positive::xo(Positive::xh())))))));
+  static inline const bool sample_valid_epoch_series_44 = BinInt::eqb(
+      epoch_205_bc_valid.ve_eclipse.he_saros_series,
+      Z::zpos(Positive::xo(Positive::xo(
+          Positive::xi(Positive::xi(Positive::xo(Positive::xh())))))));
   static inline const bool sample_valid_epoch_magnitude_ge_one =
       QArith_base::Qle_bool(Q{Z::zpos(Positive::xh()), Positive::xh()},
                             epoch_205_bc_valid.ve_eclipse.he_magnitude);
@@ -758,13 +679,13 @@ struct EpochCellGlyphTraceCase {
                   Z::zpos(Positive::xh()));
   static inline const bool sample_eclipse_possible_after_6 =
       eclipse_possible_at_dial(step_n(UINT64_C(6), initial_state).saros_dial);
-  static inline const bool sample_epoch_178_misaligned = !(BinInt::eqb(
-      saros_cell(
-          Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
-              Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
-          Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
-          eclipse_jun_178_bc),
-      Z::z0()));
+  static inline const bool sample_epoch_178_misaligned =
+      !(BinInt::eqb(saros_cell(
+            Z::zneg(Positive::xo(Positive::xo(Positive::xi(Positive::xi(
+                Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))))),
+            Z::zpos(Positive::xi(Positive::xo(Positive::xh()))),
+            eclipse_jun_178_bc),
+                    Z::z0()));
 };
 
 #endif // INCLUDED_EPOCH_CELL_GLYPH_TRACE

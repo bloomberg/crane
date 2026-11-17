@@ -15,7 +15,7 @@
 // agree and `check` returns `true`.
 int main() {
   try {
-    bool r = check(std::monostate{});
+    bool r = check();
     if (!r) {
       std::fprintf(stderr, "FAIL: check returned false (expected true)\n");
       return 1;

@@ -29,20 +29,21 @@
 Comparison OK::compare(const Nat &x, const Nat &y) {
   if (&y == &x) {
     return Comparison::EQ;
-  }
-  if (std::holds_alternative<typename Nat::O>(x.v())) {
-    if (std::holds_alternative<typename Nat::O>(y.v())) {
-      return Comparison::EQ;
-    } else {
-      return Comparison::LT;
-    }
   } else {
-    const auto &[a0] = std::get<typename Nat::S>(x.v());
-    if (std::holds_alternative<typename Nat::O>(y.v())) {
-      return Comparison::GT;
+    if (std::holds_alternative<typename Nat::O>(x.v())) {
+      if (std::holds_alternative<typename Nat::O>(y.v())) {
+        return Comparison::EQ;
+      } else {
+        return Comparison::LT;
+      }
     } else {
-      const auto &[a00] = std::get<typename Nat::S>(y.v());
-      return compare(*a0, *a00);
+      const auto &[a0] = std::get<typename Nat::S>(x.v());
+      if (std::holds_alternative<typename Nat::O>(y.v())) {
+        return Comparison::GT;
+      } else {
+        const auto &[a00] = std::get<typename Nat::S>(y.v());
+        return compare(*a0, *a00);
+      }
     }
   }
 }

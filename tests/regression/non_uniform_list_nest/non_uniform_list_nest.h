@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -121,6 +122,27 @@ struct NonUniformListNest {
     static n2 s2(n2 a0) { return n2(S2{std::make_shared<n2>(std::move(a0))}); }
 
     // MANIPULATORS
+    ~n2() {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<n2> {
+        if (auto *_alt = std::get_if<S2>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
+          }
+        }
+        return nullptr;
+      };
+      std::shared_ptr<n2> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
+      }
+    }
+
+    n2(const n2 &) = default;
+    n2 &operator=(const n2 &) = default;
+    n2(n2 &&) = default;
+    n2 &operator=(n2 &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -128,30 +150,26 @@ struct NonUniformListNest {
   };
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
-             std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 n2_rect(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
       const auto &[a0] = std::get<typename n2::Z2>(n.v());
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename n2::S2>(n.v());
-      return crane_any_cast<T1>(
-          f0(*a0, n2_rect(crane_erase_fn<T1>(f), f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, n2_rect<T1>(f, f0, *a0)));
     }
   }
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
-             std::is_invocable_r_v<T1, F1 &, n2 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 n2_rec(F0 &&f, F1 &&f0, const n2 &n) {
     if (std::holds_alternative<typename n2::Z2>(n.v())) {
       const auto &[a0] = std::get<typename n2::Z2>(n.v());
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename n2::S2>(n.v());
-      return crane_any_cast<T1>(
-          f0(*a0, n2_rec(crane_erase_fn<T1>(f), f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, n2_rec<T1>(f, f0, *a0)));
     }
   }
 

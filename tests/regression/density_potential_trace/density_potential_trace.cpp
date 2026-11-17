@@ -7,7 +7,7 @@ Real DensityPotentialTraceCase::sample_mu(Real x) {
 }
 
 Real DensityPotentialTraceCase::sample_gamma(Real t) {
-  return (t / Real::from_z(INT64_C(2)));
+  return (std::move(t) / Real::from_z(INT64_C(2)));
 }
 
 Real DensityPotentialTraceCase::sample_v(Real) {

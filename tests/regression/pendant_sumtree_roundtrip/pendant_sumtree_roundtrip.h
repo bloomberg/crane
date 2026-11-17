@@ -5,8 +5,8 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -28,14 +28,14 @@ struct Fin {
 
 template <typename A> struct List {
   // TYPES
-  struct Nil0 {};
+  struct Nil {};
 
-  struct Cons0 {
+  struct Cons {
     A a;
     std::shared_ptr<List<A>> l;
   };
 
-  using variant_t = std::variant<Nil0, Cons0>;
+  using variant_t = std::variant<Nil, Cons>;
 
 private:
   // DATA
@@ -45,20 +45,21 @@ public:
   // CREATORS
   List() {}
 
-  explicit List(Nil0 _v) : v_(_v) {}
+  explicit List(Nil _v) : v_(_v) {}
 
-  explicit List(Cons0 _v) : v_(std::move(_v)) {}
+  explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil0>(_other.v())) {
-            return Nil0{};
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
+            return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons0>(_other.v());
-            return Cons0{
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
+            return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -70,17 +71,16 @@ public:
           }
         }()) {}
 
-  static List<A> nil0() { return List<A>(Nil0{}); }
+  static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons0(A a, List<A> l) {
-    return List<A>(
-        Cons0{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, List<A> l) {
+    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
   }
 
   // MANIPULATORS
   ~List() {
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
-      if (auto *_alt = std::get_if<Cons0>(&_v)) {
+      if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
           std::atomic_thread_fence(std::memory_order_acquire);
           return std::move(_alt->l);
@@ -96,8 +96,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -109,38 +109,38 @@ public:
   bool forallb(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons0 {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     bool _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified forallb: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified forallb: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = true;
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = (f(a0) && std::move(_result));
       }
@@ -149,42 +149,42 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, A &, T1 &&>
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: saves [a1], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons0 {
+    struct CraneCont_Cons {
       A a1;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified fold_right: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
         } else {
-          const auto &[a1, a2] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{a1});
+          _stack.emplace_back(CraneEnter{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -195,39 +195,39 @@ public:
   template <typename T1> List<T1> concat() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons0 {
+    struct CraneCont_Cons {
       List<T1> a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<T1> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified concat: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified concat: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<List<T1>>::Nil0>(_sv.v())) {
-          _result = List<T1>::nil0();
+        if (std::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
+          _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] =
-              std::get<typename List<List<T1>>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+              std::get<typename List<List<T1>>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         List<T1> a0 = std::move(_f.a0);
         _result = a0.app(std::move(_result));
       }
@@ -236,61 +236,64 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil0());
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
-        auto _cell = std::make_shared<List<T1>>(
-            typename List<T1>::Cons0(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons0>((*_write)->v_mut()).l;
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons0: resumes after recursive call, then processes rest.
-    struct _Cont_Cons0 {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons0>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons0.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
-        if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
-          _stack.emplace_back(_Cont_Cons0{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons0>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -298,32 +301,33 @@ public:
   }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename List<A>::Nil0>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons0>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons0(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons0>((*_write)->v_mut()).l;
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
 struct Datatypes {
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
   static std::optional<T2> option_map(F0 &&f, const std::optional<T1> &o);
 };
 
@@ -334,13 +338,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -357,18 +361,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -382,15 +387,15 @@ template <typename A, typename P> struct SigT {
 
 template <typename A> struct T0 {
   // TYPES
-  struct Nil {};
+  struct Nil0 {};
 
-  struct Cons {
+  struct Cons0 {
     A h;
     uint64_t n;
     std::shared_ptr<T0<A>> a2;
   };
 
-  using variant_t = std::variant<Nil, Cons>;
+  using variant_t = std::variant<Nil0, Cons0>;
 
 private:
   // DATA
@@ -400,37 +405,38 @@ public:
   // CREATORS
   T0() {}
 
-  explicit T0(Nil _v) : v_(_v) {}
+  explicit T0(Nil0 _v) : v_(_v) {}
 
-  explicit T0(Cons _v) : v_(std::move(_v)) {}
+  explicit T0(Cons0 _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  T0(const T0<_U> &_other)
+  template <typename CraneU>
+  T0(const T0<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename T0<_U>::Nil>(_other.v())) {
-            return Nil{};
+          if (std::holds_alternative<typename T0<CraneU>::Nil0>(_other.v())) {
+            return Nil0{};
           } else {
             const auto &[h, n, a2] =
-                std::get<typename T0<_U>::Cons>(_other.v());
-            return Cons{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
-                            return crane_convert<A>(h);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        n,
-                        (a2 ? std::make_shared<T0<A>>(crane_convert<T0<A>>(*a2))
-                            : nullptr)};
+                std::get<typename T0<CraneU>::Cons0>(_other.v());
+            return Cons0{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(h);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                n,
+                (a2 ? std::make_shared<T0<A>>(crane_convert<T0<A>>(*a2))
+                    : nullptr)};
           }
         }()) {}
 
-  static T0<A> nil() { return T0<A>(Nil{}); }
+  static T0<A> nil0() { return T0<A>(Nil0{}); }
 
-  static T0<A> cons(A h, uint64_t n, T0<A> a2) {
-    return T0<A>(Cons{std::move(h), n, std::make_shared<T0<A>>(std::move(a2))});
+  static T0<A> cons0(A h, uint64_t n, T0<A> a2) {
+    return T0<A>(Cons0{std::move(h), n,
+                       std::make_shared<T0<A>>(std::move(a2))});
   }
 
   // MANIPULATORS
@@ -494,15 +500,15 @@ public:
 
   T(const T &) = default;
   T &operator=(const T &) = default;
-  T(T &&) noexcept = default;
-  T &operator=(T &&) noexcept = default;
+  T(T &&) = default;
+  T &operator=(T &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Sig<uint64_t> to_nat(uint64_t) const;
+  Sig<uint64_t> to_nat(uint64_t _x) const;
 };
 
 struct PendantSumtreeRoundtripCase {
@@ -540,17 +546,9 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1> static T1 Twist_rec(T1 f, T1 f0, Twist t1) {
-    switch (t1) {
-    case Twist::TS: {
-      return f;
-    }
-    case Twist::TZ: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return Twist_rect<T1>(std::move(f), std::move(f0), t1);
   }
+
   enum class Fiber { COTTON, CAMELID };
 
   template <typename T1> static T1 Fiber_rect(T1 f, T1 f0, Fiber f1) {
@@ -567,17 +565,9 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1> static T1 Fiber_rec(T1 f, T1 f0, Fiber f1) {
-    switch (f1) {
-    case Fiber::COTTON: {
-      return f;
-    }
-    case Fiber::CAMELID: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return Fiber_rect<T1>(std::move(f), std::move(f0), f1);
   }
+
   enum class Color { WHITE, BROWN, RED, BLUE };
 
   template <typename T1>
@@ -602,22 +592,8 @@ struct PendantSumtreeRoundtripCase {
 
   template <typename T1>
   static T1 Color_rec(T1 f, T1 f0, T1 f1, T1 f2, Color c) {
-    switch (c) {
-    case Color::WHITE: {
-      return f;
-    }
-    case Color::BROWN: {
-      return f0;
-    }
-    case Color::RED: {
-      return f1;
-    }
-    case Color::BLUE: {
-      return f2;
-    }
-    default:
-      std::unreachable();
-    }
+    return Color_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                          std::move(f2), c);
   }
 
   struct CordMeta {
@@ -683,15 +659,18 @@ struct PendantSumtreeRoundtripCase {
 
     // MANIPULATORS
     ~SumTree() {
+      if (std::holds_alternative<SumLeaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<SumTree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<SumNode>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (std::holds_alternative<typename List<SumTree>::Cons0>(
-                _lp->v())) {
-              auto &_lc = std::get<typename List<SumTree>::Cons0>(_lp->v_mut());
+            while (
+                std::holds_alternative<typename List<SumTree>::Cons>(_lp->v())) {
+              auto &_lc = std::get<typename List<SumTree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<SumTree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
                 std::atomic_thread_fence(std::memory_order_acquire);
@@ -717,8 +696,8 @@ struct PendantSumtreeRoundtripCase {
 
     SumTree(const SumTree &) = default;
     SumTree &operator=(const SumTree &) = default;
-    SumTree(SumTree &&) noexcept = default;
-    SumTree &operator=(SumTree &&) noexcept = default;
+    SumTree(SumTree &&) = default;
+    SumTree &operator=(SumTree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -727,9 +706,7 @@ struct PendantSumtreeRoundtripCase {
   };
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
-             std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
-                                   List<SumTree> &>
+    requires std::is_invocable_r_v<T1, F1 &, const CertifiedPendant &>
   static T1 SumTree_rect(uint64_t, F1 &&f, F2 &&f0, const SumTree &s) {
     if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
       const auto &[a0] = std::get<typename SumTree::SumLeaf>(s.v());
@@ -741,17 +718,8 @@ struct PendantSumtreeRoundtripCase {
   }
 
   template <typename T1, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F1 &, CertifiedPendant &> &&
-             std::is_invocable_r_v<T1, F2 &, CertifiedPendant &,
-                                   List<SumTree> &>
-  static T1 SumTree_rec(uint64_t, F1 &&f, F2 &&f0, const SumTree &s) {
-    if (std::holds_alternative<typename SumTree::SumLeaf>(s.v())) {
-      const auto &[a0] = std::get<typename SumTree::SumLeaf>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename SumTree::SumNode>(s.v());
-      return f0(a0, *a1);
-    }
+  static T1 SumTree_rec(uint64_t _x, F1 &&f, F2 &&f0, const SumTree &s) {
+    return SumTree_rect<T1>(_x, f, f0, s);
   }
 
   static CertifiedPendant sumtree_top(uint64_t _x, const SumTree &st);
@@ -792,11 +760,10 @@ struct PendantSumtreeRoundtripCase {
   static inline const CertifiedPendant pendant_5 =
       CertifiedPendant{sample_meta_a, digits_5};
   static inline const List<T0<digit>> sample_multi_digits =
-      List<T0<digit>>::cons0(
-          digits_731,
-          List<T0<digit>>::cons0(
-              digits_462,
-              List<T0<digit>>::cons0(digits_269, List<T0<digit>>::nil0())));
+      List<T0<digit>>::cons(
+          digits_731, List<T0<digit>>::cons(
+                          digits_462, List<T0<digit>>::cons(
+                                          digits_269, List<T0<digit>>::nil())));
   static inline const bool sample_multi_roundtrip_ok = []() -> bool {
     auto _cs = decode_multi(UINT64_C(3),
                             encode_multi(UINT64_C(3), sample_multi_digits));
@@ -806,40 +773,40 @@ struct PendantSumtreeRoundtripCase {
           decoded.template map<uint64_t>([](T0<digit> _x0) -> uint64_t {
             return value_digits(UINT64_C(3), _x0);
           }),
-          List<uint64_t>::cons0(
+          List<uint64_t>::cons(
               UINT64_C(731),
-              List<uint64_t>::cons0(
-                  UINT64_C(462), List<uint64_t>::cons0(
-                                     UINT64_C(269), List<uint64_t>::nil0()))));
+              List<uint64_t>::cons(
+                  UINT64_C(462),
+                  List<uint64_t>::cons(UINT64_C(269), List<uint64_t>::nil()))));
     } else {
       return false;
     }
   }();
   static inline const PendantGroup sample_group = PendantGroup{
       pendant_731,
-      List<CertifiedPendant>::cons0(
-          pendant_462, List<CertifiedPendant>::cons0(
-                           pendant_269, List<CertifiedPendant>::nil0()))};
+      List<CertifiedPendant>::cons(
+          pendant_462, List<CertifiedPendant>::cons(
+                           pendant_269, List<CertifiedPendant>::nil()))};
   static inline const SumTree sample_subtree = SumTree::sumnode(
-      pendant_269,
-      List<SumTree>::cons0(SumTree::sumleaf(pendant_200),
-                           List<SumTree>::cons0(SumTree::sumleaf(pendant_069),
-                                                List<SumTree>::nil0())));
+      pendant_269, List<SumTree>::cons(
+                       SumTree::sumleaf(pendant_200),
+                       List<SumTree>::cons(SumTree::sumleaf(pendant_069),
+                                           List<SumTree>::nil())));
   static inline const SumTree sample_tree = SumTree::sumnode(
       pendant_731,
-      List<SumTree>::cons0(
+      List<SumTree>::cons(
           SumTree::sumleaf(pendant_462),
-          List<SumTree>::cons0(sample_subtree, List<SumTree>::nil0())));
+          List<SumTree>::cons(sample_subtree, List<SumTree>::nil())));
   static inline const Ledger sample_ledger =
-      List<SigT<uint64_t, CertifiedPendant>>::cons0(
+      List<SigT<uint64_t, CertifiedPendant>>::cons(
           SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3), pendant_731),
-          List<SigT<uint64_t, CertifiedPendant>>::cons0(
+          List<SigT<uint64_t, CertifiedPendant>>::cons(
               SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(3),
                                                        pendant_462),
-              List<SigT<uint64_t, CertifiedPendant>>::cons0(
+              List<SigT<uint64_t, CertifiedPendant>>::cons(
                   SigT<uint64_t, CertifiedPendant>::existt(UINT64_C(1),
                                                            pendant_5),
-                  List<SigT<uint64_t, CertifiedPendant>>::nil0())));
+                  List<SigT<uint64_t, CertifiedPendant>>::nil())));
   static inline const bool sample_group_valid =
       group_sums_validb(UINT64_C(3), sample_group);
   static inline const bool sample_subtree_valid =
@@ -858,7 +825,6 @@ struct PendantSumtreeRoundtripCase {
 };
 
 template <typename T1, typename T2, typename F0>
-  requires std::is_invocable_r_v<T2, F0 &, T1 &>
 std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
   if (o.has_value()) {
     const T1 &a = *o;
@@ -869,32 +835,67 @@ std::optional<T2> Datatypes::option_map(F0 &&f, const std::optional<T1> &o) {
 }
 
 template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
-  auto fold_right_fix_impl = [](auto &_self_fold_right_fix, uint64_t,
-                                const T0<T1> &v0, List<T1> b) -> List<T1> {
-    if (std::holds_alternative<typename T0<T1>::Nil>(v0.v())) {
-      return b;
-    } else {
-      const auto &[h, n1, a2] = std::get<typename T0<T1>::Cons>(v0.v());
-      return List<T1>::cons0(
-          h, _self_fold_right_fix(_self_fold_right_fix, n1, *a2, std::move(b)));
-    }
-  };
-  auto fold_right_fix = [&](uint64_t _x, const T0<T1> &v0,
-                            List<T1> b) -> List<T1> {
-    return fold_right_fix_impl(fold_right_fix_impl, _x, v0, b);
-  };
-  return fold_right_fix(n, v, List<T1>::nil0());
+  auto fold_right_fix_impl =
+      [](auto &_self_fold_right_fix, uint64_t, const T0<T1> &v0,
+         List<T1> b)
+           -> List<T1> {
+        if (std::holds_alternative<typename T0<T1>::Nil0>(v0.v())) {
+          return b;
+        } else {
+          const auto &[h, n1, a2] = std::get<typename T0<T1>::Cons0>(v0.v());
+          return List<T1>::cons(h, _self_fold_right_fix(_self_fold_right_fix,
+                                                        n1, *a2, std::move(b)));
+        }
+      };
+  {
+    uint64_t _lc1_x = n;
+    const T0<T1> &_lc1_v0 = v;
+    List<T1> _lc1_b = List<T1>::nil();
+    return fold_right_fix_impl(fold_right_fix_impl, _lc1_x, _lc1_v0,
+                               std::move(_lc1_b));
+  }
 }
 
-inline Sig<uint64_t> T::to_nat(uint64_t) const {
-  if (std::holds_alternative<typename T::F1>(this->v())) {
-    return Sig<uint64_t>::exist(UINT64_C(0));
-  } else {
-    const auto &[n1, a1] = std::get<typename T::FS>(this->v());
-    Sig<uint64_t> _tmp1 = a1->to_nat(n1);
-    auto &[x0] = _tmp1;
-    return Sig<uint64_t>::exist((std::move(x0) + 1));
+inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
+  const T *_self = this;
+
+  /// CraneEnter: captures varying parameters for each recursive call.
+  struct CraneEnter {
+    const T *_self;
+    uint64_t _x;
+  };
+
+  /// CraneCont_FS: resumes after recursive call, then processes rest.
+  struct CraneCont_FS {};
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
+  Sig<uint64_t> _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{_self, _x});
+  /// Loopified to_nat: CraneEnter -> CraneCont_FS.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const T *_self = _f._self;
+      uint64_t _x = _f._x;
+      auto &&_sv = *_self;
+      if (std::holds_alternative<typename T::F1>(_sv.v())) {
+        _result = Sig<uint64_t>::exist(UINT64_C(0));
+      } else {
+        const auto &[n1, a1] = std::get<typename T::FS>(_sv.v());
+        _stack.emplace_back(CraneCont_FS{});
+        _stack.emplace_back(CraneEnter{crane_raw(a1), n1});
+      }
+    } else {
+      auto _f = std::move(std::get<CraneCont_FS>(_frame));
+      Sig<uint64_t> _tmp1 = std::move(_result);
+      auto &[x0] = _tmp1;
+      _result = Sig<uint64_t>::exist((std::move(x0) + 1));
+    }
   }
+  return _result;
 }
 
 #endif // INCLUDED_PENDANT_SUMTREE_ROUNDTRIP

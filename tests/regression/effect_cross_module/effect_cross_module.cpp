@@ -2,12 +2,12 @@
 
 /// Inner module defines a helper that returns a value
 void EffectCrossModule::Inner::greet(std::string name) {
-  std::cout << "Hello, "s + name << '\n';
+  std::cout << std::string("Hello, ") + std::move(name) << '\n';
   return;
 }
 
 std::string EffectCrossModule::Inner::ask_name() {
-  std::cout << "What is your name?"s << '\n';
+  std::cout << std::string("What is your name?") << '\n';
   return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
@@ -24,8 +24,9 @@ void EffectCrossModule::test_greet() {
 std::string EffectCrossModule::test_ask_name() { return Inner::ask_name(); }
 
 int64_t EffectCrossModule::test_with_greeting() {
-  return Inner::template with_greeting<int64_t>(
-      [](std::string name) { return static_cast<int64_t>(name.length()); });
+  return Inner::template with_greeting<int64_t>([](std::string name) {
+    return static_cast<int64_t>(std::move(name).length());
+  });
 }
 
 /// Use Inner's helper in a recursive function
@@ -45,7 +46,7 @@ void EffectCrossModule::greet_all(const List<std::string> &names) {
 std::string EffectCrossModule::combined_io_op() {
   std::string name = Inner::ask_name();
   [&]() {
-    std::ofstream file("last_name.txt"s);
+    std::ofstream file(std::string("last_name.txt"));
     file << name;
   }();
   return name;

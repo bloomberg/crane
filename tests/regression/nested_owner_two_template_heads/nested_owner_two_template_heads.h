@@ -3,11 +3,10 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include "small_vector.h"
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -58,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,23 +90,23 @@ struct Bag {
 
     explicit bag(Add _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    bag(const typename Bag::template bag<_U> &_other)
+    template <typename CraneU>
+    bag(const typename Bag::template bag<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename Bag::template bag<_U>::Empty>(
-                    _other.v())) {
+            if (std::holds_alternative<
+                    typename Bag::template bag<CraneU>::Empty>(_other.v())) {
               return Empty{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename Bag::template bag<_U>::Add>(_other.v());
+                  std::get<typename Bag::template bag<CraneU>::Add>(_other.v());
               return Add{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<typename Bag::template bag<A>>(
@@ -130,14 +129,14 @@ struct Bag {
     ~bag() {
       auto _next =
           [&](variant_t &_v) -> std::shared_ptr<typename Bag::template bag<A>> {
-        if (auto *_alt = std::get_if<Add>(&_v)) {
-          if (_alt->a1 && _alt->a1.use_count() == 1) {
-            std::atomic_thread_fence(std::memory_order_acquire);
-            return std::move(_alt->a1);
-          }
-        }
-        return nullptr;
-      };
+            if (auto *_alt = std::get_if<Add>(&_v)) {
+              if (_alt->a1 && _alt->a1.use_count() == 1) {
+                std::atomic_thread_fence(std::memory_order_acquire);
+                return std::move(_alt->a1);
+              }
+            }
+            return nullptr;
+          };
       std::shared_ptr<typename Bag::template bag<A>> _cur = _next(v_mut());
       while (_cur) {
         _cur = _next(_cur->v_mut());
@@ -146,17 +145,15 @@ struct Bag {
 
     bag(const bag &) = default;
     bag &operator=(const bag &) = default;
-    bag(bag &&) noexcept = default;
-    bag &operator=(bag &&) noexcept = default;
+    bag(bag &&) = default;
+    bag &operator=(bag &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename F0>
-      requires std::is_invocable_r_v<bool, F0 &, A &>
-    Nat countIf(F0 &&p) const;
+    template <typename F0> Nat countIf(F0 &&p) const;
   };
 
   static inline const Nat depth_limit =
@@ -180,22 +177,49 @@ struct Tally {
 Bag::bag<Nat> roundtrip(Bag::bag<Nat> b);
 bool count_odd_is(const Bag::bag<Nat> &b, const Nat &n);
 const Nat limit = Bag::depth_limit;
-Bag::bag<Nat> round(const Bag::bag<Nat> &x0_);
+Bag::bag<Nat> round(Bag::bag<Nat> x0_);
 
 template <typename A>
-template <typename F0>
-  requires std::is_invocable_r_v<bool, F0 &, A &>
-Nat Bag::bag<A>::countIf(F0 &&p) const {
-  if (std::holds_alternative<typename Bag::bag<A>::Empty>(this->v())) {
-    return Nat::o();
-  } else {
-    const auto &[a0, a1] = std::get<typename Bag::bag<A>::Add>(this->v());
-    if (p(a0)) {
-      return Tally::bump(a1->countIf(p));
+template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
+  const typename Bag::template bag<A> *_self = this;
+
+  /// CraneEnter: captures varying parameters for each recursive call.
+  struct CraneEnter {
+    const typename Bag::template bag<A> *_self;
+  };
+
+  /// CraneCont1: resumes after recursive call, then processes rest.
+  struct CraneCont1 {};
+
+  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  Nat _result{};
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{_self});
+  /// Loopified countIf: CraneEnter -> CraneCont1.
+  while (!_stack.empty()) {
+    CraneFrame _frame = std::move(_stack.back());
+    _stack.pop_back();
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const typename Bag::template bag<A> *_self = _f._self;
+      auto &&_sv = *_self;
+      if (std::holds_alternative<typename Bag::bag<A>::Empty>(_sv.v())) {
+        _result = Nat::o();
+      } else {
+        const auto &[a0, a1] = std::get<typename Bag::bag<A>::Add>(_sv.v());
+        if (p(a0)) {
+          _stack.emplace_back(CraneCont1{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        } else {
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        }
+      }
     } else {
-      return a1->countIf(p);
+      auto _f = std::move(std::get<CraneCont1>(_frame));
+      _result = Tally::bump(std::move(_result));
     }
   }
+  return _result;
 }
 
 #endif // INCLUDED_NESTED_OWNER_TWO_TEMPLATE_HEADS

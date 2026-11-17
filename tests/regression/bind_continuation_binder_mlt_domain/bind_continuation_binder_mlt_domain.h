@@ -4,12 +4,11 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -31,23 +30,34 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
-};
-/// Field order identical to bind_continuation_binder_field_order.
-template <typename
-I>concept Params = requires {
-    typename I::tag;
-    typename I::addr;
-  } && (requires {
-    { I::t0() } -> std::convertible_to<typename I::tag>;
+}; /// Field order identical to bind_continuation_binder_field_order.
+template <typename I>
+concept Params = requires {
+  typename I::tag;
+  typename I::addr;
+} && (requires {
+  {
+    I::t0()
+  }
+  -> std::convertible_to<typename I::tag>;
+} || requires {
+  {
+    I::t0
+  }
+  -> std::convertible_to<typename I::tag>;
+}) &&
+  (requires {
+    {
+      I::zero()
+    }
+    -> std::convertible_to<typename I::addr>;
   } || requires {
-    { I::t0 } -> std::convertible_to<typename I::tag>;
-  }) && (requires {
-    { I::zero() } -> std::convertible_to<typename I::addr>;
-  } || requires {
-    { I::zero } -> std::convertible_to<typename I::addr>;
+    {
+      I::zero
+    }
+    -> std::convertible_to<typename I::addr>;
   });
 
 struct Nat {
@@ -95,8 +105,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -127,16 +137,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -173,8 +184,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -182,24 +193,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat length() const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<Nat>(Nat::o());
+        auto _value = Nat::o();
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -207,7 +222,6 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
@@ -236,13 +250,13 @@ public:
 
   explicit EOU(Err _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  EOU(const EOU<_U> &_other)
+  template <typename CraneU>
+  EOU(const EOU<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename EOU<_U>::Ok>(_other.v())) {
-            const auto &[a0] = std::get<typename EOU<_U>::Ok>(_other.v());
+          if (std::holds_alternative<typename EOU<CraneU>::Ok>(_other.v())) {
+            const auto &[a0] = std::get<typename EOU<CraneU>::Ok>(_other.v());
             return Ok{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -250,7 +264,7 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] = std::get<typename EOU<_U>::Err>(_other.v());
+            const auto &[a0] = std::get<typename EOU<CraneU>::Err>(_other.v());
             return Err{a0};
           }
         }()) {}
@@ -267,20 +281,20 @@ public:
 };
 
 struct EOU_monad {
-  template <typename _A0> using m = EOU<_A0>;
+  template <typename CraneA0> using m = EOU<CraneA0>;
 
-  template <typename _A0> static EOU<_A0> ret(_A0 a) {
-    return EOU<_A0>::ok(std::move(a));
+  template <typename CraneA0> static EOU<CraneA0> ret(CraneA0 a) {
+    return EOU<CraneA0>::ok(std::move(a));
   }
 
-  template <typename _A0, typename _A1>
-  static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
-    if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-      const auto &[a0] = std::get<typename EOU<_A0>::Ok>(m.v());
-      return k(a0);
+  template <typename CraneA0, typename CraneA1>
+  static EOU<CraneA1> bind(EOU<CraneA0> m, crane::fn<EOU<CraneA1>(CraneA0)> k) {
+    if (std::holds_alternative<typename EOU<CraneA0>::Ok>(m.v_mut())) {
+      auto &[a0] = std::get<typename EOU<CraneA0>::Ok>(m.v_mut());
+      return k(std::move(a0));
     } else {
-      const auto &[a0] = std::get<typename EOU<_A0>::Err>(m.v());
-      return EOU<_A1>::err(a0);
+      auto &[a0] = std::get<typename EOU<CraneA0>::Err>(m.v_mut());
+      return EOU<CraneA1>::err(std::move(a0));
     }
   }
 };
@@ -312,16 +326,16 @@ public:
 
   explicit Dv(DNum _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Dv(const Dv<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Dv(const Dv<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Dv<_U0, _U1>::DAddr>(
+          if (std::holds_alternative<typename Dv<CraneU0, CraneU1>::DAddr>(
                   _other.v())) {
             const auto &[a0, a1] =
-                std::get<typename Dv<_U0, _U1>::DAddr>(_other.v());
+                std::get<typename Dv<CraneU0, CraneU1>::DAddr>(_other.v());
             return DAddr{
                 [&]() -> tag {
-                  if constexpr (crane_convertible<tag, const _U0 &>) {
+                  if constexpr (crane_convertible<tag, const CraneU0 &>) {
                     return crane_convert<tag>(a0);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -329,7 +343,7 @@ public:
                   }
                 }(),
                 [&]() -> addr {
-                  if constexpr (crane_convertible<addr, const _U1 &>) {
+                  if constexpr (crane_convertible<addr, const CraneU1 &>) {
                     return crane_convert<addr>(a1);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -338,7 +352,7 @@ public:
                 }()};
           } else {
             const auto &[a0] =
-                std::get<typename Dv<_U0, _U1>::DNum>(_other.v());
+                std::get<typename Dv<CraneU0, CraneU1>::DNum>(_other.v());
             return DNum{a0};
           }
         }()) {}
@@ -376,63 +390,69 @@ template <Params _tcI0>
 EOU<Dv<typename _tcI0::tag, typename _tcI0::addr>>
 bytes_to_dv(typename _tcI0::addr a, const Nat &n, const List<Byte> &bs) {
   if (std::holds_alternative<typename Nat::O>(n.v())) {
-    return Monad0::template ret<EOU_monad,
-                                Dv<typename _tcI0::tag, typename _tcI0::addr>>(
+    return EOU_monad::template ret<
+        Dv<typename _tcI0::tag, typename _tcI0::addr>>(
         Dv<typename _tcI0::tag, typename _tcI0::addr>::dnum(Nat::o()));
   } else {
     const auto &[a0] = std::get<typename Nat::S>(n.v());
     const Nat &a0_value = *a0;
     if (std::holds_alternative<typename List<Byte>::Nil>(bs.v())) {
-      return Monad0::template ret<
-          EOU_monad, Dv<typename _tcI0::tag, typename _tcI0::addr>>(
-          Dv<typename _tcI0::tag, typename _tcI0::addr>::daddr(_tcI0::t0(), a));
+      return EOU_monad::template ret<
+          Dv<typename _tcI0::tag, typename _tcI0::addr>>(
+          Dv<typename _tcI0::tag, typename _tcI0::addr>::daddr(_tcI0::t0(),
+                                                               std::move(a)));
     } else {
       const auto &[a00, a10] = std::get<typename List<Byte>::Cons>(bs.v());
       const List<Byte> &a10_value = *a10;
       const auto &[a01] = a00;
-      auto go_impl = [=](auto &_self_go, List<Nat> ds, List<Byte> bs0)
-          -> EOU<List<Dv<typename _tcI0::tag, typename _tcI0::addr>>> {
-        if (std::holds_alternative<typename List<Nat>::Nil>(ds.v())) {
-          return Monad0::template ret<
-              EOU_monad, List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
-              List<Dv<typename _tcI0::tag, typename _tcI0::addr>>::nil());
-        } else {
-          const auto &[a02, a12] = std::get<typename List<Nat>::Cons>(ds.v());
-          const List<Nat> &a12_value = *a12;
-          return Monad0::template bind<
-              EOU_monad, Dv<typename _tcI0::tag, typename _tcI0::addr>,
-              List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
-              bytes_to_dv<_tcI0>(a, a0_value, bs0),
-              [=](const Dv<typename _tcI0::tag, typename _tcI0::addr> &f) {
-                return Monad0::template bind<
-                    EOU_monad,
-                    List<Dv<typename _tcI0::tag, typename _tcI0::addr>>,
-                    List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
-                    _self_go(_self_go, a12_value, bs0),
-                    [=](const List<
-                        Dv<typename _tcI0::tag, typename _tcI0::addr>> &r) {
-                      return Monad0::template ret<
-                          EOU_monad,
-                          List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
-                          List<Dv<typename _tcI0::tag,
-                                  typename _tcI0::addr>>::cons(f, r));
-                    });
-              });
-        }
-      };
-      auto go = [=](List<Nat> ds, List<Byte> bs0)
-          -> EOU<List<Dv<typename _tcI0::tag, typename _tcI0::addr>>> {
-        return go_impl(go_impl, ds, bs0);
-      };
-      return Monad0::template bind<
-          EOU_monad, List<Dv<typename _tcI0::tag, typename _tcI0::addr>>,
+      auto go_impl =
+          [=, a = std::move(a)](auto &_self_go, List<Nat> ds,
+                                List<Byte> bs0)
+               -> EOU<List<Dv<typename _tcI0::tag, typename _tcI0::addr>>> {
+            if (std::holds_alternative<typename List<Nat>::Nil>(ds.v_mut())) {
+              return EOU_monad::template ret<
+                  List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
+                  List<Dv<typename _tcI0::tag, typename _tcI0::addr>>::nil());
+            } else {
+              auto &[_, a12] = std::get<typename List<Nat>::Cons>(ds.v_mut());
+              const List<Nat> &a12_value = *a12;
+              return EOU_monad::template bind<
+                  Dv<typename _tcI0::tag, typename _tcI0::addr>,
+                  List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
+                  bytes_to_dv<_tcI0>(a, a0_value, bs0),
+                  [=](const Dv<typename _tcI0::tag, typename _tcI0::addr> &f) {
+                    return EOU_monad::template bind<
+                        List<Dv<typename _tcI0::tag, typename _tcI0::addr>>,
+                        List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
+                        _self_go(_self_go, a12_value, bs0),
+                        [=](const List<
+                            Dv<typename _tcI0::tag,
+                               typename _tcI0::addr>> &r) {
+                          return EOU_monad::template ret<List<
+                              Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
+                              List<
+                                  Dv<typename _tcI0::tag,
+                                     typename _tcI0::addr>>::cons(f, r));
+                        });
+                  });
+            }
+          };
+      auto go =
+          [=, go_impl = std::move(go_impl)](List<Nat> ds,
+                                            List<Byte> bs0)
+               -> EOU<List<Dv<typename _tcI0::tag,
+                              typename _tcI0::addr>>> {
+            return go_impl(go_impl, std::move(ds), std::move(bs0));
+          };
+      return EOU_monad::template bind<
+          List<Dv<typename _tcI0::tag, typename _tcI0::addr>>,
           Dv<typename _tcI0::tag, typename _tcI0::addr>>(
           go(List<Nat>::cons(a01, List<Nat>::nil()), a10_value),
-          [](const List<Dv<typename _tcI0::tag, typename _tcI0::addr>> &r) {
-            return Monad0::template ret<
-                EOU_monad, Dv<typename _tcI0::tag, typename _tcI0::addr>>(
-                Dv<typename _tcI0::tag, typename _tcI0::addr>::dnum(
-                    r.length()));
+          [](const List<Dv<typename _tcI0::tag,
+                           typename _tcI0::addr>> &r) {
+            return EOU_monad::template ret<
+                Dv<typename _tcI0::tag, typename _tcI0::addr>>(
+                Dv<typename _tcI0::tag, typename _tcI0::addr>::dnum(r.length()));
           });
     }
   }
@@ -450,8 +470,9 @@ struct natParams {
 static_assert(Params<natParams>);
 
 struct BindContinuationBinderMltDomain {
-  static inline const EOU<Dv<typename natParams::tag, typename natParams::addr>>
-      run = bytes_to_dv<natParams>(
+  static inline const EOU<Dv<typename natParams::tag,
+                             typename natParams::addr>> run =
+      bytes_to_dv<natParams>(
           Nat::o(), Nat::s(Nat::s(Nat::o())),
           List<Byte>::cons(Byte::b(Nat::s(Nat::o())), List<Byte>::nil()));
 };
@@ -462,7 +483,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);

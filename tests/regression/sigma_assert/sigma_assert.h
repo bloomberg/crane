@@ -2,6 +2,7 @@
 #define INCLUDED_SIGMA_ASSERT
 
 #include <cassert>
+#include <cstdint>
 
 struct Nat {
   static uint64_t div2(uint64_t n);

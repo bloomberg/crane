@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -22,6 +22,7 @@ struct String;
 struct Bool {
   static Sumbool bool_dec(Bool0 b1, Bool0 b2);
 };
+
 enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
@@ -69,8 +70,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -106,18 +107,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -129,10 +131,11 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
   A projT1() const {
-    const auto &[x0, a1] = *this;
+    const auto &[x0, _] = *this;
     return x0;
   }
 };
+
 enum class Sumbool { LEFT, RIGHT };
 
 struct Ascii {
@@ -207,8 +210,8 @@ public:
 
   String(const String &) = default;
   String &operator=(const String &) = default;
-  String(String &&) noexcept = default;
-  String &operator=(String &&) noexcept = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -218,24 +221,28 @@ public:
   String append(String s2) const;
 
   Nat length() const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const String *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
-        *_write = std::make_shared<Nat>(Nat::o());
+        auto _value = Nat::o();
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
-        const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        const auto &[_, a1] = std::get<typename String::String0>(_sv.v());
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -293,27 +300,16 @@ struct Levenshtein {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F1 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F2 &, Ascii &, Ascii &, String &>
-    T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const String &,
-                const String &) const {
-      if (std::holds_alternative<typename edit::Insertion>(this->v())) {
-        const auto &[a0, s0] = std::get<typename edit::Insertion>(this->v());
-        return f(a0, s0);
-      } else if (std::holds_alternative<typename edit::Deletion>(this->v())) {
-        const auto &[a0, s0] = std::get<typename edit::Deletion>(this->v());
-        return f0(a0, s0);
-      } else {
-        const auto &[a0, a_1, neq] = std::get<typename edit::Update>(this->v());
-        return f1(a0, a_1, neq);
-      }
+    T1 edit_rec(F0 &&f, F1 &&f0, F2 &&f1, const String &_x,
+                const String &_x0) const {
+      return this->template edit_rect<T1>(f, f0, f1, _x, _x0);
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F1 &, Ascii &, String &> &&
-               std::is_invocable_r_v<T1, F2 &, Ascii &, Ascii &, String &>
+      requires std::is_invocable_r_v<T1, F0 &, const Ascii &, const String &> &&
+               std::is_invocable_r_v<T1, F1 &, const Ascii &, const String &> &&
+               std::is_invocable_r_v<T1, F2 &, const Ascii &, const Ascii &,
+                                     const String &>
     T1 edit_rect(F0 &&f, F1 &&f0, F2 &&f1, const String &,
                  const String &) const {
       if (std::holds_alternative<typename edit::Insertion>(this->v())) {
@@ -375,9 +371,9 @@ struct Levenshtein {
 
     static chain change(String s, String t, String u, Nat n, edit a4,
                         chain a5) {
-      return chain(Change{std::move(s), std::move(t), std::move(u),
-                          std::move(n), std::move(a4),
-                          std::make_shared<chain>(std::move(a5))});
+      return chain(
+          Change{std::move(s), std::move(t), std::move(u), std::move(n),
+                 std::move(a4), std::make_shared<chain>(std::move(a5))});
     }
 
     // MANIPULATORS
@@ -405,8 +401,8 @@ struct Levenshtein {
 
     chain(const chain &) = default;
     chain &operator=(const chain &) = default;
-    chain(chain &&) noexcept = default;
-    chain &operator=(chain &&) noexcept = default;
+    chain(chain &&) = default;
+    chain &operator=(chain &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -458,175 +454,91 @@ struct Levenshtein {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, Ascii &, String &, String &,
-                                     Nat &, chain &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
-                                     Nat &, edit &, chain &, T1 &>
     T1 chain_rec(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
                  const Nat &_x1) const {
-      const chain *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const chain *_self;
-        String _x;
-        String _x0;
-        Nat _x1;
-      };
-
-      /// _Cont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after recursive
-      /// call, then processes rest.
-      struct _Cont_Change {
-        edit a4;
-        std::shared_ptr<chain> a5;
-        Nat n0;
-        String s0;
-        String t0;
-        String u0;
-      };
-
-      /// _Cont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Skip {
-        Ascii a0;
-        std::shared_ptr<chain> a4;
-        Nat n0;
-        String s0;
-        String t0;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Change, _Cont_Skip>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x, _x0, _x1});
-      /// Loopified chain_rec: _Enter -> _Cont_Change -> _Cont_Skip.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const chain *_self = _f._self;
-          const String &_x = std::move(_f._x);
-          const String &_x0 = std::move(_f._x0);
-          const Nat &_x1 = std::move(_f._x1);
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
-            _result = f;
-          } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
-            const auto &[a0, s0, t0, n0, a4] =
-                std::get<typename chain::Skip>(_sv.v());
-            _stack.emplace_back(_Cont_Skip{a0, a4, n0, s0, t0});
-            _stack.emplace_back(_Enter{crane_raw(a4), s0, t0, n0});
-          } else {
-            const auto &[s0, t0, u0, n0, a4, a5] =
-                std::get<typename chain::Change>(_sv.v());
-            _stack.emplace_back(_Cont_Change{a4, a5, n0, s0, t0, u0});
-            _stack.emplace_back(_Enter{crane_raw(a5), t0, u0, n0});
-          }
-        } else if (std::holds_alternative<_Cont_Change>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Change>(_frame));
-          edit a4 = std::move(_f.a4);
-          std::shared_ptr<chain> a5 = std::move(_f.a5);
-          Nat n0 = std::move(_f.n0);
-          String s0 = std::move(_f.s0);
-          String t0 = std::move(_f.t0);
-          String u0 = std::move(_f.u0);
-          _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
-        } else {
-          auto _f = std::move(std::get<_Cont_Skip>(_frame));
-          Ascii a0 = std::move(_f.a0);
-          std::shared_ptr<chain> a4 = std::move(_f.a4);
-          Nat n0 = std::move(_f.n0);
-          String s0 = std::move(_f.s0);
-          String t0 = std::move(_f.t0);
-          _result = f0(a0, s0, t0, n0, *a4, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template chain_rect<T1>(std::move(f), f0, f1, _x, _x0, _x1);
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, Ascii &, String &, String &,
-                                     Nat &, chain &, T1 &> &&
-               std::is_invocable_r_v<T1, F2 &, String &, String &, String &,
-                                     Nat &, edit &, chain &, T1 &>
     T1 chain_rect(T1 f, F1 &&f0, F2 &&f1, const String &_x, const String &_x0,
                   const Nat &_x1) const {
       const chain *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const chain *_self;
-        String _x;
-        String _x0;
-        Nat _x1;
+        const String *_x;
+        const String *_x0;
+        const Nat *_x1;
       };
 
-      /// _Cont_Change: saves [a4, a5, n0, s0, t0, u0], resumes after recursive
-      /// call, then processes rest.
-      struct _Cont_Change {
-        edit a4;
-        std::shared_ptr<chain> a5;
-        Nat n0;
+      /// CraneCont_Change: saves [s0, t0, u0, n0, a4, a5], resumes after
+      /// recursive call, then processes rest.
+      struct CraneCont_Change {
         String s0;
         String t0;
         String u0;
+        Nat n0;
+        edit a4;
+        std::shared_ptr<chain> a5;
       };
 
-      /// _Cont_Skip: saves [a0, a4, n0, s0, t0], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Skip {
+      /// CraneCont_Skip: saves [a0, s0, t0, n0, a4], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_Skip {
         Ascii a0;
-        std::shared_ptr<chain> a4;
-        Nat n0;
         String s0;
         String t0;
+        Nat n0;
+        std::shared_ptr<chain> a4;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Change, _Cont_Skip>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Change, CraneCont_Skip>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x, _x0, _x1});
-      /// Loopified chain_rect: _Enter -> _Cont_Change -> _Cont_Skip.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, &_x, &_x0, &_x1});
+      /// Loopified chain_rect: CraneEnter -> CraneCont_Change ->
+      /// CraneCont_Skip.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const chain *_self = _f._self;
-          const String &_x = std::move(_f._x);
-          const String &_x0 = std::move(_f._x0);
-          const Nat &_x1 = std::move(_f._x1);
+          const String &_x = *_f._x;
+          const String &_x0 = *_f._x0;
+          const Nat &_x1 = *_f._x1;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename chain::Empty>(_sv.v())) {
             _result = f;
           } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
             const auto &[a0, s0, t0, n0, a4] =
                 std::get<typename chain::Skip>(_sv.v());
-            _stack.emplace_back(_Cont_Skip{a0, a4, n0, s0, t0});
-            _stack.emplace_back(_Enter{crane_raw(a4), s0, t0, n0});
+            _stack.emplace_back(CraneCont_Skip{a0, s0, t0, n0, a4});
+            _stack.emplace_back(CraneEnter{crane_raw(a4), &s0, &t0, &n0});
           } else {
             const auto &[s0, t0, u0, n0, a4, a5] =
                 std::get<typename chain::Change>(_sv.v());
-            _stack.emplace_back(_Cont_Change{a4, a5, n0, s0, t0, u0});
-            _stack.emplace_back(_Enter{crane_raw(a5), t0, u0, n0});
+            _stack.emplace_back(CraneCont_Change{s0, t0, u0, n0, a4, a5});
+            _stack.emplace_back(CraneEnter{crane_raw(a5), &t0, &u0, &n0});
           }
-        } else if (std::holds_alternative<_Cont_Change>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Change>(_frame));
-          edit a4 = std::move(_f.a4);
-          std::shared_ptr<chain> a5 = std::move(_f.a5);
-          Nat n0 = std::move(_f.n0);
+        } else if (std::holds_alternative<CraneCont_Change>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Change>(_frame));
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
           String u0 = std::move(_f.u0);
+          Nat n0 = std::move(_f.n0);
+          edit a4 = std::move(_f.a4);
+          std::shared_ptr<chain> a5 = std::move(_f.a5);
           _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
-          auto _f = std::move(std::get<_Cont_Skip>(_frame));
+          auto _f = std::move(std::get<CraneCont_Skip>(_frame));
           Ascii a0 = std::move(_f.a0);
-          std::shared_ptr<chain> a4 = std::move(_f.a4);
-          Nat n0 = std::move(_f.n0);
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
+          Nat n0 = std::move(_f.n0);
+          std::shared_ptr<chain> a4 = std::move(_f.a4);
           _result = f0(a0, s0, t0, n0, *a4, std::move(_result));
         }
       }
@@ -635,9 +547,9 @@ struct Levenshtein {
   };
 
   static chain same_chain(const String &s);
-  static chain inserts_chain(const String &s1, const String &s2);
+  static chain inserts_chain(const String &s1, String s2);
   static chain inserts_chain_empty(const String &s);
-  static chain deletes_chain(const String &s1, const String &s2);
+  static chain deletes_chain(const String &s1, String s2);
   static chain deletes_chain_empty(const String &s);
   static chain aux_both_empty(const String &_x, const String &_x0);
 
@@ -649,7 +561,7 @@ struct Levenshtein {
     Nat n3 = f(z);
     switch (n1.leb(n2)) {
     case Bool0::TRUE_: {
-      switch (std::move(n1).leb(std::move(n3))) {
+      switch (n1.leb(std::move(n3))) {
       case Bool0::TRUE_: {
         return x;
       }
@@ -662,7 +574,7 @@ struct Levenshtein {
       break;
     }
     case Bool0::FALSE_: {
-      switch (std::move(n2).leb(std::move(n3))) {
+      switch (n2.leb(std::move(n3))) {
       case Bool0::TRUE_: {
         return y;
       }
@@ -679,9 +591,9 @@ struct Levenshtein {
     }
   }
 
-  static SigT<Nat, chain> levenshtein_chain(const String &s, String x0_);
-  static Nat levenshtein_computed(const String &s, const String &t);
-  static Nat levenshtein(const String &x0_, const String &x1_);
+  static SigT<Nat, chain> levenshtein_chain(String s, const String &x0_);
+  static Nat levenshtein_computed(String s, const String &t);
+  static Nat levenshtein(String x0_, const String &x1_);
 };
 
 inline Sumbool Ascii::ascii_dec(const Ascii &b) const {
@@ -770,12 +682,28 @@ inline Sumbool Ascii::ascii_dec(const Ascii &b) const {
 }
 
 inline String String::append(String s2) const {
-  if (std::holds_alternative<typename String::EmptyString>(this->v())) {
-    return s2;
-  } else {
-    const auto &[a0, a1] = std::get<typename String::String0>(this->v());
-    return String::string0(a0, a1->append(std::move(s2)));
+  std::optional<String> _root{};
+  std::shared_ptr<String> *_write = nullptr;
+  const String *_loop_self = this;
+  while (true) {
+    auto &&_sv = *_loop_self;
+    if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+      auto _value = std::move(s2);
+      (_write ? *(*_write = std::make_shared<String>(std::move(_value)))
+              : _root.emplace(std::move(_value)));
+      break;
+    } else {
+      const auto &[a0, a1] = std::get<typename String::String0>(_sv.v());
+      auto _cell = typename String::String0(a0, nullptr);
+      String &_node =
+          (_write ? *(*_write = std::make_shared<String>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write = &std::get<typename String::String0>(_node.v_mut()).a1;
+      _loop_self = crane_raw(a1);
+      continue;
+    }
   }
+  return std::move(*_root);
 }
 
 #endif // INCLUDED_LEVENSHTEIN

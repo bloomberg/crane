@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -126,15 +125,16 @@ struct CofixSelfCallTargs {
 
     explicit treeF(VisF _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1, typename _U2>
-    treeF(const treeF<_U0, _U1, _U2> &_other)
+    template <typename CraneU0, typename CraneU1, typename CraneU2>
+    treeF(const treeF<CraneU0, CraneU1, CraneU2> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename treeF<_U0, _U1, _U2>::RetF>(
-                    _other.v())) {
+            if (std::holds_alternative<
+                    typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(_other.v())) {
               const auto &[r] =
-                  std::get<typename treeF<_U0, _U1, _U2>::RetF>(_other.v());
+                  std::get<typename treeF<CraneU0, CraneU1, CraneU2>::RetF>(
+                      _other.v());
               return RetF{[&]() -> R {
-                if constexpr (crane_convertible<R, const _U1 &>) {
+                if constexpr (crane_convertible<R, const CraneU1 &>) {
                   return crane_convert<R>(r);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -142,12 +142,14 @@ struct CofixSelfCallTargs {
                 }
               }()};
             } else {
-              if (std::holds_alternative<typename treeF<_U0, _U1, _U2>::TauF>(
+              if (std::holds_alternative<
+                      typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
                       _other.v())) {
                 const auto &[t] =
-                    std::get<typename treeF<_U0, _U1, _U2>::TauF>(_other.v());
+                    std::get<typename treeF<CraneU0, CraneU1, CraneU2>::TauF>(
+                        _other.v());
                 return TauF{[&]() -> T {
-                  if constexpr (crane_convertible<T, const _U2 &>) {
+                  if constexpr (crane_convertible<T, const CraneU2 &>) {
                     return crane_convert<T>(t);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -156,17 +158,19 @@ struct CofixSelfCallTargs {
                 }()};
               } else {
                 const auto &[x, e] =
-                    std::get<typename treeF<_U0, _U1, _U2>::VisF>(_other.v());
-                return VisF{[&]() -> E {
-                              if constexpr (crane_convertible<E, const _U0 &>) {
-                                return crane_convert<E>(x);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            crane_convert<crane::fn<T(crane::obj)>>(e)};
+                    std::get<typename treeF<CraneU0, CraneU1, CraneU2>::VisF>(
+                        _other.v());
+                return VisF{
+                    [&]() -> E {
+                      if constexpr (crane_convertible<E, const CraneU0 &>) {
+                        return crane_convert<E>(x);
+                      } else {
+                        throw std::logic_error("unreachable: inactive "
+                                               "constructor field at this "
+                                               "instantiation");
+                      }
+                    }(),
+                    crane_convert<crane::fn<T(crane::obj)>>(e)};
               }
             }
           }()) {}
@@ -192,8 +196,8 @@ struct CofixSelfCallTargs {
 
   template <typename E, typename R> struct tree {
     // TYPES
-    template <typename _S0 = tree<E, R>> struct Go_ {
-      treeF<E, R, _S0> observe;
+    template <typename CraneS0 = tree<E, R>> struct Go_ {
+      treeF<E, R, CraneS0> observe;
     };
 
     using Go = Go_<>;
@@ -211,14 +215,14 @@ struct CofixSelfCallTargs {
     explicit tree(Go _v)
         : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-    template <typename _U0, typename _U1>
-    tree(const tree<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    tree(const tree<CraneU0, CraneU1> &_other)
         : lazy_v_(crane::lazy<variant_t>::converted_from(
-              _other.lazy_cell(), [=]() -> variant_t {
-                const auto &[observe] =
-                    std::get<typename tree<_U0, _U1>::Go>(_other.v());
-                return Go{crane_convert<treeF<E, R, tree<E, R>>>(observe)};
-              })) {}
+        _other.lazy_cell(), [=]() -> variant_t {
+          const auto &[observe] =
+              std::get<typename tree<CraneU0, CraneU1>::Go>(_other.v());
+          return Go{crane_convert<treeF<E, R, tree<E, R>>>(observe)};
+        })) {}
 
     explicit tree(crane::fn<variant_t()> _thunk)
         : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -242,7 +246,7 @@ struct CofixSelfCallTargs {
   };
 
   template <typename T1, typename T2>
-  static treeF<T1, T2, tree<T1, T2>> observe(tree<T1, T2> t) {
+  static treeF<T1, T2, tree<T1, T2>> observe(const tree<T1, T2> &t) {
     const auto &[observe1] = std::get<typename tree<T1, T2>::Go>(t.v());
     return observe1;
   }
@@ -251,26 +255,28 @@ struct CofixSelfCallTargs {
     noE() = delete;
   };
 
-  static std::optional<Nat> run(const Nat &fuel, tree<noE, Nat> t);
+  static std::optional<Nat> run(const Nat &fuel, const tree<noE, Nat> &t);
 
   template <typename T1, typename T2, typename T3>
   static tree<T1, T3>
-  subst(std::type_identity_t<crane::fn<tree<T1, T3>(T2)>> k,
-        std::type_identity_t<crane::fn<tree<T1, T3>(tree<T1, T2>)>> kv,
-        tree<T1, T2> u) {
+  subst(const std::type_identity_t<crane::fn<tree<T1, T3>(T2)>> &k,
+        const std::type_identity_t<crane::fn<tree<T1, T3>(tree<T1, T2>)>> &kv,
+        const tree<T1, T2> &u) {
     auto &&_sv = observe<T1, T2>(u);
     if (std::holds_alternative<typename treeF<T1, T2, tree<T1, T2>>::RetF>(
             _sv.v())) {
       const auto &[r0] =
           std::get<typename treeF<T1, T2, tree<T1, T2>>::RetF>(_sv.v());
       return k(r0);
-    } else if (std::holds_alternative<
-                   typename treeF<T1, T2, tree<T1, T2>>::TauF>(_sv.v())) {
+    } else if (
+        std::holds_alternative<typename treeF<T1, T2, tree<T1, T2>>::TauF>(
+            _sv.v())) {
       const auto &[t2] =
           std::get<typename treeF<T1, T2, tree<T1, T2>>::TauF>(_sv.v());
-      return tree<T1, T3>::lazy_([=]() -> tree<T1, T3> {
-        return tree<T1, T3>::go(
-            treeF<T1, T3, tree<T1, T3>>::tauf(subst<T1, T2, T3>(k, kv, t2)));
+      return tree<T1, T3>::lazy_([=]() -> typename tree<T1,
+                                                        T3>::Go {
+        return {treeF<T1, T3, tree<T1, T3>>::tauf(subst<T1, T2, T3>(k, kv,
+                                                                    t2))};
       });
     } else {
       return kv(u);
@@ -278,19 +284,20 @@ struct CofixSelfCallTargs {
   }
 
   static inline const tree<noE, Nat> t0 =
-      tree<noE, Nat>::go(treeF<noE, Nat, tree<noE, Nat>>::tauf(
-          tree<noE, Nat>::go(treeF<noE, Nat, tree<noE, Nat>>::tauf(
-              tree<noE, Nat>::go(treeF<noE, Nat, tree<noE, Nat>>::retf(
-                  Nat::s(Nat::s(Nat::o()))))))));
-  static inline const tree<noE, Nat> t1 = subst<noE, Nat, Nat>(
-      [](const Nat &n) {
+      tree<noE, Nat>::go(
+          treeF<noE, Nat, tree<noE, Nat>>::tauf(tree<noE, Nat>::go(
+              treeF<noE, Nat, tree<noE, Nat>>::tauf(
+                  tree<noE, Nat>::go(treeF<noE, Nat, tree<noE, Nat>>::retf(
+                      Nat::s(Nat::s(Nat::o()))))))));
+  static inline const tree<noE, Nat> t1 =
+      subst<noE, Nat, Nat>([](const Nat &n) {
         return tree<noE, Nat>::go(
             treeF<noE, Nat, tree<noE, Nat>>::retf(Nat::s(n)));
       },
-      [](tree<noE, Nat> u) { return u; }, t0);
+                           [](tree<noE, Nat> u) { return u; }, t0);
   static inline const bool is_three = []() -> bool {
-    auto _cs = run(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
+    auto _cs = run(Nat::s(Nat::s(Nat::s(
+        Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))),
                    t1);
     if (_cs.has_value()) {
       const Nat &n = *_cs;

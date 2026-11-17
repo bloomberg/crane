@@ -4,13 +4,11 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <crane_real.h>
 #include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -46,16 +44,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -92,8 +91,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,35 +102,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -146,7 +145,6 @@ struct ListDef {
 
 struct Pos {
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &>
   static T1 iter(F0 &&f, const T1 &x, unsigned int n) {
     if (n == 1u) {
       return f(x);
@@ -175,21 +173,22 @@ struct PolygonWindingAreaTraceCase {
     Real lambda;
   };
 
-  static inline const Real R_earth_default = Rdefinitions::Q2R(Q{
-      INT64_C(3440065),
-      (2u *
-       (2u *
-        (2u * (2u * (2u * (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) + 1u)) +
-               1u))))});
-  static inline const Real R_earth = R_earth_default;
+  static inline const Real R_earth_default = Rdefinitions::Q2R(
+      Q{INT64_C(3440065),
+        (2u * (2u * (2u * (2u * (2u *
+                                 (2u * (2u * (2u * (2u * 1u + 1u) + 1u) + 1u) +
+                                  1u)) +
+                           1u))))});
+  [[gnu::used]] static inline const Real R_earth = R_earth_default;
   static Real hav(Real theta);
   static Real distance(const Point &p1, const Point &p2);
   using Polygon = List<Point>;
 
   template <typename T1>
-  static T1 nth_cyclic(const T1 &default0, const List<T1> &l, uint64_t i) {
-    return ListDef::template nth<T1>((l.length() ? i % l.length() : i), l,
-                                     default0);
+  static T1 nth_cyclic(T1 default0, const List<T1> &l, uint64_t i) {
+    auto &&_once1 = l.length();
+    return ListDef::template nth<T1>((_once1 ? i % _once1 : i), l,
+                                     std::move(default0));
   }
 
   static Real lon_diff(Real lon1, Real lon2);
@@ -219,9 +218,9 @@ struct PolygonWindingAreaTraceCase {
             Real::from_z(INT64_C(1))};
   static inline const Polygon test_triangle = List<Point>::cons(
       test_triangle_v1,
-      List<Point>::cons(
-          test_triangle_v2,
-          List<Point>::cons(test_triangle_v3, List<Point>::nil())));
+      List<Point>::cons(test_triangle_v2,
+                        List<Point>::cons(test_triangle_v3,
+                                          List<Point>::nil())));
   static inline const Point test_centroid =
       Point{(Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(2))),
             (Real::from_z(INT64_C(1)) / Real::from_z(INT64_C(3)))};
@@ -252,7 +251,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -260,7 +259,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

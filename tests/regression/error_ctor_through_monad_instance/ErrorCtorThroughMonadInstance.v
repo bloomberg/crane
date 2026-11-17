@@ -29,7 +29,7 @@
 
 From Crane Require Import Extraction.
 From ExtLib Require Import Structures.Monad.
-Require Import PeanoNat.
+From Stdlib Require Import PeanoNat.
 
 Import MonadNotation.
 Local Open Scope monad_scope.

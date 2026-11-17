@@ -1,6 +1,7 @@
 #ifndef INCLUDED_JCN_OPS
 #define INCLUDED_JCN_OPS
 
+#include <cstdint>
 #include <utility>
 
 struct JcnOps {
@@ -35,20 +36,17 @@ struct JcnOps {
       (check_carry_clear_gate &&
        (check_nonzero_gate &&
         (check_test_high && (check_test_low && check_zero_gate))));
-  static inline const uint64_t JCN_JNT = UINT64_C(1);
-  static inline const uint64_t JCN_JC = UINT64_C(2);
-  static inline const uint64_t JCN_JZ = UINT64_C(4);
-  static inline const uint64_t JCN_JT = UINT64_C(9);
-  static inline const uint64_t JCN_JNC = UINT64_C(10);
-  static inline const uint64_t JCN_JNZ = UINT64_C(12);
+  static constexpr uint64_t JCN_JNT = UINT64_C(1);
+  static constexpr uint64_t JCN_JC = UINT64_C(2);
+  static constexpr uint64_t JCN_JZ = UINT64_C(4);
+  static constexpr uint64_t JCN_JT = UINT64_C(9);
+  static constexpr uint64_t JCN_JNC = UINT64_C(10);
+  static constexpr uint64_t JCN_JNZ = UINT64_C(12);
   static inline const uint64_t test_constants = []() {
-    return []() {
-      state s = state{UINT64_C(0), true, false, UINT64_C(0)};
-      return (
-          ((jcn_condition(std::move(s), JCN_JC) ? UINT64_C(1) : UINT64_C(0)) +
-           (jcn_condition(std::move(s), JCN_JZ) ? UINT64_C(1) : UINT64_C(0))) +
-          (jcn_condition(std::move(s), JCN_JNT) ? UINT64_C(1) : UINT64_C(0)));
-    }();
+    state s = state{UINT64_C(0), true, false, UINT64_C(0)};
+    return (((jcn_condition(s, JCN_JC) ? UINT64_C(1) : UINT64_C(0)) +
+             (jcn_condition(s, JCN_JZ) ? UINT64_C(1) : UINT64_C(0))) +
+            (jcn_condition(s, JCN_JNT) ? UINT64_C(1) : UINT64_C(0)));
   }();
   static inline const std::pair<std::pair<uint64_t, bool>, uint64_t> t =
       std::make_pair(std::make_pair(test_branch_target, test_condition),

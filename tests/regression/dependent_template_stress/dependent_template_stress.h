@@ -1,6 +1,8 @@
 #ifndef INCLUDED_DEPENDENT_TEMPLATE_STRESS
 #define INCLUDED_DEPENDENT_TEMPLATE_STRESS
 
+#include <cstdint>
+
 template <typename M>
 concept Container = requires {
   typename M::template t<void>;
@@ -39,7 +41,8 @@ struct DependentTemplateStress {
       return v;
     }
 
-    static typename C::template t<uint64_t> complex_use(uint64_t x0_) {
+    constexpr static typename C::template t<uint64_t>
+    complex_use(uint64_t x0_) {
       return C::template singleton<uint64_t>(x0_);
     }
   };

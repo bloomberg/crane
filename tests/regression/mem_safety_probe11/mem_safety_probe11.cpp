@@ -24,13 +24,12 @@ MemSafetyProbe11::collect_dual_captures(
   if (std::holds_alternative<typename MemSafetyProbe11::tree::Leaf>(t.v())) {
     return acc;
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
     const MemSafetyProbe11::tree &a0_value = *a0;
     const MemSafetyProbe11::tree &a2_value = *a2;
-    crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
-      return (a0_value.tree_sum() + a2_value.tree_sum());
-    };
+    crane::fn<uint64_t(uint64_t)> f =
+        [=](uint64_t) { return (a0_value.tree_sum() + a2_value.tree_sum()); };
     MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>> acc2 =
         mylist<crane::fn<uint64_t(uint64_t)>>::mycons(std::move(f),
                                                       std::move(acc));
@@ -46,19 +45,18 @@ MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe11::capture_tails(
     const MemSafetyProbe11::mylist<uint64_t> &l,
     MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>> acc) {
-  if (std::holds_alternative<
-          typename MemSafetyProbe11::mylist<uint64_t>::Mynil>(l.v())) {
+  if (std::holds_alternative<typename MemSafetyProbe11::mylist<uint64_t>::Mynil>(
+          l.v())) {
     return acc;
   } else {
     const auto &[a0, a1] =
         std::get<typename MemSafetyProbe11::mylist<uint64_t>::Mycons>(l.v());
     const MemSafetyProbe11::mylist<uint64_t> &a1_value = *a1;
-    crane::fn<uint64_t(uint64_t)> f = [=](uint64_t) {
-      return (a0 + a1_value.length());
-    };
-    return capture_tails(a1_value,
-                         mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-                             std::move(f), std::move(acc)));
+    crane::fn<uint64_t(uint64_t)> f =
+        [=](uint64_t) { return (a0 + a1_value.length()); };
+    return capture_tails(
+        a1_value, mylist<crane::fn<uint64_t(uint64_t)>>::mycons(std::move(f),
+                                                                std::move(acc)));
   }
 }
 
@@ -72,16 +70,14 @@ MemSafetyProbe11::triple_use_tree(
   if (std::holds_alternative<typename MemSafetyProbe11::tree::Leaf>(t.v())) {
     return acc;
   } else {
-    const auto &[a0, a1, a2] =
+    const auto &[a0, _, a2] =
         std::get<typename MemSafetyProbe11::tree::Node>(t.v());
     const MemSafetyProbe11::tree &a0_value = *a0;
     const MemSafetyProbe11::tree &a2_value = *a2;
-    crane::fn<uint64_t(uint64_t)> fl = [=](uint64_t) {
-      return a0_value.tree_sum();
-    };
-    crane::fn<uint64_t(uint64_t)> fr = [=](uint64_t) {
-      return a2_value.tree_sum();
-    };
+    crane::fn<uint64_t(uint64_t)> fl =
+        [=](uint64_t) { return a0_value.tree_sum(); };
+    crane::fn<uint64_t(uint64_t)> fr =
+        [=](uint64_t) { return a2_value.tree_sum(); };
     MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>> acc2 =
         mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
             std::move(fr), mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
@@ -98,8 +94,8 @@ MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe11::dual_accum(
     const MemSafetyProbe11::mylist<uint64_t> &l, uint64_t sum_acc,
     MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>> fn_acc) {
-  if (std::holds_alternative<
-          typename MemSafetyProbe11::mylist<uint64_t>::Mynil>(l.v())) {
+  if (std::holds_alternative<typename MemSafetyProbe11::mylist<uint64_t>::Mynil>(
+          l.v())) {
     return fn_acc;
   } else {
     const auto &[a0, a1] =

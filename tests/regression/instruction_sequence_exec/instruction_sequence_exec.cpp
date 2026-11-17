@@ -7,8 +7,7 @@ InstructionSequenceExec::state InstructionSequenceExec::execute(
           typename InstructionSequenceExec::instruction::NOP_>(i.v())) {
     return s;
   } else if (std::holds_alternative<
-                 typename InstructionSequenceExec::instruction::INC_PC>(
-                 i.v())) {
+                 typename InstructionSequenceExec::instruction::INC_PC>(i.v())) {
     return state{(s.pc_ + 1), s.acc_};
   } else {
     const auto &[a0] =

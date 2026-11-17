@@ -3,15 +3,16 @@
 
 #include "fn.h"
 #include "lazy.h"
+#include <cstdint>
 #include <utility>
 #include <variant>
 
 struct RuntimeBlockInvariants {
   struct stream {
     // TYPES
-    template <typename _S0 = stream> struct SCons_ {
+    template <typename CraneS0 = stream> struct SCons_ {
       uint64_t a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using SCons = SCons_<>;
@@ -49,7 +50,7 @@ struct RuntimeBlockInvariants {
   };
 
   static stream from(uint64_t n);
-  static uint64_t hd(stream s);
+  static uint64_t hd(const stream &s);
 };
 
 #endif // INCLUDED_RUNTIME_BLOCK_INVARIANTS

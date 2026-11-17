@@ -28,7 +28,7 @@ int64_t EffectBindAction::conditional_effect(bool flag) {
 std::string EffectBindAction::maybe_override(std::string name,
                                              std::string default0) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(name.c_str());
+    auto *v = std::getenv(std::move(name).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   return [&]() -> std::string {
@@ -64,7 +64,7 @@ std::string EffectBindAction::echo_if(bool flag) {
   std::getline(std::cin, line);
   [&]() -> void {
     if (flag) {
-      std::cout << std::move(line) << '\n';
+      std::cout << line << '\n';
       return;
     } else {
       return;
@@ -106,7 +106,7 @@ std::string EffectBindAction::let_match_then_effect(uint64_t n) {
 uint64_t EffectBindAction::discard_conditional(bool flag) {
   [&]() -> void {
     if (flag) {
-      std::cout << "flagged"s << '\n';
+      std::cout << std::string("flagged") << '\n';
       return;
     } else {
       return;

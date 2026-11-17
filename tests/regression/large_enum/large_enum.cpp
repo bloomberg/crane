@@ -103,8 +103,7 @@ uint64_t LargeEnum::tok_to_nat(const LargeEnum::tok &t) {
     return UINT64_C(106);
   } else if (std::holds_alternative<typename LargeEnum::tok::TBang>(t.v())) {
     return UINT64_C(107);
-  } else if (std::holds_alternative<typename LargeEnum::tok::TSemicolon>(
-                 t.v())) {
+  } else if (std::holds_alternative<typename LargeEnum::tok::TSemicolon>(t.v())) {
     return UINT64_C(108);
   } else if (std::holds_alternative<typename LargeEnum::tok::TIdent>(t.v())) {
     const auto &[a0] = std::get<typename LargeEnum::tok::TIdent>(t.v());

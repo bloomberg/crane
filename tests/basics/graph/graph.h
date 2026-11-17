@@ -3,12 +3,11 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -66,8 +65,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -98,16 +97,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -144,32 +144,33 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, A &>
-  List<A> filter(F0 &&f) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+  template <typename F0> List<A> filter(F0 &&f) const {
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(List<A>::nil());
+        auto _value = List<A>::nil();
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
         if (f(a0)) {
-          auto _cell =
-              std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<A>::Cons(a0, nullptr);
+          List<A> &_node =
+              (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a1);
           continue;
         } else {
@@ -178,7 +179,7 @@ public:
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -220,18 +221,18 @@ template <typename A> struct DirectedEdge {
   A edge_to;
 
   // ACCESSORS
-  template <typename _U> operator DirectedEdge<_U>() const {
-    return {[&]() -> _U {
-              if constexpr (crane_convertible<_U, const A &>) {
-                return crane_convert<_U>(edge_from);
+  template <typename CraneU> operator DirectedEdge<CraneU>() const {
+    return {[&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const A &>) {
+                return crane_convert<CraneU>(edge_from);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U {
-              if constexpr (crane_convertible<_U, const A &>) {
-                return crane_convert<_U>(edge_to);
+            [&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const A &>) {
+                return crane_convert<CraneU>(edge_to);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -252,16 +253,16 @@ template <typename A> struct Directed {
   List<DirectedEdge<A>> directed_edges;
 
   // ACCESSORS
-  template <typename _U> operator Directed<_U>() const {
-    return {crane_convert<List<_U>>(directed_nodes),
-            crane_convert<List<DirectedEdge<_U>>>(directed_edges)};
+  template <typename CraneU> operator Directed<CraneU>() const {
+    return {crane_convert<List<CraneU>>(directed_nodes),
+            crane_convert<List<DirectedEdge<CraneU>>>(directed_edges)};
   }
 };
 
 template <typename _tcI0, typename T1>
   requires Eq<_tcI0, T1>
 struct DirectedGraph {
-  template <typename _A0> using G = Directed<_A0>;
+  template <typename CraneA0> using G = Directed<CraneA0>;
   using edge = DirectedEdge<T1>;
 
   static Directed<T1> empty() {
@@ -281,9 +282,10 @@ struct DirectedGraph {
   static List<T1> nodes(Directed<T1> g) { return std::move(g).directed_nodes; }
 
   static List<edge> edges(Directed<T1> g, T1 n) {
-    return g.directed_edges.filter([=](DirectedEdge<T1> _x0) -> bool {
-      return directed_originates<_tcI0, T1>(n, _x0);
-    });
+    return std::move(g).directed_edges.filter(
+        [=, n = std::move(n)](DirectedEdge<T1> _x0) -> bool {
+          return directed_originates<_tcI0, T1>(std::move(n), _x0);
+        });
   }
 };
 
@@ -293,18 +295,18 @@ template <typename A> struct UndirectedEdge {
   A edge_second;
 
   // ACCESSORS
-  template <typename _U> operator UndirectedEdge<_U>() const {
-    return {[&]() -> _U {
-              if constexpr (crane_convertible<_U, const A &>) {
-                return crane_convert<_U>(edge_first);
+  template <typename CraneU> operator UndirectedEdge<CraneU>() const {
+    return {[&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const A &>) {
+                return crane_convert<CraneU>(edge_first);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U {
-              if constexpr (crane_convertible<_U, const A &>) {
-                return crane_convert<_U>(edge_second);
+            [&]() -> CraneU {
+              if constexpr (crane_convertible<CraneU, const A &>) {
+                return crane_convert<CraneU>(edge_second);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -324,16 +326,16 @@ template <typename A> struct Undirected {
   List<UndirectedEdge<A>> undirected_edges;
 
   // ACCESSORS
-  template <typename _U> operator Undirected<_U>() const {
-    return {crane_convert<List<_U>>(undirected_nodes),
-            crane_convert<List<UndirectedEdge<_U>>>(undirected_edges)};
+  template <typename CraneU> operator Undirected<CraneU>() const {
+    return {crane_convert<List<CraneU>>(undirected_nodes),
+            crane_convert<List<UndirectedEdge<CraneU>>>(undirected_edges)};
   }
 };
 
 template <typename _tcI0, typename T1>
   requires Eq<_tcI0, T1>
 struct UndirectedGraph {
-  template <typename _A0> using G = Undirected<_A0>;
+  template <typename CraneA0> using G = Undirected<CraneA0>;
   using edge = UndirectedEdge<T1>;
 
   static Undirected<T1> empty() {
@@ -356,9 +358,10 @@ struct UndirectedGraph {
   }
 
   static List<edge> edges(Undirected<T1> g, T1 n) {
-    return g.undirected_edges.filter([=](UndirectedEdge<T1> _x0) -> bool {
-      return undirected_originates<_tcI0, T1>(n, _x0);
-    });
+    return std::move(g).undirected_edges.filter(
+        [=, n = std::move(n)](UndirectedEdge<T1> _x0) -> bool {
+          return undirected_originates<_tcI0, T1>(std::move(n), _x0);
+        });
   }
 };
 

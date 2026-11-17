@@ -3,12 +3,10 @@
 
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -59,8 +57,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -86,8 +84,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template M<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template M<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template M<crane::obj>>;
 };
 
@@ -98,40 +95,42 @@ struct HktLambdaParamCarrier {
   }
 
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template M<T3>, F1 &, T2 &>
   static typename _tcI0::template M<T3> bind(typename _tcI0::template M<T2> x,
                                              F1 &&x0) {
     return _tcI0::template bind<T2, T3>(std::move(x), x0);
   }
 
   struct OptM {
-    template <typename _A0> using M = std::optional<_A0>;
+    template <typename CraneA0> using M = std::optional<CraneA0>;
 
-    template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-      return std::make_optional<_A0>(x);
+    template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
+      return std::make_optional<CraneA0>(std::move(x));
     }
 
-    template <typename _A0, typename _A1>
-    static std::optional<_A1> bind(std::optional<_A0> m,
-                                   crane::fn<std::optional<_A1>(_A0)> f) {
+    template <typename CraneA0, typename CraneA1>
+    static std::optional<CraneA1>
+    bind(std::optional<CraneA0> m,
+         crane::fn<std::optional<CraneA1>(CraneA0)> f) {
       if (m.has_value()) {
-        const _A0 &x = *m;
+        const CraneA0 &x = *m;
         return f(x);
       } else {
-        return std::optional<_A1>();
+        return std::optional<CraneA1>();
       }
     }
   };
 
   static_assert(Monad<OptM>);
 
-  template <Monad _tcI0, typename T2, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template M<T2>, F1 &, T2 &>
+  template <Monad _tcI0, typename T2>
   static typename _tcI0::template M<T2> twice(typename _tcI0::template M<T2> m,
-                                              F1 &&f) {
-    return bind<_tcI0, T2, T2>(std::move(m), [=](const T2 &x) {
-      return bind<_tcI0, T2, T2>(f(x),
-                                 [](const T2 &y) { return ret<_tcI0, T2>(y); });
+                                              const std::type_identity_t<
+                                                  crane::fn<
+                                                      typename _tcI0::template M<
+                                                          T2>(T2)>> &f) {
+    return _tcI0::template bind<T2, T2>(std::move(m), [=](const T2 &x) {
+      return _tcI0::template bind<T2, T2>(
+          f(x), [](const T2 &y) { return _tcI0::template ret<T2>(y); });
     });
   }
 

@@ -4,6 +4,7 @@
 #include "crane_fn.h"
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -57,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -66,25 +67,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -96,25 +100,25 @@ public:
 /// binders do not.
 struct IfBranchFunctionParams {
   template <typename F1, typename F2>
-    requires std::is_invocable_r_v<Nat, F1 &, Nat &> &&
-             std::is_invocable_r_v<Nat, F2 &, Nat &>
-  static Nat h(Bool0 b, F1 &&f, F2 &&g, Nat x0_) {
+    requires std::is_invocable_r_v<Nat, F1 &, const Nat &> &&
+             std::is_invocable_r_v<Nat, F2 &, const Nat &>
+  static Nat h(Bool0 b, F1 &&f, F2 &&g, const Nat &x0_) {
     switch (b) {
     case Bool0::TRUE_: {
-      return f(std::move(x0_));
+      return f(x0_);
     }
     case Bool0::FALSE_: {
-      return g(std::move(x0_));
+      return g(x0_);
     }
     default:
       std::unreachable();
     }
   }
 
-  static inline const Nat run = h(
-      Bool0::FALSE_, [](const Nat &x) { return Nat::s(x); },
-      [](const Nat &x) { return x.add(Nat::s(Nat::s(Nat::o()))); },
-      Nat::s(Nat::o()));
+  static inline const Nat run =
+      h(Bool0::FALSE_, [](const Nat &x) { return Nat::s(x); },
+        [](const Nat &x) { return x.add(Nat::s(Nat::s(Nat::o()))); },
+        Nat::s(Nat::o()));
 };
 
 #endif // INCLUDED_IF_BRANCH_FUNCTION_PARAMS

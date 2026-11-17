@@ -1,6 +1,8 @@
 #ifndef INCLUDED_FUNC_ONLY_SUBMODULE_AB
 #define INCLUDED_FUNC_ONLY_SUBMODULE_AB
 
+#include <cstdint>
+
 struct FuncOnlySubmoduleAb {
   struct Root {
     struct A {

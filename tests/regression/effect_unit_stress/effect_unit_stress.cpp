@@ -6,7 +6,7 @@ void EffectUnitStress::ret_tt_simple() { return; }
 void EffectUnitStress::ret_tt_after_bind() { return; }
 
 void EffectUnitStress::ret_tt_after_effect() {
-  std::cout << "x"s << '\n';
+  std::cout << std::string("x") << '\n';
   return;
 }
 
@@ -38,7 +38,7 @@ void EffectUnitStress::conditional_tt(bool b) {
 /// 5. Ret in one branch, effect in other
 void EffectUnitStress::conditional_mixed(bool b) {
   if (b) {
-    std::cout << "yes"s << '\n';
+    std::cout << std::string("yes") << '\n';
     return;
   } else {
     return;
@@ -51,7 +51,7 @@ std::pair<std::string, std::string> EffectUnitStress::pair_of_effects() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return std::make_pair(a, b);
+  return std::make_pair(std::move(a), std::move(b));
 }
 
 /// 7. match on nat with monadic body
@@ -100,10 +100,10 @@ std::string EffectUnitStress::nested_if_monadic(bool b1, bool b2) {
 /// 10. Monadic function returning option
 std::optional<uint64_t> EffectUnitStress::safe_head(const List<uint64_t> &xs) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
-    std::cout << "empty!"s << '\n';
+    std::cout << std::string("empty!") << '\n';
     return std::optional<uint64_t>();
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(xs.v());
     return std::make_optional<uint64_t>(a0);
   }
 }

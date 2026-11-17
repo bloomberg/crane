@@ -1,7 +1,7 @@
 #ifndef INCLUDED_NESTED_MOD
 #define INCLUDED_NESTED_MOD
 
-#include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -27,19 +27,7 @@ struct NestedMod {
     }
 
     template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-      switch (c) {
-      case Color::RED: {
-        return f;
-      }
-      case Color::GREEN: {
-        return f0;
-      }
-      case Color::BLUE: {
-        return f1;
-      }
-      default:
-        std::unreachable();
-      }
+      return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
     }
 
     struct Inner {
@@ -91,10 +79,10 @@ struct NestedMod {
       };
 
       template <typename T1, typename F0, typename F1, typename F2>
-        requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-                 std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-                 std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
-                                       uint64_t &>
+        requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+                 std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+                 std::is_invocable_r_v<T1, F2 &, const uint64_t &,
+                                       const uint64_t &, const uint64_t &>
       static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
         if (std::holds_alternative<typename shape::Circle>(s.v())) {
           const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -109,21 +97,8 @@ struct NestedMod {
       }
 
       template <typename T1, typename F0, typename F1, typename F2>
-        requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-                 std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-                 std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t &,
-                                       uint64_t &>
       static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
-        if (std::holds_alternative<typename shape::Circle>(s.v())) {
-          const auto &[a0] = std::get<typename shape::Circle>(s.v());
-          return f(a0);
-        } else if (std::holds_alternative<typename shape::Square>(s.v())) {
-          const auto &[a0] = std::get<typename shape::Square>(s.v());
-          return f0(a0);
-        } else {
-          const auto &[a0, a1, a2] = std::get<typename shape::Triangle>(s.v());
-          return f1(a0, a1, a2);
-        }
+        return shape_rect<T1>(f, f0, f1, s);
       }
 
       static uint64_t area(const shape &s);
@@ -135,7 +110,7 @@ struct NestedMod {
 
   static inline const Outer::Inner::shape my_circle =
       Outer::Inner::shape::circle(UINT64_C(5));
-  static inline const Outer::Color my_color = Outer::Color::RED;
+  static constexpr Outer::Color my_color = Outer::Color::RED;
   static inline const uint64_t test_area = Outer::Inner::area(my_circle);
   static inline const uint64_t test_combined =
       Outer::shape_with_color(my_circle, my_color);

@@ -3,29 +3,33 @@
 /// TEST 1: Partial app of get_left_val, applied to recursive result.
 /// The closure body accesses nested tree structure.
 uint64_t MemSafetyProbe5::sum_left_vals(
-    const MemSafetyProbe5::mylist<MemSafetyProbe5::tree>
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+    const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l) { /// CraneEnter:
+                                                               /// captures
+                                                               /// varying
+                                                               /// parameters
+                                                               /// for each
+                                                               /// recursive
+                                                               /// call.
+  struct CraneEnter {
     const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> *l;
   };
 
-  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Mycons {
+  struct CraneCont_Mycons {
     MemSafetyProbe5::tree a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Mycons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_left_vals: _Enter -> _Cont_Mycons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum_left_vals: CraneEnter -> CraneCont_Mycons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mynil>(
@@ -35,11 +39,11 @@ uint64_t MemSafetyProbe5::sum_left_vals(
         const auto &[a0, a1] = std::get<
             typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
             l.v());
-        _stack.emplace_back(_Cont_Mycons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
       MemSafetyProbe5::tree a0 = std::move(_f.a0);
       _result = a0.get_left_val(std::move(_result));
     }
@@ -52,66 +56,67 @@ uint64_t MemSafetyProbe5::sum_left_vals(
 MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe5::build_getters(
     const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &l) {
-  std::shared_ptr<MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>
-      _head{};
-  std::shared_ptr<MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>
-      *_write = &_head;
-  MemSafetyProbe5::mylist<MemSafetyProbe5::tree> _loop_l = l;
+  std::optional<MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>> _root{};
+  std::shared_ptr<MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>> *_write =
+      nullptr;
+  const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
             typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mynil>(
-            _loop_l.v())) {
-      *_write = std::make_shared<
-          MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          mylist<crane::fn<uint64_t(uint64_t)>>::mynil());
+            _loop_l->v())) {
+      auto _value = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       const auto &[a0, a1] = std::get<
           typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
-          _loop_l.v());
+          _loop_l->v());
       const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &a1_value = *a1;
-      auto _cell = std::make_shared<
-          MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>>(
-          typename MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>::
-              Mycons([=](uint64_t _x0)
-                         -> uint64_t { return a0.get_left_val(_x0); },
-                     nullptr));
-      *_write = std::move(_cell);
-      _write = &std::get<typename MemSafetyProbe5::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons>((*_write)->v_mut())
-                    .a1;
-      _loop_l = a1_value;
+      auto _cell = typename MemSafetyProbe5::mylist<
+          crane::fn<uint64_t(uint64_t)>>::Mycons(
+          [=](uint64_t _x0) -> uint64_t { return a0.get_left_val(_x0); },
+          nullptr);
+      MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
+          (_write ? *(*_write = std::make_shared<MemSafetyProbe5::mylist<
+                          crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
+      _write =
+          &std::get<typename MemSafetyProbe5::mylist<
+              crane::fn<uint64_t(uint64_t)>>::Mycons>(_node.v_mut()).a1;
+      _loop_l = &a1_value;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t MemSafetyProbe5::apply_all(
     const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &l,
-    uint64_t
-        x) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+    uint64_t x) { /// CraneEnter: captures varying parameters for each recursive
+                  /// call.
+  struct CraneEnter {
     const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> *l;
   };
 
-  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Mycons {
+  struct CraneCont_Mycons {
     crane::fn<uint64_t(uint64_t)> a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Mycons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified apply_all: _Enter -> _Cont_Mycons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified apply_all: CraneEnter -> CraneCont_Mycons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
               crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
@@ -119,11 +124,11 @@ uint64_t MemSafetyProbe5::apply_all(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe5::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
-        _stack.emplace_back(_Cont_Mycons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
       _result = a0(std::move(_result));
     }
@@ -134,29 +139,34 @@ uint64_t MemSafetyProbe5::apply_all(
 MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe5::collect_left_vals(
     MemSafetyProbe5::tree t,
-    MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>>
-        acc) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+    MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> acc) { /// CraneEnter:
+                                                                  /// captures
+                                                                  /// varying
+                                                                  /// parameters
+                                                                  /// for each
+                                                                  /// recursive
+                                                                  /// call.
+  struct CraneEnter {
     MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> acc;
     MemSafetyProbe5::tree t;
   };
 
-  /// _Cont_Node: saves [a0], resumes after recursive call, then processes rest.
-  struct _Cont_Node {
+  /// CraneCont_Node: saves [a0], resumes after recursive call, then processes
+  /// rest.
+  struct CraneCont_Node {
     std::shared_ptr<MemSafetyProbe5::tree> a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Node>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Node>;
   MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{std::move(acc), std::move(t)});
-  /// Loopified collect_left_vals: _Enter -> _Cont_Node.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{std::move(acc), std::move(t)});
+  /// Loopified collect_left_vals: CraneEnter -> CraneCont_Node.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> acc =
           std::move(_f.acc);
       MemSafetyProbe5::tree t = std::move(_f.t);
@@ -164,22 +174,22 @@ MemSafetyProbe5::collect_left_vals(
               t.v_mut())) {
         _result = std::move(acc);
       } else {
-        auto &[a0, a1, a2] =
+        auto &[a0, _, a2] =
             std::get<typename MemSafetyProbe5::tree::Node>(t.v_mut());
         const MemSafetyProbe5::tree &a0_value = *a0;
         const MemSafetyProbe5::tree &a2_value = *a2;
-        _stack.emplace_back(_Cont_Node{a0});
-        _stack.emplace_back(_Enter{
-            mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
+        _stack.emplace_back(CraneCont_Node{a0});
+        _stack.emplace_back(
+            CraneEnter{mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
                 [=](uint64_t _x0) -> uint64_t { return t.get_left_val(_x0); },
                 std::move(acc)),
-            a2_value});
+                       a2_value});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Node>(_frame));
+      auto _f = std::move(std::get<CraneCont_Node>(_frame));
       std::shared_ptr<MemSafetyProbe5::tree> a0 = std::move(_f.a0);
       const MemSafetyProbe5::tree &a0_value = *a0;
-      _stack.emplace_back(_Enter{std::move(_result), a0_value});
+      _stack.emplace_back(CraneEnter{std::move(_result), std::move(a0_value)});
     }
   }
   return _result;
@@ -188,62 +198,66 @@ MemSafetyProbe5::collect_left_vals(
 /// TEST 6: Stress test with very large list of trees.
 MemSafetyProbe5::mylist<MemSafetyProbe5::tree>
 MemSafetyProbe5::make_tree_list(uint64_t n) {
-  std::shared_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _head{};
+  std::optional<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> _root{};
   std::shared_ptr<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>> *_write =
-      &_head;
-  uint64_t _loop_n = std::move(n);
+      nullptr;
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
-      *_write =
-          std::make_shared<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
-              mylist<MemSafetyProbe5::tree>::mynil());
+      auto _value = mylist<MemSafetyProbe5::tree>::mynil();
+      (_write ? *(*_write = std::make_shared<
+                      MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
+                      std::move(_value)))
+              : _root.emplace(std::move(_value)));
       break;
     } else {
       uint64_t n_ = _loop_n - 1;
       auto _cell =
-          std::make_shared<MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
-              typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons(
-                  tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
-                             (_loop_n * UINT64_C(2)), tree::leaf()),
-                  nullptr));
-      *_write = std::move(_cell);
+          typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons(
+              tree::node(tree::node(tree::leaf(), _loop_n, tree::leaf()),
+                         (_loop_n * UINT64_C(2)), tree::leaf()),
+              nullptr);
+      MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &_node =
+          (_write ? *(*_write = std::make_shared<
+                          MemSafetyProbe5::mylist<MemSafetyProbe5::tree>>(
+                          std::move(_cell)))
+                  : _root.emplace(std::move(_cell)));
       _write =
           &std::get<
-               typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
-               (*_write)->v_mut())
-               .a1;
+              typename MemSafetyProbe5::mylist<MemSafetyProbe5::tree>::Mycons>(
+              _node.v_mut())
+              .a1;
       _loop_n = n_;
       continue;
     }
   }
-  return std::move(*_head);
+  return std::move(*_root);
 }
 
 uint64_t MemSafetyProbe5::sum_getters(
     const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &l,
-    uint64_t
-        x) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+    uint64_t x) { /// CraneEnter: captures varying parameters for each recursive
+                  /// call.
+  struct CraneEnter {
     const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> *l;
   };
 
-  /// _Cont_Mycons: saves [a0], resumes after recursive call, then processes
+  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
   /// rest.
-  struct _Cont_Mycons {
+  struct CraneCont_Mycons {
     crane::fn<uint64_t(uint64_t)> a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Mycons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{&l});
-  /// Loopified sum_getters: _Enter -> _Cont_Mycons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{&l});
+  /// Loopified sum_getters: CraneEnter -> CraneCont_Mycons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
       const MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe5::mylist<
               crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
@@ -251,11 +265,11 @@ uint64_t MemSafetyProbe5::sum_getters(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe5::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
-        _stack.emplace_back(_Cont_Mycons{a0});
-        _stack.emplace_back(_Enter{crane_raw(a1)});
+        _stack.emplace_back(CraneCont_Mycons{a0});
+        _stack.emplace_back(CraneEnter{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
       _result = (a0(x) + std::move(_result));
     }

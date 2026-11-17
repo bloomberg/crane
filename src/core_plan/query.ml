@@ -1,0 +1,1058 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** What Core elaboration asks of a term, its types and the table, and
+    translation asks too: a global's recorded type, the role of a parameter,
+    the type variables a call's arguments instantiate or a C++ compiler
+    deduces, how a let-bound lambda is generated, which arguments are class
+    dictionaries, and where a class-field call projects statically.  Nothing
+    here reads translation's state or builds C++: {!Elaborate} plans on
+    it before translation runs. *)
+
+open Names
+open Base.Core_util
+open Base.Table
+open Util
+open Base.Type_util
+
+(** {!Base.Table.find_type}, [None] where [r] has no recorded type. *)
+let find_type_opt (r : GlobRef.t) : Core.Type.t option =
+  try Some (Base.Table.find_type r) with Not_found -> None
+
+(** A declaration's parameter of type [ty] is its dictionary exactly when
+    [ty] is a class: the one criterion the head generators promote a
+    parameter to an instance by. *)
+let parameter_role ty = if Base.Table.is_typeclass_type ty then Core.Lexenv.Dictionary else Core.Lexenv.Value
+
+(** Like [List.firstn] but returns [min(n, length lst)] elements instead of
+    raising when [n > length lst]. Needed because extraction sometimes produces
+    type argument lists shorter than expected (due to [Core.Type.Erased Core.Erasure_reason.Type_argument] erasure,
+    higher-kinded extraction failures, or universe polymorphism).
+
+    @param n    number of elements to take (must be >= 0)
+    @param lst  input list
+    @return prefix of [lst] with length [min(n, length lst)] *)
+let safe_firstn n lst =
+  let rec aux n lst acc =
+    match n, lst with
+    | 0, _ | _, [] -> List.rev acc
+    | n, hd::tl -> aux (n-1) tl (hd::acc)
+  in
+  aux n lst []
+
+(** Collect all Core.Type.Variable indices from a Core.Type.t. Used to find type variables beyond
+    those of the containing inductive/record. *)
+let collect_tvars_set acc ty = IntSet.union acc (Base.Core_util.core_tvars ty)
+
+(** Convert an IntSet of type variable indices back to a list, wrapping
+    [collect_tvars_set]. Used to collect all Core.Type.Variable indices from a Core.Type.t. *)
+let collect_tvars acc ty =
+  IntSet.elements (collect_tvars_set (IntSet.of_list acc) ty)
+
+(** [reconcile_parameter_type body_ty sig_ty] -- the type a definition's
+    parameter is bound at in its body, from the type its lambda is annotated
+    with, [body_ty] (unified with the signature's), and the type the
+    definition's signature gives it, [sig_ty].
+
+    A [Core.Type.Unknown] in the annotation is the signature's: a promoted dependent
+    record's lambda leaves the erased carrier unknown, where the signature
+    has [Core.Type.Global_app (m_carrier, \[\])], which converts.
+
+    The signature's type replaces the annotation outright only where the
+    signature has fewer arrows -- a type alias like [State S A = S -> A * S]
+    expands to extra ones, and binding the parameter at the alias lets inner
+    call sites see an over-application and chain it ([f(a)(s')], not
+    [f(a, s')]) -- or names a type alias taking promoted parameters
+    ([FusedS := state * ...] under [Existing Instance], declared [template
+    <typename ptr>]): its body names class fields only the alias's own
+    parameters resolve, so the expansion spells them erased.  Not
+    unconditionally, because the definition's parameter types would then
+    differ from the declaration's, which [gen_sfun] spells from the expanded
+    types. *)
+let reconcile_parameter_type body_ty sig_ty =
+  let rec merge_unknown body_ty sig_ty =
+    match (body_ty, sig_ty) with
+    | Core.Type.Unknown, _ -> sig_ty
+    | Core.Type.Global_app {head = r1;
+                            type_arguments = ts1;
+                            index_arguments = a1}, Core.Type.Global_app {head = r2; type_arguments = ts2; _}
+      when GlobRef.CanOrd.equal r1 r2 && List.length ts1 = List.length ts2 ->
+      Core.Type.Global_app {head = r1; type_arguments = List.map2 merge_unknown ts1 ts2; index_arguments = a1}
+    | Core.Type.Arrow {parameter = t1a; result = t1b}, Core.Type.Arrow {parameter = t2a; result = t2b} ->
+      Core.Type.Arrow {parameter = merge_unknown t1a t2a; result = merge_unknown t1b t2b}
+    | _ -> body_ty
+  in
+  let promoted_alias t =
+    match Base.Core_util.type_simpl t with
+    | Core.Type.Global_app {head = (GlobRef.ConstRef _ as g); _} -> Base.Table.promoted_type_params g <> []
+    | _ -> false
+  in
+  let body_ty = merge_unknown body_ty sig_ty in
+  if count_core_arrows body_ty > count_core_arrows sig_ty || promoted_alias sig_ty then sig_ty
+  else body_ty
+
+(** The type variables a type spells out in a deducible position.  A
+    function-typed parameter reaches C++ as an opaque template parameter [F0]
+    rather than as a written-out signature, so a variable occurring only
+    inside one -- the callback's own codomain, say -- is in no deducible
+    context; every other parameter spells its type out. *)
+let rec spelled_tvars_of ?(plain = fun _ -> false) acc = function
+  | Core.Type.Variable {variable = j; _} -> IntSet.add j acc
+  (* A higher-kinded variable is written applied, and is spelled all the same:
+     as a template name, or -- a family -- as the plain type it is.  A plain
+     head's arguments are not written at all ([E A] is [T1]), so where
+     [plain] says so they spell nothing. *)
+  | Core.Type.Variable_app {head = j; arguments = l} ->
+    let acc = IntSet.add j acc in
+    if plain j then acc else List.fold_left (spelled_tvars_of ~plain) acc l
+  | Core.Type.Arrow {parameter = a; result = b} ->
+    spelled_tvars_of ~plain (spelled_tvars_of ~plain acc a) b
+  (* An inductive's indices are not written ([Core.Type.Global_app] conversion keeps its
+     parameters only): [getE T] is the enum [GetE]. *)
+  | Core.Type.Global_app {head = r; type_arguments = l; _} ->
+    let l =
+      match r with
+      | GlobRef.IndRef (kn, _) -> (
+        match Base.Table.get_ind_num_param_vars_opt kn with
+        | Some n -> safe_firstn n l
+        | None -> l )
+      | _ -> l
+    in
+    (* Nor are the arguments a mapping's text does not place: [itree E R] is
+       [std::shared_ptr<ITree<R>>], and [E] cannot be read off it. *)
+    let l = List.filteri (fun i _ -> Base.Type_util.type_arg_is_written r i) l in
+    List.fold_left (spelled_tvars_of ~plain) acc l
+  | Core.Type.Meta {contents = Some t} -> spelled_tvars_of ~plain acc t
+  | _ -> acc
+
+(** The variables [core_ty]'s declaration takes as template names.
+
+    {!Base.Type_util.higher_kinded_core_tvars} less those the declaration only
+    ever applies, in its parameters and nowhere else: each such application is
+    relaxed there to a fresh deduced parameter
+    ({!Plan_templates.relax_applied_param}), and the variable left a plain
+    [typename] -- [fused_trigger]'s [e : F T] is declared [_P0 e], and [F]
+    [typename T1 = void].  So its arguments are no more spelled than a plain
+    family's, and its position takes a box like any other. *)
+let declared_higher_kinded_tvars core_ty =
+  let relaxed j =
+    let bare = ref false and applied = ref false in
+    let rec scan t =
+      match resolve_meta t with
+      | Core.Type.Variable {variable = j'; _} when j' = j -> bare := true
+      | Core.Type.Variable_app {head = j'; arguments = l} ->
+        if j' = j then applied := true;
+        List.iter scan l
+      | Core.Type.Arrow {parameter = a; result = b} -> scan a; scan b
+      | Core.Type.Global_app {type_arguments = l; _} -> List.iter scan l
+      | _ -> ()
+    in
+    List.iter
+      (fun d ->
+        match expand_core_fun_alias d with Core.Type.Arrow _ -> () | d -> scan d )
+      (core_domains core_ty);
+    !applied && (not !bare)
+    && not (IntSet.mem j (collect_tvars_set IntSet.empty (core_return_type core_ty)))
+  in
+  IntSet.filter (fun j -> not (relaxed j))
+    (Base.Type_util.higher_kinded_core_tvars [core_ty])
+
+(** The type variables of [id] a C++ compiler could read off the call's value
+    arguments. *)
+let deducible_tvars_of_glob id =
+  match find_type_opt id with
+  | None -> None
+  | Some core_ty_orig ->
+    let hk = declared_higher_kinded_tvars core_ty_orig in
+    let plain j = not (IntSet.mem j hk) in
+    Some
+      (List.fold_left
+         (fun acc d ->
+           (* A definitional class is an alias for a function type -- [Id_ C
+              obj] -- and an argument there is a callable just the same. *)
+           match expand_core_fun_alias d with
+           | Core.Type.Arrow _ -> acc
+           | _ -> spelled_tvars_of ~plain acc d )
+         IntSet.empty
+         (List.map resolve_meta (core_domains core_ty_orig)) )
+
+(** Infer the Core type of a body expression from its structure, or [None] where
+    the structure does not say.
+
+    This reads a type off a typed AST -- [Core.Expr.Construct] and [Core.Expr.Match] carry theirs,
+    and a global's is in the table -- rather than guessing one back out of an
+    untyped C++ expression.  Its answer annotates a lambda's ([Cpp_ir.Expr.Lambda]) return type,
+    so the frame a loopified call builds is typed instead of falling back on
+    [decltype(lambda)].
+
+    Instantiation goes through {!Base.Core_util.Var_types.apply}, by the callee's
+    variables: a second substituter here would be a second oracle, free to
+    disagree. *)
+let rec infer_core_body_type (a : Core.Expr.t) : Core.Type.t option =
+  match a with
+  | Core.Expr.Apply {callee = Core.Expr.Global ({callee = r; _} as use); arguments = args} ->
+    ( match find_type_opt r with
+    | Some ty ->
+      (* Instantiate type schema variables with actual type arguments -- the
+         ones the call site wrote, by variable, or, where it wrote none, the
+         ones its arguments imply. *)
+      let ty =
+        if not (Base.Core_util.Var_types.is_empty (Base.Core_util.written_type_args use)) then
+          Base.Core_util.instantiate_written ~reader:"infer_core_body_type" use ty
+        else
+          Base.Core_util.Var_types.apply
+            (tvar_instantiation r ty
+               (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args) )
+            ty
+      in
+      strip_arrows_n (count_real_core_args args) ty
+    | None -> None )
+  | Core.Expr.Construct {result_type = ty; _} -> Some (resolve_meta ty)
+  | Core.Expr.Match {branches = pv; _} when Array.length pv > 0 ->
+    Some (resolve_meta pv.(0).result_type)
+  | Core.Expr.Let {body; _} -> infer_core_body_type body
+  | Core.Expr.Lambda {parameter_type = ty; body; _} ->
+    Option.map (fun rty -> Core.Type.Arrow {parameter = ty; result = rty}) (infer_core_body_type body)
+  | Core.Expr.Global {callee = r; _} -> find_type_opt r
+  | Core.Expr.Coerce {value = e; _}
+  | Core.Expr.Boxed_value {value = e; _}
+  | Core.Expr.Lambda_group_barrier {value = e; _} ->
+    infer_core_body_type e
+  | _ -> None
+
+(** [tvar_instantiation_found callee_ty args] is the callee's type-variable
+    instantiation, read off the arguments' own Core types.
+
+    A call site does not always carry its type arguments: where the use wrote
+    none, the callee's schema stays uninstantiated at the written arguments,
+    so a codomain like [projT2]'s reads as a bare [Core.Type.Variable] and
+    nothing downstream can tell whether it erases.  The arguments still pin
+    the variables down -- matching the declared domain against the type each
+    argument actually has recovers them.
+
+    The result pairs each variable found with its type, the variable as
+    [callee_ty] spells it, [i] for [Core.Type.Variable (_, i)]; a variable no argument
+    mentions is absent. *)
+and tvar_instantiation_found
+    ?lex
+    ?(constructors = false)
+    ?result
+    callee_ty
+    args =
+  (* A binder's type is not on the [Core.Expr.Bound_variable] that names it; it was written down
+     where it was bound, which is what [lex], the environment [args] are typed
+     in, keeps.  Without one a variable says nothing. *)
+  let arg_core_ty a =
+    match infer_core_body_type a with
+    | Some _ as t -> t
+    | None -> (
+      match (a, lex) with
+      | Core.Expr.Bound_variable {index = i; _}, Some lex -> Core.Lexenv.type_opt lex i
+      | _ -> None )
+  in
+  let found = Hashtbl.create 7 in
+  (* The first binding stands, unless a later one is free of variables where
+     it was not: a dictionary's own type binds a carrier at its instance's
+     variables ([itree (E (sum _ _))]), and the handler argument that follows
+     says [itree TopE]. *)
+  let bind k t =
+    let open_ t = not (IntSet.is_empty (collect_tvars_set IntSet.empty t)) in
+    match Hashtbl.find_opt found k with
+    | None -> Hashtbl.replace found k t
+    | Some old when open_ old && not (open_ t) -> Hashtbl.replace found k t
+    | Some _ -> ()
+  in
+  let rec unify formal actual =
+    match (resolve_meta formal, resolve_meta actual) with
+    | Core.Type.Variable {variable = i; _}, a -> bind i a
+    (* A definitional class is the function type it abbreviates: [Case obj C]
+       met by the eta-expanded dictionary lambda that fills it. *)
+    | (Core.Type.Global_app {head = GlobRef.ConstRef _; _} as f), (Core.Type.Arrow _ as a)
+      when (match expand_core_fun_alias f with Core.Type.Arrow _ -> true | _ -> false) ->
+      unify (expand_core_fun_alias f) a
+    | Core.Type.Global_app {head = g1; type_arguments = a1; _}, Core.Type.Global_app {head = g2; type_arguments = a2; _}
+      when GlobRef.CanOrd.equal g1 g2 && List.length a1 = List.length a2 ->
+      List.iter2 unify a1 a2
+    (* An actual type spelled through an alias -- [MCFGtop T] for [itree
+       MCFGEtop T] -- is what the alias stands for. *)
+    | (Core.Type.Global_app {head = g1; _} as f), Core.Type.Global_app {head = (GlobRef.ConstRef kn as g2);
+                                                                        type_arguments = a2; _}
+      when (not (GlobRef.CanOrd.equal g1 g2))
+           && Option.has_some (Base.Table.lookup_typedef_unchecked kn) ->
+      let body = Option.get (Base.Table.lookup_typedef_unchecked kn) in
+      unify f (if a2 = [] then body else Base.Core_util.type_subst_list a2 body)
+    (* Where both sides open with type abstractions, they may abstract
+       different numbers of them -- [E ~> M]'s one against a handler written
+       [fun T => intr], itself abstracting its own [T] -- and the value
+       arguments align only past all of them.  Only where both do: a formal
+       value domain against an erased binder is a category's object, kept on
+       one side and erased on the other. *)
+    | Core.Type.Arrow {parameter = Core.Type.Erased _;
+                       result = c1}, Core.Type.Arrow {parameter = Core.Type.Erased _; result = c2} ->
+      let rec past_abstractions t =
+        match resolve_meta t with
+        | Core.Type.Arrow {parameter = Core.Type.Erased _; result = c} -> past_abstractions c
+        | t -> t
+      in
+      unify (past_abstractions c1) (past_abstractions c2)
+    | Core.Type.Arrow {parameter = d1; result = c1}, Core.Type.Arrow {parameter = d2; result = c2} ->
+      unify d1 d2 ;
+      unify c1 c2
+    (* A carrier applied to arguments -- [m A] -- is the shape a class method
+       is written in, and its element is exactly the variable a call site
+       cannot deduce.  The heads are variables themselves, so they pin nothing
+       down against each other; the arguments do. *)
+    | Core.Type.Variable_app {arguments = a1; _}, Core.Type.Variable_app {arguments = a2; _}
+      when List.length a1 = List.length a2 -> List.iter2 unify a1 a2
+    (* An applied variable against a concrete application of the same arity: the
+       variable stands for the head, which the actual type names, and the
+       arguments are what both are applied to. This is the only place a [Type ->
+       Type] argument can still be read off -- Core erases the argument
+       itself, and what is left is the constraint that mentions it.
+
+       Asked for, not assumed: where a class's carrier is what the variable
+       stands for, the head alone is the wrong answer. A composed carrier [fun t
+       => option (Exp t)] meets an [option (Exp any)] here and the head is
+       [option], which is the arity deduction would have guessed and precisely
+       what a composition is not. The dictionary routes recover those, and they
+       must be left to reach them. *)
+    | Core.Type.Variable_app {head = k;
+                              arguments = a1}, Core.Type.Global_app {head = g; type_arguments = a2; index_arguments = l}
+      when constructors && List.length a1 = List.length a2 ->
+      bind k (Core.Type.Global_app {head = g; type_arguments = []; index_arguments = l});
+      List.iter2 unify a1 a2
+    (* A carrier is a head partially applied: [M T] against [itree TopE T]
+       binds [M] to [itree TopE], the arguments the application writes ahead
+       of the ones the variable is applied to.  Only where those are families
+       -- a head, or one at its erased index: [modul nat (cfg nat)] is as
+       much [fun T => modul T (cfg T)] at [nat] as [modul nat] at
+       [cfg nat], and a prefix of plain types cannot say which. *)
+    | Core.Type.Variable_app {head = k;
+                              arguments = a1}, Core.Type.Global_app {head = g; type_arguments = a2; index_arguments = l}
+      when constructors && List.length a1 < List.length a2
+           && List.for_all
+                (fun t ->
+                  match resolve_meta t with
+                  | Core.Type.Global_app {type_arguments = []; _} -> true
+                  | Core.Type.Global_app {type_arguments = args; _} ->
+                    Base.Type_util.is_core_erased_ty (List.nth args (List.length args - 1))
+                  | _ -> false )
+                (List.filteri (fun i _ -> i < List.length a2 - List.length a1) a2) ->
+      let n_fixed = List.length a2 - List.length a1 in
+      bind k (Core.Type.Global_app {head = g;
+                                    type_arguments = List.filteri (fun i _ -> i < n_fixed) a2;
+                                    index_arguments = l});
+      List.iter2 unify a1 (List.filteri (fun i _ -> i >= n_fixed) a2)
+    (* A type alias meets an actual type already written as what it expands to:
+       a class with a single field is inlined to that field, so a constraint
+       spelled [Sub UBE E] meets an [UBE X -> UBE X]. Expanding puts both in the
+       same form, and the alias's arguments are what its own parameters stand
+       for. *)
+    | Core.Type.Global_app {head = GlobRef.ConstRef kn; type_arguments = cargs; _}, actual when constructors ->
+      ( match Base.Table.lookup_typedef_unchecked kn with
+      | Some body -> unify (Base.Core_util.type_subst_list cargs body) actual
+      | None -> () )
+    | _ -> ()
+  in
+  (* [args] holds the value arguments only, so a [Core.Type.Erased] formal -- an erased
+     type or proof parameter -- consumes none of them.  What is left once they
+     run out is the type of the application -- the codomain, or for a partial
+     application the callable still to be applied -- and [result], where the
+     position states one, says what it is. *)
+  let rec walk ty args =
+    match (resolve_meta ty, args) with
+    | Core.Type.Arrow {parameter = Core.Type.Erased _; result = cod}, _ -> walk cod args
+    | Core.Type.Arrow {parameter = dom; result = cod}, a :: rest ->
+      ( match arg_core_ty a with
+      | Some t -> unify dom t
+      | None -> () ) ;
+      walk cod rest
+    | ty, [] -> Option.iter (unify ty) result
+    | _ -> ()
+  in
+  walk callee_ty args ;
+  Hashtbl.fold (fun i t acc -> (i, t) :: acc) found []
+
+(** {!tvar_instantiation_found} at [r]'s variables, every one up to the last
+    one found: a variable no argument mentions keeps itself, so substituting
+    leaves it alone. *)
+and tvar_instantiation r callee_ty args =
+  match Base.Core_util.reference_scheme r with
+  | None -> Base.Core_util.Var_types.empty
+  | Some scheme ->
+    let found = tvar_instantiation_found callee_ty args in
+    let at v = List.assoc_opt (Core.Scheme.Var.ordinal v) found in
+    Base.Core_util.Var_types.through
+      (Base.Core_util.last_var (List.filter (fun v -> Option.has_some (at v)) (Core.Scheme.Var.all scheme)))
+      (fun v ->
+        match at v with
+        | Some t -> t
+        | None -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = Core.Scheme.Var.ordinal v} )
+
+(** [resolve_from_argument_types tyargs args] resolves the variables after
+    the last one the call wrote or resolved ({!Call_tyargs.beyond_extent})
+    from what the call's value arguments [args] say they are, where C++ could
+    not have deduced them.
+
+    All or nothing: C++ takes a prefix of the parameter list, so a variable
+    that cannot be named leaves every later one unnameable too, and naming
+    some short of the undeducible one achieves nothing.  Variables the
+    compiler can deduce are left to it -- naming a type twice is an
+    opportunity to spell it differently, not a safeguard. *)
+and resolve_from_argument_types ~lex tyargs args =
+  let id = Call_tyargs.callee tyargs in
+  match find_type_opt id with
+  | None -> tyargs
+  | Some callee_ty ->
+    let n = IntSet.fold max (collect_tvars_set IntSet.empty callee_ty) 0 in
+    let missing =
+      List.filter (fun v -> Core.Scheme.Var.ordinal v <= n) (Call_tyargs.beyond_extent tyargs)
+    in
+    let deducible = Option.default IntSet.empty (deducible_tvars_of_glob id) in
+    if List.for_all (fun v -> IntSet.mem (Core.Scheme.Var.ordinal v) deducible) missing then tyargs
+    else
+      let found = tvar_instantiation_found ~lex callee_ty args in
+      Call_tyargs.resolve_all Call_tyargs.Argument_types
+        (fun v -> List.assoc_opt (Core.Scheme.Var.ordinal v) found)
+        missing tyargs
+
+(** [resolve_from_argument_heads tyargs args] resolves a hole before the last
+    variable the call wrote ({!Call_tyargs.interior_holes}) from the head the
+    variable meets in a value argument's type.
+
+    Core erases a [Type -> Type] argument, but the callee still declares a
+    template parameter for it -- and the erasure is contagious: template
+    arguments are positional, so the all-or-nothing rule in
+    {!Base.Type_util.filter_erased_type_args} drops the concrete arguments
+    beside it.  One lost family therefore costs every type argument the call
+    could have written, including the ones nothing can deduce.
+
+    The family survives in the type of whatever argument is constrained in it
+    -- [Sub UBE E] against a [Sub UBE UBE] -- which is what
+    {!tvar_instantiation_found} reads.  [accept v t] may decline the answer
+    [t] for [v]. *)
+and resolve_from_argument_heads ?(only_alias_args = false) ?(accept = fun _ _ -> true) ~lex
+    tyargs args =
+  let id = Call_tyargs.callee tyargs in
+  match (Call_tyargs.interior_holes tyargs, find_type_opt id) with
+  | [], _ | _, None -> tyargs
+  | holes, Some callee_ty ->
+    (* Only a variable the callee applies: this pass exists because Core
+       erases a [Type -> Type] argument, and a plain type argument that came
+       out erased is erased for a reason a value argument cannot undo. *)
+    let applied = Base.Type_util.applied_core_tvar_arities [callee_ty] in
+    (* Nor one a type alias in a domain is applied to: [ReSum_id : Id_ obj C
+       -> ...] takes the category's morphism constructor [C], a type-level
+       function erased for that reason alone, and the definitional class
+       [Id_] -- an alias -- states it through the argument passed at it.
+       A class, not any alias: [halist K V], a plain one, is applied to a
+       value-indexed family whose argument's type is one instance of it.
+       The erasure the rule above protects is a dependent inductive's
+       ([sigT]), never an alias's. *)
+    let in_dictionary =
+      let rec alias_arg v = function
+        | Core.Type.Global_app {head = (GlobRef.ConstRef _ as g); type_arguments = l; _}
+          when Typeclasses.is_class g ->
+          List.exists
+            (fun a ->
+              (match resolve_meta a with
+               | Core.Type.Variable {variable = j; _} -> j = v
+               | _ -> false)
+              || alias_arg v a )
+            l
+        | Core.Type.Global_app {type_arguments = l; _} -> List.exists (alias_arg v) l
+        | Core.Type.Meta {contents = Some t} -> alias_arg v t
+        | _ -> false
+      in
+      fun v ->
+        List.exists (alias_arg v)
+          (List.map resolve_meta (core_domains callee_ty))
+    in
+    let eligible =
+      List.filter
+        (fun v ->
+          let k = Core.Scheme.Var.ordinal v in
+          ((not only_alias_args) && Hashtbl.mem applied k) || in_dictionary k )
+        holes
+    in
+    let found =
+      tvar_instantiation_found ~lex ~constructors:true callee_ty args
+    in
+    Call_tyargs.resolve Call_tyargs.Argument_heads
+      (fun v ->
+        match List.assoc_opt (Core.Scheme.Var.ordinal v) found with
+        | Some t when accept v t -> Some t
+        | _ -> None )
+      eligible tyargs
+
+(** The instance of [t], the type of a let-bound function, that every use in
+    its scope [body] is at, when the uses agree on one that pins each of the
+    binding's own variables -- those above [n_outer] -- down to the enclosing
+    declaration's.  Extraction generalises a let-bound function's type
+    whatever the Rocq annotation says, and a binding used at one instance is
+    polymorphic in name only: lifting it makes a template whose variables no
+    call can deduce, and whose partial applications erase what they do not
+    know.  [None] where the binder is used other than applied, or where the
+    uses disagree.  [lex] is the enclosing scope's environment. *)
+let sole_instance ~lex ~n_outer t body =
+  let exception Not_sole in
+  try
+    let instances = ref [] in
+    Base.Core_util.ast_iter_rel_applied
+      (fun n i args ->
+        if Int.equal i (n + 1) then begin
+          if args = [] then raise Not_sole;
+          let args =
+            List.map
+              (fun a ->
+                if Base.Core_util.ast_occurs_itvl 1 (n + 1) a then raise Not_sole
+                else Base.Core_util.ast_lift (-(n + 1)) a )
+              args
+          in
+          instances := tvar_instantiation_found ~lex t args :: !instances
+        end )
+      body;
+    let vars = IntSet.elements (collect_tvars_set IntSet.empty t) in
+    let outer_only ty = IntSet.for_all (fun k -> k <= n_outer) (collect_tvars_set IntSet.empty ty) in
+    let agreed k =
+      match List.map (List.assoc_opt k) !instances with
+      | Some ty :: rest when List.for_all (function Some ty' -> Base.Core_util.eq_core_type ty ty' | None -> false) rest ->
+        Some ty
+      | _ -> None
+    in
+    let instance k =
+      match agreed k with
+      | Some ty when k > n_outer && outer_only ty -> ty
+      | Some (Core.Type.Variable {variable = k'; _}) when Int.equal k k' ->
+        Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = k}
+      | None when k <= n_outer -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = k}
+      | _ -> raise Not_sole
+    in
+    if !instances = [] then None
+    else
+      let n = List.fold_left max 0 vars in
+      Some
+        (List.init n
+          (fun j -> if List.mem (j + 1) vars then instance (j + 1) else
+            Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic; variable = j + 1}))
+  with Not_sole -> None
+
+(** [a], a lambda bound by a let at type [t], with a binder for each value
+    arrow of [t] it stops short of, its body applied to them: the lambda a
+    {!Bound} let generates.  [convert_core_type_to_cpp_type] uncurries the
+    binding's type fully, so [unit -> State bool unit] is a function of two
+    parameters, and [fun u => state_bind ...], whose body is a unary
+    function rather than a lambda, would be a lambda of one, which no slot of
+    that type holds.  The binders added are anonymous, so they are named as
+    every anonymous parameter is ([_x0], [_x1], ...); a lambda abstracting
+    every value arrow is itself. *)
+let eta_bound_lambda t a =
+  match a with
+  | Core.Expr.Lambda _ ->
+    let binders, body = collect_lams a in
+    let n_have = List.length (List.filter (fun (_, ty) -> not (erased_by_extraction ty)) binders) in
+    (* The domains of the value arrows the lambda does not abstract, outermost
+       first. *)
+    let new_doms = List.filteri (fun i _ -> i >= n_have) (core_value_domains t) in
+    let d = List.length new_doms in
+    if d = 0 then a
+    else
+      let new_binders = List.map (fun dom -> (Core.Binder_name.Source anonymous_name, dom)) new_doms in
+      (* The innermost new binder is [Core.Expr.Bound_variable 1], the outermost [Core.Expr.Bound_variable d]. *)
+      let args = List.init d (fun i -> Core.Expr.fresh_rel (d - i)) in
+      let applied =
+        match ast_lift d body with
+        | Core.Expr.Apply {callee = f; arguments = xs} -> Core.Expr.Apply {callee = f; arguments = xs @ args}
+        | lifted -> Core_passes.Spines.apply lifted args
+      in
+      named_lams binders (named_lams (List.rev new_binders) applied)
+  | _ -> a
+
+(** How [let x : t := a in b], [a] a lambda, is generated under a head of
+    [n_outer] type variables, [lex] being the enclosing scope's environment. *)
+type let_lambda =
+  | Bound  (** Polymorphic in nothing of its own: bound as a value. *)
+  | At_instance of Core.Type.t list
+      (** Used at one instance only ({!sole_instance}): bound at it. *)
+  | Inlined of Core.Expr.t
+      (** A polymorphic alias -- [let alias := @id], abstracting over erased
+          type parameters alone -- used at several instances.  It has no C++
+          value to bind, only a template no call could deduce, so each use
+          calls what it abbreviates: this is [b] with a copy of [a] of its
+          own ({!Core_passes.Fresh_occurrences.term}) put in place of each read of [x]
+          and the applications reduced, [alias nat 9] becoming [id 9]. *)
+  | Lifted  (** Lifted out to a function template of its own. *)
+
+(** The decision {!let_lambda} names, made from the Core term alone: it is
+    the one owner of it, applied once in Core
+    ({!Elaborate.generated_definition}), after which translation meets
+    only lambdas it binds or lifts. *)
+let let_lambda ~lex ~n_outer t a b =
+  if not (Base.Type_util.own_type_variables ~n_outer [t]) then Bound
+  else
+    match sole_instance ~lex ~n_outer t b with
+    | Some inst -> At_instance inst
+    | None ->
+      let params, _ = collect_lams a in
+      if List.exists (fun (_, ty) -> is_runtime_binder_type ty) params then Lifted
+      else
+        let rec beta_red_app args = function
+          | Core.Expr.Lambda {body; _} -> (
+            match args with
+            | [] ->
+              Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                parameter_type = Core.Type.Erased Core.Erasure_reason.Type_argument;
+                                body = beta_normalize body}
+            | _ :: rest -> beta_red_app rest (ast_pop body) )
+          | f ->
+            let f = beta_normalize f in
+            if args = [] then f else Core.Expr.Apply {callee = f; arguments = List.map beta_normalize args}
+        and beta_normalize = function
+          | Core.Expr.Apply {callee = (Core.Expr.Lambda _ as f); arguments = args} -> beta_red_app args f
+          | t -> ast_map beta_normalize t
+        in
+        Inlined (beta_normalize (ast_subst_each (fun () -> Core_passes.Fresh_occurrences.term a) b))
+
+(** Check if a GlobRef returns a typeclass type (possibly through Core.Type.Arrow layers). *)
+let ref_returns_typeclass r =
+  match find_type_opt r with
+  | Some ty -> Base.Table.is_typeclass_type (core_return_type ty)
+  | None -> false
+
+(** Check if a function returns a skipped type (e.g., ReSum instances whose
+    Class is extracted as a ConstRef, not IndRef, and thus not recognized by
+    [is_typeclass]). Such arguments are infrastructure that should be erased. *)
+let ref_returns_skipped r =
+  match find_type_opt r with Some ty -> core_ret_is_skipped ty | None -> false
+
+(** Whether a global denotes a typeclass instance. *)
+let ref_is_instance r =
+  match find_type_opt r with
+  | Some ty -> core_type_is_instance ty
+  | None -> false
+
+(** Strip [Core.Expr.Coerce], [Core.Expr.Boxed_value] and [Core.Expr.Lambda_group_barrier] wrappers recursively -- each
+    is a transparent coercion in Core and should be ignored by
+    numeral-folding traversals. *)
+let strip_magic = Core.Expr.strip_crossings
+
+(** A dictionary as an argument, without what only wraps it: coercions, and
+    the lambdas over a singleton class method's erased type arguments that
+    an instance passed as a value is eta-expanded with -- [fun _ _ => d],
+    whose body never mentions them. *)
+let rec strip_dictionary e =
+  match strip_magic e with
+  | Core.Expr.Lambda {parameter_type = ty; body = b; _} when erased_by_extraction ty
+    && not (Base.Core_util.ast_occurs 1 b) ->
+    strip_dictionary (Base.Core_util.ast_pop b)
+  | e -> e
+
+(** [subst_dict_carrier carrier ty] puts [carrier] in place of the leading
+    class parameter throughout [ty].  A class parameter stands in a method's
+    own types as [Core.Type.Variable_app (1, _)] -- the carrier applied -- and the call's type
+    arguments instantiate the method's [forall]s, not the class's, so without
+    this substitution a parameter declared [m A] resolves to nothing at all.
+
+    [carrier] is a type constructor written as an application whose
+    placeholders stand for what it is applied to, so applying it is filling
+    them -- which is what {!Base.Core_util.apply_core_type} does, including for the
+    type-level lambda [fun T => holder T (box T)] whose binder occurs twice.
+
+    An occurrence that cannot be filled is left as the [Core.Type.Variable_app] it was: a type of
+    the wrong arity in its place is worse than an unrecovered one, which is
+    only a missed opportunity. *)
+let subst_dict_carrier ?(at = 1) carrier ty =
+  let apply k xs =
+    match carrier with
+    | Core.Type.Global_app _ -> Base.Core_util.apply_core_type carrier xs
+    | _ -> Core.Type.Variable_app {head = k; arguments = xs}
+  in
+  let rec go t =
+    match resolve_meta t with
+    | Core.Type.Variable_app {head = j; arguments = xs} when j = at -> apply j (List.map go xs)
+    | Core.Type.Variable_app {head = j; arguments = xs} -> Core.Type.Variable_app {head = j; arguments = List.map go xs}
+    | Core.Type.Global_app {head = c; type_arguments = a; index_arguments = l} ->
+      Core.Type.Global_app {head = c; type_arguments = List.map go a; index_arguments = l}
+    | Core.Type.Arrow {parameter = a; result = b} -> Core.Type.Arrow {parameter = go a; result = go b}
+    | t -> t
+  in
+  go ty
+
+(** The carrier a call's dictionary argument fixes, as a Core type.
+
+    The dictionary reaches the call wrapped in the adapter lambda that erases
+    its arguments, so the instance is found by descending to the head of the
+    lambda's body.  It need not be an instance at all: where the enclosing
+    function abstracts over the instance, the dictionary is a binder, and the
+    carrier is written in the constraint that binder's own type spells.  Both
+    sources end at a Core type headed by the carrier, and are consumed as one.
+    A binder is read in [lex], the environment the call stands in, and the
+    constraints of [caller], the declaration it stands in. *)
+let dict_carrier_core_type_with ~find ~lex ~caller id args =
+  let ( let* ) = Option.bind in
+  let* core_ty = find id in
+  (* The class parameter is quantified first, and an explicit argument list is
+     positional, so only a leading carrier can be written.
+
+     The position wanted is into the {e arguments}, which is not the position
+     in the domain list: an erased domain takes no argument.  A class method
+     quantifies its own [forall]s before the class, so counting domains would
+     land past the dictionary -- [tfmap]'s class domain is second but its
+     dictionary is the first argument. *)
+  let* i, cls =
+    let rec find i = function
+      | [] -> None
+      | d :: ds -> (
+        match resolve_meta d with
+        | Core.Type.Global_app {head = c; type_arguments = [arg]; _}
+          when ( match resolve_meta arg with
+               | Core.Type.Variable_app {head = 1; _} -> true
+               | _ -> false ) ->
+          Some (i, c)
+        | Core.Type.Erased _ -> find i ds
+        | _ -> find (i + 1) ds )
+    in
+    find 0 (core_domains core_ty)
+  in
+  let* dict = List.nth_opt args i in
+  (* The class applied to one argument {e is} the carrier, already applied:
+     a Core type has no way to hold a constructor that is not.  Both sources
+     below may land on it -- a binder's type is the constraint itself, and a
+     dictionary that is a record value has the class as its own type -- so
+     both go through this one step. *)
+  let strip_class t =
+    match t with
+    | Core.Type.Global_app {head = c; type_arguments = [arg]; _} when Environ.QGlobRef.equal (Global.env ()) c cls ->
+      resolve_meta arg
+    | t -> t
+  in
+  (* Two sources, one consumer.  A dictionary that {e is} a named instance
+     says what its carrier is through the method it defines; a dictionary that
+     is a binder -- the enclosing function abstracting over the instance --
+     says so through the constraint its own type spells.  Both end at a Core
+     type whose head is the carrier and whose last argument is the one the
+     carrier varies in. *)
+  (* A dictionary-producing global abstracts over the class parameters of the
+     instances it is built from: [TFunctor_holder] takes a [TFunctor FnBody]
+     and returns the traversal of [fun T => holder T (FnBody T)].  Its
+     codomain names [FnBody] as a [Core.Type.Variable_app], and what stands for it is whatever
+     dictionary the call supplies.  Paired here as (argument position, type
+     variable), the positions counted over arguments rather than domains for
+     the reason above. *)
+  let class_params ty =
+    let rec go i acc = function
+      | [] -> List.rev acc
+      | d :: ds -> (
+        match resolve_meta d with
+        | Core.Type.Erased _ -> go i acc ds
+        | Core.Type.Global_app {type_arguments = [arg]; _} -> (
+          match resolve_meta arg with
+          | Core.Type.Variable_app {head = k; _} -> go (i + 1) ((i, k) :: acc) ds
+          | _ -> go (i + 1) acc ds )
+        | _ -> go (i + 1) acc ds )
+    in
+    go 0 [] (core_domains ty)
+  in
+  let rec head_glob = function
+    | Core.Expr.Lambda {body = b; _}
+    | Core.Expr.Coerce {value = b; _}
+    | Core.Expr.Boxed_value {value = b; _}
+    | Core.Expr.Lambda_group_barrier {value = b; _}
+    | Core.Expr.Apply {callee = b; _} ->
+      head_glob b
+    | Core.Expr.Global {callee = r; _} -> Some r
+    | _ -> None
+  in
+  (* [depth] counts the binders descended through to reach the term in hand.
+     The dictionary arrives wrapped in the adapter lambda that erases its
+     arguments, so a dictionary that is a binder of the enclosing declaration
+     is spelled at an index shifted by that lambda's own parameters, while the
+     environment those indices are resolved against does not have them.  Left
+     unshifted, the first dictionary of a class context reads past the end and
+     the second reads the first one's constraint -- so the carriers of two
+     sibling traversals come out crossed rather than merely missing, which is
+     the shape that made this findable. *)
+  let rec dict_core_type ?(depth = 0) = function
+    | Core.Expr.Lambda {body = b; _} -> dict_core_type ~depth:(depth + 1) b
+    | Core.Expr.Coerce {value = b; _}
+    | Core.Expr.Boxed_value {value = b; _}
+    | Core.Expr.Lambda_group_barrier {value = b; _} ->
+      dict_core_type ~depth b
+    | Core.Expr.Apply {callee = b; arguments = dicts} as tm ->
+      (* The head's codomain still names its own class parameters; the
+         dictionaries it is applied to are what say which carriers those are.
+         Without this the generic instance's binder is what gets written, and
+         at a site with no binder in scope it does not even name anything. *)
+      let* cod = dict_core_type ~depth b in
+      let params =
+        match Option.bind (head_glob tm) find with
+        | Some ty -> class_params ty
+        | None -> []
+      in
+      Some
+        (List.fold_left
+           (fun acc (p, k) ->
+             match Option.bind (List.nth_opt dicts p) (dict_core_type ~depth) with
+             | Some carrier -> subst_dict_carrier ~at:k carrier acc
+             | None -> acc )
+           cod params )
+    | Core.Expr.Global {callee = r; _} ->
+      (* The instance's method returns [T1] applied: [TFunctor_box]'s codomain
+         is [box B]. *)
+      Option.map (fun t -> resolve_meta (core_codomain t)) (find r)
+    | Core.Expr.Bound_variable {index = i; _} ->
+      let i = i - depth in
+      let constraint_arg t =
+        match Option.map resolve_meta t with
+        | Some (Core.Type.Global_app {type_arguments = [_]; _} as t) -> Some (strip_class t)
+        | _ -> None
+      in
+      let recorded = constraint_arg (Option.map Core.Widen.type_ (Core.Lexenv.type_opt lex i)) in
+      ( match recorded with
+      | Some _ -> recorded
+      | None ->
+        (* The recorded type can be gone: a class with a single field is
+           inlined to that field, so the binder is remembered as the method's
+           own arrow and the class it came from is nowhere in it.  The
+           enclosing declaration still spells the constraint, and while the
+           body is under nothing but that declaration's own binders, the two
+           lists are the same list read from opposite ends. *)
+        let ( let* ) = Option.bind in
+        let* r = caller in
+        let* decl_ty = find r in
+        let doms = core_domains decl_ty in
+        let n = Core.Lexenv.depth lex in
+        (* [List.nth_opt] raises rather than answering [None] on a negative
+           index, and [i] can exceed [n]: a dictionary reached through an
+           argument of the call need not be a binder of this body at all. *)
+        if n <> List.length doms || i > n || i <= 0 then None
+        else constraint_arg (List.nth_opt doms (n - i)) )
+    | _ -> None
+  in
+  Option.map strip_class (dict_core_type dict)
+
+(** [ty], global [id]'s declared type, as a call with type arguments [tys] and
+    value arguments [value_args] instantiates it.  [tys] instantiates the
+    callee's own [forall]s; a class parameter is not among them, and stands in
+    every type as the carrier applied -- so the dictionary argument has to be
+    read first, or a [bind]'s [m A] resolves to nothing: erased, where the
+    type argument written for it is a dummy. *)
+let dict_carrier_core_type ~lex ~caller id args =
+  dict_carrier_core_type_with ~find:find_type_opt ~lex ~caller id args
+
+(** {!with_dict_carrier} reading the types of globals with [find]: the
+    extracted program reads them before they are frozen. *)
+let with_dict_carrier_with ~find ~lex ~caller id value_args ty =
+  match dict_carrier_core_type_with ~find ~lex ~caller id value_args with
+  | Some carrier -> subst_dict_carrier carrier ty
+  | None -> ty
+
+let with_dict_carrier ~lex ~caller id value_args ty =
+  with_dict_carrier_with ~find:find_type_opt ~lex ~caller id value_args ty
+
+(** [ty], global [id]'s declared type, instantiated at the call's type
+    arguments [tys] after {!with_dict_carrier} has substituted the carrier
+    its dictionary argument fixes. *)
+let instantiate_at_call ~lex ~caller id tys value_args ty =
+  Base.Core_util.Var_types.apply tys (with_dict_carrier ~lex ~caller id value_args ty)
+
+(** Whether the binder at de Bruijn index [i] in [lex] is an instance
+    argument rather than a value: a declaration's dictionary parameter, or
+    a binder at a class Crane skips.  [false] for an index [lex] does not
+    bind. *)
+let binder_is_instance lex i =
+  (* An instance parameter is not a value argument.  A declaration's
+     class-typed parameter is its dictionary, as the binder records where it
+     was bound ({!parameter_role}).  One that came from Coq
+     at a class Crane skips -- [h : E -< F], whose class [ReSum] is skipped --
+     is no parameter of the declaration's either, and is known by that class.
+     Skipped is the whole test there: a binder at a class Crane {e kept} is
+     an ordinary value wherever it is not a declaration's parameter, and
+     reading it as an instance would take the argument away from the call.
+     The declaration drops both kinds; without the second the call sites went
+     on passing the one the declaration had dropped. *)
+  match Core.Lexenv.binder lex i with
+  | Some {role = Dictionary; _} -> true
+  | Some {type_; role = Value; _} -> core_ret_is_skipped type_
+  | None -> false
+
+(** Whether the Core argument [core_arg] is a type class instance (a
+   reference to a struct that implements a type class), read in [lex].
+
+   [Core.Expr.Coerce] is a transparent coercion -- extraction inserts one around an
+   instance whose class is applied to a type CONSTRUCTOR (e.g. [Mon Opt] with
+   [Opt : Type -> Type]).  Look through it, or the instance is left in value
+   position and the generated call names the instance struct as if it were a
+   value. *)
+let is_typeclass_instance_arg ~lex core_arg =
+  match strip_dictionary core_arg with
+  | Core.Expr.Global {callee = r; _} ->
+    (* An instance parameterised over types alone carries its parameters in
+       the [Core.Expr.Global]'s type arguments, so its Core type is still an arrow --
+       [MList : forall A, Monoid (list A)].  Read the codomain, as the
+       application case below does, or such an instance is left in value
+       position and the call names the instance struct as if it were one. *)
+    ref_is_instance r
+  | Core.Expr.Bound_variable {index = i; _} -> binder_is_instance lex i
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} ->
+    (* Parameterized instance application, e.g. numList A H. Check if r's
+       return type (after stripping Core.Type.Arrow) is a typeclass type, or if it
+       returns a skipped type (e.g. ReSum instances where the Class is a
+       ConstRef not recognized by is_typeclass). *)
+    ref_is_instance r
+  | Core.Expr.Match {scrutinee_type = case_ty; scrutinee = _scrutinee; branches; _} when Array.length branches = 1 ->
+    (* Single-branch case = record field projection.  If the projected
+       field's type is itself a typeclass, this is a typeclass instance
+       arg — e.g., [base_category(PS)] projects a [PreCategory]-typed
+       field from a [PreStableCategory] record.
+       Look up the record's field types from the case type rather than
+       relying on branch binding types (which may be unresolved). *)
+    let {Core.Match.Branch.binders = binds; body = br_body; _} = branches.(0) in
+    ( match br_body with
+    | Core.Expr.Bound_variable {index = j; _} when j >= 1 && j <= List.length binds ->
+      let idx = List.length binds - j in
+      (* Try to get the field type from the record definition *)
+      let field_is_tc =
+        match case_ty with
+        | Core.Type.Global_app {head = r; _} when Base.Table.is_typeclass r ->
+          let field_types = Base.Table.record_field_types r in
+          let non_dummy =
+            filter_value_types field_types
+          in
+          ( try
+              let fty = List.nth non_dummy idx in
+              Base.Table.is_typeclass_type fty
+            with _ -> false )
+        | _ -> false
+      in
+      field_is_tc
+    | _ -> false )
+  | _ -> false
+
+(** Whether the instance argument [core_arg] is passed at no template
+    parameter: its class, or the instance itself, is one Crane skips. *)
+let instance_arg_is_erased ~lex core_arg =
+  (* An instance argument is not a value argument, but only one whose class
+     Crane kept is a template argument either: {!collect_typeclass_param_ids}
+     mints a concept-constrained parameter per kept class and none for a
+     skipped one, so an [E -< F] has no parameter of any kind to be passed at.
+     Passing it anyway put the instance in the callee's template argument
+     list, where it names no type. *)
+  match strip_magic core_arg with
+  | Core.Expr.Global {callee = r; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} ->
+    (* Either the instance's class is infrastructure Crane skips -- [E -< F],
+       whose [ReSum] is a [ConstRef] mapped to the empty string -- or the
+       instance itself is, as [Monad_itree] is in both ITree modes.  Skipping
+       the instance is how a mode says its carrier's operations are named by
+       their mappings and not by a dictionary. *)
+    ref_returns_skipped r || ref_is_skipped r
+  | Core.Expr.Bound_variable {index = i; _} -> (
+    match Core.Lexenv.type_opt lex i with
+    | Some ty -> core_ret_is_skipped ty
+    | None -> false )
+  | _ -> false
+
+(** The class an instance argument is an instance of, as a Core type, a
+   variable's read off its binder in [lex]; [Core.Type.Unknown] where none
+   is recorded. *)
+let instance_class_ty ~lex core_arg =
+  let of_ref r =
+    match Base.Table.find_type r with
+    | ty -> core_return_type ty
+    | exception Not_found -> Core.Type.Unknown
+  in
+  match strip_dictionary core_arg with
+  | Core.Expr.Global {callee = r; _} | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; _} -> of_ref r
+  | Core.Expr.Bound_variable {index = i; _} -> (
+    match Core.Lexenv.type_opt lex i with
+    | Some ty -> core_return_type ty
+    | None -> Core.Type.Unknown )
+  | _ -> Core.Type.Unknown
+
+(** Among [args], the instance a projection call of the class field [x]
+   would project through, where Crane kept it.
+
+   A mapping on a class field is written for a mode that erases the class's
+   instances: with nothing left to project from, the field's C++ text has to
+   name the operation itself.  That text speaks for one particular carrier --
+   [Monad.bind] in reified ITree mode is [itree_bind] -- so it may only stand
+   where the instance it speaks for was the one erased.  An instance Crane kept
+   reached C++ as a struct or as a concept-constrained template parameter, and
+   names its own operations; projecting through it is both what the Rocq term
+   says and the only thing that can typecheck.
+
+   Requiring the field to belong to {e this} instance's class is what keeps the
+   rule from firing on an ordinary mapped constant that merely takes an
+   instance among its arguments. *)
+let kept_instance_of_projection ~lex x args =
+  List.find_opt
+    (fun a ->
+      is_typeclass_instance_arg ~lex a
+      && (not (instance_arg_is_erased ~lex a))
+      && List.mem (Some x)
+           (record_fields_of_type (instance_class_ty ~lex a)) )
+    args
+
+(** The value parameters of class field [use] called through [inst] in
+
+   [lex], as the method declares them.
+
+   Two substitutions, because the projection's type quantifies over the
+   class's carrier as well as the method's own variables and the use's
+   type arguments carry only the latter -- its leading entry, the
+   carrier's, is [Core.Type.Erased].  The carrier is what the instance is an instance
+   {e at}, the sole argument of its class type; without it every [m A]
+   absorbs its argument and says [std::any].  The carrier, the dictionary
+   and the erased type arguments all stand in front of the value
+   parameters. *)
+let projection_value_domains ~lex (use : Core.Global_use.t) inst =
+  match Base.Table.find_type use.callee with
+  | exception Not_found -> []
+  | ty ->
+    let ty =
+      match resolve_meta (instance_class_ty ~lex inst) with
+      | Core.Type.Global_app {type_arguments = [carrier]; _} -> subst_dict_carrier carrier ty
+      | _ -> ty
+    in
+    core_domains
+      (Base.Core_util.instantiate_written ~reader:"projection_value_domains" use ty)
+    |> List.filter (fun t ->
+           match resolve_meta t with
+           | Core.Type.Erased _ -> false
+           | t -> not (Base.Table.is_typeclass_type t))
+
+(** [static_projection ~lex use args] -- where the call [use args], standing
+    in [lex], calls a class field as a static member of the instance it
+    projects through, rather than through the field's dispatcher: which
+    argument that instance is, the member's value parameters, and the
+    operands the call leaves out.  A mapped field is projected so wherever
+    its instance was kept ({!kept_instance_of_projection}), and a singleton
+    class's method wherever its instance was -- its dictionary is known
+    wherever the call is, its projection's only one, and the instance struct
+    declaring the method under the dispatcher's own name hides the
+    dispatcher from any call inside it.  A mapped field's call leaves
+    nothing out; a singleton method's static member takes every operand, so
+    a partial application closes over the rest. *)
+let static_projection ~lex (use : Core.Global_use.t) args : Elaborated_call.static_projection option =
+  let x = use.callee in
+  let inst =
+    if Base.Table.is_inline_custom x then kept_instance_of_projection ~lex x args
+    else if Base.Table.singleton_method_class x <> None then
+      List.find_opt (fun a -> is_typeclass_instance_arg ~lex a && not (instance_arg_is_erased ~lex a)) args
+    else None
+  in
+  Option.map
+    (fun inst ->
+      let domains = projection_value_domains ~lex use inst in
+      let missing =
+        if Base.Table.is_inline_custom x then []
+        else
+          let operands = List.filter (fun a -> not (Base.Core_util.is_erased_value a || a == inst)) args in
+          List.filteri (fun i _ -> i >= List.length operands) domains
+      in
+      let rec position i = function
+        | a :: rest -> if a == inst then i else position (i + 1) rest
+        | [] -> assert false
+      in
+      {Elaborated_call.instance = position 0 args; domains; missing} )
+    inst

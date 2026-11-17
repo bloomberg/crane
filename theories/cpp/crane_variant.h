@@ -14,7 +14,13 @@
 // is a large share of the run time.
 //
 // A wrong alternative is reported as std::variant reports it, by throwing
-// std::bad_variant_access.
+// std::bad_variant_access.  An assignment takes its source before it destroys
+// anything, so one whose copy throws leaves the variant as it was.  So is the
+// state left when what is built after the old alternative is destroyed throws
+// -- an emplace, or a taken value moved in by a move that can throw: no
+// alternative exists, and the variant holds nothing (std::variant's
+// valueless_by_exception) rather than a tag naming a destroyed alternative.
+// Moves are noexcept exactly when every alternative's move is.
 
 #ifndef INCLUDED_CRANE_VARIANT
 #define INCLUDED_CRANE_VARIANT
@@ -47,6 +53,20 @@ template <class... Ts> class variant {
 
   alignas(Ts...) unsigned char storage_[std::max({sizeof(Ts)...})];
   std::uint8_t index_;
+
+  // No alternative: the index no alternative has, so every test on it fails
+  // and destroy() has nothing to do.
+  static constexpr std::uint8_t valueless = 255;
+  static constexpr bool nothrow_move = (std::is_nothrow_move_constructible_v<Ts> && ...);
+  static constexpr bool nothrow_move_assign = nothrow_move && (std::is_nothrow_move_assignable_v<Ts> && ...);
+
+  // Replace the alternative with whatever [build] constructs, which sets
+  // [index_] once it has succeeded.
+  template <class Build> void rebuild(Build &&build) {
+    destroy();
+    index_ = valueless;
+    build();
+  }
 
   // f(integral_constant<I>) for the active index I: a chain of compares the
   // optimiser turns into a jump table, inlined where it is used.
@@ -87,7 +107,7 @@ template <class... Ts> class variant {
 public:
   variant() : index_(0) { ::new (storage_) alt<0>(); }
   variant(const variant &o) { copy_from(o); }
-  variant(variant &&o) noexcept { move_from(o); }
+  variant(variant &&o) noexcept(nothrow_move) { move_from(o); }
 
   // From one of the alternatives, exactly: generated code always names the
   // alternative it builds.
@@ -102,17 +122,29 @@ public:
     ::new (storage_) alt<I>(std::forward<A>(a)...);
   }
 
+  // [o] may live inside the alternative this one holds -- [v = child.v] --
+  // which is not destroyed before [o] is read: the same alternative is
+  // assigned, whose own assignment takes [o] first, and another is built
+  // from a copy of [o] taken before.
   variant &operator=(const variant &o) {
-    if (this != &o) {
-      destroy();
-      copy_from(o);
+    if (this == &o)
+      return *this;
+    if (index_ == o.index_)
+      on_index([&](auto i) { raw<decltype(i)::value>() = o.template raw<decltype(i)::value>(); });
+    else {
+      variant copy(o);
+      rebuild([&] { move_from(copy); });
     }
     return *this;
   }
-  variant &operator=(variant &&o) noexcept {
-    if (this != &o) {
-      destroy();
-      move_from(o);
+  variant &operator=(variant &&o) noexcept(nothrow_move_assign) {
+    if (this == &o)
+      return *this;
+    if (index_ == o.index_)
+      on_index([&](auto i) { raw<decltype(i)::value>() = std::move(o.template raw<decltype(i)::value>()); });
+    else {
+      variant taken(std::move(o));
+      rebuild([&] { move_from(taken); });
     }
     return *this;
   }
@@ -124,9 +156,10 @@ public:
   }
 
   template <std::size_t I, class... A> alt<I> &emplace(A &&...a) {
-    destroy();
-    ::new (storage_) alt<I>(std::forward<A>(a)...);
-    index_ = I;
+    rebuild([&] {
+      ::new (storage_) alt<I>(std::forward<A>(a)...);
+      index_ = I;
+    });
     return raw<I>();
   }
 

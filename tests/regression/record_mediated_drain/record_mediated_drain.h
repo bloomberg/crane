@@ -4,11 +4,10 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -18,15 +17,15 @@ struct RecordMediatedDrain {
     A tl;
 
     // ACCESSORS
-    template <typename _U> operator cell<_U>() const {
-      return {hd, [&]() -> _U {
-                if constexpr (crane_convertible<_U, const A &>) {
-                  return crane_convert<_U>(tl);
-                } else {
-                  throw std::logic_error("unreachable: inactive constructor "
-                                         "field at this instantiation");
-                }
-              }()};
+    template <typename CraneU> operator cell<CraneU>() const {
+      return {hd, [&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(tl);
+        } else {
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
+        }
+      }()};
     }
   };
 
@@ -60,6 +59,9 @@ struct RecordMediatedDrain {
 
     // MANIPULATORS
     ~t() {
+      if (std::holds_alternative<Stop>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<t>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<More>(&_v)) {
@@ -83,8 +85,8 @@ struct RecordMediatedDrain {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -93,7 +95,6 @@ struct RecordMediatedDrain {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, cell<t> &>
   static T1 t_rect(T1 f, F1 &&f0, const t &t0) {
     if (std::holds_alternative<typename t::Stop>(t0.v())) {
       return f;
@@ -104,14 +105,8 @@ struct RecordMediatedDrain {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, cell<t> &>
   static T1 t_rec(T1 f, F1 &&f0, const t &t0) {
-    if (std::holds_alternative<typename t::Stop>(t0.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename t::More>(t0.v());
-      return f0(*a0);
-    }
+    return t_rect<T1>(std::move(f), f0, t0);
   }
 
   static t wrap(uint64_t k, const t &acc);

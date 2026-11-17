@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -96,38 +97,38 @@ public:
   bool forallb(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     bool _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified forallb: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified forallb: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = true;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
         _result = (f(a0) && std::move(_result));
       }
@@ -180,14 +181,12 @@ struct InstructionCycles {
 
     uint64_t cycles_jcn(const state1 &s) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
-        const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
+        const auto &[a0, _] = std::get<typename instruction1::JCN1>(this->v());
         uint64_t c1 = (UINT64_C(8) ? a0 / UINT64_C(8) : 0);
-        uint64_t c2 =
-            (UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
-                         : (UINT64_C(4) ? a0 / UINT64_C(4) : 0));
-        uint64_t c3 =
-            (UINT64_C(2) ? (UINT64_C(2) ? a0 / UINT64_C(2) : 0) % UINT64_C(2)
-                         : (UINT64_C(2) ? a0 / UINT64_C(2) : 0));
+        auto &&_once1 = (UINT64_C(4) ? a0 / UINT64_C(4) : 0);
+        uint64_t c2 = (UINT64_C(2) ? _once1 % UINT64_C(2) : _once1);
+        auto &&_once2 = (UINT64_C(2) ? a0 / UINT64_C(2) : 0);
+        uint64_t c3 = (UINT64_C(2) ? _once2 % UINT64_C(2) : _once2);
         uint64_t c4 = (UINT64_C(2) ? a0 % UINT64_C(2) : a0);
         bool base_cond = ((s.acc1 == UINT64_C(0) && c2 == UINT64_C(1)) ||
                           ((s.carry1 && c3 == UINT64_C(1)) ||
@@ -209,18 +208,13 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
     T1 instruction1_rec(F0 &&f, T1 f0) const {
-      if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
-        const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
-        return f(a0, a1);
-      } else {
-        return f0;
-      }
+      return this->template instruction1_rect<T1>(f, std::move(f0));
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const uint64_t &>
     T1 instruction1_rect(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction1::JCN1>(this->v())) {
         const auto &[a0, a1] = std::get<typename instruction1::JCN1>(this->v());
@@ -232,8 +226,8 @@ struct InstructionCycles {
   };
 
   static inline const uint64_t test_cycles_jcn_not_taken =
-      instruction1::jcn1(UINT64_C(4), UINT64_C(7))
-          .cycles_jcn(state1{UINT64_C(1), false, true});
+      instruction1::jcn1(UINT64_C(4), UINT64_C(7)).cycles_jcn(
+          state1{UINT64_C(1), false, true});
 
   struct instruction2 {
     // TYPES
@@ -268,18 +262,12 @@ struct InstructionCycles {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
     T1 instruction2_rec(F0 &&f, T1 f0) const {
-      if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
-        const auto &[a0] = std::get<typename instruction2::JMS2>(this->v());
-        return f(a0);
-      } else {
-        return f0;
-      }
+      return this->template instruction2_rect<T1>(f, std::move(f0));
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 instruction2_rect(F0 &&f, T1 f0) const {
       if (std::holds_alternative<typename instruction2::JMS2>(this->v())) {
         const auto &[a0] = std::get<typename instruction2::JMS2>(this->v());
@@ -348,62 +336,35 @@ struct InstructionCycles {
   template <typename T1>
   static T1 instr3_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                        T1 f7, Instr3 i) {
-    switch (i) {
-    case Instr3::NOP3: {
-      return f;
-    }
-    case Instr3::ADD3: {
-      return f0;
-    }
-    case Instr3::WRM3: {
-      return f1;
-    }
-    case Instr3::FIM3: {
-      return f2;
-    }
-    case Instr3::JMS3: {
-      return f3;
-    }
-    case Instr3::JCNTAKEN3: {
-      return f4;
-    }
-    case Instr3::JCNNOTTAKEN3: {
-      return f5;
-    }
-    case Instr3::ISZTAKEN3: {
-      return f6;
-    }
-    case Instr3::ISZZERO3: {
-      return f7;
-    }
-    default:
-      std::unreachable();
-    }
+    return instr3_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                           std::move(f2), std::move(f3), std::move(f4),
+                           std::move(f5), std::move(f6), std::move(f7), i);
   }
 
   static uint64_t cycles_min(Instr3 i);
-  static inline const List<Instr3> all_instrs3 = List<Instr3>::cons(
-      Instr3::NOP3,
+  static inline const List<Instr3> all_instrs3 =
       List<Instr3>::cons(
-          Instr3::ADD3,
+          Instr3::NOP3,
           List<Instr3>::cons(
-              Instr3::WRM3,
+              Instr3::ADD3,
               List<Instr3>::cons(
-                  Instr3::FIM3,
+                  Instr3::WRM3,
                   List<Instr3>::cons(
-                      Instr3::JMS3,
-                      List<Instr3>::cons(
-                          Instr3::JCNTAKEN3,
-                          List<Instr3>::cons(
-                              Instr3::JCNNOTTAKEN3,
-                              List<Instr3>::cons(
-                                  Instr3::ISZTAKEN3,
-                                  List<Instr3>::cons(
-                                      Instr3::ISZZERO3,
-                                      List<Instr3>::nil())))))))));
+                      Instr3::FIM3, List<Instr3>::cons(
+                                        Instr3::JMS3, List<Instr3>::cons(
+                                                          Instr3::JCNTAKEN3,
+                                                          List<Instr3>::cons(
+                                                              Instr3::JCNNOTTAKEN3,
+                                                              List<Instr3>::cons(
+                                                                  Instr3::ISZTAKEN3,
+                                                                  List<Instr3>::cons(
+                                                                      Instr3::ISZZERO3,
+                                                                      List<
+                                                                          Instr3>::nil())))))))));
   static inline const bool test_min_cycles_per_instruction =
-      all_instrs3.forallb(
-          [](Instr3 i) { return UINT64_C(8) <= cycles_min(i); });
+      all_instrs3.forallb([](Instr3 i) {
+        return UINT64_C(8) <= cycles_min(i);
+      });
   enum class Instr4 {
     NOP4,
     ADD4,
@@ -455,59 +416,31 @@ struct InstructionCycles {
   template <typename T1>
   static T1 instr4_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5, T1 f6,
                        T1 f7, Instr4 i) {
-    switch (i) {
-    case Instr4::NOP4: {
-      return f;
-    }
-    case Instr4::ADD4: {
-      return f0;
-    }
-    case Instr4::WRM4: {
-      return f1;
-    }
-    case Instr4::FIM4: {
-      return f2;
-    }
-    case Instr4::JMS4: {
-      return f3;
-    }
-    case Instr4::JCNTAKEN4: {
-      return f4;
-    }
-    case Instr4::JCNNOTTAKEN4: {
-      return f5;
-    }
-    case Instr4::ISZTAKEN4: {
-      return f6;
-    }
-    case Instr4::ISZZERO4: {
-      return f7;
-    }
-    default:
-      std::unreachable();
-    }
+    return instr4_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                           std::move(f2), std::move(f3), std::move(f4),
+                           std::move(f5), std::move(f6), std::move(f7), i);
   }
 
   static uint64_t cycles_max(Instr4 i);
-  static inline const List<Instr4> all_instrs4 = List<Instr4>::cons(
-      Instr4::NOP4,
+  static inline const List<Instr4> all_instrs4 =
       List<Instr4>::cons(
-          Instr4::ADD4,
+          Instr4::NOP4,
           List<Instr4>::cons(
-              Instr4::WRM4,
+              Instr4::ADD4,
               List<Instr4>::cons(
-                  Instr4::FIM4,
+                  Instr4::WRM4,
                   List<Instr4>::cons(
-                      Instr4::JMS4,
-                      List<Instr4>::cons(
-                          Instr4::JCNTAKEN4,
-                          List<Instr4>::cons(
-                              Instr4::JCNNOTTAKEN4,
-                              List<Instr4>::cons(
-                                  Instr4::ISZTAKEN4,
-                                  List<Instr4>::cons(
-                                      Instr4::ISZZERO4,
-                                      List<Instr4>::nil())))))))));
+                      Instr4::FIM4, List<Instr4>::cons(
+                                        Instr4::JMS4, List<Instr4>::cons(
+                                                          Instr4::JCNTAKEN4,
+                                                          List<Instr4>::cons(
+                                                              Instr4::JCNNOTTAKEN4,
+                                                              List<Instr4>::cons(
+                                                                  Instr4::ISZTAKEN4,
+                                                                  List<Instr4>::cons(
+                                                                      Instr4::ISZZERO4,
+                                                                      List<
+                                                                          Instr4>::nil())))))))));
   static inline const bool test_max_cycles_per_instruction =
       all_instrs4.forallb(
           [](Instr4 i) { return cycles_max(i) <= UINT64_C(24); });
@@ -560,9 +493,9 @@ struct InstructionCycles {
 
     state5 execute5(state5 s) const {
       if (std::holds_alternative<typename instruction5::INC5>(this->v())) {
-        return state5{(UINT64_C(16) ? (s.acc5 + UINT64_C(1)) % UINT64_C(16)
-                                    : (s.acc5 + UINT64_C(1))),
-                      s.carry5, s.test5};
+        auto &&_once1 = (s.acc5 + UINT64_C(1));
+        return state5{(UINT64_C(16) ? _once1 % UINT64_C(16) : _once1), s.carry5,
+                      s.test5};
       } else {
         return s;
       }
@@ -575,9 +508,9 @@ struct InstructionCycles {
           return UINT64_C(16);
         } else {
           if ((s.acc5 == UINT64_C(0) &&
-               (UINT64_C(2)
-                    ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
-                    : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) == UINT64_C(1))) {
+               (UINT64_C(2) ? (UINT64_C(4) ? a0 / UINT64_C(4) : 0) % UINT64_C(2)
+                            : (UINT64_C(4) ? a0 / UINT64_C(4) : 0)) ==
+               UINT64_C(1))) {
             return UINT64_C(16);
           } else {
             return UINT64_C(8);
@@ -589,29 +522,17 @@ struct InstructionCycles {
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &>
     T1 instruction5_rec(T1 f, F1 &&f0, F2 &&f1) const {
-      if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
-        return f;
-      } else if (std::holds_alternative<typename instruction5::JCN5>(
-                     this->v())) {
-        const auto &[a0] = std::get<typename instruction5::JCN5>(this->v());
-        return f0(a0);
-      } else {
-        const auto &[a0] = std::get<typename instruction5::INC5>(this->v());
-        return f1(a0);
-      }
+      return this->template instruction5_rect<T1>(std::move(f), f0, f1);
     }
 
     template <typename T1, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F2 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+               std::is_invocable_r_v<T1, F2 &, const uint64_t &>
     T1 instruction5_rect(T1 f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename instruction5::NOP5>(this->v())) {
         return f;
-      } else if (std::holds_alternative<typename instruction5::JCN5>(
-                     this->v())) {
+      } else if (std::holds_alternative<typename instruction5::JCN5>(this->v())) {
         const auto &[a0] = std::get<typename instruction5::JCN5>(this->v());
         return f0(a0);
       } else {
@@ -621,8 +542,7 @@ struct InstructionCycles {
     }
   };
 
-  static uint64_t program_cycles5(const state5 &s,
-                                  const List<instruction5> &prog);
+  static uint64_t program_cycles5(state5 s, const List<instruction5> &prog);
   static inline const uint64_t test_instruction_cycle_sum = program_cycles5(
       state5{UINT64_C(0), false, true},
       List<instruction5>::cons(
@@ -637,8 +557,8 @@ struct InstructionCycles {
     return f;
   }
 
-  template <typename T1> static T1 instruction6_rec(T1 f, Instruction6) {
-    return f;
+  template <typename T1> static T1 instruction6_rec(T1 f, Instruction6 _x) {
+    return instruction6_rect<T1>(std::move(f), _x);
   }
 
   struct state6 {
@@ -667,8 +587,8 @@ struct InstructionCycles {
     return f;
   }
 
-  template <typename T1> static T1 instruction7_rec(T1 f, Instruction7) {
-    return f;
+  template <typename T1> static T1 instruction7_rec(T1 f, Instruction7 _x) {
+    return instruction7_rect<T1>(std::move(f), _x);
   }
 
   struct state7 {
@@ -681,24 +601,19 @@ struct InstructionCycles {
   static inline const uint64_t test_program_cycles_single = program_cycles7(
       state7{UINT64_C(16)},
       List<Instruction7>::cons(Instruction7::NOP7, List<Instruction7>::nil()));
-  static inline const std::pair<
-      std::pair<
-          std::pair<
-              std::pair<std::pair<std::pair<uint64_t, uint64_t>, bool>, bool>,
-              uint64_t>,
-          std::pair<uint64_t, uint64_t>>,
-      uint64_t>
-      t = std::make_pair(
-          std::make_pair(
-              std::make_pair(
-                  std::make_pair(
-                      std::make_pair(std::make_pair(test_cycles_jcn_not_taken,
-                                                    test_cycles_jms_constant),
-                                     test_min_cycles_per_instruction),
-                      test_max_cycles_per_instruction),
-                  test_instruction_cycle_sum),
-              test_program_cycles),
-          test_program_cycles_single);
+  static inline const std::pair<std::pair<
+      std::pair<std::pair<std::pair<std::pair<uint64_t, uint64_t>, bool>, bool>,
+                uint64_t>,
+      std::pair<uint64_t, uint64_t>>,
+                                uint64_t> t =
+      std::make_pair(std::make_pair(std::make_pair(
+          std::make_pair(std::make_pair(std::make_pair(
+              test_cycles_jcn_not_taken, test_cycles_jms_constant),
+                                        test_min_cycles_per_instruction),
+                         test_max_cycles_per_instruction),
+          test_instruction_cycle_sum),
+                                    test_program_cycles),
+                     test_program_cycles_single);
 };
 
 #endif // INCLUDED_INSTRUCTION_CYCLES

@@ -1,0 +1,68 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** The effect operations of a unit's program, elaborated from Core ahead of
+    translation, part of the unit's {!Driver.Program_facts}: which applications are a
+    registered monad's [bind] or [ret] ([Crane Extract Monad]), and how each is
+    generated.
+
+    How is the declaration's: one whose codomain is a monad the extraction
+    keeps as a tree is generated in {!Reified} mode, where [bind] and [ret]
+    are calls building it; every other one in {!Sequential} mode, where the
+    tree is erased, [bind m k] is [m] run and then [k]'s body continuing
+    where the bind stands -- its tail position the enclosing one -- and
+    [ret v] is [v].
+
+    Transitional.  The operations are analysed for the unit, by the
+    occurrence of the use naming the operation ({!Core.Occurrence}), and
+    translation, handed them with the unit, takes an application's from
+    there; under [CRANE_CHECK_IR]
+    each is checked against the global's registration and the mode the
+    generation translating it is in. *)
+
+(** How a declaration's effect operations are generated. *)
+type mode =
+  | Sequential  (** the monad erased: [bind] is sequencing, [ret] its value *)
+  | Reified  (** the monad kept as a tree: [bind] and [ret] build it *)
+
+(** Which registered monad operation a global is. *)
+type operation =
+  | Bind  (** the monad's [bind] *)
+  | Return  (** the monad's [ret] *)
+
+(** One use of an operation, and the mode it is generated in. *)
+type effect_ = {operation : operation; mode : mode}
+
+(** The mode a monad's computations are generated in: {!Reified} for one
+    extracted as a tree ({!Base.Table.is_monad_reified}). *)
+val mode_of_monad : Names.GlobRef.t -> mode
+
+(** The operation the global is registered as, if it is one. *)
+val operation_of : Names.GlobRef.t -> operation option
+
+(** A unit's effect operations. *)
+type t
+
+(** No operations. *)
+val empty : t
+
+(** [analyze s] -- every use of a [bind] or [ret] in [s]'s declarations'
+    bodies, each with the mode of the declaration it is written in. *)
+val analyze : Core.Program.t -> t
+
+(** Whether two analyses found the same operations, at the same
+    occurrences, in the same modes. *)
+val equal : t -> t -> bool
+
+(** [lookup t use] -- the operation of the use [use] among [t], if the
+    analysis reached it; [None] for a use it did not, or one whose copies a
+    rewrite duplicated were found in two modes. *)
+val lookup : t -> Core.Global_use.t -> effect_ option
+
+(** Record that translation took an operation from the unit's, for
+    {!report}. *)
+val tally : unit -> unit
+
+(** How many operations the unit analysed ([t]), and how many translation
+    found there. *)
+val report : t -> string

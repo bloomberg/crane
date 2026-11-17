@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEEP_ARITH_NESTING
 #define INCLUDED_DEEP_ARITH_NESTING
 
+#include <cstdint>
 #include <utility>
 
 struct DeepArithNesting {

@@ -11,7 +11,7 @@ ProgFix::interleave_func(const SigT<List<uint64_t>, List<uint64_t>> &x) {
                 SigT<List<uint64_t>, List<uint64_t>>::existt(l3, l4));
         return interleave_func([&]() {
           auto &[x0] = y;
-          return x0;
+          return std::move(x0);
         }());
       };
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v_mut())) {

@@ -2,6 +2,7 @@
 #define INCLUDED_SECTIONS_MODULES
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename M>
@@ -14,13 +15,17 @@ concept Semigroup = requires {
 template <typename M>
 concept HasIdentity = requires {
   typename M::T;
-  requires(
-      requires {
-        { M::id } -> std::convertible_to<typename M::T>;
-      } ||
-      requires {
-        { M::id() } -> std::convertible_to<typename M::T>;
-      });
+  requires (requires {
+    {
+      M::id
+    }
+    -> std::convertible_to<typename M::T>;
+  } || requires {
+    {
+      M::id()
+    }
+    -> std::convertible_to<typename M::T>;
+  });
 };
 template <typename M>
 concept Monoid = requires {
@@ -28,13 +33,17 @@ concept Monoid = requires {
   {
     M::op(std::declval<typename M::T>(), std::declval<typename M::T>())
   } -> std::same_as<typename M::T>;
-  requires(
-      requires {
-        { M::id } -> std::convertible_to<typename M::T>;
-      } ||
-      requires {
-        { M::id() } -> std::convertible_to<typename M::T>;
-      });
+  requires (requires {
+    {
+      M::id
+    }
+    -> std::convertible_to<typename M::T>;
+  } || requires {
+    {
+      M::id()
+    }
+    -> std::convertible_to<typename M::T>;
+  });
 };
 
 struct SectionsModules {
@@ -44,7 +53,7 @@ struct SectionsModules {
   struct NatMonoid {
     using T = uint64_t;
     static uint64_t op(uint64_t x0_, uint64_t x1_);
-    static inline const uint64_t id = UINT64_C(0);
+    static constexpr uint64_t id = UINT64_C(0);
   };
 
   using TransparentMod = NatMonoid;
@@ -72,14 +81,14 @@ struct SectionsModules {
   static uint64_t use_outer(uint64_t x0_, uint64_t x1_);
 
   struct Base {
-    static inline const uint64_t base_val = UINT64_C(42);
+    static constexpr uint64_t base_val = UINT64_C(42);
     static uint64_t base_fun(uint64_t n);
   };
 
   struct Extended {
-    static inline const uint64_t base_val = UINT64_C(42);
+    static constexpr uint64_t base_val = UINT64_C(42);
     static uint64_t base_fun(uint64_t n);
-    static inline const uint64_t extended_val = UINT64_C(100);
+    static constexpr uint64_t extended_val = UINT64_C(100);
     static uint64_t extended_fun(uint64_t n);
   };
 

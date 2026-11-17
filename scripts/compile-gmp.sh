@@ -96,7 +96,7 @@ if [ -d "$HB_LLVM" ]; then
         fi
     fi
     CXX_FLAGS=(
-        -std=c++23
+        -std=c++2c
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         "${SYSROOT_FLAGS[@]}"
@@ -115,6 +115,7 @@ if [ -d "$HB_LLVM" ]; then
         -Wno-constant-conversion -Wno-sign-conversion
         -Wno-deprecated-literal-operator
         -Wno-deprecated-declarations -Werror
+        -DCRANE_STRICT_ARITY
     )
     LINK_FLAGS=(
         -L"$HB_LLVM/lib"
@@ -128,7 +129,7 @@ if [ -d "$HB_LLVM" ]; then
 else
     CXX="clang++"
     CXX_FLAGS=(
-        -std=c++23
+        -std=c++2c
         -"$OPT_LEVEL"
         -fbracket-depth=1024
         -I .
@@ -143,6 +144,7 @@ else
         -Wno-constant-conversion -Wno-sign-conversion
         -Wno-deprecated-literal-operator
         -Wno-deprecated-declarations -Werror
+        -DCRANE_STRICT_ARITY
     )
     LINK_FLAGS=(
         -L"$GMP_PREFIX/lib"

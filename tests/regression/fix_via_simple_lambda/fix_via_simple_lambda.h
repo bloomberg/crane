@@ -2,8 +2,10 @@
 #define INCLUDED_FIX_VIA_SIMPLE_LAMBDA
 
 #include "fn.h"
+#include <cstdint>
 #include <memory>
 #include <optional>
+#include <utility>
 
 struct FixViaSimpleLambda {
   /// Two local fixpoints both capture a let-binding base via &.

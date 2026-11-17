@@ -1,13 +1,10 @@
 #ifndef INCLUDED_BIND_ETA_REDUCED
 #define INCLUDED_BIND_ETA_REDUCED
 
-#include "fn.h"
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <string>
-#include <system_error>
+#include <type_traits>
+#include <utility>
 
 struct BindEtaReduced {
   /// Bug case 1: bind with a callback as continuation.
@@ -19,14 +16,16 @@ struct BindEtaReduced {
       std::getline(std::cin, _r);
       return _r;
     }();
-    return f(_bind_result);
+    return f(std::move(_bind_result));
   }
 
   /// Bug case 2: same with a pure callback.
-  static std::string transform(crane::fn<std::string(std::string)> f) {
+  template <typename F0>
+    requires std::is_invocable_r_v<std::string, F0 &, std::string &&>
+  static std::string transform(F0 &&f) {
     std::string line;
     std::getline(std::cin, line);
-    return f(line);
+    return f(std::move(line));
   }
 
   /// Control case: explicit lambda prevents eta-reduction.
@@ -36,7 +35,7 @@ struct BindEtaReduced {
       std::getline(std::cin, _r);
       return _r;
     }();
-    return f(_bind_result);
+    return f(std::move(_bind_result));
   }
 };
 

@@ -3,14 +3,12 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <utility>
 #include <variant>
 
 #include "Datatypes.h"
 
 namespace PairIndexedInductiveAnyCast {
-
 struct Pair_wrap;
 
 struct Pair_wrap {
@@ -41,7 +39,6 @@ struct Ops {
     return Pair_wrap::mk_pair_wrap(std::make_pair(a, n));
   }
 };
-
 } // namespace PairIndexedInductiveAnyCast
 
 #endif // INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST

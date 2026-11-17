@@ -3,8 +3,8 @@
 
 #include "fn.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -59,8 +59,8 @@ struct ClosureRecursiveBuild {
 
     fn_list(const fn_list &) = default;
     fn_list &operator=(const fn_list &) = default;
-    fn_list(fn_list &&) noexcept = default;
-    fn_list &operator=(fn_list &&) noexcept = default;
+    fn_list(fn_list &&) = default;
+    fn_list &operator=(fn_list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -69,8 +69,6 @@ struct ClosureRecursiveBuild {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, crane::fn<uint64_t(uint64_t)> &,
-                                   fn_list &, T1 &>
   static T1 fn_list_rect(T1 f, F1 &&f0, const fn_list &f1) {
     if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
       return f;
@@ -81,15 +79,8 @@ struct ClosureRecursiveBuild {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, crane::fn<uint64_t(uint64_t)> &,
-                                   fn_list &, T1 &>
   static T1 fn_list_rec(T1 f, F1 &&f0, const fn_list &f1) {
-    if (std::holds_alternative<typename fn_list::FNil>(f1.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename fn_list::FCons>(f1.v());
-      return f0(a0, *a1, fn_list_rec<T1>(std::move(f), f0, *a1));
-    }
+    return fn_list_rect<T1>(std::move(f), f0, f1);
   }
 
   /// Recursively build a list of fixpoint closures. Each recursive call

@@ -2,6 +2,7 @@
 #define INCLUDED_INSTANCE_ALIAS
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A constant whose type is a class applied to arguments is treated purely as
@@ -18,9 +19,9 @@ concept Monoid = requires {
 
 struct InstanceAlias {
   struct MNat {
-    static uint64_t zero() { return UINT64_C(0); }
+    constexpr static uint64_t zero() { return UINT64_C(0); }
 
-    static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Monoid<MNat, uint64_t>);

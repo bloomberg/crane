@@ -5,11 +5,11 @@ uint64_t SingletonRecord::get_value(const SingletonRecord::wrapper &w) {
 }
 
 uint64_t SingletonRecord::get_value2(const SingletonRecord::wrapper &w) {
-  return w.value;
+  return get_value(w);
 }
 
 uint64_t SingletonRecord::unwrap(const SingletonRecord::wrapper &w) {
-  return w.value;
+  return get_value(w);
 }
 
 SingletonRecord::wrapper

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_EFFECT_COMPLEX_ARGS
 #define INCLUDED_EFFECT_COMPLEX_ARGS
 
-#include <crane_itree.h>
 #include <cstdlib>
 #include <iostream>
 #include <memory>
@@ -9,8 +8,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct EffectComplexArgs {
   /// 1. set_env with concatenated key — complex expr as first arg

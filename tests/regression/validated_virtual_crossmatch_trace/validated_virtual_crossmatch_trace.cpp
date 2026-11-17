@@ -148,8 +148,7 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
               eplet_62GE,
               List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::cons(
                   eplet_65QIA,
-                  List<
-                      ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil()));
+                  List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil()));
         } else {
           uint64_t n1 = n0 - 1;
           if (n1 <= 0) {
@@ -183,30 +182,24 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
           } else {
             uint64_t n2 = n1 - 1;
             if (n2 <= 0) {
-              return List<
-                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
+              return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
             } else {
               uint64_t n3 = n2 - 1;
               if (n3 <= 0) {
-                return List<
-                    ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
+                return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
               } else {
                 uint64_t n4 = n3 - 1;
                 if (n4 <= 0) {
-                  return List<
-                      ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
+                  return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
                 } else {
                   uint64_t n5 = n4 - 1;
                   if (n5 <= 0) {
-                    return List<
-                        ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::
-                        cons(eplet_142T,
-                             List<ValidatedVirtualCrossmatchTraceCase::
-                                      HLAEpitope>::nil());
+                    return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::cons(
+                        eplet_142T,
+                        List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil());
                   } else {
                     uint64_t _x = n5 - 1;
-                    return List<
-                        ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
+                    return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
                   }
                 }
               }
@@ -235,14 +228,12 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
           } else {
             uint64_t n2 = n1 - 1;
             if (n2 <= 0) {
-              return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::
-                  cons(eplet_77N,
-                       List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::
-                           nil());
+              return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::cons(
+                  eplet_77N,
+                  List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil());
             } else {
               uint64_t _x = n2 - 1;
-              return List<
-                  ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
+              return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::nil();
             }
           }
         }
@@ -258,9 +249,8 @@ ValidatedVirtualCrossmatchTraceCase::allele_epitopes(
 List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
 ValidatedVirtualCrossmatchTraceCase::typing_epitopes(
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &t) {
-  return t.hla_typed_alleles
-      .template flat_map<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>(
-          allele_epitopes);
+  return t.hla_typed_alleles.template flat_map<
+      ValidatedVirtualCrossmatchTraceCase::HLAEpitope>(allele_epitopes);
 }
 
 List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>
@@ -275,10 +265,10 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
         typename List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::Cons>(
         l.v());
     const List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &a1_value = *a1;
-    if (a1_value.existsb(
-            [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) -> bool {
-              return epitope_eqb(a0, _x0);
-            })) {
+
+    if (a1_value.existsb([=](
+            ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0)
+                              -> bool { return epitope_eqb(a0, _x0); })) {
       return epitope_dedup(a1_value);
     } else {
       return List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope>::cons(
@@ -330,12 +320,15 @@ uint64_t ValidatedVirtualCrossmatchTraceCase::max_dsa_mfi(
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
       epitope_dedup(typing_epitopes(donor));
   return recipient.vxm_epitope_abs.template fold_left<uint64_t>(
-      [=](uint64_t acc,
+      [=, donor_epitopes = std::move(donor_epitopes)](
+          uint64_t acc,
           const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody &ab)
-          -> uint64_t {
-        if (donor_epitopes.existsb(
-                [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0)
-                    -> bool { return epitope_eqb(ab.ab_epitope, _x0); })) {
+           -> uint64_t {
+        if (donor_epitopes.existsb([=](
+                ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0)
+                                        -> bool {
+              return epitope_eqb(ab.ab_epitope, _x0);
+            })) {
           return std::max(acc, ab.ab_mfi);
         } else {
           return acc;
@@ -349,14 +342,16 @@ bool ValidatedVirtualCrossmatchTraceCase::has_complement_fixing_dsa(
     const ValidatedVirtualCrossmatchTraceCase::HLATyping &donor) {
   List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> donor_epitopes =
       epitope_dedup(typing_epitopes(donor));
-  return recipient.vxm_epitope_abs.existsb(
-      [=](const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody &ab) {
-        return (
-            (ab.ab_complement_fixing && mfi_negative_threshold < ab.ab_mfi) &&
-            donor_epitopes.existsb(
-                [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0)
-                    -> bool { return epitope_eqb(ab.ab_epitope, _x0); }));
-      });
+  return recipient.vxm_epitope_abs.existsb([=, donor_epitopes =
+                                                std::move(donor_epitopes)](
+      const ValidatedVirtualCrossmatchTraceCase::EpitopeAntibody &ab) {
+    return (
+        (ab.ab_complement_fixing && mfi_negative_threshold < ab.ab_mfi) &&
+        donor_epitopes.existsb(
+            [=](ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0) -> bool {
+              return epitope_eqb(ab.ab_epitope, _x0);
+            }));
+  });
 }
 
 ValidatedVirtualCrossmatchTraceCase::VirtualXMResult
@@ -466,7 +461,7 @@ ValidatedVirtualCrossmatchTraceCase::create_safe_transfusion_order(
     bool is_emergency) {
   ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder order =
       SafeTransfusionOrder{recipient_id, product_id, compat_result, xm,
-                           sample_time,  authorizer, is_emergency};
+                           sample_time, authorizer, is_emergency};
   if (transfusion_order_authorized(order, current_time)) {
     return std::make_optional<
         ValidatedVirtualCrossmatchTraceCase::SafeTransfusionOrder>(

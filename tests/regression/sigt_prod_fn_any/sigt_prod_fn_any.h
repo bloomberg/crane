@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <stdexcept>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -101,18 +102,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -147,7 +149,7 @@ template <SEM S> struct Make {
   template <typename F1, typename F2>
   static entry mk(typename S::idx a, F1 &&f, F2 &&g) {
     return SigT<prod2, psem>::existt(
-        std::make_pair(a, List<typename S::idx>::nil()),
+        std::make_pair(std::move(a), List<typename S::idx>::nil()),
         std::make_pair(crane::obj(crane_erase_fn(f)),
                        crane::obj(crane_erase_fn(g))));
   }
@@ -179,13 +181,13 @@ struct Inst {
 };
 
 using M = Make<Inst>;
-const M::entry my_entry =
+[[gnu::used]] inline const M::entry my_entry =
     M::mk(std::monostate{},
           crane_erase_fn<bool>([](uint64_t n) { return n == UINT64_C(0); }),
           crane_erase_fn<uint64_t>([](uint64_t n) { return (n + 1); }));
 Inst::sem my_arg(std::monostate _x);
 /// In Rocq this is true (predicate 0 =? 0 holds), and the extracted C++ now
 /// returns true as well (before the fix it threw std::bad_any_cast).
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_PROD_FN_ANY

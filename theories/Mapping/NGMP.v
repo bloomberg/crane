@@ -24,7 +24,8 @@ Crane Extract Inductive positive =>
 Crane Extract Inductive N =>
   "mpz_class"
   [ "mpz_class(0)" "%a0" ]
-  "if (%scrut == 0) { %br0 } else { mpz_class %b1a0 = %scrut; %br1 }".
+  "if (%scrut == 0) { %br0 } else { mpz_class %b1a0 = %scrut; %br1 }"
+  From "gmpxx.h".
 
 Crane Extract Numeral N => "mpz_class(%n)".
 

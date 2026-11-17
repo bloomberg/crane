@@ -4,7 +4,9 @@
 #include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -65,8 +67,8 @@ struct LoopifyNameHygiene {
 
     Frame_(const Frame_ &) = default;
     Frame_ &operator=(const Frame_ &) = default;
-    Frame_(Frame_ &&) noexcept = default;
-    Frame_ &operator=(Frame_ &&) noexcept = default;
+    Frame_(Frame_ &&) = default;
+    Frame_ &operator=(Frame_ &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -75,44 +77,42 @@ struct LoopifyNameHygiene {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, Frame_ &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1
   Frame_rect_(F0 &&f, F1 &&f0,
-              const Frame_ &f_) { /// _Enter: captures varying parameters for
-                                  /// each recursive call.
-
-    struct _Enter {
+              const Frame_ &f_) { /// CraneEnter: captures varying parameters
+                                  /// for each recursive call.
+    struct CraneEnter {
       const Frame_ *f_;
     };
 
-    /// _Cont_Resume_Cons_: saves [a0], resumes after recursive call with
-    /// _result.
-    struct _Cont_Resume_Cons_ {
+    /// CraneCont_Resume_Cons_: saves [a0], resumes after recursive call, then
+    /// processes rest.
+    struct CraneCont_Resume_Cons_ {
       std::shared_ptr<Frame_> a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Resume_Cons_>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Resume_Cons_>;
     T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&f_});
-    /// Loopified _Frame_rect: _Enter -> _Cont_Resume_Cons_.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{&f_});
+    /// Loopified _Frame_rect: CraneEnter -> CraneCont_Resume_Cons_.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const Frame_ &f_ = *_f.f_;
         if (std::holds_alternative<typename Frame_::Enter_>(f_.v())) {
           const auto &[a0] = std::get<typename Frame_::Enter_>(f_.v());
           _result = f(a0);
         } else {
           const auto &[a0] = std::get<typename Frame_::Resume_Cons_>(f_.v());
-          _stack.emplace_back(_Cont_Resume_Cons_{a0});
-          _stack.emplace_back(_Enter{crane_raw(a0)});
+          _stack.emplace_back(CraneCont_Resume_Cons_{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a0)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Resume_Cons_>(_frame));
+        auto _f = std::move(std::get<CraneCont_Resume_Cons_>(_frame));
         std::shared_ptr<Frame_> a0 = std::move(_f.a0);
         _result = f0(*a0, std::move(_result));
       }
@@ -121,57 +121,16 @@ struct LoopifyNameHygiene {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, Frame_ &, T1 &>
-  static T1
-  Frame_rec_(F0 &&f, F1 &&f0,
-             const Frame_ &f_) { /// _Enter: captures varying parameters for
-                                 /// each recursive call.
-
-    struct _Enter {
-      const Frame_ *f_;
-    };
-
-    /// _Cont_Resume_Cons_: saves [a0], resumes after recursive call with
-    /// _result.
-    struct _Cont_Resume_Cons_ {
-      std::shared_ptr<Frame_> a0;
-    };
-
-    using _Frame = std::variant<_Enter, _Cont_Resume_Cons_>;
-    T1 _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{&f_});
-    /// Loopified _Frame_rec: _Enter -> _Cont_Resume_Cons_.
-    while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
-      _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const Frame_ &f_ = *_f.f_;
-        if (std::holds_alternative<typename Frame_::Enter_>(f_.v())) {
-          const auto &[a0] = std::get<typename Frame_::Enter_>(f_.v());
-          _result = f(a0);
-        } else {
-          const auto &[a0] = std::get<typename Frame_::Resume_Cons_>(f_.v());
-          _stack.emplace_back(_Cont_Resume_Cons_{a0});
-          _stack.emplace_back(_Enter{crane_raw(a0)});
-        }
-      } else {
-        auto _f = std::move(std::get<_Cont_Resume_Cons_>(_frame));
-        std::shared_ptr<Frame_> a0 = std::move(_f.a0);
-        _result = f0(*a0, std::move(_result));
-      }
-    }
-    return _result;
+  static T1 Frame_rec_(F0 &&f, F1 &&f0, const Frame_ &f_) {
+    return Frame_rect_<T1>(f, f0, f_);
   }
 
   static uint64_t depth(const Frame_ &f);
   static Frame_ mk(uint64_t n);
   /// Definition names that become loopify's locals.
-  static inline const uint64_t stack_ = UINT64_C(1);
-  static inline const uint64_t result_ = UINT64_C(2);
-  static inline const uint64_t self_ = UINT64_C(3);
+  static constexpr uint64_t stack_ = UINT64_C(1);
+  static constexpr uint64_t result_ = UINT64_C(2);
+  static constexpr uint64_t self_ = UINT64_C(3);
   static uint64_t locals(uint64_t n);
   static inline const uint64_t run =
       (depth(mk(UINT64_C(5))) + locals(UINT64_C(10)));

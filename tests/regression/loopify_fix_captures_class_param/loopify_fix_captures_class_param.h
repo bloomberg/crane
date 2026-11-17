@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -62,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -113,25 +112,28 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -158,16 +160,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -204,8 +207,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -251,14 +254,16 @@ struct LoopifyFixCapturesClassParam {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->ts && _alt->ts.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->ts.get();
-            while (
-                std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<tree>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<tree>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<tree>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -285,8 +290,8 @@ struct LoopifyFixCapturesClassParam {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -295,8 +300,7 @@ struct LoopifyFixCapturesClassParam {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-             std::is_invocable_r_v<T1, F1 &, List<tree> &>
+    requires std::is_invocable_r_v<T1, F0 &, const Nat &>
   static T1 tree_rect(F0 &&f0, F1 &&f1, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       const auto &[n0] = std::get<typename tree::Leaf>(t.v());
@@ -308,67 +312,57 @@ struct LoopifyFixCapturesClassParam {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Nat &> &&
-             std::is_invocable_r_v<T1, F1 &, List<tree> &>
   static T1 tree_rec(F0 &&f0, F1 &&f1, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      const auto &[n0] = std::get<typename tree::Leaf>(t.v());
-      return f0(n0);
-    } else {
-      const auto &[ts0] = std::get<typename tree::Node>(t.v());
-      return f1(*ts0);
-    }
+    return tree_rect<T1>(f0, f1, t);
   }
 
   template <Sized _tcI0>
-  static std::optional<Nat>
-  f(const tree &t,
-    const Nat
-        &i) { /// _Enter: captures varying parameters for each recursive call.
-
-    struct _Enter {
+  static std::optional<Nat> f(const tree &t,
+                              Nat i) { /// CraneEnter: captures varying
+                                       /// parameters for each recursive call.
+    struct CraneEnter {
       Nat i;
-      tree t;
+      const tree *t;
     };
 
-    /// _Enter_loop: captures varying parameters for each recursive call.
-    struct _Enter_loop {
+    /// CraneEnter_loop: captures varying parameters for each recursive call.
+    struct CraneEnter_loop {
       Nat k;
-      List<tree> ts;
+      const List<tree> *ts;
     };
 
-    using _Frame = std::variant<_Enter, _Enter_loop>;
+    using CraneFrame = std::variant<CraneEnter, CraneEnter_loop>;
     std::optional<Nat> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{i, t});
-    /// Loopified f: _Enter.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{std::move(i), &t});
+    /// Loopified f: CraneEnter.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const Nat &i = std::move(_f.i);
-        const tree &t = std::move(_f.t);
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
+        Nat i = std::move(_f.i);
+        const tree &t = *_f.t;
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
           const auto &[n0] = std::get<typename tree::Leaf>(t.v());
-          _result = std::make_optional<Nat>(n0.add(i));
+          _result = std::make_optional<Nat>(n0.add(std::move(i)));
         } else {
           const auto &[ts0] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(_Enter_loop{i, *ts0});
+          _stack.emplace_back(CraneEnter_loop{std::move(i), crane_raw(ts0)});
         }
       } else {
-        auto _f = std::move(std::get<_Enter_loop>(_frame));
-        const Nat &k = std::move(_f.k);
-        const List<tree> &ts = std::move(_f.ts);
+        auto _f = std::move(std::get<CraneEnter_loop>(_frame));
+        Nat k = std::move(_f.k);
+        const List<tree> &ts = *_f.ts;
         if (std::holds_alternative<typename List<tree>::Nil>(ts.v())) {
           _result = std::optional<Nat>();
         } else {
           const auto &[a0, a1] = std::get<typename List<tree>::Cons>(ts.v());
           if (k.ltb(_tcI0::size(Nat::s(Nat::s(Nat::o()))))) {
-            _stack.emplace_back(_Enter{k, a0});
+            _stack.emplace_back(CraneEnter{std::move(k), &a0});
           } else {
-            _stack.emplace_back(
-                _Enter_loop{k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), *a1});
+            _stack.emplace_back(CraneEnter_loop{
+                k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), crane_raw(a1)});
           }
         }
       }
@@ -381,15 +375,14 @@ struct LoopifyFixCapturesClassParam {
   };
 
   static_assert(Sized<id_size>);
-  static inline const std::optional<Nat> result = f<id_size>(
-      tree::node(List<tree>::cons(
+  static inline const std::optional<Nat> result =
+      f<id_size>(tree::node(List<tree>::cons(
           tree::leaf(Nat::s(Nat::o())),
-          List<tree>::cons(
-              tree::node(List<tree>::cons(
-                  tree::leaf(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                  List<tree>::nil())),
-              List<tree>::nil()))),
-      Nat::s(Nat::s(Nat::s(Nat::o()))));
+          List<tree>::cons(tree::node(List<tree>::cons(
+              tree::leaf(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+              List<tree>::nil())),
+                           List<tree>::nil()))),
+                 Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
 
 #endif // INCLUDED_LOOPIFY_FIX_CAPTURES_CLASS_PARAM

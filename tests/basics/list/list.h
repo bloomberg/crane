@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -34,16 +34,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -80,17 +81,15 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, A &, List<A> &, T1 &>
-  T1 list_rect(T1 f, F1 &&f0) const {
+  template <typename T1, typename F1> T1 list_rect(T1 f, F1 &&f0) const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return f;
     } else {
@@ -99,22 +98,15 @@ public:
     }
   }
 
-  template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, A &, List<A> &, T1 &>
-  T1 list_rec(T1 f, F1 &&f0) const {
-    if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
-      return f0(a0, *a1, a1->template list_rec<T1>(std::move(f), f0));
-    }
+  template <typename T1, typename F1> T1 list_rec(T1 f, F1 &&f0) const {
+    return this->template list_rect<T1>(std::move(f), f0);
   }
 
   List<A> tl() const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<A>::nil();
     } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      const auto &[_, a1] = std::get<typename List<A>::Cons>(this->v());
       return *a1;
     }
   }
@@ -123,7 +115,7 @@ public:
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return x;
     } else {
-      const auto &[a0, a1] = std::get<typename List<A>::Cons>(this->v());
+      const auto &[a0, _] = std::get<typename List<A>::Cons>(this->v());
       return a0;
     }
   }
@@ -147,7 +139,7 @@ public:
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     if (std::holds_alternative<typename List<A>::Nil>(this->v())) {
       return List<T1>::nil();
@@ -165,13 +157,13 @@ public:
                 UINT64_C(1),
                 List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())))
             .app(List<uint64_t>::cons(
-                UINT64_C(8),
+            UINT64_C(8),
+            List<uint64_t>::cons(
+                UINT64_C(3),
                 List<uint64_t>::cons(
-                    UINT64_C(3),
-                    List<uint64_t>::cons(
-                        UINT64_C(7),
-                        List<uint64_t>::cons(UINT64_C(9),
-                                             List<uint64_t>::nil())))));
+                    UINT64_C(7),
+                    List<uint64_t>::cons(UINT64_C(9),
+                                         List<uint64_t>::nil())))));
     return v;
   }
 };

@@ -3,11 +3,10 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -24,18 +23,19 @@ struct DocComments {
     B snd;
 
     // ACCESSORS
-    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(fst);
+    template <typename CraneU0, typename CraneU1>
+    operator pair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(fst);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(snd);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(snd);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -70,23 +70,23 @@ struct DocComments {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    mylist(const mylist<_U> &_other)
+    template <typename CraneU>
+    mylist(const mylist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+            if (std::holds_alternative<typename mylist<CraneU>::Mynil>(
                     _other.v())) {
               return Mynil{};
             } else {
               const auto &[a, l] =
-                  std::get<typename mylist<_U>::Mycons>(_other.v());
+                  std::get<typename mylist<CraneU>::Mycons>(_other.v());
               return Mycons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (l ? std::make_shared<mylist<A>>(crane_convert<mylist<A>>(*l))
@@ -122,8 +122,8 @@ struct DocComments {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -132,7 +132,6 @@ struct DocComments {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
@@ -143,14 +142,8 @@ struct DocComments {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+    return mylist_rect<T1, T2>(std::move(f), f0, m);
   }
 
   static uint64_t no_doc_comment(uint64_t x);
@@ -187,19 +180,7 @@ struct DocComments {
   }
 
   template <typename T1> static T1 color_rec(T1 f, T1 f0, T1 f1, Color c) {
-    switch (c) {
-    case Color::RED: {
-      return f;
-    }
-    case Color::GREEN: {
-      return f0;
-    }
-    case Color::BLUE: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 };
 

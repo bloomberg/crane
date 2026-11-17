@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -20,18 +19,19 @@ template <typename A, typename B> struct Prod {
   // ACCESSORS
   Prod<A, B> clone() const { return {a0, a1}; }
 
-  template <typename _U0, typename _U1> operator Prod<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(a0);
+  template <typename CraneU0, typename CraneU1>
+  operator Prod<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const B &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const B &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -43,7 +43,7 @@ template <typename A, typename B> struct Prod {
   static Prod<A, B> pair(A a0, B a1) { return {std::move(a0), std::move(a1)}; }
 
   A fst() const {
-    auto &[a0, a1] = *this;
+    const auto &[a0, _] = *this;
     return a0;
   }
 };
@@ -96,19 +96,19 @@ struct Nat {
 
     nat(const nat &) = default;
     nat &operator=(const nat &) = default;
-    nat(nat &&) noexcept = default;
-    nat &operator=(nat &&) noexcept = default;
+    nat(nat &&) = default;
+    nat &operator=(nat &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    Nat::nat div(Nat::nat y) const {
-      if (std::holds_alternative<typename Nat::nat::O>(y.v_mut())) {
+    Nat::nat div(const Nat::nat &y) const {
+      if (std::holds_alternative<typename Nat::nat::O>(y.v())) {
         return y;
       } else {
-        auto &[a0] = std::get<typename Nat::nat::S>(y.v_mut());
+        const auto &[a0] = std::get<typename Nat::nat::S>(y.v());
         return Nat::divmod(*this, *a0, Nat::nat::o(), *a0).fst();
       }
     }
@@ -121,8 +121,8 @@ struct Nat {
 struct DeclOrderForwardUse {
   static Nat::nat d(const Nat::nat &x0_, const Nat::nat &x1_);
   static inline const Nat::nat test =
-      d(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(
-            Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))),
+      d(Nat::nat::s(Nat::nat::s(Nat::nat::s(
+          Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))),
         Nat::nat::s(Nat::nat::s(Nat::nat::o())));
 };
 

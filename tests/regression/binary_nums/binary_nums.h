@@ -2,6 +2,7 @@
 #define INCLUDED_BINARY_NUMS
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -15,6 +16,7 @@ struct Z;
 struct Datatypes {
   static Comparison CompOpp(Comparison r);
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct Positive {
@@ -80,8 +82,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -170,7 +172,8 @@ struct Coq_Pos {
   static Positive mul(const Positive &x, Positive y);
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -243,7 +246,8 @@ struct Pos {
   static Comparison compare(const Positive &x0_, const Positive &x1_);
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &, T1> &&
+             std::is_invocable_r_v<T1, F0 &, T1 &, T1 &>
   static T1 iter_op(F0 &&op, const Positive &p, T1 a) {
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
@@ -260,10 +264,10 @@ struct Pos {
 };
 
 struct BinNat {
-  static N sub(N n, const N &m);
+  static N sub(const N &n, const N &m);
   static Comparison compare(const N &n, const N &m);
   static N pred(const N &n);
-  static N add(N n, N m);
+  static N add(const N &n, const N &m);
   static N mul(const N &n, const N &m);
   static uint64_t to_nat(const N &a);
 };
@@ -273,7 +277,7 @@ struct BinInt {
   static Z succ_double(const Z &x);
   static Z pred_double(const Z &x);
   static Z pos_sub(const Positive &x, const Positive &y);
-  static Z add(Z x, Z y);
+  static Z add(const Z &x, const Z &y);
   static Z opp(const Z &x);
   static Z sub(const Z &m, const Z &n);
   static Z mul(const Z &x, const Z &y);

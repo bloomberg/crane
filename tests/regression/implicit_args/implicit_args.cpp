@@ -39,7 +39,7 @@ uint64_t ImplicitArgs::sum_with_init(uint64_t init,
 }
 
 uint64_t ImplicitArgs::nested_implicits(uint64_t a, uint64_t b, uint64_t c) {
-  return (a + (b + c));
+  return combine(a, b, c);
 }
 
 uint64_t ImplicitArgs::choose_branch(bool flag, uint64_t t, uint64_t f) {

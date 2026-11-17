@@ -5,8 +5,8 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -40,16 +40,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -86,8 +87,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,13 +103,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -148,11 +149,9 @@ struct ComprehensivePatterns {
     L4 l5_l4;
   };
 
-  static std::pair<
-      std::pair<std::pair<std::pair<std::pair<std::pair<L5, L4>, L3>, L2>, L1>,
-                S>,
-      uint64_t>
-  deep_nest(const L5 &l5);
+  static std::pair<std::pair<
+      std::pair<std::pair<std::pair<std::pair<L5, L4>, L3>, L2>, L1>, S>,
+                   uint64_t> deep_nest(const L5 &l5);
   static std::pair<std::pair<std::pair<S, uint64_t>, uint64_t>, uint64_t>
   nested_pair_reuse(const S &s);
   static std::pair<S, uint64_t> compose(const S &s);
@@ -189,19 +188,7 @@ struct ComprehensivePatterns {
   }
 
   template <typename T1> static T1 Three_rec(T1 f, T1 f0, T1 f3, Three t) {
-    switch (t) {
-    case Three::A: {
-      return f;
-    }
-    case Three::B: {
-      return f0;
-    }
-    case Three::C: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+    return Three_rect<T1>(std::move(f), std::move(f0), std::move(f3), t);
   }
 
   static std::pair<S, uint64_t> match_three(Three t, const S &s);
@@ -209,8 +196,7 @@ struct ComprehensivePatterns {
   static std::pair<S, uint64_t> match_record(const S &s);
   static std::pair<S, uint64_t> rebind(const S &s1);
   static std::pair<crane::fn<uint64_t(std::monostate)>,
-                   crane::fn<uint64_t(std::monostate)>>
-  closure_pair(S s);
+                   crane::fn<uint64_t(std::monostate)>> closure_pair(S s);
   static Sig<S> sigma_reuse(const S &s);
   static std::pair<uint64_t, std::pair<uint64_t, uint64_t>>
   multi_proj_arg(const S &s);
@@ -250,21 +236,13 @@ struct ComprehensivePatterns {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, S &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
     T1 Either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename Either::Left_S>(this->v())) {
-        const auto &[s0] = std::get<typename Either::Left_S>(this->v());
-        return f(s0);
-      } else {
-        const auto &[n0] = std::get<typename Either::Right_N>(this->v());
-        return f0(n0);
-      }
+      return this->template Either_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, S &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const S &> &&
+               std::is_invocable_r_v<T1, F1 &, const uint64_t &>
     T1 Either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename Either::Left_S>(this->v())) {
         const auto &[s0] = std::get<typename Either::Left_S>(this->v());
@@ -383,9 +361,9 @@ struct ComprehensivePatterns {
   static uint64_t sum_proj(uint64_t n, const NC &r);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, NC &>
-  static uint64_t apply(F0 &&f, NC x0_) {
-    return f(std::move(x0_));
+    requires std::is_invocable_r_v<uint64_t, F0 &, const NC &>
+  static uint64_t apply(F0 &&f, const NC &x0_) {
+    return f(x0_);
   }
 
   static uint64_t hof_test(const NC &r);
@@ -422,9 +400,9 @@ struct ComprehensivePatterns {
   };
 
   static RSeq side_effect(RSeq r);
-  static uint64_t after_side_effect(const RSeq &r);
-  static uint64_t two_side_effects(const RSeq &r);
-  static uint64_t side_effect_in_branch(bool b, const RSeq &r);
+  static uint64_t after_side_effect(RSeq r);
+  static uint64_t two_side_effects(RSeq r);
+  static uint64_t side_effect_in_branch(bool b, RSeq r);
 
   struct StateStmt {
     uint64_t stmt_value;
@@ -509,6 +487,15 @@ struct ComprehensivePatterns {
 
     // MANIPULATORS
     ~Tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<Tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -533,8 +520,8 @@ struct ComprehensivePatterns {
 
     Tree(const Tree &) = default;
     Tree &operator=(const Tree &) = default;
-    Tree(Tree &&) noexcept = default;
-    Tree &operator=(Tree &&) noexcept = default;
+    Tree(Tree &&) = default;
+    Tree &operator=(Tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -543,7 +530,7 @@ struct ComprehensivePatterns {
 
     Tree nested_reuse() const {
       Tree t2 = this->transform_tree();
-      return std::move(t2).transform_tree();
+      return t2.transform_tree();
     }
 
     Tree flip_tree() const {
@@ -551,7 +538,7 @@ struct ComprehensivePatterns {
         const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
         return Tree::node(*this, a0, *this);
       } else {
-        const auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
+        const auto &[_, a1, _] = std::get<typename Tree::Node>(this->v());
         return Tree::leaf(a1);
       }
     }
@@ -569,36 +556,37 @@ struct ComprehensivePatterns {
     uint64_t consume_tree_with_state(const StateLB &s) const {
       const Tree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const Tree *_self;
       };
 
-      /// _Cont_Node: saves [a1, a2], resumes after recursive call, then
+      /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Node {
+      struct CraneCont_Node {
         uint64_t a1;
-        std::shared_ptr<Tree> a2;
+        const Tree *a2;
       };
 
-      /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Node_1 {
+      /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_Node_1 {
+        uint64_t a1;
         uint64_t _tmp2;
-        uint64_t a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified consume_tree_with_state: _Enter -> _Cont_Node ->
-      /// _Cont_Node_1.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified consume_tree_with_state: CraneEnter -> CraneCont_Node ->
+      /// CraneCont_Node_1.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const Tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
@@ -606,17 +594,17 @@ struct ComprehensivePatterns {
             _result = (a0 + s.lb_value);
           } else {
             const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Cont_Node{a1, a2});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Node>(_frame));
+        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Node>(_frame));
           uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
-          _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          const Tree &a2 = *_f.a2;
+          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a2});
         } else {
-          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
           _result = (((a1 + s.lb_value) + _f._tmp2) + std::move(_result));
         }
@@ -627,35 +615,36 @@ struct ComprehensivePatterns {
     uint64_t tree_sum() const {
       const Tree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const Tree *_self;
       };
 
-      /// _Cont_Node: saves [a1, a2], resumes after recursive call, then
+      /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Node {
+      struct CraneCont_Node {
         uint64_t a1;
-        std::shared_ptr<Tree> a2;
+        const Tree *a2;
       };
 
-      /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Node_1 {
+      /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_Node_1 {
+        uint64_t a1;
         uint64_t _tmp2;
-        uint64_t a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_sum: _Enter -> _Cont_Node -> _Cont_Node_1.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified tree_sum: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const Tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
@@ -663,17 +652,17 @@ struct ComprehensivePatterns {
             _result = std::move(a0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Cont_Node{a1, a2});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Node>(_frame));
+        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Node>(_frame));
           uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
-          _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          const Tree &a2 = *_f.a2;
+          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a2});
         } else {
-          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
           _result = ((a1 + _f._tmp2) + std::move(_result));
         }
@@ -682,112 +671,48 @@ struct ComprehensivePatterns {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
-                                     T1 &>
     T1 Tree_rec(F0 &&f, F1 &&f0) const {
-      const Tree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const Tree *_self;
-      };
-
-      /// _Cont_Node: saves [a0, a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Node {
-        std::shared_ptr<Tree> a0;
-        uint64_t a1;
-        std::shared_ptr<Tree> a2;
-      };
-
-      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Node_1 {
-        T1 _tmp2;
-        std::shared_ptr<Tree> a0;
-        uint64_t a1;
-        std::shared_ptr<Tree> a2;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified Tree_rec: _Enter -> _Cont_Node -> _Cont_Node_1.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const Tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
-            const auto &[a0] = std::get<typename Tree::Leaf>(_sv.v());
-            _result = f(a0);
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Cont_Node{a0, a1, a2});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Node>(_frame));
-          std::shared_ptr<Tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
-          _stack.emplace_back(
-              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-          std::shared_ptr<Tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template Tree_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, Tree &, T1 &, uint64_t &, Tree &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 Tree_rect(F0 &&f, F1 &&f0) const {
       const Tree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const Tree *_self;
       };
 
-      /// _Cont_Node: saves [a0, a1, a2], resumes after recursive call, then
+      /// CraneCont_Node: saves [a0, a1, a2], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Node {
+      struct CraneCont_Node {
         std::shared_ptr<Tree> a0;
         uint64_t a1;
-        std::shared_ptr<Tree> a2;
+        const Tree *a2;
       };
 
-      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Node_1 {
+      /// CraneCont_Node_1: saves [a0, a1, a2, _tmp2], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_Node_1 {
+        std::shared_ptr<Tree> a0;
+        uint64_t a1;
+        const Tree *a2;
         T1 _tmp2;
-        std::shared_ptr<Tree> a0;
-        uint64_t a1;
-        std::shared_ptr<Tree> a2;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified Tree_rect: _Enter -> _Cont_Node -> _Cont_Node_1.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified Tree_rect: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const Tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
@@ -795,23 +720,23 @@ struct ComprehensivePatterns {
             _result = f(a0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename Tree::Node>(_sv.v());
-            _stack.emplace_back(_Cont_Node{a0, a1, a2});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_Node{a0, a1, crane_raw(a2)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Node>(_frame));
+        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Node>(_frame));
           std::shared_ptr<Tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
+          const Tree &a2 = *_f.a2;
           _stack.emplace_back(
-              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+              CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a2});
         } else {
-          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           std::shared_ptr<Tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
-          std::shared_ptr<Tree> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
+          const Tree &a2 = *_f.a2;
+          _result = f0(*a0, std::move(_f._tmp2), a1, a2, std::move(_result));
         }
       }
       return _result;
@@ -866,19 +791,12 @@ struct ComprehensivePatterns {
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, StateRO &>
-    T1 Container_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename Container::Empty>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename Container::Full>(this->v());
-        return f0(a0);
-      }
+    template <typename T1, typename F1> T1 Container_rec(T1 f, F1 &&f0) const {
+      return this->template Container_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, StateRO &>
+      requires std::is_invocable_r_v<T1, F1 &, const StateRO &>
     T1 Container_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename Container::Empty>(this->v())) {
         return f;
@@ -895,9 +813,9 @@ struct ComprehensivePatterns {
   };
 
   static StateOP identity(StateOP s);
-  static uint64_t extract_via_match(const StateOP &s);
+  static uint64_t extract_via_match(StateOP s);
   static StateOP consume_state(StateOP s);
-  static uint64_t match_consumed(const StateOP &s);
+  static uint64_t match_consumed(StateOP s);
   static std::pair<StateOP, uint64_t> force_owned(const StateOP &s);
   static std::pair<std::pair<StateOP, StateOP>, uint64_t>
   pair_then_match(const StateOP &s);

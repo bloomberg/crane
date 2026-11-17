@@ -1,6 +1,8 @@
 #ifndef INCLUDED_KBP_MULTIBIT_DEFAULT
 #define INCLUDED_KBP_MULTIBIT_DEFAULT
 
+#include <cstdint>
+
 struct KbpMultibitDefault {
   struct state {
     uint64_t acc;

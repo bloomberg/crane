@@ -20,19 +20,17 @@ Bool0 PeanoNat::eqb(const Nat &n, const Nat &m) {
 
 EOU<Dv> ErrorCtorTypeFromEnclosingReturn::eval_icmp(const Nat &x,
                                                     const Nat &y) {
-  return
-      [&]() {
-        switch (PeanoNat::eqb(x, y)) {
-        case Bool0::TRUE_: {
-          return ret<Bool0>(Bool0::TRUE_);
-        }
-        case Bool0::FALSE_: {
-          return EOU<Bool0>::err(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
-        }
-        default:
-          std::unreachable();
-        }
-      }()
-          .template bind0<Dv>([](Bool0 b) { return ret<Dv>(Dv::dvbool(b)); });
+  return [&]() {
+    switch (PeanoNat::eqb(x, y)) {
+    case Bool0::TRUE_: {
+      return ret<Bool0>(Bool0::TRUE_);
+    }
+    case Bool0::FALSE_: {
+      return EOU<Bool0>::err(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
+    }
+    default:
+      std::unreachable();
+    }
+  }().template bind0<Dv>([](Bool0 b) { return ret<Dv>(Dv::dvbool(b)); });
 }

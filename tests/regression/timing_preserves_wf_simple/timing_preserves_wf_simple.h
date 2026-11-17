@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TIMING_PRESERVES_WF_SIMPLE
 #define INCLUDED_TIMING_PRESERVES_WF_SIMPLE
 
+#include <cstdint>
 #include <utility>
 
 struct TimingPreservesWfSimple {
@@ -31,25 +32,8 @@ struct TimingPreservesWfSimple {
 
   template <typename T1>
   static T1 instr_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, Instr i) {
-    switch (i) {
-    case Instr::NOP: {
-      return f;
-    }
-    case Instr::ADD: {
-      return f0;
-    }
-    case Instr::WRM: {
-      return f1;
-    }
-    case Instr::FIM: {
-      return f2;
-    }
-    case Instr::JMS: {
-      return f3;
-    }
-    default:
-      std::unreachable();
-    }
+    return instr_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                          std::move(f2), std::move(f3), i);
   }
 
   struct state {
@@ -64,7 +48,6 @@ struct TimingPreservesWfSimple {
   static state execute(const state &s, Instr i);
   static inline const state sample =
       state{UINT64_C(4), UINT64_C(4), UINT64_C(100), UINT64_C(2)};
-
   static inline const bool t =
       (wf(sample) &&
        (cycles(Instr::JMS) == UINT64_C(24) &&

@@ -2,7 +2,7 @@
 #define INCLUDED_EMPTY_INDUCTIVE_ELIM
 
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -16,8 +16,9 @@ struct EmptyInductiveElim {
     throw std::logic_error("absurd case");
   }
 
-  template <typename T1> static T1 void_rec() {
-    throw std::logic_error("absurd case");
+  template <typename T1> static const T1 &void_rec() {
+    static const T1 v = [](crane::obj) { return void_rect<T1>(); };
+    return v;
   }
 
   static uint64_t absurd();

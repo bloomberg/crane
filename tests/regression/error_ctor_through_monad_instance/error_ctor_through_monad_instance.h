@@ -4,12 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -27,8 +25,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 enum class Bool0 { TRUE_, FALSE_ };
@@ -78,8 +75,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,7 +88,6 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
@@ -124,13 +120,13 @@ public:
 
   explicit EOU(Err _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  EOU(const EOU<_U> &_other)
+  template <typename CraneU>
+  EOU(const EOU<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename EOU<_U>::Ok>(_other.v())) {
-            const auto &[a0] = std::get<typename EOU<_U>::Ok>(_other.v());
+          if (std::holds_alternative<typename EOU<CraneU>::Ok>(_other.v())) {
+            const auto &[a0] = std::get<typename EOU<CraneU>::Ok>(_other.v());
             return Ok{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U &>) {
+              if constexpr (crane_convertible<A, const CraneU &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -138,7 +134,7 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] = std::get<typename EOU<_U>::Err>(_other.v());
+            const auto &[a0] = std::get<typename EOU<CraneU>::Err>(_other.v());
             return Err{a0};
           }
         }()) {}
@@ -155,20 +151,20 @@ public:
 };
 
 struct EOU_monad {
-  template <typename _A0> using m = EOU<_A0>;
+  template <typename CraneA0> using m = EOU<CraneA0>;
 
-  template <typename _A0> static EOU<_A0> ret(_A0 a) {
-    return EOU<_A0>::ok(std::move(a));
+  template <typename CraneA0> static EOU<CraneA0> ret(CraneA0 a) {
+    return EOU<CraneA0>::ok(std::move(a));
   }
 
-  template <typename _A0, typename _A1>
-  static EOU<_A1> bind(EOU<_A0> m, crane::fn<EOU<_A1>(_A0)> k) {
-    if (std::holds_alternative<typename EOU<_A0>::Ok>(m.v())) {
-      const auto &[a0] = std::get<typename EOU<_A0>::Ok>(m.v());
-      return k(a0);
+  template <typename CraneA0, typename CraneA1>
+  static EOU<CraneA1> bind(EOU<CraneA0> m, crane::fn<EOU<CraneA1>(CraneA0)> k) {
+    if (std::holds_alternative<typename EOU<CraneA0>::Ok>(m.v_mut())) {
+      auto &[a0] = std::get<typename EOU<CraneA0>::Ok>(m.v_mut());
+      return k(std::move(a0));
     } else {
-      const auto &[a0] = std::get<typename EOU<_A0>::Err>(m.v());
-      return EOU<_A1>::err(a0);
+      auto &[a0] = std::get<typename EOU<CraneA0>::Err>(m.v_mut());
+      return EOU<CraneA1>::err(std::move(a0));
     }
   }
 };
@@ -243,7 +239,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);

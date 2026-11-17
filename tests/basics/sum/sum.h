@@ -3,8 +3,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
-#include <atomic>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -35,15 +34,15 @@ struct Sum {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
-    either(const either<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    either(const either<CraneU0, CraneU1> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename either<_U0, _U1>::Left>(
+            if (std::holds_alternative<typename either<CraneU0, CraneU1>::Left>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Left>(_other.v());
+                  std::get<typename either<CraneU0, CraneU1>::Left>(_other.v());
               return Left{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U0 &>) {
+                if constexpr (crane_convertible<A, const CraneU0 &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -51,10 +50,10 @@ struct Sum {
                 }
               }()};
             } else {
-              const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Right>(_other.v());
+              const auto &[a0] = std::get<
+                  typename either<CraneU0, CraneU1>::Right>(_other.v());
               return Right{[&]() -> B {
-                if constexpr (crane_convertible<B, const _U1 &>) {
+                if constexpr (crane_convertible<B, const CraneU1 &>) {
                   return crane_convert<B>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -77,7 +76,7 @@ struct Sum {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const B &>
     either<A, T1> map_right(F0 &&f) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -89,7 +88,7 @@ struct Sum {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     either<T1, B> map_left(F0 &&f) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -109,21 +108,13 @@ struct Sum {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
-        const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename either<A, B>::Right>(this->v());
-        return f0(a0);
-      }
+      return this->template either_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -171,15 +162,17 @@ struct Sum {
 
     explicit triple(Third _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1, typename _U2>
-    triple(const triple<_U0, _U1, _U2> &_other)
+    template <typename CraneU0, typename CraneU1, typename CraneU2>
+    triple(const triple<CraneU0, CraneU1, CraneU2> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename triple<_U0, _U1, _U2>::First>(
+            if (std::holds_alternative<
+                    typename triple<CraneU0, CraneU1, CraneU2>::First>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename triple<_U0, _U1, _U2>::First>(_other.v());
+                  std::get<typename triple<CraneU0, CraneU1, CraneU2>::First>(
+                      _other.v());
               return First{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U0 &>) {
+                if constexpr (crane_convertible<A, const CraneU0 &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -188,12 +181,13 @@ struct Sum {
               }()};
             } else {
               if (std::holds_alternative<
-                      typename triple<_U0, _U1, _U2>::Second>(_other.v())) {
-                const auto &[a0] =
-                    std::get<typename triple<_U0, _U1, _U2>::Second>(
-                        _other.v());
+                      typename triple<CraneU0, CraneU1, CraneU2>::Second>(
+                      _other.v())) {
+                const auto &[a0] = std::get<
+                    typename triple<CraneU0, CraneU1, CraneU2>::Second>(
+                    _other.v());
                 return Second{[&]() -> B {
-                  if constexpr (crane_convertible<B, const _U1 &>) {
+                  if constexpr (crane_convertible<B, const CraneU1 &>) {
                     return crane_convert<B>(a0);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -202,9 +196,10 @@ struct Sum {
                 }()};
               } else {
                 const auto &[a0] =
-                    std::get<typename triple<_U0, _U1, _U2>::Third>(_other.v());
+                    std::get<typename triple<CraneU0, CraneU1, CraneU2>::Third>(
+                        _other.v());
                 return Third{[&]() -> C {
-                  if constexpr (crane_convertible<C, const _U2 &>) {
+                  if constexpr (crane_convertible<C, const CraneU2 &>) {
                     return crane_convert<C>(a0);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -234,28 +229,14 @@ struct Sum {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &> &&
-               std::is_invocable_r_v<T1, F2 &, C &>
     T1 triple_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
-      if (std::holds_alternative<typename triple<A, B, C>::First>(this->v())) {
-        const auto &[a0] = std::get<typename triple<A, B, C>::First>(this->v());
-        return f(a0);
-      } else if (std::holds_alternative<typename triple<A, B, C>::Second>(
-                     this->v())) {
-        const auto &[a0] =
-            std::get<typename triple<A, B, C>::Second>(this->v());
-        return f0(a0);
-      } else {
-        const auto &[a0] = std::get<typename triple<A, B, C>::Third>(this->v());
-        return f1(a0);
-      }
+      return this->template triple_rect<T1>(f, f0, f1);
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &> &&
-               std::is_invocable_r_v<T1, F2 &, C &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &> &&
+               std::is_invocable_r_v<T1, F2 &, const C &>
     T1 triple_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename triple<A, B, C>::First>(this->v())) {
         const auto &[a0] = std::get<typename triple<A, B, C>::First>(this->v());

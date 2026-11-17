@@ -2,8 +2,8 @@
 #define INCLUDED_REUSE_FN_IN_BODY
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -57,8 +57,8 @@ struct ReuseFnInBody {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -67,7 +67,6 @@ struct ReuseFnInBody {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rect(F0 &&f, T1 f0, const mylist &m) {
     if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
       const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
@@ -78,14 +77,8 @@ struct ReuseFnInBody {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, mylist &, T1 &>
   static T1 mylist_rec(F0 &&f, T1 f0, const mylist &m) {
-    if (std::holds_alternative<typename mylist::Mycons>(m.v())) {
-      const auto &[a0, a1] = std::get<typename mylist::Mycons>(m.v());
-      return f(a0, *a1, mylist_rec<T1>(f, std::move(f0), *a1));
-    } else {
-      return f0;
-    }
+    return mylist_rect<T1>(f, std::move(f0), m);
   }
 
   static uint64_t length(const mylist &l);
@@ -106,13 +99,12 @@ struct ReuseFnInBody {
   /// This is similar to reuse_use_after_move but the scrutinee
   /// is used through a DIFFERENT function (sum instead of length)
   /// AND combined with a pattern variable in an arithmetic expression.
-  static mylist prefix_sum(mylist l, bool b);
-  static inline const uint64_t test1 = sum(prefix_sum(
-      mylist::mycons(
-          UINT64_C(1),
-          mylist::mycons(UINT64_C(2),
-                         mylist::mycons(UINT64_C(3), mylist::mynil()))),
-      true));
+  static mylist prefix_sum(const mylist &l, bool b);
+  static inline const uint64_t test1 = sum(prefix_sum(mylist::mycons(
+      UINT64_C(1),
+      mylist::mycons(UINT64_C(2),
+                     mylist::mycons(UINT64_C(3), mylist::mynil()))),
+                                                      true));
   /// Original list: 1, 2, 3. sum = 6.
   /// prefix_sum: head becomes sum(1,2,3) + 1 = 6 + 1 = 7, tail = 2, 3.
   /// Result: 7, 2, 3. sum = 12.

@@ -3,15 +3,14 @@
 /// 1. Bool match as value argument to set_env
 void EffectMatchArg::set_bool_value(bool flag, std::string key) {
   setenv(
-      key.c_str(),
+      std::move(key).c_str(),
       [&]() -> std::string {
         if (flag) {
           return "yes";
         } else {
           return "no";
         }
-      }()
-                   .c_str(),
+      }().c_str(),
       1);
   return;
 }
@@ -25,9 +24,9 @@ void EffectMatchArg::set_bool_key(bool flag, std::string value) {
         } else {
           return "KEY_B";
         }
-      }()
-                   .c_str(),
-      value.c_str(), 1);
+      }().c_str(),
+      std::move(value).c_str(),
+      1);
   return;
 }
 
@@ -35,7 +34,7 @@ void EffectMatchArg::set_bool_key(bool flag, std::string value) {
 void EffectMatchArg::set_option_value(std::string key,
                                       const std::optional<std::string> &r) {
   setenv(
-      key.c_str(),
+      std::move(key).c_str(),
       [&]() -> std::string {
         if (r.has_value()) {
           const std::string &v = *r;
@@ -43,8 +42,7 @@ void EffectMatchArg::set_option_value(std::string key,
         } else {
           return "default";
         }
-      }()
-                   .c_str(),
+      }().c_str(),
       1);
   return;
 }
@@ -70,8 +68,7 @@ std::optional<std::string> EffectMatchArg::get_conditional(bool flag) {
       } else {
         return "KEY_B";
       }
-    }()
-                                       .c_str());
+    }().c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }
@@ -84,7 +81,7 @@ std::optional<std::string> EffectMatchArg::round_trip_match(bool flag) {
   } else {
     key = "Y";
   }
-  setenv(key.c_str(), "val"s.c_str(), 1);
+  setenv(key.c_str(), std::string("val").c_str(), 1);
   return [&]() -> std::optional<std::string> {
     auto *v = std::getenv(std::move(key).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();

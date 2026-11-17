@@ -4,14 +4,12 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <utility>
 
 #include "Datatypes.h"
 #include "Specif.h"
 
 namespace SepExtAnyFunCall {
-
 using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
@@ -34,11 +32,10 @@ template <SymTypes Ty> struct Actions {
         crane::fn<bool(crane::obj)>>::existt(gamma, crane_erase_fn<bool>(f));
   }
 
-  static bool apply_entry(entry x0_, symbols_semty x1_) {
-    return crane_any_cast<bool>(x0_.projT2()(std::move(x1_)));
+  static bool apply_entry(const entry &x0_, symbols_semty x1_) {
+    return x0_.projT2()(std::move(x1_));
   }
 };
-
 } // namespace SepExtAnyFunCall
 
 #endif // INCLUDED_SEPEXTANYFUNCALL

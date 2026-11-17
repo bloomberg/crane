@@ -14,9 +14,9 @@ struct crane_ {
   /// name.
   struct stream {
     // TYPES
-    template <typename _S0 = stream> struct Cons_ {
+    template <typename CraneS0 = stream> struct Cons_ {
       bool a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cons = Cons_<>;
@@ -54,7 +54,7 @@ struct crane_ {
   };
 
   static stream ones();
-  static bool head(stream s);
+  static bool head(const stream &s);
   static inline const bool sample = head(ones());
 };
 

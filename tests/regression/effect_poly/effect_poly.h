@@ -2,23 +2,16 @@
 #define INCLUDED_EFFECT_POLY
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
-#include <crane_itree.h>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <memory>
 #include <stdexcept>
 #include <string>
-#include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 template <typename A> struct List;
 
@@ -45,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -91,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,8 +96,9 @@ public:
 
 struct EffectPoly {
   /// 1. Polymorphic monadic map
-  template <typename T1, typename T2>
-  static T2 map_result(std::type_identity_t<crane::fn<T2(T1)>> f, const T1 &m) {
+  template <typename T1, typename T2, typename F0>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
+  static T2 map_result(F0 &&f, const T1 &m) {
     T1 a = m;
     return f(std::move(a));
   }
@@ -127,15 +122,14 @@ struct EffectPoly {
   static void test_sequence_void();
 
   /// 6. Polymorphic fold over itree results
-  template <typename T1, typename T2>
-  static T1 fold_m(std::type_identity_t<crane::fn<T1(T1, T2)>> f,
-                   const T1 &init, const List<T2> &xs) {
+  template <typename T1, typename T2, typename F0>
+  static T1 fold_m(F0 &&f, const T1 &init, const List<T2> &xs) {
     if (std::holds_alternative<typename List<T2>::Nil>(xs.v())) {
       return init;
     } else {
       const auto &[a0, a1] = std::get<typename List<T2>::Cons>(xs.v());
       T1 acc = f(init, a0);
-      return fold_m<T1, T2>(std::move(f), std::move(acc), *a1);
+      return fold_m<T1, T2>(f, std::move(acc), *a1);
     }
   }
 

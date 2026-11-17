@@ -2,18 +2,12 @@
 #define INCLUDED_BIND_TYPE_INFERENCE
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
-#include <crane_itree.h>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <memory>
 #include <stdexcept>
-#include <system_error>
+#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -43,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -89,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -103,17 +98,19 @@ struct BindTypeInference {
 
   static int64_t test1();
 
-  template <typename T1, typename T2>
-  static T2 transform(const T1 &ma, std::type_identity_t<crane::fn<T2(T1)>> f) {
+  template <typename T1, typename T2, typename F1>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &&>
+  static T2 transform(const T1 &ma, F1 &&f) {
     T1 x = ma;
     return f(std::move(x));
   }
 
   static int64_t test2();
 
-  template <typename T1, typename T2, typename T3>
-  static T3 nested(const T1 &a, std::type_identity_t<crane::fn<T2(T1)>> f,
-                   std::type_identity_t<crane::fn<T3(T2)>> g) {
+  template <typename T1, typename T2, typename T3, typename F1, typename F2>
+    requires std::is_invocable_r_v<T2, F1 &, T1 &&> &&
+             std::is_invocable_r_v<T3, F2 &, T2 &&>
+  static T3 nested(const T1 &a, F1 &&f, F2 &&g) {
     T1 x = a;
     T2 y = f(std::move(x));
     return g(std::move(y));

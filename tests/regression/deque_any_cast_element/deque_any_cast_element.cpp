@@ -14,12 +14,12 @@ apply_entry(const SigT<Tag, crane::fn<crane::obj(crane::obj)>> &e) {
                              return _a1;
                            }(std::make_pair(crane::obj(UINT64_C(1)),
                                             crane::obj(UINT64_C(2))),
-                                      [](auto _a0, auto _a1) {
-                                        _a1.push_front(_a0);
-                                        return _a1;
-                                      }(std::make_pair(crane::obj(UINT64_C(3)),
-                                                       crane::obj(UINT64_C(4))),
-                                        std::deque<crane::obj>{}))),
+                             [](auto _a0, auto _a1) {
+                               _a1.push_front(_a0);
+                               return _a1;
+                             }(std::make_pair(crane::obj(UINT64_C(3)),
+                                              crane::obj(UINT64_C(4))),
+                               std::deque<crane::obj>{}))),
                            crane::obj(UINT64_C(20)))))));
   }
   case Tag::TAGB: {

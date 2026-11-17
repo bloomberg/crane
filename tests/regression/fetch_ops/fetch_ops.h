@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -104,28 +105,28 @@ struct FetchOps {
   static uint64_t fetch_byte(const state &s, uint64_t addr);
   static inline const uint64_t fetch_default_test =
       fetch_byte(state{List<uint64_t>::cons(
-                     UINT64_C(1),
-                     List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))},
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))},
                  UINT64_C(5));
   static uint64_t fetch_byte_direct(const List<uint64_t> &rom_data,
                                     uint64_t addr);
-  static inline const uint64_t fetch_in_range_test = fetch_byte_direct(
-      List<uint64_t>::cons(
+  static inline const uint64_t fetch_in_range_test =
+      fetch_byte_direct(List<uint64_t>::cons(
           UINT64_C(11),
           List<uint64_t>::cons(
               UINT64_C(22),
               List<uint64_t>::cons(UINT64_C(33), List<uint64_t>::nil()))),
-      UINT64_C(1));
+                        UINT64_C(1));
 
-  template <typename T1> static List<T1> drop(uint64_t n, List<T1> l) {
+  template <typename T1> static List<T1> drop(uint64_t n, const List<T1> &l) {
     if (n <= 0) {
       return l;
     } else {
       uint64_t n_ = n - 1;
-      if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
+      if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v_mut());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return drop<T1>(n_, *a1);
       }
     }
@@ -134,25 +135,21 @@ struct FetchOps {
   static std::pair<uint64_t, uint64_t>
   fetch_pair(const List<uint64_t> &rom_data, uint64_t addr);
   static inline const uint64_t fetch_pair_test = []() {
-    std::pair<uint64_t, uint64_t> p = fetch_pair(
-        List<uint64_t>::cons(
-            UINT64_C(1),
-            List<uint64_t>::cons(
-                UINT64_C(2),
-                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
-        UINT64_C(0));
+    std::pair<uint64_t, uint64_t> p = fetch_pair(List<uint64_t>::cons(
+        UINT64_C(1), List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3), List<uint64_t>::nil()))),
+                                                 UINT64_C(0));
     return (p.first + p.second);
   }();
   static std::optional<std::pair<uint64_t, uint64_t>>
   fetch_window(const List<uint64_t> &rom_data, uint64_t addr);
   static inline const uint64_t fetch_window_test = []() -> uint64_t {
-    auto _cs = fetch_window(
-        List<uint64_t>::cons(
-            UINT64_C(9),
-            List<uint64_t>::cons(
-                UINT64_C(8),
-                List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
-        UINT64_C(0));
+    auto _cs = fetch_window(List<uint64_t>::cons(
+        UINT64_C(9), List<uint64_t>::cons(
+                         UINT64_C(8), List<uint64_t>::cons(
+                                          UINT64_C(7), List<uint64_t>::nil()))),
+                            UINT64_C(0));
     if (_cs.has_value()) {
       const std::pair<uint64_t, uint64_t> &p = *_cs;
       const auto &[_x, next] = p;
@@ -162,11 +159,11 @@ struct FetchOps {
     }
   }();
   static inline const std::pair<
-      std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>
-      t = std::make_pair(std::make_pair(std::make_pair(fetch_default_test,
-                                                       fetch_in_range_test),
-                                        fetch_pair_test),
-                         fetch_window_test);
+      std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t> t =
+      std::make_pair(std::make_pair(
+          std::make_pair(fetch_default_test, fetch_in_range_test),
+          fetch_pair_test),
+                     fetch_window_test);
 };
 
 template <typename T1>
@@ -175,7 +172,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -183,7 +180,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

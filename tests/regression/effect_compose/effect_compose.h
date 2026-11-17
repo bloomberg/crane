@@ -2,14 +2,16 @@
 #define INCLUDED_EFFECT_COMPOSE
 
 #include "fn.h"
-#include <crane_itree.h>
+#include "shared_block.h"
+#include <cstdint>
 #include <future>
 #include <iostream>
 #include <string>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
+static_assert(crane::rc_is_atomic,
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 struct EffectCompose {
   /// Spawn a future that doubles a number, retrieve the result.

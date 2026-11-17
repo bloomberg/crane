@@ -1,7 +1,7 @@
 #ifndef INCLUDED_SETOID_RW
 #define INCLUDED_SETOID_RW
 
-#include <utility>
+#include <cstdint>
 
 struct SetoidRw {
   static uint64_t mod3(uint64_t n);

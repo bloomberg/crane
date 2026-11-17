@@ -4,22 +4,21 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
+#include <algorithm>
 #include <atomic>
-#include <crane_itree.h>
 #include <cstdint>
-#include <filesystem>
-#include <fstream>
-#include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <stm_adapter.h>
-#include <system_error>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
+static_assert(crane::rc_is_atomic,
+              "this unit runs on several threads, but a header included before "
+              "it chose CRANE_NON_ATOMIC_RC");
 
 template <typename A> struct List;
 
@@ -46,16 +45,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -92,8 +92,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -109,27 +109,27 @@ template <typename K, typename V> struct CHT {
   stm::TVar<List<std::pair<K, V>>> cht_fallback;
 
   stm::TVar<List<std::pair<K, V>>> bucket_of(const K &k) const {
-    int64_t i = (this->cht_nbuckets == 0
-                     ? this->cht_hash(k)
-                     : this->cht_hash(k) %
-                           (this->cht_nbuckets | (this->cht_nbuckets == 0)));
+    auto &&_once1 = this->cht_hash(k);
+    auto &&_once2 = this->cht_nbuckets;
+    int64_t i = (_once2 == 0 ? _once1 : _once1 % (_once2 | (_once2 == 0)));
     return this->cht_buckets.at(i);
   }
 
   std::optional<V> stm_get(const K &k) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
-    List<std::pair<K, V>> xs = stm::readTVar(b);
-    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k, xs);
+    List<std::pair<K, V>> xs = stm::readTVar(std::move(b));
+    return CHT<int, int>::template assoc_lookup<K, V>(this->cht_eqb, k,
+                                                      std::move(xs));
   }
 
-  std::monostate stm_put(const K &k, const V &v) const {
+  void stm_put(const K &k, const V &v) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
     List<std::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, std::move(xs));
-    stm::writeTVar(b, xs_);
-    return std::monostate{};
+    stm::writeTVar(std::move(b), std::move(xs_));
+    return;
   }
 
   std::optional<V> stm_delete(const K &k) const {
@@ -141,15 +141,15 @@ template <typename K, typename V> struct CHT {
     auto _cs = p.first;
     if (_cs.has_value()) {
       const V &_x = *_cs;
-      stm::writeTVar(std::move(b), p.second);
-      return p.first;
+      stm::writeTVar(std::move(b), std::move(p).second);
+      return std::move(p).first;
     } else {
-      return p.first;
+      return std::move(p).first;
     }
   }
 
   template <typename F1>
-    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
+    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &&>
   V stm_update(const K &k, F1 &&f) const {
     stm::TVar<List<std::pair<K, V>>> b = this->bucket_of(k);
     List<std::pair<K, V>> xs = stm::readTVar(b);
@@ -159,7 +159,7 @@ template <typename K, typename V> struct CHT {
     List<std::pair<K, V>> xs_ =
         CHT<int, int>::template assoc_insert_or_replace<K, V>(this->cht_eqb, k,
                                                               v, std::move(xs));
-    stm::writeTVar(b, xs_);
+    stm::writeTVar(std::move(b), std::move(xs_));
     return v;
   }
 
@@ -173,13 +173,8 @@ template <typename K, typename V> struct CHT {
     }
   }
 
-  std::monostate put(const K &k, const V &v) const {
-    return stm::atomically([&] {
-      return [&]() {
-        this->stm_put(k, v);
-        return std::monostate{};
-      }();
-    });
+  void put(const K &k, const V &v) const {
+    return stm::atomically([&] { return this->stm_put(k, v); });
   }
 
   std::optional<V> get(const K &k) const {
@@ -190,9 +185,7 @@ template <typename K, typename V> struct CHT {
     return stm::atomically([&] { return this->stm_delete(k); });
   }
 
-  template <typename F1>
-    requires std::is_invocable_r_v<V, F1 &, std::optional<V> &>
-  V hash_update(const K &k, F1 &&f) const {
+  template <typename F1> V hash_update(const K &k, F1 &&f) const {
     return stm::atomically([&] { return this->stm_update(k, f); });
   }
 
@@ -201,7 +194,6 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::optional<T2> assoc_lookup(F0 &&eqb, const T1 &k,
                                         const List<std::pair<T1, T2>> &xs) {
     if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {
@@ -219,7 +211,6 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static List<std::pair<T1, T2>>
   assoc_insert_or_replace(F0 &&eqb, const T1 &k, const T2 &v,
                           const List<std::pair<T1, T2>> &xs) {
@@ -242,7 +233,6 @@ template <typename K, typename V> struct CHT {
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::pair<std::optional<T2>, List<std::pair<T1, T2>>>
   assoc_remove(F0 &&eqb, const T1 &k, const List<std::pair<T1, T2>> &xs) {
     if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(xs.v())) {
@@ -256,8 +246,9 @@ template <typename K, typename V> struct CHT {
       } else {
         std::pair<std::optional<T2>, List<std::pair<T1, T2>>> q =
             CHT<int, int>::template assoc_remove<T1, T2>(eqb, k, *a1);
-        return std::make_pair(q.first, List<std::pair<T1, T2>>::cons(
-                                           std::make_pair(k_, v_), q.second));
+        return std::make_pair(std::move(q).first,
+                              List<std::pair<T1, T2>>::cons(
+                                  std::make_pair(k_, v_), std::move(q).second));
       }
     }
   }
@@ -266,43 +257,42 @@ template <typename K, typename V> struct CHT {
   static std::vector<stm::TVar<List<std::pair<T1, T2>>>>
   mk_buckets(int64_t num) {
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> buckets = {};
-    auto f_impl =
-        [&](auto &_self_f,
-            uint64_t n) -> std::vector<stm::TVar<List<std::pair<T1, T2>>>> {
-      if (n <= 0) {
-        return buckets;
-      } else {
-        uint64_t n_ = n - 1;
-        stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically(
-            [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
-        buckets.push_back(b);
-        return _self_f(_self_f, n_);
+    {
+      uint64_t _lc1_n = static_cast<unsigned int>(num);
+      uint64_t _lc1_loop_n = _lc1_n;
+      while (true) {
+        if (_lc1_loop_n <= 0) {
+          return buckets;
+        } else {
+          uint64_t n_ = _lc1_loop_n - 1;
+          stm::TVar<List<std::pair<T1, T2>>> b = stm::atomically([&] {
+            return stm::newTVar<List<std::pair<T1, T2>>>(
+                List<std::pair<T1, T2>>::nil());
+          });
+          buckets.push_back(std::move(b));
+          _lc1_loop_n = n_;
+        }
       }
-    };
-    auto f =
-        [&](uint64_t n) -> std::vector<stm::TVar<List<std::pair<T1, T2>>>> {
-      return f_impl(f_impl, n);
-    };
-    return f(static_cast<unsigned int>(num));
+    }
   }
 
-  template <typename T1, typename T2>
-  static CHT<T1, T2> new_hash(std::type_identity_t<crane::fn<bool(T1, T1)>> eqb,
-                              std::type_identity_t<crane::fn<int64_t(T1)>> hash,
-                              int64_t requested) {
-    int64_t n = std::max<int64_t>(requested, 1);
+  template <typename T1, typename T2, typename F0, typename F1>
+  static CHT<T1, T2> new_hash(F0 &&eqb, F1 &&hash, int64_t requested) {
+    int64_t n = std::max<int64_t>(requested, INT64_C(1));
     std::vector<stm::TVar<List<std::pair<T1, T2>>>> bs =
         CHT<int, int>::template mk_buckets<T1, T2>(n);
     bool empt = bs.empty();
     if (empt) {
-      stm::TVar<List<std::pair<T1, T2>>> fb = stm::atomically(
-          [&] { return stm::newTVar(List<std::pair<T1, T2>>::nil()); });
+      stm::TVar<List<std::pair<T1, T2>>> fb = stm::atomically([&] {
+        return stm::newTVar<List<std::pair<T1, T2>>>(
+            List<std::pair<T1, T2>>::nil());
+      });
       std::vector<stm::TVar<List<std::pair<T1, T2>>>> v = {};
       v.push_back(fb);
-      return CHT<T1, T2>{std::move(eqb), std::move(hash), v, 1, fb};
+      return CHT<T1, T2>{eqb, hash, std::move(v), INT64_C(1), std::move(fb)};
     } else {
-      stm::TVar<List<std::pair<T1, T2>>> b = bs.at(0);
-      return CHT<T1, T2>{std::move(eqb), std::move(hash), bs, n, std::move(b)};
+      stm::TVar<List<std::pair<T1, T2>>> b = bs.at(INT64_C(0));
+      return CHT<T1, T2>{eqb, hash, std::move(bs), n, std::move(b)};
     }
   }
 };

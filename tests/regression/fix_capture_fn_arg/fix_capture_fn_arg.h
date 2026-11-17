@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_CAPTURE_FN_ARG
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct FixCaptureFnArg {
@@ -24,8 +25,11 @@ struct FixCaptureFnArg {
         return (_self_go(_self_go, x_) + 1);
       }
     };
-    auto go = [=](uint64_t x) -> uint64_t { return go_impl(go_impl, x); };
-    return std::make_pair(f(base), go);
+    auto go =
+        [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
+          return go_impl(go_impl, x);
+        };
+    return std::make_pair(f(base), std::move(go));
   }
 
   /// test1: make_transform(x=>x*2, 5) = (10, go).

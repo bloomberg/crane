@@ -68,7 +68,11 @@ for dir in tests/$category/*/; do
             done
             cppsrcs=$(echo $cppsrcs)
         fi
-        srcs=$(echo $cppsrcs $name.t.cpp)
+        # The driver is linked first, so its translation unit is initialised
+        # first: a header's variable must then hold its value before a
+        # generated .cpp's initialisation has run -- the order that shows an
+        # initialisation-order bug, which the other order hides.
+        srcs=$(echo $name.t.cpp $cppsrcs)
             cat << EOF
 (subdir $name
  (rule

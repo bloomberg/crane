@@ -4,7 +4,7 @@
 DeepDestruct::mylist<uint64_t>
 DeepDestruct::build_aux(uint64_t n, DeepDestruct::mylist<uint64_t> acc) {
   DeepDestruct::mylist<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_acc;
@@ -27,7 +27,7 @@ uint64_t DeepDestruct::head_or_zero(const DeepDestruct::mylist<uint64_t> &l) {
           l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename DeepDestruct::mylist<uint64_t>::Mycons>(l.v());
     return a0;
   }

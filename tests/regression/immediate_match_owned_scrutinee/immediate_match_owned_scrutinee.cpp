@@ -13,14 +13,14 @@ Nat ImmediateMatchOwnedScrutinee::count(const List<Nat> &l) {
   if (std::holds_alternative<typename List<Nat>::Nil>(l.v())) {
     return Nat::o();
   } else {
-    const auto &[a0, a1] = std::get<typename List<Nat>::Cons>(l.v());
+    const auto &[_, a1] = std::get<typename List<Nat>::Cons>(l.v());
     return Nat::s(count(*a1));
   }
 }
 
 std::optional<Nat> ImmediateMatchOwnedScrutinee::pred_count(List<Nat> l) {
   Nat n = count(l);
-  crane::fn<Nat(Nat)> g = [=](const Nat &k) {
+  crane::fn<Nat(Nat)> g = [=, l = std::move(l)](const Nat &k) {
     return count(List<Nat>::cons(k, l));
   };
   return std::make_optional<Nat>([&]() {
@@ -33,12 +33,13 @@ std::optional<Nat> ImmediateMatchOwnedScrutinee::pred_count(List<Nat> l) {
   }());
 }
 
-bool ImmediateMatchOwnedScrutinee::check(std::monostate) {
+bool ImmediateMatchOwnedScrutinee::check() {
   auto _cs = pred_count(List<Nat>::cons(
       Nat::s(Nat::o()),
-      List<Nat>::cons(Nat::s(Nat::s(Nat::o())),
-                      List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
-                                      List<Nat>::nil()))));
+      List<Nat>::cons(
+          Nat::s(Nat::s(Nat::o())),
+          List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                          List<Nat>::nil()))));
   if (_cs.has_value()) {
     const Nat &n = *_cs;
     if (std::holds_alternative<typename Nat::O>(n.v())) {

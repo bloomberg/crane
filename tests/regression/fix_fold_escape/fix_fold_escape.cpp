@@ -21,12 +21,14 @@ FixFoldEscape::collect_adders(const List<uint64_t> &l) {
             return (_self_adder(_self_adder, x_) + 1);
           }
         };
-        auto adder = [=](uint64_t x) -> uint64_t {
-          return adder_impl(adder_impl, x);
-        };
-        return List<crane::fn<uint64_t(uint64_t)>>::cons(adder, acc);
+        auto adder =
+            [=, adder_impl = std::move(adder_impl)](uint64_t x) -> uint64_t {
+              return adder_impl(adder_impl, x);
+            };
+        return List<crane::fn<uint64_t(uint64_t)>>::cons(std::move(adder), acc);
       },
-      List<crane::fn<uint64_t(uint64_t)>>::nil(), l);
+      List<crane::fn<uint64_t(uint64_t)>>::nil(),
+      l);
 }
 
 uint64_t FixFoldEscape::apply_head(const List<crane::fn<uint64_t(uint64_t)>> &l,
@@ -35,7 +37,7 @@ uint64_t FixFoldEscape::apply_head(const List<crane::fn<uint64_t(uint64_t)>> &l,
           l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename List<crane::fn<uint64_t(uint64_t)>>::Cons>(l.v());
     return a0(x);
   }

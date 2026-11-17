@@ -6,12 +6,11 @@
     C++ standard library equivalents ([std::optional], [std::pair],
     [std::string], [int64_t], [double]).
 
-    Sets the stdlib flavor to ["std"] and the clang-format style. *)
+    Sets the stdlib flavor to ["std"]. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Shared.
 
 #[export] Set Crane StdLib "std".
-#[export] Set Crane Format Style "{BasedOnStyle: LLVM, SeparateDefinitionBlocks: Always}".
 
 Crane Extract Inductive option =>
   "std::optional<%t0>"
@@ -104,3 +103,8 @@ Crane Extract Inlined Constant PrimFloat.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant PrimFloat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant PrimFloat.leb => "%a0 <= %a1".
 Crane Extract Inlined Constant PrimFloat.of_uint63 => "static_cast<double>(%a0)".
+(* [classify]'s result is the [float_class] enum, whose constructors are
+   numbered in declaration order: [PNormal], [NNormal], [PSubn], [NSubn],
+   [PZero], [NZero], [PInf], [NInf], [NaN]. *)
+Crane Extract Inlined Constant PrimFloat.classify =>
+  "[](double _x) { const int _c = std::fpclassify(_x); const int _n = std::signbit(_x) ? 1 : 0; return static_cast<%ret>(_c == FP_NAN ? 8 : (_c == FP_INFINITE ? 6 : _c == FP_ZERO ? 4 : _c == FP_SUBNORMAL ? 2 : 0) + _n); }(%a0)" From "cmath".

@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -40,16 +40,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -86,8 +87,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -97,35 +98,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -147,7 +148,7 @@ struct PromOps {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return List<T1>::cons(x, *a1);
       }
     } else {
@@ -202,62 +203,40 @@ struct PromOps {
   static state3 set_prom_params3(const state3 &s, uint64_t addr, uint64_t data,
                                  bool enable);
   static inline const uint64_t test3 = []() {
-    return []() {
-      state3 s =
-          state3{UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
-                 false,
-                 UINT64_C(4),
-                 List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
-                 List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(
-                     UINT64_C(8),
-                     List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
-                 true,
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 false};
-      state3 s_ =
-          set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-      return ((s_.prom_addr3 +
-               (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
-              s_.regs3.length());
-    }();
+    state3 s = state3{
+        UINT64_C(1), List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3), List<uint64_t>::nil())),
+        false, UINT64_C(4),
+        List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
+        List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()), UINT64_C(0),
+        UINT64_C(0), List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
+        UINT64_C(0), List<uint64_t>::cons(
+                         UINT64_C(8), List<uint64_t>::cons(
+                                          UINT64_C(9), List<uint64_t>::nil())),
+        true, UINT64_C(0), UINT64_C(0), false};
+    state3 s_ =
+        set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
+    return ((s_.prom_addr3 + (s_.prom_enable3 ? s_.prom_data3 : UINT64_C(0))) +
+            s_.regs3.length());
   }();
   static inline const uint64_t test4 = []() {
-    return []() {
-      state3 s =
-          state3{UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())),
-                 false,
-                 UINT64_C(4),
-                 List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
-                 List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
-                 UINT64_C(0),
-                 List<uint64_t>::cons(
-                     UINT64_C(8),
-                     List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
-                 true,
-                 UINT64_C(0),
-                 UINT64_C(0),
-                 false};
-      state3 s_ =
-          set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
-      return ((s_.prom_addr3 +
-               (s_.prom_enable3 ? std::move(s_).prom_data3 : UINT64_C(0))) +
-              s_.regs3.length());
-    }();
+    state3 s = state3{
+        UINT64_C(1), List<uint64_t>::cons(
+                         UINT64_C(2), List<uint64_t>::cons(
+                                          UINT64_C(3), List<uint64_t>::nil())),
+        false, UINT64_C(4),
+        List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()),
+        List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()), UINT64_C(0),
+        UINT64_C(0), List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()),
+        UINT64_C(0), List<uint64_t>::cons(
+                         UINT64_C(8), List<uint64_t>::cons(
+                                          UINT64_C(9), List<uint64_t>::nil())),
+        true, UINT64_C(0), UINT64_C(0), false};
+    state3 s_ =
+        set_prom_params3(std::move(s), UINT64_C(21), UINT64_C(144), true);
+    return ((s_.prom_addr3 + (s_.prom_enable3 ? s_.prom_data3 : UINT64_C(0))) +
+            s_.regs3.length());
   }();
 
   struct state5 {
@@ -272,25 +251,20 @@ struct PromOps {
   static state5 set_prom_params5(const state5 &s, uint64_t addr, uint64_t data,
                                  bool enable);
   static inline const uint64_t test5 = []() {
-    return []() {
-      state5 s = state5{
-          UINT64_C(3),
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
-          List<uint64_t>::cons(
-              UINT64_C(9),
-              List<uint64_t>::cons(
-                  UINT64_C(8),
-                  List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
-          UINT64_C(0),
-          UINT64_C(0),
-          false};
-      state5 s_ =
-          set_prom_params5(std::move(s), UINT64_C(23), UINT64_C(77), true);
-      return ((s_.acc5 + s_.prom_addr5) +
-              (s_.prom_enable5 ? std::move(s_).prom_data5 : UINT64_C(0)));
-    }();
+    state5 s = state5{
+        UINT64_C(3), List<uint64_t>::cons(
+                         UINT64_C(1), List<uint64_t>::cons(
+                                          UINT64_C(2), List<uint64_t>::nil())),
+        List<uint64_t>::cons(
+            UINT64_C(9),
+            List<uint64_t>::cons(
+                UINT64_C(8),
+                List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil()))),
+        UINT64_C(0), UINT64_C(0), false};
+    state5 s_ =
+        set_prom_params5(std::move(s), UINT64_C(23), UINT64_C(77), true);
+    return ((s_.acc5 + s_.prom_addr5) +
+            (s_.prom_enable5 ? s_.prom_data5 : UINT64_C(0)));
   }();
 
   struct state6 {
@@ -302,15 +276,15 @@ struct PromOps {
 
   static state6 set_prom_params6(const state6 &s, uint64_t addr, uint64_t data,
                                  bool enable);
-  static inline const state6 sample6 = state6{
-      List<uint64_t>::cons(
+  static inline const state6 sample6 =
+      state6{List<uint64_t>::cons(
           UINT64_C(10),
           List<uint64_t>::cons(
               UINT64_C(11),
               List<uint64_t>::cons(
                   UINT64_C(12),
                   List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
-      UINT64_C(0), UINT64_C(0), false};
+             UINT64_C(0), UINT64_C(0), false};
   static inline const bool test6 = Bool::eqb(
       set_prom_params6(sample6, UINT64_C(2), UINT64_C(99), true).prom_enable6,
       true);
@@ -327,10 +301,10 @@ struct PromOps {
                                  bool enable);
   static inline const state7 sample7 =
       state7{List<uint64_t>::cons(
-                 UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
              List<uint64_t>::cons(
                  UINT64_C(9),
                  List<uint64_t>::cons(
@@ -353,10 +327,10 @@ struct PromOps {
                                  bool enable);
   static inline const state8 sample8 =
       state8{List<uint64_t>::cons(
-                 UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2),
-                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+          UINT64_C(1),
+          List<uint64_t>::cons(
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
              List<uint64_t>::cons(
                  UINT64_C(9),
                  List<uint64_t>::cons(UINT64_C(8), List<uint64_t>::nil())),
@@ -374,18 +348,20 @@ struct PromOps {
 
   static state9 set_prom_params9(const state9 &s, uint64_t addr, uint64_t data,
                                  bool enable);
-  static inline const state9 sample9 = state9{
-      List<uint64_t>::cons(
+  static inline const state9 sample9 =
+      state9{List<uint64_t>::cons(
           UINT64_C(10),
           List<uint64_t>::cons(
               UINT64_C(11),
               List<uint64_t>::cons(
                   UINT64_C(12),
                   List<uint64_t>::cons(UINT64_C(13), List<uint64_t>::nil())))),
-      UINT64_C(0), UINT64_C(0), false};
+             UINT64_C(0), UINT64_C(0), false};
   static inline const bool test9 =
-      set_prom_params9(sample9, UINT64_C(12), UINT64_C(99), true)
-          .rom9.length() == sample9.rom9.length();
+      set_prom_params9(sample9, UINT64_C(12), UINT64_C(99),
+                       true)
+          .rom9.length() ==
+      sample9.rom9.length();
 
   struct state10 {
     List<uint64_t> regs10;
@@ -404,48 +380,45 @@ struct PromOps {
   static state10 set_prom_params10(const state10 &s, uint64_t addr,
                                    uint64_t data, bool enable);
   static state10 execute_wpm10(const state10 &s);
-  static inline const state10 sample10 = state10{
-      List<uint64_t>::cons(
+  static inline const state10 sample10 =
+      state10{List<uint64_t>::cons(
           UINT64_C(1),
           List<uint64_t>::cons(
               UINT64_C(2),
               List<uint64_t>::cons(
                   UINT64_C(3),
                   List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())))),
-      List<uint64_t>::cons(
-          UINT64_C(10),
-          List<uint64_t>::cons(
-              UINT64_C(11),
               List<uint64_t>::cons(
-                  UINT64_C(12),
+                  UINT64_C(10),
                   List<uint64_t>::cons(
-                      UINT64_C(13),
+                      UINT64_C(11),
                       List<uint64_t>::cons(
-                          UINT64_C(14),
+                          UINT64_C(12),
                           List<uint64_t>::cons(
-                              UINT64_C(15),
+                              UINT64_C(13),
                               List<uint64_t>::cons(
-                                  UINT64_C(16),
+                                  UINT64_C(14),
                                   List<uint64_t>::cons(
-                                      UINT64_C(17),
-                                      List<uint64_t>::nil())))))))),
-      UINT64_C(7),
-      UINT64_C(1025),
-      List<uint64_t>::cons(
-          UINT64_C(7),
-          List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
-      UINT64_C(2),
-      List<uint64_t>::cons(
-          UINT64_C(3),
-          List<uint64_t>::cons(
-              UINT64_C(4),
+                                      UINT64_C(15),
+                                      List<uint64_t>::cons(
+                                          UINT64_C(16),
+                                          List<uint64_t>::cons(
+                                              UINT64_C(17),
+                                              List<uint64_t>::nil())))))))),
+              UINT64_C(7), UINT64_C(1025),
               List<uint64_t>::cons(
-                  UINT64_C(5),
-                  List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil())))),
-      UINT64_C(5),
-      UINT64_C(0),
-      UINT64_C(0),
-      false};
+                  UINT64_C(7),
+                  List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil())),
+              UINT64_C(2),
+              List<uint64_t>::cons(
+                  UINT64_C(3),
+                  List<uint64_t>::cons(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(
+                          UINT64_C(5), List<uint64_t>::cons(
+                                           UINT64_C(6),
+                                           List<uint64_t>::nil())))),
+              UINT64_C(5), UINT64_C(0), UINT64_C(0), false};
   static inline const bool check_pc_bound = []() {
     state10 after = execute_wpm10(
         set_prom_params10(sample10, UINT64_C(3), UINT64_C(99), true));
@@ -513,51 +486,35 @@ struct PromOps {
     bool prom_enable11;
   };
 
-  static state11 execute_wpm11(state11 s);
-  static inline const state11 sample11 = state11{
-      List<uint64_t>::cons(
+  static state11 execute_wpm11(const state11 &s);
+  static inline const state11 sample11 =
+      state11{List<uint64_t>::cons(
           UINT64_C(0),
           List<uint64_t>::cons(
               UINT64_C(0),
               List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil()))),
-      UINT64_C(1), UINT64_C(9), true};
+              UINT64_C(1), UINT64_C(9), true};
   static inline const uint64_t test11 = ListDef::template nth<uint64_t>(
       UINT64_C(1), execute_wpm11(sample11).rom11, UINT64_C(0));
   static inline const std::pair<
-      std::pair<
-          std::pair<
-              std::pair<
-                  std::pair<
-                      std::pair<
-                          std::pair<
-                              std::pair<std::pair<std::pair<uint64_t, uint64_t>,
-                                                  uint64_t>,
-                                        uint64_t>,
-                              uint64_t>,
+      std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<
+          std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>,
+                                                                  uint64_t>,
+                                                        bool>,
+                                              bool>,
+                                    bool>,
                           bool>,
-                      bool>,
-                  bool>,
-              bool>,
-          bool>,
-      uint64_t>
-      t = std::make_pair(
-          std::make_pair(
-              std::make_pair(
-                  std::make_pair(
-                      std::make_pair(
-                          std::make_pair(
-                              std::make_pair(
-                                  std::make_pair(
-                                      std::make_pair(
-                                          std::make_pair(test1, test2), test3),
-                                      test4),
-                                  test5),
-                              test6),
-                          test7),
-                      test8),
-                  test9),
-              test10),
-          test11);
+                bool>,
+      uint64_t> t = std::make_pair(std::make_pair(std::make_pair(std::make_pair(
+      std::make_pair(std::make_pair(std::make_pair(std::make_pair(
+          std::make_pair(std::make_pair(test1, test2), test3), test4),
+                                                   test5),
+                                    test6),
+                     test7),
+      test8),
+                                                                 test9),
+                                                  test10),
+                                   test11);
 };
 
 template <typename T1>
@@ -566,7 +523,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -574,7 +531,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

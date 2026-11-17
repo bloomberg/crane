@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_MATCHES_MODULE
 #define INCLUDED_NAME_MATCHES_MODULE
 
+#include <cstdint>
 #include <type_traits>
 #include <variant>
 
@@ -25,15 +26,12 @@ struct NameMatchesModule {
         return a0;
       }
 
-      template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
-      T1 Inner_rec(F0 &&f) const {
-        const auto &[a0] = *this;
-        return f(a0);
+      template <typename T1, typename F0> T1 Inner_rec(F0 &&f) const {
+        return this->template Inner_rect<T1>(f);
       }
 
       template <typename T1, typename F0>
-        requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+        requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
       T1 Inner_rect(F0 &&f) const {
         const auto &[a0] = *this;
         return f(a0);
@@ -45,7 +43,7 @@ struct NameMatchesModule {
   /// its enclosing module becomes a member with the same name as its class,
   /// which C++ forbids.  Both spellings are here: Inner inside module Inner,
   /// and NameMatchesModule inside module NameMatchesModule.
-  static inline const uint64_t NameMatchesModule0 = UINT64_C(4);
+  static constexpr uint64_t NameMatchesModule0 = UINT64_C(4);
   static inline const uint64_t run =
       (NameMatchesModule0 + Inner_Mod::Inner::i(UINT64_C(6)).get());
 };

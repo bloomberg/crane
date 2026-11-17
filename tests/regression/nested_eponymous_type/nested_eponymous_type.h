@@ -11,11 +11,11 @@ struct Nat;
 template <typename X> struct Compare;
 
 struct Other {
-  static bool is_lt(const Nat &n);
+  static bool is_lt0(const Nat &n);
 };
 
 struct Compare_Mod {
-  static bool is_lt0(const Nat &n);
+  static bool is_lt(const Nat &n);
 };
 
 struct Nat {
@@ -63,8 +63,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -136,8 +136,8 @@ public:
 struct NestedEponymousType {
   template <typename T1>
   static bool use(const T1 &x, const T1 &y, const Compare<T1> &c) {
-    return (c.cmp_lt(x, y) && (Compare_Mod::is_lt0(Nat::s(Nat::o())) &&
-                               Other::is_lt(Nat::s(Nat::o()))));
+    return (c.cmp_lt(x, y) && (Compare_Mod::is_lt(Nat::s(Nat::o())) &&
+                               Other::is_lt0(Nat::s(Nat::o()))));
   }
 };
 

@@ -91,6 +91,9 @@ staged, everything up to and including `make bench-build` still works; only the
 2. **opam**: `yojson`, `unix` (OCaml runners); `coq-color` (already a rocq-crane
    dependency).
 3. **immer** headers, default `$(HOME)/cpp/immer` — override with `IMMER=/path`.
+   **mimalloc** (`brew install mimalloc`), linked into the Crane runners as the
+   C++ allocator; `MIMALLOC_LIBS=` builds them with the system allocator.  They
+   are built `-O3 -flto` (`CRANE_OPT`).
 4. **simdjson** / **libxml2** for the reference baselines.
 5. **hyperfine** on `PATH` for wall-clock measurement.
 

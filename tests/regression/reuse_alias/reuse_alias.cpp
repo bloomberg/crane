@@ -35,7 +35,7 @@ ReuseAlias::alias_and_match(const ReuseAlias::mylist<uint64_t> &l) {
           l.v())) {
     return std::make_pair(l, UINT64_C(0));
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v());
     return std::make_pair(l, a0);
   }
@@ -49,7 +49,7 @@ ReuseAlias::scrutinee_in_branch(const ReuseAlias::mylist<uint64_t> &l) {
           l.v())) {
     return std::make_pair(mylist<uint64_t>::mynil(), mylist<uint64_t>::mynil());
   } else {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename ReuseAlias::mylist<uint64_t>::Mycons>(l.v());
     return std::make_pair(l, *a1);
   }

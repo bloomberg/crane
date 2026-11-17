@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -35,16 +35,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -81,8 +82,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,19 +95,22 @@ struct LetFix {
   static uint64_t local_sum(const List<uint64_t> &l);
 
   template <typename T1> static List<T1> local_rev(const List<T1> &l) {
-    auto go_impl = [](auto &_self_go, List<T1> acc,
-                      const List<T1> &xs) -> List<T1> {
-      if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
-        return acc;
-      } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
-        return _self_go(_self_go, List<T1>::cons(a0, std::move(acc)), *a1);
+    {
+      List<T1> _lc1_acc = List<T1>::nil();
+      const List<T1> &_lc1_xs = l;
+      const List<T1> *_lc1_loop_xs = &_lc1_xs;
+      List<T1> _lc1_loop_acc = std::move(_lc1_acc);
+      while (true) {
+        if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_xs->v())) {
+          return _lc1_loop_acc;
+        } else {
+          const auto &[a0, a1] =
+              std::get<typename List<T1>::Cons>(_lc1_loop_xs->v());
+          _lc1_loop_xs = crane_raw(a1);
+          _lc1_loop_acc = List<T1>::cons(a0, std::move(_lc1_loop_acc));
+        }
       }
-    };
-    auto go = [&](List<T1> acc, const List<T1> &xs) -> List<T1> {
-      return go_impl(go_impl, acc, xs);
-    };
-    return go(List<T1>::nil(), l);
+    }
   }
 
   static List<uint64_t> local_flatten(const List<List<uint64_t>> &xss);
@@ -116,7 +120,7 @@ struct LetFix {
     if (std::holds_alternative<typename List<T1>::Nil>(xs.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(xs.v());
+      const auto &[_, a1] = std::get<typename List<T1>::Cons>(xs.v());
       return (local_length<T1>(*a1) + 1);
     }
   }
@@ -137,20 +141,20 @@ struct LetFix {
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
   static inline const List<uint64_t> test_flatten =
-      local_flatten(List<List<uint64_t>>::cons(
-          List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
+      local_flatten(
           List<List<uint64_t>>::cons(
-              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
+              List<uint64_t>::cons(
+                  UINT64_C(1),
+                  List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
               List<List<uint64_t>>::cons(
-                  List<uint64_t>::cons(
+                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()),
+                  List<List<uint64_t>>::cons(List<uint64_t>::cons(
                       UINT64_C(4),
                       List<uint64_t>::cons(
-                          UINT64_C(5),
-                          List<uint64_t>::cons(UINT64_C(6),
-                                               List<uint64_t>::nil()))),
-                  List<List<uint64_t>>::nil()))));
+                          UINT64_C(5), List<uint64_t>::cons(
+                                           UINT64_C(6),
+                                           List<uint64_t>::nil()))),
+                                             List<List<uint64_t>>::nil()))));
   static inline const bool test_mem_found = local_mem(
       UINT64_C(3),
       List<uint64_t>::cons(

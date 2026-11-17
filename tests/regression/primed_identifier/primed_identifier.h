@@ -2,13 +2,15 @@
 #define INCLUDED_PRIMED_IDENTIFIER
 
 #include "crane_fn.h"
-#include "fn.h"
 #include <atomic>
+#include <concepts>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
 struct Nat;
+struct Sized_nat_;
 
 struct PrimedIdentifier {
   static Nat use(const Nat &n);
@@ -59,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -68,35 +70,47 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
-template <typename t> using Sized = crane::fn<Nat(t)>;
+template <typename I, typename T>
+concept Sized = requires {
+  { I::size(std::declval<T>()) } -> std::convertible_to<Nat>;
+};
 
-template <typename T1> Nat size(std::type_identity_t<Sized<T1>> sized, T1 x0_) {
-  return sized(std::move(x0_));
+template <typename _tcI0, typename T1>
+  requires Sized<_tcI0, T1>
+Nat size(const T1 &x0_) {
+  return _tcI0::size(x0_);
 }
 
-const Sized<Nat> Sized_nat_ = [](const Nat &n) { return Nat::s(n); };
-Nat twice_(const Nat &n);
+struct Sized_nat_ {
+  static Nat size(Nat n) { return Nat::s(std::move(n)); }
+};
+
+static_assert(Sized<Sized_nat_, Nat>);
+Nat twice_(Nat n);
 
 #endif // INCLUDED_PRIMED_IDENTIFIER

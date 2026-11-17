@@ -1,0 +1,233 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** Rendering CppIR as C++ source text.
+
+    The last stage of the pipeline, after the passes that settle a
+    declaration ({!Cpp_passes.Pipeline.finish}).  The declaration printer's input
+    is a finished declaration in CppIR ({!Cpp_ir.Resolved}): it runs no
+    compiler pass.  The registries below
+    are the printer's remaining state: forward declarations and synthesised
+    aliases it mints while rendering and the assembly drains. *)
+
+open Names
+
+(** The types the printer reads: CppIR at the phase resolution leaves. *)
+type ty = Cpp_ir.Resolved.Type.t
+
+(** The declarations the printer reads: CppIR at the phase resolution leaves. *)
+type decl = Cpp_ir.Resolved.Decl.t
+
+(** {2 Rendering} *)
+
+(** [pp_cpp_type_at ctx par vl t] renders the CppIR type [t] at the
+    position [ctx]; [par] and [vl] as for {!pp_cpp_type}. *)
+val pp_cpp_type_at : Unit_plan.Cpp_state.render_ctx -> bool -> Id.t list -> ty -> Pp.t
+
+(** The name of a module a declaration of the tree names, as
+    {!Cpp_ast.resolve} resolved it where the declaration is written; under
+    [CRANE_CHECK_IR], checked against the name resolution gives it at the
+    position it is printed at ({!Unit_plan.Cpp_names.live_name}).  A module not yet
+    resolved is an anomaly. *)
+val resolved_module : Unit_plan.Cpp_state.render_ctx -> Cpp_ast.module_ref -> Base.Cpp_name.t
+
+(** {!resolved_module} for the concept of a type class. *)
+val resolved_class_concept : Unit_plan.Cpp_state.render_ctx -> Cpp_ast.global_ref -> Base.Cpp_name.t
+
+(** {!resolved_module} for a type. *)
+val resolved_type_name : Unit_plan.Cpp_state.render_ctx -> Cpp_ast.global_ref -> Base.Cpp_name.t
+
+(** {!resolved_module} for the concept of a module type. *)
+val resolved_concept : Unit_plan.Cpp_state.render_ctx -> Cpp_ast.concept_ref -> Base.Cpp_name.t
+
+(** [name_in ctx names frame key] is the name [names] gives [key] at
+    [frame], checked as {!resolved_module} is, at the position [ctx].  A
+    table not yet resolved, or one that was but not for this, is an
+    anomaly. *)
+val name_in : Unit_plan.Cpp_state.render_ctx -> Unit_plan.Cpp_resolution.table -> Unit_plan.Cpp_resolution.frame -> Unit_plan.Cpp_resolution.key -> Base.Cpp_name.t
+
+(** The text of a declaration not yet printed, printed at the position its
+    spelling enters, a module type's concept by [modtype_concept] and an
+    assertion by [assertion], from the names resolved for it. *)
+val print_unprinted :
+  Unit_plan.Cpp_state.render_ctx ->
+  modtype_concept:
+    (Unit_plan.Cpp_state.render_ctx ->
+    names:Unit_plan.Cpp_resolution.table ->
+    params:ModPath.t list ->
+    ModPath.t ->
+    Cpp_ast.Modtype_concept.t ->
+    Pp.t ) ->
+  assertion:(Unit_plan.Cpp_state.render_ctx -> Cpp_ast.assertion -> Pp.t) ->
+  Cpp_ast.unprinted ->
+  Pp.t
+
+(** [read_cpp_decl ctx env decl] renders [decl] at the position [ctx]: for
+    a declaration whose text is read, not written. *)
+val read_cpp_decl : Unit_plan.Cpp_state.render_ctx -> Base.Common.env -> decl -> Pp.t
+
+
+(** How a member is written: in the struct with or without its body, or out
+    of line. *)
+type member_mode
+
+(** [pp_cpp_field ctx env f] renders a struct member at the position
+    [ctx].  [struct_name] is the enclosing struct's name, for constructors
+    and destructors. *)
+val pp_cpp_field :
+  struct_name:Pp.t ->
+  ?mode:member_mode ->
+  Unit_plan.Cpp_state.render_ctx ->
+  Base.Common.env ->
+  Cpp_ir.Resolved.phase Cpp_ir.Field.t ->
+  Pp.t
+
+(** [pp_type ctx t] renders the type [t], naming no variable by index, at
+    the position [ctx]. *)
+val pp_type : Unit_plan.Cpp_state.render_ctx -> ty -> Pp.t
+
+(** [pp_cpp_type u par vl t] renders a type no finished declaration holds
+    at the start of the header of the unit [u], where nothing may be named, for a diagnostic
+    of a type that names nothing; [par] asks for parentheses where
+    precedence needs them, [vl] names the type variables by index.
+    [~lead:false] drops the leading [typename] of a dependent name about to
+    be embedded in a longer one.  The type is resolved already
+    ({!Cpp_passes.Pipeline.spell_type}): the printer reads no lowered value. *)
+val pp_cpp_type : ?lead:bool -> Unit_plan.Context.t -> Unit_plan.Cpp_state.plans -> bool -> Id.t list -> ty -> Pp.t
+
+(** Doc-comment lines for [name], or nothing when none is registered. *)
+val pp_doc_comment_for_name : ?indent:string -> string -> Pp.t
+
+(** The break between two declaration groups ({!Cpp_ast.cut2}). *)
+val cut2 : unit -> Pp.t
+
+(** {2 The printer's spelling, as planning asks it}
+
+    Planning's questions about what a declaration writes
+    ({!Leaf_plan.resolved_names_into_a_struct}) are asked of the same
+    heads and names the printer writes, not of a rendering. *)
+
+(** A type's name as the type printer writes it: the qualifiers in front of
+    it, the name itself, whether a dependent qualifier in it asks for
+    [typename], and whether template arguments following it need the
+    [template] disambiguator. *)
+type written_head = {
+  outer : Base.Cpp_name.scope list;
+  head : Base.Cpp_name.t;
+  typename : bool;
+  template_keyword : bool;
+}
+
+(** A name written with nothing in front of it. *)
+val unqualified_head : Base.Cpp_name.t -> written_head
+
+(** The head of a global type no custom mapping inlines, at the position,
+    [applied] when template arguments follow it. *)
+val glob_head : Unit_plan.Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> written_head
+
+(** The head of an inductive written through the struct it is declared in. *)
+val inductive_head : Unit_plan.Cpp_state.render_ctx -> GlobRef.t -> applied:bool -> written_head
+
+(** The qualifiers a member of the struct being defined out of line is
+    written with when named outside that struct's body, or [None] where it
+    is written bare. *)
+val member_scopes : Unit_plan.Cpp_state.render_ctx -> ty -> Base.Cpp_name.scope list option
+
+(** The spelling of an external type's name in a file of the unit given. *)
+val external_type_name : Unit_plan.Context.t -> string -> string
+
+(** The primitive integer type, if registered: what a literal of it is
+    written through. *)
+val uint63_type : unit -> GlobRef.t option
+
+(** The type a declaration introduces, by the entity it declares, for an
+    alias and a wrapper struct. *)
+val decl_type_ref : decl -> GlobRef.t option
+
+(** {2 Custom type templates} *)
+
+
+(** [pp_type_pieces r pieces arg] writes the type mapping [r] instantiated
+    in [pieces], hole [i] filled with [arg i] -- in a module type's concept,
+    each argument written as the concept qualifies it.  Every hole is
+    supplied, an erased argument included ({!Cpp_ast.Modtype_concept.concept_type}). *)
+val pp_type_pieces : GlobRef.t -> Cpp_ir.Foreign.piece list -> (int -> Pp.t option) -> Pp.t
+
+(** {2 Wrapper structs} *)
+
+(** The name the struct wrapping an inductive at namespace scope is written
+    under at the position. *)
+val nspace_wrapper_name : Unit_plan.Cpp_state.render_ctx -> GlobRef.t -> string
+
+(** Under [CRANE_CHECK_IR], the type name the declaration given introduces
+    at file scope where written at the position given, noted as written in
+    the file. *)
+val note_file_scope_type : Unit_plan.Cpp_state.render_ctx -> decl -> unit
+
+(** {2 Synthesised aliases} *)
+
+(** A template synthesised to stand where a type constructor is written as a
+    template template argument but has no template name of its own: an alias
+    template, or a holder -- a struct over the enclosing declaration's
+    parameters the body names, with the alias as its member [c]. *)
+type ctor_alias = Unit_plan.Cpp_state.ctor_alias = {
+  base : string;  (** What its name is made from. *)
+  holder : Unit_plan.Cpp_state.holder_parameter list option;  (** A holder's parameters. *)
+  declared : Cpp_ast.declared_in;  (** Where it is declared. *)
+  body : string;
+      (** The type it abbreviates, as written where it is declared. *)
+  type_ : ty;  (** That type. *)
+  vars : Id.t list;  (** The names of the variables it names by index. *)
+  uses : Unit_plan.Cpp_state.tyctor_use list;  (** How its body writes the type constructors in it. *)
+}
+
+(** The name of a template, a function of its body. *)
+val ctor_alias_name : ctor_alias -> string
+
+(** How the type constructor given, naming the variables given by index, is
+    written at the position given: as the plan of the leaf being printed
+    says, or as planning, deciding it there, decides and notes. *)
+val tyctor_written : Unit_plan.Cpp_state.render_ctx -> Id.t list -> ty -> (ctor_alias * Unit_plan.Cpp_state.holder_argument list) option
+
+(** The template given, spelled at the position given: collected where the
+    position collects them, and otherwise, under [CRANE_CHECK_IR], noted as
+    spelled in the file. *)
+val note_ctor_alias_spelled : Unit_plan.Cpp_state.render_ctx -> ctor_alias -> unit
+
+(** What a synthesised template's body is decided from. *)
+
+(** [tyctor_constructor t] is the constructor a type constructor position
+    writes: the head of [t] when [t] is applied, [t] otherwise. *)
+val tyctor_constructor : ty -> ty
+
+(** [cut_at_argument_list s] is [s] up to its first template argument list. *)
+val cut_at_argument_list : string -> string
+
+(** [identifier_tokens s] is the identifiers [s] writes, as whole tokens. *)
+val identifier_tokens : string -> string list
+
+(** [foreign_text fr] is the text the instantiated mapping [fr] was
+    instantiated from, each hole the placeholder it was written as. *)
+val foreign_text : Cpp_ir.Resolved.phase Cpp_ir.Foreign.t -> string
+
+(** The type variable a synthesised alias template abstracts over
+    ([Cpp_ir.Type.Carrier_parameter]). *)
+val ctor_alias_tvar : string
+
+(** Under [CRANE_CHECK_IR], start recording the templates the file about
+    to be written spells. *)
+val start_ctor_alias_census : unit -> unit
+
+(** The templates the file being written spelled where nothing collected
+    them since {!start_ctor_alias_census}, under [CRANE_CHECK_IR]; starts
+    the census again. *)
+val take_ctor_aliases_spelled : unit -> ctor_alias list
+
+(** Under [CRANE_CHECK_IR], start recording the type names the file about
+    to be written introduces at file scope. *)
+val start_file_scope_census : unit -> unit
+
+(** Under [CRANE_CHECK_IR], check those against the ones planned
+    ({!Unit_plan.Cpp_state.file_scope_types_of}). *)
+val check_file_scope_types : file:Base.Common.file -> unit
+

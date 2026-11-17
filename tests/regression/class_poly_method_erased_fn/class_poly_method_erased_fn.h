@@ -1,11 +1,10 @@
 #ifndef INCLUDED_CLASS_POLY_METHOD_ERASED_FN
 #define INCLUDED_CLASS_POLY_METHOD_ERASED_FN
 
-#include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A typeclass method polymorphic in its own type argument
@@ -16,25 +15,27 @@
 template <typename I>
 concept Mapper = requires {
   {
-    I::mapf(std::declval<crane::fn<crane::obj(crane::obj)>>(),
-            std::declval<crane::obj>())
+    I::template mapf<crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<crane::obj>())
   } -> std::convertible_to<crane::obj>;
 };
 
 struct ClassPolyMethodErasedFn {
   template <Mapper _tcI0, typename T1, typename F0>
   static T1 mapf(F0 &&x, const T1 &x0) {
-    return crane_any_cast<T1>(_tcI0::mapf(crane_erase_fn(x), x0));
+    return _tcI0::template mapf<T1>(x, x0);
   }
 
   struct Twice {
-    static crane::obj mapf(crane::fn<crane::obj(crane::obj)> f, crane::obj x) {
-      return f(f(x));
+    template <typename CraneA0>
+    static CraneA0 mapf(crane::fn<CraneA0(CraneA0)> f, CraneA0 x) {
+      return f(f(std::move(x)));
     }
   };
 
   static_assert(Mapper<Twice>);
-  static inline const uint64_t go = mapf<Twice, uint64_t>(
+  static inline const uint64_t go = Twice::template mapf<uint64_t>(
       [](uint64_t n) { return (n + UINT64_C(3)); }, UINT64_C(1));
 };
 

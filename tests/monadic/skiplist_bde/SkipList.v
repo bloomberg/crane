@@ -186,7 +186,7 @@ Crane Extract Inlined Constant writeNext => "stm::writeTVar<bsl::shared_ptr<Skip
 (* In our STM context, NodeRef (shared_ptr) serves as the pair reference *)
 Definition Pair (K V : Type) := NodeRef K V.
 
-Crane Extract Inlined Constant Pair => "bsl::shared_ptr<SkipNode<%t0, %t1>>".
+Crane Extract Inlined Constant Pair => "bsl::shared_ptr<SkipNode<%t0, %t1>>" From "skipnode.h".
 
 Record SkipList (K V : Type) := mkSkipList {
   slHead     : NodeRef K V;      (* Sentinel head node *)

@@ -1,7 +1,6 @@
 #ifndef INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
 #define INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
 
-#include <atomic>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -46,7 +45,7 @@ struct GeneratedVariantFactoryNameClash {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &>
+    requires std::is_invocable_r_v<T1, F1 &, const bool &>
   static T1 token_rect(T1 f, F1 &&f0, const token &t) {
     if (std::holds_alternative<typename token::Variant_t>(t.v())) {
       return f;
@@ -57,14 +56,8 @@ struct GeneratedVariantFactoryNameClash {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, bool &>
   static T1 token_rec(T1 f, F1 &&f0, const token &t) {
-    if (std::holds_alternative<typename token::Variant_t>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename token::Other>(t.v());
-      return f0(a0);
-    }
+    return token_rect<T1>(std::move(f), f0, t);
   }
 
   static bool is_variant(const token &t);

@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <crane_itree.h>
+#include <cstdint>
 #include <utility>
 #include <variant>
 
@@ -20,7 +20,7 @@ struct TranslateAppliesHandler {
   static std::shared_ptr<ITree<uint64_t>> relabelled();
   static std::shared_ptr<ITree<uint64_t>> injected();
 
-  template <typename T1 = void> static uint64_t which_b(BE e) {
+  template <typename T1 = void> constexpr static uint64_t which_b(BE e) {
     switch (e) {
     case BE::B0: {
       return UINT64_C(0);
@@ -35,8 +35,7 @@ struct TranslateAppliesHandler {
 
   template <typename T1 = void>
   static uint64_t which_side(const Sum1<AE, AE, crane::obj> &e) {
-    if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(
-            e.v())) {
+    if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(e.v())) {
       return UINT64_C(1);
     } else {
       return UINT64_C(2);

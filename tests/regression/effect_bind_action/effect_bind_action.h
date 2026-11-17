@@ -2,7 +2,6 @@
 #define INCLUDED_EFFECT_BIND_ACTION
 
 #include <chrono>
-#include <crane_itree.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -11,8 +10,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct EffectBindAction {
   /// 1. Bool match inside bind action: one branch block template

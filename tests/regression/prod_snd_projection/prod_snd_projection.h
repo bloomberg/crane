@@ -3,8 +3,8 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -39,6 +39,9 @@ struct ProdSndProjection {
 
     // MANIPULATORS
     ~t() {
+      if (std::holds_alternative<L>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<t>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<N>(&_v)) {
@@ -62,8 +65,8 @@ struct ProdSndProjection {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -72,7 +75,6 @@ struct ProdSndProjection {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<uint64_t, t> &>
   static T1 t_rect(T1 f, F1 &&f0, const t &t0) {
     if (std::holds_alternative<typename t::L>(t0.v())) {
       return f;
@@ -83,14 +85,8 @@ struct ProdSndProjection {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, std::pair<uint64_t, t> &>
   static T1 t_rec(T1 f, F1 &&f0, const t &t0) {
-    if (std::holds_alternative<typename t::L>(t0.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename t::N>(t0.v());
-      return f0(*a0);
-    }
+    return t_rect<T1>(std::move(f), f0, t0);
   }
 
   static uint64_t depth(const t &x);

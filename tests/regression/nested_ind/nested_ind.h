@@ -5,9 +5,10 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -38,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,26 +95,28 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -140,35 +144,37 @@ struct NestedInd {
 
     explicit custom_list(Ccons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    custom_list(const custom_list<_U> &_other)
+    template <typename CraneU>
+    custom_list(const custom_list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename custom_list<_U>::Cnil>(
+            if (std::holds_alternative<typename custom_list<CraneU>::Cnil>(
                     _other.v())) {
               return Cnil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename custom_list<_U>::Ccons>(_other.v());
-              return Ccons{[&]() -> A {
-                             if constexpr (crane_convertible<A, const _U &>) {
-                               return crane_convert<A>(a0);
-                             } else {
-                               throw std::logic_error(
-                                   "unreachable: inactive constructor field at "
-                                   "this instantiation");
-                             }
-                           }(),
-                           (a1 ? std::make_shared<custom_list<A>>(
-                                     crane_convert<custom_list<A>>(*a1))
-                               : nullptr)};
+                  std::get<typename custom_list<CraneU>::Ccons>(_other.v());
+              return Ccons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<custom_list<A>>(
+                            crane_convert<custom_list<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
     static custom_list<A> cnil() { return custom_list<A>(Cnil{}); }
 
     static custom_list<A> ccons(A a0, custom_list<A> a1) {
-      return custom_list<A>(Ccons{
-          std::move(a0), std::make_shared<custom_list<A>>(std::move(a1))});
+      return custom_list<A>(
+          Ccons{std::move(a0),
+                std::make_shared<custom_list<A>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -190,8 +196,8 @@ struct NestedInd {
 
     custom_list(const custom_list &) = default;
     custom_list &operator=(const custom_list &) = default;
-    custom_list(custom_list &&) noexcept = default;
-    custom_list &operator=(custom_list &&) noexcept = default;
+    custom_list(custom_list &&) = default;
+    custom_list &operator=(custom_list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -201,36 +207,36 @@ struct NestedInd {
     uint64_t custom_list_length() const {
       const custom_list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const custom_list<A> *_self;
       };
 
-      /// _Cont_Ccons: resumes after recursive call, then processes rest.
-      struct _Cont_Ccons {};
+      /// CraneCont_Ccons: resumes after recursive call, then processes rest.
+      struct CraneCont_Ccons {};
 
-      using _Frame = std::variant<_Enter, _Cont_Ccons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Ccons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified custom_list_length: _Enter -> _Cont_Ccons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified custom_list_length: CraneEnter -> CraneCont_Ccons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
+            const auto &[_, a1] =
                 std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(_Cont_Ccons{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Ccons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Ccons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Ccons>(_frame));
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
@@ -238,79 +244,36 @@ struct NestedInd {
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, custom_list<A> &, T1 &>
     T1 custom_list_rec(T1 f, F1 &&f0) const {
-      const custom_list<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const custom_list<A> *_self;
-      };
-
-      /// _Cont_Ccons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Ccons {
-        A a0;
-        std::shared_ptr<custom_list<A>> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Ccons>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified custom_list_rec: _Enter -> _Cont_Ccons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const custom_list<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(_Cont_Ccons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Ccons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<custom_list<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template custom_list_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, custom_list<A> &, T1 &>
     T1 custom_list_rect(T1 f, F1 &&f0) const {
       const custom_list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const custom_list<A> *_self;
       };
 
-      /// _Cont_Ccons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Ccons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Ccons {
+      struct CraneCont_Ccons {
         A a0;
         std::shared_ptr<custom_list<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Ccons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Ccons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified custom_list_rect: _Enter -> _Cont_Ccons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified custom_list_rect: CraneEnter -> CraneCont_Ccons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const custom_list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename custom_list<A>::Cnil>(_sv.v())) {
@@ -318,11 +281,11 @@ struct NestedInd {
           } else {
             const auto &[a0, a1] =
                 std::get<typename custom_list<A>::Ccons>(_sv.v());
-            _stack.emplace_back(_Cont_Ccons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Ccons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Ccons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Ccons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<custom_list<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -351,28 +314,29 @@ struct NestedInd {
 
     explicit rose(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    rose(const rose<_U> &_other)
+    template <typename CraneU>
+    rose(const rose<CraneU> &_other)
         : v_([&]() -> variant_t {
             const auto &[a0, a1] =
-                std::get<typename rose<_U>::Node>(_other.v());
-            return Node{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
-                            return crane_convert<A>(a0);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (a1 ? std::make_shared<custom_list<rose<A>>>(
-                                  crane_convert<custom_list<rose<A>>>(*a1))
-                            : nullptr)};
+                std::get<typename rose<CraneU>::Node>(_other.v());
+            return Node{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a0);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (a1 ? std::make_shared<custom_list<rose<A>>>(
+                          crane_convert<custom_list<rose<A>>>(*a1))
+                    : nullptr)};
           }()) {}
 
     static rose<A> node(A a0, custom_list<rose<A>> a1) {
-      return rose<A>(Node{std::move(a0), std::make_shared<custom_list<rose<A>>>(
-                                             std::move(a1))});
+      return rose<A>(
+          Node{std::move(a0),
+               std::make_shared<custom_list<rose<A>>>(std::move(a1))});
     }
 
     // MANIPULATORS
@@ -384,7 +348,7 @@ struct NestedInd {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
             while (std::holds_alternative<typename custom_list<rose<A>>::Ccons>(
-                _lp->v())) {
+                       _lp->v())) {
               auto &_lc =
                   std::get<typename custom_list<rose<A>>::Ccons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose<A>>(std::move(_lc.a0)));
@@ -412,8 +376,8 @@ struct NestedInd {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -421,25 +385,20 @@ struct NestedInd {
     const variant_t &v() const { return v_; }
 
     uint64_t children_count() const {
-      const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
+      const auto &[_, a1] = std::get<typename rose<A>::Node>(this->v());
       return a1->custom_list_length();
     }
 
     A root() const {
-      const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
+      const auto &[a0, _] = std::get<typename rose<A>::Node>(this->v());
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, custom_list<rose<A>> &>
-    T1 rose_rec(F0 &&f) const {
-      const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
-      return f(a0, *a1);
+    template <typename T1, typename F0> T1 rose_rec(F0 &&f) const {
+      return this->template rose_rect<T1>(f);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, custom_list<rose<A>> &>
-    T1 rose_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 rose_rect(F0 &&f) const {
       const auto &[a0, a1] = std::get<typename rose<A>::Node>(this->v());
       return f(a0, *a1);
     }
@@ -508,14 +467,16 @@ struct NestedInd {
 
     // MANIPULATORS
     ~expr() {
+      if (std::holds_alternative<Lit>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<expr>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Add>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a0.get();
-            while (
-                std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<expr>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -532,8 +493,7 @@ struct NestedInd {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a0.get();
-            while (
-                std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<expr>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<expr>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<expr>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -560,8 +520,8 @@ struct NestedInd {
 
     expr(const expr &) = default;
     expr &operator=(const expr &) = default;
-    expr(expr &&) noexcept = default;
-    expr &operator=(expr &&) noexcept = default;
+    expr(expr &&) = default;
+    expr &operator=(expr &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -569,331 +529,223 @@ struct NestedInd {
     const variant_t &v() const { return v_; }
 
     template <typename F0>
-      requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
     expr lit_map(F0 &&f) const {
-      const expr *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const expr *_self;
-      };
-
-      using _Frame = std::variant<_Enter>;
-      expr _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified lit_map: _Enter.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-          _result = expr::lit(f(a0));
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          List<expr> _tmp3;
-          auto aux_impl = [&](auto &_self_aux,
-                              const List<expr> &l) -> List<expr> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<expr>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(a00.lit_map(f),
-                                      _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<expr> {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp3 = aux(*a0);
-          _result = expr::add(std::move(_tmp3));
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          List<expr> _tmp6;
-          auto aux_impl = [&](auto &_self_aux,
-                              const List<expr> &l) -> List<expr> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<expr>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return List<expr>::cons(a00.lit_map(f),
-                                      _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<expr> {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp6 = aux(*a0);
-          _result = expr::mul(std::move(_tmp6));
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Lit>(this->v());
+        return expr::lit(f(a0));
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        List<expr> _tmp3;
+        auto aux_impl =
+            [&](auto &_self_aux, const List<expr> &l) -> List<expr> {
+              if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+                return List<expr>::nil();
+              } else {
+                const auto &[a00, a10] =
+                    std::get<typename List<expr>::Cons>(l.v());
+                return List<expr>::cons(a00.lit_map(f),
+                                        _self_aux(_self_aux, *a10));
+              }
+            };
+        auto aux =
+            [&](const List<expr> &l) -> List<expr> {
+              return aux_impl(aux_impl, l);
+            };
+        _tmp3 = aux(*a0);
+        return expr::add(std::move(_tmp3));
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        List<expr> _tmp6;
+        auto aux_impl =
+            [&](auto &_self_aux, const List<expr> &l) -> List<expr> {
+              if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+                return List<expr>::nil();
+              } else {
+                const auto &[a00, a10] =
+                    std::get<typename List<expr>::Cons>(l.v());
+                return List<expr>::cons(a00.lit_map(f),
+                                        _self_aux(_self_aux, *a10));
+              }
+            };
+        auto aux =
+            [&](const List<expr> &l) -> List<expr> {
+              return aux_impl(aux_impl, l);
+            };
+        _tmp6 = aux(*a0);
+        return expr::mul(std::move(_tmp6));
       }
-      return _result;
     }
 
     List<uint64_t> literals() const {
-      const expr *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const expr *_self;
-      };
-
-      using _Frame = std::variant<_Enter>;
-      List<uint64_t> _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified literals: _Enter.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-          _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          auto aux_impl = [](auto &_self_aux,
-                             const List<expr> &l) -> List<uint64_t> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<uint64_t>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return a00.literals().app(_self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<uint64_t> {
-            return aux_impl(aux_impl, l);
-          };
-          _result = aux(*a0);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          auto aux_impl = [](auto &_self_aux,
-                             const List<expr> &l) -> List<uint64_t> {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return List<uint64_t>::nil();
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return a00.literals().app(_self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> List<uint64_t> {
-            return aux_impl(aux_impl, l);
-          };
-          _result = aux(*a0);
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Lit>(this->v());
+        return List<uint64_t>::cons(a0, List<uint64_t>::nil());
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        auto aux_impl =
+            [](auto &_self_aux, const List<expr> &l) -> List<uint64_t> {
+              if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+                return List<uint64_t>::nil();
+              } else {
+                const auto &[a00, a10] =
+                    std::get<typename List<expr>::Cons>(l.v());
+                return a00.literals().app(_self_aux(_self_aux, *a10));
+              }
+            };
+        auto aux =
+            [&](const List<expr> &l) -> List<uint64_t> {
+              return aux_impl(aux_impl, l);
+            };
+        return aux(*a0);
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        auto aux_impl =
+            [](auto &_self_aux, const List<expr> &l) -> List<uint64_t> {
+              if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+                return List<uint64_t>::nil();
+              } else {
+                const auto &[a00, a10] =
+                    std::get<typename List<expr>::Cons>(l.v());
+                return a00.literals().app(_self_aux(_self_aux, *a10));
+              }
+            };
+        auto aux =
+            [&](const List<expr> &l) -> List<uint64_t> {
+              return aux_impl(aux_impl, l);
+            };
+        return aux(*a0);
       }
-      return _result;
     }
 
     uint64_t expr_depth() const {
-      const expr *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const expr *_self;
-      };
-
-      using _Frame = std::variant<_Enter>;
-      uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified expr_depth: _Enter.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          _result = UINT64_C(0);
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          uint64_t _tmp3;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp3 = aux(*a0);
-          _result = (_tmp3 + 1);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          uint64_t _tmp6;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp6 = aux(*a0);
-          _result = (_tmp6 + 1);
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        return UINT64_C(0);
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        uint64_t _tmp3;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
+        _tmp3 = aux(*a0);
+        return (_tmp3 + 1);
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        uint64_t _tmp6;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return std::max(a00.expr_depth(), _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
+        _tmp6 = aux(*a0);
+        return (_tmp6 + 1);
       }
-      return _result;
     }
 
     uint64_t expr_size() const {
-      const expr *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const expr *_self;
-      };
-
-      using _Frame = std::variant<_Enter>;
-      uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified expr_size: _Enter.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          _result = UINT64_C(1);
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          uint64_t _tmp3;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.expr_size() + _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp3 = aux(*a0);
-          _result = (_tmp3 + 1);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          uint64_t _tmp6;
-          auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.expr_size() + _self_aux(_self_aux, *a10));
-            }
-          };
-          auto aux = [&](const List<expr> &l) -> uint64_t {
-            return aux_impl(aux_impl, l);
-          };
-          _tmp6 = aux(*a0);
-          _result = (_tmp6 + 1);
-        }
+      if (std::holds_alternative<typename expr::Lit>(this->v())) {
+        return UINT64_C(1);
+      } else if (std::holds_alternative<typename expr::Add>(this->v())) {
+        const auto &[a0] = std::get<typename expr::Add>(this->v());
+        uint64_t _tmp3;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return (a00.expr_size() + _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
+        _tmp3 = aux(*a0);
+        return (_tmp3 + 1);
+      } else {
+        const auto &[a0] = std::get<typename expr::Mul>(this->v());
+        uint64_t _tmp6;
+        auto aux_impl = [](auto &_self_aux, const List<expr> &l) -> uint64_t {
+          if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a00, a10] = std::get<typename List<expr>::Cons>(l.v());
+            return (a00.expr_size() + _self_aux(_self_aux, *a10));
+          }
+        };
+        auto aux =
+            [&](const List<expr> &l) -> uint64_t {
+              return aux_impl(aux_impl, l);
+            };
+        _tmp6 = aux(*a0);
+        return (_tmp6 + 1);
       }
-      return _result;
     }
 
     uint64_t eval() const {
-      const expr *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const expr *_self;
-      };
-
-      using _Frame = std::variant<_Enter>;
-      uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified eval: _Enter.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        auto _f = std::move(std::get<_Enter>(_frame));
-        const expr *_self = _f._self;
-        auto &&_sv = *_self;
-        if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Lit>(_sv.v());
-          _result = std::move(a0);
-        } else if (std::holds_alternative<typename expr::Add>(_sv.v())) {
-          const auto &[a0] = std::get<typename expr::Add>(_sv.v());
-          auto sum_all_impl = [](auto &_self_sum_all,
-                                 const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(0);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
-            }
-          };
-          auto sum_all = [&](const List<expr> &l) -> uint64_t {
-            return sum_all_impl(sum_all_impl, l);
-          };
-          _result = sum_all(*a0);
-        } else {
-          const auto &[a0] = std::get<typename expr::Mul>(_sv.v());
-          auto prod_all_impl = [](auto &_self_prod_all,
-                                  const List<expr> &l) -> uint64_t {
-            if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
-              return UINT64_C(1);
-            } else {
-              const auto &[a00, a10] =
-                  std::get<typename List<expr>::Cons>(l.v());
-              return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
-            }
-          };
-          auto prod_all = [&](const List<expr> &l) -> uint64_t {
-            return prod_all_impl(prod_all_impl, l);
-          };
-          _result = prod_all(*a0);
-        }
-      }
-      return _result;
-    }
-
-    template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, List<expr> &> &&
-               std::is_invocable_r_v<T1, F2 &, List<expr> &>
-    T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
         const auto &[a0] = std::get<typename expr::Lit>(this->v());
-        return f(a0);
+        return a0;
       } else if (std::holds_alternative<typename expr::Add>(this->v())) {
         const auto &[a0] = std::get<typename expr::Add>(this->v());
-        return f0(*a0);
+        auto sum_all_impl =
+            [](auto &_self_sum_all, const List<expr> &l) -> uint64_t {
+              if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+                return UINT64_C(0);
+              } else {
+                const auto &[a00, a10] =
+                    std::get<typename List<expr>::Cons>(l.v());
+                return (a00.eval() + _self_sum_all(_self_sum_all, *a10));
+              }
+            };
+        auto sum_all =
+            [&](const List<expr> &l) -> uint64_t {
+              return sum_all_impl(sum_all_impl, l);
+            };
+        return sum_all(*a0);
       } else {
         const auto &[a0] = std::get<typename expr::Mul>(this->v());
-        return f1(*a0);
+        auto prod_all_impl =
+            [](auto &_self_prod_all, const List<expr> &l) -> uint64_t {
+              if (std::holds_alternative<typename List<expr>::Nil>(l.v())) {
+                return UINT64_C(1);
+              } else {
+                const auto &[a00, a10] =
+                    std::get<typename List<expr>::Cons>(l.v());
+                return (a00.eval() * _self_prod_all(_self_prod_all, *a10));
+              }
+            };
+        auto prod_all =
+            [&](const List<expr> &l) -> uint64_t {
+              return prod_all_impl(prod_all_impl, l);
+            };
+        return prod_all(*a0);
       }
     }
 
     template <typename T1, typename F0, typename F1, typename F2>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, List<expr> &> &&
-               std::is_invocable_r_v<T1, F2 &, List<expr> &>
+    T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
+      return this->template expr_rect<T1>(f, f0, f1);
+    }
+
+    template <typename T1, typename F0, typename F1, typename F2>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       if (std::holds_alternative<typename expr::Lit>(this->v())) {
         const auto &[a0] = std::get<typename expr::Lit>(this->v());
@@ -908,25 +760,24 @@ struct NestedInd {
     }
   };
 
-  static inline const expr test_add = expr::add(
-      List<expr>::cons(expr::lit(UINT64_C(1)),
-                       List<expr>::cons(expr::lit(UINT64_C(2)),
-                                        List<expr>::cons(expr::lit(UINT64_C(3)),
-                                                         List<expr>::nil()))));
-  static inline const expr test_mul = expr::mul(
-      List<expr>::cons(expr::lit(UINT64_C(2)),
-                       List<expr>::cons(expr::lit(UINT64_C(3)),
-                                        List<expr>::cons(expr::lit(UINT64_C(4)),
-                                                         List<expr>::nil()))));
+  static inline const expr test_add = expr::add(List<expr>::cons(
+      expr::lit(UINT64_C(1)),
+      List<expr>::cons(
+          expr::lit(UINT64_C(2)),
+          List<expr>::cons(expr::lit(UINT64_C(3)), List<expr>::nil()))));
+  static inline const expr test_mul = expr::mul(List<expr>::cons(
+      expr::lit(UINT64_C(2)),
+      List<expr>::cons(
+          expr::lit(UINT64_C(3)),
+          List<expr>::cons(expr::lit(UINT64_C(4)), List<expr>::nil()))));
   static inline const expr test_nested = expr::mul(List<expr>::cons(
       expr::add(List<expr>::cons(
           expr::lit(UINT64_C(1)),
           List<expr>::cons(expr::lit(UINT64_C(2)), List<expr>::nil()))),
-      List<expr>::cons(
-          expr::add(List<expr>::cons(
-              expr::lit(UINT64_C(3)),
-              List<expr>::cons(expr::lit(UINT64_C(4)), List<expr>::nil()))),
-          List<expr>::nil())));
+      List<expr>::cons(expr::add(List<expr>::cons(
+          expr::lit(UINT64_C(3)),
+          List<expr>::cons(expr::lit(UINT64_C(4)), List<expr>::nil()))),
+                       List<expr>::nil())));
   static inline const uint64_t test_eval_add = test_add.eval();
   static inline const uint64_t test_eval_mul = test_mul.eval();
   static inline const uint64_t test_eval_nested = test_nested.eval();
@@ -935,47 +786,30 @@ struct NestedInd {
   static inline const List<uint64_t> test_literals = test_nested.literals();
   static inline const uint64_t test_doubled =
       test_nested.lit_map([](uint64_t n) { return (n * UINT64_C(2)); }).eval();
-  static inline const std::pair<
-      std::pair<
-          std::pair<
-              std::pair<
-                  std::pair<
-                      std::pair<
-                          std::pair<
-                              std::pair<std::pair<std::pair<std::pair<uint64_t,
-                                                                      uint64_t>,
-                                                            uint64_t>,
-                                                  uint64_t>,
-                                        uint64_t>,
-                              uint64_t>,
+  static inline const std::pair<std::pair<
+      std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<std::pair<
+          std::pair<std::pair<uint64_t, uint64_t>, uint64_t>, uint64_t>,
+                                                                  uint64_t>,
+                                                        uint64_t>,
+                                              uint64_t>,
+                                    uint64_t>,
                           uint64_t>,
-                      uint64_t>,
-                  uint64_t>,
-              uint64_t>,
-          List<uint64_t>>,
-      uint64_t>
-      t = std::make_pair(
-          std::make_pair(
-              std::make_pair(
-                  std::make_pair(
-                      std::make_pair(
-                          std::make_pair(
-                              std::make_pair(
-                                  std::make_pair(
-                                      std::make_pair(
-                                          std::make_pair(
-                                              std::make_pair(test_root_leaf,
-                                                             test_root_small),
-                                              test_children_leaf),
-                                          test_children_small),
-                                      test_children_bigger),
-                                  test_eval_add),
-                              test_eval_mul),
-                          test_eval_nested),
-                      test_size_nested),
-                  test_depth_nested),
-              test_literals),
-          test_doubled);
+                uint64_t>,
+      List<uint64_t>>,
+                                uint64_t> t = std::make_pair(
+      std::make_pair(std::make_pair(std::make_pair(std::make_pair(
+          std::make_pair(std::make_pair(std::make_pair(std::make_pair(
+              std::make_pair(std::make_pair(test_root_leaf, test_root_small),
+                             test_children_leaf),
+              test_children_small),
+                                                       test_children_bigger),
+                                        test_eval_add),
+                         test_eval_mul),
+          test_eval_nested),
+                                                   test_size_nested),
+                                    test_depth_nested),
+                     test_literals),
+      test_doubled);
 };
 
 #endif // INCLUDED_NESTED_IND

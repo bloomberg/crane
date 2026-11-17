@@ -31,10 +31,10 @@ FixStateThreading::collect_odds_evens(const List<uint64_t> &l,
 std::pair<uint64_t, uint64_t>
 FixStateThreading::sum_with_acc(const List<uint64_t> &l, uint64_t acc) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return std::make_pair(std::move(acc), UINT64_C(0));
+    return std::make_pair(acc, UINT64_C(0));
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    auto [acc_, s] = sum_with_acc(*a1, (std::move(acc) + a0));
+    auto [acc_, s] = sum_with_acc(*a1, (acc + a0));
     return std::make_pair(acc_, (s + UINT64_C(1)));
   }
 }

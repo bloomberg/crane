@@ -15,29 +15,31 @@ uint64_t ParallelTest::ack(const std::pair<uint64_t, uint64_t> &p) {
         }
       }
     };
-    auto ack_m = [&](uint64_t n0) -> uint64_t {
-      return ack_m_impl(ack_m_impl, n0);
-    };
+    auto ack_m =
+        [&](uint64_t n0) -> uint64_t { return ack_m_impl(ack_m_impl, n0); };
     return ack_m(n);
   };
-  auto f = [&](uint64_t m, uint64_t n) -> uint64_t {
-    return f_impl(f_impl, m, n);
-  };
-  return f(p.first, p.second);
+  {
+    uint64_t _lc1_m = p.first;
+    uint64_t _lc1_n = p.second;
+    return f_impl(f_impl, _lc1_m, _lc1_n);
+  }
 }
 
 std::pair<uint64_t, uint64_t> ParallelTest::fast(uint64_t m, uint64_t n) {
   std::pair<uint64_t, uint64_t> p = std::make_pair(m, n);
-  std::future<uint64_t> t1 = std::async(std::launch::async, ack, p);
-  std::future<uint64_t> t2 = std::async(std::launch::async, ack, p);
-  uint64_t r1 = t1.get();
-  uint64_t r2 = t2.get();
+  std::shared_future<uint64_t> t1 =
+      std::async(std::launch::async, ack, p).share();
+  std::shared_future<uint64_t> t2 =
+      std::async(std::launch::async, ack, p).share();
+  uint64_t r1 = std::move(t1).get();
+  uint64_t r2 = std::move(t2).get();
   return std::make_pair(r1, r2);
 }
 
 std::pair<uint64_t, uint64_t> ParallelTest::slow(uint64_t m, uint64_t n) {
   std::pair<uint64_t, uint64_t> p = std::make_pair(m, n);
   uint64_t r1 = ack(p);
-  uint64_t r2 = ack(std::move(p));
+  uint64_t r2 = ack(p);
   return std::make_pair(r1, r2);
 }

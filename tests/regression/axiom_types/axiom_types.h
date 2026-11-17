@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -16,14 +16,14 @@ struct AxiomTypes {
   using MysteryType = crane::obj /* AXIOM TO BE REALIZED */;
   static MysteryType mystery_value();
   static MysteryType mystery_function(MysteryType x0_);
-  static MysteryType use_axiom(std::monostate _x);
+  static MysteryType use_axiom();
 
   struct AxiomRecord {
     uint64_t normal_field;
     MysteryType axiom_field;
   };
 
-  static AxiomRecord make_axiom_record(std::monostate _x);
+  static AxiomRecord make_axiom_record();
   static MysteryType extract_axiom_field(const AxiomRecord &r);
 
   struct AxiomInductive {
@@ -66,7 +66,7 @@ struct AxiomTypes {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 AxiomInductive_rect(F0 &&f, F1 &&f0, const AxiomInductive &a) {
     if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
       const auto &[a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
@@ -78,20 +78,13 @@ struct AxiomTypes {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
   static T1 AxiomInductive_rec(F0 &&f, F1 &&f0, const AxiomInductive &a) {
-    if (std::holds_alternative<typename AxiomInductive::AxConstr1>(a.v())) {
-      const auto &[a0] = std::get<typename AxiomInductive::AxConstr1>(a.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename AxiomInductive::AxConstr2>(a.v());
-      return crane_call_erased(f0, a0);
-    }
+    return AxiomInductive_rect<T1>(f, f0, a);
   }
 
-  static AxiomInductive use_axiom_inductive(std::monostate _x);
+  static AxiomInductive use_axiom_inductive();
   static MysteryType axiom_identity(MysteryType x);
-  static MysteryType nested_axiom(std::monostate _x);
+  static MysteryType nested_axiom();
 
   template <typename A> struct list {
     // TYPES
@@ -116,22 +109,22 @@ struct AxiomTypes {
 
     explicit list(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    list(const list<_U> &_other)
+    template <typename CraneU>
+    list(const list<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename list<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename list<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename list<_U>::Cons>(_other.v());
+                  std::get<typename list<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? std::make_shared<list<A>>(crane_convert<list<A>>(*a1))
@@ -165,98 +158,54 @@ struct AxiomTypes {
 
     list(const list &) = default;
     list &operator=(const list &) = default;
-    list(list &&) noexcept = default;
-    list &operator=(list &&) noexcept = default;
+    list(list &&) = default;
+    list &operator=(list &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, list<A> &, T1 &>
-    T1 list_rec(T1 f, F1 &&f0) const {
-      const list<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const list<A> *_self;
-      };
-
-      /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Cons {
-        A a0;
-        std::shared_ptr<list<A>> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Cons>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified list_rec: _Enter -> _Cont_Cons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const list<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename list<A>::Nil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] = std::get<typename list<A>::Cons>(_sv.v());
-            _stack.emplace_back(_Cont_Cons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Cons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<list<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 list_rec(T1 f, F1 &&f0) const {
+      return this->template list_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, list<A> &, T1 &>
-    T1 list_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 list_rect(T1 f, F1 &&f0) const {
       const list<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const list<A> *_self;
       };
 
-      /// _Cont_Cons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Cons {
+      struct CraneCont_Cons {
         A a0;
         std::shared_ptr<list<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Cons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified list_rect: _Enter -> _Cont_Cons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified list_rect: CraneEnter -> CraneCont_Cons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list<A>::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename list<A>::Cons>(_sv.v());
-            _stack.emplace_back(_Cont_Cons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Cons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Cons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<list<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -266,11 +215,11 @@ struct AxiomTypes {
     }
   };
 
-  static list<MysteryType> axiom_list(std::monostate _x);
+  static list<MysteryType> axiom_list();
 
   template <typename T1> static T1 poly_axiom(T1 x) { return x; }
 
-  static MysteryType use_poly_axiom(std::monostate _x);
+  static MysteryType use_poly_axiom();
 };
 
 #endif // INCLUDED_AXIOM_TYPES

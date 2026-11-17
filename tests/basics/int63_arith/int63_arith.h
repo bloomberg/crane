@@ -4,8 +4,8 @@
 #include <cstdint>
 
 struct Int63Arith {
-  static inline const int64_t i_zero = INT64_C(0);
-  static inline const int64_t i_one = INT64_C(1);
+  static constexpr int64_t i_zero = INT64_C(0);
+  static constexpr int64_t i_one = INT64_C(1);
   static inline const int64_t i_add =
       static_cast<int64_t>((static_cast<uint64_t>(INT64_C(10)) +
                             static_cast<uint64_t>(INT64_C(20))) &
@@ -24,9 +24,10 @@ struct Int63Arith {
   static inline const bool i_leb_false = INT64_C(5) <= INT64_C(3);
   static int64_t i_abs(int64_t x);
   static inline const int64_t test_abs_pos = i_abs(INT64_C(42));
-  static inline const int64_t test_abs_neg = i_abs(static_cast<int64_t>(
-      (static_cast<uint64_t>(INT64_C(0)) - static_cast<uint64_t>(INT64_C(42))) &
-      0x7FFFFFFFFFFFFFFFULL));
+  static inline const int64_t test_abs_neg =
+      i_abs(static_cast<int64_t>((static_cast<uint64_t>(INT64_C(0)) -
+                                  static_cast<uint64_t>(INT64_C(42))) &
+                                 0x7FFFFFFFFFFFFFFFULL));
 };
 
 #endif // INCLUDED_INT63_ARITH

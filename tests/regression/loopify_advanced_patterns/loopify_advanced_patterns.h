@@ -4,9 +4,10 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -37,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -146,9 +148,9 @@ struct LoopifyAdvancedPatterns {
   };
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, const uint64_t &>
   static T1 shape_rect(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -163,27 +165,14 @@ struct LoopifyAdvancedPatterns {
   }
 
   template <typename T1, typename F0, typename F1, typename F2>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &>
   static T1 shape_rec(F0 &&f, F1 &&f0, F2 &&f1, const shape &s) {
-    if (std::holds_alternative<typename shape::Circle>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Circle>(s.v());
-      return f(a0);
-    } else if (std::holds_alternative<typename shape::Square>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Square>(s.v());
-      return f0(a0);
-    } else {
-      const auto &[a0] = std::get<typename shape::Triangle>(s.v());
-      return f1(a0);
-    }
+    return shape_rect<T1>(f, f0, f1, s);
   }
 
   static uint64_t extract_value(const shape &s);
   static uint64_t sum_shapes(const List<shape> &l);
   static std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
   count_by_shape(const List<shape> &l);
-
   static List<uint64_t> replace_at(uint64_t idx, uint64_t value,
                                    const List<uint64_t> &l);
 };

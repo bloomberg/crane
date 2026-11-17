@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <cstdint>
 #include <deque>
 #include <utility>
@@ -13,17 +12,16 @@
 #include "Specif.h"
 
 namespace DequeActionMismatch {
-
 enum class Tag;
 using sem_ty = crane::obj;
 enum class Tag { TAGLIST, TAGNAT };
 using action = Specif::SigT<Tag, crane::fn<sem_ty(sem_ty)>>;
-const action base_action =
+[[gnu::used]] inline const action base_action =
     Specif::template SigT<Tag, crane::fn<crane::obj(crane::obj)>>::existt(
         Tag::TAGLIST, crane_erase_fn([](const crane::obj &) -> crane::obj {
           return std::deque<crane::obj>{};
         }));
-const action cons_action =
+[[gnu::used]] inline const action cons_action =
     Specif::template SigT<Tag, crane::fn<crane::obj(crane::obj)>>::existt(
         Tag::TAGLIST,
         crane_erase_fn([](const crane::obj &_any_xs) -> crane::obj {
@@ -33,12 +31,12 @@ const action cons_action =
             _a1.push_front(_a0);
             return _a1;
           }(std::make_pair(crane::obj(UINT64_C(42)), crane::obj(UINT64_C(99))),
-                 xs);
+            xs);
         }));
 Specif::SigT<Tag, sem_ty>
 apply_action(const Specif::SigT<Tag, crane::fn<crane::obj(crane::obj)>> &a,
-             Specif::SigT<Tag, sem_ty> v);
-const Specif::SigT<Tag, sem_ty> chain = []() {
+             const Specif::SigT<Tag, sem_ty> &v);
+[[gnu::used]] inline const Specif::SigT<Tag, sem_ty> chain = []() {
   Specif::SigT<Tag, sem_ty> v0 = Specif::template SigT<Tag, sem_ty>::existt(
       Tag::TAGLIST, std::deque<crane::obj>{});
   Specif::SigT<Tag, sem_ty> v1 = apply_action(base_action, std::move(v0));
@@ -50,7 +48,6 @@ uint64_t get_length(const Specif::SigT<Tag, sem_ty> &v);
 uint64_t get_first(const Specif::SigT<Tag, sem_ty> &v);
 const uint64_t test_length = get_length(chain);
 const uint64_t test_first = get_first(chain);
-
 } // namespace DequeActionMismatch
 
 #endif // INCLUDED_DEQUEACTIONMISMATCH

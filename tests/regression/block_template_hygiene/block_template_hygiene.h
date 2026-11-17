@@ -1,16 +1,11 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_HYGIENE
 #define INCLUDED_BLOCK_TEMPLATE_HYGIENE
 
-#include <crane_itree.h>
-#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <string>
-#include <system_error>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct BlockTemplateHygiene {
   /// Test 1: Two consecutive get_line calls with the SAME binder name s.
@@ -28,8 +23,8 @@ struct BlockTemplateHygiene {
   static std::string shadow_internal_name();
   /// Test 4: Multiple different block templates in the same scope.
   /// Uses get_line (block template) interleaved with print (expression
-  /// template) to verify that block templates don't interfere with expression
-  /// templates.
+  /// template)
+  /// to verify that block templates don't interfere with expression templates.
   static std::string interleaved_templates();
   /// Test 5: Block template with %a0 argument alongside %result.
   /// Uses our custom read_trimmed which has both %result and %a0.

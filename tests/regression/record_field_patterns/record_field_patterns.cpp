@@ -36,8 +36,8 @@ uint64_t RecordFieldPatterns::zero_x(const RecordFieldPatterns::Point &p) {
 /// Apply a polymorphic function to a record — the record type flows
 /// through a type variable.
 RecordFieldPatterns::Point
-RecordFieldPatterns::id_point(const RecordFieldPatterns::Point &x0_) {
-  return identity<RecordFieldPatterns::Point>(x0_);
+RecordFieldPatterns::id_point(RecordFieldPatterns::Point x0_) {
+  return identity<RecordFieldPatterns::Point>(std::move(x0_));
 }
 
 std::pair<uint64_t, uint64_t>
@@ -74,12 +74,12 @@ RecordFieldPatterns::PointImpl::get_y(const RecordFieldPatterns::Point &p) {
 
 uint64_t
 RecordFieldPatterns::segment_length_sq(const RecordFieldPatterns::Segment &s) {
-  RecordFieldPatterns::Point seg_start0 = s.seg_start;
-  RecordFieldPatterns::Point seg_end0 = s.seg_end;
+  const RecordFieldPatterns::Point &seg_start0 = s.seg_start;
+  const RecordFieldPatterns::Point &seg_end0 = s.seg_end;
   uint64_t x1 = seg_start0.px;
-  uint64_t y1 = std::move(seg_start0).py;
+  uint64_t y1 = seg_start0.py;
   uint64_t x2 = seg_end0.px;
-  uint64_t y2 = std::move(seg_end0).py;
+  uint64_t y2 = seg_end0.py;
   uint64_t dx = (((x2 - x1) > x2 ? 0 : (x2 - x1)));
   uint64_t dy = (((y2 - y1) > y2 ? 0 : (y2 - y1)));
   return ((dx * dx) + (dy * dy));
@@ -96,9 +96,8 @@ RecordFieldPatterns::bounded_range(const RecordFieldPatterns::Bounded &b) {
 uint64_t
 RecordFieldPatterns::sum_px(const List<RecordFieldPatterns::Point> &points) {
   return points.template fold_left<uint64_t>(
-      [](uint64_t acc, const RecordFieldPatterns::Point &p) {
-        return (acc + p.px);
-      },
+      [](uint64_t acc,
+         const RecordFieldPatterns::Point &p) { return (acc + p.px); },
       UINT64_C(0));
 }
 

@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,7 +93,9 @@ public:
 };
 
 template <typename M>
-concept OrderedType = requires { typename M::t; };
+concept OrderedType = requires {
+  typename M::t;
+};
 
 struct DoubleTypename {
   template <OrderedType X> struct MakeMap {
@@ -104,15 +107,15 @@ struct DoubleTypename {
       // ACCESSORS
       entry<A> clone() const { return {a0, a1}; }
 
-      template <typename _U> operator entry<_U>() const {
-        return {a0, [&]() -> _U {
-                  if constexpr (crane_convertible<_U, const A &>) {
-                    return crane_convert<_U>(a1);
-                  } else {
-                    throw std::logic_error("unreachable: inactive constructor "
-                                           "field at this instantiation");
-                  }
-                }()};
+      template <typename CraneU> operator entry<CraneU>() const {
+        return {a0, [&]() -> CraneU {
+          if constexpr (crane_convertible<CraneU, const A &>) {
+            return crane_convert<CraneU>(a1);
+          } else {
+            throw std::logic_error("unreachable: inactive constructor field at "
+                                   "this instantiation");
+          }
+        }()};
       }
 
       // CREATORS
@@ -122,17 +125,16 @@ struct DoubleTypename {
     };
 
     template <typename T1, typename T2, typename F0>
-      requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
+      requires std::is_invocable_r_v<T2, F0 &, const typename X::t &,
+                                     const T1 &>
     static T2 entry_rect(F0 &&f, const entry<T1> &e) {
       const auto &[a0, a1] = e;
       return f(a0, a1);
     }
 
     template <typename T1, typename T2, typename F0>
-      requires std::is_invocable_r_v<T2, F0 &, typename X::t &, T1 &>
     static T2 entry_rec(F0 &&f, const entry<T1> &e) {
-      const auto &[a0, a1] = e;
-      return f(a0, a1);
+      return entry_rect<T1, T2>(f, e);
     }
 
     template <typename T1>
@@ -140,8 +142,8 @@ struct DoubleTypename {
       if (std::holds_alternative<typename List<entry<T1>>::Nil>(l.v())) {
         return List<typename X::t>::nil();
       } else {
-        const auto &[a0, a1] = std::get<typename List<entry<T1>>::Cons>(l.v());
-        const auto &[a00, a10] = a0;
+        const auto &[a0, _] = std::get<typename List<entry<T1>>::Cons>(l.v());
+        const auto &[a00, _] = a0;
         return List<typename X::t>::cons(a00, List<typename X::t>::nil());
       }
     }

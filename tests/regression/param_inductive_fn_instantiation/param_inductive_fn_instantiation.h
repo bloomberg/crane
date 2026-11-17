@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -19,8 +20,8 @@ struct ParamInductiveFnInstantiation {
     // ACCESSORS
     endo<A> clone() const { return {a0}; }
 
-    template <typename _U> operator endo<_U>() const {
-      return {crane_convert<crane::fn<_U(_U)>>(a0)};
+    template <typename CraneU> operator endo<CraneU>() const {
+      return {crane_convert<crane::fn<CraneU(CraneU)>>(a0)};
     }
 
     // CREATORS
@@ -28,17 +29,15 @@ struct ParamInductiveFnInstantiation {
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, crane::fn<T1(T1)> &>
+    requires std::is_invocable_r_v<T2, F0 &, const crane::fn<T1(T1)> &>
   static T2 endo_rect(F0 &&f, const endo<T1> &e) {
     const auto &[a0] = e;
     return f(a0);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, crane::fn<T1(T1)> &>
   static T2 endo_rec(F0 &&f, const endo<T1> &e) {
-    const auto &[a0] = e;
-    return f(a0);
+    return endo_rect<T1, T2>(f, e);
   }
 
   template <typename T1> static T1 run(const endo<T1> &e, const T1 &x) {
@@ -49,7 +48,7 @@ struct ParamInductiveFnInstantiation {
   static inline const endo<crane::fn<uint64_t(uint64_t)>> d = []() {
     return endo<crane::fn<uint64_t(uint64_t)>>::e(
         [](crane::fn<uint64_t(uint64_t)> g) {
-          return [=](uint64_t n) { return g(g(n)); };
+          return [=, g = std::move(g)](uint64_t n) { return g(g(n)); };
         });
   }();
   static inline const uint64_t go = run<crane::fn<uint64_t(uint64_t)>>(

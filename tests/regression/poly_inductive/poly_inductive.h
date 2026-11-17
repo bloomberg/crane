@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -20,13 +20,13 @@ struct PolyInductive {
     // ACCESSORS
     pbox<A> clone() const { return {a0}; }
 
-    template <typename _U> operator pbox<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const A &>) {
-          return crane_convert<_U>(a0);
+    template <typename CraneU> operator pbox<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -39,15 +39,12 @@ struct PolyInductive {
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
-    T1 pbox_rec(F0 &&f) const {
-      const auto &[a0] = *this;
-      return f(a0);
+    template <typename T1, typename F0> T1 pbox_rec(F0 &&f) const {
+      return this->template pbox_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 pbox_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -62,18 +59,19 @@ struct PolyInductive {
     // ACCESSORS
     ppair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator ppair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator ppair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -87,24 +85,21 @@ struct PolyInductive {
     }
 
     B psnd() const {
-      const auto &[a0, a1] = *this;
+      const auto &[_, a1] = *this;
       return a1;
     }
 
     A pfst() const {
-      const auto &[a0, a1] = *this;
+      const auto &[a0, _] = *this;
       return a0;
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
-    T1 ppair_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 ppair_rec(F0 &&f) const {
+      return this->template ppair_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 ppair_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -133,17 +128,17 @@ struct PolyInductive {
 
     explicit pmaybe(PJust _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    pmaybe(const pmaybe<_U> &_other)
+    template <typename CraneU>
+    pmaybe(const pmaybe<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename pmaybe<_U>::PNothing>(
+            if (std::holds_alternative<typename pmaybe<CraneU>::PNothing>(
                     _other.v())) {
               return PNothing{};
             } else {
               const auto &[a0] =
-                  std::get<typename pmaybe<_U>::PJust>(_other.v());
+                  std::get<typename pmaybe<CraneU>::PJust>(_other.v());
               return PJust{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -173,7 +168,7 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     pmaybe<T1> pmaybe_map(F0 &&f) const {
       if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return pmaybe<T1>::pnothing();
@@ -183,19 +178,12 @@ struct PolyInductive {
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
-    T1 pmaybe_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename pmaybe<A>::PJust>(this->v());
-        return f0(a0);
-      }
+    template <typename T1, typename F1> T1 pmaybe_rec(T1 f, F1 &&f0) const {
+      return this->template pmaybe_rect<T1>(std::move(f), f0);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
+      requires std::is_invocable_r_v<T1, F1 &, const A &>
     T1 pmaybe_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename pmaybe<A>::PNothing>(this->v())) {
         return f;
@@ -231,14 +219,15 @@ struct PolyInductive {
 
     explicit ptree(PNode _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    ptree(const ptree<_U> &_other)
+    template <typename CraneU>
+    ptree(const ptree<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename ptree<_U>::PLeaf>(_other.v())) {
+            if (std::holds_alternative<typename ptree<CraneU>::PLeaf>(
+                    _other.v())) {
               const auto &[a0] =
-                  std::get<typename ptree<_U>::PLeaf>(_other.v());
+                  std::get<typename ptree<CraneU>::PLeaf>(_other.v());
               return PLeaf{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U &>) {
+                if constexpr (crane_convertible<A, const CraneU &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -247,7 +236,7 @@ struct PolyInductive {
               }()};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename ptree<_U>::PNode>(_other.v());
+                  std::get<typename ptree<CraneU>::PNode>(_other.v());
               return PNode{
                   (a0 ? std::make_shared<ptree<A>>(crane_convert<ptree<A>>(*a0))
                       : nullptr),
@@ -265,6 +254,15 @@ struct PolyInductive {
 
     // MANIPULATORS
     ~ptree() {
+      if (std::holds_alternative<PLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<PNode>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<ptree<A>>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<PNode>(&_v)) {
@@ -289,8 +287,8 @@ struct PolyInductive {
 
     ptree(const ptree &) = default;
     ptree &operator=(const ptree &) = default;
-    ptree(ptree &&) noexcept = default;
-    ptree &operator=(ptree &&) noexcept = default;
+    ptree(ptree &&) = default;
+    ptree &operator=(ptree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -300,49 +298,51 @@ struct PolyInductive {
     uint64_t ptree_size() const {
       const ptree<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const ptree<A> *_self;
       };
 
-      /// _Cont_PNode: saves [a1], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_PNode {
-        std::shared_ptr<ptree<A>> a1;
+      /// CraneCont_PNode: saves [a1], resumes after recursive call, then
+      /// processes rest.
+      struct CraneCont_PNode {
+        const ptree<A> *a1;
       };
 
-      /// _Cont_PNode_1: saves [_tmp2], resumes after recursive call, then
+      /// CraneCont_PNode_1: saves [_tmp2], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_PNode_1 {
+      struct CraneCont_PNode_1 {
         uint64_t _tmp2;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_PNode, _Cont_PNode_1>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_PNode, CraneCont_PNode_1>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified ptree_size: _Enter -> _Cont_PNode -> _Cont_PNode_1.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified ptree_size: CraneEnter -> CraneCont_PNode ->
+      /// CraneCont_PNode_1.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const ptree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
             _result = UINT64_C(1);
           } else {
             const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(_sv.v());
-            _stack.emplace_back(_Cont_PNode{a1});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_PNode{crane_raw(a1)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_PNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_PNode>(_frame));
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
-          _stack.emplace_back(_Cont_PNode_1{std::move(_result)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+        } else if (std::holds_alternative<CraneCont_PNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_PNode>(_frame));
+          const ptree<A> &a1 = *_f.a1;
+          _stack.emplace_back(CraneCont_PNode_1{std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a1});
         } else {
-          auto _f = std::move(std::get<_Cont_PNode_1>(_frame));
+          auto _f = std::move(std::get<CraneCont_PNode_1>(_frame));
           _result = ((_f._tmp2 + std::move(_result)) + 1);
         }
       }
@@ -350,106 +350,47 @@ struct PolyInductive {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
-                                     T1 &>
     T1 ptree_rec(F0 &&f, F1 &&f0) const {
-      const ptree<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const ptree<A> *_self;
-      };
-
-      /// _Cont_PNode: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_PNode {
-        std::shared_ptr<ptree<A>> a0;
-        std::shared_ptr<ptree<A>> a1;
-      };
-
-      /// _Cont_PNode_1: saves [_tmp2, a0, a1], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_PNode_1 {
-        T1 _tmp2;
-        std::shared_ptr<ptree<A>> a0;
-        std::shared_ptr<ptree<A>> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_PNode, _Cont_PNode_1>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified ptree_rec: _Enter -> _Cont_PNode -> _Cont_PNode_1.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const ptree<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
-            const auto &[a0] = std::get<typename ptree<A>::PLeaf>(_sv.v());
-            _result = f(a0);
-          } else {
-            const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(_sv.v());
-            _stack.emplace_back(_Cont_PNode{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<_Cont_PNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_PNode>(_frame));
-          std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
-          _stack.emplace_back(
-              _Cont_PNode_1{std::move(_result), std::move(a0), a1});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else {
-          auto _f = std::move(std::get<_Cont_PNode_1>(_frame));
-          std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
-          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template ptree_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, ptree<A> &, T1 &, ptree<A> &,
-                                     T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
       const ptree<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const ptree<A> *_self;
       };
 
-      /// _Cont_PNode: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_PNode: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_PNode {
+      struct CraneCont_PNode {
         std::shared_ptr<ptree<A>> a0;
-        std::shared_ptr<ptree<A>> a1;
+        const ptree<A> *a1;
       };
 
-      /// _Cont_PNode_1: saves [_tmp2, a0, a1], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_PNode_1 {
+      /// CraneCont_PNode_1: saves [a0, a1, _tmp2], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_PNode_1 {
+        std::shared_ptr<ptree<A>> a0;
+        const ptree<A> *a1;
         T1 _tmp2;
-        std::shared_ptr<ptree<A>> a0;
-        std::shared_ptr<ptree<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_PNode, _Cont_PNode_1>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_PNode, CraneCont_PNode_1>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified ptree_rect: _Enter -> _Cont_PNode -> _Cont_PNode_1.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified ptree_rect: CraneEnter -> CraneCont_PNode ->
+      /// CraneCont_PNode_1.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const ptree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
@@ -457,21 +398,21 @@ struct PolyInductive {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(_sv.v());
-            _stack.emplace_back(_Cont_PNode{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_PNode{a0, crane_raw(a1)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_PNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_PNode>(_frame));
+        } else if (std::holds_alternative<CraneCont_PNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_PNode>(_frame));
           std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
+          const ptree<A> &a1 = *_f.a1;
           _stack.emplace_back(
-              _Cont_PNode_1{std::move(_result), std::move(a0), a1});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+              CraneCont_PNode_1{std::move(a0), &a1, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a1});
         } else {
-          auto _f = std::move(std::get<_Cont_PNode_1>(_frame));
+          auto _f = std::move(std::get<CraneCont_PNode_1>(_frame));
           std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
-          std::shared_ptr<ptree<A>> a1 = std::move(_f.a1);
-          _result = f0(*a0, std::move(_f._tmp2), *a1, std::move(_result));
+          const ptree<A> &a1 = *_f.a1;
+          _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
         }
       }
       return _result;
@@ -489,8 +430,8 @@ struct PolyInductive {
   static inline const uint64_t test_pnothing =
       pmaybe<uint64_t>::pnothing().pmaybe_default(UINT64_C(0));
   static inline const uint64_t test_pmap =
-      pmaybe<uint64_t>::pjust(UINT64_C(5))
-          .template pmaybe_map<uint64_t>([](uint64_t x) { return (x + 1); })
+      pmaybe<uint64_t>::pjust(UINT64_C(5)).template pmaybe_map<uint64_t>(
+          [](uint64_t x) { return (x + 1); })
           .pmaybe_default(UINT64_C(0));
   static inline const uint64_t test_ptree =
       ptree<uint64_t>::pnode(

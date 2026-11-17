@@ -3,6 +3,7 @@
 
 #include "fn.h"
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A typeclass instance at a function type (`Sz (nat -> nat)`): the instance
@@ -17,7 +18,7 @@ concept Sz = requires {
 
 struct InstanceAtFunctionType {
   struct SzN {
-    static uint64_t sz(uint64_t n) { return n; }
+    constexpr static uint64_t sz(uint64_t n) { return n; }
   };
 
   static_assert(Sz<SzN, uint64_t>);

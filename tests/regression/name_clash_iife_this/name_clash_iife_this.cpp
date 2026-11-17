@@ -17,8 +17,7 @@ uint64_t NameClashIifeThis::match_of_match(NameClashIifeThis::Color c,
       std::unreachable();
     }
   }();
-  if (std::holds_alternative<typename NameClashIifeThis::shape::Circle>(
-          _sv.v())) {
+  if (std::holds_alternative<typename NameClashIifeThis::shape::Circle>(_sv.v())) {
     const auto &[a0] =
         std::get<typename NameClashIifeThis::shape::Circle>(_sv.v());
     return (a0 * UINT64_C(2));

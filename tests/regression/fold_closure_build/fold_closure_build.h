@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -51,27 +51,28 @@ struct FoldClosureBuild {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    mylist(const mylist<_U> &_other)
+    template <typename CraneU>
+    mylist(const mylist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+            if (std::holds_alternative<typename mylist<CraneU>::Mynil>(
                     _other.v())) {
               return Mynil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename mylist<_U>::Mycons>(_other.v());
-              return Mycons{[&]() -> A {
-                              if constexpr (crane_convertible<A, const _U &>) {
-                                return crane_convert<A>(a0);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            (a1 ? std::make_shared<mylist<A>>(
-                                      crane_convert<mylist<A>>(*a1))
-                                : nullptr)};
+                  std::get<typename mylist<CraneU>::Mycons>(_other.v());
+              return Mycons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<mylist<A>>(
+                            crane_convert<mylist<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -101,8 +102,8 @@ struct FoldClosureBuild {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -111,7 +112,6 @@ struct FoldClosureBuild {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
     if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
       return f;
@@ -122,19 +122,13 @@ struct FoldClosureBuild {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, mylist<T1> &, T2 &>
   static T2 mylist_rec(T2 f, F1 &&f0, const mylist<T1> &m) {
-    if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-      return f0(a0, *a1, mylist_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+    return mylist_rect<T1, T2>(std::move(f), f0, m);
   }
 
   /// Simple fold_left.
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const T2 &>
   static T1 fold_left(F0 &&f, T1 acc, const mylist<T2> &l) {
     if (std::holds_alternative<typename mylist<T2>::Mynil>(l.v())) {
       return acc;
@@ -157,43 +151,45 @@ struct FoldClosureBuild {
   /// and h (unsigned int). If these are captured by =, safe. By &, dangles.
   static uint64_t compose_adders(const mylist<uint64_t> &l, uint64_t x0_);
   /// test1: compose_adders 10,20,30 7 = 67
-  static inline const uint64_t test1 = compose_adders(
+  static inline const uint64_t test1 = compose_adders(mylist<uint64_t>::mycons(
+      UINT64_C(10),
       mylist<uint64_t>::mycons(
-          UINT64_C(10),
-          mylist<uint64_t>::mycons(
-              UINT64_C(20), mylist<uint64_t>::mycons(
-                                UINT64_C(30), mylist<uint64_t>::mynil()))),
-      UINT64_C(7));
+          UINT64_C(20),
+          mylist<uint64_t>::mycons(UINT64_C(30), mylist<uint64_t>::mynil()))),
+                                                      UINT64_C(7));
   /// Pattern 2: Store the composed function and call it TWICE.
   /// If the closure chain has dangling references, the second call
   /// might read clobbered stack memory.
   static inline const uint64_t test2 = []() {
-    crane::fn<uint64_t(uint64_t)> f = [](uint64_t _x0) -> uint64_t {
-      return compose_adders(
-          mylist<uint64_t>::mycons(
-              UINT64_C(5), mylist<uint64_t>::mycons(UINT64_C(10),
-                                                    mylist<uint64_t>::mynil())),
-          _x0);
-    };
-    return (f(UINT64_C(0)) + f(UINT64_C(100)));
+    return []() {
+      crane::fn<uint64_t(uint64_t)> f = []() {
+        auto _pa0 = mylist<uint64_t>::mycons(
+            UINT64_C(5),
+            mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil()));
+        return [=](uint64_t _x0) -> uint64_t {
+          return compose_adders(_pa0, _x0);
+        };
+      }();
+      return (f(UINT64_C(0)) + f(UINT64_C(100)));
+    }();
   }();
   /// Pattern 3: Fold producing a list of closures (not composing them).
   /// Each closure captures the list element from the fold iteration.
   static mylist<crane::fn<uint64_t(uint64_t)>>
   collect_adders(const mylist<uint64_t> &l);
-
   static uint64_t apply_all(const mylist<crane::fn<uint64_t(uint64_t)>> &fns,
                             uint64_t x);
   /// test3: collect_adders 10,20,30
   /// = (30+_), (20+_), (10+_)  (reversed by fold_left)
   /// apply_all with x=5: (30+5) + (20+5) + (10+5) = 75
-  static inline const uint64_t test3 = apply_all(
-      collect_adders(mylist<uint64_t>::mycons(
-          UINT64_C(10),
-          mylist<uint64_t>::mycons(
-              UINT64_C(20), mylist<uint64_t>::mycons(
-                                UINT64_C(30), mylist<uint64_t>::mynil())))),
-      UINT64_C(5));
+  static inline const uint64_t test3 =
+      apply_all(
+          collect_adders(mylist<uint64_t>::mycons(
+              UINT64_C(10),
+              mylist<uint64_t>::mycons(
+                  UINT64_C(20), mylist<uint64_t>::mycons(
+                                    UINT64_C(30), mylist<uint64_t>::mynil())))),
+          UINT64_C(5));
   /// Pattern 4: Fold with a FIXPOINT as accumulator.
   /// The fixpoint captures both acc and h from the fold callback.
   ///
@@ -215,11 +211,11 @@ struct FoldClosureBuild {
   /// first: acc=id, h=10, go1(x) = x + id(10) = x + 10
   /// second: acc=go1, h=20, go2(x) = x + go1(20) = x + 30
   /// test5 = go2(7) = 7 + 30 = 37
-  static inline const uint64_t test5 = compose_with_fix(
-      mylist<uint64_t>::mycons(
+  static inline const uint64_t test5 =
+      compose_with_fix(mylist<uint64_t>::mycons(
           UINT64_C(10),
           mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mynil())),
-      UINT64_C(7));
+                       UINT64_C(7));
 };
 
 #endif // INCLUDED_FOLD_CLOSURE_BUILD

@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -39,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -85,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,7 +95,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -113,40 +114,40 @@ public:
   List<A> rev() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: saves [a0], resumes after recursive call, then processes
+    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
     /// rest.
-    struct _Cont_Cons {
+    struct CraneCont_Cons {
       A a0;
     };
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     List<A> _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified rev: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified rev: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = List<A>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{a0});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          _stack.emplace_back(CraneCont_Cons{a0});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         auto a0 = std::move(_f.a0);
-        _result = std::move(_result).app(List<A>::cons(a0, List<A>::nil()));
+        _result = _result.app(List<A>::cons(a0, List<A>::nil()));
       }
     }
     return _result;
@@ -155,35 +156,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -191,39 +192,45 @@ public:
   }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
 template <typename M>
 concept CONTAINER = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::empty } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::empty() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::empty
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::empty()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
   {
     M::push(std::declval<uint64_t>(), std::declval<typename M::t>())
   } -> std::same_as<typename M::t>;
@@ -239,7 +246,7 @@ struct FunctorComp {
     static inline const t empty = List<uint64_t>::nil();
     static t push(uint64_t x, const List<uint64_t> &s);
     static std::optional<std::pair<uint64_t, t>> pop(const List<uint64_t> &s);
-    static uint64_t size(t x0_);
+    static uint64_t size(const t &x0_);
   };
 
   struct Queue {
@@ -255,70 +262,71 @@ struct FunctorComp {
   template <CONTAINER C> struct ContainerOps {
     static typename C::t push_list(const List<uint64_t> &l, typename C::t c) {
       return l.template fold_left<typename C::t>(
-          [](typename C::t acc, uint64_t x) { return C::push(x, acc); },
+          [](typename C::t acc,
+             uint64_t x) { return C::push(x, std::move(acc)); },
           std::move(c));
     }
 
     static List<uint64_t> to_list(typename C::t c) {
-      auto go_impl = [](auto &_self_go, uint64_t fuel,
-                        const List<uint64_t> &acc,
-                        typename C::t c0) -> List<uint64_t> {
-        if (fuel <= 0) {
-          return acc.rev();
-        } else {
-          uint64_t f = fuel - 1;
-          auto _cs = C::pop(c0);
-          if (_cs.has_value()) {
-            const std::pair<uint64_t, typename C::t> &p = *_cs;
-            const auto &[x, c_] = p;
-            return _self_go(_self_go, f, List<uint64_t>::cons(x, acc), c_);
+      uint64_t _arg0 = C::size(c);
+      {
+        uint64_t _lc1_fuel = _arg0;
+        const List<uint64_t> &_lc1_acc = List<uint64_t>::nil();
+        typename C::t _lc1_c0 = std::move(c);
+        typename C::t _lc1_loop_c0 = std::move(_lc1_c0);
+        List<uint64_t> _lc1_loop_acc = _lc1_acc;
+        uint64_t _lc1_loop_fuel = _lc1_fuel;
+        while (true) {
+          if (_lc1_loop_fuel <= 0) {
+            return _lc1_loop_acc.rev();
           } else {
-            return acc.rev();
+            uint64_t f = _lc1_loop_fuel - 1;
+            auto _cs = C::pop(_lc1_loop_c0);
+            if (_cs.has_value()) {
+              const std::pair<uint64_t, typename C::t> &p = *_cs;
+              const auto &[x, c_] = p;
+              _lc1_loop_c0 = c_;
+              _lc1_loop_acc = List<uint64_t>::cons(x, std::move(_lc1_loop_acc));
+              _lc1_loop_fuel = f;
+            } else {
+              return _lc1_loop_acc.rev();
+            }
           }
         }
-      };
-      auto go = [&](uint64_t fuel, const List<uint64_t> &acc,
-                    typename C::t c0) -> List<uint64_t> {
-        return go_impl(go_impl, fuel, acc, c0);
-      };
-      return go(C::size(c), List<uint64_t>::nil(), c);
+      }
     }
   };
 
   using StackOps = ContainerOps<Stack>;
   using QueueOps = ContainerOps<Queue>;
   static inline const List<uint64_t> test_stack =
-      StackOps::to_list(StackOps::push_list(
+      StackOps::to_list(StackOps::push_list(List<uint64_t>::cons(
+          UINT64_C(1),
           List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
-          Stack::empty));
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+                                            Stack::empty));
   static inline const List<uint64_t> test_queue =
-      QueueOps::to_list(QueueOps::push_list(
+      QueueOps::to_list(QueueOps::push_list(List<uint64_t>::cons(
+          UINT64_C(1),
           List<uint64_t>::cons(
-              UINT64_C(1),
-              List<uint64_t>::cons(
-                  UINT64_C(2),
-                  List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
-          Queue::empty));
+              UINT64_C(2),
+              List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
+                                            Queue::empty));
   static inline const uint64_t test_stack_size =
-      Stack::size(StackOps::push_list(
+      Stack::size(StackOps::push_list(List<uint64_t>::cons(
+          UINT64_C(10),
           List<uint64_t>::cons(
-              UINT64_C(10),
-              List<uint64_t>::cons(
-                  UINT64_C(20),
-                  List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
-          Stack::empty));
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
+                                      Stack::empty));
   static inline const uint64_t test_queue_size =
-      Queue::size(QueueOps::push_list(
+      Queue::size(QueueOps::push_list(List<uint64_t>::cons(
+          UINT64_C(10),
           List<uint64_t>::cons(
-              UINT64_C(10),
-              List<uint64_t>::cons(
-                  UINT64_C(20),
-                  List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
-          Queue::empty));
+              UINT64_C(20),
+              List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
+                                      Queue::empty));
 };
 
 #endif // INCLUDED_FUNCTOR_COMP

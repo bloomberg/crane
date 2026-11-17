@@ -23,32 +23,32 @@ bool wrap_string(const std::string &s) { return String0::eqb1(s, s); }
 
 bool mk_action(uint64_t n, domty tup) {
   if (n <= 0) {
-    const auto &[v, _x] =
-        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-    return wrap_string(crane::any_cast<std::string>(v));
+    auto [v, _x] =
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(tup));
+    return wrap_string(crane::any_cast<std::string>(std::move(v)));
   } else {
     uint64_t _x = n - 1;
-    const auto &[v, _x0] =
-        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+    auto [v, _x0] =
+        crane::any_cast<std::pair<crane::obj, crane::obj>>(std::move(tup));
     return crane::any_cast<uint64_t>(v) < (crane::any_cast<uint64_t>(v) + 1);
   }
 }
 
 domty garg(uint64_t n) {
   if (n <= 0) {
-    return std::make_pair(
-        crane::obj(std::string(1, (static_cast<char>(
-                                      (false ? 1 : 0) | (false ? 2 : 0) |
-                                      (false ? 4 : 0) | (true ? 8 : 0) |
-                                      (false ? 16 : 0) | (true ? 32 : 0) |
-                                      (true ? 64 : 0) | (false ? 128 : 0)))) +
-                   std::string(1, (static_cast<char>(
-                                      (true ? 1 : 0) | (false ? 2 : 0) |
-                                      (false ? 4 : 0) | (true ? 8 : 0) |
-                                      (false ? 16 : 0) | (true ? 32 : 0) |
-                                      (true ? 64 : 0) | (false ? 128 : 0)))) +
-                   std::string()),
-        crane::obj(std::monostate{}));
+    return std::make_pair(crane::obj(
+        std::string(1, (static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
+                                          (false ? 4 : 0) | (true ? 8 : 0) |
+                                          (false ? 16 : 0) | (true ? 32 : 0) |
+                                          (true ? 64 : 0) |
+                                          (false ? 128 : 0)))) +
+        std::string(1, (static_cast<char>((true ? 1 : 0) | (false ? 2 : 0) |
+                                          (false ? 4 : 0) | (true ? 8 : 0) |
+                                          (false ? 16 : 0) | (true ? 32 : 0) |
+                                          (true ? 64 : 0) |
+                                          (false ? 128 : 0)))) +
+        std::string()),
+                          crane::obj(std::monostate{}));
   } else {
     uint64_t _x = n - 1;
     return std::make_pair(crane::obj(UINT64_C(0)),
@@ -69,7 +69,7 @@ bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
   }
 }
 
-bool check(std::monostate) { return run(my_entry); }
+bool check() { return run(my_entry); }
 
 bool Bool::eqb(bool b1, bool b2) {
   if (b1) {
@@ -104,16 +104,15 @@ bool Ascii0::eqb0(char a, char b) {
   bool b5 = (b >> 5) & 1;
   bool b6 = (b >> 6) & 1;
   bool b7 = (b >> 7) & 1;
-  if (((((((Bool::eqb(a0, b0) ? Bool::eqb(a1, b1) : false) ? Bool::eqb(a2, b2)
-                                                           : false)
-              ? Bool::eqb(a3, b3)
-              : false)
-             ? Bool::eqb(a4, b4)
-             : false)
-            ? Bool::eqb(a5, b5)
-            : false)
-           ? Bool::eqb(a6, b6)
-           : false)) {
+  if ((
+          (((((Bool::eqb(a0, b0) ? Bool::eqb(a1, b1) : false) ? Bool::eqb(a2,
+                                                                          b2)
+                                                              : false)
+                 ? Bool::eqb(a3, b3)
+                 : false) ? Bool::eqb(a4, b4) : false) ? Bool::eqb(a5, b5)
+                                                       : false) ? Bool::eqb(a6,
+                                                                            b6)
+                                                                : false)) {
     return Bool::eqb(a7, b7);
   } else {
     return false;

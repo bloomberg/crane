@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -104,17 +105,15 @@ struct RocqBug11114 {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 t_rect(const List<uint64_t> &, F1 &&f, const t &t0) {
     const auto &[k0] = t0;
     return f(k0);
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &>
-  static T1 t_rec(const List<uint64_t> &, F1 &&f, const t &t0) {
-    const auto &[k0] = t0;
-    return f(k0);
+  static T1 t_rec(const List<uint64_t> &_x, F1 &&f, const t &t0) {
+    return t_rect<T1>(_x, f, t0);
   }
 
   struct pkg {
@@ -123,19 +122,18 @@ struct RocqBug11114 {
   };
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
   static pkg map(F0 &&f, const pkg &p) {
     return pkg{p.sig_, [&]() {
-                 const auto &_sv = p.t_;
-                 const auto &[k0] = _sv;
-                 return t::t0(f(k0));
-               }()};
+      const auto &_sv = p.t_;
+      const auto &[k0] = _sv;
+      return t::t0(f(k0));
+    }()};
   }
 
   static inline const pkg test_pkg =
       pkg{List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
           t::t0(UINT64_C(2))};
-
   static inline const pkg test_map =
       map([](uint64_t x) { return (x + UINT64_C(1)); }, test_pkg);
 };

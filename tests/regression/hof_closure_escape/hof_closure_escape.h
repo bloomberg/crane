@@ -4,9 +4,9 @@
 #include "fn.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -44,6 +44,15 @@ struct HofClosureEscape {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -68,8 +77,8 @@ struct HofClosureEscape {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -78,8 +87,6 @@ struct HofClosureEscape {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -91,16 +98,8 @@ struct HofClosureEscape {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
-                tree_rec<T1>(f, f0, *a2));
-    }
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   static uint64_t sum_values(const tree &t, uint64_t x);
@@ -109,7 +108,6 @@ struct HofClosureEscape {
   /// The partial application happens at the CALL SITE of wrap_some,
   /// so the & lambda is created by the caller and passed through.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static std::optional<crane::fn<uint64_t(uint64_t)>> wrap_some(F0 &&f) {
     return std::make_optional<crane::fn<uint64_t(uint64_t)>>(f);
   }

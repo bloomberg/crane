@@ -7,24 +7,24 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
           std::chrono::steady_clock::now().time_since_epoch())
           .count());
   std::string tmp = [&]() -> std::string {
-    std::string _n = std::filesystem::path(prefix).filename().string();
-    if (_n.empty() || _n == "." || _n == "..")
-      _n = "tmp";
+    std::string _n =
+        std::filesystem::path(std::move(prefix)).filename().string();
+    if (_n.empty() || _n == "." || _n == "..") _n = "tmp";
     std::filesystem::path _base = std::filesystem::temp_directory_path();
     std::random_device _rng;
     for (;;) {
       std::string _d =
-          (_base / (_n + std::to_string(_rng()) + std::to_string(_rng())))
+          (_base /
+           (_n + std::to_string(_rng()) + std::to_string(_rng())))
               .string();
       if (::mkdir(_d.c_str(), 0700) != 0) {
-        if (errno == EEXIST)
-          continue;
+        if (errno == EEXIST) continue;
         throw std::runtime_error("crane: failed to create temporary directory");
       }
       std::string _p = _d + "/" + _n;
       int _fd = ::open(_p.c_str(), O_CREAT | O_EXCL | O_RDWR, 0600);
-      if (_fd < 0)
-        throw std::runtime_error("crane: failed to create temporary file");
+      if (_fd < 0) throw std::runtime_error("crane: failed to create temporary "
+                                            "file");
       ::close(_fd);
       return _p;
     }
@@ -34,7 +34,7 @@ std::string EffectWorkflow::full_workflow(std::string prefix) {
     std::filesystem::create_directories(std::filesystem::path(tmp), _ec);
     return !_ec;
   }();
-  setenv("LAST_TEMP"s.c_str(), tmp.c_str(), 1);
+  setenv(std::string("LAST_TEMP").c_str(), tmp.c_str(), 1);
   std::cout << tmp << '\n';
   int64_t _x3 = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
@@ -51,7 +51,7 @@ std::string EffectWorkflow::conditional_create(std::string path) {
     return !_ec;
   }();
   if (ok) {
-    std::cout << "created"s << '\n';
+    std::cout << std::string("created") << '\n';
     return path;
   } else {
     return "exists";
@@ -62,7 +62,7 @@ std::string EffectWorkflow::conditional_create(std::string path) {
 void EffectWorkflow::read_and_set() {
   std::string line;
   std::getline(std::cin, line);
-  setenv("USER_INPUT"s.c_str(), std::move(line).c_str(), 1);
+  setenv(std::string("USER_INPUT").c_str(), std::move(line).c_str(), 1);
   return;
 }
 
@@ -77,7 +77,7 @@ uint64_t EffectWorkflow::repeat_log(uint64_t n, std::string msg) {
             std::chrono::steady_clock::now().time_since_epoch())
             .count());
     std::cout << msg << '\n';
-    uint64_t r = repeat_log(n_, msg);
+    uint64_t r = repeat_log(n_, std::move(msg));
     return (r + 1);
   }
 }
@@ -97,7 +97,7 @@ std::string EffectWorkflow::env_or_create(std::string name, std::string path) {
       std::filesystem::create_directories(std::filesystem::path(path), _ec);
       return !_ec;
     }();
-    setenv(name.c_str(), path.c_str(), 1);
+    setenv(std::move(name).c_str(), path.c_str(), 1);
     return path;
   }
 }
@@ -116,7 +116,7 @@ std::pair<std::string, std::string> EffectWorkflow::double_read() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return std::make_pair(a, b);
+  return std::make_pair(std::move(a), std::move(b));
 }
 
 /// 8. Return int literal in monadic context

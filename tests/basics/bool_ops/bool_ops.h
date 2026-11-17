@@ -1,9 +1,11 @@
 #ifndef INCLUDED_BOOL_OPS
 #define INCLUDED_BOOL_OPS
 
+#include <cstdint>
+
 struct BoolOps {
-  static inline const bool bool_true = true;
-  static inline const bool bool_false = false;
+  static constexpr bool bool_true = true;
+  static constexpr bool bool_false = false;
   static bool my_negb(bool b);
   static bool my_andb(bool a, bool b);
   static bool my_orb(bool a, bool b);

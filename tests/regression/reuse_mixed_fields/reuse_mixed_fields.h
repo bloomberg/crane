@@ -1,7 +1,7 @@
 #ifndef INCLUDED_REUSE_MIXED_FIELDS
 #define INCLUDED_REUSE_MIXED_FIELDS
 
-#include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -50,8 +50,9 @@ struct ReuseMixedFields {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 payload_rect(F0 &&f, F1 &&f0, const payload &p) {
     if (std::holds_alternative<typename payload::AsNat>(p.v())) {
       const auto &[a0, a1] = std::get<typename payload::AsNat>(p.v());
@@ -63,22 +64,14 @@ struct ReuseMixedFields {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
   static T1 payload_rec(F0 &&f, F1 &&f0, const payload &p) {
-    if (std::holds_alternative<typename payload::AsNat>(p.v())) {
-      const auto &[a0, a1] = std::get<typename payload::AsNat>(p.v());
-      return f(a0, a1);
-    } else {
-      const auto &[a0, a1] = std::get<typename payload::AsPair>(p.v());
-      return f0(a0, a1);
-    }
+    return payload_rect<T1>(f, f0, p);
   }
 
   /// Forces d to be owned through the else branch.
   /// The match branch has reuse candidates: both AsNat and AsPair
   /// have arity 2.
-  static payload swap_tag_or_id(payload p, bool do_swap);
+  static payload swap_tag_or_id(const payload &p, bool do_swap);
   /// test1: swap AsNat 10 20 -> should be AsPair 20 10.
   /// With reuse bug: variant stays AsNat, fields are 20, 10.
   /// Match sees AsNat -> returns first field + 1000 = 1020.
@@ -87,10 +80,10 @@ struct ReuseMixedFields {
     auto &&_sv =
         swap_tag_or_id(payload::asnat(UINT64_C(10), UINT64_C(20)), true);
     if (std::holds_alternative<typename payload::AsNat>(_sv.v())) {
-      const auto &[a0, a1] = std::get<typename payload::AsNat>(_sv.v());
+      const auto &[a0, _] = std::get<typename payload::AsNat>(_sv.v());
       return (a0 + UINT64_C(1000));
     } else {
-      const auto &[a0, a1] = std::get<typename payload::AsPair>(_sv.v());
+      const auto &[a0, _] = std::get<typename payload::AsPair>(_sv.v());
       return a0;
     }
   }();

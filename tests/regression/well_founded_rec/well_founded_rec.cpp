@@ -32,7 +32,8 @@ uint64_t WellFoundedRec::gcd_wf(uint64_t x, uint64_t b) {
     return b;
   } else {
     uint64_t a_ = x - 1;
-    uint64_t y = ((a_ + 1) ? b % (a_ + 1) : b);
+    auto &&_once1 = (a_ + 1);
+    uint64_t y = (_once1 ? b % _once1 : b);
     return gcd_wf(y, (a_ + 1));
   }
 }

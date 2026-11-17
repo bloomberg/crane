@@ -58,7 +58,22 @@ inline fn_stats_t &fn_stats() noexcept {
 
 CRANE_RC_POLICY_BEGIN
 
+template <class Sig> class fn;
+
 namespace fn_detail {
+
+// The entry for a saturated application of a curried function, [f(a)(b)]
+// for an [f] whose result is itself an [fn]: a callable written as one
+// lambda returning another -- a state monad's continuation -- runs the inner
+// one where it is made, never boxing it into the [fn] the one-argument entry
+// must return.  OCaml compiles [fun a s -> ...] to a closure of arity two for
+// the same reason.  Present only for that shape.
+template <class R, class... A> struct curried_entry {};
+template <class R2, class B, class A> struct curried_entry<fn<R2(B)>, A> {
+  using result2 = R2;
+  using arg2 = B;
+  R2 (*const invoke2)(const void *, const A &, const B &);
+};
 
 // What every block of one signature starts with.  The entry points are
 // function pointers rather than a vtable so the header is three words and
@@ -71,7 +86,8 @@ namespace fn_detail {
 // once, in its own parameter.  Through a single by-value entry every
 // argument the caller kept -- a field of a node, a loop's state -- was
 // copied at the call whatever the callable did with it.
-template <class R, class... A> struct block : shared_block {
+template <class R, class... A>
+struct block : shared_block, curried_entry<R, A...> {
   R (*const invoke)(const block *, A &&...);
   R (*const invoke_ref)(const block *, const A &...);
 };
@@ -91,7 +107,23 @@ struct holder : block<R, A...>,
 
   template <class G>
   explicit holder(G &&g)
-      : block<R, A...>{{{}, &drop}, &call, &call_ref}, f(std::forward<G>(g)) {}
+      : block<R, A...>{{{}, &drop}, curried(), &call, &call_ref},
+        f(std::forward<G>(g)) {}
+
+  static constexpr curried_entry<R, A...> curried() {
+    if constexpr (std::is_empty_v<curried_entry<R, A...>>)
+      return {};
+    else
+      return {&call2<>};
+  }
+  // [f(a)(b)], the inner callable left as [f] made it.
+  template <class E = curried_entry<R, A...>>
+  static typename E::result2 call2(const void *b, const A &...a,
+                                   const typename E::arg2 &x) {
+    const F &f =
+        static_cast<const holder *>(static_cast<const block<R, A...> *>(b))->f;
+    return invoke_as<typename E::result2>(std::invoke(f, a...), x);
+  }
 
   static R call(const block<R, A...> *b, A &&...a) {
     return invoke_as<R>(static_cast<const holder *>(b)->f,
@@ -131,6 +163,83 @@ template <class T> struct is_std_function : std::false_type {};
 template <class Sig>
 struct is_std_function<std::function<Sig>> : std::true_type {};
 
+// A Rocq function value means the same however its arrows are grouped, and
+// Crane groups them two ways: flat where a declaration spells the type --
+// [nat -> nat -> nat] as [fn<R(A, B)>] -- and curried where a type variable
+// stands for it, as [fn<fn<R(B)>(A)>], since a signature that writes an arrow
+// around a type variable takes its arguments one at a time.  A value crossing
+// from one spelling to the other is the same function regrouped: [regroup]
+// says whether a callable [F] reaches [R] from the arguments [A...] by some
+// grouping, and [regrouped] is the callable that applies it so.
+template <class... T> struct types {};
+
+template <class R> struct fn_parts {
+  static constexpr bool is_fn = false;
+};
+template <class R2, class... B> struct fn_parts<fn<R2(B...)>> {
+  static constexpr bool is_fn = true;
+  using result = R2;
+  using args = types<B...>;
+};
+
+template <class F, class R, class Args> struct regroup;
+template <class F, class R, class Args> struct regrouped;
+
+template <class F, class R, class... A> struct regroup<F, R, types<A...>> {
+  // [R] is itself a function: take its arguments as well, in one call.
+  static consteval bool into_result() {
+    if constexpr (fn_parts<R>::is_fn)
+      return []<class... B>(types<B...>) {
+        return regroup<F, typename fn_parts<R>::result, types<A..., B...>>::value;
+      }(typename fn_parts<R>::args{});
+    else
+      return false;
+  }
+  // [F] takes fewer: apply it to the first, and the rest to what it returns.
+  static consteval bool through_first() {
+    if constexpr (sizeof...(A) >= 2)
+      return []<class A0, class... As>(types<A0, As...>) {
+        if constexpr (std::is_invocable_v<const F &, A0>)
+          return regroup<std::invoke_result_t<const F &, A0>, R, types<As...>>::value;
+        else
+          return false;
+      }(types<A...>{});
+    else
+      return false;
+  }
+  static consteval bool compute() {
+    if constexpr (std::is_invocable_r_v<R, const F &, A...>)
+      return true;
+    else if constexpr (into_result())
+      return true;
+    else
+      return through_first();
+  }
+  static constexpr bool value = compute();
+};
+
+template <class F, class R, class... A> struct regrouped<F, R, types<A...>> {
+  F f;
+  R operator()(A... a) const {
+    using G = regroup<F, R, types<A...>>;
+    if constexpr (std::is_invocable_r_v<R, const F &, A...>)
+      return invoke_as<R>(f, std::move(a)...);
+    else if constexpr (G::into_result())
+      return [&]<class... B>(types<B...>) {
+        return R([f = f, ... a = std::move(a)](B... b) {
+          return regrouped<F, typename fn_parts<R>::result, types<A..., B...>>{f}(
+              a..., std::move(b)...);
+        });
+      }(typename fn_parts<R>::args{});
+    else
+      return [&]<class A0, class... As>(A0 &&a0, As &&...as) {
+        using H = std::invoke_result_t<const F &, A0>;
+        return regrouped<H, R, types<std::remove_cvref_t<As>...>>{
+            std::invoke(f, std::forward<A0>(a0))}(std::forward<As>(as)...);
+      }(std::move(a)...);
+  }
+};
+
 } // namespace fn_detail
 
 template <class Sig> class fn;
@@ -140,8 +249,10 @@ template <class R, class... A> class fn<R(A...)> {
   const block *p_ = nullptr;
 
 public:
-  // A copy is a refcount bump (see field.h).
+  // A copy is a refcount bump (see field.h), and the value is one counted
+  // word: null or the address of a [shared_block] (see obj.h).
   using crane_cheap_copy = void;
+  using crane_counted_word = void;
 
 private:
   void retain() const noexcept {
@@ -183,6 +294,22 @@ public:
     CRANE_FN_STAT(made);
   }
 
+#ifndef CRANE_STRICT_ARITY
+  // The same function with its arrows grouped otherwise -- a curried value
+  // reaching a flat slot, or a flat one a curried slot; see
+  // [fn_detail::regroup].  Generated code writes such a crossing itself, as
+  // [crane::regroup<Into>(f)]; this conversion is the safety net for one it
+  // missed, and [CRANE_STRICT_ARITY], which the test suite compiles with,
+  // takes it away so that a missed crossing does not compile.
+  template <class F, class D = std::decay_t<F>>
+    requires(!std::is_same_v<D, fn>) &&
+            (!std::is_invocable_r_v<R, const D &, A...>) &&
+            (fn_detail::regroup<D, R, fn_detail::types<A...>>::value) &&
+            (std::is_copy_constructible_v<D>)
+  fn(F &&f)
+      : fn(fn_detail::regrouped<D, R, fn_detail::types<A...>>{std::forward<F>(f)}) {}
+#endif
+
   fn(const fn &o) noexcept : p_(o.p_) { retain(); }
   fn(fn &&o) noexcept : p_(std::exchange(o.p_, nullptr)) {}
   // [o] may be owned by the closure this one releases, so its pointer is
@@ -204,6 +331,19 @@ public:
   }
   ~fn() { release(); }
 
+  // [crane::make_immortal]: the closure's block kept for the rest of the
+  // program -- a constant ([crane::immortal]).  What it captured is
+  // reached only through it, by calls, which leave the counts alone.
+  void make_immortal() const noexcept {
+    if (p_) p_->rc.make_immortal();
+  }
+
+  // [crane::release_into]: the closure released into [h], this one empty.
+  void release_into(pool_detail::thread_heap &h) noexcept {
+    if (p_) p_->release_into(h);
+    p_ = nullptr;
+  }
+
   // Arguments the caller keeps go in by reference; arguments it gives up
   // are moved.  Where a parameter type is itself a reference the two
   // coincide, and only the first exists.
@@ -222,12 +362,47 @@ public:
     return p_->invoke(p_, std::forward<A>(a)...);
   }
 
+  template <class R2, class B, class A0>
+  friend R2 apply2(const fn<fn<R2(B)>(A0)> &f, const std::type_identity_t<A0> &a,
+                   const std::type_identity_t<B> &b);
+
   explicit operator bool() const noexcept { return p_ != nullptr; }
   friend bool operator==(const fn &f, std::nullptr_t) noexcept {
     return f.p_ == nullptr;
   }
   void swap(fn &o) noexcept { std::swap(p_, o.p_); }
 };
+
+// [f(a)(b)].  Through an [fn] whose result is an [fn], by the entry that
+// leaves the intermediate callable unboxed; anything else is applied twice.
+namespace fn_detail {
+template <class F> struct is_curried_fn : std::false_type {};
+template <class R2, class B, class A0>
+struct is_curried_fn<fn<fn<R2(B)>(A0)>> : std::true_type {};
+} // namespace fn_detail
+
+template <class F, class X, class Y>
+  requires(!fn_detail::is_curried_fn<F>::value)
+decltype(auto) apply2(const F &f, X &&a, Y &&b) {
+  return f(std::forward<X>(a))(std::forward<Y>(b));
+}
+template <class R2, class B, class A0>
+R2 apply2(const fn<fn<R2(B)>(A0)> &f, const std::type_identity_t<A0> &a,
+          const std::type_identity_t<B> &b) {
+  if (!f.p_)
+    throw std::bad_function_call();
+  CRANE_FN_STAT(calls);
+  return f.p_->invoke2(f.p_, a, b);
+}
+
+// [f] as the function type [Into], its arrows grouped as [Into] groups them:
+// the crossing generated code writes where a value spelled at one arrow site
+// reaches a slot spelled at another ([fn_detail::regroup]).
+template <class Into, class F> Into regroup(F &&f) {
+  using P = fn_detail::fn_parts<Into>;
+  return Into(fn_detail::regrouped<std::decay_t<F>, typename P::result, typename P::args>{
+      std::forward<F>(f)});
+}
 
 template <class R, class... A> fn(R (*)(A...)) -> fn<R(A...)>;
 template <class F>

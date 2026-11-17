@@ -1,8 +1,8 @@
 #include "type_constructor_param_inductive.h"
 
 uint64_t TypeConstructorParamInductive::size_list(
-    const TypeConstructorParamInductive::wrapped<List<crane::obj>, uint64_t>
-        &w) {
+    const TypeConstructorParamInductive::wrapped<List<crane::obj>,
+                                                 uint64_t> &w) {
   if (std::holds_alternative<typename TypeConstructorParamInductive::wrapped<
           List<crane::obj>, uint64_t>::Wrap>(w.v())) {
     const auto &[a0] = std::get<typename TypeConstructorParamInductive::wrapped<

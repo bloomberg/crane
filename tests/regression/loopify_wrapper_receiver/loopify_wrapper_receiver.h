@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -20,13 +20,13 @@ struct LoopifyWrapperReceiver {
     // ACCESSORS
     box<A> clone() const { return {a0}; }
 
-    template <typename _U> operator box<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const A &>) {
-          return crane_convert<_U>(a0);
+    template <typename CraneU> operator box<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -34,15 +34,12 @@ struct LoopifyWrapperReceiver {
     // CREATORS
     static box<A> b(A a0) { return {std::move(a0)}; }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
-    T1 box_rec(F0 &&f) const {
-      const auto &[a0] = *this;
-      return f(a0);
+    template <typename T1, typename F0> T1 box_rec(F0 &&f) const {
+      return this->template box_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -79,6 +76,9 @@ struct LoopifyWrapperReceiver {
 
     // MANIPULATORS
     ~t() {
+      if (std::holds_alternative<L>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<t>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<N>(&_v)) {
@@ -102,8 +102,8 @@ struct LoopifyWrapperReceiver {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -113,33 +113,24 @@ struct LoopifyWrapperReceiver {
     t build(uint64_t n) const {
       t _self_store;
       const t *_loop_self = this;
-      uint64_t _loop_n = std::move(n);
+      uint64_t _loop_n = n;
       while (true) {
         if (_loop_n <= 0) {
-          return std::move(*_loop_self);
+          return *_loop_self;
         } else {
           uint64_t m = _loop_n - 1;
-          _self_store = t::n(box<t>::b(std::move(*_loop_self)));
+          _self_store = t::n(box<t>::b(*_loop_self));
           _loop_self = &_self_store;
           _loop_n = m;
         }
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, box<t> &>
-    T1 t_rec(T1 f, F1 &&f0) const {
-      if (std::holds_alternative<typename t::L>(this->v())) {
-        return f;
-      } else {
-        const auto &[a0] = std::get<typename t::N>(this->v());
-        return f0(*a0);
-      }
+    template <typename T1, typename F1> T1 t_rec(T1 f, F1 &&f0) const {
+      return this->template t_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, box<t> &>
-    T1 t_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 t_rect(T1 f, F1 &&f0) const {
       if (std::holds_alternative<typename t::L>(this->v())) {
         return f;
       } else {

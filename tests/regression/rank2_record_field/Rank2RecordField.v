@@ -1,7 +1,7 @@
 From Crane Require Import Extraction.
 From Crane.Mapping Require Import Std.
 Require Import Crane.Mapping.NatIntStd.
-Require Import List. Import ListNotations.
+From Stdlib Require Import List. Import ListNotations.
 (** A rank-2 record field ([forall A, list A -> nat]) stores a methodified
     function as a value: the reference must become a method-calling lambda,
     not a hand-rolled forwarding call naming an undeducible type variable. *)

@@ -20,8 +20,9 @@ bool PeanoNat::eqb(const Nat &n, const Nat &m) {
 
 EOU<Dv> ErrorCtorThroughReifiedInstance::eval_icmp(const Nat &x, const Nat &y) {
   return EOU_monad::template bind<bool, Dv>(
-      (PeanoNat::eqb(x, y) ? EOU_monad::template ret<bool>(true)
-                           : EOU<bool>::err(Nat::s(Nat::s(Nat::s(
-                                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))),
+      (PeanoNat::eqb(x, y)
+           ? EOU_monad::template ret<bool>(true)
+           : EOU<bool>::err(Nat::s(
+                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))),
       [](bool b) { return EOU_monad::template ret<Dv>(Dv::dvbool(b)); });
 }

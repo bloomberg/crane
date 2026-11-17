@@ -4,7 +4,7 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
+#include "shared_block.h"
 #include <atomic>
 #include <functional>
 #include <memory>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -101,18 +102,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -156,19 +158,15 @@ template <SEM S> struct Make {
   using entry = SigT<prod2, psem>;
 
   static entry mk_entry(typename S::idx a) {
+    static const auto erased_fn =
+        crane::immortal(crane_erase_fn([](const auto &tup) {
+          const auto &[_x, _x0] =
+              crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+          return true;
+        }));
     return SigT<prod2, psem>::existt(
-        std::make_pair(a, List<typename S::idx>::nil()),
-        std::make_pair(
-            crane::obj(crane_erase_fn([](const auto &tup) {
-              const auto &[_x, _x0] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-              return true;
-            })),
-            crane::obj(crane_erase_fn([](const auto &tup) {
-              const auto &[_x, _x0] =
-                  crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-              return true;
-            }))));
+        std::make_pair(std::move(a), List<typename S::idx>::nil()),
+        std::make_pair(crane::obj(erased_fn), crane::obj(erased_fn)));
   }
 
   template <typename F1>
@@ -195,8 +193,8 @@ struct Inst {
 };
 
 using M = Make<Inst>;
-const M::entry my_entry = M::mk_entry(std::monostate{});
+[[gnu::used]] inline const M::entry my_entry = M::mk_entry(std::monostate{});
 Inst::sem my_arg(std::monostate _x);
-bool check(std::monostate _x);
+bool check();
 
 #endif // INCLUDED_SIGT_PROD_FN_ANY_LIT_PAIR

@@ -30,7 +30,7 @@ uint64_t AccumClosureEscape::apply_first(
           crane::fn<uint64_t(uint64_t)>>::Mynil>(fns.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] = std::get<typename AccumClosureEscape::mylist<
+    const auto &[a0, _] = std::get<typename AccumClosureEscape::mylist<
         crane::fn<uint64_t(uint64_t)>>::Mycons>(fns.v());
     return a0(x);
   }

@@ -3,9 +3,9 @@
 
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -14,13 +14,17 @@
 template <typename M>
 concept Elem = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::dflt } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::dflt() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::dflt
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::dflt()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 template <Elem E> struct MutualTree {
@@ -97,8 +101,8 @@ template <Elem E> struct MutualTree {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -175,8 +179,8 @@ template <Elem E> struct MutualTree {
 
     forest(const forest &) = default;
     forest &operator=(const forest &) = default;
-    forest(forest &&) noexcept = default;
-    forest &operator=(forest &&) noexcept = default;
+    forest(forest &&) = default;
+    forest &operator=(forest &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -185,8 +189,7 @@ template <Elem E> struct MutualTree {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, forest &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
@@ -198,20 +201,11 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, forest &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t0) {
-    if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
-      const auto &[a0] = std::get<typename tree::Leaf>(t0.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
-      return f0(a0, *a1);
-    }
+    return tree_rect<T1>(f, f0, t0);
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
   static T1 forest_rect(T1 f, F1 &&f0, const forest &f1) {
     if (std::holds_alternative<typename forest::FNil>(f1.v())) {
       return f;
@@ -222,21 +216,15 @@ template <Elem E> struct MutualTree {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, forest &, T1 &>
   static T1 forest_rec(T1 f, F1 &&f0, const forest &f1) {
-    if (std::holds_alternative<typename forest::FNil>(f1.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename forest::FCons>(f1.v());
-      return f0(*a0, *a1, forest_rec<T1>(std::move(f), f0, *a1));
-    }
+    return forest_rect<T1>(std::move(f), f0, f1);
   }
 
   static uint64_t tree_size(const tree &t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       return UINT64_C(1);
     } else {
-      const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
+      const auto &[_, a1] = std::get<typename tree::Node>(t0.v());
       return (UINT64_C(1) + forest_size(*a1));
     }
   }
@@ -293,14 +281,13 @@ template <Elem E> struct MutualTree {
 
 struct NatElem {
   using t = uint64_t;
-  static inline const uint64_t dflt = UINT64_C(0);
+  static constexpr uint64_t dflt = UINT64_C(0);
 };
 
 static_assert(Elem<NatElem>);
 using NatTree = MutualTree<NatElem>;
 const uint64_t test_tree_size = NatTree::tree_size(NatTree::sample_tree());
 const uint64_t test_forest_size = NatTree::forest_size(NatTree::small_forest());
-
 const uint64_t test_tree_sum = NatTree::tree_sum(NatTree::sample_tree());
 
 #endif // INCLUDED_MUTUAL_FUNCTOR

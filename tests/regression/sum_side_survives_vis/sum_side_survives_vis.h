@@ -2,8 +2,8 @@
 #define INCLUDED_SUM_SIDE_SURVIVES_VIS
 
 #include "obj.h"
-#include <any>
 #include <crane_itree.h>
+#include <cstdint>
 #include <variant>
 
 enum class AE;
@@ -16,8 +16,7 @@ struct SumSideSurvivesVis {
 
   template <typename T1 = void>
   static uint64_t side(const Sum1<AE, AE, crane::obj> &e) {
-    if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(
-            e.v())) {
+    if (std::holds_alternative<typename Sum1<AE, AE, crane::obj>::Inl1>(e.v())) {
       return UINT64_C(1);
     } else {
       return UINT64_C(2);

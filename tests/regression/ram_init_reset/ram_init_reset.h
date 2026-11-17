@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,7 +103,7 @@ struct RamInitReset {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return List<T1>::cons(x, *a1);
       }
     } else {
@@ -157,15 +158,11 @@ struct RamInitReset {
       ram_bank{ListDef::template repeat<ram_chip>(empty_chip, UINT64_C(4))};
   static inline const List<ram_bank> empty_ram =
       ListDef::template repeat<ram_bank>(empty_bank, UINT64_C(4));
-  static inline const ram_sel default_sel =
+  [[gnu::used]] static inline const ram_sel default_sel =
       ram_sel{UINT64_C(0), UINT64_C(0), UINT64_C(0), UINT64_C(0)};
   static inline const state init_state =
       state{ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(16)),
-            UINT64_C(0),
-            false,
-            UINT64_C(0),
-            List<uint64_t>::nil(),
-            empty_ram,
+            UINT64_C(0), false, UINT64_C(0), List<uint64_t>::nil(), empty_ram,
             default_sel,
             ListDef::template repeat<uint64_t>(UINT64_C(0), UINT64_C(8))};
   static state reset_state(const state &s);

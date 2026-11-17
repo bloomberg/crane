@@ -6,9 +6,10 @@
 #include "Datatypes.h"
 
 namespace UndeclTvarTemplate {
-
 template <typename M>
-concept Ty = requires { typename M::Sigma; };
+concept Ty = requires {
+  typename M::Sigma;
+};
 
 template <Ty X> struct Make {
   using String = typename Datatypes::template List<typename X::Sigma>;
@@ -25,7 +26,6 @@ template <Ty X> struct Make {
     }
   }
 };
-
 } // namespace UndeclTvarTemplate
 
 #endif // INCLUDED_UNDECLTVARTEMPLATE

@@ -3,8 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
-#include <atomic>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -14,7 +12,6 @@
 #include "ProvDef.h"
 
 namespace SepExtPromotedAliasImport {
-
 template <typename ptr> struct Mbit;
 using ParamsDef::ptr;
 using ProvDef::prov;
@@ -43,13 +40,14 @@ public:
 
   explicit Mbit(Bit_byte _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Mbit(const Mbit<_U> &_other)
+  template <typename CraneU>
+  Mbit(const Mbit<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Mbit<_U>::Bit_ptr>(_other.v())) {
-            const auto &[p] = std::get<typename Mbit<_U>::Bit_ptr>(_other.v());
+          if (std::holds_alternative<typename Mbit<CraneU>::Bit_ptr>(_other.v())) {
+            const auto &[p] =
+                std::get<typename Mbit<CraneU>::Bit_ptr>(_other.v());
             return Bit_ptr{[&]() -> ptr {
-              if constexpr (crane_convertible<ptr, const _U &>) {
+              if constexpr (crane_convertible<ptr, const CraneU &>) {
                 return crane_convert<ptr>(p);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -57,7 +55,8 @@ public:
               }
             }()};
           } else {
-            const auto &[n] = std::get<typename Mbit<_U>::Bit_byte>(_other.v());
+            const auto &[n] =
+                std::get<typename Mbit<CraneU>::Bit_byte>(_other.v());
             return Bit_byte{n};
           }
         }()) {}
@@ -85,7 +84,6 @@ public:
     }
   }
 };
-
 } // namespace SepExtPromotedAliasImport
 
 #endif // INCLUDED_SEPEXTPROMOTEDALIASIMPORT

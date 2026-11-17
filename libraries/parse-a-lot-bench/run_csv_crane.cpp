@@ -14,6 +14,10 @@
 #include "conslist.h"
 #include "CSV.h"
 
+// Unqualified, so it finds crane::get_if for a shared variant
+// ([Set Crane SharedVariant]) and std::get_if for a std::variant.
+using std::get_if;
+
 struct RunArgs { int argc; char **argv; int result; };
 
 // The CSV start symbol [Csv] has semantic type [list (list string)]. The
@@ -71,9 +75,9 @@ static void *run_main(void *arg) {
     using PR = CSV::CSV_Parser::ParserAndProofs::PEF::PS::P::Parse_result;
     const char *kind = nullptr;
     const crane::obj *val = nullptr;
-    if (const auto *u = std::get_if<PR::Unique>(&pr.v())) {
+    if (const auto *u = get_if<PR::Unique>(&pr.v())) {
         kind = "unique"; val = &u->a0;
-    } else if (const auto *am = std::get_if<PR::Ambig>(&pr.v())) {
+    } else if (const auto *am = get_if<PR::Ambig>(&pr.v())) {
         kind = "ambig";  val = &am->a0;
     }
     if (kind) {

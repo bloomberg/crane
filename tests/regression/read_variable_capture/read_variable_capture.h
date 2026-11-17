@@ -1,14 +1,13 @@
 #ifndef INCLUDED_READ_VARIABLE_CAPTURE
 #define INCLUDED_READ_VARIABLE_CAPTURE
 
-#include <crane_itree.h>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <iterator>
 #include <string>
 #include <system_error>
-
-using namespace std::string_literals;
+#include <utility>
 
 struct ReadVariableCapture {
   /// Works: literal argument — no capture needed

@@ -37,9 +37,17 @@ bool PeanoNat::eq_dec(const Nat &n, const Nat &m) {
   }
 }
 
-bool AstLib::RawIDOrd::eq_dec(AstLib::RawIDOrd::t x0_,
-                              AstLib::RawIDOrd::t x1_) {
-  return x0_.raw_id_dec(std::move(x1_));
+Nat AstLib::pick(Nat a, Nat b) {
+  if (PeanoNat::leb(a, b)) {
+    return b;
+  } else {
+    return a;
+  }
+}
+
+bool AstLib::RawIDOrd::eq_dec(const AstLib::RawIDOrd::t &x0_,
+                              const AstLib::RawIDOrd::t &x1_) {
+  return x0_.raw_id_dec(x1_);
 }
 
 bool AstLib::eq_dec_raw_id(const Raw_id &a, const Raw_id &b) {
@@ -47,14 +55,6 @@ bool AstLib::eq_dec_raw_id(const Raw_id &a, const Raw_id &b) {
     return true;
   } else {
     return false;
-  }
-}
-
-Nat AstLib::pick(Nat a, Nat b) {
-  if (PeanoNat::leb(a, b)) {
-    return b;
-  } else {
-    return a;
   }
 }
 
@@ -66,8 +66,8 @@ bool via_non_colliding(const Raw_id &a, const Raw_id &b) {
   }
 }
 
-Nat via_colliding(const Nat &x0_, const Nat &x1_) {
-  return AstLib::pick(x0_, x1_);
+Nat via_colliding(Nat x0_, Nat x1_) {
+  return AstLib::pick(std::move(x0_), std::move(x1_));
 }
 
 bool via_file(const Raw_id &x0_, const Raw_id &x1_) {

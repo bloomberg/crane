@@ -4,7 +4,7 @@
 std::optional<std::string> EffectNestedIo::read_optional() {
   std::string line;
   std::getline(std::cin, line);
-  return std::make_optional<std::string>(line);
+  return std::make_optional<std::string>(std::move(line));
 }
 
 /// 2. Block template result used in a pair
@@ -12,14 +12,14 @@ std::pair<std::string, int64_t> EffectNestedIo::read_pair() {
   std::string line;
   std::getline(std::cin, line);
   int64_t len = static_cast<int64_t>(line.length());
-  return std::make_pair(line, len);
+  return std::make_pair(std::move(line), len);
 }
 
 /// 3. Block template result concatenated with another string
 std::string EffectNestedIo::read_and_greet() {
   std::string name;
   std::getline(std::cin, name);
-  std::string greeting = "Hello, "s + std::move(name);
+  std::string greeting = std::string("Hello, ") + std::move(name);
   return greeting;
 }
 
@@ -29,7 +29,7 @@ std::pair<std::string, std::string> EffectNestedIo::read_two_lines() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return std::make_pair(a, b);
+  return std::make_pair(std::move(a), std::move(b));
 }
 
 /// 5. Block template in function that also uses clock effect
@@ -44,14 +44,14 @@ std::pair<std::string, int64_t> EffectNestedIo::timed_read() {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::steady_clock::now().time_since_epoch())
           .count());
-  return std::make_pair(line, t2);
+  return std::make_pair(std::move(line), t2);
 }
 
 /// 6. Block template result stored in env
 std::string EffectNestedIo::read_and_store(std::string key) {
   std::string line;
   std::getline(std::cin, line);
-  setenv(key.c_str(), line.c_str(), 1);
+  setenv(std::move(key).c_str(), line.c_str(), 1);
   return line;
 }
 
@@ -59,16 +59,16 @@ std::string EffectNestedIo::read_and_store(std::string key) {
 std::pair<std::string, std::string> EffectNestedIo::multi_read_store() {
   std::string k;
   std::getline(std::cin, k);
-  setenv("KEY"s.c_str(), k.c_str(), 1);
+  setenv(std::string("KEY").c_str(), k.c_str(), 1);
   std::string v;
   std::getline(std::cin, v);
-  setenv("VALUE"s.c_str(), v.c_str(), 1);
-  return std::make_pair(k, v);
+  setenv(std::string("VALUE").c_str(), v.c_str(), 1);
+  return std::make_pair(std::move(k), std::move(v));
 }
 
 /// 8. Block template result length checked
 int64_t EffectNestedIo::read_length() {
   std::string line;
   std::getline(std::cin, line);
-  return static_cast<int64_t>(line.length());
+  return static_cast<int64_t>(std::move(line).length());
 }

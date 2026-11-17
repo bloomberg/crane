@@ -4,7 +4,7 @@
 DeepApp::mylist<uint64_t> DeepApp::build(uint64_t n,
                                          DeepApp::mylist<uint64_t> acc) {
   DeepApp::mylist<uint64_t> _loop_acc = std::move(acc);
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_acc;
@@ -25,16 +25,15 @@ DeepApp::mylist<uint64_t> DeepApp::map_id(const DeepApp::mylist<uint64_t> &l) {
 /// Append two lists.
 DeepApp::mylist<uint64_t>
 DeepApp::append_lists(const DeepApp::mylist<uint64_t> &x0_,
-                      const DeepApp::mylist<uint64_t> &x1_) {
-  return app<uint64_t>(x0_, x1_);
+                      DeepApp::mylist<uint64_t> x1_) {
+  return app<uint64_t>(x0_, std::move(x1_));
 }
 
 uint64_t DeepApp::head_or_zero(const DeepApp::mylist<uint64_t> &l) {
-  if (std::holds_alternative<typename DeepApp::mylist<uint64_t>::Mynil>(
-          l.v())) {
+  if (std::holds_alternative<typename DeepApp::mylist<uint64_t>::Mynil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename DeepApp::mylist<uint64_t>::Mycons>(l.v());
     return a0;
   }

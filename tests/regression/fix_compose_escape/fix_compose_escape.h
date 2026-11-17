@@ -2,6 +2,9 @@
 #define INCLUDED_FIX_COMPOSE_ESCAPE
 
 #include "fn.h"
+#include <cstdint>
+#include <type_traits>
+#include <utility>
 
 struct FixComposeEscape {
   /// A local fixpoint is composed with another function.
@@ -12,8 +15,9 @@ struct FixComposeEscape {
   /// variable that is destroyed when compose_add returns.  The =
   /// capture copies the std::function VALUE, including its dangling
   /// & references.
-  static uint64_t compose_add(uint64_t base, crane::fn<uint64_t(uint64_t)> g,
-                              uint64_t x0_) {
+  template <typename F1>
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t>
+  static uint64_t compose_add(uint64_t base, F1 &&g, uint64_t x0_) {
     auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
       if (x <= 0) {
         return base;
@@ -42,7 +46,7 @@ struct FixComposeEscape {
     crane::fn<uint64_t(uint64_t)> inner = [](uint64_t _x0) -> uint64_t {
       return compose_add(UINT64_C(50), [](uint64_t x) { return x; }, _x0);
     };
-    return compose_add(UINT64_C(100), inner, UINT64_C(7));
+    return compose_add(UINT64_C(100), std::move(inner), UINT64_C(7));
   }();
 };
 

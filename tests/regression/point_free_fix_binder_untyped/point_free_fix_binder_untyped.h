@@ -4,13 +4,11 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -33,18 +31,23 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
-template <typename
-I>concept Params = requires {
-    typename I::base;
-  } && (requires {
-    { I::base_default() } -> std::convertible_to<typename I::base>;
-  } || requires {
-    { I::base_default } -> std::convertible_to<typename I::base>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::base;
+} && (requires {
+  {
+    I::base_default()
+  }
+  -> std::convertible_to<typename I::base>;
+} || requires {
+  {
+    I::base_default
+  }
+  -> std::convertible_to<typename I::base>;
+});
 template <typename I, typename X>
 concept C1 = requires {
   { I::c1(std::declval<X>()) } -> std::convertible_to<X>;
@@ -107,8 +110,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -139,16 +142,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -185,8 +189,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -218,13 +222,13 @@ public:
 
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Tree(const Tree<_U> &_other)
+  template <typename CraneU>
+  Tree(const Tree<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Tree<_U>::Leaf>(_other.v())) {
-            const auto &[b] = std::get<typename Tree<_U>::Leaf>(_other.v());
+          if (std::holds_alternative<typename Tree<CraneU>::Leaf>(_other.v())) {
+            const auto &[b] = std::get<typename Tree<CraneU>::Leaf>(_other.v());
             return Leaf{[&]() -> base {
-              if constexpr (crane_convertible<base, const _U &>) {
+              if constexpr (crane_convertible<base, const CraneU &>) {
                 return crane_convert<base>(b);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -232,7 +236,8 @@ public:
               }
             }()};
           } else {
-            const auto &[kids] = std::get<typename Tree<_U>::Node>(_other.v());
+            const auto &[kids] =
+                std::get<typename Tree<CraneU>::Node>(_other.v());
             return Node{(kids ? std::make_shared<List<Tree<base>>>(
                                     crane_convert<List<Tree<base>>>(*kids))
                               : nullptr)};
@@ -242,8 +247,7 @@ public:
   static Tree<base> leaf(base b) { return Tree<base>(Leaf{std::move(b)}); }
 
   static Tree<base> node(List<Tree<base>> kids) {
-    return Tree<base>(
-        Node{std::make_shared<List<Tree<base>>>(std::move(kids))});
+    return Tree<base>(Node{std::make_shared<List<Tree<base>>>(std::move(kids))});
   }
 
   // MANIPULATORS
@@ -257,13 +261,13 @@ struct Denote {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
   template <Monad _tcI0, typename T2, typename T3>
-  static typename _tcI0::template m<List<T3>> map_monad(
-      std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
-      const List<T2> &l);
+  static typename _tcI0::template m<List<T3>>
+  map_monad(const std::type_identity_t<
+      crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
+            const List<T2> &l);
   template <typename _tcI0, typename _tcI1, typename _tcI2, typename _tcI3,
             Params _tcI4, typename T1>
     requires C4<_tcI0, T1> && C3<_tcI1, T1> && C2<_tcI2, T1> && C1<_tcI3, T1>
@@ -272,20 +276,20 @@ struct Denote {
 };
 
 struct option_monad {
-  template <typename _A0> using m = std::optional<_A0>;
+  template <typename CraneA0> using m = std::optional<CraneA0>;
 
-  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-    return std::make_optional<_A0>(x);
+  template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
+    return std::make_optional<CraneA0>(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static std::optional<_A1> bind(std::optional<_A0> o,
-                                 crane::fn<std::optional<_A1>(_A0)> f) {
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<CraneA1>
+  bind(std::optional<CraneA0> o, crane::fn<std::optional<CraneA1>(CraneA0)> f) {
     if (o.has_value()) {
-      const _A0 &x = *o;
+      const CraneA0 &x = *o;
       return f(x);
     } else {
-      return std::optional<_A1>();
+      return std::optional<CraneA1>();
     }
   }
 };
@@ -332,26 +336,26 @@ typename _tcI0::template m<T2> Denote::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Denote::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
 }
 
 template <Monad _tcI0, typename T2, typename T3>
-typename _tcI0::template m<List<T3>> Denote::map_monad(
-    std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
-    const List<T2> &l) {
+typename _tcI0::template m<List<T3>>
+Denote::map_monad(const std::type_identity_t<
+    crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
+                  const List<T2> &l) {
   if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-    return Denote::template ret<_tcI0, List<T3>>(List<T3>::nil());
+    return _tcI0::template ret<List<T3>>(List<T3>::nil());
   } else {
     const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
     const List<T2> &a1_value = *a1;
-    return Denote::template bind<_tcI0, T3, List<T3>>(f(a0), [=](const T3 &y) {
-      return Denote::template bind<_tcI0, List<T3>, List<T3>>(
+    return _tcI0::template bind<T3, List<T3>>(f(a0), [=](const T3 &y) {
+      return _tcI0::template bind<List<T3>, List<T3>>(
           Denote::template map_monad<_tcI0, T2, T3>(f, a1_value),
           [=](const List<T3> &ys) {
-            return Denote::template ret<_tcI0, List<T3>>(List<T3>::cons(y, ys));
+            return _tcI0::template ret<List<T3>>(List<T3>::cons(y, ys));
           });
     });
   }
@@ -362,27 +366,26 @@ template <typename _tcI0, typename _tcI1, typename _tcI2, typename _tcI3,
   requires C4<_tcI0, T1> && C3<_tcI1, T1> && C2<_tcI2, T1> && C1<_tcI3, T1>
 std::optional<Tree<typename _tcI4::base>>
 Denote::freeze(const Tree<typename _tcI4::base> &t) {
-  if (std::holds_alternative<typename Tree<typename _tcI4::base>::Leaf>(
-          t.v())) {
+  if (std::holds_alternative<typename Tree<typename _tcI4::base>::Leaf>(t.v())) {
     const auto &[b0] =
         std::get<typename Tree<typename _tcI4::base>::Leaf>(t.v());
-    return Denote::template ret<option_monad, Tree<typename _tcI4::base>>(
+    return option_monad::template ret<Tree<typename _tcI4::base>>(
         Tree<typename _tcI4::base>::leaf(b0));
   } else {
     const auto &[kids0] =
         std::get<typename Tree<typename _tcI4::base>::Node>(t.v());
     const List<Tree<typename _tcI4::base>> &kids0_value = *kids0;
-    return Denote::template bind<option_monad, List<Tree<typename _tcI4::base>>,
-                                 Tree<typename _tcI4::base>>(
+    return option_monad::template bind<List<Tree<typename _tcI4::base>>,
+                                       Tree<typename _tcI4::base>>(
         Denote::template map_monad<option_monad, Tree<typename _tcI4::base>,
-                                   Tree<typename _tcI4::base>>(
-            [](const Tree<typename _tcI4::base> &x) {
-              return Denote::template freeze<_tcI0, _tcI1, _tcI2, _tcI3, _tcI4,
-                                             T1>(x);
-            },
-            kids0_value),
+                                   Tree<typename _tcI4::base>>([](
+            const Tree<typename _tcI4::base> &x) {
+          return Denote::template freeze<_tcI0, _tcI1, _tcI2, _tcI3, _tcI4, T1>(
+              x);
+        },
+                                                               kids0_value),
         [](const List<Tree<typename _tcI4::base>> &ks) {
-          return Denote::template ret<option_monad, Tree<typename _tcI4::base>>(
+          return option_monad::template ret<Tree<typename _tcI4::base>>(
               Tree<typename _tcI4::base>::node(ks));
         });
   }

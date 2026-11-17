@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -12,6 +12,25 @@
 #include <variant>
 
 template <typename A> struct List;
+
+struct LetMatchType2 {
+  /// 1. Match returning bool — should be fine
+  static bool let_match_bool(uint64_t n);
+  /// 2. Match returning pair — might trigger std::any
+  static uint64_t let_match_pair(bool b);
+  /// 3. Match returning list — might trigger std::any
+  static List<uint64_t> let_match_list(bool b);
+  /// 4. Match returning option — might trigger std::any
+  static std::optional<uint64_t> let_match_opt(bool b);
+  /// 5. Cascading let-matches all returning nat — should be fine
+  static uint64_t cascading_nat(bool a, bool b, bool c);
+  /// 6. Match returning function type
+  static uint64_t let_match_fun(bool b);
+  /// 7. Match result used in another match
+  static uint64_t match_of_match(uint64_t n);
+  /// 8. let-bound match where arms have bindings
+  static uint64_t let_match_bindings(uint64_t n);
+};
 
 template <typename A> struct List {
   // TYPES
@@ -36,16 +55,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,32 +102,13 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct LetMatchType2 {
-  /// 1. Match returning bool — should be fine
-  static bool let_match_bool(uint64_t n);
-  /// 2. Match returning pair — might trigger std::any
-  static uint64_t let_match_pair(bool b);
-  /// 3. Match returning list — might trigger std::any
-  static List<uint64_t> let_match_list(bool b);
-  /// 4. Match returning option — might trigger std::any
-  static std::optional<uint64_t> let_match_opt(bool b);
-  /// 5. Cascading let-matches all returning nat — should be fine
-  static uint64_t cascading_nat(bool a, bool b, bool c);
-  /// 6. Match returning function type
-  static uint64_t let_match_fun(bool b);
-  /// 7. Match result used in another match
-  static uint64_t match_of_match(uint64_t n);
-  /// 8. let-bound match where arms have bindings
-  static uint64_t let_match_bindings(uint64_t n);
 };
 
 #endif // INCLUDED_LET_MATCH_TYPE2

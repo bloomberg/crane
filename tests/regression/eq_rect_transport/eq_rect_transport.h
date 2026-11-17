@@ -1,6 +1,8 @@
 #ifndef INCLUDED_EQ_RECT_TRANSPORT
 #define INCLUDED_EQ_RECT_TRANSPORT
 
+#include <cstdint>
+
 struct EqRectTransport {
   template <typename T1, typename T2> static T2 cast(T1 a) { return a; }
 

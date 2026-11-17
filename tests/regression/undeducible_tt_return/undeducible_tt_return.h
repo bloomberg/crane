@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -15,6 +14,11 @@ struct Nat;
 template <typename E, typename F, typename X> struct Sum1;
 template <typename X> struct ReqA;
 template <typename X> struct ReqB;
+
+struct UndeducibleTtReturn {
+  static std::optional<Nat>
+  use(const Sum1<ReqA<crane::obj>, ReqB<crane::obj>, Nat> &ab);
+};
 
 struct Nat {
   // TYPES
@@ -61,8 +65,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -95,15 +99,16 @@ public:
 
   explicit Sum1(Inr1 _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1, typename _U2>
-  Sum1(const Sum1<_U0, _U1, _U2> &_other)
+  template <typename CraneU0, typename CraneU1, typename CraneU2>
+  Sum1(const Sum1<CraneU0, CraneU1, CraneU2> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum1<_U0, _U1, _U2>::Inl1>(
-                  _other.v())) {
+          if (std::holds_alternative<
+                  typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(_other.v())) {
             const auto &[e] =
-                std::get<typename Sum1<_U0, _U1, _U2>::Inl1>(_other.v());
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inl1>(
+                    _other.v());
             return Inl1{[&]() -> E {
-              if constexpr (crane_convertible<E, const _U0 &>) {
+              if constexpr (crane_convertible<E, const CraneU0 &>) {
                 return crane_convert<E>(e);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -112,9 +117,10 @@ public:
             }()};
           } else {
             const auto &[f] =
-                std::get<typename Sum1<_U0, _U1, _U2>::Inr1>(_other.v());
+                std::get<typename Sum1<CraneU0, CraneU1, CraneU2>::Inr1>(
+                    _other.v());
             return Inr1{[&]() -> F {
-              if constexpr (crane_convertible<F, const _U1 &>) {
+              if constexpr (crane_convertible<F, const CraneU1 &>) {
                 return crane_convert<F>(f);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -152,13 +158,13 @@ template <typename X> struct ReqA {
   // ACCESSORS
   ReqA<X> clone() const { return {x}; }
 
-  template <typename _U> operator ReqA<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const X &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator ReqA<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const X &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -174,24 +180,19 @@ template <typename X> struct ReqB {
   // ACCESSORS
   ReqB<X> clone() const { return {x}; }
 
-  template <typename _U> operator ReqB<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const X &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator ReqB<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const X &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
 
   // CREATORS
   static ReqB<X> mkb(X x) { return {std::move(x)}; }
-};
-
-struct UndeducibleTtReturn {
-  static std::optional<Nat>
-  use(const Sum1<ReqA<crane::obj>, ReqB<crane::obj>, Nat> &ab);
 };
 
 template <typename T1, typename T2, typename T4, typename F0, typename F1>

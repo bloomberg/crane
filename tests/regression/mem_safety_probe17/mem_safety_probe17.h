@@ -4,11 +4,11 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -59,6 +59,17 @@ struct MemSafetyProbe17 {
 
     // MANIPULATORS
     ~qtree() {
+      if (std::holds_alternative<QLeaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<QNode>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a3 && _alt->a3.use_count() == 1) ||
+              (_alt->a4 && _alt->a4.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<qtree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<QNode>(&_v)) {
@@ -89,8 +100,8 @@ struct MemSafetyProbe17 {
 
     qtree(const qtree &) = default;
     qtree &operator=(const qtree &) = default;
-    qtree(qtree &&) noexcept = default;
-    qtree &operator=(qtree &&) noexcept = default;
+    qtree(qtree &&) = default;
+    qtree &operator=(qtree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -103,59 +114,60 @@ struct MemSafetyProbe17 {
     uint64_t weighted_sum() const {
       const qtree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const qtree *_self;
       };
 
-      /// _Cont_QNode: saves [a1, a3, a4, local_weight], resumes after recursive
-      /// call, then processes rest.
-      struct _Cont_QNode {
-        std::shared_ptr<qtree> a1;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
-        uint64_t local_weight;
-      };
-
-      /// _Cont_QNode_1: saves [_tmp4, a3, a4, local_weight], resumes after
+      /// CraneCont_QNode: saves [a1, a3, a4, local_weight], resumes after
       /// recursive call, then processes rest.
-      struct _Cont_QNode_1 {
-        uint64_t _tmp4;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+      struct CraneCont_QNode {
+        const qtree *a1;
+        const qtree *a3;
+        const qtree *a4;
         uint64_t local_weight;
       };
 
-      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a4, local_weight], resumes after
+      /// CraneCont_QNode_1: saves [a3, a4, local_weight, _tmp4], resumes after
       /// recursive call, then processes rest.
-      struct _Cont_QNode_2 {
-        uint64_t _tmp3;
-        uint64_t _tmp4;
-        std::shared_ptr<qtree> a4;
+      struct CraneCont_QNode_1 {
+        const qtree *a3;
+        const qtree *a4;
         uint64_t local_weight;
+        uint64_t _tmp4;
       };
 
-      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, local_weight], resumes
+      /// CraneCont_QNode_2: saves [a4, local_weight, _tmp4, _tmp3], resumes
       /// after recursive call, then processes rest.
-      struct _Cont_QNode_3 {
-        uint64_t _tmp2;
-        uint64_t _tmp3;
-        uint64_t _tmp4;
+      struct CraneCont_QNode_2 {
+        const qtree *a4;
         uint64_t local_weight;
+        uint64_t _tmp4;
+        uint64_t _tmp3;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
+      /// CraneCont_QNode_3: saves [local_weight, _tmp4, _tmp3, _tmp2], resumes
+      /// after recursive call, then processes rest.
+      struct CraneCont_QNode_3 {
+        uint64_t local_weight;
+        uint64_t _tmp4;
+        uint64_t _tmp3;
+        uint64_t _tmp2;
+      };
+
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_QNode, CraneCont_QNode_1,
+                       CraneCont_QNode_2, CraneCont_QNode_3>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified weighted_sum: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified weighted_sum: CraneEnter -> CraneCont_QNode ->
+      /// CraneCont_QNode_1 -> CraneCont_QNode_2 -> CraneCont_QNode_3.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -168,35 +180,36 @@ struct MemSafetyProbe17 {
                    (UINT64_C(3) * a2)) +
                   (UINT64_C(4) * a3->qtree_sum())) +
                  (UINT64_C(5) * a4->qtree_sum()));
-            _stack.emplace_back(_Cont_QNode{a1, a3, a4, local_weight});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_QNode{crane_raw(a1), crane_raw(a3),
+                                                crane_raw(a4), local_weight});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+        } else if (std::holds_alternative<CraneCont_QNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode>(_frame));
+          const qtree &a1 = *_f.a1;
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
-          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a3),
-                                            std::move(a4), local_weight});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+          _stack.emplace_back(
+              CraneCont_QNode_1{&a3, &a4, local_weight, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a1});
+        } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
-          _stack.emplace_back(_Cont_QNode_2{std::move(_result), _f._tmp4,
-                                            std::move(a4), local_weight});
-          _stack.emplace_back(_Enter{crane_raw(a3)});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+          _stack.emplace_back(CraneCont_QNode_2{&a4, local_weight, _f._tmp4,
+                                                std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a3});
+        } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
+          const qtree &a4 = *_f.a4;
           uint64_t local_weight = _f.local_weight;
-          _stack.emplace_back(_Cont_QNode_3{std::move(_result), _f._tmp3,
-                                            _f._tmp4, local_weight});
-          _stack.emplace_back(_Enter{crane_raw(a4)});
+          _stack.emplace_back(CraneCont_QNode_3{local_weight, _f._tmp4,
+                                                _f._tmp3, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a4});
         } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
+          auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
           uint64_t local_weight = _f.local_weight;
           _result = ((((local_weight + _f._tmp4) + _f._tmp3) + _f._tmp2) +
                      std::move(_result));
@@ -206,134 +219,134 @@ struct MemSafetyProbe17 {
     }
 
     /// TEST 5: Zip two 4-ary trees.
-    qtree qtree_zip(qtree t2) const {
+    qtree qtree_zip(const qtree &t2) const {
       const qtree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const qtree *_self;
-        qtree t2;
+        const qtree *t2;
       };
 
-      /// _Cont_QNode: saves [a10, a2, a20, a3, a30, a4, a40, a5], resumes after
-      /// recursive call, then processes rest.
-      struct _Cont_QNode {
-        std::shared_ptr<qtree> a10;
-        std::shared_ptr<qtree> a2;
-        uint64_t a20;
+      /// CraneCont_QNode: saves [a2, a3, a4, a5, a10, a20, a30, a40], resumes
+      /// after recursive call, then processes rest.
+      struct CraneCont_QNode {
+        const qtree *a2;
         uint64_t a3;
-        std::shared_ptr<qtree> a30;
-        std::shared_ptr<qtree> a4;
-        std::shared_ptr<qtree> a40;
-        std::shared_ptr<qtree> a5;
+        const qtree *a4;
+        const qtree *a5;
+        const qtree *a10;
+        uint64_t a20;
+        const qtree *a30;
+        const qtree *a40;
       };
 
-      /// _Cont_QNode_1: saves [_tmp4, a20, a3, a30, a4, a40, a5], resumes after
-      /// recursive call, then processes rest.
-      struct _Cont_QNode_1 {
+      /// CraneCont_QNode_1: saves [a3, a4, a5, a20, a30, a40, _tmp4], resumes
+      /// after recursive call, then processes rest.
+      struct CraneCont_QNode_1 {
+        uint64_t a3;
+        const qtree *a4;
+        const qtree *a5;
+        uint64_t a20;
+        const qtree *a30;
+        const qtree *a40;
         qtree _tmp4;
-        uint64_t a20;
-        uint64_t a3;
-        std::shared_ptr<qtree> a30;
-        std::shared_ptr<qtree> a4;
-        std::shared_ptr<qtree> a40;
-        std::shared_ptr<qtree> a5;
       };
 
-      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a20, a3, a40, a5], resumes after
-      /// recursive call, then processes rest.
-      struct _Cont_QNode_2 {
+      /// CraneCont_QNode_2: saves [a3, a5, a20, a40, _tmp4, _tmp3], resumes
+      /// after recursive call, then processes rest.
+      struct CraneCont_QNode_2 {
+        uint64_t a3;
+        const qtree *a5;
+        uint64_t a20;
+        const qtree *a40;
+        qtree _tmp4;
         qtree _tmp3;
-        qtree _tmp4;
-        uint64_t a20;
-        uint64_t a3;
-        std::shared_ptr<qtree> a40;
-        std::shared_ptr<qtree> a5;
       };
 
-      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a20, a3], resumes after
+      /// CraneCont_QNode_3: saves [a3, a20, _tmp4, _tmp3, _tmp2], resumes after
       /// recursive call, then processes rest.
-      struct _Cont_QNode_3 {
+      struct CraneCont_QNode_3 {
+        uint64_t a3;
+        uint64_t a20;
+        qtree _tmp4;
+        qtree _tmp3;
         qtree _tmp2;
-        qtree _tmp3;
-        qtree _tmp4;
-        uint64_t a20;
-        uint64_t a3;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_QNode, CraneCont_QNode_1,
+                       CraneCont_QNode_2, CraneCont_QNode_3>;
       qtree _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, std::move(t2)});
-      /// Loopified qtree_zip: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, &t2});
+      /// Loopified qtree_zip: CraneEnter -> CraneCont_QNode ->
+      /// CraneCont_QNode_1 -> CraneCont_QNode_2 -> CraneCont_QNode_3.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const qtree *_self = _f._self;
-          qtree t2 = std::move(_f.t2);
+          const qtree &t2 = *_f.t2;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = std::move(t2);
           } else {
             const auto &[a0, a2, a3, a4, a5] =
                 std::get<typename qtree::QNode>(_sv.v());
-            if (std::holds_alternative<typename qtree::QLeaf>(t2.v_mut())) {
+            if (std::holds_alternative<typename qtree::QLeaf>(t2.v())) {
               _result = *_self;
             } else {
-              auto &[a00, a10, a20, a30, a40] =
-                  std::get<typename qtree::QNode>(t2.v_mut());
-              _stack.emplace_back(
-                  _Cont_QNode{a10, a2, a20, a3, a30, a4, a40, a5});
-              _stack.emplace_back(_Enter{crane_raw(a0), *a00});
+              const auto &[a00, a10, a20, a30, a40] =
+                  std::get<typename qtree::QNode>(t2.v());
+              _stack.emplace_back(CraneCont_QNode{
+                  crane_raw(a2), a3, crane_raw(a4), crane_raw(a5),
+                  crane_raw(a10), a20, crane_raw(a30), crane_raw(a40)});
+              _stack.emplace_back(CraneEnter{crane_raw(a0), crane_raw(a00)});
             }
           }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
-          std::shared_ptr<qtree> a10 = std::move(_f.a10);
-          std::shared_ptr<qtree> a2 = std::move(_f.a2);
-          uint64_t a20 = _f.a20;
+        } else if (std::holds_alternative<CraneCont_QNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode>(_frame));
+          const qtree &a2 = *_f.a2;
           uint64_t a3 = _f.a3;
-          std::shared_ptr<qtree> a30 = std::move(_f.a30);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          std::shared_ptr<qtree> a40 = std::move(_f.a40);
-          std::shared_ptr<qtree> a5 = std::move(_f.a5);
-          _stack.emplace_back(_Cont_QNode_1{std::move(_result), a20, a3,
-                                            std::move(a30), std::move(a4),
-                                            std::move(a40), std::move(a5)});
-          _stack.emplace_back(_Enter{crane_raw(a2), *a10});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
+          const qtree &a4 = *_f.a4;
+          const qtree &a5 = *_f.a5;
+          const qtree &a10 = *_f.a10;
           uint64_t a20 = _f.a20;
+          const qtree &a30 = *_f.a30;
+          const qtree &a40 = *_f.a40;
+          _stack.emplace_back(CraneCont_QNode_1{a3, &a4, &a5, a20, &a30, &a40,
+                                                std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a2, &a10});
+        } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
           uint64_t a3 = _f.a3;
-          std::shared_ptr<qtree> a30 = std::move(_f.a30);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          std::shared_ptr<qtree> a40 = std::move(_f.a40);
-          std::shared_ptr<qtree> a5 = std::move(_f.a5);
-          _stack.emplace_back(_Cont_QNode_2{std::move(_result),
-                                            std::move(_f._tmp4), a20, a3,
-                                            std::move(a40), std::move(a5)});
-          _stack.emplace_back(_Enter{crane_raw(a4), *a30});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
+          const qtree &a4 = *_f.a4;
+          const qtree &a5 = *_f.a5;
           uint64_t a20 = _f.a20;
+          const qtree &a30 = *_f.a30;
+          const qtree &a40 = *_f.a40;
+          _stack.emplace_back(CraneCont_QNode_2{
+              a3, &a5, a20, &a40, std::move(_f._tmp4), std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a4, &a30});
+        } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
           uint64_t a3 = _f.a3;
-          std::shared_ptr<qtree> a40 = std::move(_f.a40);
-          std::shared_ptr<qtree> a5 = std::move(_f.a5);
-          _stack.emplace_back(_Cont_QNode_3{std::move(_result),
-                                            std::move(_f._tmp3),
-                                            std::move(_f._tmp4), a20, a3});
-          _stack.emplace_back(_Enter{crane_raw(a5), *a40});
+          const qtree &a5 = *_f.a5;
+          uint64_t a20 = _f.a20;
+          const qtree &a40 = *_f.a40;
+          _stack.emplace_back(
+              CraneCont_QNode_3{a3, a20, std::move(_f._tmp4),
+                                std::move(_f._tmp3), std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a5, &a40});
         } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
-          uint64_t a20 = _f.a20;
+          auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
           uint64_t a3 = _f.a3;
-          _result = qtree::qnode(std::move(_f._tmp4), std::move(_f._tmp3),
-                                 (a3 + std::move(a20)), std::move(_f._tmp2),
-                                 std::move(_result));
+          uint64_t a20 = _f.a20;
+          _result =
+              qtree::qnode(std::move(_f._tmp4), std::move(_f._tmp3), (a3 + a20),
+                           std::move(_f._tmp2), std::move(_result));
         }
       }
       return _result;
@@ -343,59 +356,60 @@ struct MemSafetyProbe17 {
     qtree qtree_mirror() const {
       const qtree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const qtree *_self;
       };
 
-      /// _Cont_QNode: saves [a0, a1, a2, a3], resumes after recursive call,
+      /// CraneCont_QNode: saves [a0, a1, a2, a3], resumes after recursive call,
       /// then processes rest.
-      struct _Cont_QNode {
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
+      struct CraneCont_QNode {
+        const qtree *a0;
+        const qtree *a1;
         uint64_t a2;
-        std::shared_ptr<qtree> a3;
+        const qtree *a3;
       };
 
-      /// _Cont_QNode_1: saves [_tmp4, a0, a1, a2], resumes after recursive
+      /// CraneCont_QNode_1: saves [a0, a1, a2, _tmp4], resumes after recursive
       /// call, then processes rest.
-      struct _Cont_QNode_1 {
-        qtree _tmp4;
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
+      struct CraneCont_QNode_1 {
+        const qtree *a0;
+        const qtree *a1;
         uint64_t a2;
+        qtree _tmp4;
       };
 
-      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a0, a2], resumes after recursive
-      /// call, then processes rest.
-      struct _Cont_QNode_2 {
-        qtree _tmp3;
-        qtree _tmp4;
-        std::shared_ptr<qtree> a0;
-        uint64_t a2;
-      };
-
-      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a2], resumes after
+      /// CraneCont_QNode_2: saves [a0, a2, _tmp4, _tmp3], resumes after
       /// recursive call, then processes rest.
-      struct _Cont_QNode_3 {
-        qtree _tmp2;
-        qtree _tmp3;
-        qtree _tmp4;
+      struct CraneCont_QNode_2 {
+        const qtree *a0;
         uint64_t a2;
+        qtree _tmp4;
+        qtree _tmp3;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
+      /// CraneCont_QNode_3: saves [a2, _tmp4, _tmp3, _tmp2], resumes after
+      /// recursive call, then processes rest.
+      struct CraneCont_QNode_3 {
+        uint64_t a2;
+        qtree _tmp4;
+        qtree _tmp3;
+        qtree _tmp2;
+      };
+
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_QNode, CraneCont_QNode_1,
+                       CraneCont_QNode_2, CraneCont_QNode_3>;
       qtree _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified qtree_mirror: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified qtree_mirror: CraneEnter -> CraneCont_QNode ->
+      /// CraneCont_QNode_1 -> CraneCont_QNode_2 -> CraneCont_QNode_3.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -403,36 +417,37 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_Cont_QNode{a0, a1, a2, a3});
-            _stack.emplace_back(_Enter{crane_raw(a4)});
+            _stack.emplace_back(CraneCont_QNode{crane_raw(a0), crane_raw(a1),
+                                                a2, crane_raw(a3)});
+            _stack.emplace_back(CraneEnter{crane_raw(a4)});
           }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
-          std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
+        } else if (std::holds_alternative<CraneCont_QNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode>(_frame));
+          const qtree &a0 = *_f.a0;
+          const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a0),
-                                            std::move(a1), a2});
-          _stack.emplace_back(_Enter{crane_raw(a3)});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
-          std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
+          const qtree &a3 = *_f.a3;
+          _stack.emplace_back(
+              CraneCont_QNode_1{&a0, &a1, a2, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a3});
+        } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
+          const qtree &a0 = *_f.a0;
+          const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
-          _stack.emplace_back(_Cont_QNode_2{
-              std::move(_result), std::move(_f._tmp4), std::move(a0), a2});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
-          std::shared_ptr<qtree> a0 = std::move(_f.a0);
+          _stack.emplace_back(CraneCont_QNode_2{&a0, a2, std::move(_f._tmp4),
+                                                std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a1});
+        } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
+          const qtree &a0 = *_f.a0;
           uint64_t a2 = _f.a2;
-          _stack.emplace_back(_Cont_QNode_3{std::move(_result),
-                                            std::move(_f._tmp3),
-                                            std::move(_f._tmp4), a2});
-          _stack.emplace_back(_Enter{crane_raw(a0)});
+          _stack.emplace_back(CraneCont_QNode_3{
+              a2, std::move(_f._tmp4), std::move(_f._tmp3),
+              std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a0});
         } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
+          auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
           uint64_t a2 = _f.a2;
           _result = qtree::qnode(std::move(_f._tmp4), std::move(_f._tmp3), a2,
                                  std::move(_f._tmp2), std::move(_result));
@@ -444,88 +459,89 @@ struct MemSafetyProbe17 {
     uint64_t qtree_size() const {
       const qtree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const qtree *_self;
       };
 
-      /// _Cont_QNode: saves [a1, a3, a4], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_QNode {
-        std::shared_ptr<qtree> a1;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
-      };
-
-      /// _Cont_QNode_1: saves [_tmp4, a3, a4], resumes after recursive call,
+      /// CraneCont_QNode: saves [a1, a3, a4], resumes after recursive call,
       /// then processes rest.
-      struct _Cont_QNode_1 {
-        uint64_t _tmp4;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+      struct CraneCont_QNode {
+        const qtree *a1;
+        const qtree *a3;
+        const qtree *a4;
       };
 
-      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a4], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_QNode_2 {
-        uint64_t _tmp3;
-        uint64_t _tmp4;
-        std::shared_ptr<qtree> a4;
-      };
-
-      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4], resumes after recursive
+      /// CraneCont_QNode_1: saves [a3, a4, _tmp4], resumes after recursive
       /// call, then processes rest.
-      struct _Cont_QNode_3 {
-        uint64_t _tmp2;
-        uint64_t _tmp3;
+      struct CraneCont_QNode_1 {
+        const qtree *a3;
+        const qtree *a4;
         uint64_t _tmp4;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
+      /// CraneCont_QNode_2: saves [a4, _tmp4, _tmp3], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_QNode_2 {
+        const qtree *a4;
+        uint64_t _tmp4;
+        uint64_t _tmp3;
+      };
+
+      /// CraneCont_QNode_3: saves [_tmp4, _tmp3, _tmp2], resumes after
+      /// recursive call, then processes rest.
+      struct CraneCont_QNode_3 {
+        uint64_t _tmp4;
+        uint64_t _tmp3;
+        uint64_t _tmp2;
+      };
+
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_QNode, CraneCont_QNode_1,
+                       CraneCont_QNode_2, CraneCont_QNode_3>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified qtree_size: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified qtree_size: CraneEnter -> CraneCont_QNode ->
+      /// CraneCont_QNode_1 -> CraneCont_QNode_2 -> CraneCont_QNode_3.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2, a3, a4] =
+            const auto &[a0, a1, _, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_Cont_QNode{a1, a3, a4});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(
+                CraneCont_QNode{crane_raw(a1), crane_raw(a3), crane_raw(a4)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+        } else if (std::holds_alternative<CraneCont_QNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode>(_frame));
+          const qtree &a1 = *_f.a1;
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
+          _stack.emplace_back(CraneCont_QNode_1{&a3, &a4, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a1});
+        } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
           _stack.emplace_back(
-              _Cont_QNode_1{std::move(_result), std::move(a3), std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+              CraneCont_QNode_2{&a4, _f._tmp4, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a3});
+        } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
+          const qtree &a4 = *_f.a4;
           _stack.emplace_back(
-              _Cont_QNode_2{std::move(_result), _f._tmp4, std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a3)});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(
-              _Cont_QNode_3{std::move(_result), _f._tmp3, _f._tmp4});
-          _stack.emplace_back(_Enter{crane_raw(a4)});
+              CraneCont_QNode_3{_f._tmp4, _f._tmp3, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a4});
         } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
+          auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
           _result = ((((UINT64_C(1) + _f._tmp4) + _f._tmp3) + _f._tmp2) +
                      std::move(_result));
         }
@@ -536,91 +552,93 @@ struct MemSafetyProbe17 {
     uint64_t qtree_depth() const {
       const qtree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const qtree *_self;
       };
 
-      /// _Cont_QNode: saves [a1, a3, a4], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_QNode {
-        std::shared_ptr<qtree> a1;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+      /// CraneCont_QNode: saves [a1, a3, a4], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_QNode {
+        const qtree *a1;
+        const qtree *a3;
+        const qtree *a4;
       };
 
-      /// _Cont_QNode_1: saves [a3, a4, da], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_QNode_1 {
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+      /// CraneCont_QNode_1: saves [a3, a4, da], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_QNode_1 {
+        const qtree *a3;
+        const qtree *a4;
         uint64_t da;
       };
 
-      /// _Cont_QNode_2: saves [a4, da, db], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_QNode_2 {
-        std::shared_ptr<qtree> a4;
+      /// CraneCont_QNode_2: saves [a4, da, db], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_QNode_2 {
+        const qtree *a4;
         uint64_t da;
         uint64_t db;
       };
 
-      /// _Cont_QNode_3: saves [da, db, dc], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_QNode_3 {
+      /// CraneCont_QNode_3: saves [da, db, dc], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_QNode_3 {
         uint64_t da;
         uint64_t db;
         uint64_t dc;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_QNode, CraneCont_QNode_1,
+                       CraneCont_QNode_2, CraneCont_QNode_3>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified qtree_depth: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified qtree_depth: CraneEnter -> CraneCont_QNode ->
+      /// CraneCont_QNode_1 -> CraneCont_QNode_2 -> CraneCont_QNode_3.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1, a2, a3, a4] =
+            const auto &[a0, a1, _, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_Cont_QNode{a1, a3, a4});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(
+                CraneCont_QNode{crane_raw(a1), crane_raw(a3), crane_raw(a4)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+        } else if (std::holds_alternative<CraneCont_QNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode>(_frame));
+          const qtree &a1 = *_f.a1;
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
           uint64_t da = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_1{std::move(a3), std::move(a4), da});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+          _stack.emplace_back(CraneCont_QNode_1{&a3, &a4, da});
+          _stack.emplace_back(CraneEnter{_f.a1});
+        } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
           uint64_t da = _f.da;
           uint64_t db = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_2{std::move(a4), da, db});
-          _stack.emplace_back(_Enter{crane_raw(a3)});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+          _stack.emplace_back(CraneCont_QNode_2{&a4, da, db});
+          _stack.emplace_back(CraneEnter{_f.a3});
+        } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
+          const qtree &a4 = *_f.a4;
           uint64_t da = _f.da;
           uint64_t db = _f.db;
           uint64_t dc = std::move(_result);
-          _stack.emplace_back(_Cont_QNode_3{da, db, dc});
-          _stack.emplace_back(_Enter{crane_raw(a4)});
+          _stack.emplace_back(CraneCont_QNode_3{da, db, dc});
+          _stack.emplace_back(CraneEnter{_f.a4});
         } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
+          auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
           uint64_t da = _f.da;
           uint64_t db = _f.db;
           uint64_t dc = _f.dc;
@@ -646,59 +664,60 @@ struct MemSafetyProbe17 {
     uint64_t qtree_sum() const {
       const qtree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const qtree *_self;
       };
 
-      /// _Cont_QNode: saves [a1, a2, a3, a4], resumes after recursive call,
+      /// CraneCont_QNode: saves [a1, a2, a3, a4], resumes after recursive call,
       /// then processes rest.
-      struct _Cont_QNode {
-        std::shared_ptr<qtree> a1;
+      struct CraneCont_QNode {
+        const qtree *a1;
         uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+        const qtree *a3;
+        const qtree *a4;
       };
 
-      /// _Cont_QNode_1: saves [_tmp4, a2, a3, a4], resumes after recursive
+      /// CraneCont_QNode_1: saves [a2, a3, a4, _tmp4], resumes after recursive
       /// call, then processes rest.
-      struct _Cont_QNode_1 {
-        uint64_t _tmp4;
+      struct CraneCont_QNode_1 {
         uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+        const qtree *a3;
+        const qtree *a4;
+        uint64_t _tmp4;
       };
 
-      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a2, a4], resumes after recursive
-      /// call, then processes rest.
-      struct _Cont_QNode_2 {
-        uint64_t _tmp3;
-        uint64_t _tmp4;
-        uint64_t a2;
-        std::shared_ptr<qtree> a4;
-      };
-
-      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a2], resumes after
+      /// CraneCont_QNode_2: saves [a2, a4, _tmp4, _tmp3], resumes after
       /// recursive call, then processes rest.
-      struct _Cont_QNode_3 {
-        uint64_t _tmp2;
-        uint64_t _tmp3;
-        uint64_t _tmp4;
+      struct CraneCont_QNode_2 {
         uint64_t a2;
+        const qtree *a4;
+        uint64_t _tmp4;
+        uint64_t _tmp3;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
+      /// CraneCont_QNode_3: saves [a2, _tmp4, _tmp3, _tmp2], resumes after
+      /// recursive call, then processes rest.
+      struct CraneCont_QNode_3 {
+        uint64_t a2;
+        uint64_t _tmp4;
+        uint64_t _tmp3;
+        uint64_t _tmp2;
+      };
+
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_QNode, CraneCont_QNode_1,
+                       CraneCont_QNode_2, CraneCont_QNode_3>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified qtree_sum: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified qtree_sum: CraneEnter -> CraneCont_QNode ->
+      /// CraneCont_QNode_1 -> CraneCont_QNode_2 -> CraneCont_QNode_3.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -706,35 +725,36 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_Cont_QNode{a1, a2, a3, a4});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_QNode{crane_raw(a1), a2,
+                                                crane_raw(a3), crane_raw(a4)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
+        } else if (std::holds_alternative<CraneCont_QNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode>(_frame));
+          const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(_Cont_QNode_1{std::move(_result), a2,
-                                            std::move(a3), std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
-          uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
           _stack.emplace_back(
-              _Cont_QNode_2{std::move(_result), _f._tmp4, a2, std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a3)});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
+              CraneCont_QNode_1{a2, &a3, &a4, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a1});
+        } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
           uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
           _stack.emplace_back(
-              _Cont_QNode_3{std::move(_result), _f._tmp3, _f._tmp4, a2});
-          _stack.emplace_back(_Enter{crane_raw(a4)});
+              CraneCont_QNode_2{a2, &a4, _f._tmp4, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a3});
+        } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
+          uint64_t a2 = _f.a2;
+          const qtree &a4 = *_f.a4;
+          _stack.emplace_back(
+              CraneCont_QNode_3{a2, _f._tmp4, _f._tmp3, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a4});
         } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
+          auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
           uint64_t a2 = _f.a2;
           _result =
               ((((_f._tmp4 + _f._tmp3) + a2) + _f._tmp2) + std::move(_result));
@@ -743,201 +763,77 @@ struct MemSafetyProbe17 {
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, qtree &, T1 &, qtree &, T1 &,
-                                     uint64_t &, qtree &, T1 &, qtree &, T1 &>
-    T1 qtree_rec(T1 f, F1 &&f0) const {
-      const qtree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const qtree *_self;
-      };
-
-      /// _Cont_QNode: saves [a0, a1, a2, a3, a4], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_QNode {
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
-        uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
-      };
-
-      /// _Cont_QNode_1: saves [_tmp4, a0, a1, a2, a3, a4], resumes after
-      /// recursive call, then processes rest.
-      struct _Cont_QNode_1 {
-        T1 _tmp4;
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
-        uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
-      };
-
-      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a0, a1, a2, a3, a4], resumes after
-      /// recursive call, then processes rest.
-      struct _Cont_QNode_2 {
-        T1 _tmp3;
-        T1 _tmp4;
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
-        uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
-      };
-
-      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a0, a1, a2, a3, a4],
-      /// resumes after recursive call, then processes rest.
-      struct _Cont_QNode_3 {
-        T1 _tmp2;
-        T1 _tmp3;
-        T1 _tmp4;
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
-        uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified qtree_rec: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const qtree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1, a2, a3, a4] =
-                std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_Cont_QNode{a0, a1, a2, a3, a4});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
-          std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
-          uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a0),
-                                            a1, a2, std::move(a3),
-                                            std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
-          std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
-          uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(_Cont_QNode_2{
-              std::move(_result), std::move(_f._tmp4), std::move(a0),
-              std::move(a1), a2, a3, std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a3)});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
-          std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
-          uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(_Cont_QNode_3{
-              std::move(_result), std::move(_f._tmp3), std::move(_f._tmp4),
-              std::move(a0), std::move(a1), a2, std::move(a3), a4});
-          _stack.emplace_back(_Enter{crane_raw(a4)});
-        } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
-          std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
-          uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _result = f0(*a0, std::move(_f._tmp4), *a1, std::move(_f._tmp3), a2,
-                       *a3, std::move(_f._tmp2), *a4, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 qtree_rec(T1 f, F1 &&f0) const {
+      return this->template qtree_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, qtree &, T1 &, qtree &, T1 &,
-                                     uint64_t &, qtree &, T1 &, qtree &, T1 &>
-    T1 qtree_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 qtree_rect(T1 f, F1 &&f0) const {
       const qtree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const qtree *_self;
       };
 
-      /// _Cont_QNode: saves [a0, a1, a2, a3, a4], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_QNode {
+      /// CraneCont_QNode: saves [a0, a1, a2, a3, a4], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_QNode {
         std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
+        const qtree *a1;
         uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+        const qtree *a3;
+        const qtree *a4;
       };
 
-      /// _Cont_QNode_1: saves [_tmp4, a0, a1, a2, a3, a4], resumes after
+      /// CraneCont_QNode_1: saves [a0, a1, a2, a3, a4, _tmp4], resumes after
       /// recursive call, then processes rest.
-      struct _Cont_QNode_1 {
+      struct CraneCont_QNode_1 {
+        std::shared_ptr<qtree> a0;
+        const qtree *a1;
+        uint64_t a2;
+        const qtree *a3;
+        const qtree *a4;
         T1 _tmp4;
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
-        uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
       };
 
-      /// _Cont_QNode_2: saves [_tmp3, _tmp4, a0, a1, a2, a3, a4], resumes after
-      /// recursive call, then processes rest.
-      struct _Cont_QNode_2 {
+      /// CraneCont_QNode_2: saves [a0, a1, a2, a3, a4, _tmp4, _tmp3], resumes
+      /// after recursive call, then processes rest.
+      struct CraneCont_QNode_2 {
+        std::shared_ptr<qtree> a0;
+        const qtree *a1;
+        uint64_t a2;
+        const qtree *a3;
+        const qtree *a4;
+        T1 _tmp4;
         T1 _tmp3;
-        T1 _tmp4;
-        std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
-        uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
       };
 
-      /// _Cont_QNode_3: saves [_tmp2, _tmp3, _tmp4, a0, a1, a2, a3, a4],
+      /// CraneCont_QNode_3: saves [a0, a1, a2, a3, a4, _tmp4, _tmp3, _tmp2],
       /// resumes after recursive call, then processes rest.
-      struct _Cont_QNode_3 {
-        T1 _tmp2;
-        T1 _tmp3;
-        T1 _tmp4;
+      struct CraneCont_QNode_3 {
         std::shared_ptr<qtree> a0;
-        std::shared_ptr<qtree> a1;
+        const qtree *a1;
         uint64_t a2;
-        std::shared_ptr<qtree> a3;
-        std::shared_ptr<qtree> a4;
+        const qtree *a3;
+        const qtree *a4;
+        T1 _tmp4;
+        T1 _tmp3;
+        T1 _tmp2;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_QNode, _Cont_QNode_1,
-                                  _Cont_QNode_2, _Cont_QNode_3>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_QNode, CraneCont_QNode_1,
+                       CraneCont_QNode_2, CraneCont_QNode_3>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified qtree_rect: _Enter -> _Cont_QNode -> _Cont_QNode_1 ->
-      /// _Cont_QNode_2 -> _Cont_QNode_3.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified qtree_rect: CraneEnter -> CraneCont_QNode ->
+      /// CraneCont_QNode_1 -> CraneCont_QNode_2 -> CraneCont_QNode_3.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const qtree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename qtree::QLeaf>(_sv.v())) {
@@ -945,51 +841,51 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[a0, a1, a2, a3, a4] =
                 std::get<typename qtree::QNode>(_sv.v());
-            _stack.emplace_back(_Cont_QNode{a0, a1, a2, a3, a4});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_QNode{a0, crane_raw(a1), a2,
+                                                crane_raw(a3), crane_raw(a4)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_QNode>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode>(_frame));
+        } else if (std::holds_alternative<CraneCont_QNode>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode>(_frame));
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
+          const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(_Cont_QNode_1{std::move(_result), std::move(a0),
-                                            a1, a2, std::move(a3),
-                                            std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
-        } else if (std::holds_alternative<_Cont_QNode_1>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_1>(_frame));
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
+          _stack.emplace_back(CraneCont_QNode_1{std::move(a0), &a1, a2, &a3,
+                                                &a4, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a1});
+        } else if (std::holds_alternative<CraneCont_QNode_1>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_1>(_frame));
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
+          const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(_Cont_QNode_2{
-              std::move(_result), std::move(_f._tmp4), std::move(a0),
-              std::move(a1), a2, a3, std::move(a4)});
-          _stack.emplace_back(_Enter{crane_raw(a3)});
-        } else if (std::holds_alternative<_Cont_QNode_2>(_frame)) {
-          auto _f = std::move(std::get<_Cont_QNode_2>(_frame));
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
+          _stack.emplace_back(
+              CraneCont_QNode_2{std::move(a0), &a1, a2, &a3, &a4,
+                                std::move(_f._tmp4), std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a3});
+        } else if (std::holds_alternative<CraneCont_QNode_2>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_QNode_2>(_frame));
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
+          const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _stack.emplace_back(_Cont_QNode_3{
-              std::move(_result), std::move(_f._tmp3), std::move(_f._tmp4),
-              std::move(a0), std::move(a1), a2, std::move(a3), a4});
-          _stack.emplace_back(_Enter{crane_raw(a4)});
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
+          _stack.emplace_back(CraneCont_QNode_3{
+              std::move(a0), &a1, a2, &a3, &a4, std::move(_f._tmp4),
+              std::move(_f._tmp3), std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a4});
         } else {
-          auto _f = std::move(std::get<_Cont_QNode_3>(_frame));
+          auto _f = std::move(std::get<CraneCont_QNode_3>(_frame));
           std::shared_ptr<qtree> a0 = std::move(_f.a0);
-          std::shared_ptr<qtree> a1 = std::move(_f.a1);
+          const qtree &a1 = *_f.a1;
           uint64_t a2 = _f.a2;
-          std::shared_ptr<qtree> a3 = std::move(_f.a3);
-          std::shared_ptr<qtree> a4 = std::move(_f.a4);
-          _result = f0(*a0, std::move(_f._tmp4), *a1, std::move(_f._tmp3), a2,
-                       *a3, std::move(_f._tmp2), *a4, std::move(_result));
+          const qtree &a3 = *_f.a3;
+          const qtree &a4 = *_f.a4;
+          _result = f0(*a0, std::move(_f._tmp4), a1, std::move(_f._tmp3), a2,
+                       a3, std::move(_f._tmp2), a4, std::move(_result));
         }
       }
       return _result;
@@ -998,27 +894,26 @@ struct MemSafetyProbe17 {
 
   /// TEST 1: Sum of a 4-ary tree. Basic correctness.
   static inline const uint64_t test_qtree_sum = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(10),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()));
-    return std::move(t).qtree_sum();
+    qtree t = qtree::qnode(
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                     qtree::qleaf(), qtree::qleaf()),
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                     qtree::qleaf(), qtree::qleaf()),
+        UINT64_C(10), qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
+                                   qtree::qleaf(), qtree::qleaf()),
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                     qtree::qleaf(), qtree::qleaf()));
+    return t.qtree_sum();
   }();
   /// TEST 2: Depth of a deep 4-ary tree.
   static inline const uint64_t test_qtree_depth = []() {
     qtree inner = qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
                                qtree::qleaf(), qtree::qleaf());
-    qtree t = qtree::qnode(inner,
-                           qtree::qnode(inner, qtree::qleaf(), UINT64_C(2),
-                                        qtree::qleaf(), qtree::qleaf()),
-                           UINT64_C(3), qtree::qleaf(), qtree::qleaf());
-    return std::move(t).qtree_depth();
+    qtree t =
+        qtree::qnode(inner, qtree::qnode(inner, qtree::qleaf(), UINT64_C(2),
+                                         qtree::qleaf(), qtree::qleaf()),
+                     UINT64_C(3), qtree::qleaf(), qtree::qleaf());
+    return t.qtree_depth();
   }();
   static inline const uint64_t test_qtree_mirror = []() {
     qtree t =
@@ -1028,7 +923,7 @@ struct MemSafetyProbe17 {
                      qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
                                   qtree::qleaf(), qtree::qleaf()),
                      qtree::qleaf());
-    return std::move(t).qtree_mirror().qtree_sum();
+    return t.qtree_mirror().qtree_sum();
   }();
 
   /// TEST 4: Flatten a 4-ary tree to a list (inorder traversal).
@@ -1056,27 +951,28 @@ struct MemSafetyProbe17 {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    mylist(const mylist<_U> &_other)
+    template <typename CraneU>
+    mylist(const mylist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+            if (std::holds_alternative<typename mylist<CraneU>::Mynil>(
                     _other.v())) {
               return Mynil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename mylist<_U>::Mycons>(_other.v());
-              return Mycons{[&]() -> A {
-                              if constexpr (crane_convertible<A, const _U &>) {
-                                return crane_convert<A>(a0);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            (a1 ? std::make_shared<mylist<A>>(
-                                      crane_convert<mylist<A>>(*a1))
-                                : nullptr)};
+                  std::get<typename mylist<CraneU>::Mycons>(_other.v());
+              return Mycons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<mylist<A>>(
+                            crane_convert<mylist<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -1106,8 +1002,8 @@ struct MemSafetyProbe17 {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -1115,55 +1011,59 @@ struct MemSafetyProbe17 {
     const variant_t &v() const { return v_; }
 
     mylist<A> myapp(mylist<A> l2) const {
-      std::shared_ptr<mylist<A>> _head{};
-      std::shared_ptr<mylist<A>> *_write = &_head;
+      std::optional<mylist<A>> _root{};
+      std::shared_ptr<mylist<A>> *_write = nullptr;
       const mylist<A> *_loop_self = this;
-      mylist<A> _loop_l2 = std::move(l2);
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-          *_write = std::make_shared<mylist<A>>(std::move(_loop_l2));
+          auto _value = std::move(l2);
+          (_write ? *(*_write = std::make_shared<mylist<A>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
-          auto _cell = std::make_shared<mylist<A>>(
-              typename mylist<A>::Mycons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename mylist<A>::Mycons>((*_write)->v_mut()).a1;
+          auto _cell = typename mylist<A>::Mycons(a0, nullptr);
+          mylist<A> &_node = (_write ? *(*_write = std::make_shared<mylist<A>>(
+                                             std::move(_cell)))
+                                     : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename mylist<A>::Mycons>(_node.v_mut()).a1;
           _loop_self = crane_raw(a1);
           continue;
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
+    }
+
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist<A> *_self;
       };
 
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Mycons {
+      struct CraneCont_Mycons {
         A a0;
         std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_rect: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -1171,58 +1071,11 @@ struct MemSafetyProbe17 {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
-    }
-
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
-      const mylist<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const mylist<A> *_self;
-      };
-
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Mycons {
-        A a0;
-        std::shared_ptr<mylist<A>> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Cont_Mycons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -1235,16 +1088,15 @@ struct MemSafetyProbe17 {
   static uint64_t sum_list(const mylist<uint64_t> &l);
   static mylist<uint64_t> qtree_flatten(const qtree &t);
   static inline const uint64_t test_qtree_flatten = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+    qtree t = qtree::qnode(
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                     qtree::qleaf(), qtree::qleaf()),
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                     qtree::qleaf(), qtree::qleaf()),
+        UINT64_C(5), qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
                                   qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(5),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()));
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                     qtree::qleaf(), qtree::qleaf()));
     return sum_list(qtree_flatten(std::move(t)));
   }();
   static inline const uint64_t test_qtree_zip = []() {
@@ -1252,20 +1104,19 @@ struct MemSafetyProbe17 {
                             qtree::qleaf(), qtree::qleaf());
     qtree t2 = qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(20),
                             qtree::qleaf(), qtree::qleaf());
-    return std::move(t1).qtree_zip(std::move(t2)).qtree_sum();
+    return t1.qtree_zip(std::move(t2)).qtree_sum();
   }();
   static inline const uint64_t test_weighted = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+    qtree t = qtree::qnode(
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                     qtree::qleaf(), qtree::qleaf()),
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                     qtree::qleaf(), qtree::qleaf()),
+        UINT64_C(3), qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
                                   qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(3),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(5),
-                                  qtree::qleaf(), qtree::qleaf()));
-    return std::move(t).weighted_sum();
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(5),
+                     qtree::qleaf(), qtree::qleaf()));
+    return t.weighted_sum();
   }();
   /// TEST 7: Build a 4-ary tree programmatically and check.
   static qtree make_qtree(uint64_t n);
@@ -1273,16 +1124,15 @@ struct MemSafetyProbe17 {
       make_qtree(UINT64_C(4)).qtree_sum();
   /// TEST 8: Two-pass on a 4-ary tree: flatten then sum vs direct sum.
   static inline const uint64_t test_two_pass_qtree = []() {
-    qtree t =
-        qtree::qnode(qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+    qtree t = qtree::qnode(
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(1),
+                     qtree::qleaf(), qtree::qleaf()),
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
+                     qtree::qleaf(), qtree::qleaf()),
+        UINT64_C(5), qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
                                   qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(2),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     UINT64_C(5),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(3),
-                                  qtree::qleaf(), qtree::qleaf()),
-                     qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
-                                  qtree::qleaf(), qtree::qleaf()));
+        qtree::qnode(qtree::qleaf(), qtree::qleaf(), UINT64_C(4),
+                     qtree::qleaf(), qtree::qleaf()));
     return (sum_list(qtree_flatten(t)) + t.qtree_sum());
   }();
 };

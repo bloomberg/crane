@@ -46,8 +46,7 @@ uint64_t MatchRefAfterMove::nested_match_probe(
 /// and the other is a function of the matched value.
 /// Tests evaluation order in pair construction.
 MatchRefAfterMove::mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>
-MatchRefAfterMove::match_into_pair(
-    const MatchRefAfterMove::mylist<uint64_t> &l) {
+MatchRefAfterMove::match_into_pair(const MatchRefAfterMove::mylist<uint64_t> &l) {
   if (std::holds_alternative<
           typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
     return mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>::mkpair(
@@ -70,7 +69,7 @@ MatchRefAfterMove::double_match(const MatchRefAfterMove::mylist<uint64_t> &l) {
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
       return a0;
     }
@@ -80,7 +79,7 @@ MatchRefAfterMove::double_match(const MatchRefAfterMove::mylist<uint64_t> &l) {
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(l.v())) {
       return mylist<uint64_t>::mynil();
     } else {
-      const auto &[a00, a10] =
+      const auto &[_, a10] =
           std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
       return *a10;
     }
@@ -114,9 +113,8 @@ uint64_t MatchRefAfterMove::complex_match(
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(a0.v())) {
       return UINT64_C(0);
     } else {
-      const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
-              a0.v());
+      const auto &[a00, _] = std::get<
+          typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(a0.v());
       return a00;
     }
   } else {
@@ -127,9 +125,8 @@ uint64_t MatchRefAfterMove::complex_match(
             typename MatchRefAfterMove::mylist<uint64_t>::Mynil>(a0.v())) {
       return UINT64_C(999);
     } else {
-      const auto &[a00, a10] =
-          std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(
-              a0.v());
+      const auto &[a00, a10] = std::get<
+          typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(a0.v());
       return (a00 + a10->mylist_length());
     }
   }

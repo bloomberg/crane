@@ -10,12 +10,12 @@
 ///
 /// Found in Vellvm with the global Set Crane Loopify: 35 of the 59 errors
 /// are this one, in ListUtil.monad_fold_right and ListUtil.map_monad.
-Itree<LoopifyResultNoDefault::Ev, uint64_t>
-LoopifyResultNoDefault::sum_tree(std::monostate) {
+Itree<LoopifyResultNoDefault::Ev, uint64_t> LoopifyResultNoDefault::sum_tree() {
   return mfr<Monad_itree<LoopifyResultNoDefault::Ev>, uint64_t, uint64_t>(
-      [](uint64_t r, uint64_t x) {
-        return Monad0::template ret<Monad_itree<LoopifyResultNoDefault::Ev>,
-                                    uint64_t>((r + x));
+      [](uint64_t r,
+         uint64_t x) {
+        return Monad_itree<LoopifyResultNoDefault::Ev>::template ret<uint64_t>(
+            (r + x));
       },
       List<uint64_t>::cons(
           UINT64_C(1),

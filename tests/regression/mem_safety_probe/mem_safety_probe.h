@@ -5,9 +5,10 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -47,6 +48,15 @@ struct MemSafetyProbe {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -71,8 +81,8 @@ struct MemSafetyProbe {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -94,52 +104,53 @@ struct MemSafetyProbe {
     tree map_tree(F0 &&f) const {
       const tree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const tree *_self;
       };
 
-      /// _Cont_Node: saves [a1, a2], resumes after recursive call, then
+      /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Node {
+      struct CraneCont_Node {
         uint64_t a1;
-        std::shared_ptr<tree> a2;
+        const tree *a2;
       };
 
-      /// _Cont_Node_1: saves [_tmp2, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Node_1 {
+      /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_Node_1 {
+        uint64_t a1;
         tree _tmp2;
-        uint64_t a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
       tree _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified map_tree: _Enter -> _Cont_Node -> _Cont_Node_1.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified map_tree: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = tree::leaf();
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_Cont_Node{a1, a2});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Node>(_frame));
+        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Node>(_frame));
           uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          _stack.emplace_back(_Cont_Node_1{std::move(_result), a1});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+          const tree &a2 = *_f.a2;
+          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a2});
         } else {
-          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           uint64_t a1 = _f.a1;
           _result = tree::node(std::move(_f._tmp2), f(a1), std::move(_result));
         }
@@ -154,8 +165,8 @@ struct MemSafetyProbe {
     pair_of_closures() const {
       tree _self_val = *this;
       return std::make_pair(
-          [=](uint64_t _x0) -> uint64_t {
-            return std::move(_self_val).sum_values(_x0);
+          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+            return _self_val.sum_values(_x0);
           },
           [](uint64_t n) { return n; });
     }
@@ -170,146 +181,81 @@ struct MemSafetyProbe {
         if (std::holds_alternative<typename tree::Leaf>(_sv0.v())) {
           return (a1 + x);
         } else {
-          const auto &[a00, a10, a20] = std::get<typename tree::Node>(_sv0.v());
+          const auto &[_, a10, _] = std::get<typename tree::Node>(_sv0.v());
           auto &&_sv1 = *a2;
           if (std::holds_alternative<typename tree::Leaf>(_sv1.v())) {
             return (a10 + x);
           } else {
-            const auto &[a01, a11, a21] =
-                std::get<typename tree::Node>(_sv1.v());
+            const auto &[_, a11, _] = std::get<typename tree::Node>(_sv1.v());
             return (((a10 + a11) + a1) + x);
           }
         }
       }
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rec(T1 f, F1 &&f0) const {
-      const tree *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const tree *_self;
-      };
-
-      /// _Cont_Node: saves [a0, a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Node {
-        std::shared_ptr<tree> a0;
-        uint64_t a1;
-        std::shared_ptr<tree> a2;
-      };
-
-      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Node_1 {
-        T1 _tmp2;
-        std::shared_ptr<tree> a0;
-        uint64_t a1;
-        std::shared_ptr<tree> a2;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_rec: _Enter -> _Cont_Node -> _Cont_Node_1.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const tree *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_Cont_Node{a0, a1, a2});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
-          }
-        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Node>(_frame));
-          std::shared_ptr<tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          _stack.emplace_back(
-              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
-        } else {
-          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
-          std::shared_ptr<tree> a0 = std::move(_f.a0);
-          uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 tree_rec(T1 f, F1 &&f0) const {
+      return this->template tree_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                     T1 &>
-    T1 tree_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const tree *_self;
       };
 
-      /// _Cont_Node: saves [a0, a1, a2], resumes after recursive call, then
+      /// CraneCont_Node: saves [a0, a1, a2], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Node {
+      struct CraneCont_Node {
         std::shared_ptr<tree> a0;
         uint64_t a1;
-        std::shared_ptr<tree> a2;
+        const tree *a2;
       };
 
-      /// _Cont_Node_1: saves [_tmp2, a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct _Cont_Node_1 {
+      /// CraneCont_Node_1: saves [a0, a1, a2, _tmp2], resumes after recursive
+      /// call, then processes rest.
+      struct CraneCont_Node_1 {
+        std::shared_ptr<tree> a0;
+        uint64_t a1;
+        const tree *a2;
         T1 _tmp2;
-        std::shared_ptr<tree> a0;
-        uint64_t a1;
-        std::shared_ptr<tree> a2;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Node, _Cont_Node_1>;
+      using CraneFrame =
+          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified tree_rect: _Enter -> _Cont_Node -> _Cont_Node_1.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified tree_rect: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(_Cont_Node{a0, a1, a2});
-            _stack.emplace_back(_Enter{crane_raw(a0)});
+            _stack.emplace_back(CraneCont_Node{a0, a1, crane_raw(a2)});
+            _stack.emplace_back(CraneEnter{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<_Cont_Node>(_frame)) {
-          auto _f = std::move(std::get<_Cont_Node>(_frame));
+        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
+          auto _f = std::move(std::get<CraneCont_Node>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
+          const tree &a2 = *_f.a2;
           _stack.emplace_back(
-              _Cont_Node_1{std::move(_result), std::move(a0), a1, a2});
-          _stack.emplace_back(_Enter{crane_raw(a2)});
+              CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
+          _stack.emplace_back(CraneEnter{_f.a2});
         } else {
-          auto _f = std::move(std::get<_Cont_Node_1>(_frame));
+          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
-          std::shared_ptr<tree> a2 = std::move(_f.a2);
-          _result = f0(*a0, std::move(_f._tmp2), a1, *a2, std::move(_result));
+          const tree &a2 = *_f.a2;
+          _result = f0(*a0, std::move(_f._tmp2), a1, a2, std::move(_result));
         }
       }
       return _result;
@@ -334,15 +280,13 @@ struct MemSafetyProbe {
       return a0(x);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
-    T1 fn_box_rec(F0 &&f) const {
-      const auto &[a0] = *this;
-      return f(a0);
+    template <typename T1, typename F0> T1 fn_box_rec(F0 &&f) const {
+      return this->template fn_box_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
+      requires std::is_invocable_r_v<T1, F0 &,
+                                     const crane::fn<uint64_t(uint64_t)> &>
     T1 fn_box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -373,27 +317,28 @@ struct MemSafetyProbe {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    mylist(const mylist<_U> &_other)
+    template <typename CraneU>
+    mylist(const mylist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+            if (std::holds_alternative<typename mylist<CraneU>::Mynil>(
                     _other.v())) {
               return Mynil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename mylist<_U>::Mycons>(_other.v());
-              return Mycons{[&]() -> A {
-                              if constexpr (crane_convertible<A, const _U &>) {
-                                return crane_convert<A>(a0);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            (a1 ? std::make_shared<mylist<A>>(
-                                      crane_convert<mylist<A>>(*a1))
-                                : nullptr)};
+                  std::get<typename mylist<CraneU>::Mycons>(_other.v());
+              return Mycons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<mylist<A>>(
+                            crane_convert<mylist<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -423,88 +368,43 @@ struct MemSafetyProbe {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const mylist<A> *_self;
-      };
-
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Mycons {
-        A a0;
-        std::shared_ptr<mylist<A>> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Cont_Mycons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist<A> *_self;
       };
 
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Mycons {
+      struct CraneCont_Mycons {
         A a0;
         std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_rect: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -512,11 +412,11 @@ struct MemSafetyProbe {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -530,7 +430,8 @@ struct MemSafetyProbe {
   /// If f is a partial application with & capture and apply_twice calls
   /// it twice, the second call would use a moved-from value.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t> &&
+             std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
   static uint64_t apply_twice(F0 &&f, uint64_t x) {
     return f(f(x));
   }
@@ -540,10 +441,11 @@ struct MemSafetyProbe {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return std::move(t).sum_values(_x0);
-      };
-      return apply_twice(f, UINT64_C(0));
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+            return t.sum_values(_x0);
+          };
+      return apply_twice(std::move(f), UINT64_C(0));
     }();
   }();
   /// ---- TEST 2: Build list of closures from tree branches ----
@@ -568,7 +470,7 @@ struct MemSafetyProbe {
   static inline const uint64_t test_pair_closures = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
-        std::move(t).pair_of_closures();
+        t.pair_of_closures();
     return (p.first(UINT64_C(10)) + p.second(UINT64_C(100)));
   }();
 
@@ -576,20 +478,19 @@ struct MemSafetyProbe {
   /// Each iteration wraps the accumulator in a new closure that captures
   /// a tree value. Tests deep closure chaining with value type captures.
   static uint64_t fold_compose(const mylist<tree> &trees,
-                               crane::fn<uint64_t(uint64_t)> acc,
+                               const crane::fn<uint64_t(uint64_t)> &acc,
                                uint64_t x0_) {
-    crane::fn<uint64_t(uint64_t)> _loop_acc = std::move(acc);
-    mylist<tree> _loop_trees = trees;
+    crane::fn<uint64_t(uint64_t)> _loop_acc = acc;
+    const mylist<tree> *_loop_trees = &trees;
     while (true) {
-      if (std::holds_alternative<typename mylist<tree>::Mynil>(
-              _loop_trees.v())) {
+      if (std::holds_alternative<typename mylist<tree>::Mynil>(_loop_trees->v())) {
         return _loop_acc(x0_);
       } else {
         const auto &[a0, a1] =
-            std::get<typename mylist<tree>::Mycons>(_loop_trees.v());
+            std::get<typename mylist<tree>::Mycons>(_loop_trees->v());
         const mylist<tree> &a1_value = *a1;
         _loop_acc = [=](uint64_t n) { return _loop_acc(a0.sum_values(n)); };
-        _loop_trees = a1_value;
+        _loop_trees = &a1_value;
       }
     }
   }
@@ -597,11 +498,10 @@ struct MemSafetyProbe {
   static inline const uint64_t test_fold_compose = []() {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-    return fold_compose(
-        mylist<tree>::mycons(
-            std::move(t1),
-            mylist<tree>::mycons(std::move(t2), mylist<tree>::mynil())),
-        [](uint64_t n) { return n; }, UINT64_C(5));
+    return fold_compose(mylist<tree>::mycons(
+        std::move(t1),
+        mylist<tree>::mycons(std::move(t2), mylist<tree>::mynil())),
+                        [](uint64_t n) { return n; }, UINT64_C(5));
   }();
   /// ---- TEST 5: Partial application + match scrutinee reuse ----
   /// f captures t by partial application, then t is used as a match
@@ -615,7 +515,7 @@ struct MemSafetyProbe {
   static uint64_t add3(uint64_t a, uint64_t b, uint64_t c);
   static inline const uint64_t test_deep_curry = []() {
     tree t = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
-    uint64_t v = std::move(t).sum_values(UINT64_C(0));
+    uint64_t v = t.sum_values(UINT64_C(0));
     return add3(v, UINT64_C(20), UINT64_C(30));
   }();
   /// ---- TEST 7: Store partial application in Box, then apply twice ----
@@ -635,12 +535,10 @@ struct MemSafetyProbe {
   static inline const uint64_t test_dual_capture = []() {
     return []() {
       tree t = tree::node(tree::leaf(), UINT64_C(42), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return t.sum_values(_x0);
-      };
-      crane::fn<uint64_t(uint64_t)> g = [&](uint64_t _x0) -> uint64_t {
-        return std::move(t).sum_values(_x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
+      crane::fn<uint64_t(uint64_t)> g =
+          [&](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
       return (f(UINT64_C(1)) + g(UINT64_C(2)));
     }();
   }();
@@ -648,9 +546,8 @@ struct MemSafetyProbe {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    tree t2 =
-        std::move(t).map_tree([](uint64_t n) { return (n + UINT64_C(1)); });
-    return std::move(t2).sum_values(UINT64_C(0));
+    tree t2 = t.map_tree([](uint64_t n) { return (n + UINT64_C(1)); });
+    return t2.sum_values(UINT64_C(0));
   }();
   /// ---- TEST 10: Partial application stored in Box via match ----
   /// The partial application captures a match-bound tree value and
@@ -661,12 +558,12 @@ struct MemSafetyProbe {
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
     fn_box b = box_from_match(std::move(t));
-    return std::move(b).apply_box(UINT64_C(5));
+    return b.apply_box(UINT64_C(5));
   }();
   static inline const uint64_t test_combine = []() {
     tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
     tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-    return std::move(t1).combine_trees(std::move(t2), UINT64_C(5));
+    return t1.combine_trees(std::move(t2), UINT64_C(5));
   }();
   /// ---- TEST 12: Chain of partial applications with intermediate let ----
   /// f captures t, then g uses f's result to build another closure.
@@ -676,9 +573,8 @@ struct MemSafetyProbe {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                           UINT64_C(20),
                           tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [&](uint64_t _x0) -> uint64_t {
-        return std::move(t).sum_values(_x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [&](uint64_t _x0) -> uint64_t { return t.sum_values(_x0); };
       uint64_t v = f(UINT64_C(0));
       return add3(v, UINT64_C(100), UINT64_C(200));
     }();

@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -43,16 +43,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -89,8 +90,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -100,35 +101,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -143,13 +144,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -160,10 +161,6 @@ template <typename A> struct Sig {
 
 struct Sort {
   template <typename T1, typename T2, typename F0, typename F2, typename F3>
-    requires std::is_invocable_r_v<std::pair<List<T1>, List<T1>>, F0 &,
-                                   List<T1> &> &&
-             std::is_invocable_r_v<T2, F2 &, T1 &> &&
-             std::is_invocable_r_v<T2, F3 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq(F0 &&splitF, T2 x, F2 &&x0, F3 &&x1, const List<T1> &ls) {
     bool s = UINT64_C(2) <= ls.length();
     if (s) {
@@ -173,7 +170,7 @@ struct Sort {
       if (std::holds_alternative<typename List<T1>::Nil>(ls.v())) {
         return x;
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(ls.v());
+        const auto &[a0, _] = std::get<typename List<T1>::Cons>(ls.v());
         return x0(a0);
       }
     }
@@ -199,16 +196,13 @@ struct Sort {
   }
 
   template <typename T1, typename T2, typename F1, typename F2>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &> &&
-             std::is_invocable_r_v<T2, F2 &, List<T1> &, T2 &, T2 &>
-  static T2 div_conq_split(const T2 &x, F1 &&x0_, F2 &&x1_, List<T1> x2_) {
-    return div_conq<T1, T2>(split<T1>, x, x0_, x1_, std::move(x2_));
+  static T2 div_conq_split(T2 x, F1 &&x0_, F2 &&x1_, const List<T1> &x2_) {
+    return div_conq<T1, T2>(split<T1>, std::move(x), x0_, x1_, x2_);
   }
 
   template <typename T1, typename T2, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &> &&
-             std::is_invocable_r_v<T2, F2 &, T1 &, T1 &> &&
-             std::is_invocable_r_v<T2, F3 &, T1 &, T1 &, List<T1> &, T2 &, T2 &>
+    requires std::is_invocable_r_v<T2, F1 &, const T1 &> &&
+             std::is_invocable_r_v<T2, F2 &, const T1 &, const T1 &>
   static T2 div_conq_pair(T2 x, F1 &&x0, F2 &&x1, F3 &&x2, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return x;
@@ -226,7 +220,6 @@ struct Sort {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &>
   static std::pair<List<T1>, List<T1>>
   split_pivot(F0 &&le_dec0, const T1 &pivot, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
@@ -243,34 +236,31 @@ struct Sort {
   }
 
   template <typename T1, typename T2, typename F0, typename F2>
-    requires std::is_invocable_r_v<bool, F0 &, T1 &, T1 &> &&
-             std::is_invocable_r_v<T2, F2 &, T1 &, List<T1> &, T2 &, T2 &>
   static T2 div_conq_pivot(F0 &&le_dec0, T2 x, F2 &&x0, const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return x;
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return x0(a0, *a1,
-                div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                       split_pivot(le_dec0, a0, *a1).first),
-                div_conq_pivot<T1, T2>(le_dec0, x, x0,
-                                       split_pivot(le_dec0, a0, *a1).second));
+      return x0(
+          a0, *a1, div_conq_pivot<T1, T2>(
+                       le_dec0, x, x0, split_pivot<T1>(le_dec0, a0, *a1).first),
+          div_conq_pivot<T1, T2>(le_dec0, x, x0,
+                                 split_pivot<T1>(le_dec0, a0, *a1).second));
     }
   }
 
-  static Sig<List<uint64_t>> sort_cons_prog(uint64_t a,
-                                            const List<uint64_t> &_x,
-                                            const List<uint64_t> &l_);
+  static Sig<List<uint64_t>>
+  sort_cons_prog(uint64_t a, const List<uint64_t> &_x,
+                 const List<uint64_t> &l_);
   static Sig<List<uint64_t>> isort(const List<uint64_t> &l);
   static List<uint64_t> merge(List<uint64_t> l1, const List<uint64_t> &l2);
-  static Sig<List<uint64_t>> merge_prog(const List<uint64_t> &_x,
-                                        const List<uint64_t> &l1,
-                                        const List<uint64_t> &l2);
+  static Sig<List<uint64_t>>
+  merge_prog(const List<uint64_t> &_x, List<uint64_t> l1,
+             const List<uint64_t> &l2);
   static Sig<List<uint64_t>> msort(const List<uint64_t> &x0_);
-  static Sig<List<uint64_t>> pair_merge_prog(uint64_t _x, uint64_t _x0,
-                                             const List<uint64_t> &_x1,
-                                             const List<uint64_t> &l_,
-                                             const List<uint64_t> &l_0);
+  static Sig<List<uint64_t>>
+  pair_merge_prog(uint64_t _x, uint64_t _x0, const List<uint64_t> &_x1,
+                  const List<uint64_t> &l_, List<uint64_t> l_0);
   static Sig<List<uint64_t>> psort(const List<uint64_t> &x0_);
   static Sig<List<uint64_t>> qsort(const List<uint64_t> &x0_);
 };

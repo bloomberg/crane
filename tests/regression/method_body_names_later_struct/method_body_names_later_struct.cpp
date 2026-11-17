@@ -18,10 +18,10 @@ Comparison PeanoNat::compare(const Nat &n, const Nat &m) {
   }
 }
 
-Zed Arith::roundtrip(Zed x) { return x; }
-
 Comparison Arith::norm(Comparison c) { return c; }
+
+Zed Arith::roundtrip(Zed x) { return x; }
 
 bool le(const Zed &x0_, const Zed &x1_) { return x0_.le_dec(x1_); }
 
-Zed round(const Zed &x0_) { return Arith::roundtrip(x0_); }
+Zed round(Zed x0_) { return Arith::roundtrip(std::move(x0_)); }

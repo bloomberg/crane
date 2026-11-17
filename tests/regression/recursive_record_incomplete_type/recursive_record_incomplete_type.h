@@ -4,11 +4,10 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -37,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -139,8 +139,7 @@ struct RecursiveRecordIncompleteType {
           if (_alt->kids && _alt->kids.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->kids.get();
-            while (
-                std::holds_alternative<typename List<cell>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<cell>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<cell>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<cell>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -167,8 +166,8 @@ struct RecursiveRecordIncompleteType {
 
     cell(const cell &) = default;
     cell &operator=(const cell &) = default;
-    cell(cell &&) noexcept = default;
-    cell &operator=(cell &&) noexcept = default;
+    cell(cell &&) = default;
+    cell &operator=(cell &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -177,17 +176,14 @@ struct RecursiveRecordIncompleteType {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<cell> &>
   static T1 cell_rect(F0 &&f, const cell &c) {
     const auto &[key1, kids1] = std::get<typename cell::MkCell>(c.v());
     return f(key1, *kids1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<cell> &>
   static T1 cell_rec(F0 &&f, const cell &c) {
-    const auto &[key1, kids1] = std::get<typename cell::MkCell>(c.v());
-    return f(key1, *kids1);
+    return cell_rect<T1>(f, c);
   }
 
   static uint64_t key(const cell &c);

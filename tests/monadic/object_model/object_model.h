@@ -5,7 +5,6 @@
 #include "fn.h"
 #include "obj.h"
 #include <algorithm>
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -81,16 +80,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -127,8 +127,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -143,13 +143,13 @@ template <typename Err> struct ExceptE {
   // ACCESSORS
   ExceptE<Err> clone() const { return {a0}; }
 
-  template <typename _U> operator ExceptE<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const Err &>) {
-        return crane_convert<_U>(a0);
+  template <typename CraneU> operator ExceptE<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const Err &>) {
+        return crane_convert<CraneU>(a0);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -171,9 +171,8 @@ struct Err {
 
 struct nat_ix {
   static List<uint64_t> range(uint64_t fp, uint64_t sp) {
-    return ListDef::seq(fp, ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                                  ? 0
-                                  : ((UINT64_C(1) + sp) - fp))));
+    auto &&_once1 = (UINT64_C(1) + sp);
+    return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
   }
 
   static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
@@ -184,25 +183,26 @@ struct nat_ix {
     }
   }
 
-  static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
-    return ((((UINT64_C(1) + sp) - fp) > (UINT64_C(1) + sp)
-                 ? 0
-                 : ((UINT64_C(1) + sp) - fp)));
+  constexpr static uint64_t rangeSize(uint64_t fp, uint64_t sp) {
+    auto &&_once2 = (UINT64_C(1) + sp);
+    return (((_once2 - fp) > _once2 ? 0 : (_once2 - fp)));
   }
 
-  static uint64_t toNat(uint64_t n) { return n; }
+  constexpr static uint64_t toNat(uint64_t n) { return n; }
 
-  static uint64_t fromNat(uint64_t n) { return n; }
+  constexpr static uint64_t fromNat(uint64_t n) { return n; }
 
-  static uint64_t suc(uint64_t x) { return (x + 1); }
+  constexpr static uint64_t suc(uint64_t x) { return (x + 1); }
 
-  static uint64_t sub(uint64_t a0, uint64_t a1) {
+  constexpr static uint64_t sub(uint64_t a0, uint64_t a1) {
     return (((a0 - a1) > a0 ? 0 : (a0 - a1)));
   }
 
-  static uint64_t max(uint64_t a0, uint64_t a1) { return std::max(a0, a1); }
+  constexpr static uint64_t max(uint64_t a0, uint64_t a1) {
+    return std::max(a0, a1);
+  }
 
-  static uint64_t zero() { return UINT64_C(0); }
+  constexpr static uint64_t zero() { return UINT64_C(0); }
 };
 
 static_assert(Ix<nat_ix, uint64_t>);
@@ -237,7 +237,7 @@ template <typename S> struct Point {
   crane::fn<int64_t(std::monostate)> offsetX;
 
   // ACCESSORS
-  template <typename _U> operator Point<_U>() const {
+  template <typename CraneU> operator Point<CraneU>() const {
     return {crane_convert<crane::fn<int64_t(std::monostate)>>(getX), moveD,
             crane_convert<crane::fn<int64_t(std::monostate)>>(offsetX)};
   }
@@ -249,11 +249,10 @@ template <typename S> struct Account {
   crane::fn<std::optional<int64_t>(int64_t)> withdraw;
 
   // ACCESSORS
-  template <typename _U> operator Account<_U>() const {
-    return {
-        crane_convert<crane::fn<int64_t(std::monostate)>>(getBalance),
-        crane_convert<crane::fn<int64_t(uint64_t)>>(deposit),
-        crane_convert<crane::fn<std::optional<int64_t>(int64_t)>>(withdraw)};
+  template <typename CraneU> operator Account<CraneU>() const {
+    return {crane_convert<crane::fn<int64_t(std::monostate)>>(getBalance),
+            crane_convert<crane::fn<int64_t(uint64_t)>>(deposit),
+            crane_convert<crane::fn<std::optional<int64_t>(int64_t)>>(withdraw)};
   }
 };
 
@@ -262,9 +261,9 @@ template <typename S> struct BankAccountCollection {
   Account<S> saving;
 
   // ACCESSORS
-  template <typename _U> operator BankAccountCollection<_U>() const {
-    return {crane_convert<Account<_U>>(checking),
-            crane_convert<Account<_U>>(saving)};
+  template <typename CraneU> operator BankAccountCollection<CraneU>() const {
+    return {crane_convert<Account<CraneU>>(checking),
+            crane_convert<Account<CraneU>>(saving)};
   }
 };
 

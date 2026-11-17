@@ -7,25 +7,27 @@
 /// left moved-from for the next reader.
 uint64_t
 RoseSharedSuffixDrainSize::rsize(const RoseSharedSuffixDrainSize::rose &t) {
-  const auto &[a0, a1] =
+  const auto &[_, a1] =
       std::get<typename RoseSharedSuffixDrainSize::rose::Node>(t.v());
   return ([&]() {
     auto go_impl =
         [](auto &_self_go,
-           const List<RoseSharedSuffixDrainSize::rose> &l) -> uint64_t {
-      if (std::holds_alternative<
-              typename List<RoseSharedSuffixDrainSize::rose>::Nil>(l.v())) {
-        return UINT64_C(0);
-      } else {
-        const auto &[a2, a3] =
-            std::get<typename List<RoseSharedSuffixDrainSize::rose>::Cons>(
-                l.v());
-        return (rsize(a2) + _self_go(_self_go, *a3));
-      }
-    };
-    auto go = [&](const List<RoseSharedSuffixDrainSize::rose> &l) -> uint64_t {
-      return go_impl(go_impl, l);
-    };
+           const List<RoseSharedSuffixDrainSize::rose> &l)
+             -> uint64_t {
+          if (std::holds_alternative<
+                  typename List<RoseSharedSuffixDrainSize::rose>::Nil>(l.v())) {
+            return UINT64_C(0);
+          } else {
+            const auto &[a2, a3] =
+                std::get<typename List<RoseSharedSuffixDrainSize::rose>::Cons>(
+                    l.v());
+            return (rsize(a2) + _self_go(_self_go, *a3));
+          }
+        };
+    auto go =
+        [&](const List<RoseSharedSuffixDrainSize::rose> &l) -> uint64_t {
+          return go_impl(go_impl, l);
+        };
     return go(*a1);
   }() + 1);
 }

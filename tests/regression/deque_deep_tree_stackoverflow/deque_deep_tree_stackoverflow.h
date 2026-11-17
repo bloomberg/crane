@@ -3,6 +3,7 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <deque>
 #include <memory>
 #include <type_traits>
@@ -42,6 +43,9 @@ struct DequeDeepTreeStackoverflow {
 
     // MANIPULATORS
     ~rose() {
+      if (std::holds_alternative<RLeaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<rose>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<RNode>(&_v)) {
@@ -67,8 +71,8 @@ struct DequeDeepTreeStackoverflow {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -77,8 +81,7 @@ struct DequeDeepTreeStackoverflow {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, std::deque<rose> &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 rose_rect(F0 &&f, F1 &&f0, const rose &r) {
     if (std::holds_alternative<typename rose::RLeaf>(r.v())) {
       const auto &[a0] = std::get<typename rose::RLeaf>(r.v());
@@ -90,16 +93,8 @@ struct DequeDeepTreeStackoverflow {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, std::deque<rose> &>
   static T1 rose_rec(F0 &&f, F1 &&f0, const rose &r) {
-    if (std::holds_alternative<typename rose::RLeaf>(r.v())) {
-      const auto &[a0] = std::get<typename rose::RLeaf>(r.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename rose::RNode>(r.v());
-      return f0(*a0);
-    }
+    return rose_rect<T1>(f, f0, r);
   }
 
   static rose deep_tree(uint64_t depth);

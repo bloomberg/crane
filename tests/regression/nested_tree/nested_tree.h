@@ -4,11 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -60,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,16 +91,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -138,8 +138,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -147,26 +147,28 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    List<A> _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<A>>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<A>::Cons(a0, nullptr);
+        List<A> &_node =
+            (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -201,6 +203,27 @@ struct NestedTree {
     }
 
     // MANIPULATORS
+    ~tree() {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<tree> {
+        if (auto *_alt = std::get_if<Node>(&_v)) {
+          if (_alt->t && _alt->t.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->t);
+          }
+        }
+        return nullptr;
+      };
+      std::shared_ptr<tree> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
+      }
+    }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -208,26 +231,22 @@ struct NestedTree {
   };
 
   template <typename T1, typename T2 = void, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, crane::obj &, tree &, T1 &>
   static T1 tree_rect(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
-      return crane_any_cast<T1>(
-          f0(a0, *a1, tree_rect(f, crane_erase_fn<T1>(f0), *a1)));
+      return crane_any_cast<T1>(f0(a0, *a1, tree_rect(f, f0, *a1)));
     }
   }
 
   template <typename T1, typename T2 = void, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, crane::obj &, tree &, T1 &>
   static T1 tree_rec(const T1 &f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
-      return crane_any_cast<T1>(
-          f0(a0, *a1, tree_rec(f, crane_erase_fn<T1>(f0), *a1)));
+      return crane_any_cast<T1>(f0(a0, *a1, tree_rec(f, f0, *a1)));
     }
   }
 
@@ -237,32 +256,30 @@ struct NestedTree {
           std::make_pair(Nat::s(Nat::s(Nat::o())),
                          Nat::s(Nat::s(Nat::s(Nat::o())))),
           tree::node(
-              std::make_pair(
-                  std::make_pair(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                  std::make_pair(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
-                      Nat::s(Nat::s(
-                          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))),
+              std::make_pair(std::make_pair(
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))),
+                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                             std::make_pair(Nat::s(Nat::s(
+                                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))),
+                                            Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
+                                                Nat::s(Nat::s(Nat::o()))))))))),
               tree::leaf())));
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<List<T2>, F0 &, T1 &>
   static List<T2> lift(F0 &&f, const std::pair<T1, T1> &p) {
     const auto &[x, y] = p;
     return f(x).app(f(y));
   }
 
   template <typename T1, typename T2>
-  static List<List<T2>> _flatten_tree_go(const crane::fn<List<T2>(T1)> f,
-                                         const tree t0) {
+  static List<List<T2>> flatten_tree_crane_go(const crane::fn<List<T2>(T1)> f,
+                                              const tree t0) {
     if (std::holds_alternative<typename tree::Leaf>(t0.v())) {
       return List<List<T2>>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
       return List<List<T2>>::cons(f(a0),
-                                  _flatten_tree_go<T1, T2>(
+                                  flatten_tree_crane_go<T1, T2>(
                                       [=](std::pair<T1, T1> _x0) -> List<T2> {
                                         return lift<T1, T2>(f, _x0);
                                       },
@@ -271,7 +288,7 @@ struct NestedTree {
   }
 
   template <typename T1> static List<List<T1>> flatten_tree(const tree &t) {
-    return _flatten_tree_go<T1, T1>(
+    return flatten_tree_crane_go(
         [](const T1 &x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };

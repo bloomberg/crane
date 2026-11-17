@@ -4,9 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -59,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,38 +93,46 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
-struct TfunctorAliasCarrier {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
 
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+struct TfunctorAliasCarrier {
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
   template <typename T> struct exp {
@@ -150,13 +159,13 @@ struct TfunctorAliasCarrier {
 
     explicit exp(Neg _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    exp(const exp<_U> &_other)
+    template <typename CraneU>
+    exp(const exp<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename exp<_U>::Lit>(_other.v())) {
-              const auto &[t] = std::get<typename exp<_U>::Lit>(_other.v());
+            if (std::holds_alternative<typename exp<CraneU>::Lit>(_other.v())) {
+              const auto &[t] = std::get<typename exp<CraneU>::Lit>(_other.v());
               return Lit{[&]() -> T {
-                if constexpr (crane_convertible<T, const _U &>) {
+                if constexpr (crane_convertible<T, const CraneU &>) {
                   return crane_convert<T>(t);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -164,7 +173,7 @@ struct TfunctorAliasCarrier {
                 }
               }()};
             } else {
-              const auto &[e] = std::get<typename exp<_U>::Neg>(_other.v());
+              const auto &[e] = std::get<typename exp<CraneU>::Neg>(_other.v());
               return Neg{
                   (e ? std::make_shared<exp<T>>(crane_convert<exp<T>>(*e))
                      : nullptr)};
@@ -196,8 +205,8 @@ struct TfunctorAliasCarrier {
 
     exp(const exp &) = default;
     exp &operator=(const exp &) = default;
-    exp(exp &&) noexcept = default;
-    exp &operator=(exp &&) noexcept = default;
+    exp(exp &&) = default;
+    exp &operator=(exp &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -206,8 +215,7 @@ struct TfunctorAliasCarrier {
   };
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
-             std::is_invocable_r_v<T2, F1 &, exp<T1> &, T2 &>
+    requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static T2 exp_rect(F0 &&f, F1 &&f0, const exp<T1> &e) {
     if (std::holds_alternative<typename exp<T1>::Lit>(e.v())) {
       const auto &[t0] = std::get<typename exp<T1>::Lit>(e.v());
@@ -219,16 +227,8 @@ struct TfunctorAliasCarrier {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &> &&
-             std::is_invocable_r_v<T2, F1 &, exp<T1> &, T2 &>
   static T2 exp_rec(F0 &&f, F1 &&f0, const exp<T1> &e) {
-    if (std::holds_alternative<typename exp<T1>::Lit>(e.v())) {
-      const auto &[t0] = std::get<typename exp<T1>::Lit>(e.v());
-      return f(t0);
-    } else {
-      const auto &[e1] = std::get<typename exp<T1>::Neg>(e.v());
-      return f0(*e1, exp_rec<T1, T2>(f, f0, *e1));
-    }
+    return exp_rect<T1, T2>(f, f0, e);
   }
 
   template <typename t> using texp = std::pair<t, exp<t>>;
@@ -238,32 +238,66 @@ struct TfunctorAliasCarrier {
     texp<T> c_new;
 
     // ACCESSORS
-    template <typename _U> operator cmpxchg<_U>() const {
-      return {crane_convert<texp<_U>>(c_ptr), crane_convert<texp<_U>>(c_new)};
+    template <typename CraneU> operator cmpxchg<CraneU>() const {
+      return {crane_convert<texp<CraneU>>(c_ptr),
+              crane_convert<texp<CraneU>>(c_new)};
     }
   };
 
-  static exp<crane::obj> TFunctor_exp(crane::fn<crane::obj(crane::obj)> f,
-                                      const exp<crane::obj> &e);
-  static texp<crane::obj>
-  TFunctor_texp(TFunctor<exp<crane::obj>> h,
-                crane::fn<crane::obj(crane::obj)> f,
-                const std::pair<crane::obj, exp<crane::obj>> &pat);
-  static cmpxchg<crane::obj>
-  TFunctor_cmpxchg(crane::fn<crane::obj(crane::obj)> f,
-                   const cmpxchg<crane::obj> &c);
+  struct TFunctor_exp {
+    template <typename CraneA0> using T = exp<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static exp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, exp<CraneA0> e) {
+      if (std::holds_alternative<typename exp<CraneA0>::Lit>(e.v_mut())) {
+        auto &[t0] = std::get<typename exp<CraneA0>::Lit>(e.v_mut());
+        return exp<CraneA1>::lit(f(std::move(t0)));
+      } else {
+        auto &[e0] = std::get<typename exp<CraneA0>::Neg>(e.v_mut());
+        return exp<CraneA1>::neg(TFunctor_exp::tfmap(std::move(f), *e0));
+      }
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_exp>);
+
+  template <TFunctor _tcI0> struct TFunctor_texp {
+    template <typename CraneA0> using T = texp<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static texp<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                               texp<CraneA0> pat) {
+      auto [t, e] = std::move(pat);
+      return std::make_pair(
+          f(std::move(t)),
+          _tcI0::template tfmap<CraneA0, CraneA1>(f, std::move(e)));
+    }
+  };
+
+  struct TFunctor_cmpxchg {
+    template <typename CraneA0> using T = cmpxchg<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static cmpxchg<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f,
+                                  cmpxchg<CraneA0> c) {
+      return cmpxchg<CraneA1>{TFunctor_texp<TFunctor_exp>::template tfmap<
+          CraneA0, CraneA1>(f, c.c_ptr),
+                              TFunctor_texp<TFunctor_exp>::template tfmap<
+                                  CraneA0, CraneA1>(f, c.c_new)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_cmpxchg>);
   static inline const cmpxchg<Nat> c0 = cmpxchg<Nat>{
       std::make_pair(Nat::s(Nat::o()), exp<Nat>::lit(Nat::s(Nat::o()))),
       std::make_pair(Nat::s(Nat::s(Nat::o())),
                      exp<Nat>::neg(exp<Nat>::lit(Nat::s(Nat::s(Nat::o())))))};
-  static inline const cmpxchg<Nat> c1 = tfmap<cmpxchg<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, cmpxchg<crane::obj> _ec1) {
-        return TFunctor_cmpxchg(_ec0, _ec1);
-      },
-      [](const Nat &x) { return Nat::s(x); }, c0);
+  static inline const cmpxchg<Nat> c1 =
+      TFunctor_cmpxchg::template tfmap<Nat, Nat>(
+          [](const Nat &x) { return Nat::s(x); }, c0);
   static inline const bool is_five =
-      c1.c_ptr.first.add(c1.c_new.first)
-          .eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
+      c1.c_ptr.first.add(c1.c_new.first).eqb(
+          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
 
 #endif // INCLUDED_TFUNCTOR_ALIAS_CARRIER

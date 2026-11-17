@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -91,7 +92,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -144,31 +145,9 @@ struct RecordErasedProofFieldsCase {
   template <typename T1>
   static T1 ItemKind_rec(T1 f, T1 f0, T1 f1, T1 f2, T1 f3, T1 f4, T1 f5,
                          ItemKind i) {
-    switch (i) {
-    case ItemKind::KINDA: {
-      return f;
-    }
-    case ItemKind::KINDB: {
-      return f0;
-    }
-    case ItemKind::KINDC: {
-      return f1;
-    }
-    case ItemKind::KINDD: {
-      return f2;
-    }
-    case ItemKind::KINDE: {
-      return f3;
-    }
-    case ItemKind::KINDF: {
-      return f4;
-    }
-    case ItemKind::KINDG: {
-      return f5;
-    }
-    default:
-      std::unreachable();
-    }
+    return ItemKind_rect<T1>(std::move(f), std::move(f0), std::move(f1),
+                             std::move(f2), std::move(f3), std::move(f4),
+                             std::move(f5), i);
   }
 
   struct StoredTag {
@@ -211,8 +190,8 @@ struct RecordErasedProofFieldsCase {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
-             std::is_invocable_r_v<T1, F1 &, ItemKind &>
+    requires std::is_invocable_r_v<T1, F0 &, const ItemKind &> &&
+             std::is_invocable_r_v<T1, F1 &, const ItemKind &>
   static T1 StoredTag_rect(F0 &&f, F1 &&f0, const StoredTag &s) {
     if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
       const auto &[a0] = std::get<typename StoredTag::TagPrimary>(s.v());
@@ -224,17 +203,10 @@ struct RecordErasedProofFieldsCase {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, ItemKind &> &&
-             std::is_invocable_r_v<T1, F1 &, ItemKind &>
   static T1 StoredTag_rec(F0 &&f, F1 &&f0, const StoredTag &s) {
-    if (std::holds_alternative<typename StoredTag::TagPrimary>(s.v())) {
-      const auto &[a0] = std::get<typename StoredTag::TagPrimary>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename StoredTag::TagSecondary>(s.v());
-      return f0(a0);
-    }
+    return StoredTag_rect<T1>(f, f0, s);
   }
+
   enum class TraceBucket { BUCKETA, BUCKETB, BUCKETC };
 
   template <typename T1>
@@ -256,19 +228,7 @@ struct RecordErasedProofFieldsCase {
 
   template <typename T1>
   static T1 TraceBucket_rec(T1 f, T1 f0, T1 f1, TraceBucket t) {
-    switch (t) {
-    case TraceBucket::BUCKETA: {
-      return f;
-    }
-    case TraceBucket::BUCKETB: {
-      return f0;
-    }
-    case TraceBucket::BUCKETC: {
-      return f1;
-    }
-    default:
-      std::unreachable();
-    }
+    return TraceBucket_rect<T1>(std::move(f), std::move(f0), std::move(f1), t);
   }
 
   struct PrimaryRecord {

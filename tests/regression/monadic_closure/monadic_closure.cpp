@@ -4,7 +4,7 @@
 int64_t MonadicClosure::capture_bind() {
   std::string line;
   std::getline(std::cin, line);
-  crane::fn<int64_t(uint64_t)> f = [=](uint64_t) {
+  crane::fn<int64_t(uint64_t)> f = [=, line = std::move(line)](uint64_t) {
     return static_cast<int64_t>(line.length());
   };
   return static_cast<int64_t>((static_cast<uint64_t>(f(UINT64_C(0))) +
@@ -28,7 +28,9 @@ int64_t MonadicClosure::test_apply_after() {
 crane::fn<std::string(std::string)> MonadicClosure::make_greeter() {
   std::string prefix;
   std::getline(std::cin, prefix);
-  return [=](std::string name) { return prefix + name; };
+  return [=, prefix = std::move(prefix)](std::string name) {
+    return prefix + std::move(name);
+  };
 }
 
 int64_t MonadicClosure::test_with_length() {
@@ -53,14 +55,13 @@ int64_t MonadicClosure::nested_capture() {
 }
 
 uint64_t MonadicClosure::test_count() {
-  return count_matching(
-      [](std::string s) {
-        return static_cast<int64_t>(s.length()) == INT64_C(0);
-      },
-      List<std::string>::cons(
-          "a",
-          List<std::string>::cons(
-              "", List<std::string>::cons("bc", List<std::string>::nil()))));
+  return count_matching([](std::string s) {
+    return static_cast<int64_t>(std::move(s).length()) == INT64_C(0);
+  },
+                        List<std::string>::cons(
+                            "a", List<std::string>::cons(
+                                     "", List<std::string>::cons(
+                                             "bc", List<std::string>::nil()))));
 }
 
 /// 7. Effect inside a let, result used later
@@ -68,7 +69,7 @@ int64_t MonadicClosure::let_effect_capture() {
   std::string line;
   std::getline(std::cin, line);
   int64_t len = static_cast<int64_t>(line.length());
-  std::cout << line << '\n';
+  std::cout << std::move(line) << '\n';
   return len;
 }
 

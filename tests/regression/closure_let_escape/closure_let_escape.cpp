@@ -22,8 +22,11 @@ ClosureLetEscape::make_fn_fix(uint64_t n) {
       return (_self_add(_self_add, x_) + 1);
     }
   };
-  auto add = [=](uint64_t x) -> uint64_t { return add_impl(add_impl, x); };
-  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(add);
+  auto add =
+      [=, add_impl = std::move(add_impl)](uint64_t x) -> uint64_t {
+        return add_impl(add_impl, x);
+      };
+  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(add));
 }
 
 /// test3: Captures from multiple let bindings.
@@ -40,8 +43,9 @@ ClosureLetEscape::make_fn_multi(uint64_t n) {
       return (_self_helper(_self_helper, x_) + 1);
     }
   };
-  auto helper = [=](uint64_t x) -> uint64_t {
-    return helper_impl(helper_impl, x);
-  };
-  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(helper);
+  auto helper =
+      [=, helper_impl = std::move(helper_impl)](uint64_t x) -> uint64_t {
+        return helper_impl(helper_impl, x);
+      };
+  return std::make_optional<crane::fn<uint64_t(uint64_t)>>(std::move(helper));
 }

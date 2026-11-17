@@ -2,20 +2,27 @@
 #define INCLUDED_DEPENDENT_TYPENAME
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept HasType = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::default_ } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::default_() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::default_
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::default_()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 template <typename M>
-concept Container = requires { typename M::template t<void>; };
+concept Container = requires {
+  typename M::template t<void>;
+};
 
 struct DependentTypename {
   template <HasType M> struct UsesType {
@@ -47,7 +54,8 @@ struct DependentTypename {
       return v;
     }
 
-    static typename C::template t<uint64_t> use_singleton(uint64_t x0_) {
+    constexpr static typename C::template t<uint64_t>
+    use_singleton(uint64_t x0_) {
       return C::template singleton<uint64_t>(x0_);
     }
   };

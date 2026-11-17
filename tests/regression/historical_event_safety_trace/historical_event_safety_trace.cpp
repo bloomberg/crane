@@ -114,16 +114,18 @@ uint64_t HistoricalEventSafetyTraceCase::historical_lookup_2011(uint64_t t) {
 bool HistoricalEventSafetyTraceCase::witness_test_initial_safe_at(uint64_t h) {
   return run_historical_test(hist_witness_plant, flood_1983_inflows,
                              UINT64_C(0), hist_witness_ctrl, hist_witness_stage,
-                             hist_witness_initial, h, UINT64_C(1983))
-      .tr_initial_safe;
+                             hist_witness_initial, h,
+                             UINT64_C(1983))
+             .tr_initial_safe;
 }
 
 uint64_t
 HistoricalEventSafetyTraceCase::witness_test_peak_level_at(uint64_t h) {
   return run_historical_test(hist_witness_plant, flood_2011_inflows,
                              UINT64_C(0), hist_witness_ctrl, hist_witness_stage,
-                             hist_witness_initial, h, UINT64_C(2011))
-      .tr_max_level;
+                             hist_witness_initial, h,
+                             UINT64_C(2011))
+             .tr_max_level;
 }
 
 uint64_t

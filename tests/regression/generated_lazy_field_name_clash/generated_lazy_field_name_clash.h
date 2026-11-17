@@ -8,15 +8,16 @@
 
 struct GeneratedLazyFieldNameClash {
   /// Generated coinductive classes store their forced value in a lazy field
-  /// named d_lazyV_.  If the Rocq coinductive itself is named d_lazyV_, Crane
+  /// named
+  /// d_lazyV_.  If the Rocq coinductive itself is named d_lazyV_, Crane
   /// generates a C++ class d_lazyV_ with a data member also named d_lazyV_.
   /// This hides the class name inside its own scope and breaks constructors and
   /// method signatures, so the generated C++ does not compile.
   struct d_lazyV_ {
     // TYPES
-    template <typename _S0 = d_lazyV_> struct Cons_ {
+    template <typename CraneS0 = d_lazyV_> struct Cons_ {
       bool a0;
-      _S0 a1;
+      CraneS0 a1;
     };
 
     using Cons = Cons_<>;
@@ -55,7 +56,7 @@ struct GeneratedLazyFieldNameClash {
   };
 
   static d_lazyV_ true_stream();
-  static bool head(d_lazyV_ s);
+  static bool head(const d_lazyV_ &s);
   static inline const bool sample = head(true_stream());
 };
 

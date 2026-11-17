@@ -388,11 +388,11 @@ N BinNat::double_(const N &n) {
   }
 }
 
-N BinNat::sub(N n, const N &m) {
-  if (std::holds_alternative<typename N::N0>(n.v_mut())) {
+N BinNat::sub(const N &n, const N &m) {
+  if (std::holds_alternative<typename N::N0>(n.v())) {
     return N::n0();
   } else {
-    auto &[a0] = std::get<typename N::Npos>(n.v_mut());
+    const auto &[a0] = std::get<typename N::Npos>(n.v());
     if (std::holds_alternative<typename N::N0>(m.v())) {
       return n;
     } else {
@@ -573,30 +573,30 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   }
 }
 
-Z BinInt::add(Z x, Z y) {
-  if (std::holds_alternative<typename Z::Z0>(x.v_mut())) {
+Z BinInt::add(const Z &x, const Z &y) {
+  if (std::holds_alternative<typename Z::Z0>(x.v())) {
     return y;
-  } else if (std::holds_alternative<typename Z::Zpos>(x.v_mut())) {
-    auto &[a0] = std::get<typename Z::Zpos>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+  } else if (std::holds_alternative<typename Z::Zpos>(x.v())) {
+    const auto &[a0] = std::get<typename Z::Zpos>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return Z::zpos(Pos::add(a0, std::move(a00)));
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return Z::zpos(Pos::add(a0, a00));
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return BinInt::pos_sub(a0, std::move(a00));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return BinInt::pos_sub(a0, a00);
     }
   } else {
-    auto &[a0] = std::get<typename Z::Zneg>(x.v_mut());
-    if (std::holds_alternative<typename Z::Z0>(y.v_mut())) {
+    const auto &[a0] = std::get<typename Z::Zneg>(x.v());
+    if (std::holds_alternative<typename Z::Z0>(y.v())) {
       return x;
-    } else if (std::holds_alternative<typename Z::Zpos>(y.v_mut())) {
-      auto &[a00] = std::get<typename Z::Zpos>(y.v_mut());
-      return BinInt::pos_sub(std::move(a00), a0);
+    } else if (std::holds_alternative<typename Z::Zpos>(y.v())) {
+      const auto &[a00] = std::get<typename Z::Zpos>(y.v());
+      return BinInt::pos_sub(a00, a0);
     } else {
-      auto &[a00] = std::get<typename Z::Zneg>(y.v_mut());
-      return Z::zneg(Pos::add(a0, std::move(a00)));
+      const auto &[a00] = std::get<typename Z::Zneg>(y.v());
+      return Z::zneg(Pos::add(a0, a00));
     }
   }
 }
@@ -676,13 +676,12 @@ Z BinInt::of_N(const N &n) {
 N BorrowedFieldMovedIntoMethod::sz(const BfmTypes::ty &t) {
   if (std::holds_alternative<typename BfmTypes::ty::TB>(t.v())) {
     const auto &[n0] = std::get<typename BfmTypes::ty::TB>(t.v());
-    return BinNat::div(
-        N::npos(n0),
-        N::npos(Positive::xo(Positive::xo(Positive::xo(Positive::xh())))));
+    return BinNat::div(N::npos(n0), N::npos(Positive::xo(Positive::xo(
+                                        Positive::xo(Positive::xh())))));
   } else if (std::holds_alternative<typename BfmTypes::ty::TS>(t.v())) {
     return N::n0();
   } else {
-    const auto &[vector, sz0, t1] = std::get<typename BfmTypes::ty::TA>(t.v());
+    const auto &[_, sz0, t1] = std::get<typename BfmTypes::ty::TA>(t.v());
     return BinNat::mul(sz0, sz(*t1));
   }
 }
@@ -697,16 +696,15 @@ Z BorrowedFieldMovedIntoMethod::get(const std::optional<Z> &o) {
 }
 
 /// Each walk is 3 * 8 = 24.
-bool BorrowedFieldMovedIntoMethod::check(std::monostate) {
+bool BorrowedFieldMovedIntoMethod::check() {
   return BinInt::eqb(
-      BinInt::add(get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
-                      arr, Z::z0(),
-                      List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
-                                      List<Nat>::nil()))),
-                  get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
-                      arr, Z::z0(),
-                      List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
-                                      List<Nat>::nil())))),
+      BinInt::add(
+          get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
+              arr, Z::z0(), List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                            List<Nat>::nil()))),
+          get(walk<BorrowedFieldMovedIntoMethod::SizeI>(
+              arr, Z::z0(), List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                            List<Nat>::nil())))),
       Z::zpos(Positive::xo(Positive::xo(
           Positive::xo(Positive::xo(Positive::xi(Positive::xh())))))));
 }

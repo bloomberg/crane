@@ -8,10 +8,7 @@ uint64_t PathologicalRecord::hof_access(const PathologicalRecord::Rec &r) {
 }
 
 uint64_t PathologicalRecord::nested_lets(const PathologicalRecord::Rec &r) {
-  uint64_t a = r.f1;
-  uint64_t b = r.f2;
-  uint64_t c = r.f3;
-  return ((a + b) + c);
+  return hof_access(r);
 }
 
 uint64_t
@@ -33,9 +30,9 @@ uint64_t PathologicalRecord::countdown(uint64_t n,
     return r.f1;
   } else {
     uint64_t n_ = n - 1;
-    crane::obj _x = r.f1;
+    const crane::obj &_x = r.f1;
     uint64_t b = r.f2;
-    crane::obj _x0 = r.f3;
+    const crane::obj &_x0 = r.f3;
     return (countdown(n_, r) + b);
   }
 }

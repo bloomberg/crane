@@ -5,10 +5,9 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
-#include <type_traits>
+#include <optional>
 #include <utility>
 #include <variant>
 
@@ -63,8 +62,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -72,25 +71,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -99,8 +101,8 @@ struct RocqBug13581 {
     crane::fn<T0(T0)> mixin_f;
 
     // ACCESSORS
-    template <typename _U> operator mixin_of<_U>() const {
-      return {crane_convert<crane::fn<_U(_U)>>(mixin_f)};
+    template <typename CraneU> operator mixin_of<CraneU>() const {
+      return {crane_convert<crane::fn<CraneU(CraneU)>>(mixin_f)};
     }
   };
 
@@ -112,8 +114,8 @@ struct RocqBug13581 {
     Nat x;
 
     // ACCESSORS
-    template <typename _U> operator R<_U>() const {
-      return {crane_convert<crane::fn<_U(_U)>>(g), x};
+    template <typename CraneU> operator R<CraneU>() const {
+      return {crane_convert<crane::fn<CraneU(CraneU)>>(g), x};
     }
   };
 
@@ -148,13 +150,13 @@ struct RocqBug13581 {
 
     explicit I(D _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    I(const I<_U> &_other)
+    template <typename CraneU>
+    I(const I<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename I<_U>::C>(_other.v())) {
+            if (std::holds_alternative<typename I<CraneU>::C>(_other.v())) {
               return C{};
             } else {
-              const auto &[a0] = std::get<typename I<_U>::D>(_other.v());
+              const auto &[a0] = std::get<typename I<CraneU>::D>(_other.v());
               return D{(a0 ? std::make_shared<J<T>>(crane_convert<J<T>>(*a0))
                            : nullptr)};
             }
@@ -202,8 +204,8 @@ struct RocqBug13581 {
 
     I(const I &) = default;
     I &operator=(const I &) = default;
-    I(I &&) noexcept = default;
-    I &operator=(I &&) noexcept = default;
+    I(I &&) = default;
+    I &operator=(I &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -229,10 +231,10 @@ struct RocqBug13581 {
 
     explicit J(E _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    J(const J<_U> &_other)
+    template <typename CraneU>
+    J(const J<CraneU> &_other)
         : v_([&]() -> variant_t {
-            const auto &[a0] = std::get<typename J<_U>::E>(_other.v());
+            const auto &[a0] = std::get<typename J<CraneU>::E>(_other.v());
             return E{(a0 ? std::make_shared<I<T>>(crane_convert<I<T>>(*a0))
                          : nullptr)};
           }()) {}
@@ -277,8 +279,8 @@ struct RocqBug13581 {
 
     J(const J &) = default;
     J &operator=(const J &) = default;
-    J(J &&) noexcept = default;
-    J &operator=(J &&) noexcept = default;
+    J(J &&) = default;
+    J &operator=(J &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -287,7 +289,6 @@ struct RocqBug13581 {
   };
 
   template <typename T1, typename T2, typename F3>
-    requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
   static T2 I_rect(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
                    const I<T1> &i) {
     if (std::holds_alternative<typename I<T1>::C>(i.v())) {
@@ -299,29 +300,21 @@ struct RocqBug13581 {
   }
 
   template <typename T1, typename T2, typename F3>
-    requires std::is_invocable_r_v<T2, F3 &, J<T1> &>
-  static T2 I_rec(const T1 &, const T1 &, T2 f, F3 &&f0, const Nat &,
+  static T2 I_rec(const T1 &_x, const T1 &_x0, T2 f, F3 &&f0, const Nat &_x1,
                   const I<T1> &i) {
-    if (std::holds_alternative<typename I<T1>::C>(i.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename I<T1>::D>(i.v());
-      return f0(*a0);
-    }
+    return I_rect<T1, T2>(_x, _x0, std::move(f), f0, _x1, i);
   }
 
   template <typename T1, typename T2, typename F2>
-    requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
   static T2 J_rect(const T1 &, const T1 &, F2 &&f, Bool0, const J<T1> &j) {
     const auto &[a0] = std::get<typename J<T1>::E>(j.v());
     return f(*a0);
   }
 
   template <typename T1, typename T2, typename F2>
-    requires std::is_invocable_r_v<T2, F2 &, I<T1> &>
-  static T2 J_rec(const T1 &, const T1 &, F2 &&f, Bool0, const J<T1> &j) {
-    const auto &[a0] = std::get<typename J<T1>::E>(j.v());
-    return f(*a0);
+  static T2 J_rec(const T1 &_x, const T1 &_x0, F2 &&f, Bool0 _x1,
+                  const J<T1> &j) {
+    return J_rect<T1, T2>(_x, _x0, f, _x1, j);
   }
 
   static inline const I<Nat> c = I<Nat>::d(J<Nat>::e(I<Nat>::c()));

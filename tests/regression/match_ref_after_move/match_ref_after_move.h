@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -39,27 +39,28 @@ struct MatchRefAfterMove {
 
     explicit mylist(Mycons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    mylist(const mylist<_U> &_other)
+    template <typename CraneU>
+    mylist(const mylist<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename mylist<_U>::Mynil>(
+            if (std::holds_alternative<typename mylist<CraneU>::Mynil>(
                     _other.v())) {
               return Mynil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename mylist<_U>::Mycons>(_other.v());
-              return Mycons{[&]() -> A {
-                              if constexpr (crane_convertible<A, const _U &>) {
-                                return crane_convert<A>(a0);
-                              } else {
-                                throw std::logic_error(
-                                    "unreachable: inactive constructor field "
-                                    "at this instantiation");
-                              }
-                            }(),
-                            (a1 ? std::make_shared<mylist<A>>(
-                                      crane_convert<mylist<A>>(*a1))
-                                : nullptr)};
+                  std::get<typename mylist<CraneU>::Mycons>(_other.v());
+              return Mycons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  (a1 ? std::make_shared<mylist<A>>(
+                            crane_convert<mylist<A>>(*a1))
+                      : nullptr)};
             }
           }()) {}
 
@@ -89,8 +90,8 @@ struct MatchRefAfterMove {
 
     mylist(const mylist &) = default;
     mylist &operator=(const mylist &) = default;
-    mylist(mylist &&) noexcept = default;
-    mylist &operator=(mylist &&) noexcept = default;
+    mylist(mylist &&) = default;
+    mylist &operator=(mylist &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -103,116 +104,70 @@ struct MatchRefAfterMove {
     uint64_t mylist_length() const {
       const mylist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist<A> *_self;
       };
 
-      /// _Cont_Mycons: resumes after recursive call, then processes rest.
-      struct _Cont_Mycons {};
+      /// CraneCont_Mycons: resumes after recursive call, then processes rest.
+      struct CraneCont_Mycons {};
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_length: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_length: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            const auto &[_, a1] = std::get<typename mylist<A>::Mycons>(_sv.v());
+            _stack.emplace_back(CraneCont_Mycons{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           _result = (UINT64_C(1) + std::move(_result));
         }
       }
       return _result;
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rec(T1 f, F1 &&f0) const {
-      const mylist<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const mylist<A> *_self;
-      };
-
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Mycons {
-        A a0;
-        std::shared_ptr<mylist<A>> a1;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rec: _Enter -> _Cont_Mycons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const mylist<A> *_self = _f._self;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[a0, a1] =
-                std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
-          auto a0 = std::move(_f.a0);
-          std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
-          _result = f0(a0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+    template <typename T1, typename F1> T1 mylist_rec(T1 f, F1 &&f0) const {
+      return this->template mylist_rect<T1>(std::move(f), f0);
     }
 
-    template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &, mylist<A> &, T1 &>
-    T1 mylist_rect(T1 f, F1 &&f0) const {
+    template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const mylist<A> *_self;
       };
 
-      /// _Cont_Mycons: saves [a0, a1], resumes after recursive call, then
+      /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
       /// processes rest.
-      struct _Cont_Mycons {
+      struct CraneCont_Mycons {
         A a0;
         std::shared_ptr<mylist<A>> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Mycons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self});
-      /// Loopified mylist_rect: _Enter -> _Cont_Mycons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self});
+      /// Loopified mylist_rect: CraneEnter -> CraneCont_Mycons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Mynil>(_sv.v())) {
@@ -220,11 +175,11 @@ struct MatchRefAfterMove {
           } else {
             const auto &[a0, a1] =
                 std::get<typename mylist<A>::Mycons>(_sv.v());
-            _stack.emplace_back(_Cont_Mycons{a0, a1});
-            _stack.emplace_back(_Enter{crane_raw(a1)});
+            _stack.emplace_back(CraneCont_Mycons{a0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Mycons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -242,18 +197,19 @@ struct MatchRefAfterMove {
     // ACCESSORS
     mypair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator mypair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator mypair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -266,15 +222,12 @@ struct MatchRefAfterMove {
       return {std::move(a0), std::move(a1)};
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
-    T1 mypair_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 mypair_rec(F0 &&f) const {
+      return this->template mypair_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &, const B &>
     T1 mypair_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -305,21 +258,23 @@ struct MatchRefAfterMove {
   static uint64_t mylist_sum(const mylist<uint64_t> &l);
   /// test1: head_and_tail_length 10,20,30 = (10, 2)
   static inline const uint64_t test1 = []() {
-    const auto &_sv = head_and_tail_length(mylist<uint64_t>::mycons(
-        UINT64_C(10),
-        mylist<uint64_t>::mycons(
-            UINT64_C(20), mylist<uint64_t>::mycons(
-                              UINT64_C(30), mylist<uint64_t>::mynil()))));
+    const auto &_sv =
+        head_and_tail_length(mylist<uint64_t>::mycons(
+            UINT64_C(10),
+            mylist<uint64_t>::mycons(
+                UINT64_C(20), mylist<uint64_t>::mycons(
+                                  UINT64_C(30), mylist<uint64_t>::mynil()))));
     const auto &[a0, a1] = _sv;
     return (a0 + a1);
   }();
   /// test2: nested_match_probe 10,20,30 = 10+20+1 = 31
   static inline const uint64_t test2 =
-      nested_match_probe(mylist<uint64_t>::mycons(
-          UINT64_C(10),
+      nested_match_probe(
           mylist<uint64_t>::mycons(
-              UINT64_C(20), mylist<uint64_t>::mycons(
-                                UINT64_C(30), mylist<uint64_t>::mynil()))));
+              UINT64_C(10),
+              mylist<uint64_t>::mycons(
+                  UINT64_C(20), mylist<uint64_t>::mycons(
+                                    UINT64_C(30), mylist<uint64_t>::mynil()))));
   /// test3: match_into_pair 5,10 = (5, 6,10)
   static inline const uint64_t test3 = []() {
     const auto &_sv = match_into_pair(mylist<uint64_t>::mycons(
@@ -342,7 +297,6 @@ struct MatchRefAfterMove {
   /// Pattern 5: CPS with explicit continuation that captures from match.
   /// The continuation is a SIMPLE lambda, not a fixpoint.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &, uint64_t &>
   static uint64_t match_with_cont(const mylist<uint64_t> &l, F1 &&k) {
     if (std::holds_alternative<typename mylist<uint64_t>::Mynil>(l.v())) {
       return k(UINT64_C(0), UINT64_C(0));
@@ -355,10 +309,10 @@ struct MatchRefAfterMove {
   /// test5: match_with_cont 100, 200, 300 (+) = 100 + 2 = 102
   static inline const uint64_t test5 = match_with_cont(
       mylist<uint64_t>::mycons(
-          UINT64_C(100),
-          mylist<uint64_t>::mycons(
-              UINT64_C(200), mylist<uint64_t>::mycons(
-                                 UINT64_C(300), mylist<uint64_t>::mynil()))),
+          UINT64_C(100), mylist<uint64_t>::mycons(
+                             UINT64_C(200), mylist<uint64_t>::mycons(
+                                                UINT64_C(300),
+                                                mylist<uint64_t>::mynil()))),
       [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); });
 
   /// Pattern 6: Deep nesting of matches with multiple constructors.
@@ -386,15 +340,15 @@ struct MatchRefAfterMove {
 
     explicit either(Right _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
-    either(const either<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    either(const either<CraneU0, CraneU1> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename either<_U0, _U1>::Left>(
+            if (std::holds_alternative<typename either<CraneU0, CraneU1>::Left>(
                     _other.v())) {
               const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Left>(_other.v());
+                  std::get<typename either<CraneU0, CraneU1>::Left>(_other.v());
               return Left{[&]() -> A {
-                if constexpr (crane_convertible<A, const _U0 &>) {
+                if constexpr (crane_convertible<A, const CraneU0 &>) {
                   return crane_convert<A>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -402,10 +356,10 @@ struct MatchRefAfterMove {
                 }
               }()};
             } else {
-              const auto &[a0] =
-                  std::get<typename either<_U0, _U1>::Right>(_other.v());
+              const auto &[a0] = std::get<
+                  typename either<CraneU0, CraneU1>::Right>(_other.v());
               return Right{[&]() -> B {
-                if constexpr (crane_convertible<B, const _U1 &>) {
+                if constexpr (crane_convertible<B, const CraneU1 &>) {
                   return crane_convert<B>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -428,21 +382,13 @@ struct MatchRefAfterMove {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
     T1 either_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
-        const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename either<A, B>::Right>(this->v());
-        return f0(a0);
-      }
+      return this->template either_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, A &> &&
-               std::is_invocable_r_v<T1, F1 &, B &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &> &&
+               std::is_invocable_r_v<T1, F1 &, const B &>
     T1 either_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename either<A, B>::Left>(this->v())) {
         const auto &[a0] = std::get<typename either<A, B>::Left>(this->v());
@@ -458,10 +404,11 @@ struct MatchRefAfterMove {
   complex_match(const either<mylist<uint64_t>, mylist<uint64_t>> &e);
   /// test6: complex_match (Right 50, 60) = 50 + 1 = 51
   static inline const uint64_t test6 =
-      complex_match(either<mylist<uint64_t>, mylist<uint64_t>>::right(
-          mylist<uint64_t>::mycons(
-              UINT64_C(50), mylist<uint64_t>::mycons(
-                                UINT64_C(60), mylist<uint64_t>::mynil()))));
+      complex_match(
+          either<mylist<uint64_t>, mylist<uint64_t>>::right(
+              mylist<uint64_t>::mycons(
+                  UINT64_C(50), mylist<uint64_t>::mycons(
+                                    UINT64_C(60), mylist<uint64_t>::mynil()))));
 };
 
 #endif // INCLUDED_MATCH_REF_AFTER_MOVE

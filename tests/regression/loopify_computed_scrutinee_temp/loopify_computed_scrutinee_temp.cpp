@@ -27,7 +27,7 @@ LoopifyComputedScrutineeTemp::hd(const LoopifyComputedScrutineeTemp::lst &l) {
           l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(l.v());
     return a0;
   }
@@ -41,32 +41,32 @@ LoopifyComputedScrutineeTemp::wrap(uint64_t m,
 
 uint64_t LoopifyComputedScrutineeTemp::walk(
     uint64_t n,
-    const LoopifyComputedScrutineeTemp::lst
-        &l) { /// _Enter: captures varying parameters for each recursive call.
-
-  struct _Enter {
+    const LoopifyComputedScrutineeTemp::lst &l) { /// CraneEnter: captures
+                                                  /// varying parameters for
+                                                  /// each recursive call.
+  struct CraneEnter {
     LoopifyComputedScrutineeTemp::lst l;
     uint64_t n;
   };
 
-  /// _Cont_Cons: saves [a0, l], resumes after recursive call, then processes
-  /// rest.
-  struct _Cont_Cons {
-    uint64_t a0;
+  /// CraneCont_Cons: saves [l, a0], resumes after recursive call, then
+  /// processes rest.
+  struct CraneCont_Cons {
     LoopifyComputedScrutineeTemp::lst l;
+    uint64_t a0;
   };
 
-  using _Frame = std::variant<_Enter, _Cont_Cons>;
+  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
   uint64_t _result{};
-  crane::small_vector<_Frame> _stack;
-  _stack.emplace_back(_Enter{l, n});
-  /// Loopified walk: _Enter -> _Cont_Cons.
+  crane::small_vector<CraneFrame> _stack;
+  _stack.emplace_back(CraneEnter{l, n});
+  /// Loopified walk: CraneEnter -> CraneCont_Cons.
   while (!_stack.empty()) {
-    _Frame _frame = std::move(_stack.back());
+    CraneFrame _frame = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<_Enter>(_frame)) {
-      auto _f = std::move(std::get<_Enter>(_frame));
-      const LoopifyComputedScrutineeTemp::lst &l = std::move(_f.l);
+    if (std::holds_alternative<CraneEnter>(_frame)) {
+      auto _f = std::move(std::get<CraneEnter>(_frame));
+      const LoopifyComputedScrutineeTemp::lst &l = _f.l;
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -80,15 +80,15 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
           const auto &[a0, a1] =
               std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(
                   _sv.v());
-          _stack.emplace_back(_Cont_Cons{a0, l});
-          _stack.emplace_back(_Enter{*a1, m});
+          _stack.emplace_back(CraneCont_Cons{l, a0});
+          _stack.emplace_back(CraneEnter{*a1, m});
         }
       }
     } else {
-      auto _f = std::move(std::get<_Cont_Cons>(_frame));
+      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      LoopifyComputedScrutineeTemp::lst l = std::move(_f.l);
       uint64_t a0 = _f.a0;
-      const LoopifyComputedScrutineeTemp::lst &l = std::move(_f.l);
-      _result = ((a0 + hd(l)) + std::move(_result));
+      _result = ((a0 + hd(std::move(l))) + std::move(_result));
     }
   }
   return _result;

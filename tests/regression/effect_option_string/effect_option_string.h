@@ -1,7 +1,6 @@
 #ifndef INCLUDED_EFFECT_OPTION_STRING
 #define INCLUDED_EFFECT_OPTION_STRING
 
-#include <crane_itree.h>
 #include <cstdint>
 #include <cstdlib>
 #include <iostream>
@@ -10,8 +9,6 @@
 #include <string>
 #include <utility>
 #include <variant>
-
-using namespace std::string_literals;
 
 struct EffectOptionString {
   /// 1. Pure let binding with option match — Some returns variable,

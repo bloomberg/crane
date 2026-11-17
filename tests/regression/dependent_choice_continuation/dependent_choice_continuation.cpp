@@ -18,8 +18,7 @@ bool DependentChoiceContinuation::run(
     case MemC::CFRESH_PROV: {
       auto &&_sv0 = k0(true);
       if (std::holds_alternative<
-              typename DependentChoiceContinuation::MemS<bool>::MRet>(
-              _sv0.v())) {
+              typename DependentChoiceContinuation::MemS<bool>::MRet>(_sv0.v())) {
         const auto &[a0] =
             std::get<typename DependentChoiceContinuation::MemS<bool>::MRet>(
                 _sv0.v());

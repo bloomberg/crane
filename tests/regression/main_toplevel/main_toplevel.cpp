@@ -1,7 +1,7 @@
 #include "main_toplevel.h"
 
 void Greeter::greet() {
-  std::cout << "hello from toplevel main"s << '\n';
+  std::cout << std::string("hello from toplevel main") << '\n';
   return;
 }
 

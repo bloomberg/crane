@@ -1,7 +1,7 @@
 #ifndef INCLUDED_LOOPIFY_GAP_MUTUAL3
 #define INCLUDED_LOOPIFY_GAP_MUTUAL3
 
-#include <utility>
+#include <cstdint>
 
 struct LoopifyGapMutual3 {
   static uint64_t rot_a(uint64_t n);

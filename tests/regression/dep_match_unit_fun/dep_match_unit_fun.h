@@ -2,7 +2,7 @@
 #define INCLUDED_DEP_MATCH_UNIT_FUN
 
 #include "fn.h"
-#include <atomic>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -45,7 +45,8 @@ struct DepMatchUnitFun {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
+    requires std::is_invocable_r_v<T1, F0 &,
+                                   const crane::fn<uint64_t(uint64_t)> &>
   static T1 tg_rect(F0 &&f, T1 f0, bool, const tg &t) {
     if (std::holds_alternative<typename tg::TF>(t.v())) {
       const auto &[a0] = std::get<typename tg::TF>(t.v());
@@ -56,14 +57,8 @@ struct DepMatchUnitFun {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::fn<uint64_t(uint64_t)> &>
-  static T1 tg_rec(F0 &&f, T1 f0, bool, const tg &t) {
-    if (std::holds_alternative<typename tg::TF>(t.v())) {
-      const auto &[a0] = std::get<typename tg::TF>(t.v());
-      return f(a0);
-    } else {
-      return f0;
-    }
+  static T1 tg_rec(F0 &&f, T1 f0, bool _x, const tg &t) {
+    return tg_rect<T1>(f, std::move(f0), _x, t);
   }
 
   static uint64_t get(const tg &t, uint64_t x0_);

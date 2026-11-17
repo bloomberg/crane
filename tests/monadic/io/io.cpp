@@ -3,33 +3,34 @@
 void iotest::test1(std::string) { return; }
 
 void iotest::test2(std::string s) {
-  std::cout << s;
+  std::cout << std::move(s);
   return;
 }
 
 void iotest::test3(std::string s) {
-  std::cout << s << '\n';
+  std::cout << std::move(s) << '\n';
   return;
 }
 
 std::string iotest::test4() {
-  std::cout << "what is your name?"s << '\n';
+  std::cout << std::string("what is your name?") << '\n';
   std::string s2;
   std::getline(std::cin, s2);
-  std::cout << "hello "s + s2 << '\n';
-  return "I read the name "s + s2 + " from the command line!"s;
+  std::cout << std::string("hello ") + s2 << '\n';
+  return std::string("I read the name ") + std::move(s2) +
+         std::string(" from the command line!");
 }
 
 void iotest::test5() {
   std::string s = [&]() -> std::string {
-    std::ifstream file("file.txt"s);
+    std::ifstream file(std::string("file.txt"));
     if (!file) {
-      std::cerr << "Failed to open file " << "file.txt"s << '\n';
+      std::cerr << "Failed to open file " << std::string("file.txt") << '\n';
       return std::string{};
     }
     return std::string(std::istreambuf_iterator<char>(file),
                        std::istreambuf_iterator<char>());
   }();
-  std::cout << s << '\n';
+  std::cout << std::move(s) << '\n';
   return;
 }

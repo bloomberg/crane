@@ -3,9 +3,10 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -36,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,17 +94,17 @@ public:
 
   List<A> skipn(uint64_t n) const {
     const List<A> *_loop_self = this;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        return std::move(*_loop_self);
+        return *_loop_self;
       } else {
         uint64_t n0 = _loop_n - 1;
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           return List<A>::nil();
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
           _loop_self = crane_raw(a1);
           _loop_n = n0;
         }
@@ -111,33 +113,38 @@ public:
   }
 
   List<A> firstn(uint64_t n) const {
-    std::shared_ptr<List<A>> _head{};
-    std::shared_ptr<List<A>> *_write = &_head;
+    std::optional<List<A>> _root{};
+    std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
-    uint64_t _loop_n = std::move(n);
+    uint64_t _loop_n = n;
     while (true) {
       if (_loop_n <= 0) {
-        *_write = std::make_shared<List<A>>(List<A>::nil());
+        auto _value = List<A>::nil();
+        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         uint64_t n0 = _loop_n - 1;
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-          *_write = std::make_shared<List<A>>(List<A>::nil());
+          auto _value = List<A>::nil();
+          (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          auto _cell =
-              std::make_shared<List<A>>(typename List<A>::Cons(a0, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          auto _cell = typename List<A>::Cons(a0, nullptr);
+          List<A> &_node =
+              (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a1);
           _loop_n = n0;
           continue;
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -153,7 +160,7 @@ struct CpuEmulator {
       if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
         return List<T1>::nil();
       } else {
-        const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+        const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
         return List<T1>::cons(x, *a1);
       }
     } else {
@@ -417,21 +424,24 @@ struct CpuEmulator {
             typename F5, typename F6, typename F20, typename F21, typename F22,
             typename F23, typename F24, typename F25, typename F26,
             typename F27, typename F28>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F6 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F20 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F21 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F22 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F23 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F24 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F25 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F26 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F27 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F28 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F1 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F2 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F3 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F4 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F5 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F6 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F20 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F21 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F22 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F23 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F24 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F25 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F26 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F27 &, const uint64_t &,
+                                   const uint64_t &> &&
+             std::is_invocable_r_v<T1, F28 &, const uint64_t &>
   static T1 instr_rect(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
                        F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
                        T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
@@ -518,101 +528,18 @@ struct CpuEmulator {
             typename F5, typename F6, typename F20, typename F21, typename F22,
             typename F23, typename F24, typename F25, typename F26,
             typename F27, typename F28>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F2 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F3 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F4 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F5 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F6 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F20 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F21 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F22 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F23 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F24 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F25 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F26 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F27 &, uint64_t &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F28 &, uint64_t &>
-  static T1 instr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4,
-                      F6 &&f5, T1 f6, T1 f7, T1 f8, T1 f9, T1 f10, T1 f11,
-                      T1 f12, T1 f13, T1 f14, T1 f15, T1 f16, T1 f17, T1 f18,
-                      F20 &&f19, F21 &&f20, F22 &&f21, F23 &&f22, F24 &&f23,
-                      F25 &&f24, F26 &&f25, F27 &&f26, F28 &&f27,
-                      const instr &i) {
-    if (std::holds_alternative<typename instr::NOP>(i.v())) {
-      return f;
-    } else if (std::holds_alternative<typename instr::LDM>(i.v())) {
-      const auto &[n0] = std::get<typename instr::LDM>(i.v());
-      return f0(n0);
-    } else if (std::holds_alternative<typename instr::LD>(i.v())) {
-      const auto &[r0] = std::get<typename instr::LD>(i.v());
-      return f1(r0);
-    } else if (std::holds_alternative<typename instr::XCH>(i.v())) {
-      const auto &[r0] = std::get<typename instr::XCH>(i.v());
-      return f2(r0);
-    } else if (std::holds_alternative<typename instr::INC>(i.v())) {
-      const auto &[r0] = std::get<typename instr::INC>(i.v());
-      return f3(r0);
-    } else if (std::holds_alternative<typename instr::ADD>(i.v())) {
-      const auto &[r0] = std::get<typename instr::ADD>(i.v());
-      return f4(r0);
-    } else if (std::holds_alternative<typename instr::SUB>(i.v())) {
-      const auto &[r0] = std::get<typename instr::SUB>(i.v());
-      return f5(r0);
-    } else if (std::holds_alternative<typename instr::IAC>(i.v())) {
-      return f6;
-    } else if (std::holds_alternative<typename instr::DAC>(i.v())) {
-      return f7;
-    } else if (std::holds_alternative<typename instr::CLC>(i.v())) {
-      return f8;
-    } else if (std::holds_alternative<typename instr::STC>(i.v())) {
-      return f9;
-    } else if (std::holds_alternative<typename instr::CMC>(i.v())) {
-      return f10;
-    } else if (std::holds_alternative<typename instr::CMA>(i.v())) {
-      return f11;
-    } else if (std::holds_alternative<typename instr::CLB>(i.v())) {
-      return f12;
-    } else if (std::holds_alternative<typename instr::RAL>(i.v())) {
-      return f13;
-    } else if (std::holds_alternative<typename instr::RAR>(i.v())) {
-      return f14;
-    } else if (std::holds_alternative<typename instr::TCC>(i.v())) {
-      return f15;
-    } else if (std::holds_alternative<typename instr::TCS>(i.v())) {
-      return f16;
-    } else if (std::holds_alternative<typename instr::DAA>(i.v())) {
-      return f17;
-    } else if (std::holds_alternative<typename instr::KBP>(i.v())) {
-      return f18;
-    } else if (std::holds_alternative<typename instr::JUN>(i.v())) {
-      const auto &[a0] = std::get<typename instr::JUN>(i.v());
-      return f19(a0);
-    } else if (std::holds_alternative<typename instr::JMS>(i.v())) {
-      const auto &[a0] = std::get<typename instr::JMS>(i.v());
-      return f20(a0);
-    } else if (std::holds_alternative<typename instr::JCN>(i.v())) {
-      const auto &[c0, a0] = std::get<typename instr::JCN>(i.v());
-      return f21(c0, a0);
-    } else if (std::holds_alternative<typename instr::FIM>(i.v())) {
-      const auto &[r0, d0] = std::get<typename instr::FIM>(i.v());
-      return f22(r0, d0);
-    } else if (std::holds_alternative<typename instr::SRC>(i.v())) {
-      const auto &[r0] = std::get<typename instr::SRC>(i.v());
-      return f23(r0);
-    } else if (std::holds_alternative<typename instr::FIN>(i.v())) {
-      const auto &[r0] = std::get<typename instr::FIN>(i.v());
-      return f24(r0);
-    } else if (std::holds_alternative<typename instr::JIN>(i.v())) {
-      const auto &[r0] = std::get<typename instr::JIN>(i.v());
-      return f25(r0);
-    } else if (std::holds_alternative<typename instr::ISZ>(i.v())) {
-      const auto &[r0, a0] = std::get<typename instr::ISZ>(i.v());
-      return f26(r0, a0);
-    } else {
-      const auto &[d0] = std::get<typename instr::BBL>(i.v());
-      return f27(d0);
-    }
+  static T1
+  instr_rec(T1 f, F1 &&f0, F2 &&f1, F3 &&f2, F4 &&f3, F5 &&f4, F6 &&f5, T1 f6,
+            T1 f7, T1 f8, T1 f9, T1 f10, T1 f11, T1 f12, T1 f13, T1 f14, T1 f15,
+            T1 f16, T1 f17, T1 f18, F20 &&f19, F21 &&f20, F22 &&f21, F23 &&f22,
+            F24 &&f23, F25 &&f24, F26 &&f25, F27 &&f26, F28 &&f27,
+            const instr &i) {
+    return instr_rect<T1>(std::move(f), f0, f1, f2, f3, f4, f5, std::move(f6),
+                          std::move(f7), std::move(f8), std::move(f9),
+                          std::move(f10), std::move(f11), std::move(f12),
+                          std::move(f13), std::move(f14), std::move(f15),
+                          std::move(f16), std::move(f17), std::move(f18), f19,
+                          f20, f21, f22, f23, f24, f25, f26, f27, i);
   }
 
   static state execute(const state &s, const instr &i);
@@ -652,10 +579,8 @@ struct CpuEmulator {
                                                                       UINT64_C(
                                                                           0),
                                                                       List<
-                                                                          uint64_t>::
-                                                                          nil())))))))))))))))),
-      false,
-      UINT64_C(10),
+                                                                          uint64_t>::nil())))))))))))))))),
+      false, UINT64_C(10),
       List<uint64_t>::cons(
           UINT64_C(20),
           List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())),
@@ -682,7 +607,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[a0, _] = std::get<typename List<T1>::Cons>(l.v());
       return a0;
     }
   } else {
@@ -690,7 +615,7 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a00, a10] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a10] = std::get<typename List<T1>::Cons>(l.v());
       return ListDef::template nth<T1>(m, *a10, std::move(default0));
     }
   }

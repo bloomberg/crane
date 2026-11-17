@@ -5,13 +5,11 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -40,18 +38,23 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-  } && (requires {
-    { I::nullp() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::nullp } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+} && (requires {
+  {
+    I::nullp()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::nullp
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct Nat {
   // TYPES
@@ -98,8 +101,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -107,25 +110,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -152,16 +158,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -198,8 +205,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -209,7 +216,6 @@ public:
 
 struct Functor0 {
   template <Functor _tcI0, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T2 &>
   static typename _tcI0::template F<T3> fmap(F0 &&x,
                                              typename _tcI0::template F<T2> x0);
 };
@@ -218,42 +224,42 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
   template <Monad _tcI0, typename T2, typename T3>
   static typename _tcI0::template m<T3>
-  liftM(std::type_identity_t<crane::fn<T3(T2)>> f,
+  liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
         typename _tcI0::template m<T2> x);
 };
 
 template <Monad _tcI0> struct Functor_Monad {
-  template <typename _A0> using m = typename _tcI0::template m<_A0>;
-  template <typename _A0> using F = typename _tcI0::template m<_A0>;
+  template <typename CraneA0> using m = typename _tcI0::template m<CraneA0>;
+  template <typename CraneA0> using F = typename _tcI0::template m<CraneA0>;
 
-  template <typename _A0, typename _A1>
-  static typename _tcI0::template m<_A1>
-  fmap(crane::fn<_A1(_A0)> a0, typename _tcI0::template m<_A0> a1) {
-    return Monad0::template liftM<_tcI0, _A0, _A1>(std::move(a0),
-                                                   std::move(a1));
+  template <typename CraneA0, typename CraneA1>
+  static typename _tcI0::template m<CraneA1>
+  fmap(crane::fn<CraneA1(CraneA0)> a0, typename _tcI0::template m<CraneA0> a1) {
+    return Monad0::template liftM<_tcI0, CraneA0, CraneA1>(std::move(a0),
+                                                           std::move(a1));
   }
 };
 
 struct Monad_option {
-  template <typename _A0> using m = std::optional<_A0>;
+  template <typename CraneA0> using m = std::optional<CraneA0>;
 
-  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-    return std::make_optional<_A0>(x);
+  template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
+    return std::make_optional<CraneA0>(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static std::optional<_A1> bind(std::optional<_A0> c1,
-                                 crane::fn<std::optional<_A1>(_A0)> c2) {
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<CraneA1>
+  bind(std::optional<CraneA0> c1,
+       crane::fn<std::optional<CraneA1>(CraneA0)> c2) {
     if (c1.has_value()) {
-      const _A0 &v = *c1;
+      const CraneA0 &v = *c1;
       return c2(v);
     } else {
-      return std::optional<_A1>();
+      return std::optional<CraneA1>();
     }
   }
 };
@@ -290,6 +296,9 @@ public:
 
   // MANIPULATORS
   ~Dtyp() {
+    if (std::holds_alternative<DLeaf>(v_mut())) {
+      return;
+    }
     crane::small_vector<std::shared_ptr<Dtyp>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<DStruct>(&_v)) {
@@ -323,8 +332,8 @@ public:
 
   Dtyp(const Dtyp &) = default;
   Dtyp &operator=(const Dtyp &) = default;
-  Dtyp(Dtyp &&) noexcept = default;
-  Dtyp &operator=(Dtyp &&) noexcept = default;
+  Dtyp(Dtyp &&) = default;
+  Dtyp &operator=(Dtyp &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -356,13 +365,14 @@ public:
 
   explicit Dvalue(DVS _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  Dvalue(const Dvalue<_U> &_other)
+  template <typename CraneU>
+  Dvalue(const Dvalue<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Dvalue<_U>::DV0>(_other.v())) {
-            const auto &[a0] = std::get<typename Dvalue<_U>::DV0>(_other.v());
+          if (std::holds_alternative<typename Dvalue<CraneU>::DV0>(_other.v())) {
+            const auto &[a0] =
+                std::get<typename Dvalue<CraneU>::DV0>(_other.v());
             return DV0{[&]() -> ptr {
-              if constexpr (crane_convertible<ptr, const _U &>) {
+              if constexpr (crane_convertible<ptr, const CraneU &>) {
                 return crane_convert<ptr>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -370,7 +380,8 @@ public:
               }
             }()};
           } else {
-            const auto &[a0] = std::get<typename Dvalue<_U>::DVS>(_other.v());
+            const auto &[a0] =
+                std::get<typename Dvalue<CraneU>::DVS>(_other.v());
             return DVS{(a0 ? std::make_shared<List<Dvalue<ptr>>>(
                                  crane_convert<List<Dvalue<ptr>>>(*a0))
                            : nullptr)};
@@ -394,58 +405,80 @@ template <Params _tcI0>
 std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
                                                      const Dtyp &dt) {
   crane::fn<std::optional<List<Dvalue<typename _tcI0::ptr>>>(
-      std::optional<Nat>, Nat, List<Dtyp>, List<Nat>)>
-      list_to_dvalue = [](std::optional<Nat> pad, const Nat &x,
-                          const List<Dtyp> &x0, const List<Nat> &x1) {
-        auto go_impl = [=](auto &_self_go, Nat offset, List<Dtyp> dts,
-                           List<Nat> dbs0)
-            -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
-          if (std::holds_alternative<typename List<Dtyp>::Nil>(dts.v())) {
-            return Monad0::template ret<Monad_option,
-                                        List<Dvalue<typename _tcI0::ptr>>>(
-                List<Dvalue<typename _tcI0::ptr>>::nil());
-          } else {
-            const auto &[a0, a1] = std::get<typename List<Dtyp>::Cons>(dts.v());
-            const List<Dtyp> &a1_value = *a1;
-            Nat padding;
-            if (pad.has_value()) {
-              const Nat &p = *pad;
-              padding = p;
-            } else {
-              padding = Nat::o();
-            }
-            return Monad0::template bind<Monad_option,
-                                         Dvalue<typename _tcI0::ptr>,
-                                         List<Dvalue<typename _tcI0::ptr>>>(
-                to_dvalue<_tcI0>(dbs0, a0),
-                [=](const Dvalue<typename _tcI0::ptr> &f) {
-                  return Monad0::template bind<
-                      Monad_option, List<Dvalue<typename _tcI0::ptr>>,
-                      List<Dvalue<typename _tcI0::ptr>>>(
-                      _self_go(_self_go, offset.add(padding), a1_value, dbs0),
-                      [=](const List<Dvalue<typename _tcI0::ptr>> &rest) {
-                        return Monad0::template ret<
-                            Monad_option, List<Dvalue<typename _tcI0::ptr>>>(
-                            List<Dvalue<typename _tcI0::ptr>>::cons(f, rest));
-                      });
-                });
-          }
-        };
-        auto go = [=](Nat offset, List<Dtyp> dts, List<Nat> dbs0)
-            -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
-          return go_impl(go_impl, offset, dts, dbs0);
-        };
+      std::optional<Nat>, Nat, List<Dtyp>, List<Nat>)> list_to_dvalue =
+      [](std::optional<Nat> pad, const Nat &x, const List<Dtyp> &x0,
+         const List<Nat> &x1) {
+        auto go_impl =
+            [=, pad = std::move(pad)](auto &_self_go, Nat offset,
+                                      List<Dtyp> dts,
+                                      List<Nat> dbs0)
+                 -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
+              if (std::holds_alternative<typename List<Dtyp>::Nil>(dts.v_mut())) {
+                return Monad_option::template ret<
+                    List<Dvalue<typename _tcI0::ptr>>>(
+                    List<Dvalue<typename _tcI0::ptr>>::nil());
+              } else {
+                auto &[a0, a1] =
+                    std::get<typename List<Dtyp>::Cons>(dts.v_mut());
+                const List<Dtyp> &a1_value = *a1;
+                Nat padding;
+                if (pad.has_value()) {
+                  const Nat &p = *pad;
+                  padding = p;
+                } else {
+                  padding = Nat::o();
+                }
+                return Monad_option::template bind<
+                    Dvalue<typename _tcI0::ptr>,
+                    List<Dvalue<typename _tcI0::ptr>>>(to_dvalue<_tcI0>(
+                    dbs0, std::move(a0)),
+                                                       [=, offset =
+                                                            std::move(offset),
+                                                        padding =
+                                                            std::move(padding)](
+                                                           const Dvalue<
+                                                               typename _tcI0::ptr> &f) {
+                                                         return Monad_option::template bind<
+                                                             List<Dvalue<
+                                                                 typename _tcI0::ptr>>,
+                                                             List<Dvalue<
+                                                                 typename _tcI0::ptr>>>(
+                                                             _self_go(
+                                                                 _self_go,
+                                                                 offset.add(
+                                                                     padding),
+                                                                 a1_value,
+                                                                 dbs0),
+                                                             [=](const List<Dvalue<
+                                                                 typename _tcI0::ptr>> &rest) {
+                                                               return Monad_option::template ret<
+                                                                   List<Dvalue<
+                                                                       typename _tcI0::ptr>>>(
+                                                                   List<Dvalue<
+                                                                       typename _tcI0::ptr>>::cons(
+                                                                       f,
+                                                                       rest));
+                                                             });
+                                                       });
+              }
+            };
+        auto go =
+            [=, go_impl = std::move(go_impl)](Nat offset, List<Dtyp> dts,
+                                              List<Nat> dbs0)
+                 -> std::optional<List<Dvalue<typename _tcI0::ptr>>> {
+              return go_impl(go_impl, std::move(offset), std::move(dts),
+                             std::move(dbs0));
+            };
         return go(x, x0, x1);
       };
   if (std::holds_alternative<typename Dtyp::DLeaf>(dt.v())) {
-    return Monad0::template ret<Monad_option, Dvalue<typename _tcI0::ptr>>(
+    return Monad_option::template ret<Dvalue<typename _tcI0::ptr>>(
         Dvalue<typename _tcI0::ptr>::dv0(_tcI0::nullp()));
   } else {
     const auto &[a0] = std::get<typename Dtyp::DStruct>(dt.v());
     const List<Dtyp> &a0_value = *a0;
-    return Functor0::template fmap<Functor_Monad<Monad_option>,
-                                   List<Dvalue<typename _tcI0::ptr>>,
-                                   Dvalue<typename _tcI0::ptr>>(
+    return Functor_Monad<Monad_option>::template fmap<
+        List<Dvalue<typename _tcI0::ptr>>, Dvalue<typename _tcI0::ptr>>(
         [](const List<Dvalue<typename _tcI0::ptr>> &x) {
           return Dvalue<typename _tcI0::ptr>::dvs(x);
         },
@@ -474,7 +507,6 @@ struct LiftedFixExtraTargAtCall {
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>
-  requires std::is_invocable_r_v<T3, F0 &, T2 &>
 typename _tcI0::template F<T3>
 Functor0::fmap(F0 &&x, typename _tcI0::template F<T2> x0) {
   return _tcI0::template fmap<T2, T3>(x, std::move(x0));
@@ -486,7 +518,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
@@ -494,10 +525,10 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
 
 template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3>
-Monad0::liftM(std::type_identity_t<crane::fn<T3(T2)>> f,
+Monad0::liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
               typename _tcI0::template m<T2> x) {
-  return Monad0::template bind<_tcI0, T2, T3>(std::move(x), [=](const T2 &x0) {
-    return Monad0::template ret<_tcI0, T3>(f(x0));
+  return _tcI0::template bind<T2, T3>(std::move(x), [=](const T2 &x0) {
+    return _tcI0::template ret<T3>(f(x0));
   });
 }
 

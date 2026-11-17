@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TODO_INLINE_CUSTOM_POLY_ID
 #define INCLUDED_TODO_INLINE_CUSTOM_POLY_ID
 
+#include <cstdint>
 #include <todo_inline_custom_poly_id_support.h>
 
 struct TodoInlineCustomPolyId {

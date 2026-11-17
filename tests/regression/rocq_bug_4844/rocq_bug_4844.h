@@ -3,8 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
-#include <atomic>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -36,14 +34,15 @@ public:
 
   explicit Sum(Inr _v) : v_(std::move(_v)) {}
 
-  template <typename _U0, typename _U1>
-  Sum(const Sum<_U0, _U1> &_other)
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename Sum<_U0, _U1>::Inl>(_other.v())) {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inl>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
             return Inl{[&]() -> A {
-              if constexpr (crane_convertible<A, const _U0 &>) {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
                 return crane_convert<A>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -52,9 +51,9 @@ public:
             }()};
           } else {
             const auto &[a0] =
-                std::get<typename Sum<_U0, _U1>::Inr>(_other.v());
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
             return Inr{[&]() -> B {
-              if constexpr (crane_convertible<B, const _U1 &>) {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
                 return crane_convert<B>(a0);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
@@ -80,7 +79,7 @@ struct RocqBug4844 {
       Sum<crane::obj, crane::obj>::inl(crane::obj());
   enum class SomeType { BUILD_SOMETYPE };
   using ST = crane::obj;
-  static inline const SomeType SomeTrue = SomeType::BUILD_SOMETYPE;
+  static constexpr SomeType SomeTrue = SomeType::BUILD_SOMETYPE;
   using abstrSum = Sum<ST, ST>;
   static inline const abstrSum semilogic_ =
       crane::any_cast<abstrSum>(semilogic);
@@ -97,17 +96,15 @@ struct RocqBug4844 {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
+    requires std::is_invocable_r_v<T1, F1 &, const Sum<ST, ST> &>
   static T1 box_rect(SomeType, F1 &&f, const box &b) {
     const auto &[a0] = b;
     return f(a0);
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, Sum<ST, ST> &>
-  static T1 box_rec(SomeType, F1 &&f, const box &b) {
-    const auto &[a0] = b;
-    return f(a0);
+  static T1 box_rec(SomeType _x, F1 &&f, const box &b) {
+    return box_rect<T1>(_x, f, b);
   }
 
   static inline const box boxed_semilogic = box::box0(semilogic);

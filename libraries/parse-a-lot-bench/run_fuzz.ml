@@ -6,8 +6,6 @@
 module R = Literal.LXR.Mem.STT.R.Defs.Regexes
 open R
 
-let rec nat2int = function Datatypes.O -> 0 | Datatypes.S n -> 1 + nat2int n
-
 let rec len = function
   | EmptySet | EmptyStr | Char _ -> 1
   | App (a, b) | Union (a, b) -> 1 + len a + len b
@@ -39,7 +37,7 @@ let () =
   for _ = 1 to iters do
     let e = rnd (1 + Random.int depth) in
     let ok = ClosureCheck.chk1 e in
-    let n = nat2int (ClosureCheck.nstates1 e) and l = len e in
+    let n = ClosureCheck.nstates1 e and l = len e in
     if not ok then begin
       incr bad;
       Printf.printf "NOT CLOSED  len=%d states=%d  %s\n%!" l n (show e)

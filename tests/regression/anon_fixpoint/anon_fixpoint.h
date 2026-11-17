@@ -1,7 +1,7 @@
 #ifndef INCLUDED_ANON_FIXPOINT
 #define INCLUDED_ANON_FIXPOINT
 
-#include <utility>
+#include <cstdint>
 
 struct AnonFixpoint {
   static uint64_t sum_to(uint64_t n);

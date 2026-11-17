@@ -6,7 +6,7 @@ uint64_t RecursiveMonadic::countdown(uint64_t n) {
     return UINT64_C(0);
   } else {
     uint64_t n_ = n - 1;
-    std::cout << "tick"s << '\n';
+    std::cout << std::string("tick") << '\n';
     return countdown(n_);
   }
 }
@@ -17,7 +17,7 @@ uint64_t RecursiveMonadic::sum_list(const List<uint64_t> &xs) {
     return UINT64_C(0);
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(xs.v());
-    std::cout << "adding"s << '\n';
+    std::cout << std::string("adding") << '\n';
     uint64_t s = sum_list(*a1);
     return (a0 + s);
   }
@@ -43,7 +43,7 @@ uint64_t RecursiveMonadic::repeat_action(uint64_t n, std::string msg) {
   } else {
     uint64_t n_ = n - 1;
     std::cout << msg << '\n';
-    uint64_t r = repeat_action(n_, msg);
+    uint64_t r = repeat_action(n_, std::move(msg));
     return (r + 1);
   }
 }
@@ -57,7 +57,7 @@ List<std::string> RecursiveMonadic::read_n_lines(uint64_t n) {
     std::string line;
     std::getline(std::cin, line);
     List<std::string> rest = read_n_lines(n_);
-    return List<std::string>::cons(line, std::move(rest));
+    return List<std::string>::cons(std::move(line), std::move(rest));
   }
 }
 
@@ -67,7 +67,7 @@ std::string RecursiveMonadic::even_action(uint64_t n) {
     return "even";
   } else {
     uint64_t n_ = n - 1;
-    std::cout << "e"s << '\n';
+    std::cout << std::string("e") << '\n';
     return odd_action(n_);
   }
 }
@@ -77,7 +77,7 @@ std::string RecursiveMonadic::odd_action(uint64_t n) {
     return "odd";
   } else {
     uint64_t n_ = n - 1;
-    std::cout << "o"s << '\n';
+    std::cout << std::string("o") << '\n';
     return even_action(n_);
   }
 }

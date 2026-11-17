@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <cstdint>
 #include <deque>
@@ -29,18 +28,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -121,6 +121,21 @@ public:
 
   // MANIPULATORS
   ~Val() {
+    if (std::holds_alternative<VBool>(v_mut())) {
+      return;
+    }
+    if (std::holds_alternative<VFloat>(v_mut())) {
+      return;
+    }
+    if (std::holds_alternative<VInt>(v_mut())) {
+      return;
+    }
+    if (std::holds_alternative<VNull>(v_mut())) {
+      return;
+    }
+    if (std::holds_alternative<VStr>(v_mut())) {
+      return;
+    }
     crane::small_vector<std::shared_ptr<Val>> _stack = {};
     auto _drain = [&](variant_t &_v) {
       if (auto *_alt = std::get_if<VList>(&_v)) {
@@ -146,8 +161,8 @@ public:
 
   Val(const Val &) = default;
   Val &operator=(const Val &) = default;
-  Val(Val &&) noexcept = default;
-  Val &operator=(Val &&) noexcept = default;
+  Val(Val &&) = default;
+  Val &operator=(Val &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -161,10 +176,11 @@ bool nodupKeys(const std::deque<std::pair<std::string, T1>> &prs) {
     return true;
   } else {
     const auto &_x = prs.front();
-    std::deque<std::pair<std::string, T1>> _x0(prs.begin() + 1, prs.end());
+    std::deque<std::pair<std::string, T1>> _x0(prs.begin()+1, prs.end());
     return false;
   }
 }
+
 enum class Nonterminal { VALUE, OBJ };
 
 struct Symbol {
@@ -203,61 +219,58 @@ public:
 using production = std::pair<Nonterminal, std::deque<Symbol>>;
 using production_semty = std::pair<predicate_semty, action_semty>;
 using grammar_entry = SigT<production, production_semty>;
-const std::deque<grammar_entry> entries =
+[[gnu::used]] inline const std::deque<grammar_entry> entries =
     [](auto _a0, auto _a1) {
       _a1.push_front(_a0);
       return _a1;
-    }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
-           std::pair<crane::obj, crane::obj>>::
-          existt(
-              std::make_pair(
-                  Nonterminal::VALUE,
-                  [](auto _a0, auto _a1) {
-                    _a1.push_front(_a0);
-                    return _a1;
-                  }(Symbol::nt(Nonterminal::OBJ), std::deque<Symbol>{})),
-              std::make_pair(
-                  crane::obj(crane_erase_fn([](const auto &tup) {
-                    const auto &[prs, _x] =
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                    return nodupKeys<Val>(
-                        crane_container_cast<
-                            std::deque<std::pair<std::string, Val>>>(
-                            crane::any_cast<std::deque<crane::obj>>(prs)));
-                  })),
-                  crane::obj(crane_erase_fn([](const auto &tup) {
-                    const auto &[prs, _x] =
-                        crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
-                    return Val::vassoc(crane_container_cast<
-                                       std::deque<std::pair<std::string, Val>>>(
-                        crane::any_cast<std::deque<crane::obj>>(prs)));
-                  })))),
-      [](auto _a0, auto _a1) {
-        _a1.push_front(_a0);
-        return _a1;
-      }(SigT<std::pair<Nonterminal, std::deque<Symbol>>,
-             std::pair<crane::obj, crane::obj>>::
-            existt(std::make_pair(Nonterminal::VALUE,
-                                  [](auto _a0, auto _a1) {
-                                    _a1.push_front(_a0);
-                                    return _a1;
-                                  }(Symbol::t(), std::deque<Symbol>{})),
-                   std::make_pair(
-                       crane::obj(
-                           crane_erase_fn([](const auto &) { return true; })),
-                       crane::obj(crane_erase_fn([](const auto &tup) {
-                         const auto &[s, _x] =
-                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                 tup);
-                         return Val::vstr(crane::any_cast<std::string>(s));
-                       })))),
-        std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
-                        std::pair<crane::obj, crane::obj>>>{}));
-uint64_t num_entries(std::monostate _x);
+    }(
+        SigT<std::pair<Nonterminal, std::deque<Symbol>>,
+             std::pair<crane::obj, crane::obj>>::existt(
+            std::make_pair(Nonterminal::VALUE, [](auto _a0, auto _a1) {
+              _a1.push_front(_a0);
+              return _a1;
+            }(Symbol::nt(Nonterminal::OBJ), std::deque<Symbol>{})),
+            std::make_pair(
+                crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[prs, _x] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  return nodupKeys<Val>(crane_container_cast<
+                      std::deque<std::pair<std::string, Val>>>(
+                      crane::any_cast<std::deque<crane::obj>>(prs)));
+                })),
+                crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[prs, _x] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  return Val::vassoc(crane_container_cast<
+                      std::deque<std::pair<std::string, Val>>>(
+                      crane::any_cast<std::deque<crane::obj>>(prs)));
+                })))),
+        [](auto _a0, auto _a1) {
+          _a1.push_front(_a0);
+          return _a1;
+        }(
+            SigT<std::pair<Nonterminal, std::deque<Symbol>>,
+                 std::pair<crane::obj, crane::obj>>::existt(
+                std::make_pair(Nonterminal::VALUE, [](auto _a0, auto _a1) {
+                  _a1.push_front(_a0);
+                  return _a1;
+                }(Symbol::t(), std::deque<Symbol>{})),
+                std::make_pair(
+                    crane::obj(
+                        crane_erase_fn([](const auto &) { return true; })),
+                    crane::obj(crane_erase_fn([](const auto &tup) {
+                      const auto &[s, _x] =
+                          crane::any_cast<std::pair<crane::obj, crane::obj>>(
+                              tup);
+                      return Val::vstr(crane::any_cast<std::string>(s));
+                    })))),
+            std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
+                            std::pair<crane::obj, crane::obj>>>{}));
+uint64_t num_entries();
 
 inline Val Val::vassoc(std::deque<std::pair<std::string, Val>> a0) {
-  return Val(VAssoc{std::make_shared<std::deque<std::pair<std::string, Val>>>(
-      std::move(a0))});
+  return Val(VAssoc{
+      std::make_shared<std::deque<std::pair<std::string, Val>>>(std::move(a0))});
 }
 
 inline Val Val::vlist(std::deque<Val> a0) {

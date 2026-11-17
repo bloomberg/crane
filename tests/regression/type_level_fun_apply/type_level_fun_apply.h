@@ -5,11 +5,9 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <functional>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -60,8 +58,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -102,6 +100,15 @@ struct TypeLevelFunApply {
 
     // MANIPULATORS
     ~ty() {
+      if (std::holds_alternative<TNat>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<TArr>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a1 && _alt->a1.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<ty>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<TArr>(&_v)) {
@@ -126,8 +133,8 @@ struct TypeLevelFunApply {
 
     ty(const ty &) = default;
     ty &operator=(const ty &) = default;
-    ty(ty &&) noexcept = default;
-    ty &operator=(ty &&) noexcept = default;
+    ty(ty &&) = default;
+    ty &operator=(ty &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -136,7 +143,6 @@ struct TypeLevelFunApply {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rect(T1 f, F1 &&f0, const ty &t) {
     if (std::holds_alternative<typename ty::TNat>(t.v())) {
       return f;
@@ -147,14 +153,8 @@ struct TypeLevelFunApply {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, ty &, T1 &, ty &, T1 &>
   static T1 ty_rec(T1 f, F1 &&f0, const ty &t) {
-    if (std::holds_alternative<typename ty::TNat>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename ty::TArr>(t.v());
-      return f0(*a0, ty_rec<T1>(f, f0, *a0), *a1, ty_rec<T1>(f, f0, *a1));
-    }
+    return ty_rect<T1>(std::move(f), f0, t);
   }
 
   using sem = crane::obj;

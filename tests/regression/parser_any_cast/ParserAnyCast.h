@@ -2,7 +2,7 @@
 #define INCLUDED_PARSERANYCAST
 
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <utility>
 #include <variant>
 
@@ -14,7 +14,6 @@
 #include "String_.h"
 
 namespace ParserAnyCast {
-
 struct ParserAnyCast {
   enum class Tag { A, B };
   using sem_ty = crane::obj;
@@ -41,14 +40,13 @@ struct ParserAnyCast {
                     String::String::string0(
                         Ascii::Ascii::ascii0(false, false, true, true, false,
                                              true, true, false),
-                        String::String::string0(
-                            Ascii::Ascii::ascii0(true, true, true, true, false,
-                                                 true, true, false),
-                            String::String::emptystring()))))));
+                        String::String::string0(Ascii::Ascii::ascii0(
+                            true, true, true, true, false, true, true, false),
+                                                String::String::emptystring()))))));
     return v;
   }
 
-  static Tag get_tag(entry x0_);
+  static Tag get_tag(const entry &x0_);
   static Datatypes::List<Tag>
   process_entries(const Datatypes::List<Specif::SigT<Tag, crane::obj>> &es);
 
@@ -73,6 +71,7 @@ struct ParserAnyCast {
     static const uint64_t v = sum_a_entries(test_entries());
     return v;
   }
+
   enum class Label { NUML, STRL, UNITL };
   using label_sem = crane::obj;
 
@@ -95,14 +94,13 @@ struct ParserAnyCast {
     return v;
   }
 
-  static Label get_entry_label(labeled_entry x0_);
+  static Label get_entry_label(const labeled_entry &x0_);
 
   static const Label &test_default_label() {
     static const Label v = get_entry_label(make_default_entry());
     return v;
   }
 };
-
 } // namespace ParserAnyCast
 
 #endif // INCLUDED_PARSERANYCAST

@@ -1,0 +1,1147 @@
+(* Copyright 2026 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** Structure analysis: pre-analyzes the full extraction structure before
+    rendering begins. Computes module ordering, enum registrations, inductive
+    name maps, wrapper module classifications, and the layout facts name
+    resolution reads (collision wrappers, alias sources, eponymous records,
+    concept names and scopes, lifted instances).
+
+    It runs once per unit from [Emit.Files.prepare_structure], after the method
+    registry is obtained and before anything renders. The {!t} record it
+    returns is turned into the unit's {!Module_plan}.
+
+    See structure_analysis.mli for the full interface documentation. *)
+
+open Util
+open Names
+open Base.Table
+open Base.Common
+
+(** Information about a single module in the extraction structure. *)
+type module_info = {
+  modpath : ModPath.t;
+  sels : (Label.t * Core.Module.Structure_item.t) list;
+  wrapper_name : string option;
+  is_main : bool;
+}
+
+(** The result of structure analysis, containing sorted modules and metadata. *)
+type t = {
+  sorted_modules : module_info list;
+  global_scope_enums : GlobRef.t list;
+  collision_wrappers : (ModPath.t * string) list;
+  wrapper_bystanders : (ModPath.t * string) list;
+  functor_app_sources : (ModPath.t * ModPath.t) list;
+  eponymous_records : GlobRef.t list;
+  functor_concept_scopes : (ModPath.t * Module_plan.concept_scope) list;
+  concept_renames : (GlobRef.t * string) list;
+  modtype_concept_renames : (ModPath.t * string) list;
+  lifted_instances : GlobRef.t list;
+}
+
+(** {2 Functor application sources} *)
+
+(** The module a module expression ultimately names, if any: an alias names it
+    directly, an application names the functor being applied, and a functor
+    names whatever its body names.  A [Core.Module.Expr.Structure] names nothing -- it {i is} the
+    module. *)
+let rec module_expr_source = function
+  | Core.Module.Expr.Path mp -> Some mp
+  | Core.Module.Expr.Apply {functor_ = me; _} -> module_expr_source me
+  | Core.Module.Expr.Functor {body; _} -> module_expr_source body
+  | Core.Module.Expr.Structure _ -> None
+
+(** The [Core.Module.Expr.Structure] body a module expression eventually reaches, past any
+    functor parameters, together with the module path that body was declared
+    under. *)
+let rec module_expr_struct = function
+  | Core.Module.Expr.Functor {body; _} -> module_expr_struct body
+  | Core.Module.Expr.Structure {path = mp; items = sel} -> Some (mp, sel)
+  | Core.Module.Expr.Path _ | Core.Module.Expr.Apply _ -> None
+
+(** {2 Traversal} *)
+
+(** Fold [f] over every element of [s], descending into nested module bodies.
+
+    [f ctx mp l se acc] sees an element under label [l] declared in the module
+    at path [mp], with the context in force there.  The context starts at
+    [root mp] in each top-level module and is renewed by [enter] on the way
+    into a nested one.
+
+    Every collector below walks the structure this way; they differ only in the
+    context they carry down, so the descent -- which module expressions have a
+    body, and what path that body is under -- is settled once, here. *)
+let fold_structure
+    ~(root : ModPath.t -> 'ctx)
+    ~(enter : 'ctx -> ModPath.t -> 'ctx)
+    (f : 'ctx -> ModPath.t -> Label.t -> 'p Core.Module.Structure_item.at -> 'a -> 'a)
+    (s : 'p Core.Program.at)
+    (acc : 'a) : 'a =
+  let rec go ctx mp sel acc =
+    List.fold_left
+      (fun acc (l, se) ->
+        let acc = f ctx mp l se acc in
+        match se with
+        | Core.Module.Structure_item.Module m -> (
+          match module_expr_struct m.expr with
+          | Some (body_mp, inner) -> go (enter ctx body_mp) body_mp inner acc
+          | None -> acc )
+        | _ -> acc )
+      acc
+      sel
+  in
+  List.fold_left (fun acc (mp, sel) -> go (root mp) mp sel acc) acc s
+
+(** {!fold_structure} for the collectors that carry no context and accumulate
+    by side effect. *)
+let iter_structure
+    (f : ModPath.t -> Label.t -> 'p Core.Module.Structure_item.at -> unit)
+    (s : 'p Core.Program.at) : unit =
+  fold_structure ~root:ignore
+    ~enter:(fun () _ -> ())
+    (fun () mp l se () -> f mp l se)
+    s ()
+
+(** The inductives a structure element declares, each as its reference, its
+    index in the mutual block, and the block itself.  An element that declares
+    none contributes nothing, which is what lets the collectors below say what
+    they do with an inductive without each repeating how to find one. *)
+let element_inductives = function
+  | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = (ind : Core.Inductive.t)}) ->
+    List.init (Array.length ind.packets) (fun i ->
+      (GlobRef.IndRef (kn, i), i, ind) )
+  | _ -> []
+
+(** [(modpath, source)] for every module that is an alias for, or an
+    application of, another module.  They are a property of the structure,
+    decided here before rendering, so a use rendered before the [using]
+    declaration for the alias can still resolve it. *)
+let collect_functor_app_sources (s : Core.Program.t) :
+    (ModPath.t * ModPath.t) list =
+  List.rev
+    (fold_structure ~root:ignore
+       ~enter:(fun () _ -> ())
+       (fun () mp l se acc ->
+         match se with
+         | Core.Module.Structure_item.Module m -> (
+           match module_expr_source m.expr with
+           | Some src -> (MPdot (mp, l), src) :: acc
+           | None -> acc )
+         | _ -> acc )
+       s [])
+
+let declares_module_type sel =
+  List.exists (function _, Core.Module.Structure_item.Module_type _ -> true | _ -> false) sel
+
+(** The concept scope of the functor [f] outside the structure -- in another
+    file of a separate extraction, whose own unit declares the concepts --
+    read off its signature as that unit's structure shows it: a functor
+    defined by its body, whose body declares a module type. *)
+let declared_functor_scope f =
+  match base_mp f with
+  | MPbound _ -> None
+  | MPfile _ | MPdot _ -> (
+    match Global.lookup_module f with
+    | exception e when CErrors.noncritical e -> None
+    | mb -> (
+      let rec params acc : _ Declarations.functorize -> _ = function
+        | MoreFunctor (mbid, _, body) -> params (MPbound mbid :: acc) body
+        | NoFunctor sign -> (List.rev acc, sign)
+      in
+      match (Mod_declarations.mod_expr mb, params [] (Mod_declarations.mod_type mb)) with
+      | (FullStruct | Struct _), ((_ :: _ as ps), sign)
+        when List.exists (function _, Declarations.SFBmodtype _ -> true | _ -> false) sign ->
+        Some {Module_plan.functor_ = f; args = ps}
+      | _ -> None ) )
+
+(** The concept scope of every functor whose body declares a module type,
+    keyed by its body; of every application of such a functor, keyed by the
+    module it defines, the functor's over the arguments; and of every alias
+    of such an application.  A concept cannot be declared inside the class
+    template a functor becomes, and the module type may mention the
+    functor's parameters, so its concept is declared at file scope over
+    those parameters too; the name it goes by there, and the arguments every
+    use passes, are settled here. *)
+let collect_functor_concept_scopes (s : Core.Program.t) : (ModPath.t * Module_plan.concept_scope) list =
+  let rec params acc = function
+    | Core.Module.Expr.Functor {parameter = mbid; body; _} -> params (MPbound mbid :: acc) body
+    | body -> (List.rev acc, body)
+  in
+  let rec application args = function
+    | Core.Module.Expr.Apply {functor_ = f; argument = Core.Module.Expr.Path arg} -> application (arg :: args) f
+    | Core.Module.Expr.Path f -> Some (f, args)
+    | _ -> None
+  in
+  let found scopes mp = List.find_map (fun (key, scope) -> if ModPath.equal key mp then Some scope else None) scopes in
+  (* Whether [mp] is the functor body declaring the concepts of [scope]. *)
+  let declares mp (scope : Module_plan.concept_scope) = ModPath.equal mp scope.functor_ in
+  List.rev
+    (fold_structure ~root:ignore
+       ~enter:(fun () _ -> ())
+       (fun () mp l se scopes ->
+         match se with
+         | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Functor _ as me; _} -> (
+           match params [] me with
+           | ps, Core.Module.Expr.Structure {path = body_mp; items = sel} when declares_module_type sel ->
+             (body_mp, {Module_plan.functor_ = body_mp; args = ps}) :: scopes
+           | _ -> scopes )
+         | Core.Module.Structure_item.Module {Core.Module.expr = me; _} -> (
+           match application [] me with
+           | Some (f, (_ :: _ as args)) -> (
+             let scope = match found scopes f with None -> declared_functor_scope f | scope -> scope in
+             match scope with
+             | Some scope when declares f scope && List.length scope.args = List.length args ->
+               (MPdot (mp, l), {scope with args}) :: scopes
+             | _ -> scopes )
+           | Some (source, []) -> (
+             match found scopes source with
+             | Some scope when not (declares source scope) -> (MPdot (mp, l), scope) :: scopes
+             | _ -> scopes )
+           | None -> scopes )
+         | _ -> scopes )
+       s [])
+
+(** {2 Enum registration} *)
+
+(** Register enum inductives by scanning the whole structure.
+
+    An inductive qualifies as an enum when ALL of the following hold (the
+    last three are {!Base.Table.is_enum_inductive_packet}):
+    - It is not a custom-extracted type ([is_custom] returns false).
+    - It is not part of a mutual inductive block (only single inductives).
+    - All constructors are nullary (no arguments — [constructor_argument_types] are all [[]]).
+    - It has no kept type parameters ([num_param_vars = 0]).
+    - It has at least one constructor ([Array.length p.ip_types > 0]).
+
+    Records and type classes are excluded upfront since they have different
+    representations.
+
+    Detected enums are registered via [Base.Table.add_enum_inductive], which sets a
+    global flag queryable by [Base.Table.is_enum_inductive].
+
+    Recurses into sub-modules to find enums at any nesting depth. *)
+let register_enum_inductives (s : Core.Program.t) : unit =
+  iter_structure
+    (fun _mp _l se ->
+      List.iter
+        (fun (ind_ref, i, (ind : Core.Inductive.t)) ->
+          match ind.kind with
+          | Core.Inductive.Kind.Record _ | Core.Inductive.Kind.Type_class _ -> ()
+          | _ ->
+            let is_mutual = Array.length ind.packets > 1 in
+            if
+              (not (is_custom ind_ref))
+              && (not is_mutual)
+              && Base.Table.is_enum_inductive_packet ind i
+            then Base.Table.add_enum_inductive ind_ref )
+        (element_inductives se) )
+    s
+
+let register_shared_variants (s : _ Core.Program.at) : unit =
+  if Base.Table.shared_variant () then
+    iter_structure
+      (fun _mp _l se ->
+        List.iter
+          (fun (ind_ref, i, ind) ->
+            match ind_ref with
+            | GlobRef.IndRef (kn, _) when Base.Table.is_shared_variant_packet kn ind i ->
+              Base.Table.add_shared_variant ind_ref
+            | _ -> () )
+          (element_inductives se) )
+      s
+
+(** Every definition whose body only raises -- an axiom, an absurd case, a
+    proof-only definition whose body extraction simplifies to one.  Each is a
+    throwing value: {!Driver.Program_facts} records the list and lowering reads it
+    ({!Core_to_cpp.Lowering_state.is_throwing_value}), so it is emitted as a
+    zero-argument function that throws when called rather than a constant
+    that throws during static initialisation, and every reference must call
+    it.  Read off the final bodies, since simplification is what can turn
+    [False_rect _ h] into the throw. *)
+let throwing_values (s : Core.Program.t) : GlobRef.t list =
+  let found = ref [] in
+  iter_structure
+    (fun _mp _l se ->
+      match se with
+      | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = e; _})
+        when Base.Core_util.only_throws e ->
+        found := r :: !found
+      | _ -> () )
+    s;
+  List.rev !found
+
+(** {2 Inductive name collection} *)
+
+(** Collect (name, defining_modpath) for every inductive type in the structure,
+    spelled as Rocq spells it -- callers that care about the name a type is
+    emitted under at global scope capitalise it themselves.
+
+    {!analyze} uses this for name collision detection: a wrapper module whose
+    name an inductive from another module takes gets a suffixed name
+    ([classify_module]'s [taken]), and a child module whose capitalised name
+    collides is forced inside a parent wrapper
+    ({!collect_collision_wrappers}).
+
+    Recurses into sub-modules to collect inductives at all nesting depths. *)
+let collect_inductive_names (s : Core.Program.t) : (string * ModPath.t) list =
+  fold_structure ~root:ignore
+    ~enter:(fun () _ -> ())
+    (fun () _mp _l se acc ->
+      List.fold_left
+        (fun acc (ind_ref, _i, _ind) ->
+          (* A custom-extracted inductive is spelled as the C++ type it was
+             mapped to and never declared, so its Rocq name is not taken:
+             [nat] mapped to [uint64_t] must not push a module called [Nat]
+             into a collision wrapper. *)
+          if Base.Table.is_custom ind_ref then
+            acc
+          else
+            (Base.Common.pp_global_name Type ind_ref, modpath_of_r ind_ref) :: acc )
+        acc
+        (element_inductives se) )
+    s []
+
+(** {2 Global scope enum collection} *)
+
+(** Collect enum inductives that appear at global scope (top-level Core.Module.Structure_item.Declaration
+    entries, not nested inside sub-modules).
+
+    This must run AFTER [register_enum_inductives] has been called, because it
+    relies on [Base.Table.is_enum_inductive] to identify enums.
+
+    Global-scope enums are emitted as [enum class] declarations before any
+    wrapper modules or the main module, ensuring they are in scope for all
+    subsequent C++ declarations that reference them.
+
+    Note: only the top-level declarations are scanned (no recursion into
+    sub-modules). Enums inside sub-modules are emitted within their containing
+    module's scope when that module is rendered. *)
+let collect_global_scope_enums (s : Core.Program.t) : GlobRef.t list =
+  let acc = ref [] in
+  List.iter
+    (fun (_mp, sel) ->
+      List.iter
+        (fun (_l, se) ->
+          match se with
+          | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+            Array.iteri
+              (fun i _p ->
+                let ind_ref = GlobRef.IndRef (kn, i) in
+                if Base.Table.is_enum_inductive ind_ref then
+                  acc := ind_ref :: !acc )
+              ind.packets
+          | _ -> () )
+        sel )
+    s;
+  !acc
+
+(** {2 Module classification} *)
+
+(** Test whether a structure element is a function declaration (Core.Decl.Value or Core.Decl.Recursive_group).
+    Used by [classify_module] to determine if a module contains any functions —
+    a prerequisite for wrapping. *)
+let is_func_decl (_, se) =
+  match se with
+  | Core.Module.Structure_item.Declaration (Core.Decl.Value _ | Core.Decl.Recursive_group _) -> true
+  | _ -> false
+
+(** Classify a module as a wrapper or non-wrapper.
+
+    A module becomes a wrapper (its declarations are emitted inside a C++
+    struct) when ALL of these hold:
+    - [has_bare]: It contains at least one bare [Core.Module.Structure_item.Declaration] entry.
+    - [all_bare]: It contains ONLY bare declarations (no [Core.Module.Structure_item.Module] or
+      [Core.Module.Structure_item.Module_type] children).
+    - [is_modfile]: It is a file-level module (not a sub-module).
+    - [has_func]: It contains at least one function ([Core.Decl.Value] or [Core.Decl.Recursive_group]).
+    - [not is_main]: It is not the main module being extracted.
+
+    When a module qualifies, returns [Some name] where [name] is the capitalized
+    form of the module file name (e.g. "List" for list.v), escaped if reserved
+    and suffixed [_Mod] when [taken]. Otherwise returns [None].
+
+    The main module is excluded because its declarations are emitted directly at
+    top level, not inside a wrapper struct.
+
+    [taken] says whether a name is already spoken for at file scope by
+    something this module cannot be merged into. *)
+let classify_module ?(taken = fun _ -> false) ~main_mp (mp, sel) =
+  let has_func = List.exists is_func_decl sel in
+  let has_bare =
+    List.exists
+      (fun (_, se) ->
+        match se with
+        | Core.Module.Structure_item.Declaration _ -> true
+        | _ -> false )
+      sel
+  in
+  let all_bare =
+    not
+      (List.exists
+         (fun (_, se) ->
+           match se with
+           | Core.Module.Structure_item.Module _ | Core.Module.Structure_item.Module_type _ -> true
+           | _ -> false )
+         sel )
+  in
+  let is_main =
+    match main_mp with
+    | Some m -> ModPath.equal mp m
+    | None -> false
+  in
+  if has_bare && all_bare && is_modfile mp && has_func && not is_main then
+    let name =
+      Base.Table.escape_reserved_struct_name
+        (String.capitalize_ascii (string_of_modfile mp))
+    in
+    (* The wrapper is a struct at file scope, and an eponymous inductive there
+       normally absorbs it -- the wrapper's members are emitted inside the
+       type's own declaration.  An [enum class] has no body to hold them, so
+       Rocq's [byte] and the [Byte] file wrapping its operations would collide
+       as two spellings of one name; the type keeps it. *)
+    Some (if taken name then name ^ "_Mod" else name)
+  else
+    None
+
+(** {2 Topological sort} *)
+
+(** Topologically sort non-main modules by cross-module dependencies.
+
+    This ensures that when module A references a type or function from module B,
+    module B appears before module A in the output. This is important for C++
+    compilation: forward declarations are limited, so definitions must generally
+    precede their uses.
+
+    The algorithm is Kahn's algorithm (BFS-based topological sort): 1. Build a
+    dependency graph: for each non-main module, scan all declarations for
+    GlobRef references to other modules. 2. Additionally, check the method
+    registry: if a function calls a method on a type from another module, that
+    creates an implicit dependency (the method is defined inside the other
+    module's struct). 3. Compute in-degrees and process nodes with in-degree 0
+    first. 4. If a cycle is detected (not all nodes processed), fall back to the
+    original order rather than failing.
+
+    The main module (last in the input list) is always placed last in the
+    output, regardless of dependencies. This is because the main module is the
+    "entry point" and may depend on everything.
+
+    Trivial case: if there are 0 or 1 modules, or no dependencies exist, the
+    input order is returned unchanged. *)
+let topological_sort
+    (reg : Method_registry.t)
+    (entries : ((ModPath.t * Core.Module.Structure.t) * string option) list) :
+    ((ModPath.t * Core.Module.Structure.t) * string option) list =
+  let n = List.length entries in
+  if n <= 1 then
+    entries
+  else (* By convention, the main module is the last entry. *)
+    let is_main_entry i = i = n - 1 in
+    (* Step 1: Map from ModPath to array index for non-main modules. *)
+    let mp_to_idx : (ModPath.t, int) Hashtbl.t = Hashtbl.create 16 in
+    List.iteri
+      (fun i ((mp, _sel), _wn) ->
+        if not (is_main_entry i) then
+          Hashtbl.replace mp_to_idx mp i )
+      entries;
+    (* Step 2: Build dependency graph. deps maps module index -> list of module
+       indices it depends on. *)
+    let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
+    List.iteri
+      (fun i ((mp_i, sel), _wn) ->
+        if is_main_entry i then
+          ()
+        else (* Collect unique dependencies for this module. *)
+          let dep_set : (int, unit) Hashtbl.t = Hashtbl.create 8 in
+          (* The entry a module path belongs to.  A path may name a module
+             nested inside an entry -- [Lib.Ord] within [Lib] -- and it is the
+             entry that has a slot in the order, so walk out to it. *)
+          let rec entry_of_mp mp =
+            match Hashtbl.find_opt mp_to_idx mp with
+            | Some _ as found -> found
+            | None -> (
+              match mp with
+              | ModPath.MPdot (parent, _) -> entry_of_mp parent
+              | _ -> None )
+          in
+          let add_dep_mp mp =
+            match entry_of_mp mp with
+            | Some j when j <> i -> Hashtbl.replace dep_set j ()
+            | _ -> ()
+          in
+          let add_dep r =
+            (* Direct reference: check if [r] is defined in another module. *)
+            add_dep_mp (modpath_of_r r);
+            (* Method reference: if [r] is a registered method, its eponymous
+               type lives in another module — add that as a dependency too. *)
+            match Method_registry.is_registered_method reg r with
+            | Some (epon_ref, _pos) -> add_dep_mp (modpath_of_r epon_ref)
+            | None -> ()
+          in
+          (* Everything this module names: the references in its declarations,
+             the modules its submodules are built from, and the modules its
+             module types and signatures name.  [Module M := F X] is emitted as
+             [using M = F<X>], which no forward declaration breaks the cycle
+             of, so [X]'s module has to come first; [Module Type T := O.U] is
+             emitted as [concept T = U<M>], which likewise cannot precede [U].
+
+             The traversal is {!Core_passes.Modutil.struct_iter} rather than a local one,
+             because a hand-written walk answers "what does this module name"
+             only for the cases it happens to list.  A module type must count
+             too: a file whose content is a bare alias depends on the file it
+             aliases and must be written after it. *)
+          Core_passes.Modutil.struct_iter
+            (Core_passes.Modutil.decl_iter_references add_dep add_dep add_dep)
+            (Core_passes.Modutil.spec_iter_references add_dep add_dep add_dep)
+            add_dep_mp
+            [(mp_i, sel)];
+          let dep_list = Hashtbl.fold (fun k () acc -> k :: acc) dep_set [] in
+          if dep_list <> [] then
+            Hashtbl.replace deps i dep_list )
+      entries;
+    (* Step 3: Kahn's algorithm. *)
+    if Hashtbl.length deps = 0 then
+      entries (* No dependencies — original order is fine. *)
+    else
+      let non_main_indices = List.init (n - 1) (fun i -> i) in
+      (* Compute in-degree for each non-main module. *)
+      let in_degree : (int, int) Hashtbl.t = Hashtbl.create 16 in
+      List.iter (fun i -> Hashtbl.replace in_degree i 0) non_main_indices;
+      (* Build reverse dependency index: dep -> list of modules that depend on
+         it. This avoids O(n²) scanning in the main loop below. *)
+      let reverse_deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
+      Hashtbl.iter
+        (fun idx dep_list ->
+          let valid_deps =
+            List.filter (fun dep -> Hashtbl.mem in_degree dep) dep_list
+          in
+          let count = List.length valid_deps in
+          if count > 0 then (
+            Hashtbl.replace
+              in_degree
+              idx
+              ((try Hashtbl.find in_degree idx with Not_found -> 0) + count);
+            List.iter
+              (fun dep ->
+                let existing =
+                  match Hashtbl.find_opt reverse_deps dep with
+                  | Some l -> l
+                  | None -> []
+                in
+                Hashtbl.replace reverse_deps dep (idx :: existing) )
+              valid_deps ) )
+        deps;
+      (* Seed the queue with modules that have no incoming dependencies. *)
+      let queue = Queue.create () in
+      List.iter
+        (fun i -> if Hashtbl.find in_degree i = 0 then Queue.push i queue)
+        non_main_indices;
+      (* Process the queue: emit each module, then decrement in-degree for all
+         modules that depend on it. *)
+      let sorted = ref [] in
+      while not (Queue.is_empty queue) do
+        let idx = Queue.pop queue in
+        sorted := idx :: !sorted;
+        match Hashtbl.find_opt reverse_deps idx with
+        | Some dependents ->
+          List.iter
+            (fun dependent ->
+              let new_deg = Hashtbl.find in_degree dependent - 1 in
+              Hashtbl.replace in_degree dependent new_deg;
+              if new_deg = 0 then Queue.push dependent queue )
+            dependents
+        | None -> ()
+      done;
+      let sorted_indices = List.rev !sorted in
+      if List.length sorted_indices <> List.length non_main_indices then
+        entries (* Cycle detected: fall back to original order. *)
+      else
+        let arr = Array.of_list entries in
+        let sorted_entries = List.map (fun i -> arr.(i)) sorted_indices in
+        (* Append the main module at the end. *)
+        sorted_entries @ [arr.(n - 1)]
+
+(** {2 Intra-module inductive ordering} *)
+
+(** Map each inductive to the declarations registered as its methods.
+
+    A method is rendered as an inline member of the inductive's struct, so what
+    its body needs is part of what the inductive needs -- even though the
+    declaration itself may live in another module. *)
+let methods_by_owner (reg : Method_registry.t) (s : Core.Program.t) =
+  let tbl : Core.Decl.t list Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
+  let add r d =
+    match Method_registry.is_registered_method reg r with
+    | Some (owner, _pos) ->
+      let prev = Option.default [] (Core.Ref.User.Tbl.find_opt tbl owner) in
+      Core.Ref.User.Tbl.replace tbl owner (d :: prev)
+    | None -> ()
+  in
+  List.iter
+    (fun (_mp, sel) ->
+      List.iter
+        (fun (_l, se) ->
+          match se with
+          | Core.Module.Structure_item.Declaration d ->
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> add fd.entity d) (Base.Core_util.term_defs d)
+          | _ -> () )
+        sel )
+    s;
+  tbl
+
+(** Index every term declaration in the structure by the reference it defines,
+    so a method body's dependencies can be followed one call further. *)
+let decls_by_ref (s : Core.Program.t) =
+  let tbl : Core.Decl.t Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 64 in
+  List.iter
+    (fun (_mp, sel) ->
+      List.iter
+        (fun (_l, se) ->
+          match se with
+          | Core.Module.Structure_item.Declaration d ->
+            List.iter (fun (fd : Core.Recursion.Definition.t) -> Core.Ref.User.Tbl.replace tbl fd.entity d)
+              (Base.Core_util.term_defs d)
+          | _ -> () )
+        sel )
+    s;
+  tbl
+
+(** Order a module's inductive declarations so that each comes after the ones
+    whose complete definition it needs.
+
+    An inductive's methods are rendered as inline members, so a body that reads
+    [Nat::divmod(x, y).fst()] needs [Prod] to be complete right there -- a
+    forward declaration will not do.  Rocq's own order need not respect that:
+    [nat] and [prod] are both declared in [Datatypes], [nat] first.  Only the
+    inductives move; every other structure element keeps its slot, and a
+    dependency cycle leaves the order untouched. *)
+let sort_inductives_within_module reg (s : Core.Program.t) sel =
+  let arr = Array.of_list sel in
+  let ind_slots =
+    Array.to_list (Array.mapi (fun i x -> (i, x)) arr)
+    |> List.filter_map (fun (i, (_l, se)) ->
+           match se with Core.Module.Structure_item.Declaration (Core.Decl.Inductive _) -> Some i | _ -> None )
+  in
+  if List.length ind_slots <= 1 then
+    sel
+  else
+    let methods = methods_by_owner reg s in
+    let term_decls = decls_by_ref s in
+    (* Which slot defines a given inductive reference. *)
+    let slot_of_ref : int Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
+    List.iter
+      (fun i ->
+        match arr.(i) with
+        | _l, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+          Array.iteri
+            (fun j _p ->
+              Core.Ref.User.Tbl.replace slot_of_ref (GlobRef.IndRef (kn, j)) i )
+            ind.packets
+        | _ -> () )
+      ind_slots;
+    (* The module's type aliases.  A field typed through an alias -- a record
+       holding [list final_instruction], where [final_instruction] is
+       [instruction pc] -- needs the inductive the alias names just as much as
+       a field that names it directly. *)
+    let alias_body : Core.Type.t Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 8 in
+    List.iter
+      (fun (_l, se) ->
+        match se with
+        | Core.Module.Structure_item.Declaration (Core.Decl.Type_alias {entity = r; body = ty; _}) ->
+          Core.Ref.User.Tbl.replace alias_body r ty
+        | _ -> () )
+      sel;
+    let deps : (int, int list) Hashtbl.t = Hashtbl.create 16 in
+    List.iter
+      (fun i ->
+        let acc = ref [] in
+        let add_dep r =
+          match Core.Ref.User.Tbl.find_opt slot_of_ref r with
+          | Some j when j <> i && not (List.mem j !acc) -> acc := j :: !acc
+          | _ -> ()
+        in
+        let seen_alias : unit Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 8 in
+        let rec add_type_dep r =
+          add_dep r;
+          match Core.Ref.User.Tbl.find_opt alias_body r with
+          | Some ty when not (Core.Ref.User.Tbl.mem seen_alias r) ->
+            Core.Ref.User.Tbl.replace seen_alias r ();
+            Core_passes.Modutil.type_iter_references add_type_dep ty
+          | _ -> ()
+        in
+        (* A method body reaches the type it needs through the functions it
+           calls -- [nat::div] calls [Nat::divmod], and it is [divmod] that
+           returns a [Prod] -- so follow the call graph, not just the immediate
+           references. *)
+        let seen : unit Core.Ref.User.Tbl.t = Core.Ref.User.Tbl.create 16 in
+        let rec scan d =
+          Core_passes.Modutil.decl_iter_references (follow add_dep) add_dep add_type_dep d
+        and follow k r =
+          k r;
+          if not (Core.Ref.User.Tbl.mem seen r) then begin
+            Core.Ref.User.Tbl.replace seen r ();
+            Option.iter scan (Core.Ref.User.Tbl.find_opt term_decls r)
+          end
+        in
+        ( match arr.(i) with
+        | _l, Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind} as d) ->
+          scan d;
+          Array.iteri
+            (fun j _p ->
+              List.iter
+                scan
+                (Option.default
+                   []
+                   (Core.Ref.User.Tbl.find_opt methods (GlobRef.IndRef (kn, j)))) )
+            ind.packets
+        | _ -> () );
+        Hashtbl.replace deps i !acc )
+      ind_slots;
+    (* A stable topological order: each round places the FIRST remaining slot
+       whose dependencies have all been placed, so an inductive moves only
+       when a dependency forces it to.  Placing every ready slot at once (one
+       Kahn layer per round) pushes an inductive with any dependency behind
+       all the dependency-free ones, even when Rocq's order already satisfied
+       it: an [instruction] that needs the enums declared before it went
+       behind the [program] record that holds a list of instructions. *)
+    let emitted : (int, unit) Hashtbl.t = Hashtbl.create 16 in
+    let ready i =
+      List.for_all
+        (fun j -> Hashtbl.mem emitted j)
+        (Option.default [] (Hashtbl.find_opt deps i))
+    in
+    let rec place order remaining =
+      match List.find_opt ready remaining with
+      | Some i ->
+        Hashtbl.replace emitted i ();
+        place (i :: order) (List.filter (fun k -> k <> i) remaining)
+      | None -> if remaining = [] then Some (List.rev order) else None
+    in
+    match place [] ind_slots with
+    | None -> sel (* Cycle: leave the order as extraction produced it. *)
+    | Some order ->
+      List.iter2 (fun slot src -> arr.(slot) <- List.nth sel src) ind_slots order;
+      Array.to_list arr
+
+(** {2 Main analysis entry point} *)
+
+(** Does the child module [se] itself define an inductive whose C++ name is
+    [child_name]?  If it does, the name is the child's own and no wrapper is
+    needed. *)
+let child_has_eponymous_ind (child_name : string) (se : Core.Module.Structure_item.t) :
+    bool =
+  let names_it kn (ind : Core.Inductive.t) =
+    let found = ref false in
+    Array.iteri
+      (fun i _p ->
+        let n =
+          String.capitalize_ascii
+            (Base.Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
+        in
+        if String.equal n child_name then found := true )
+      ind.packets;
+    !found
+  in
+  match se with
+  | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {path = _inner_mp;
+                                                                                      items = inner_sel}; _} ->
+    List.exists
+      (fun (_l, se') ->
+        match se' with
+        | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+          names_it kn ind
+        | _ -> false )
+      inner_sel
+  | _ -> false
+
+(** Does the module whose declarations are [sel] define an inductive whose C++
+    name is [child_name]?  Then the collision is with a sibling, which the
+    ordinary namespace rules already separate. *)
+let has_sibling_inductive
+    (sel : (Label.t * Core.Module.Structure_item.t) list) (child_name : string) : bool =
+  List.exists
+    (fun (_l, se') ->
+      match se' with
+      | Core.Module.Structure_item.Declaration (Core.Decl.Inductive {entity = kn; definition = ind}) ->
+        let found = ref false in
+        Array.iteri
+          (fun i _p ->
+            let n =
+              String.capitalize_ascii
+                (Base.Common.pp_global_name Type (GlobRef.IndRef (kn, i)))
+            in
+            if String.equal n child_name then found := true )
+          ind.packets;
+        !found
+      | _ -> false )
+    sel
+
+(** Decide, for every module, which of its children a name collision forces
+    inside a parent wrapper struct, and under what name.
+
+    A child module collides when its capitalised name is already the C++ name of
+    an inductive declared elsewhere; the child, its body, and each of its
+    declarations then live inside a struct named after the file-level module. *)
+let collect_collision_wrappers
+    (names : (string, ModPath.t) Hashtbl.t) (modules : module_info list) :
+    (ModPath.t * string) list * (ModPath.t * string) list =
+  let acc = ref [] in
+  let add mp name = acc := (mp, name) :: !acc in
+  let bystanders = ref [] in
+  let add_bystander mp name = bystanders := (mp, name) :: !bystanders in
+  List.iter
+    (fun mi ->
+      let mp = mi.modpath and sel = mi.sels in
+      if mi.wrapper_name = None && is_modfile mp then begin
+        let is_colliding_child l se =
+          let child_name = String.capitalize_ascii (Label.to_string l) in
+          match Hashtbl.find_opt names child_name with
+          | Some ind_mp ->
+            (not (ModPath.equal ind_mp mp))
+            && (not (child_has_eponymous_ind child_name se))
+            && not (has_sibling_inductive sel child_name)
+          | None -> false
+        in
+        let colliding =
+          List.filter
+            (fun (l, se) ->
+              match se with
+              | Core.Module.Structure_item.Module _ -> is_colliding_child l se
+              | _ -> false )
+            sel
+        in
+        (* Collision forces the child inside the wrapper; it does not decide
+           how.  A child the wrapper absorbs declaration by declaration has no
+           struct of its own left, so its name is flattened away.  A child that
+           is a functor application is emitted as a single [using] name, and
+           that name is the whole of it -- there is nothing to absorb, and
+           flattening it would leave the alias unwritten and every path into it
+           spelled with the wrapper in place of the child. *)
+        let is_flattened_child l se =
+          match se with
+          | Core.Module.Structure_item.Module
+            {Core.Module.expr = Core.Module.Expr.Structure _ | Core.Module.Expr.Path _; _} ->
+            is_colliding_child l se
+          | _ -> false
+        in
+        if colliding <> [] then begin
+          (* The wrapper is a new struct at file scope, named after the file.
+             A file whose module is named after it -- the usual shape, one
+             module per file -- already emits a struct under that name, and the
+             two would collide in turn; the wrapper is the incidental one, so
+             it is the side that takes the suffix. *)
+          let base =
+            Base.Table.escape_reserved_struct_name
+              (String.capitalize_ascii (string_of_modfile mp))
+          in
+          let taken_by_sibling =
+            List.exists
+              (fun (l, se) ->
+                match se with
+                | Core.Module.Structure_item.Module _ ->
+                  String.equal base (Base.Common.emitted_module_name (MPdot (mp, l)))
+                | _ -> false )
+              sel
+          in
+          let parent_name =
+            if taken_by_sibling || Hashtbl.mem names base then base ^ "_Mod"
+            else base
+          in
+          let register_decl_modpaths inner_sel =
+            List.iter
+              (fun (_l, se') ->
+                match se' with
+                | Core.Module.Structure_item.Declaration d ->
+                  List.iter
+                    (fun (fd : Core.Recursion.Definition.t) -> add (modpath_of_r fd.entity) parent_name)
+                    (Base.Core_util.term_defs d)
+                | _ -> () )
+              inner_sel
+          in
+          List.iter
+            (fun (l, se) ->
+              match se with
+              | Core.Module.Structure_item.Module
+                {Core.Module.expr = Core.Module.Expr.Structure {path = inner_mp; items = inner_sel}; _} ->
+                add (MPdot (mp, l)) parent_name;
+                add inner_mp parent_name;
+                register_decl_modpaths inner_sel
+              | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Path alias_mp; _} ->
+                add (MPdot (mp, l)) parent_name;
+                add alias_mp parent_name
+              | _ -> () )
+            colliding;
+          (* The wrapper is one struct, and the file's own top-level
+             declarations are emitted inside it beside the wrapped children --
+             so they are members too, and a reference to one has to say the
+             struct's name.  Registering only the children would leave the two
+             halves of a single struct spelled differently: [Helpers::length]
+             for the one that came from [Module N], a bare [map_monad] for the
+             one the file declared itself. *)
+          register_decl_modpaths sel;
+          (* The wrapper absorbs the file's other children too, but keeps their
+             own nesting: a sibling that does not collide is rendered inside the
+             wrapper as the struct it already was.  So its name survives and
+             only wants the wrapper's in front of it -- which is why these are
+             kept apart from the wrapped children above, whose own name is
+             flattened away. *)
+          List.iter
+            (fun (l, se) ->
+              match se with
+              | Core.Module.Structure_item.Module m when not (is_flattened_child l se) ->
+                add_bystander (MPdot (mp, l)) parent_name;
+                ( match m.expr with
+                | Core.Module.Expr.Structure {path = inner_mp; _} -> add_bystander inner_mp parent_name
+                | Core.Module.Expr.Path alias_mp -> add_bystander alias_mp parent_name
+                | _ -> () )
+              | _ -> () )
+            sel
+        end
+      end )
+    modules;
+  (List.rev !acc, List.rev !bystanders)
+
+(** Collect every eponymous record: a record inductive whose name is, up to
+    case, the name of the module that declares it, and which is therefore
+    flattened into that module's struct rather than nested inside it.
+
+    Like the collision wrappers, this is layout, and the name resolver copies
+    the set when it is built.  Discovering it while rendering would mean
+    discovering it after the resolver had already answered. *)
+let collect_eponymous_records (s : Core.Program.t) : GlobRef.t list =
+  List.rev
+    (fold_structure
+       ~root:(fun mp ->
+         (* Under separate extraction a file is a namespace, which has no
+            body to merge a record into -- and needs none, since
+            [namespace CFG { struct CFG; }] is legal as it stands. *)
+         if Base.Common.get_force_cross_file_qualification () then None
+         else Some (String.lowercase_ascii (string_of_modfile mp)) )
+         (* The name that matters is the one the module struct is emitted
+            under, suffix included: a module renamed out of the way of its
+            inductive is no longer eponymous with it, and the merge that
+            renaming was there to prevent must not happen after all. *)
+       ~enter:(fun _ mp ->
+         Some (String.lowercase_ascii (Base.Common.emitted_module_name mp)) )
+       (fun module_name _mp _l se acc ->
+         List.fold_left
+           (fun acc (ind_ref, _i, (ind : Core.Inductive.t)) ->
+             match ind.kind with
+             | Core.Inductive.Kind.Record _
+               when Option.equal String.equal
+                      (Some
+                         (String.lowercase_ascii
+                            (Base.Common.pp_global_name Type ind_ref) ) )
+                      module_name ->
+               ind_ref :: acc
+             | _ -> acc )
+           acc
+           (element_inductives se) )
+       s [])
+
+(** The template parameter every module-type concept is written over:
+    {!Emit.Concepts} spells the modelled module by it in the
+    [template<typename M>] head and throughout the requirement bodies. *)
+let concept_self_param = "M"
+
+(** The C++ concept identifier a module type labelled [l] takes unless a
+    clash qualifies it: the label as {!Base.Common.modular_rename} escapes any
+    identifier -- C++ keywords and primes -- and one escape more, since a
+    concept named [concept_self_param] would be shadowed by its own template
+    parameter. *)
+let concept_name_of_label l =
+  let s = Base.Common.modular_rename (Label.to_id l) in
+  if String.equal s concept_self_param then s ^ "_" else s
+
+(** Decide the name every concept is emitted under, for the type classes and
+    module types whose own name does not settle it.
+
+    A concept is declared at C++ file scope whatever module declared the class
+    or module type, so two called [T] in different modules -- two classes, two
+    module types, or one of each -- would be one redefinition of the other.
+    Where a name is shared, each holder is qualified with the module that
+    declares it -- all of them, so that which name one gets does not depend on
+    the order they were rendered in.  A module type declared in a functor's
+    body is named after the functor already ({!collect_functor_concept_scopes})
+    and is not among them. *)
+let collect_concept_renames (s : Core.Program.t) :
+    (GlobRef.t * string) list * (ModPath.t * string) list =
+  let classes, modtypes =
+    fold_structure ~root:ignore
+      ~enter:(fun () _ -> ())
+      (fun () mp l se (classes, modtypes) ->
+        match se with
+        | Core.Module.Structure_item.Module_type _ ->
+          (classes, (MPdot (mp, l), concept_name_of_label l) :: modtypes)
+        | _ ->
+          ( List.fold_left
+              (fun acc (ind_ref, _i, (ind : Core.Inductive.t)) ->
+                match ind.kind with
+                | Core.Inductive.Kind.Type_class _ -> (ind_ref, Base.Common.pp_global_name Type ind_ref) :: acc
+                | _ -> acc )
+              classes (element_inductives se),
+            modtypes ) )
+      s ([], [])
+  in
+  let counts = Hashtbl.create 8 in
+  List.iter
+    (fun b -> Hashtbl.replace counts b (1 + Option.default 0 (Hashtbl.find_opt counts b)))
+    (List.map snd classes @ List.map snd modtypes);
+  let renames scope_of =
+    List.filter_map (fun (holder, b) ->
+        if Hashtbl.find counts b > 1 then
+          Some (holder, Base.Common.emitted_module_name (scope_of holder) ^ "_" ^ b)
+        else None )
+  in
+  ( renames modpath_of_r (List.rev classes),
+    renames (function MPdot (mp, _) -> mp | mp -> mp) (List.rev modtypes) )
+
+(** Whether a term of type [ty] is a type-class instance: its type, past any
+    arrows, is a type class. *)
+let is_instance_type (ty : Core.Type.t) : bool =
+  let rec return_type = function
+    | Core.Type.Arrow {result = rest; _} -> return_type rest
+    | t -> t
+  in
+  match return_type ty with
+  | Core.Type.Global_app {head = class_ref; _} -> Base.Table.is_typeclass class_ref
+  | _ -> false
+
+(** The instances a wrapper struct does not keep.  An instance is emitted as a
+    struct at namespace scope wherever it was declared, because it is named as
+    a concept's template argument -- a type, which no module owns -- so a use
+    of one declared in a wrapped module must not qualify it with the wrapper. *)
+let collect_lifted_instances (modules : module_info list) : GlobRef.t list =
+  List.concat_map
+    (fun m ->
+      if Option.is_empty m.wrapper_name then []
+      else
+        List.filter_map
+          (fun (_l, se) ->
+            match se with
+            | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r;
+                                                                       body = _a;
+                                                                       type_ = t}) when is_instance_type t ->
+              Some r
+            | _ -> None )
+          m.sels )
+    modules
+
+(** Perform all structure analysis in a single call.
+
+    This is called once per unit from [Emit.Files.prepare_structure], once the method
+    registry is obtained. The steps are:
+    {ol
+    {- Register enum inductives across all modules (side-effect on Table).}
+    {- Collect inductive names for collision detection.}
+    {- Collect global-scope enums for early emission.}
+    {- Order each module's inductives, classify modules as wrapper or not,
+       and topologically sort them by cross-module dependencies.}
+    {- Decide the collision wrappers and their bystanders.}
+    {- Collect the eponymous records and the concept renames.}
+    {- Collect alias and functor-application sources, functor concept scopes
+       and lifted instances.}}
+
+    The main module is identified as the last module in the input structure
+    (following Rocq's convention that the extracted module is listed last). *)
+let analyze (reg : Method_registry.t) (s : Core.Program.t) : t =
+  (* 1. Register enum inductives (side-effect: populates Table). *)
+  register_enum_inductives s;
+  (* 2. Collect inductive names for name collision detection. *)
+  let declared_inductive_names = collect_inductive_names s in
+  (* At global scope a type is emitted under a capitalised name, which is what
+     a module competes with. *)
+  let inductive_names =
+    List.map
+      (fun (n, mp) -> (String.capitalize_ascii n, mp))
+      declared_inductive_names
+  in
+  (* 3. Collect global-scope enums (must run after enum registration). *)
+  let global_scope_enums = collect_global_scope_enums s in
+  (* 4. Classify each module and topologically sort. The main module is the last
+     in the structure by convention. *)
+  let main_mp =
+    match List.rev s with
+    | (mp, _) :: _ -> Some mp
+    | [] -> None
+  in
+  let enum_names =
+    List.map
+      (fun r -> String.capitalize_ascii (Base.Common.pp_global_name Type r))
+      global_scope_enums
+  in
+  (* A wrapper named after a type another module declares is merged into that
+     type: the file [List.v] of operations on [Datatypes.list] becomes
+     [List<A>::length()].  That only works for the operations the merge can
+     reach -- the ones taking the type -- so a module with even one function
+     left over cannot be merged, and its struct and the type would then be two
+     declarations of one name.  The module is the side that gives way; the name
+     of a type is what its users refer to.
+
+     The comparison is against the name Rocq gives the type, not the capitalised
+     one it takes at global scope: a module named [Nat] and a type named [nat]
+     are not two declarations of one name -- the type is emitted inside the
+     module's struct, as [Nat::nat], and nothing has to give way. *)
+  let unmergeable_into_foreign_type mp sel name =
+    List.exists
+      (fun (n, ind_mp) ->
+        String.equal n name && not (ModPath.equal ind_mp mp) )
+      declared_inductive_names
+    && not
+         (List.for_all
+            (fun (_l, se) ->
+              let methodified r =
+                Method_registry.is_registered_method reg r <> None
+              in
+              match se with
+              | Core.Module.Structure_item.Declaration ((Core.Decl.Value _ | Core.Decl.Recursive_group _) as d) ->
+                List.for_all (fun (fd : Core.Recursion.Definition.t) -> methodified fd.entity) (Base.Core_util.term_defs d)
+              | _ -> true )
+            sel )
+  in
+  let entries =
+    List.map
+      (fun (mp, sel) ->
+        let sel = sort_inductives_within_module reg s sel in
+        let taken name =
+          List.mem name enum_names || unmergeable_into_foreign_type mp sel name
+        in
+        ((mp, sel), classify_module ~taken ~main_mp (mp, sel)) )
+      s
+  in
+  let sorted = topological_sort reg entries in
+  let sorted_modules =
+    List.map
+      (fun ((mp, sels), wrapper_name) ->
+        let is_main =
+          match main_mp with
+          | Some m -> ModPath.equal mp m
+          | None -> false
+        in
+        {modpath = mp; sels; wrapper_name; is_main} )
+      sorted
+  in
+  (* 5. Decide which modules a name collision forces inside a wrapper struct.
+     This has to be settled before any rendering, because name resolution is
+     built from it. *)
+  let names = Hashtbl.create 16 in
+  List.iter (fun (n, mp) -> Hashtbl.replace names n mp) inductive_names;
+  let collision_wrappers, wrapper_bystanders =
+    collect_collision_wrappers names sorted_modules
+  in
+  (* 6. Collect the eponymous records and concept names, for the same
+     reason. *)
+  let eponymous_records = collect_eponymous_records s in
+  let concept_renames, modtype_concept_renames = collect_concept_renames s in
+  (* 7. Collect the alias and functor-application targets, likewise. *)
+  let functor_app_sources = collect_functor_app_sources s in
+  { sorted_modules;
+    global_scope_enums;
+    collision_wrappers;
+    wrapper_bystanders;
+    functor_app_sources;
+    eponymous_records;
+    functor_concept_scopes = collect_functor_concept_scopes s;
+    concept_renames;
+    modtype_concept_renames;
+    lifted_instances = collect_lifted_instances sorted_modules }

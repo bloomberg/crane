@@ -2,6 +2,7 @@
 #define INCLUDED_TODO_ERASED_INSTANCE_PARAM
 
 #include <concepts>
+#include <cstdint>
 
 template <typename I, typename A>
 concept Default = requires {
@@ -10,7 +11,7 @@ concept Default = requires {
 
 struct TodoErasedInstanceParam {
   struct natDefault {
-    static uint64_t def() { return UINT64_C(4); }
+    constexpr static uint64_t def() { return UINT64_C(4); }
   };
 
   static_assert(Default<natDefault, uint64_t>);

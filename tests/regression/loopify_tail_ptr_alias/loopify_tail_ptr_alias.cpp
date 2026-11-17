@@ -15,9 +15,8 @@
 /// const auto &a0, a1 = std::get<Cons>(_loop_l.v());
 /// const lst *_next_acc = crane_raw(a1);                 // points INTO _loop_l
 /// _loop_s = _loop_s + hd(deref _loop_acc);
-/// _loop_l = lst::cons(0, lst::cons(m, lst::nil()));     // frees the old
-/// _loop_l _loop_acc = _next_acc;                                // now
-/// dangling
+/// _loop_l = lst::cons(0, lst::cons(m, lst::nil())); // frees the old _loop_l
+/// _loop_acc = _next_acc;                                // now dangling
 ///
 /// _next_acc aliases the tail cell owned by _loop_l. Overwriting
 /// _loop_l drops the last shared_ptr to that cell, so the pointer
@@ -32,7 +31,7 @@ uint64_t LoopifyTailPtrAlias::hd(const LoopifyTailPtrAlias::lst &l) {
   if (std::holds_alternative<typename LoopifyTailPtrAlias::lst::Nil>(l.v())) {
     return UINT64_C(0);
   } else {
-    const auto &[a0, a1] =
+    const auto &[a0, _] =
         std::get<typename LoopifyTailPtrAlias::lst::Cons>(l.v());
     return a0;
   }
@@ -41,10 +40,10 @@ uint64_t LoopifyTailPtrAlias::hd(const LoopifyTailPtrAlias::lst &l) {
 uint64_t LoopifyTailPtrAlias::rot(uint64_t n, const LoopifyTailPtrAlias::lst &l,
                                   const LoopifyTailPtrAlias::lst &acc,
                                   uint64_t s) {
-  uint64_t _loop_s = std::move(s);
+  uint64_t _loop_s = s;
   LoopifyTailPtrAlias::lst _loop_acc = acc;
   LoopifyTailPtrAlias::lst _loop_l = l;
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return _loop_s;

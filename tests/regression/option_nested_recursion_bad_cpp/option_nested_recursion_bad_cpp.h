@@ -3,9 +3,9 @@
 
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -58,8 +58,7 @@ struct OptionNestedRecursionBadCpp {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             if ((*_alt->a1).has_value()) {
-              _stack.push_back(
-                  std::make_shared<chain>(std::move(*(*_alt->a1))));
+              _stack.push_back(std::make_shared<chain>(std::move(*(*_alt->a1))));
             }
             _alt->a1.reset();
           }
@@ -78,8 +77,8 @@ struct OptionNestedRecursionBadCpp {
 
     chain(const chain &) = default;
     chain &operator=(const chain &) = default;
-    chain(chain &&) noexcept = default;
-    chain &operator=(chain &&) noexcept = default;
+    chain(chain &&) = default;
+    chain &operator=(chain &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -88,17 +87,14 @@ struct OptionNestedRecursionBadCpp {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<chain> &>
   static T1 chain_rect(F0 &&f, const chain &c) {
     const auto &[a0, a1] = std::get<typename chain::Link>(c.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, std::optional<chain> &>
   static T1 chain_rec(F0 &&f, const chain &c) {
-    const auto &[a0, a1] = std::get<typename chain::Link>(c.v());
-    return f(a0, *a1);
+    return chain_rect<T1>(f, c);
   }
 
   static chain build(uint64_t n);

@@ -3,8 +3,8 @@
 OppositePropertyTransferTraceCase::PreStableCategory
 OppositePropertyTransferTraceCase::opposite_prestable_category(
     const OppositePropertyTransferTraceCase::PreStableCategory &pS) {
-  return PreStableCategory{pS.ps_tag,  pS.ps_shift,   pS.ps_Loop,
-                           pS.ps_Susp, pS.ps_epsilon, pS.ps_eta};
+  return PreStableCategory{pS.ps_tag, pS.ps_shift, pS.ps_Loop, pS.ps_Susp,
+                           pS.ps_epsilon, pS.ps_eta};
 }
 
 OppositePropertyTransferTraceCase::is_left_semi_stable

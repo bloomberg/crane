@@ -3,9 +3,9 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <utility>
@@ -36,16 +36,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -82,8 +83,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -99,15 +100,24 @@ concept Magma = requires {
           std::declval<typename I::carrier>())
   } -> std::convertible_to<typename I::carrier>;
 };
-template <typename
-I>concept Monoid = requires {
-    typename I::m_carrier;
-    { I::m_op(std::declval<typename I::m_carrier>(), std::declval<typename I::m_carrier>()) } -> std::convertible_to<typename I::m_carrier>;
-  } && (requires {
-    { I::m_id() } -> std::convertible_to<typename I::m_carrier>;
-  } || requires {
-    { I::m_id } -> std::convertible_to<typename I::m_carrier>;
-  });
+template <typename I>
+concept Monoid = requires {
+  typename I::m_carrier;
+  {
+    I::m_op(std::declval<typename I::m_carrier>(),
+            std::declval<typename I::m_carrier>())
+  } -> std::convertible_to<typename I::m_carrier>;
+} && (requires {
+  {
+    I::m_id()
+  }
+  -> std::convertible_to<typename I::m_carrier>;
+} || requires {
+  {
+    I::m_id
+  }
+  -> std::convertible_to<typename I::m_carrier>;
+});
 
 struct DepRecord {
   using carrier = crane::obj;
@@ -115,7 +125,7 @@ struct DepRecord {
   struct nat_magma {
     using carrier = uint64_t;
 
-    static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
   };
 
   static_assert(Magma<nat_magma>);
@@ -132,9 +142,11 @@ struct DepRecord {
   struct nat_monoid {
     using m_carrier = uint64_t;
 
-    static uint64_t m_op(uint64_t a0, uint64_t a1) { return (a0 + a1); }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
+      return (a0 + a1);
+    }
 
-    static uint64_t m_id() { return UINT64_C(0); }
+    constexpr static uint64_t m_id() { return UINT64_C(0); }
   };
 
   static_assert(Monoid<nat_monoid>);
@@ -142,9 +154,11 @@ struct DepRecord {
   struct nat_mul_monoid {
     using m_carrier = uint64_t;
 
-    static uint64_t m_op(uint64_t a0, uint64_t a1) { return (a0 * a1); }
+    constexpr static uint64_t m_op(uint64_t a0, uint64_t a1) {
+      return (a0 * a1);
+    }
 
-    static uint64_t m_id() { return UINT64_C(1); }
+    constexpr static uint64_t m_id() { return UINT64_C(1); }
   };
 
   static_assert(Monoid<nat_mul_monoid>);
@@ -163,13 +177,15 @@ struct DepRecord {
   }
 
   static inline const uint64_t test_fold_add =
-      crane::any_cast<uint64_t>(mfold<nat_monoid>(List<uint64_t>::cons(
-          UINT64_C(1),
-          List<uint64_t>::cons(
-              UINT64_C(2),
+      crane::any_cast<uint64_t>(
+          mfold<nat_monoid>(List<uint64_t>::cons(
+              UINT64_C(1),
               List<uint64_t>::cons(
-                  UINT64_C(3),
-                  List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil()))))));
+                  UINT64_C(2),
+                  List<uint64_t>::cons(
+                      UINT64_C(3),
+                      List<uint64_t>::cons(UINT64_C(4),
+                                           List<uint64_t>::nil()))))));
   static inline const uint64_t test_fold_mul =
       crane::any_cast<uint64_t>(mfold<nat_mul_monoid>(List<uint64_t>::cons(
           UINT64_C(2),
@@ -192,16 +208,7 @@ struct DepRecord {
   }
 
   template <typename T1> static T1 tag_rec(T1 f, T1 f0, Tag t) {
-    switch (t) {
-    case Tag::TNAT: {
-      return f;
-    }
-    case Tag::TBOOL: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return tag_rect<T1>(std::move(f), std::move(f0), t);
   }
 
   using tag_type = crane::obj;

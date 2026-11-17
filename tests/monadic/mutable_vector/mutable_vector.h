@@ -2,6 +2,7 @@
 #define INCLUDED_MUTABLE_VECTOR
 
 #include <cstdint>
+#include <utility>
 #include <variant>
 #include <vector>
 

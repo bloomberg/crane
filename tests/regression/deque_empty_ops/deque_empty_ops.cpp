@@ -15,8 +15,7 @@ std::deque<uint64_t> DequeEmptyOps::dup(uint64_t n) {
 std::deque<uint64_t> DequeEmptyOps::run_map(const std::deque<uint64_t> &l) {
   return [](auto _f, const auto &_l) {
     std::deque<uint64_t> _r;
-    for (const auto &_x : _l)
-      _r.push_back(_f(_x));
+    for (const auto &_x : _l) _r.push_back(_f(_x));
     return _r;
   }(double_, l);
 }
@@ -36,8 +35,7 @@ std::deque<uint64_t>
 DequeEmptyOps::run_concat(const std::deque<std::deque<uint64_t>> &x0_) {
   return [](const auto &_ls) {
     std::deque<uint64_t> _r;
-    for (const auto &_s : _ls)
-      _r.insert(_r.end(), _s.begin(), _s.end());
+    for (const auto &_s : _ls) _r.insert(_r.end(), _s.begin(), _s.end());
     return _r;
   }(x0_);
 }

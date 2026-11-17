@@ -1,15 +1,14 @@
 #ifndef INCLUDED_SEPEXTANYLISTCOLLECT
 #define INCLUDED_SEPEXTANYLISTCOLLECT
 
+#include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <utility>
 #include <variant>
 
 #include "Datatypes.h"
 
 namespace SepExtAnyListCollect {
-
 using tuple = crane::obj;
 template <typename M>
 concept SymTypes = requires {
@@ -24,24 +23,26 @@ template <SymTypes Ty> struct ListCollect {
   collect(typename Ty::sym,
           const typename Datatypes::template List<typename Ty::sym> &,
           const typename Datatypes::Nat &n, symbols_semty default0) {
-    auto go_impl = [&](auto &_self_go, const typename Datatypes::Nat &n0,
-                       typename Datatypes::template List<symbols_semty> acc) ->
-        typename Datatypes::template List<symbols_semty> {
-          if (std::holds_alternative<typename Datatypes::Nat::O>(n0.v())) {
-            return acc;
-          } else {
-            const auto &[a0] = std::get<typename Datatypes::Nat::S>(n0.v());
-            return _self_go(_self_go, *a0,
-                            Datatypes::template List<symbols_semty>::cons(
-                                default0, std::move(acc)));
-          }
-        };
-    auto go = [&](const typename Datatypes::Nat &n0,
-                  typename Datatypes::template List<symbols_semty> acc) ->
-        typename Datatypes::template List<symbols_semty> {
-          return go_impl(go_impl, n0, acc);
-        };
-    return go(n, Datatypes::template List<symbols_semty>::nil());
+    {
+      const typename Datatypes::Nat &_lc1_n0 = n;
+      typename Datatypes::template List<symbols_semty> _lc1_acc =
+          Datatypes::template List<symbols_semty>::nil();
+      typename Datatypes::template List<symbols_semty> _lc1_loop_acc =
+          std::move(_lc1_acc);
+      const typename Datatypes::Nat *_lc1_loop_n0 = &_lc1_n0;
+      while (true) {
+        if (std::holds_alternative<typename Datatypes::Nat::O>(
+                _lc1_loop_n0->v())) {
+          return _lc1_loop_acc;
+        } else {
+          const auto &[a0] =
+              std::get<typename Datatypes::Nat::S>(_lc1_loop_n0->v());
+          _lc1_loop_acc = Datatypes::template List<symbols_semty>::cons(
+              default0, std::move(_lc1_loop_acc));
+          _lc1_loop_n0 = crane_raw(a0);
+        }
+      }
+    }
   }
 
   static crane::obj
@@ -53,7 +54,7 @@ template <SymTypes Ty> struct ListCollect {
             typename Datatypes::template List<symbols_semty>::Nil>(l.v())) {
       return default0;
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename Datatypes::template List<symbols_semty>::Cons>(
               l.v());
       return crane::any_cast<std::pair<crane::obj, crane::obj>>(a0).first;
@@ -66,10 +67,9 @@ template <SymTypes Ty> struct ListCollect {
       const typename Datatypes::Nat &n, symbols_semty default_tuple,
       crane::obj default_val) {
     return head_first(x, xs, collect(x, xs, n, std::move(default_tuple)),
-                      default_val);
+                      std::move(default_val));
   }
 };
-
 } // namespace SepExtAnyListCollect
 
 #endif // INCLUDED_SEPEXTANYLISTCOLLECT

@@ -1,6 +1,8 @@
 #ifndef INCLUDED_RECORD_DEFAULTS
 #define INCLUDED_RECORD_DEFAULTS
 
+#include <cstdint>
+
 struct RecordDefaults {
   struct Config {
     uint64_t cfg_width;
@@ -32,7 +34,6 @@ struct RecordDefaults {
   static inline const uint64_t test_cells = total_cells(default_config);
   static inline const uint64_t test_modified =
       total_cells(set_width(UINT64_C(120), set_debug(true, default_config)));
-
   static inline const uint64_t test_rect_area =
       rect_area(make_rect(UINT64_C(0), UINT64_C(0), UINT64_C(10), UINT64_C(5)));
 };

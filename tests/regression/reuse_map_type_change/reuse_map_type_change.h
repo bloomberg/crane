@@ -1,7 +1,7 @@
 #ifndef INCLUDED_REUSE_MAP_TYPE_CHANGE
 #define INCLUDED_REUSE_MAP_TYPE_CHANGE
 
-#include <any>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -57,22 +57,22 @@ struct ReuseMapTypeChange {
 
     explicit lst(Cons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    lst(const lst<_U> &_other)
+    template <typename CraneU>
+    lst(const lst<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename lst<_U>::Nil>(_other.v())) {
+            if (std::holds_alternative<typename lst<CraneU>::Nil>(_other.v())) {
               return Nil{};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename lst<_U>::Cons>(_other.v());
+                  std::get<typename lst<CraneU>::Cons>(_other.v());
               return Cons{
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a0);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a1 ? crane::make_rc<lst<A>>(crane_convert<lst<A>>(*a1))
@@ -82,11 +82,11 @@ struct ReuseMapTypeChange {
 
     static lst<A> nil() { return lst<A>(Nil{}); }
 
-    static lst<A> cons(A a0, lst<A> a1) {
-      return lst<A>(Cons{std::move(a0), crane::make_rc<lst<A>>(std::move(a1))});
+    static lst<A> cons(A a0, crane::child_slot<lst<A>> a1) {
+      return lst<A>(Cons{std::move(a0), a1.take()});
     }
 
-    static lst<A> cons__reuse(crane::rc<lst<A>> _tok, A a0, lst<A> a1) {
+    static lst<A> cons_crane_reuse(crane::rc<lst<A>> _tok, A a0, lst<A> a1) {
       return lst<A>(Cons{std::move(a0), crane::make_rc_reusing<lst<A>>(
                                             std::move(_tok), std::move(a1))});
     }
@@ -109,8 +109,8 @@ struct ReuseMapTypeChange {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -119,7 +119,6 @@ struct ReuseMapTypeChange {
   };
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, lst<T1> &, T2 &>
   static T2 lst_rect(T2 f, F1 &&f0, const lst<T1> &l) {
     if (std::holds_alternative<typename lst<T1>::Nil>(l.v())) {
       return f;
@@ -130,21 +129,15 @@ struct ReuseMapTypeChange {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<T2, F1 &, T1 &, lst<T1> &, T2 &>
   static T2 lst_rec(T2 f, F1 &&f0, const lst<T1> &l) {
-    if (std::holds_alternative<typename lst<T1>::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename lst<T1>::Cons>(l.v());
-      return f0(a0, *a1, lst_rec<T1, T2>(std::move(f), f0, *a1));
-    }
+    return lst_rect<T1, T2>(std::move(f), f0, l);
   }
 
   static lst<uint64_t> build(uint64_t n, lst<uint64_t> acc);
   static uint64_t suml(const lst<uint64_t> &l);
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &>
+    requires std::is_invocable_r_v<T2, F0 &, T1 &&>
   static lst<T2> mapl(F0 &&f, lst<T1> l) {
     if (std::holds_alternative<typename lst<T1>::Nil>(l.v_mut())) {
       return lst<T2>::nil();

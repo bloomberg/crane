@@ -4,9 +4,9 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -61,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -70,25 +70,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -115,16 +118,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -161,14 +165,15 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 /// A mutual inductive group whose cycle runs through a container.
 ///
 /// tree holds its children as a list branch, and branch holds a tree
@@ -239,8 +244,8 @@ public:
   ~Branch();
   Branch(const Branch &) = default;
   Branch &operator=(const Branch &) = default;
-  Branch(Branch &&) noexcept = default;
-  Branch &operator=(Branch &&) noexcept = default;
+  Branch(Branch &&) = default;
+  Branch &operator=(Branch &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -257,19 +262,20 @@ inline Tree Tree::leaf(List<Branch> a0) {
 inline Nat Tree::tree_size() const {
   const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
   Nat _tmp3;
-  auto branches_size_impl = [](auto &_self_branches_size,
-                               const List<Branch> &l) -> Nat {
-    if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
-      return Nat::o();
-    } else {
-      const auto &[a00, a10] = std::get<typename List<Branch>::Cons>(l.v());
-      return a00.branch_size().add(
-          _self_branches_size(_self_branches_size, *a10));
-    }
-  };
-  auto branches_size = [&](const List<Branch> &l) -> Nat {
-    return branches_size_impl(branches_size_impl, l);
-  };
+  auto branches_size_impl =
+      [](auto &_self_branches_size, const List<Branch> &l) -> Nat {
+        if (std::holds_alternative<typename List<Branch>::Nil>(l.v())) {
+          return Nat::o();
+        } else {
+          const auto &[a00, a10] = std::get<typename List<Branch>::Cons>(l.v());
+          return a00.branch_size().add(
+              _self_branches_size(_self_branches_size, *a10));
+        }
+      };
+  auto branches_size =
+      [&](const List<Branch> &l) -> Nat {
+        return branches_size_impl(branches_size_impl, l);
+      };
   _tmp3 = branches_size(*a0);
   return Nat::s(std::move(_tmp3));
 }
@@ -304,8 +310,8 @@ inline Branch::~Branch() {
             if (_alt->a0 && _alt->a0.use_count() == 1) {
               std::atomic_thread_fence(std::memory_order_acquire);
               auto _lp = _alt->a0.get();
-              while (std::holds_alternative<typename List<Branch>::Cons>(
-                  _lp->v())) {
+              while (
+                  std::holds_alternative<typename List<Branch>::Cons>(_lp->v())) {
                 auto &_lc = std::get<typename List<Branch>::Cons>(_lp->v_mut());
                 _stack.push_back(std::make_shared<Branch>(std::move(_lc.a)));
                 if (_lc.l && _lc.l.use_count() == 1) {
@@ -325,7 +331,7 @@ inline Branch::~Branch() {
 }
 
 inline Nat Branch::branch_size() const {
-  const auto &[a0, a1] = std::get<typename Branch::Branch0>(this->v());
+  const auto &[_, a1] = std::get<typename Branch::Branch0>(this->v());
   return Nat::s(a1->tree_size());
 }
 

@@ -1,12 +1,10 @@
 #ifndef INCLUDED_BLOCK_TEMPLATE_TYPES
 #define INCLUDED_BLOCK_TEMPLATE_TYPES
 
-#include <crane_itree.h>
-#include <filesystem>
-#include <fstream>
+#include <cstdint>
 #include <iostream>
 #include <string>
-#include <system_error>
+#include <utility>
 
 struct BlockTemplateTypes {
   /// %result inferred as unsigned int.

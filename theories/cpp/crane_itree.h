@@ -322,10 +322,17 @@ auto itree_iter(Step step, I i)
 // places the dictionary is passed on to something else's `iter`.
 //
 // Parameterised by the event family, as the Rocq instance is, and unused here
-// for the same reason `Monad_itree`'s parameter is.
+// for the same reason `Monad_itree`'s parameter is.  A struct, as the
+// generated `MonadIter` concept asks: `iter` at the method's own result and
+// index types, the step taken as whatever callable the caller has.
 template<typename E = void>
-inline constexpr auto MonadIter_itree = [](auto step, crane::obj i) {
-    return itree_iter(step, i);
+struct MonadIter_itree {
+    template<typename A> using M = std::shared_ptr<ITree<A>>;
+
+    template<typename R, typename I, typename Step>
+    static M<R> iter(Step step, I i) {
+        return itree_iter(std::move(step), std::move(i));
+    }
 };
 
 // The result of a trigger: one Vis node whose continuation returns the

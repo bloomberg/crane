@@ -2,14 +2,15 @@
 
 GeneratedLazyFieldNameClash::d_lazyV_
 GeneratedLazyFieldNameClash::true_stream() {
-  return d_lazyV_::lazy_([]() -> GeneratedLazyFieldNameClash::d_lazyV_ {
-    return d_lazyV_::cons(true, true_stream());
-  });
+  return d_lazyV_::lazy_(
+      []() -> typename GeneratedLazyFieldNameClash::d_lazyV_::Cons {
+        return {true, true_stream()};
+      });
 }
 
 bool GeneratedLazyFieldNameClash::head(
-    GeneratedLazyFieldNameClash::d_lazyV_ s) {
-  const auto &[a0, a1] =
+    const GeneratedLazyFieldNameClash::d_lazyV_ &s) {
+  const auto &[a0, _] =
       std::get<typename GeneratedLazyFieldNameClash::d_lazyV_::Cons>(s.v());
   return a0;
 }

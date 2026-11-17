@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <functional>
@@ -41,16 +40,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -87,8 +87,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -104,18 +104,19 @@ template <typename A, typename P> struct SigT {
   // ACCESSORS
   SigT<A, P> clone() const { return {x, a1}; }
 
-  template <typename _U0, typename _U1> operator SigT<_U0, _U1>() const {
-    return {[&]() -> _U0 {
-              if constexpr (crane_convertible<_U0, const A &>) {
-                return crane_convert<_U0>(x);
+  template <typename CraneU0, typename CraneU1>
+  operator SigT<CraneU0, CraneU1>() const {
+    return {[&]() -> CraneU0 {
+              if constexpr (crane_convertible<CraneU0, const A &>) {
+                return crane_convert<CraneU0>(x);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
               }
             }(),
-            [&]() -> _U1 {
-              if constexpr (crane_convertible<_U1, const P &>) {
-                return crane_convert<_U1>(a1);
+            [&]() -> CraneU1 {
+              if constexpr (crane_convertible<CraneU1, const P &>) {
+                return crane_convert<CraneU1>(a1);
               } else {
                 throw std::logic_error("unreachable: inactive constructor "
                                        "field at this instantiation");
@@ -127,7 +128,7 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 
   A projT1() const {
-    const auto &[x0, a1] = *this;
+    const auto &[x0, _] = *this;
     return x0;
   }
 };
@@ -189,8 +190,8 @@ template <SYM Ty> struct DefsFn {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, typename Ty::terminal &> &&
-             std::is_invocable_r_v<T1, F1 &, typename Ty::nonterminal &>
+    requires std::is_invocable_r_v<T1, F0 &, const typename Ty::terminal &> &&
+             std::is_invocable_r_v<T1, F1 &, const typename Ty::nonterminal &>
   static T1 symbol_rect(F0 &&f, F1 &&f0, const symbol &s) {
     if (std::holds_alternative<typename symbol::T>(s.v())) {
       const auto &[a0] = std::get<typename symbol::T>(s.v());
@@ -202,16 +203,8 @@ template <SYM Ty> struct DefsFn {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, typename Ty::terminal &> &&
-             std::is_invocable_r_v<T1, F1 &, typename Ty::nonterminal &>
   static T1 symbol_rec(F0 &&f, F1 &&f0, const symbol &s) {
-    if (std::holds_alternative<typename symbol::T>(s.v())) {
-      const auto &[a0] = std::get<typename symbol::T>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename symbol::NT>(s.v());
-      return f0(a0);
-    }
+    return symbol_rect<T1>(f, f0, s);
   }
 
   static bool symbol_eq_dec(const symbol &s1, const symbol &s2) {
@@ -256,10 +249,7 @@ template <SYM Ty> struct DefsFn {
   static std::optional<symbols_semty>
   assemble(const List<symbol> &ys, const List<SigT<symbol, crane::obj>> &stk) {
     if (std::holds_alternative<typename List<symbol>::Nil>(ys.v())) {
-      return std::make_optional<symbols_semty>(([]() -> symbols_semty {
-        throw std::logic_error(
-            "unreachable: impossible dependent match branch");
-      })());
+      return std::make_optional<symbols_semty>(std::monostate{});
     } else {
       const auto &[a0, a1] = std::get<typename List<symbol>::Cons>(ys.v());
       if (std::holds_alternative<typename List<SigT<symbol, crane::obj>>::Nil>(
@@ -291,7 +281,7 @@ template <SYM Ty> struct DefsFn {
             symbols_semty x0_) {
     const auto &[x0, a1] = e;
     production x1 = x0;
-    const auto &[_x, _x0] = x1;
+    auto [_x, _x0] = std::move(x1);
     const auto &[_x1, a] = a1;
     action_semty act = a;
     return crane::any_cast<crane::fn<crane::obj(crane::obj)>>(std::move(act))(
@@ -305,8 +295,7 @@ template <SYM Ty> struct DefsFn {
     auto _cs = assemble(e.projT1().second, stk);
     if (_cs.has_value()) {
       const auto &vs = *_cs;
-      return std::make_optional<crane::obj>(
-          crane::obj(action_of(e, crane::any_cast<symbols_semty>(vs))));
+      return std::make_optional<crane::obj>(crane::obj(action_of(e, vs)));
     } else {
       return std::optional<crane::obj>();
     }
@@ -330,17 +319,9 @@ struct MySym {
   }
 
   template <typename T1> static T1 term_rec(T1 f, T1 f0, Term t) {
-    switch (t) {
-    case Term::LBRACE: {
-      return f;
-    }
-    case Term::RBRACE: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return term_rect<T1>(std::move(f), std::move(f0), t);
   }
+
   enum class Nt { ELEM, LST };
 
   template <typename T1> static T1 nt_rect(T1 f, T1 f0, Nt n) {
@@ -357,16 +338,7 @@ struct MySym {
   }
 
   template <typename T1> static T1 nt_rec(T1 f, T1 f0, Nt n) {
-    switch (n) {
-    case Nt::ELEM: {
-      return f;
-    }
-    case Nt::LST: {
-      return f0;
-    }
-    default:
-      std::unreachable();
-    }
+    return nt_rect<T1>(std::move(f), std::move(f0), n);
   }
 
   using terminal = Term;
@@ -378,42 +350,36 @@ struct MySym {
 };
 
 using MyDefs = DefsFn<MySym>;
-const MyDefs::grammar entries = List<
-    SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-         std::pair<crane::obj, crane::obj>>>::
-    cons(
+const MyDefs::grammar entries =
+    List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
+              std::pair<crane::obj, crane::obj>>>::cons(
         SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
-             std::pair<crane::obj, crane::obj>>::
-            existt(std::make_pair(
-                       MySym::Nt::LST,
-                       List<MyDefs::symbol>::cons(
-                           MyDefs::symbol::t(MySym::Term::LBRACE),
-                           List<MyDefs::symbol>::cons(
-                               MyDefs::symbol::nt(MySym::Nt::ELEM),
-                               List<MyDefs::symbol>::cons(
-                                   MyDefs::symbol::nt(MySym::Nt::LST),
-                                   List<MyDefs::symbol>::cons(
-                                       MyDefs::symbol::t(MySym::Term::RBRACE),
-                                       List<MyDefs::symbol>::nil()))))),
-                   std::make_pair(
-                       crane::obj(
-                           crane_erase_fn([](const auto &) { return true; })),
-                       crane::obj(crane_erase_fn([](const auto &tup) {
-                         const auto &[_x, y0] =
-                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                 tup);
-                         const auto &[pr, y1] =
-                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                 y0);
-                         const auto &[prs, y2] =
-                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                 y1);
-                         const auto &[_x0, _x1] =
-                             crane::any_cast<std::pair<crane::obj, crane::obj>>(
-                                 y2);
-                         return List<crane::obj>::cons(
-                             pr, crane::any_cast<List<crane::obj>>(prs));
-                       })))),
+             std::pair<crane::obj, crane::obj>>::existt(
+            std::make_pair(
+                MySym::Nt::LST, List<MyDefs::symbol>::cons(
+                                    MyDefs::symbol::t(MySym::Term::LBRACE),
+                                    List<MyDefs::symbol>::cons(
+                                        MyDefs::symbol::nt(MySym::Nt::ELEM),
+                                        List<MyDefs::symbol>::cons(
+                                            MyDefs::symbol::nt(MySym::Nt::LST),
+                                            List<MyDefs::symbol>::cons(
+                                                MyDefs::symbol::t(
+                                                    MySym::Term::RBRACE),
+                                                List<MyDefs::symbol>::nil()))))),
+            std::make_pair(
+                crane::obj(crane_erase_fn([](const auto &) { return true; })),
+                crane::obj(crane_erase_fn([](const auto &tup) {
+                  const auto &[_x, y0] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(tup);
+                  const auto &[pr, y1] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y0);
+                  const auto &[prs, y2] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y1);
+                  const auto &[_x0, _x1] =
+                      crane::any_cast<std::pair<crane::obj, crane::obj>>(y2);
+                  return List<crane::obj>::cons(
+                      pr, crane::any_cast<List<crane::obj>>(prs));
+                })))),
         List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
                   std::pair<crane::obj, crane::obj>>>::nil());
 

@@ -4,31 +4,29 @@
 #include <crane_real.h>
 #include <cstdint>
 #include <type_traits>
+#include <utility>
 
 struct DensityPotentialTraceCase {
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
-             std::is_invocable_r_v<Real, F1 &, Real &>
+    requires std::is_invocable_r_v<Real, F0 &, Real> &&
+             std::is_invocable_r_v<Real, F1 &, Real &&>
   static Real lapse(F0 &&f, F1 &&mu, Real x) {
-    return f(mu(x));
+    return f(mu(std::move(x)));
   }
 
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
-             std::is_invocable_r_v<Real, F1 &, Real &>
   static Real proper_time_static(F0 &&f, F1 &&mu, Real x, Real t) {
-    return (lapse(f, mu, x) * t);
+    return (lapse(f, mu, std::move(x)) * std::move(t));
   }
 
   template <typename F0, typename F1, typename F2, typename F3>
-    requires std::is_invocable_r_v<Real, F0 &, Real &> &&
-             std::is_invocable_r_v<Real, F1 &, Real &> &&
-             std::is_invocable_r_v<Real, F2 &, Real &> &&
+    requires std::is_invocable_r_v<Real, F2 &, Real &> &&
              std::is_invocable_r_v<Real, F3 &, Real &>
   static Real proper_time_density_path(F0 &&f, F1 &&mu, F2 &&gamma, F3 &&v,
                                        Real t) {
-    return r_sqrt((r_pow(lapse(f, mu, gamma(t)), UINT64_C(2)) -
-                   r_pow(v(t), UINT64_C(2))));
+    return r_sqrt(
+        (r_pow(lapse(f, mu, gamma(t)), UINT64_C(2)) -
+         r_pow(v(t), UINT64_C(2))));
   }
 
   template <typename F0>
@@ -37,10 +35,8 @@ struct DensityPotentialTraceCase {
     return r_inv((n(x) * n(x)));
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<Real, F0 &, Real &>
-  static Real V_eff_massive(F0 &&n, Real m, Real x) {
-    return (r_pow(m, UINT64_C(2)) * V_eff(n, x));
+  template <typename F0> static Real V_eff_massive(F0 &&n, Real m, Real x) {
+    return (r_pow(std::move(m), UINT64_C(2)) * V_eff(n, std::move(x)));
   }
 
   static Real sample_activation(Real z);
@@ -48,8 +44,8 @@ struct DensityPotentialTraceCase {
   static Real sample_gamma(Real t);
   static Real sample_v(Real _x);
   static Real sample_N(Real x);
-  static inline const Real sample_mass = Real::from_z(INT64_C(3));
-  static inline const Real sample_time = Real::from_z(INT64_C(2));
+  [[gnu::used]] static inline const Real sample_mass = Real::from_z(INT64_C(3));
+  [[gnu::used]] static inline const Real sample_time = Real::from_z(INT64_C(2));
   static Real density_radicand_at(uint64_t n);
   static bool static_time_nonnegative_at(uint64_t n);
   static bool density_radicand_nonnegative_at(uint64_t n);

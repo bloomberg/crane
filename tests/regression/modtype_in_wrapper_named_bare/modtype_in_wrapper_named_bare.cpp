@@ -37,17 +37,17 @@ bool PeanoNat::eq_dec(const Nat &n, const Nat &m) {
   }
 }
 
-bool AstLib::RawIDOrd::eq_dec(AstLib::RawIDOrd::t x0_,
-                              AstLib::RawIDOrd::t x1_) {
-  return x0_.raw_id_dec(std::move(x1_));
-}
-
 Nat AstLib::pick(Nat a, Nat b) {
   if (PeanoNat::leb(a, b)) {
     return b;
   } else {
     return a;
   }
+}
+
+bool AstLib::RawIDOrd::eq_dec(const AstLib::RawIDOrd::t &x0_,
+                              const AstLib::RawIDOrd::t &x1_) {
+  return x0_.raw_id_dec(x1_);
 }
 
 bool viaQualified(const Raw_id &a, const Raw_id &b) {
@@ -58,8 +58,8 @@ bool viaQualified(const Raw_id &a, const Raw_id &b) {
   }
 }
 
-Nat viaColliding(const Nat &x0_, const Nat &x1_) {
-  return AstLib::pick(x0_, x1_);
+Nat viaColliding(Nat x0_, Nat x1_) {
+  return AstLib::pick(std::move(x0_), std::move(x1_));
 }
 
 Nat keepColl(const Collider &r) {

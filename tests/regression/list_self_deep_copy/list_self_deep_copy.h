@@ -4,11 +4,9 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -37,16 +35,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +82,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -127,14 +126,16 @@ struct ListSelfDeepCopy {
 
     // MANIPULATORS
     ~chain() {
+      if (std::holds_alternative<Stop>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<chain>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Link>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a0.get();
-            while (
-                std::holds_alternative<typename List<chain>::Cons>(_lp->v())) {
+            while (std::holds_alternative<typename List<chain>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<chain>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<chain>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -161,8 +162,8 @@ struct ListSelfDeepCopy {
 
     chain(const chain &) = default;
     chain &operator=(const chain &) = default;
-    chain(chain &&) noexcept = default;
-    chain &operator=(chain &&) noexcept = default;
+    chain(chain &&) = default;
+    chain &operator=(chain &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -171,7 +172,6 @@ struct ListSelfDeepCopy {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, List<chain> &>
   static T1 chain_rect(T1 f, F1 &&f0, const chain &c) {
     if (std::holds_alternative<typename chain::Stop>(c.v())) {
       return f;
@@ -182,14 +182,8 @@ struct ListSelfDeepCopy {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, List<chain> &>
   static T1 chain_rec(T1 f, F1 &&f0, const chain &c) {
-    if (std::holds_alternative<typename chain::Stop>(c.v())) {
-      return f;
-    } else {
-      const auto &[a0] = std::get<typename chain::Link>(c.v());
-      return f0(*a0);
-    }
+    return chain_rect<T1>(std::move(f), f0, c);
   }
 
   static std::pair<chain, chain> dup_chain(const chain &c);

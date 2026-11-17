@@ -3,17 +3,17 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
+#include <cstdint>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 
 struct UnitType {
-  static inline const std::monostate unit_val = std::monostate{};
+  static constexpr std::monostate unit_val = std::monostate{};
   static void return_unit(uint64_t _x);
-  static uint64_t take_unit(std::monostate _x);
-  static uint64_t match_unit(std::monostate u);
+  static uint64_t take_unit();
+  static uint64_t match_unit();
 
   template <typename A, typename B> struct pair {
     // DATA
@@ -23,18 +23,19 @@ struct UnitType {
     // ACCESSORS
     pair<A, B> clone() const { return {a0, a1}; }
 
-    template <typename _U0, typename _U1> operator pair<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const A &>) {
-                  return crane_convert<_U0>(a0);
+    template <typename CraneU0, typename CraneU1>
+    operator pair<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const A &>) {
+                  return crane_convert<CraneU0>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const B &>) {
-                  return crane_convert<_U1>(a1);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const B &>) {
+                  return crane_convert<CraneU1>(a1);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -49,17 +50,15 @@ struct UnitType {
   };
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
+    requires std::is_invocable_r_v<T3, F0 &, const T1 &, const T2 &>
   static T3 pair_rect(F0 &&f, const pair<T1, T2> &p) {
     const auto &[a0, a1] = p;
     return f(a0, a1);
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-    requires std::is_invocable_r_v<T3, F0 &, T1 &, T2 &>
   static T3 pair_rec(F0 &&f, const pair<T1, T2> &p) {
-    const auto &[a0, a1] = p;
-    return f(a0, a1);
+    return pair_rect<T1, T2, T3>(f, p);
   }
 
   static inline const pair<uint64_t, std::monostate> pair_with_unit =
@@ -67,7 +66,7 @@ struct UnitType {
   static inline const pair<std::monostate, std::monostate> unit_pair =
       pair<std::monostate, std::monostate>::pair0(std::monostate{},
                                                   std::monostate{});
-  static void unit_to_unit(std::monostate u);
+  static void unit_to_unit();
 
   template <typename T1, typename T2> static T2 seq(const T1 &, T2 b) {
     return b;
@@ -76,8 +75,8 @@ struct UnitType {
   static inline const uint64_t sequenced = seq<std::monostate, uint64_t>(
       std::monostate{},
       seq<std::monostate, uint64_t>(std::monostate{}, UINT64_C(5)));
-  static inline const uint64_t test_take = take_unit(std::monostate{});
-  static inline const uint64_t test_match = match_unit(std::monostate{});
+  static inline const uint64_t test_take = take_unit();
+  static inline const uint64_t test_match = match_unit();
   static inline const uint64_t test_seq = sequenced;
 };
 

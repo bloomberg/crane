@@ -19,7 +19,7 @@ std::optional<uint64_t> Option::safe_pred(uint64_t n) {
   }
 }
 
-std::optional<uint64_t> Option::chain_options(std::optional<uint64_t> o1,
+std::optional<uint64_t> Option::chain_options(const std::optional<uint64_t> &o1,
                                               std::optional<uint64_t> o2) {
   if (o1.has_value()) {
     const uint64_t &_x = *o1;

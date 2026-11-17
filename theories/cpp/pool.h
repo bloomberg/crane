@@ -57,13 +57,20 @@ inline constexpr std::size_t classes = 32; // pooled blocks are at most 512 byte
 template <std::size_t Size>
 inline constexpr std::size_t class_of = (Size + grain - 1) / grain - 1;
 
+#ifdef CRANE_COUNT_TAKES
+// Measurement only: every block handed out, fresh or recycled, so a test can
+// count allocations that the free lists hide from [operator new].
+inline std::size_t takes = 0;
+#endif
+
 // The heap has no destructor: a value in a static is freed after the
 // thread's own thread_local objects are gone, so the heap must still work
 // then.  Its lists and its queue's buffer live as long as the thread.
 struct thread_heap {
   void *lists[classes] = {};
 
-  bool draining = false;
+  // How many frees are running, nested; see [free_block] in shared_block.h.
+  unsigned depth = 0;
   pending_free *items = nullptr;
   std::size_t size = 0, cap = 0;
 
@@ -71,6 +78,9 @@ struct thread_heap {
   arena *open_arena = nullptr;
 
   template <std::size_t Size> void *take() {
+#ifdef CRANE_COUNT_TAKES
+    ++takes;
+#endif
     if constexpr (class_of<Size> >= classes) {
       return ::operator new(Size);
     } else {
@@ -94,6 +104,23 @@ struct thread_heap {
     }
   }
 
+  // Frees nested this deep at most run at once; deeper ones are queued.
+  // Measured on Vellvm: 1 to 16 all beat queueing every nested free (-3% to
+  // -7%, best near 8), and 32 was 3% slower than it.
+  static constexpr unsigned max_depth = 8;
+
+  // A free that happens while another is running: run now, nested, unless
+  // that is already [max_depth] frees deep, and queued otherwise.
+  void reclaim(pending_free f) noexcept {
+    if (depth < max_depth) [[likely]] {
+      ++depth;
+      f.destroy(f.block, *this);
+      --depth;
+    } else
+      push_slow(f);
+  }
+  [[gnu::noinline]] void push_slow(pending_free f) noexcept { push(f); }
+
   void push(pending_free f) {
     if (size == cap) {
       std::size_t ncap = cap ? cap * 2 : 64;
@@ -109,8 +136,28 @@ struct thread_heap {
   }
 };
 
+// The heap blocks come from and go back to: the thread's own, or under
+// CRANE_SINGLE_THREADED ([Crane SingleThreaded], a program that uses Crane
+// values from one thread at a time) one global -- on Darwin a thread-local
+// access is a call, made by every allocation and free.  What reaches the heap
+// is declared inside CRANE_HEAP_POLICY_BEGIN / CRANE_HEAP_POLICY_END, an
+// inline namespace named after the policy, so units compiled under the two
+// do not share a definition.
+#ifdef CRANE_SINGLE_THREADED
+#define CRANE_HEAP_POLICY_BEGIN inline namespace heap_single {
+#else
+#define CRANE_HEAP_POLICY_BEGIN inline namespace heap_per_thread {
+#endif
+#define CRANE_HEAP_POLICY_END }
+
+CRANE_HEAP_POLICY_BEGIN
+
 inline thread_heap &this_thread_heap() noexcept {
+#ifdef CRANE_SINGLE_THREADED
+  static constinit thread_heap h;
+#else
   static constinit thread_local thread_heap h;
+#endif
   return h;
 }
 
@@ -143,6 +190,8 @@ template <typename Derived> struct pooled {
     ::operator delete(p, a);
   }
 };
+
+CRANE_HEAP_POLICY_END
 
 } // namespace pool_detail
 } // namespace crane

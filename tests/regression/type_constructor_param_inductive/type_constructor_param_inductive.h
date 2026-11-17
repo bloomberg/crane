@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -95,35 +96,35 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// _Enter: captures varying parameters for each recursive call.
-    struct _Enter {
+    /// CraneEnter: captures varying parameters for each recursive call.
+    struct CraneEnter {
       const List<A> *_self;
     };
 
-    /// _Cont_Cons: resumes after recursive call, then processes rest.
-    struct _Cont_Cons {};
+    /// CraneCont_Cons: resumes after recursive call, then processes rest.
+    struct CraneCont_Cons {};
 
-    using _Frame = std::variant<_Enter, _Cont_Cons>;
+    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
     uint64_t _result{};
-    crane::small_vector<_Frame> _stack;
-    _stack.emplace_back(_Enter{_self});
-    /// Loopified length: _Enter -> _Cont_Cons.
+    crane::small_vector<CraneFrame> _stack;
+    _stack.emplace_back(CraneEnter{_self});
+    /// Loopified length: CraneEnter -> CraneCont_Cons.
     while (!_stack.empty()) {
-      _Frame _frame = std::move(_stack.back());
+      CraneFrame _frame = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<_Enter>(_frame)) {
-        auto _f = std::move(std::get<_Enter>(_frame));
+      if (std::holds_alternative<CraneEnter>(_frame)) {
+        auto _f = std::move(std::get<CraneEnter>(_frame));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
-          const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(_Cont_Cons{});
-          _stack.emplace_back(_Enter{crane_raw(a1)});
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(CraneCont_Cons{});
+          _stack.emplace_back(CraneEnter{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<_Cont_Cons>(_frame));
+        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
         _result = (std::move(_result) + 1);
       }
     }
@@ -160,15 +161,16 @@ struct TypeConstructorParamInductive {
 
     explicit wrapped(Pair2 _v) : v_(std::move(_v)) {}
 
-    template <typename _U0, typename _U1>
-    wrapped(const wrapped<_U0, _U1> &_other)
+    template <typename CraneU0, typename CraneU1>
+    wrapped(const wrapped<CraneU0, CraneU1> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename wrapped<_U0, _U1>::Wrap>(
+            if (std::holds_alternative<typename wrapped<CraneU0,
+                                                        CraneU1>::Wrap>(
                     _other.v())) {
-              const auto &[a0] =
-                  std::get<typename wrapped<_U0, _U1>::Wrap>(_other.v());
+              const auto &[a0] = std::get<
+                  typename wrapped<CraneU0, CraneU1>::Wrap>(_other.v());
               return Wrap{[&]() -> F {
-                if constexpr (crane_convertible<F, const _U0 &>) {
+                if constexpr (crane_convertible<F, const CraneU0 &>) {
                   return crane_convert<F>(a0);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
@@ -177,25 +179,27 @@ struct TypeConstructorParamInductive {
               }()};
             } else {
               const auto &[a0, a1] =
-                  std::get<typename wrapped<_U0, _U1>::Pair2>(_other.v());
-              return Pair2{[&]() -> F {
-                             if constexpr (crane_convertible<F, const _U0 &>) {
-                               return crane_convert<F>(a0);
-                             } else {
-                               throw std::logic_error(
-                                   "unreachable: inactive constructor field at "
-                                   "this instantiation");
-                             }
-                           }(),
-                           [&]() -> F {
-                             if constexpr (crane_convertible<F, const _U0 &>) {
-                               return crane_convert<F>(a1);
-                             } else {
-                               throw std::logic_error(
-                                   "unreachable: inactive constructor field at "
-                                   "this instantiation");
-                             }
-                           }()};
+                  std::get<typename wrapped<CraneU0, CraneU1>::Pair2>(
+                      _other.v());
+              return Pair2{
+                  [&]() -> F {
+                    if constexpr (crane_convertible<F, const CraneU0 &>) {
+                      return crane_convert<F>(a0);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  [&]() -> F {
+                    if constexpr (crane_convertible<F, const CraneU0 &>) {
+                      return crane_convert<F>(a1);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }()};
             }
           }()) {}
 
@@ -216,9 +220,9 @@ struct TypeConstructorParamInductive {
   };
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, crane::rebind_t<T1, T2> &> &&
-             std::is_invocable_r_v<T3, F1 &, crane::rebind_t<T1, T2> &,
-                                   crane::rebind_t<T1, T2> &>
+    requires std::is_invocable_r_v<T3, F0 &, const crane::rebind_t<T1, T2> &> &&
+             std::is_invocable_r_v<T3, F1 &, const crane::rebind_t<T1, T2> &,
+                                   const crane::rebind_t<T1, T2> &>
   static T3 wrapped_rect(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
     if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
       const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
@@ -230,40 +234,43 @@ struct TypeConstructorParamInductive {
   }
 
   template <typename T1, typename T2, typename T3, typename F0, typename F1>
-    requires std::is_invocable_r_v<T3, F0 &, crane::rebind_t<T1, T2> &> &&
-             std::is_invocable_r_v<T3, F1 &, crane::rebind_t<T1, T2> &,
-                                   crane::rebind_t<T1, T2> &>
   static T3 wrapped_rec(F0 &&f, F1 &&f0, const wrapped<T1, T2> &w) {
-    if (std::holds_alternative<typename wrapped<T1, T2>::Wrap>(w.v())) {
-      const auto &[a0] = std::get<typename wrapped<T1, T2>::Wrap>(w.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename wrapped<T1, T2>::Pair2>(w.v());
-      return f0(a0, a1);
-    }
+    return wrapped_rect<T1, T2, T3>(f, f0, w);
   }
 
   static uint64_t size_list(const wrapped<List<crane::obj>, uint64_t> &w);
   static uint64_t
   size_opt(const wrapped<std::optional<crane::obj>, uint64_t> &w);
-
-  static inline const uint64_t total =
-      (((size_list(
-             wrapped<List<crane::obj>, uint64_t>::wrap(List<uint64_t>::cons(
-                 UINT64_C(1),
-                 List<uint64_t>::cons(
-                     UINT64_C(2), List<uint64_t>::cons(
-                                      UINT64_C(3), List<uint64_t>::nil()))))) +
-         size_list(wrapped<List<crane::obj>, uint64_t>::pair2(
-             List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()),
-             List<uint64_t>::cons(
-                 UINT64_C(2),
-                 List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))) +
-        size_opt(wrapped<std::optional<crane::obj>, uint64_t>::wrap(
-            std::make_optional<uint64_t>(UINT64_C(1))))) +
-       size_opt(wrapped<std::optional<crane::obj>, uint64_t>::pair2(
-           std::make_optional<uint64_t>(UINT64_C(1)),
-           std::optional<uint64_t>())));
+  static inline const uint64_t total = (((size_list(wrapped<List<crane::obj>,
+                                                            uint64_t>::wrap(List<
+                                              uint64_t>::cons(
+                                              UINT64_C(1),
+                                              List<uint64_t>::cons(
+                                                  UINT64_C(2),
+                                                  List<uint64_t>::cons(
+                                                      UINT64_C(3),
+                                                      List<uint64_t>::nil()))))) +
+                                          size_list(wrapped<List<crane::obj>,
+                                                            uint64_t>::pair2(
+                                              List<uint64_t>::cons(
+                                                  UINT64_C(1),
+                                                  List<uint64_t>::nil()),
+                                              List<uint64_t>::cons(
+                                                  UINT64_C(2),
+                                                  List<uint64_t>::cons(
+                                                      UINT64_C(3),
+                                                      List<uint64_t>::nil()))))) +
+                                         size_opt(
+                                             wrapped<std::optional<crane::obj>,
+                                                     uint64_t>::wrap(
+                                                 std::make_optional<uint64_t>(
+                                                     UINT64_C(1))))) +
+                                        size_opt(
+                                            wrapped<std::optional<crane::obj>,
+                                                    uint64_t>::pair2(
+                                                std::make_optional<uint64_t>(
+                                                    UINT64_C(1)),
+                                                std::optional<uint64_t>())));
 };
 
 #endif // INCLUDED_TYPE_CONSTRUCTOR_PARAM_INDUCTIVE

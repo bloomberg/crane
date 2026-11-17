@@ -1,8 +1,8 @@
 #ifndef INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
 #define INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
 
-#include "crane_fn.h"
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 
@@ -71,10 +71,7 @@ struct OppositePropertyTransferTraceCase {
 
   template <typename T1, typename T2, typename F0, typename F1>
     requires std::is_invocable_r_v<
-                 std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
-                 PreStableCategory &> &&
-             std::is_invocable_r_v<T1, F1 &, PreStableCategory &,
-                                   LeftStableWitness &, Triangle1Witness &>
+      std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &, PreStableCategory>
   static T2 theorem_doubling_principle_correct(
       F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
       const LeftStableWitness &h_left_op, const Triangle1Witness &h_tri1_op) {
@@ -85,40 +82,33 @@ struct OppositePropertyTransferTraceCase {
   }
 
   template <typename T1, typename T2, typename F0, typename F1>
-    requires std::is_invocable_r_v<
-        std::pair<crane::fn<T2(T1)>, crane::fn<T1(T2)>>, F0 &,
-        PreStableCategory &>
-  static T2 theorem_doubling_principle_final(F0 &&h_dual, F1 &&h_theorem,
-                                             const PreStableCategory &pS,
-                                             const RightStableWitness &h_right,
-                                             const Triangle2Witness &h_tri2) {
+  static T2 theorem_doubling_principle_final(
+      F0 &&h_dual, F1 &&h_theorem, const PreStableCategory &pS,
+      const RightStableWitness &h_right, const Triangle2Witness &h_tri2) {
     return theorem_doubling_principle_correct<T1, T2>(
-        h_dual, crane_erase_fn<T1>(h_theorem), pS,
-        right_stable_gives_opposite_left(pS, h_right), [&]() {
+        h_dual, h_theorem, pS, right_stable_gives_opposite_left(pS, h_right),
+        [&]() {
           std::pair<crane::fn<satisfies_triangle_2(satisfies_triangle_1)>,
-                    crane::fn<satisfies_triangle_1(satisfies_triangle_2)>>
-              e = triangle_identity_duality(opposite_prestable_category(pS));
+                    crane::fn<satisfies_triangle_1(satisfies_triangle_2)>> e =
+              triangle_identity_duality(opposite_prestable_category(pS));
           auto [_x, s] = std::move(e);
           satisfies_triangle_2 h_tri2_ = h_tri2;
-          return s(h_tri2_);
+          return s(std::move(h_tri2_));
         }());
   }
 
-  static inline const PreStableCategory sample_category =
-      PreStableCategory{UINT64_C(7),
-                        UINT64_C(4),
-                        [](uint64_t x) { return (x + UINT64_C(10)); },
-                        [](uint64_t x) { return (x + UINT64_C(3)); },
-                        [](uint64_t x) { return (x + UINT64_C(20)); },
-                        [](uint64_t x) { return (x + UINT64_C(5)); }};
+  static inline const PreStableCategory sample_category = PreStableCategory{
+      UINT64_C(7), UINT64_C(4), [](uint64_t x) { return (x + UINT64_C(10)); },
+      [](uint64_t x) { return (x + UINT64_C(3)); },
+      [](uint64_t x) { return (x + UINT64_C(20)); },
+      [](uint64_t x) { return (x + UINT64_C(5)); }};
   static inline const is_right_semi_stable sample_right_stable =
       RightStableWitness{UINT64_C(6), UINT64_C(11)};
   static inline const satisfies_triangle_2 sample_triangle2 =
       Triangle2Witness{UINT64_C(8), UINT64_C(16)};
   static inline const RightProperty sample_right_property =
       theorem_doubling_principle_final<LeftProperty, RightProperty>(
-          dual_property_equiv,
-          crane_erase_fn<LeftProperty>(sample_left_property), sample_category,
+          dual_property_equiv, sample_left_property, sample_category,
           sample_right_stable, sample_triangle2);
   static inline const uint64_t sample_opposite_tag =
       opposite_prestable_category(sample_category).ps_tag;

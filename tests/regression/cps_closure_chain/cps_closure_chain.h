@@ -4,8 +4,8 @@
 #include "fn.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -43,6 +43,15 @@ struct CpsClosureChain {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -67,8 +76,8 @@ struct CpsClosureChain {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -77,8 +86,6 @@ struct CpsClosureChain {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -90,16 +97,8 @@ struct CpsClosureChain {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
-                tree_rec<T1>(f, f0, *a2));
-    }
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   /// CPS-style tree traversal that builds a deep chain of continuations.
@@ -116,7 +115,8 @@ struct CpsClosureChain {
   /// is whether the = capture correctly copies all pattern variables,
   /// especially when the pattern match is on a shared_ptr type and the
   /// structured bindings are references.
-  static uint64_t tree_sum_cps(const tree &t, crane::fn<uint64_t(uint64_t)> k) {
+  static uint64_t tree_sum_cps(const tree &t,
+                               const crane::fn<uint64_t(uint64_t)> &k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(UINT64_C(0));
     } else {
@@ -151,10 +151,10 @@ struct CpsClosureChain {
   /// CPS fold: accumulates results through continuation chain.
   /// This creates closures that capture BOTH a pattern variable
   /// AND the accumulator function.
-  static uint64_t
-  tree_fold_cps(const tree &t, uint64_t base,
-                crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> combine,
-                crane::fn<uint64_t(uint64_t)> k) {
+  static uint64_t tree_fold_cps(
+      const tree &t, uint64_t base,
+      const crane::fn<uint64_t(uint64_t, uint64_t, uint64_t)> &combine,
+      const crane::fn<uint64_t(uint64_t)> &k) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return k(base);
     } else {
@@ -171,13 +171,13 @@ struct CpsClosureChain {
   }
 
   /// Test: fold with multiplication: each node multiplies (left + right + n)
-  static inline const uint64_t test_fold = tree_fold_cps(
-      tree::node(tree::node(tree::leaf(), UINT64_C(2), tree::leaf()),
-                 UINT64_C(3),
-                 tree::node(tree::leaf(), UINT64_C(4), tree::leaf())),
-      UINT64_C(1),
-      [](uint64_t l, uint64_t n, uint64_t r) { return ((l + n) + r); },
-      [](uint64_t x) { return x; });
+  static inline const uint64_t test_fold =
+      tree_fold_cps(tree::node(
+          tree::node(tree::leaf(), UINT64_C(2), tree::leaf()), UINT64_C(3),
+          tree::node(tree::leaf(), UINT64_C(4), tree::leaf())),
+                    UINT64_C(1), [](uint64_t l, uint64_t n,
+                                    uint64_t r) { return ((l + n) + r); },
+                    [](uint64_t x) { return x; });
   /// Store CPS result in a pair with another computation to test
   /// that the continuation chain doesn't interfere with other data.
   static inline const std::pair<uint64_t, uint64_t> test_pair = []() {

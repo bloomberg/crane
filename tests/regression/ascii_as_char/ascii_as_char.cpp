@@ -102,16 +102,16 @@ uint64_t Pos::to_nat(const Positive &x) {
       UINT64_C(1));
 }
 
-N BinNat::add(N n, N m) {
-  if (std::holds_alternative<typename N::N0>(n.v_mut())) {
+N BinNat::add(const N &n, const N &m) {
+  if (std::holds_alternative<typename N::N0>(n.v())) {
     return m;
   } else {
-    auto &[a0] = std::get<typename N::Npos>(n.v_mut());
-    if (std::holds_alternative<typename N::N0>(m.v_mut())) {
+    const auto &[a0] = std::get<typename N::Npos>(n.v());
+    if (std::holds_alternative<typename N::N0>(m.v())) {
       return n;
     } else {
-      auto &[a00] = std::get<typename N::Npos>(m.v_mut());
-      return N::npos(Coq_Pos::add(a0, std::move(a00)));
+      const auto &[a00] = std::get<typename N::Npos>(m.v());
+      return N::npos(Coq_Pos::add(a0, a00));
     }
   }
 }
@@ -156,25 +156,18 @@ Comparison AsciiAsChar::cmp(const String &a, const String &b) {
       return Comparison::GT;
     } else {
       const auto &[a00, a10] = std::get<typename String::String0>(b.v());
-      switch ([](char _x, char _y) {
-        return static_cast<Comparison>(
-            _x == _y ? 0
-                     : (static_cast<unsigned char>(_x) <
-                                static_cast<unsigned char>(_y)
-                            ? 1
-                            : 2));
-      }(a0, a00)) {
-      case Comparison::EQ: {
-        return cmp(*a1, *a10);
-      }
-      case Comparison::LT: {
-        return Comparison::LT;
-      }
-      case Comparison::GT: {
-        return Comparison::GT;
-      }
-      default:
-        std::unreachable();
+
+      switch ([](char _x,
+                 char _y) {
+                return static_cast<Comparison>(
+                    _x == _y
+                        ? 0
+                        : (static_cast<unsigned char>(_x) <
+                           static_cast<unsigned char>(_y) ? 1 : 2));
+              }(a0, a00)) {
+        case Comparison::EQ: {return cmp(*a1, *a10);} case Comparison::LT: {
+            return Comparison::LT;} case Comparison::GT: {
+            return Comparison::GT;} default: std::unreachable();
       }
     }
   }
@@ -219,36 +212,9 @@ bool AsciiAsChar::decide(char a, char b) {
   }
 }
 
-bool AsciiAsChar::check(std::monostate) {
-  switch (cmp(
-      String::string0(
-          static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) | (true ? 4 : 0) |
-                            (true ? 8 : 0) | (false ? 16 : 0) |
-                            (true ? 32 : 0) | (true ? 64 : 0) |
-                            (false ? 128 : 0)),
-          String::string0(
-              static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
-                                (true ? 4 : 0) | (true ? 8 : 0) |
-                                (false ? 16 : 0) | (true ? 32 : 0) |
-                                (true ? 64 : 0) | (false ? 128 : 0)),
-              String::string0(
-                  static_cast<char>((true ? 1 : 0) | (false ? 2 : 0) |
-                                    (false ? 4 : 0) | (false ? 8 : 0) |
-                                    (false ? 16 : 0) | (true ? 32 : 0) |
-                                    (true ? 64 : 0) | (false ? 128 : 0)),
-                  String::string0(
-                      static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
-                                        (true ? 4 : 0) | (false ? 8 : 0) |
-                                        (false ? 16 : 0) | (true ? 32 : 0) |
-                                        (true ? 64 : 0) | (false ? 128 : 0)),
-                      String::emptystring())))),
-      String::string0(
-          static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) | (true ? 4 : 0) |
-                            (true ? 8 : 0) | (false ? 16 : 0) |
-                            (true ? 32 : 0) | (true ? 64 : 0) |
-                            (false ? 128 : 0)),
-          String::string0(
-              static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
+bool AsciiAsChar::check() {
+  switch (cmp(String::string0(
+              static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
                                 (true ? 4 : 0) | (true ? 8 : 0) |
                                 (false ? 16 : 0) | (true ? 32 : 0) |
                                 (true ? 64 : 0) | (false ? 128 : 0)),
@@ -257,15 +223,41 @@ bool AsciiAsChar::check(std::monostate) {
                                     (true ? 4 : 0) | (true ? 8 : 0) |
                                     (false ? 16 : 0) | (true ? 32 : 0) |
                                     (true ? 64 : 0) | (false ? 128 : 0)),
+                  String::string0(static_cast<char>(
+                      (true ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
+                      (false ? 8 : 0) | (false ? 16 : 0) | (true ? 32 : 0) |
+                      (true ? 64 : 0) | (false ? 128 : 0)),
+                                  String::string0(static_cast<char>(
+                                      (false ? 1 : 0) | (false ? 2 : 0) |
+                                      (true ? 4 : 0) | (false ? 8 : 0) |
+                                      (false ? 16 : 0) | (true ? 32 : 0) |
+                                      (true ? 64 : 0) | (false ? 128 : 0)),
+                                                  String::emptystring())))),
+              String::string0(
+                  static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
+                                    (true ? 4 : 0) | (true ? 8 : 0) |
+                                    (false ? 16 : 0) | (true ? 32 : 0) |
+                                    (true ? 64 : 0) | (false ? 128 : 0)),
                   String::string0(
-                      static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
-                                        (false ? 4 : 0) | (false ? 8 : 0) |
-                                        (true ? 16 : 0) | (true ? 32 : 0) |
+                      static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
+                                        (true ? 4 : 0) | (true ? 8 : 0) |
+                                        (false ? 16 : 0) | (true ? 32 : 0) |
                                         (true ? 64 : 0) | (false ? 128 : 0)),
-                      String::emptystring())))))) {
+                      String::string0(
+                          static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
+                                            (true ? 4 : 0) | (true ? 8 : 0) |
+                                            (false ? 16 : 0) | (true ? 32 : 0) |
+                                            (true ? 64 : 0) |
+                                            (false ? 128 : 0)),
+                          String::string0(static_cast<char>(
+                              (false ? 1 : 0) | (false ? 2 : 0) |
+                              (false ? 4 : 0) | (false ? 8 : 0) |
+                              (true ? 16 : 0) | (true ? 32 : 0) |
+                              (true ? 64 : 0) | (false ? 128 : 0)),
+                                          String::emptystring())))))) {
   case Comparison::LT: {
-    switch (cmp(
-        String::string0(
+    switch (
+        cmp(String::string0(
             static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
                               (false ? 4 : 0) | (false ? 8 : 0) |
                               (true ? 16 : 0) | (true ? 32 : 0) |
@@ -286,42 +278,41 @@ bool AsciiAsChar::check(std::monostate) {
                                           (true ? 16 : 0) | (true ? 32 : 0) |
                                           (true ? 64 : 0) | (false ? 128 : 0)),
                         String::string0(static_cast<char>(
-                                            (true ? 1 : 0) | (false ? 2 : 0) |
-                                            (true ? 4 : 0) | (false ? 8 : 0) |
-                                            (false ? 16 : 0) | (true ? 32 : 0) |
-                                            (true ? 64 : 0) |
-                                            (false ? 128 : 0)),
+                            (true ? 1 : 0) | (false ? 2 : 0) | (true ? 4 : 0) |
+                            (false ? 8 : 0) | (false ? 16 : 0) |
+                            (true ? 32 : 0) | (true ? 64 : 0) |
+                            (false ? 128 : 0)),
                                         String::emptystring()))))),
-        String::string0(
-            static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
-                              (false ? 4 : 0) | (false ? 8 : 0) |
-                              (true ? 16 : 0) | (true ? 32 : 0) |
-                              (true ? 64 : 0) | (false ? 128 : 0)),
             String::string0(
-                static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
-                                  (true ? 4 : 0) | (false ? 8 : 0) |
+                static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
+                                  (false ? 4 : 0) | (false ? 8 : 0) |
                                   (true ? 16 : 0) | (true ? 32 : 0) |
                                   (true ? 64 : 0) | (false ? 128 : 0)),
                 String::string0(
-                    static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
-                                      (true ? 4 : 0) | (true ? 8 : 0) |
-                                      (false ? 16 : 0) | (true ? 32 : 0) |
+                    static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
+                                      (true ? 4 : 0) | (false ? 8 : 0) |
+                                      (true ? 16 : 0) | (true ? 32 : 0) |
                                       (true ? 64 : 0) | (false ? 128 : 0)),
                     String::string0(
-                        static_cast<char>((false ? 1 : 0) | (true ? 2 : 0) |
-                                          (false ? 4 : 0) | (false ? 8 : 0) |
-                                          (true ? 16 : 0) | (true ? 32 : 0) |
+                        static_cast<char>((true ? 1 : 0) | (true ? 2 : 0) |
+                                          (true ? 4 : 0) | (true ? 8 : 0) |
+                                          (false ? 16 : 0) | (true ? 32 : 0) |
                                           (true ? 64 : 0) | (false ? 128 : 0)),
-                        String::string0(static_cast<char>(
-                                            (true ? 1 : 0) | (false ? 2 : 0) |
-                                            (true ? 4 : 0) | (false ? 8 : 0) |
-                                            (false ? 16 : 0) | (true ? 32 : 0) |
-                                            (true ? 64 : 0) |
-                                            (false ? 128 : 0)),
-                                        String::emptystring()))))))) {
+                        String::string0(
+                            static_cast<char>(
+                                (false ? 1 : 0) | (true ? 2 : 0) |
+                                (false ? 4 : 0) | (false ? 8 : 0) |
+                                (true ? 16 : 0) | (true ? 32 : 0) |
+                                (true ? 64 : 0) | (false ? 128 : 0)),
+                            String::string0(static_cast<char>(
+                                (true ? 1 : 0) | (false ? 2 : 0) |
+                                (true ? 4 : 0) | (false ? 8 : 0) |
+                                (false ? 16 : 0) | (true ? 32 : 0) |
+                                (true ? 64 : 0) | (false ? 128 : 0)),
+                                            String::emptystring()))))))) {
     case Comparison::EQ: {
-      switch (cmp(
-          String::string0(
+      switch (
+          cmp(String::string0(
               static_cast<char>((false ? 1 : 0) | (true ? 2 : 0) |
                                 (false ? 4 : 0) | (true ? 8 : 0) |
                                 (true ? 16 : 0) | (true ? 32 : 0) |
@@ -331,53 +322,49 @@ bool AsciiAsChar::check(std::monostate) {
                                     (true ? 4 : 0) | (false ? 8 : 0) |
                                     (false ? 16 : 0) | (true ? 32 : 0) |
                                     (true ? 64 : 0) | (false ? 128 : 0)),
-                  String::string0(
-                      static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
-                                        (false ? 4 : 0) | (true ? 8 : 0) |
-                                        (true ? 16 : 0) | (true ? 32 : 0) |
-                                        (true ? 64 : 0) | (false ? 128 : 0)),
-                      String::string0(static_cast<char>(
-                                          (false ? 1 : 0) | (false ? 2 : 0) |
-                                          (true ? 4 : 0) | (false ? 8 : 0) |
-                                          (true ? 16 : 0) | (true ? 32 : 0) |
-                                          (true ? 64 : 0) | (false ? 128 : 0)),
-                                      String::emptystring())))),
-          String::string0(
-              static_cast<char>((true ? 1 : 0) | (false ? 2 : 0) |
-                                (false ? 4 : 0) | (false ? 8 : 0) |
-                                (false ? 16 : 0) | (true ? 32 : 0) |
-                                (true ? 64 : 0) | (false ? 128 : 0)),
+                  String::string0(static_cast<char>(
+                      (false ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
+                      (true ? 8 : 0) | (true ? 16 : 0) | (true ? 32 : 0) |
+                      (true ? 64 : 0) | (false ? 128 : 0)),
+                                  String::string0(static_cast<char>(
+                                      (false ? 1 : 0) | (false ? 2 : 0) |
+                                      (true ? 4 : 0) | (false ? 8 : 0) |
+                                      (true ? 16 : 0) | (true ? 32 : 0) |
+                                      (true ? 64 : 0) | (false ? 128 : 0)),
+                                                  String::emptystring())))),
               String::string0(
-                  static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
-                                    (true ? 4 : 0) | (false ? 8 : 0) |
+                  static_cast<char>((true ? 1 : 0) | (false ? 2 : 0) |
+                                    (false ? 4 : 0) | (false ? 8 : 0) |
                                     (false ? 16 : 0) | (true ? 32 : 0) |
                                     (true ? 64 : 0) | (false ? 128 : 0)),
-                  String::string0(
-                      static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
-                                        (true ? 4 : 0) | (false ? 8 : 0) |
-                                        (false ? 16 : 0) | (true ? 32 : 0) |
-                                        (true ? 64 : 0) | (false ? 128 : 0)),
-                      String::emptystring()))))) {
-      case Comparison::GT: {
-        return ((((((same(String::string0(
-                              static_cast<char>(
-                                  (false ? 1 : 0) | (false ? 2 : 0) |
-                                  (false ? 4 : 0) | (false ? 8 : 0) |
-                                  (true ? 16 : 0) | (true ? 32 : 0) |
-                                  (true ? 64 : 0) | (false ? 128 : 0)),
-                              String::string0(
-                                  static_cast<char>(
+                  String::string0(static_cast<char>(
+                      (false ? 1 : 0) | (false ? 2 : 0) | (true ? 4 : 0) |
+                      (false ? 8 : 0) | (false ? 16 : 0) | (true ? 32 : 0) |
+                      (true ? 64 : 0) | (false ? 128 : 0)),
+                                  String::string0(static_cast<char>(
                                       (false ? 1 : 0) | (false ? 2 : 0) |
-                                      (false ? 4 : 0) | (true ? 8 : 0) |
+                                      (true ? 4 : 0) | (false ? 8 : 0) |
                                       (false ? 16 : 0) | (true ? 32 : 0) |
                                       (true ? 64 : 0) | (false ? 128 : 0)),
-                                  String::string0(
-                                      static_cast<char>(
-                                          (true ? 1 : 0) | (false ? 2 : 0) |
-                                          (false ? 4 : 0) | (true ? 8 : 0) |
-                                          (false ? 16 : 0) | (true ? 32 : 0) |
-                                          (true ? 64 : 0) | (false ? 128 : 0)),
-                                      String::emptystring()))),
+                                                  String::emptystring()))))) {
+      case Comparison::GT: {
+        return ((((((same(String::string0(
+                         static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
+                                           (false ? 4 : 0) | (false ? 8 : 0) |
+                                           (true ? 16 : 0) | (true ? 32 : 0) |
+                                           (true ? 64 : 0) | (false ? 128 : 0)),
+                         String::string0(
+                             static_cast<char>(
+                                 (false ? 1 : 0) | (false ? 2 : 0) |
+                                 (false ? 4 : 0) | (true ? 8 : 0) |
+                                 (false ? 16 : 0) | (true ? 32 : 0) |
+                                 (true ? 64 : 0) | (false ? 128 : 0)),
+                             String::string0(static_cast<char>(
+                                 (true ? 1 : 0) | (false ? 2 : 0) |
+                                 (false ? 4 : 0) | (true ? 8 : 0) |
+                                 (false ? 16 : 0) | (true ? 32 : 0) |
+                                 (true ? 64 : 0) | (false ? 128 : 0)),
+                                             String::emptystring()))),
                           String::string0(
                               static_cast<char>(
                                   (false ? 1 : 0) | (false ? 2 : 0) |
@@ -390,61 +377,57 @@ bool AsciiAsChar::check(std::monostate) {
                                       (false ? 4 : 0) | (true ? 8 : 0) |
                                       (false ? 16 : 0) | (true ? 32 : 0) |
                                       (true ? 64 : 0) | (false ? 128 : 0)),
-                                  String::string0(
-                                      static_cast<char>(
-                                          (true ? 1 : 0) | (false ? 2 : 0) |
-                                          (false ? 4 : 0) | (true ? 8 : 0) |
-                                          (false ? 16 : 0) | (true ? 32 : 0) |
-                                          (true ? 64 : 0) | (false ? 128 : 0)),
-                                      String::emptystring())))) &&
+                                  String::string0(static_cast<char>(
+                                      (true ? 1 : 0) | (false ? 2 : 0) |
+                                      (false ? 4 : 0) | (true ? 8 : 0) |
+                                      (false ? 16 : 0) | (true ? 32 : 0) |
+                                      (true ? 64 : 0) | (false ? 128 : 0)),
+                                                  String::emptystring())))) &&
                      !(same(
-                         String::string0(
-                             static_cast<char>(
-                                 (false ? 1 : 0) | (false ? 2 : 0) |
-                                 (false ? 4 : 0) | (false ? 8 : 0) |
-                                 (true ? 16 : 0) | (true ? 32 : 0) |
-                                 (true ? 64 : 0) | (false ? 128 : 0)),
-                             String::string0(
-                                 static_cast<char>(
-                                     (false ? 1 : 0) | (false ? 2 : 0) |
-                                     (false ? 4 : 0) | (true ? 8 : 0) |
-                                     (false ? 16 : 0) | (true ? 32 : 0) |
-                                     (true ? 64 : 0) | (false ? 128 : 0)),
-                                 String::string0(
-                                     static_cast<char>(
-                                         (true ? 1 : 0) |
-                                         (false ? 2 : 0) | (false ? 4 : 0) |
-                                         (true ? 8 : 0) | (false ? 16 : 0) |
-                                         (true ? 32 : 0) | (true ? 64 : 0) |
-                                         (false ? 128 : 0)),
-                                     String::emptystring()))),
-                         String::string0(
-                             static_cast<char>(
-                                 (false ? 1 : 0) | (false ? 2 : 0) |
-                                 (false ? 4 : 0) | (false ? 8 : 0) |
-                                 (true ? 16 : 0) | (true ? 32 : 0) |
-                                 (true ? 64 : 0) | (false ? 128 : 0)),
-                             String::string0(
-                                 static_cast<char>(
-                                     (false ? 1 : 0) | (false ? 2 : 0) |
-                                     (false ? 4 : 0) | (true ? 8 : 0) |
-                                     (false ? 16 : 0) | (true ? 32 : 0) |
-                                     (true ? 64 : 0) | (false ? 128 : 0)),
-                                 String::string0(
-                                     static_cast<char>(
-                                         (false ? 1 : 0) | (true ? 2 : 0) |
-                                         (false ? 4 : 0) | (true ? 8 : 0) |
-                                         (false ? 16 : 0) | (true ? 32 : 0) |
-                                         (true ? 64 : 0) | (false ? 128 : 0)),
-                                     String::emptystring())))))) &&
+                           String::string0(
+                               static_cast<char>(
+                                   (false ? 1 : 0) | (false ? 2 : 0) |
+                                   (false ? 4 : 0) | (false ? 8 : 0) |
+                                   (true ? 16 : 0) | (true ? 32 : 0) |
+                                   (true ? 64 : 0) | (false ? 128 : 0)),
+                               String::string0(
+                                   static_cast<char>(
+                                       (false ? 1 : 0) | (false ? 2 : 0) |
+                                       (false ? 4 : 0) | (true ? 8 : 0) |
+                                       (false ? 16 : 0) | (true ? 32 : 0) |
+                                       (true ? 64 : 0) | (false ? 128 : 0)),
+                                   String::string0(static_cast<char>(
+                                       (true ? 1 : 0) | (false ? 2 : 0) |
+                                       (false ? 4 : 0) | (true ? 8 : 0) |
+                                       (false ? 16 : 0) | (true ? 32 : 0) |
+                                       (true ? 64 : 0) | (false ? 128 : 0)),
+                                                   String::emptystring()))),
+                           String::string0(
+                               static_cast<char>(
+                                   (false ? 1 : 0) | (false ? 2 : 0) |
+                                   (false ? 4 : 0) | (false ? 8 : 0) |
+                                   (true ? 16 : 0) | (true ? 32 : 0) |
+                                   (true ? 64 : 0) | (false ? 128 : 0)),
+                               String::string0(
+                                   static_cast<char>(
+                                       (false ? 1 : 0) | (false ? 2 : 0) |
+                                       (false ? 4 : 0) | (true ? 8 : 0) |
+                                       (false ? 16 : 0) | (true ? 32 : 0) |
+                                       (true ? 64 : 0) | (false ? 128 : 0)),
+                                   String::string0(static_cast<char>(
+                                       (false ? 1 : 0) | (true ? 2 : 0) |
+                                       (false ? 4 : 0) | (true ? 8 : 0) |
+                                       (false ? 16 : 0) | (true ? 32 : 0) |
+                                       (true ? 64 : 0) | (false ? 128 : 0)),
+                                                   String::emptystring())))))) &&
                     odd_code(static_cast<char>(
                         (true ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
                         (false ? 8 : 0) | (false ? 16 : 0) | (true ? 32 : 0) |
                         (true ? 64 : 0) | (false ? 128 : 0)))) &&
                    !(odd_code(static_cast<char>(
-                       (false ? 1 : 0) | (true ? 2 : 0) | (false ? 4 : 0) |
-                       (false ? 8 : 0) | (false ? 16 : 0) | (true ? 32 : 0) |
-                       (true ? 64 : 0) | (false ? 128 : 0))))) &&
+                         (false ? 1 : 0) | (true ? 2 : 0) | (false ? 4 : 0) |
+                         (false ? 8 : 0) | (false ? 16 : 0) | (true ? 32 : 0) |
+                         (true ? 64 : 0) | (false ? 128 : 0))))) &&
                   decide(static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
                                            (false ? 4 : 0) | (true ? 8 : 0) |
                                            (true ? 16 : 0) | (true ? 32 : 0) |
@@ -455,18 +438,20 @@ bool AsciiAsChar::check(std::monostate) {
                                            (true ? 64 : 0) |
                                            (false ? 128 : 0)))) &&
                  !(decide(
-                     static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
-                                       (false ? 4 : 0) | (true ? 8 : 0) |
-                                       (true ? 16 : 0) | (true ? 32 : 0) |
-                                       (true ? 64 : 0) | (false ? 128 : 0)),
-                     static_cast<char>(
-                         (true ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
-                         (true ? 8 : 0) | (true ? 16 : 0) | (true ? 32 : 0) |
-                         (true ? 64 : 0) | (false ? 128 : 0))))) &&
+                       static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
+                                         (false ? 4 : 0) | (true ? 8 : 0) |
+                                         (true ? 16 : 0) | (true ? 32 : 0) |
+                                         (true ? 64 : 0) | (false ? 128 : 0)),
+                       static_cast<char>((true ? 1 : 0) | (false ? 2 : 0) |
+                                         (false ? 4 : 0) | (true ? 8 : 0) |
+                                         (true ? 16 : 0) | (true ? 32 : 0) |
+                                         (true ? 64 : 0) |
+                                         (false ? 128 : 0))))) &&
                 Ascii0::nat_of_ascii(static_cast<char>(
                     (true ? 1 : 0) | (false ? 2 : 0) | (false ? 4 : 0) |
                     (false ? 8 : 0) | (false ? 16 : 0) | (false ? 32 : 0) |
-                    (true ? 64 : 0) | (false ? 128 : 0))) == UINT64_C(65));
+                    (true ? 64 : 0) | (false ? 128 : 0))) ==
+                UINT64_C(65));
       }
       default: {
         return false;
@@ -513,12 +498,12 @@ N Ascii0::N_of_ascii(char a) {
           List<bool>::cons(
               a2,
               List<bool>::cons(
-                  a3,
-                  List<bool>::cons(
-                      a4, List<bool>::cons(
-                              a5, List<bool>::cons(
-                                      a6, List<bool>::cons(
-                                              a7, List<bool>::nil())))))))));
+                  a3, List<bool>::cons(
+                          a4, List<bool>::cons(
+                                  a5, List<bool>::cons(
+                                          a6, List<bool>::cons(
+                                                  a7,
+                                                  List<bool>::nil())))))))));
 }
 
 uint64_t Ascii0::nat_of_ascii(char a) {

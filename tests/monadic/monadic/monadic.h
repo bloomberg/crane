@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -42,16 +42,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -88,8 +89,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -97,7 +98,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -120,7 +121,6 @@ struct Monadic {
   }
 
   template <typename T1, typename T2, typename F1>
-    requires std::is_invocable_r_v<std::optional<T2>, F1 &, T1 &>
   static std::optional<T2> option_bind(const std::optional<T1> &ma, F1 &&f) {
     if (ma.has_value()) {
       const T1 &a = *ma;
@@ -137,43 +137,45 @@ struct Monadic {
   template <typename s, typename a> using State = crane::fn<std::pair<a, s>(s)>;
 
   template <typename T1, typename T2> static State<T1, T2> state_return(T2 x) {
-    return [=](const T1 &s) { return std::make_pair(x, s); };
+    return [=, x = std::move(x)](const T1 &s) { return std::make_pair(x, s); };
   }
 
   template <typename T1, typename T2, typename T3>
   static State<T1, T3>
   state_bind(std::type_identity_t<State<T1, T2>> ma,
              std::type_identity_t<crane::fn<State<T1, T3>(T2)>> f) {
-    return [=](const T1 &s) {
+    return [=, f = std::move(f), ma = std::move(ma)](const T1 &s) {
       auto [a, s_] = ma(s);
-      return f(a)(s_);
+      return crane::apply2(f, std::move(a), std::move(s_));
     };
   }
 
   template <typename T1> static const State<T1, T1> &state_get() {
-    static const State<T1, T1> v = [](const auto &s) {
-      return std::make_pair(s, s);
-    };
+    static const State<T1, T1> v =
+        [](const auto &s) { return std::make_pair(s, s); };
     return v;
   }
 
   template <typename T1> static State<T1, std::monostate> state_put(T1 s) {
-    return [=](T1) { return std::make_pair(std::monostate{}, s); };
+    return [=, s = std::move(s)](T1) {
+      return std::make_pair(std::monostate{}, s);
+    };
   }
 
   template <typename T1>
   static State<uint64_t, uint64_t> count_elements(const List<T1> &l) {
     return l.template fold_left<State<uint64_t, uint64_t>>(
         [](crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)> acc, T1) {
-          return state_bind<uint64_t, uint64_t, uint64_t>(acc, [](uint64_t) {
-            return state_bind<uint64_t, uint64_t, uint64_t>(
-                state_get<uint64_t>(), [](uint64_t n) {
-                  return state_bind<uint64_t, std::monostate, uint64_t>(
-                      state_put<uint64_t>((n + 1)), [=](std::monostate) {
-                        return state_return<uint64_t, uint64_t>(n);
-                      });
-                });
-          });
+          return state_bind<uint64_t, uint64_t, uint64_t>(
+              std::move(acc), [](uint64_t) {
+                return state_bind<uint64_t, uint64_t, uint64_t>(
+                    state_get<uint64_t>(), [](uint64_t n) {
+                      return state_bind<uint64_t, std::monostate, uint64_t>(
+                          state_put<uint64_t>((n + 1)), [=](std::monostate) {
+                            return state_return<uint64_t, uint64_t>(n);
+                          });
+                    });
+              });
         },
         state_return<uint64_t, uint64_t>(UINT64_C(0)));
   }
@@ -209,8 +211,9 @@ struct Monadic {
               List<uint64_t>::cons(
                   UINT64_C(3),
                   List<uint64_t>::cons(
-                      UINT64_C(4), List<uint64_t>::cons(
-                                       UINT64_C(5), List<uint64_t>::nil()))))))(
+                      UINT64_C(4),
+                      List<uint64_t>::cons(UINT64_C(5),
+                                           List<uint64_t>::nil()))))))(
           UINT64_C(0));
   static inline const uint64_t test_state_fib = fib(UINT64_C(5));
 };

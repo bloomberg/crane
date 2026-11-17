@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -38,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -84,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -100,13 +101,13 @@ template <typename A> struct Sig {
   // ACCESSORS
   Sig<A> clone() const { return {x}; }
 
-  template <typename _U> operator Sig<_U>() const {
-    return {[&]() -> _U {
-      if constexpr (crane_convertible<_U, const A &>) {
-        return crane_convert<_U>(x);
+  template <typename CraneU> operator Sig<CraneU>() const {
+    return {[&]() -> CraneU {
+      if constexpr (crane_convertible<CraneU, const A &>) {
+        return crane_convert<CraneU>(x);
       } else {
-        throw std::logic_error(
-            "unreachable: inactive constructor field at this instantiation");
+        throw std::logic_error("unreachable: inactive constructor field at "
+                               "this instantiation");
       }
     }()};
   }
@@ -137,11 +138,11 @@ struct ConstructorBugs {
   };
 
   static source_state step(source_state s);
-  static std::pair<bool, packed_state> bad_branch(const source_state &s1);
-  static std::pair<bool, packed_state> bad_direct(const source_state &s1);
+  static std::pair<bool, packed_state> bad_branch(source_state s1);
+  static std::pair<bool, packed_state> bad_direct(source_state s1);
   static source_state step2(const source_state &s);
   static std::pair<bool, packed_state> bad_complex_step(const source_state &s1);
-  static std::pair<bool, packed_state> bad_nested(const source_state &s1);
+  static std::pair<bool, packed_state> bad_nested(source_state s1);
 
   struct source_state_list {
     field_a source_a_list;
@@ -157,7 +158,7 @@ struct ConstructorBugs {
 
   static source_state_list step_list(source_state_list s);
   static std::pair<bool, packed_state_list>
-  bad_branch_list(const source_state_list &s1);
+  bad_branch_list(source_state_list s1);
 
   struct state {
     uint64_t value;
@@ -182,14 +183,12 @@ struct ConstructorBugs {
   static List<state> list_test(const state &s);
   static std::pair<std::pair<std::pair<state, uint64_t>,
                              std::pair<uint64_t, List<uint64_t>>>,
-                   List<uint64_t>>
-  triple_proj(const state &s);
+                   List<uint64_t>> triple_proj(const state &s);
   static std::pair<state, uint64_t> inner_pair(const state &s);
   static std::pair<state, uint64_t> outer_call(uint64_t n);
   static std::pair<
       std::pair<std::pair<std::pair<state, state>, uint64_t>, uint64_t>,
-      List<uint64_t>>
-  extreme_reuse(const state &s);
+      List<uint64_t>> extreme_reuse(const state &s);
 
   struct Inner {
     uint64_t inner_val;
@@ -247,8 +246,8 @@ struct ConstructorBugs {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const Inner &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &>
   static T1 MySum_rect(F0 &&f, F1 &&f0, const MySum &m) {
     if (std::holds_alternative<typename MySum::Left>(m.v())) {
       const auto &[a0] = std::get<typename MySum::Left>(m.v());
@@ -260,16 +259,8 @@ struct ConstructorBugs {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, Inner &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &>
   static T1 MySum_rec(F0 &&f, F1 &&f0, const MySum &m) {
-    if (std::holds_alternative<typename MySum::Left>(m.v())) {
-      const auto &[a0] = std::get<typename MySum::Left>(m.v());
-      return f(a0);
-    } else {
-      const auto &[a0] = std::get<typename MySum::Right>(m.v());
-      return f0(a0);
-    }
+    return MySum_rect<T1>(f, f0, m);
   }
 
   static std::pair<Inner, uint64_t> match_sum(const MySum &s);
@@ -328,15 +319,14 @@ struct ConstructorBugs {
   static List<std::pair<State0, uint64_t>> inline_recursive(uint64_t n,
                                                             const State0 &s);
   static std::pair<std::pair<std::pair<State0, uint64_t>, uint64_t>,
-                   std::pair<uint64_t, State0>>
-  inline_complex(const State0 &s);
+                   std::pair<uint64_t, State0>> inline_complex(const State0 &s);
   static std::pair<std::pair<State0, State0>, std::pair<uint64_t, uint64_t>>
   inline_quad(const State0 &s);
   static std::pair<State0, uint64_t> inline_both_branches(bool b,
                                                           const State0 &s);
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, State0 &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const State0 &>
   static std::pair<std::pair<State0, uint64_t>, uint64_t>
   apply_twice(F0 &&f, const State0 &s) {
     return std::make_pair(std::make_pair(s, f(s)), f(s));

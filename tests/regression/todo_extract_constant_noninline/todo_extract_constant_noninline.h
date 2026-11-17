@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TODO_EXTRACT_CONSTANT_NONINLINE
 #define INCLUDED_TODO_EXTRACT_CONSTANT_NONINLINE
 
+#include <cstdint>
 #include <todo_extract_constant_noninline_support.h>
 
 struct TodoExtractConstantNoninline {

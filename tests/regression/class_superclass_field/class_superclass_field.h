@@ -2,6 +2,7 @@
 #define INCLUDED_CLASS_SUPERCLASS_FIELD
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 template <typename I, typename A>
@@ -16,7 +17,7 @@ concept Ord = requires {
 
 struct ClassSuperclassField {
   struct eqnat {
-    static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
+    constexpr static bool eqb(uint64_t a0, uint64_t a1) { return a0 == a1; }
   };
 
   static_assert(Eqb<eqnat, uint64_t>);
@@ -24,7 +25,7 @@ struct ClassSuperclassField {
   struct ordnat {
     using ord_eq = eqnat;
 
-    static bool le(uint64_t a0, uint64_t a1) { return a0 <= a1; }
+    constexpr static bool le(uint64_t a0, uint64_t a1) { return a0 <= a1; }
   };
 
   static_assert(Ord<ordnat, uint64_t>);

@@ -1,22 +1,21 @@
 #include "interp_state_after_interp.h"
 
 std::optional<Nat> InterpStateAfterInterp::first_out(
-    const Nat &fuel, Itree<Sum1<InterpStateAfterInterp::outE,
-                                InterpStateAfterInterp::noE, crane::obj>,
-                           std::pair<Nat, Nat>>
-                         t) {
+    const Nat &fuel, const Itree<Sum1<InterpStateAfterInterp::outE,
+                                      InterpStateAfterInterp::noE, crane::obj>,
+                                 std::pair<Nat, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {
     const auto &[a0] = std::get<typename Nat::S>(fuel.v());
     auto &&_sv0 = t.observe();
-    if (std::holds_alternative<
-            typename ItreeF<Sum1<InterpStateAfterInterp::outE,
-                                 InterpStateAfterInterp::noE, crane::obj>,
-                            std::pair<Nat, Nat>,
-                            Itree<Sum1<InterpStateAfterInterp::outE,
-                                       InterpStateAfterInterp::noE, crane::obj>,
-                                  std::pair<Nat, Nat>>>::RetF>(_sv0.v())) {
+    if (std::holds_alternative<typename ItreeF<
+            Sum1<InterpStateAfterInterp::outE, InterpStateAfterInterp::noE,
+                 crane::obj>,
+            std::pair<Nat, Nat>,
+            Itree<Sum1<InterpStateAfterInterp::outE,
+                       InterpStateAfterInterp::noE, crane::obj>,
+                  std::pair<Nat, Nat>>>::RetF>(_sv0.v())) {
       return std::optional<Nat>();
     } else if (std::holds_alternative<typename ItreeF<
                    Sum1<InterpStateAfterInterp::outE,
@@ -25,37 +24,35 @@ std::optional<Nat> InterpStateAfterInterp::first_out(
                    Itree<Sum1<InterpStateAfterInterp::outE,
                               InterpStateAfterInterp::noE, crane::obj>,
                          std::pair<Nat, Nat>>>::TauF>(_sv0.v())) {
-      const auto &[t0] = std::get<
-          typename ItreeF<Sum1<InterpStateAfterInterp::outE,
-                               InterpStateAfterInterp::noE, crane::obj>,
-                          std::pair<Nat, Nat>,
-                          Itree<Sum1<InterpStateAfterInterp::outE,
-                                     InterpStateAfterInterp::noE, crane::obj>,
-                                std::pair<Nat, Nat>>>::TauF>(_sv0.v());
+      const auto &[t0] = std::get<typename ItreeF<
+          Sum1<InterpStateAfterInterp::outE, InterpStateAfterInterp::noE,
+               crane::obj>,
+          std::pair<Nat, Nat>,
+          Itree<Sum1<InterpStateAfterInterp::outE, InterpStateAfterInterp::noE,
+                     crane::obj>,
+                std::pair<Nat, Nat>>>::TauF>(_sv0.v());
       return first_out(*a0, t0);
     } else {
-      const auto &[x0, e0] = std::get<
-          typename ItreeF<Sum1<InterpStateAfterInterp::outE,
-                               InterpStateAfterInterp::noE, crane::obj>,
-                          std::pair<Nat, Nat>,
-                          Itree<Sum1<InterpStateAfterInterp::outE,
-                                     InterpStateAfterInterp::noE, crane::obj>,
-                                std::pair<Nat, Nat>>>::VisF>(_sv0.v());
-      return [&]() {
-        if (std::holds_alternative<
-                typename Sum1<InterpStateAfterInterp::outE,
-                              InterpStateAfterInterp::noE, crane::obj>::Inl1>(
-                x0.v())) {
-          const auto &[a01] = std::get<
+      const auto &[x0, _] = std::get<typename ItreeF<
+          Sum1<InterpStateAfterInterp::outE, InterpStateAfterInterp::noE,
+               crane::obj>,
+          std::pair<Nat, Nat>,
+          Itree<Sum1<InterpStateAfterInterp::outE, InterpStateAfterInterp::noE,
+                     crane::obj>,
+                std::pair<Nat, Nat>>>::VisF>(_sv0.v());
+      if (std::holds_alternative<
               typename Sum1<InterpStateAfterInterp::outE,
                             InterpStateAfterInterp::noE, crane::obj>::Inl1>(
-              x0.v());
-          const auto &[a02] = a01;
-          return std::make_optional<Nat>(a02);
-        } else {
-          throw std::logic_error("absurd case");
-        }
-      }();
+              x0.v())) {
+        const auto &[a01] = std::get<
+            typename Sum1<InterpStateAfterInterp::outE,
+                          InterpStateAfterInterp::noE, crane::obj>::Inl1>(
+            x0.v());
+        const auto &[a02] = a01;
+        return std::make_optional<Nat>(a02);
+      } else {
+        throw std::logic_error("absurd case");
+      }
     }
   }
 }

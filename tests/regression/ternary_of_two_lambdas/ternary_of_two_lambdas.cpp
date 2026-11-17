@@ -15,7 +15,7 @@ bool PeanoNat::even(const Nat &n) {
   }
 }
 
-Nat f_even(const Nat &x0_, const Nat &x1_) { return x0_.add(x1_); }
+Nat f_even(const Nat &x0_, Nat x1_) { return x0_.add(std::move(x1_)); }
 
 Nat f_odd(const Nat &x0_, const Nat &x1_) { return x0_.mul(x1_); }
 
@@ -29,4 +29,4 @@ Nat pick(const Nat &n, Nat x0_) {
   }
 }
 
-Nat go(const Nat &x0_, const Nat &x1_) { return pick(x0_, x1_); }
+Nat go(const Nat &x0_, Nat x1_) { return pick(x0_, std::move(x1_)); }

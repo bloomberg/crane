@@ -30,6 +30,6 @@ std::vector<int> to_vector(const Lst<Nat> &l) {
 int main() {
   // [1; 2] mapped with (+ 3).  The callable is rebuilt once per element, so
   // the shadow variable holding it is reassigned across the loop's back edge.
-  assert((to_vector(run(std::monostate{})) == std::vector<int>{4, 5}));
+  assert((to_vector(run()) == std::vector<int>{4, 5}));
   return 0;
 }

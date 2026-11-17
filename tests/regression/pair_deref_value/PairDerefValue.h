@@ -6,13 +6,13 @@
 #include <atomic>
 #include <concepts>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <variant>
 
 #include "Datatypes.h"
 
 namespace PairDerefValue {
-
 template <typename M>
 concept HasKey = requires {
   typename M::key;
@@ -23,53 +23,59 @@ concept HasKey = requires {
 };
 
 template <HasKey K> struct Collector {
-  using production =
-      std::pair<typename K::key,
-                typename Datatypes::template List<typename K::key>>;
+  using production = std::pair<
+      typename K::key, typename Datatypes::template List<typename K::key>>;
 
   static typename Datatypes::template List<
       typename Datatypes::template List<typename K::key>>
-  rhss_for(
-      const typename Datatypes::template List<std::pair<
-          typename K::key, typename Datatypes::template List<typename K::key>>>
-          &ps,
-      typename K::key x) {
+  rhss_for(const typename Datatypes::template List<std::pair<
+      typename K::key, typename Datatypes::template List<typename K::key>>> &ps,
+           typename K::key x) {
+    std::optional<typename Datatypes::template List<
+        typename Datatypes::template List<typename K::key>>> _root{};
     std::shared_ptr<typename Datatypes::template List<
-        typename Datatypes::template List<typename K::key>>>
-        _head{};
-    std::shared_ptr<typename Datatypes::template List<
-        typename Datatypes::template List<typename K::key>>> *_write = &_head;
+        typename Datatypes::template List<typename K::key>>> *_write = nullptr;
     const typename Datatypes::template List<std::pair<
-        typename K::key, typename Datatypes::template List<typename K::key>>>
-        *_loop_ps = &ps;
+        typename K::key,
+        typename Datatypes::template List<typename K::key>>> *_loop_ps = &ps;
     while (true) {
-      if (std::holds_alternative<typename Datatypes::template List<std::pair<
-              typename K::key,
-              typename Datatypes::template List<typename K::key>>>::Nil>(
+      if (std::holds_alternative<typename Datatypes::template List<
+              std::pair<typename K::key,
+                        typename Datatypes::template List<typename K::key>>>::Nil>(
               _loop_ps->v())) {
-        *_write = std::make_shared<typename Datatypes::template List<
-            typename Datatypes::template List<typename K::key>>>(
-            Datatypes::template List<
-                typename Datatypes::template List<typename K::key>>::nil());
+        auto _value = Datatypes::template List<
+            typename Datatypes::template List<typename K::key>>::nil();
+        (_write ? *(*_write =
+                        std::make_shared<typename Datatypes::template List<
+                            typename Datatypes::template List<typename K::key>>>(
+                            std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] =
-            std::get<typename Datatypes::template List<std::pair<
-                typename K::key,
-                typename Datatypes::template List<typename K::key>>>::Cons>(
+            std::get<
+                typename Datatypes::template List<std::pair<
+                    typename K::key,
+                    typename Datatypes::template List<typename K::key>>>::Cons>(
                 _loop_ps->v());
         const auto &[x_, gamma] = a0;
         if (K::key_eq_dec(x_, x)) {
-          auto _cell = std::make_shared<typename Datatypes::template List<
-              typename Datatypes::template List<typename K::key>>>(
+          auto _cell =
               typename Datatypes::template List<
-                  typename Datatypes::template List<typename K::key>>::
-                  Cons(gamma, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename Datatypes::template List<
-              typename Datatypes::template List<typename K::key>>::Cons>(
-                        (*_write)->v_mut())
-                        .l;
+                  typename Datatypes::template List<typename K::key>>::Cons(
+                  gamma, nullptr);
+          typename Datatypes::template List<
+              typename Datatypes::template List<typename K::key>> &_node =
+              (_write ? *(*_write = std::make_shared<
+                              typename Datatypes::template List<
+                                  typename Datatypes::template List<
+                                      typename K::key>>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write =
+              &std::get<typename Datatypes::template List<
+                  typename Datatypes::template List<typename K::key>>::Cons>(
+                  _node.v_mut())
+                  .l;
           _loop_ps = crane_raw(a1);
           continue;
         } else {
@@ -78,7 +84,7 @@ template <HasKey K> struct Collector {
         }
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -88,74 +94,12 @@ struct NatKey {
 };
 
 using C = Collector<NatKey>;
-const Datatypes::List<C::production> test_prods =
+[[gnu::used]] inline const Datatypes::List<C::production> test_prods =
     Datatypes::template List<C::production>::cons(
-        std::make_pair(
-            Datatypes::Nat::s(Datatypes::Nat::o()),
-            Datatypes::template List<Datatypes::Nat>::cons(
-                Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                    Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                        Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                            Datatypes::Nat::s(Datatypes::Nat::o())))))))))),
-                Datatypes::template List<Datatypes::Nat>::cons(
-                    Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                        Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                            Datatypes::Nat::s(Datatypes::Nat::s(
-                                Datatypes::Nat::s(Datatypes::Nat::s(
-                                    Datatypes::Nat::s(Datatypes::Nat::s(
-                                        Datatypes::Nat::s(Datatypes::Nat::s(
-                                            Datatypes::Nat::s(Datatypes::Nat::s(
-                                                Datatypes::Nat::s(Datatypes::Nat::s(
-                                                    Datatypes::Nat::
-                                                        s(Datatypes::Nat::s(
-                                                            Datatypes::Nat::
-                                                                o())))))))))))))))))))),
-                    Datatypes::template List<Datatypes::Nat>::nil()))),
-        Datatypes::template List<C::production>::cons(
-            std::make_pair(
-                Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())),
-                Datatypes::template List<Datatypes::Nat>::cons(
-                    Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                        Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                            Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                Datatypes::Nat::
-                                    s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                        Datatypes::Nat::
-                                            s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                Datatypes::Nat::
-                                                    s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                        Datatypes::Nat::
-                                                            s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                                Datatypes::Nat::
-                                                                    s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                                        Datatypes::Nat::
-                                                                            o())))))))))))))))))))))))))))))),
-                    Datatypes::template List<Datatypes::Nat>::nil())),
-            Datatypes::template List<C::production>::cons(
-                std::make_pair(
-                    Datatypes::Nat::s(Datatypes::Nat::o()),
-                    Datatypes::
-                        template List<Datatypes::Nat>::cons(Datatypes::Nat::s(
-                                                                Datatypes::Nat::s(
-                                                                    Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::
-                                                                                                                                                                                                      s(Datatypes::Nat::s(
-                                                                                                                                                                                                          Datatypes::Nat::
-                                                                                                                                                                                                              s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                                                                                                                                                                                  Datatypes::
-                                                                                                                                                                                                                      Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(
-                                                                                                                                                                                                                          Datatypes::
-                                                                                                                                                                                                                              Nat::
-                                                                                                                                                                                                                                  s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())))))))))))))))))))))))))))))))))))))))),
-                                                            Datatypes::
-                                                                template List<
-                                                                    Datatypes::
-                                                                        Nat>::
-                                                                    nil())),
-                Datatypes::template List<C::production>::nil())));
-
+        std::make_pair(Datatypes::Nat::s(Datatypes::Nat::o()), Datatypes::template List<Datatypes::Nat>::cons(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())))))))))), Datatypes::template List<Datatypes::Nat>::cons(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())))))))))))))))))))), Datatypes::template List<Datatypes::Nat>::nil()))),
+        Datatypes::template List<C::production>::cons(std::make_pair(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())), Datatypes::template List<Datatypes::Nat>::cons(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())))))))))))))))))))))))))))))), Datatypes::template List<Datatypes::Nat>::nil())), Datatypes::template List<C::production>::cons(std::make_pair(Datatypes::Nat::s(Datatypes::Nat::o()), Datatypes::template List<Datatypes::Nat>::cons(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())))))))))))))))))))))))))))))))))))))))), Datatypes::template List<Datatypes::Nat>::nil())), Datatypes::template List<C::production>::nil())));
 const Datatypes::List<Datatypes::List<Datatypes::Nat>> test_result =
     C::rhss_for(test_prods, Datatypes::Nat::s(Datatypes::Nat::o()));
-
 } // namespace PairDerefValue
 
 #endif // INCLUDED_PAIRDEREFVALUE

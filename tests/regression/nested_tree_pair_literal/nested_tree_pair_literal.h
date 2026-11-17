@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -46,6 +46,27 @@ struct NestedTreePairLiteral {
     }
 
     // MANIPULATORS
+    ~tree() {
+      auto _next = [&](variant_t &_v) -> std::shared_ptr<tree> {
+        if (auto *_alt = std::get_if<Nd>(&_v)) {
+          if (_alt->a0 && _alt->a0.use_count() == 1) {
+            std::atomic_thread_fence(std::memory_order_acquire);
+            return std::move(_alt->a0);
+          }
+        }
+        return nullptr;
+      };
+      std::shared_ptr<tree> _cur = _next(v_mut());
+      while (_cur) {
+        _cur = _next(_cur->v_mut());
+      }
+    }
+
+    tree(const tree &) = default;
+    tree &operator=(const tree &) = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
+
     inline variant_t &v_mut() { return v_; }
 
     // ACCESSORS
@@ -53,30 +74,26 @@ struct NestedTreePairLiteral {
   };
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
-             std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 tree_rect(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Lf>(t.v());
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return crane_any_cast<T1>(
-          f0(*a0, tree_rect(crane_erase_fn<T1>(f), f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, tree_rect<T1>(f, f0, *a0)));
     }
   }
 
   template <typename T1, typename T2 = void, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &> &&
-             std::is_invocable_r_v<T1, F1 &, tree &, T1 &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 tree_rec(F0 &&f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Lf>(t.v())) {
       const auto &[a0] = std::get<typename tree::Lf>(t.v());
       return crane_any_cast<T1>(f(a0));
     } else {
       const auto &[a0] = std::get<typename tree::Nd>(t.v());
-      return crane_any_cast<T1>(
-          f0(*a0, tree_rec(crane_erase_fn<T1>(f), f0, *a0)));
+      return crane_any_cast<T1>(f0(*a0, tree_rec<T1>(f, f0, *a0)));
     }
   }
 
@@ -92,7 +109,6 @@ struct NestedTreePairLiteral {
   static inline const tree sample = tree::nd(tree::nd(
       tree::lf(std::make_pair(std::make_pair(UINT64_C(1), UINT64_C(2)),
                               std::make_pair(UINT64_C(3), UINT64_C(4))))));
-
   static inline const uint64_t go = size<uint64_t>(sample);
 };
 

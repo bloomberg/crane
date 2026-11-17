@@ -32,7 +32,7 @@ Crane Extract Inductive <Rocq type> =>
   A C++ code block that implements pattern matching (case analysis) on values of this type. This should dispatch to the appropriate branch based on which constructor was used, binding constructor arguments to names specified by branch parameter placeholders (`%b0a0`, `%b0a1`, etc.) and executing the corresponding branch code (`%br0`, `%br1`, etc.).
 
 * **`From ...` clause**
-  A space-separated list of libraries/headers whose inclusion is required.  Crane will translate these to the corresponding `#include <...>` directives.
+  A space-separated list of libraries/headers whose inclusion is required.  Crane will translate these to the corresponding `#include <...>` directives.  A type mapping must name the header that declares its type: see [Which headers a unit includes](#which-headers-a-unit-includes).
 
 ### Example: mapping Rocq's `option` type to `std::optional`
 
@@ -179,7 +179,7 @@ Crane Extract Inlined Constant <Rocq definition name> => "<C++ expr>" From "<lib
   A C++ expression that replaces calls to the Rocq constant. This expression may use argument placeholders (`%a0`, `%a1`, etc.) to reference the arguments passed to the constant.
 
 * **`From ...` clause**
-  A space-separated list of libraries/headers whose inclusion is required. Crane will translate these to the corresponding `#include <...>` directives.
+  A space-separated list of libraries/headers whose inclusion is required. Crane will translate these to the corresponding `#include <...>` directives.  The headers of the mapped types the constant takes or returns need not be repeated: see [Which headers a unit includes](#which-headers-a-unit-includes).
 
 ### Examples
 
@@ -272,6 +272,37 @@ Crane Extract Foreign Constant <Rocq definition name> => "<C++ callable>".
 ```coq
 Parameter native_checksum : nat -> nat.
 Crane Extract Foreign Constant native_checksum => "native_checksum".
+```
+
+---
+
+## Which headers a unit includes
+
+A generated unit includes the `From` headers of every mapping its code uses, and of every mapped type its code computes with -- a type it never spells included, such as the type a mapped operation returns into a temporary.  A mapping in scope that the code does not use contributes no header.
+
+So a mapping names the headers its own text needs, except those of the mapped types it takes or returns.  Below, `origin_at` and `on_axis` need no `From` clause: code that uses either computes with a `point`, so `<complex>` is included wherever they are.  `is_real` is written `((std::complex<double>(b ? 1.0 : 0.0, 0.0)).imag() == 0.0)`, which never spells `point`, and its unit includes `<complex>`.
+
+```coq
+Axiom point : Type.
+Axiom origin_at : bool -> point.
+Axiom on_axis : point -> bool.
+Definition is_real (b : bool) : bool := on_axis (origin_at b).
+
+Crane Extract Inlined Constant point => "std::complex<double>" From "complex".
+Crane Extract Inlined Constant origin_at => "std::complex<double>(%a0 ? 1.0 : 0.0, 0.0)".
+Crane Extract Inlined Constant on_axis => "(%a0.imag() == 0.0)".
+```
+
+A type mapping -- of an inductive, of a constant whose Rocq type is a type, of a monad (`Crane Extract Monad`), or a container's `Boxed Element` wrapper -- has no such fallback: it must name the header that declares its C++ type.  Where one has no `From` clause and its type names anything but C++'s builtin types and the mapping's placeholders, Crane warns (`crane-mapping-without-header`).  Code using such a mapping may still compile, because another mapping in use or one of Crane's runtime headers happens to include the header, but nothing promises that it will.
+
+An operation mapping -- of a constant whose Rocq type is not a type, or a constructor or match template of an inductive -- that writes a name of the C++ standard library is checked the same way: where the standard header declaring it is neither in the mapping's `From` clause nor in that of a mapped type its signature names, Crane warns (`crane-mapping-standard-header`), once, when it first extracts code using the mapping -- the mapping of a type in its signature may come after it.  The check knows the standard library's commonly mapped names only, and does not judge a mapping whose own headers, or whose signature types' headers, are not the standard library's (anything with a `.` or a `/`): such a header may include whatever its mapping needs.
+
+```coq
+Axiom larger : nat -> nat -> nat.
+(* Warns: std::max is declared in <algorithm>. *)
+Crane Extract Inlined Constant larger => "std::max(%a0, %a1)".
+(* Does not. *)
+Crane Extract Inlined Constant larger => "std::max(%a0, %a1)" From "algorithm".
 ```
 
 ---
@@ -546,6 +577,12 @@ Crane NoLoopify <function0> <function1> ...  (* Disable for specific functions *
 Crane Reset Loopify.                         (* Reset all loopification settings *)
 ```
 
+A function defined inside a functor is generated from the functor's body,
+whose members cannot be named. A setting for a function of one of its
+instances, such as `Crane NoLoopify ZMap.Raw.add` for `ZMap := FMapAVL.Make(Z_as_OT)`,
+therefore also applies to every function whose last two path components are
+the same (`Raw.add`), when no setting names that function itself.
+
 ### Example
 
 ```coq
@@ -581,10 +618,10 @@ which the frame stack supplies as heap frames rather than C++ stack frames.
 The outcome is decided by a postcondition rather than by whether a bail-out
 announced itself — the transformed body is re-classified, and a surviving
 self-call is a decline whatever the strategy claimed — so a silent bail-out
-cannot hide. A function is transformed several times per unit (a dry run, then
-the header and implementation passes) and only one result is emitted, so
-outcomes are collected silently and each name is collapsed to its best outcome
-at the end of the real run, after inner lambdas have been linearised too.
+cannot hide. Outcomes are collected silently and printed once per unit, one
+line per function: the last outcome recorded, which describes the emitted
+code (a member of a recursive group is recorded again once the whole group is
+lowered).
 
 `scripts/loopify-coverage.sh` sweeps the test corpus and diffs the declines
 against the tracked `tests/loopify-coverage.golden`; `--accept` rewrites the
@@ -593,21 +630,24 @@ passes.
 
 ### Shapes that still decline
 
-Of the recursive functions in the test corpus, twelve decline, in two classes.
+`tests/loopify-coverage.golden` lists every decline in the test corpus, in
+three classes.
 
-**Recursion that crosses a closure boundary (10).** The self-call sits inside a
-lambda or is threaded through a `std::function` accumulator, and the frame
-transform correctly refuses to rewrite it: the lambda may be invoked later, or
-elsewhere, so its call cannot simply become a frame push. This covers a local
-fixpoint mutually recursive with its enclosing function — liftable by hand to a
-top-level sibling, at which point the existing mutual-recursion inlining
-applies — and genuine continuation-passing shapes, which would need the
-continuation defunctionalised.
+**A self-call survived the transform.** Most declines. The self-call sits
+inside a lambda, a continuation, or a function passed over the children of a
+nested inductive, and the transform correctly refuses to rewrite it: the
+lambda may be invoked later, or elsewhere, so its call cannot simply become a
+frame push. Continuation-passing shapes would need the continuation
+defunctionalised.
 
-**Value-type receiver (2).** A frame stores the receiver as a raw pointer, and a
-value receiver is a temporary whose address does not outlive the frame.
-Supporting it needs a mode in which the frame owns the receiver by value, as it
-already does for ordinary parameters.
+**Needs a second machine entry.** The self-call is inside a local fixpoint or
+a spliced partner's body that the function's machine cannot yet enter. Lifting
+the local fixpoint by hand to a top-level sibling avoids it.
+
+**Value-type receiver.** A recursive call passes a value-type receiver, whose
+address cannot be stored in a frame. Supporting it needs a mode in which the
+frame owns the receiver by value, as it already does for ordinary
+parameters.
 
 ---
 
@@ -682,9 +722,14 @@ Crane Extraction "trees" Trees.
 Enable the Perceus-style in-place reuse pass. At a match on an owned recursive
 value whose arm rebuilds a constructor of the same type, the matched cell is
 written in place instead of a fresh one being allocated — provided the value is
-uniquely owned. Uniqueness is checked at run time (`use_count() == 1`), so the
-rewrite is safe even where the analysis cannot prove exclusivity statically:
-a shared cell simply takes the allocating path.
+uniquely owned. Uniqueness is checked at run time, so the rewrite is safe even
+where the analysis cannot prove exclusivity statically: a shared cell simply
+takes the allocating path.
+
+A recyclable cell needs a reusable control block, so the rewrite fires only
+under [`Set Crane NonAtomicRc`](#set-crane-nonatomicrc) (`crane::rc`) or for a
+type under `Set Crane SharedVariant`. Coinductive types and matches on enums
+are never rewritten, and the arm must rebuild exactly the scrutinee's type.
 
 ### Global flag
 
@@ -705,11 +750,12 @@ A per-function setting overrides the global flag.
 
 ### Interaction with loopification
 
-Reuse and [loopification](#set-crane-loopify--crane-loopify) are mutually
-exclusive per declaration: where a function is loopified, the reuse rewrite does
-not apply to it, because the loopified body no longer holds the matched cell in
-a form the rewrite can claim. Loopification wins, since stack safety is the
-stronger guarantee. If you want reuse for a particular function, exclude it from
+The match rewrite does not apply in a function that is
+[loopified](#set-crane-loopify--crane-loopify): loopification owns that shape,
+since stack safety is the stronger guarantee. Under `Set Crane Reuse` with
+`Set Crane NonAtomicRc`, a tail-modulo-cons loop that owns its input recycles
+cells itself instead: each turn rebuilds its output cell in the input cell it
+frees. If you want the match rewrite for a particular function, exclude it from
 loopification with `Crane NoLoopify`.
 
 ---
@@ -730,21 +776,43 @@ thread boundary are copied rather than shared. It takes precedence over the
 `bsl::shared_ptr` that [`Set Crane StdLib "BDE"`](#set-crane-stdlib) would
 otherwise select.
 
+The promise is not taken on trust. A unit whose program uses a mapping that
+puts its values on several threads keeps `std::shared_ptr`, and Crane warns
+(`crane-non-atomic-rc-concurrent`). Those mappings are the ones from the
+headers that start threads (`<thread>`, `<future>`, `crane_thread.h`,
+`bsl_thread.h`, `bsl_future.h`: `Monads.Thread`, `Monads.Par` and their BDE
+flavours) and Crane's transactional memory (`stm_adapter.h`: `Monads.STM` and
+`Monads.STMBDE`). Transactional memory is there to be shared by threads that
+the program's caller starts, even when the extracted code starts none.
+
+Under this option, a constructor's factory takes each field holding a value of
+the inductive itself as a `crane::child_slot<T>`. A slot built from a value
+boxes it into a new cell, except that all values of a constructor without
+fields (`Leaf`, `Nil`) share one cell per constructor and thread. Where a
+constructor is applied to a field read out of a matched value, the generated
+code passes `crane::child(p)` for the field `p`, and the new node shares the
+cell `p` points to instead of copying the child into a new one. Rebuilding a
+path in a persistent tree then allocates only the nodes on the path. Neither
+applies to coinductive types, to types under `Set Crane SharedVariant`, whose
+values are shared blocks already, or under [`Set Crane Arena`](#set-crane-arena--crane-noarena).
+
 ---
 
 ## `Set Crane Format Style`
 
-Set the style passed to `clang-format` when formatting the generated C++.
+Choose whether Crane lays out the generated C++.
 
 ```coq
-Set Crane Format Style "{BasedOnStyle: LLVM, SeparateDefinitionBlocks: Always}".
-Set Crane Format Style "BDE".
+Set Crane Format Style "None".
 ```
 
-The default is the LLVM-based style shown above. The value `"BDE"` is special:
-it invokes `bde-format` rather than `clang-format`. Any other value is handed to
-`clang-format -style=` verbatim, so a `file` value picks up a `.clang-format`
-from the output directory.
+Crane lays out its output itself, in the LLVM style as clang-format applies it
+with `SeparateDefinitionBlocks: Always`: two-space indentation, lines broken at
+80 columns, short function bodies on one line, a blank line between
+definitions, sorted includes. No external formatter is run. The value `"None"`
+keeps the printer's text as written: valid C++, with no indentation and lines
+of any length. Any other value (the default is `"LLVM"`; the clang-format style
+strings earlier versions passed on are accepted) lays the output out.
 
 ---
 
@@ -767,12 +835,12 @@ Set Crane Extraction File Comment "<text>".
 
 ```coq
 Set Crane Extraction Optimize.       (* on by default *)
-Unset Crane Extraction Optimize.     (* disable all MiniML-level optimizations *)
+Unset Crane Extraction Optimize.     (* disable all Core-level optimizations *)
 Set Crane Extraction Flag <n>.       (* select individual optimizations by bitmask *)
 Set Crane Extraction Conservative Types.
 ```
 
-`Optimize` is a coarse switch over the MiniML-level simplifications inherited
+`Optimize` is a coarse switch over the Core-level simplifications inherited
 from Rocq's extraction (inlining, dummy-argument removal, let-reduction);
 `Flag` exposes the same set as a bitmask for finer control, where `0` is
 equivalent to `Unset Crane Extraction Optimize`. `Conservative Types` keeps

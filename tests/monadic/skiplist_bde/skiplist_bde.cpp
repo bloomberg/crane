@@ -1,6 +1,5 @@
 #include "skiplist_bde.h"
 
-#include <bdls_filesystemutil.h>
 #include <bsl_concepts.h>
 #include <bsl_functional.h>
 #include <bsl_iostream.h>
@@ -12,8 +11,6 @@
 #include <bsl_utility.h>
 #include <bsl_variant.h>
 #include <bsl_vector.h>
-#include <crane_itree.h>
-#include <fstream>
 #include <skipnode.h>
 #include <stm_adapter.h>
 #include <variant>

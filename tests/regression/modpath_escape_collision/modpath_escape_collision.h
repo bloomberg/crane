@@ -1,6 +1,8 @@
 #ifndef INCLUDED_MODPATH_ESCAPE_COLLISION
 #define INCLUDED_MODPATH_ESCAPE_COLLISION
 
+#include <cstdint>
+
 struct ModpathEscapeCollision {
   struct A {
     struct Token_ {

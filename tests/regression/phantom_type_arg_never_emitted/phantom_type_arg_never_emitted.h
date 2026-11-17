@@ -56,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -79,24 +79,22 @@ struct PhantomTypeArgNeverEmitted {
     // ACCESSORS
     phantom<A> clone() const { return {a0}; }
 
-    template <typename _U> operator phantom<_U>() const { return {a0}; }
+    template <typename CraneU> operator phantom<CraneU>() const { return {a0}; }
 
     // CREATORS
     static phantom<A> ph(Nat a0) { return {std::move(a0)}; }
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, Nat &>
+    requires std::is_invocable_r_v<T2, F0 &, const Nat &>
   static T2 phantom_rect(F0 &&f, const phantom<T1> &p) {
     const auto &[a0] = p;
     return f(a0);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, Nat &>
   static T2 phantom_rec(F0 &&f, const phantom<T1> &p) {
-    const auto &[a0] = p;
-    return f(a0);
+    return phantom_rect<T1, T2>(f, p);
   }
 
   template <typename T1> static Nat get(const phantom<T1> &p) {

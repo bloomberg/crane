@@ -4,6 +4,7 @@
 #include "fn.h"
 #include "small_vector.h"
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -43,6 +44,15 @@ struct FixPartialApp {
 
     // MANIPULATORS
     ~tree() {
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a0 && _alt->a0.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -67,8 +77,8 @@ struct FixPartialApp {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -77,8 +87,6 @@ struct FixPartialApp {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return f;
@@ -90,16 +98,8 @@ struct FixPartialApp {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, tree &, T1 &, uint64_t &, tree &,
-                                   T1 &>
   static T1 tree_rec(T1 f, F1 &&f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f0(*a0, tree_rec<T1>(f, f0, *a0), a1, *a2,
-                tree_rec<T1>(f, f0, *a2));
-    }
+    return tree_rect<T1>(std::move(f), f0, t);
   }
 
   /// count_nodes: counts nodes in a tree. Will be partially applied.
@@ -140,9 +140,10 @@ struct FixPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
                           UINT64_C(0),
                           tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return count_nodes(std::move(t), _x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+            return count_nodes(std::move(t), _x0);
+          };
       return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();
@@ -152,18 +153,19 @@ struct FixPartialApp {
       tree t = tree::node(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()),
                           UINT64_C(0),
                           tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t _x0) -> uint64_t {
-        return count_nodes(std::move(t), _x0);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+            return count_nodes(std::move(t), _x0);
+          };
       std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> p =
-          std::make_pair(f, UINT64_C(42));
+          std::make_pair(std::move(f), UINT64_C(42));
       return (p.first(UINT64_C(0)) + p.first(UINT64_C(100)));
     }();
   }();
 
   /// More complex: partial app of tree_map, a structure-preserving function.
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, const uint64_t &>
   static tree tree_map(F0 &&f, const tree &t) {
     if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return tree::leaf();

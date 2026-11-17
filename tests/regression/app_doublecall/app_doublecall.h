@@ -1,12 +1,15 @@
 #ifndef INCLUDED_APP_DOUBLECALL
 #define INCLUDED_APP_DOUBLECALL
 
+#include <cstdint>
 #include <deque>
 
 struct AppDoublecall {
   /// A fixpoint function that returns a list -- when used as the second
-  /// argument to (++) it becomes the %a1 function-call expression in the
-  /// generated template, causing the double evaluation.
+  /// argument
+  /// to (++) it becomes the %a1 function-call expression in the generated
+  /// template,
+  /// causing the double evaluation.
   static std::deque<uint64_t> gen_list(uint64_t n);
   /// When extracted, the (++) here uses the Datatypes.app template.
   /// gen_list a and gen_list b are both function calls, so the template

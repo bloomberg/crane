@@ -2,7 +2,7 @@
 
 uint64_t ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
   if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
-    const auto &[a0, a1] =
+    const auto &[_, a1] =
         std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
     return (UINT64_C(1) + length(*a1));
   } else {
@@ -25,13 +25,12 @@ uint64_t ReuseSelfCycle::length(const ReuseSelfCycle::mylist &l) {
 /// 2. mycons branch tail is mycons with arity 2 = 2
 /// 3. mycons is index 0 -> List.hd picks it
 /// 4. use_count() == 1 for fresh values
-ReuseSelfCycle::mylist ReuseSelfCycle::prepend_self(ReuseSelfCycle::mylist l,
-                                                    bool b) {
+ReuseSelfCycle::mylist
+ReuseSelfCycle::prepend_self(const ReuseSelfCycle::mylist &l, bool b) {
   if (b) {
-    if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(
-            l.v_mut())) {
-      auto &[a0, a1] =
-          std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v_mut());
+    if (std::holds_alternative<typename ReuseSelfCycle::mylist::Mycons>(l.v())) {
+      const auto &[a0, _] =
+          std::get<typename ReuseSelfCycle::mylist::Mycons>(l.v());
       return mylist::mycons(a0, l);
     } else {
       return mylist::mynil();

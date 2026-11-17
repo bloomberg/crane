@@ -4,9 +4,10 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <concepts>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -60,8 +61,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,25 +94,28 @@ public:
   }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -138,16 +142,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -184,8 +189,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -193,64 +198,96 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
-    std::shared_ptr<List<T1>> _head{};
-    std::shared_ptr<List<T1>> *_write = &_head;
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        *_write = std::make_shared<List<T1>>(List<T1>::nil());
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        auto _cell =
-            std::make_shared<List<T1>>(typename List<T1>::Cons(f(a0), nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename List<T1>::Cons>((*_write)->v_mut()).l;
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
         _loop_self = crane_raw(a1);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
+template <typename I>
+concept TFunctor = requires {
+  typename I::template T<crane::obj>;
+  {
+    I::template tfmap<crane::obj, crane::obj>(
+        std::declval<crane::fn<crane::obj(crane::obj)>>(),
+        std::declval<typename I::template T<crane::obj>>())
+  } -> std::convertible_to<typename I::template T<crane::obj>>;
+};
+template <typename I>
+concept ConvertTyp = requires {
+  typename I::template F<crane::obj>;
+  {
+    I::convert_typ(std::declval<Nat>(),
+                   std::declval<typename I::template F<Nat>>())
+  } -> std::convertible_to<typename I::template F<Nat>>;
+};
+
 struct TfunctorAliasOfApplied {
-  template <typename t>
-  using TFunctor = crane::fn<t(crane::fn<crane::obj(crane::obj)>, t)>;
-
-  template <typename T1, typename T2, typename T3, typename F1>
-  static crane::rebind_t<T1, T3>
-  tfmap(std::type_identity_t<TFunctor<T1>> tFunctor, F1 &&f,
-        crane::rebind_t<T1, T2> x) {
-    return crane_container_cast<crane::rebind_t<T1, T3>>(
-        tFunctor(crane_erase_fn(f), crane_convert<T1>(std::move(x))));
+  template <TFunctor _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template T<T3>
+  tfmap(F0 &&f, typename _tcI0::template T<T2> x) {
+    return _tcI0::template tfmap<T2, T3>(f, std::move(x));
   }
 
-  static List<crane::obj> TFunctor_list(crane::fn<crane::obj(crane::obj)> x0_,
-                                        const List<crane::obj> &x1_);
+  struct TFunctor_list {
+    template <typename CraneA0> using T = List<CraneA0>;
 
-  template <typename T1, typename F1>
-  static List<T1> TFunctor_list_(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                                 List<T1> x0_) {
-    return std::move(x0_).template map<T1>([=](T1 _x0) -> T1 {
-      return tfmap<T1, crane::obj, crane::obj>(h, f, _x0);
-    });
-  }
+    template <typename CraneA0, typename CraneA1>
+    static List<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> a0,
+                               List<CraneA0> a1) {
+      return a1.template map<CraneA1>(std::move(a0));
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_list>);
+
+  template <TFunctor _tcI0> struct TFunctor_list_ {
+    template <typename CraneA0>
+    using T = List<typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static List<typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          List<typename _tcI0::template T<CraneA0>> a0) {
+      return a0.template map<typename _tcI0::template T<CraneA1>>(
+          [=, f = std::move(f)](typename _tcI0::template T<CraneA0> a1) {
+            return _tcI0::template tfmap<CraneA0, CraneA1>(f, std::move(a1));
+          });
+    }
+  };
 
   template <typename T> struct cfg {
     T blk;
 
     // ACCESSORS
-    template <typename _U> operator cfg<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const T &>) {
-          return crane_convert<_U>(blk);
+    template <typename CraneU> operator cfg<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const T &>) {
+          return crane_convert<CraneU>(blk);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -261,19 +298,19 @@ struct TfunctorAliasOfApplied {
     FnBody df_body;
 
     // ACCESSORS
-    template <typename _U0, typename _U1>
-    operator definition<_U0, _U1>() const {
-      return {[&]() -> _U0 {
-                if constexpr (crane_convertible<_U0, const T &>) {
-                  return crane_convert<_U0>(df_ty);
+    template <typename CraneU0, typename CraneU1>
+    operator definition<CraneU0, CraneU1>() const {
+      return {[&]() -> CraneU0 {
+                if constexpr (crane_convertible<CraneU0, const T &>) {
+                  return crane_convert<CraneU0>(df_ty);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
                 }
               }(),
-              [&]() -> _U1 {
-                if constexpr (crane_convertible<_U1, const FnBody &>) {
-                  return crane_convert<_U1>(df_body);
+              [&]() -> CraneU1 {
+                if constexpr (crane_convertible<CraneU1, const FnBody &>) {
+                  return crane_convert<CraneU1>(df_body);
                 } else {
                   throw std::logic_error("unreachable: inactive constructor "
                                          "field at this instantiation");
@@ -286,79 +323,70 @@ struct TfunctorAliasOfApplied {
     List<definition<T, FnBody>> m_defs;
 
     // ACCESSORS
-    template <typename _U0, typename _U1> operator modul<_U0, _U1>() const {
-      return {crane_convert<List<definition<_U0, _U1>>>(m_defs)};
+    template <typename CraneU0, typename CraneU1>
+    operator modul<CraneU0, CraneU1>() const {
+      return {crane_convert<List<definition<CraneU0, CraneU1>>>(m_defs)};
     }
   };
 
   template <typename t> using mcfg = modul<t, cfg<t>>;
-  static cfg<crane::obj> TFunctor_cfg(crane::fn<crane::obj(crane::obj)> f,
-                                      const cfg<crane::obj> &c);
 
-  template <typename T1, typename F1>
-  static definition<crane::obj, T1>
-  TFunctor_definition(std::type_identity_t<TFunctor<T1>> h, F1 &&f,
-                      const definition<crane::obj, T1> &d) {
-    return definition<crane::obj, T1>{
-        f(d.df_ty),
-        tfmap<T1, crane::obj, crane::obj>(std::move(h), f, d.df_body)};
+  struct TFunctor_cfg {
+    template <typename CraneA0> using T = cfg<CraneA0>;
+
+    template <typename CraneA0, typename CraneA1>
+    static cfg<CraneA1> tfmap(crane::fn<CraneA1(CraneA0)> f, cfg<CraneA0> c) {
+      return cfg<CraneA1>{f(std::move(c).blk)};
+    }
+  };
+
+  static_assert(TFunctor<TFunctor_cfg>);
+
+  template <TFunctor _tcI0> struct TFunctor_definition {
+    template <typename CraneA0>
+    using T = definition<CraneA0, typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static definition<CraneA1, typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          definition<CraneA0, typename _tcI0::template T<CraneA0>> d) {
+      return definition<CraneA1, typename _tcI0::template T<CraneA1>>{
+          f(d.df_ty), _tcI0::template tfmap<CraneA0, CraneA1>(f, d.df_body)};
+    }
+  };
+
+  template <TFunctor _tcI0, TFunctor _tcI1> struct TFunctor_mcfg {
+    template <typename CraneA0>
+    using T = modul<CraneA0, typename _tcI0::template T<CraneA0>>;
+
+    template <typename CraneA0, typename CraneA1>
+    static modul<CraneA1, typename _tcI0::template T<CraneA1>>
+    tfmap(crane::fn<CraneA1(CraneA0)> f,
+          modul<CraneA0, typename _tcI0::template T<CraneA0>> p) {
+      return modul<CraneA1, typename _tcI0::template T<CraneA1>>{
+          TFunctor_list_<_tcI1>::template tfmap<CraneA0, CraneA1>(
+              std::move(f), std::move(p).m_defs)};
+    }
+  };
+
+  template <ConvertTyp _tcI0>
+  static typename _tcI0::template F<Nat>
+  convert_typ(const Nat &x0_, typename _tcI0::template F<Nat> x1_) {
+    return _tcI0::convert_typ(x0_, std::move(x1_));
   }
 
-  template <typename T1, typename F2>
-  static modul<crane::obj, T1>
-  TFunctor_mcfg(std::type_identity_t<TFunctor<T1>>,
-                std::type_identity_t<TFunctor<definition<crane::obj, T1>>> h0,
-                F2 &&f, const modul<crane::obj, T1> &p) {
-    return modul<crane::obj, T1>{
-        tfmap<List<definition<crane::obj, T1>>, crane::obj, crane::obj>(
-            [=]() {
-              return [=](crane::fn<crane::obj(crane::obj)> _x0,
-                         const auto &_x1) -> List<definition<crane::obj, T1>> {
-                return TFunctor_list_<definition<crane::obj, T1>>(
-                    h0, _x0,
-                    crane_convert<List<definition<crane::obj, T1>>>(_x1));
-              };
-            }(),
-            f, p.m_defs)};
-  }
-  template <template <typename> class f>
-  using ConvertTyp = crane::fn<f<Nat>(Nat, f<Nat>)>;
+  struct ConvertTyp_mcfg {
+    template <typename CraneA0> using F = mcfg<CraneA0>;
 
-  template <template <typename> class T1>
-  static T1<Nat> convert_typ(std::type_identity_t<ConvertTyp<T1>> convertTyp,
-                             const Nat &x0_, T1<Nat> x1_) {
-    return crane_container_cast<T1<Nat>>(convertTyp(x0_, std::move(x1_)));
-  }
+    static mcfg<Nat> convert_typ(Nat k, mcfg<Nat> a0) {
+      return TFunctor_mcfg<TFunctor_cfg,
+                           TFunctor_definition<TFunctor_cfg>>::template tfmap<
+          Nat, Nat>([=, k = std::move(k)](const Nat &n) { return n.add(k); },
+                    std::move(a0));
+    }
+  };
 
-  static inline const ConvertTyp<mcfg> ConvertTyp_mcfg = []() {
-    return [](Nat k, mcfg<Nat> eta0_) {
-      return tfmap<modul<crane::obj, cfg<crane::obj>>, Nat, Nat>(
-          []() {
-            return [](crane::fn<crane::obj(crane::obj)> _x0,
-                      const auto &_x1) -> modul<crane::obj, cfg<crane::obj>> {
-              return TFunctor_mcfg<cfg<crane::obj>>(
-                  [](auto &&_ec0, cfg<crane::obj> _ec1) {
-                    return TFunctor_cfg(_ec0, _ec1);
-                  },
-                  []() {
-                    return [](crane::fn<crane::obj(crane::obj)> _x0,
-                              const auto &_x1)
-                               -> definition<crane::obj, cfg<crane::obj>> {
-                      return TFunctor_definition<cfg<crane::obj>>(
-                          [](auto &&_ec0, cfg<crane::obj> _ec1) {
-                            return TFunctor_cfg(_ec0, _ec1);
-                          },
-                          _x0,
-                          crane_convert<
-                              definition<crane::obj, cfg<crane::obj>>>(_x1));
-                    };
-                  }(),
-                  _x0, crane_convert<modul<crane::obj, cfg<crane::obj>>>(_x1));
-            };
-          }(),
-          [=](const Nat &n) { return n.add(k); }, eta0_);
-    };
-  }();
+  static_assert(ConvertTyp<ConvertTyp_mcfg>);
   static mcfg<Nat> convert(const modul<Nat, cfg<Nat>> &m);
   static inline const mcfg<Nat> m0 =
       modul<Nat, cfg<Nat>>{List<definition<Nat, cfg<Nat>>>::cons(
@@ -371,7 +399,7 @@ struct TfunctorAliasOfApplied {
             _sv.v())) {
       return Nat::o();
     } else {
-      const auto &[a0, a1] =
+      const auto &[a0, _] =
           std::get<typename List<definition<Nat, cfg<Nat>>>::Cons>(_sv.v());
       return a0.df_ty.add(a0.df_body.blk);
     }

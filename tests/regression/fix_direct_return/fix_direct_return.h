@@ -2,7 +2,9 @@
 #define INCLUDED_FIX_DIRECT_RETURN
 
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
+#include <utility>
 
 struct FixDirectReturn {
   /// A local fixpoint is captured by an outer lambda and returned.
@@ -14,7 +16,7 @@ struct FixDirectReturn {
   /// the COPY of add (a std::function) inside the outer lambda
   /// still holds & references to the destroyed stack variables.
   template <typename F1>
-    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F1 &, uint64_t>
   static uint64_t make_callback(uint64_t base, F1 &&x0_) {
     auto add_impl = [&](auto &_self_add, uint64_t x) -> uint64_t {
       if (x <= 0) {
@@ -40,13 +42,15 @@ struct FixDirectReturn {
     return []() {
       crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb1 =
           [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
-        return make_callback(UINT64_C(5), _x0);
-      };
+            return make_callback(UINT64_C(5), _x0);
+          };
       crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)> cb2 =
           [](crane::fn<uint64_t(uint64_t)> _x0) -> uint64_t {
-        return make_callback(UINT64_C(100), _x0);
-      };
-      return cb1([=](uint64_t) { return cb2([](uint64_t x) { return x; }); });
+            return make_callback(UINT64_C(100), _x0);
+          };
+      return cb1([=, cb2 = std::move(cb2)](uint64_t) {
+        return cb2([](uint64_t x) { return x; });
+      });
     }();
   }();
 };

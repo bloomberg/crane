@@ -5,11 +5,9 @@
 #include "fn.h"
 #include "lazy.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -61,8 +59,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -93,16 +91,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -139,8 +138,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -152,9 +151,9 @@ template <typename A> struct Colist {
   // TYPES
   struct Conil {};
 
-  template <typename _S0 = Colist<A>> struct Cocons_ {
+  template <typename CraneS0 = Colist<A>> struct Cocons_ {
     A x;
-    _S0 xs;
+    CraneS0 xs;
   };
 
   using Cocons = Cocons_<>;
@@ -174,29 +173,30 @@ public:
   explicit Colist(Cocons _v)
       : lazy_v_(crane::lazy<variant_t>(variant_t(std::move(_v)))) {}
 
-  template <typename _U>
-  Colist(const Colist<_U> &_other)
-      : lazy_v_(crane::lazy<variant_t>::converted_from(
-            _other.lazy_cell(), [=]() -> variant_t {
-              if (std::holds_alternative<typename Colist<_U>::Conil>(
-                      _other.v())) {
-                return Conil{};
-              } else {
-                const auto &[x, xs] =
-                    std::get<typename Colist<_U>::Cocons>(_other.v());
-                return Cocons{
-                    [&]() -> A {
-                      if constexpr (crane_convertible<A, const _U &>) {
-                        return crane_convert<A>(x);
-                      } else {
-                        throw std::logic_error(
-                            "unreachable: inactive constructor field at this "
-                            "instantiation");
-                      }
-                    }(),
-                    crane_convert<Colist<A>>(xs)};
-              }
-            })) {}
+  template <typename CraneU>
+  Colist(const Colist<CraneU> &_other)
+      : lazy_v_(
+      crane::lazy<variant_t>::converted_from(
+          _other.lazy_cell(), [=]() -> variant_t {
+            if (std::holds_alternative<typename Colist<CraneU>::Conil>(
+                    _other.v())) {
+              return Conil{};
+            } else {
+              const auto &[x, xs] =
+                  std::get<typename Colist<CraneU>::Cocons>(_other.v());
+              return Cocons{
+                  [&]() -> A {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
+                      return crane_convert<A>(x);
+                    } else {
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
+                    }
+                  }(),
+                  crane_convert<Colist<A>>(xs)};
+            }
+          })) {}
 
   explicit Colist(crane::fn<variant_t()> _thunk)
       : lazy_v_(crane::lazy<variant_t>(std::move(_thunk))) {}
@@ -222,21 +222,19 @@ public:
 
   const crane::lazy<variant_t> &lazy_cell() const { return lazy_v_; }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, A &>
-  Colist<T1> comap(F0 &&f) const {
+  template <typename T1> Colist<T1> comap(const crane::fn<T1(A)> &f) const {
     if (std::holds_alternative<typename Colist<A>::Conil>(this->v())) {
       return Colist<T1>::conil();
     } else {
       const auto &[a0, a1] = std::get<typename Colist<A>::Cocons>(this->v());
-      return Colist<T1>::lazy_([=]() -> Colist<T1> {
-        return Colist<T1>::cocons(f(a0), a1.template comap<T1>(f));
+      return Colist<T1>::lazy_([=]() -> typename Colist<T1>::Cocons {
+        return {f(a0), a1.template comap<T1>(f)};
       });
     }
   }
 
   template <typename T1>
-  static List<T1> list_of_colist(const Nat &fuel, Colist<T1> l) {
+  static List<T1> list_of_colist(const Nat &fuel, const Colist<T1> &l) {
     if (std::holds_alternative<typename Nat::O>(fuel.v())) {
       return List<T1>::nil();
     } else {
@@ -251,9 +249,8 @@ public:
   }
 
   static Colist<Nat> nats(const Nat &n) {
-    return Colist<Nat>::lazy_([=]() -> Colist<Nat> {
-      return Colist<Nat>::cocons(n, nats(Nat::s(n)));
-    });
+    return Colist<Nat>::lazy_(
+        [=]() -> typename Colist<Nat>::Cocons { return {n, nats(Nat::s(n))}; });
   }
 
   static const List<Nat> &first_three() {

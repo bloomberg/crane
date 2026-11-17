@@ -34,7 +34,7 @@
    not reproduced here. *)
 
 From Crane Require Import Extraction.
-Require Import List.
+From Stdlib Require Import List.
 
 Inductive UBE (A : Type) : Type := throwub : unit -> UBE A.
 Arguments throwub {A}.

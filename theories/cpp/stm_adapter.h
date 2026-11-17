@@ -10,6 +10,7 @@
 #include "crane-stm/src/stm.h"
 
 #include <cassert>
+#include <type_traits>
 
 namespace stm {
 
@@ -50,9 +51,11 @@ T readTVar(const TVar<T>& tv) {
     return tv.read(compat::current_tx());
 }
 
-/// Write a TVar using the implicit thread-local transaction.
+/// Write a TVar using the implicit thread-local transaction.  The value is
+/// converted to the TVar's element type, which it is not deduced from: a
+/// lambda written for a TVar of functions is its own closure type.
 template <typename T>
-void writeTVar(const TVar<T>& tv, T val) {
+void writeTVar(const TVar<T>& tv, std::type_identity_t<T> val) {
     tv.write(compat::current_tx(), std::move(val));
 }
 
@@ -68,22 +71,12 @@ void writeTVar(const TVar<T>& tv, T val) {
 
 template <typename F>
 auto atomically(F&& f) -> decltype(f()) {
+    // [R] may be [void]: a transaction run for its effects alone.
     using R = decltype(f());
-    if constexpr (std::is_void_v<R>) {
-        // Transaction::with<void> is not valid (C++ can't return void from a
-        // template that stores the result).  Wrap with std::monostate instead,
-        // then discard the result.
-        Transaction::with<std::monostate>([&](Transaction& tx) -> std::monostate {
-            compat::TxScope scope(tx);
-            f();
-            return {};
-        });
-    } else {
-        return Transaction::with<R>([&](Transaction& tx) -> R {
-            compat::TxScope scope(tx);
-            return f();
-        });
-    }
+    return Transaction::with<R>([&](Transaction& tx) -> R {
+        compat::TxScope scope(tx);
+        return f();
+    });
 }
 
 // ---- orElse for eagerly-evaluated values ------------------------------------

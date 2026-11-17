@@ -3,6 +3,7 @@
 
 #include "crane_fn.h"
 #include "fn.h"
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -16,8 +17,8 @@ struct DictCtorField {
     crane::fn<uint64_t(A)> sz;
 
     // ACCESSORS
-    template <typename _U> operator Sz<_U>() const {
-      return {crane_convert<crane::fn<uint64_t(_U)>>(sz)};
+    template <typename CraneU> operator Sz<CraneU>() const {
+      return {crane_convert<crane::fn<uint64_t(CraneU)>>(sz)};
     }
   };
 
@@ -39,17 +40,15 @@ struct DictCtorField {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, Sz<uint64_t> &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const Sz<uint64_t> &,
+                                   const uint64_t &>
   static T1 box_rect(F0 &&f, const box &b) {
     const auto &[a0, a1] = b;
     return f(a0, a1);
   }
 
-  template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, Sz<uint64_t> &, uint64_t &>
-  static T1 box_rec(F0 &&f, const box &b) {
-    const auto &[a0, a1] = b;
-    return f(a0, a1);
+  template <typename T1, typename F0> static T1 box_rec(F0 &&f, const box &b) {
+    return box_rect<T1>(f, b);
   }
 
   static uint64_t run(const box &b);

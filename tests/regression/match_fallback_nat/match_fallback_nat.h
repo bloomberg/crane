@@ -1,7 +1,7 @@
 #ifndef INCLUDED_MATCH_FALLBACK_NAT
 #define INCLUDED_MATCH_FALLBACK_NAT
 
-#include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -41,7 +41,7 @@ struct MatchFallbackNat {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
   static T1 maybe_nat_rect(F0 &&f, T1 f0, const maybe_nat &m) {
     if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
       const auto &[a0] = std::get<typename maybe_nat::SomeNat>(m.v());
@@ -52,14 +52,8 @@ struct MatchFallbackNat {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
   static T1 maybe_nat_rec(F0 &&f, T1 f0, const maybe_nat &m) {
-    if (std::holds_alternative<typename maybe_nat::SomeNat>(m.v())) {
-      const auto &[a0] = std::get<typename maybe_nat::SomeNat>(m.v());
-      return f(a0);
-    } else {
-      return f0;
-    }
+    return maybe_nat_rect<T1>(f, std::move(f0), m);
   }
 
   static uint64_t fallback(const maybe_nat &x);

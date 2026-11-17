@@ -5,12 +5,11 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -39,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -85,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -130,6 +130,15 @@ struct BinomialHeap {
 
     // MANIPULATORS
     ~tree() {
+      if (auto *_alt = std::get_if<Node>(&v_mut())) {
+        if (!((_alt->a1 && _alt->a1.use_count() == 1) ||
+              (_alt->a2 && _alt->a2.use_count() == 1))) {
+          return;
+        }
+      }
+      if (std::holds_alternative<Leaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<tree>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -154,8 +163,8 @@ struct BinomialHeap {
 
     tree(const tree &) = default;
     tree &operator=(const tree &) = default;
-    tree(tree &&) noexcept = default;
-    tree &operator=(tree &&) noexcept = default;
+    tree(tree &&) = default;
+    tree &operator=(tree &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -164,8 +173,6 @@ struct BinomialHeap {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, tree &, T1 &, tree &,
-                                   T1 &>
   static T1 tree_rect(F0 &&f, T1 f0, const tree &t) {
     if (std::holds_alternative<typename tree::Node>(t.v())) {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
@@ -177,16 +184,8 @@ struct BinomialHeap {
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &, tree &, T1 &, tree &,
-                                   T1 &>
   static T1 tree_rec(F0 &&f, T1 f0, const tree &t) {
-    if (std::holds_alternative<typename tree::Node>(t.v())) {
-      const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
-      return f(a0, *a1, tree_rec<T1>(f, f0, *a1), *a2,
-               tree_rec<T1>(f, f0, *a2));
-    } else {
-      return f0;
-    }
+    return tree_rect<T1>(f, std::move(f0), t);
   }
 
   using priqueue = List<tree>;
@@ -201,10 +200,11 @@ struct BinomialHeap {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
       const tree &a1_value = *a1;
       const tree &a2_value = *a2;
-      crane::fn<List<tree>(priqueue)> f = [=](priqueue q) {
-        return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
-                                cont(q));
-      };
+      crane::fn<List<tree>(priqueue)> f =
+          [=, cont = std::move(cont)](const priqueue &q) {
+            return List<tree>::cons(tree::node(a0, a1_value, tree::leaf()),
+                                    cont(q));
+          };
       return unzip(a2_value, std::move(f));
     } else {
       return cont(List<tree>::nil());

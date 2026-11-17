@@ -5,14 +5,14 @@
 #include <atomic>
 #include <concepts>
 #include <memory>
-#include <type_traits>
+#include <optional>
 #include <utility>
 #include <variant>
 
 struct Nat;
 
 struct Lib2 {
-  static Nat bump(const Nat &n);
+  static Nat bump0(const Nat &n);
 };
 
 struct Nat {
@@ -60,8 +60,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -69,25 +69,28 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
-    std::shared_ptr<Nat> _head{};
-    std::shared_ptr<Nat> *_write = &_head;
+    std::optional<Nat> _root{};
+    std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
-    Nat _loop_m = std::move(m);
     while (true) {
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
-        *_write = std::make_shared<Nat>(std::move(_loop_m));
+        auto _value = std::move(m);
+        (_write ? *(*_write = std::make_shared<Nat>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
         break;
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-        auto _cell = std::make_shared<Nat>(typename Nat::S(nullptr));
-        *_write = std::move(_cell);
-        _write = &std::get<typename Nat::S>((*_write)->v_mut()).a0;
+        auto _cell = typename Nat::S(nullptr);
+        Nat &_node =
+            (_write ? *(*_write = std::make_shared<Nat>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename Nat::S>(_node.v_mut()).a0;
         _loop_self = crane_raw(a0);
         continue;
       }
     }
-    return std::move(*_head);
+    return std::move(*_root);
   }
 };
 
@@ -96,23 +99,25 @@ struct Ord {
   static inline const t zero = Nat::o();
 };
 
-Nat bump0(const Nat &n);
+Nat bump(const Nat &n);
 template <typename M>
 concept S = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::zero } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::zero() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::zero
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::zero()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 
 template <S X> struct F {
-  template <typename F0>
-    requires std::is_invocable_r_v<typename X::t, F0 &, typename X::t &>
-  static typename X::t twice(F0 &&f) {
+  template <typename F0> static typename X::t twice(F0 &&f) {
     return f(f(X::zero));
   }
 };
@@ -120,7 +125,7 @@ template <S X> struct F {
 using M = F<Ord>;
 
 struct CrossFileModuleRef {
-  static inline const Nat use = M::twice(bump0).add(Lib2::bump(Nat::o()));
+  static inline const Nat use = M::twice(bump).add(Lib2::bump0(Nat::o()));
 };
 
 #endif // INCLUDED_CROSS_FILE_MODULE_REF

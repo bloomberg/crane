@@ -2,6 +2,7 @@
 #define INCLUDED_FIX_IN_RECORD
 
 #include "fn.h"
+#include <cstdint>
 #include <utility>
 
 struct FixInRecord {

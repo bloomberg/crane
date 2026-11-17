@@ -59,7 +59,7 @@ PulseParseCertificateCase::pulse_base_from_runs(const List<uint64_t> &rs) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(rs.v())) {
     return UINT64_C(1);
   } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(rs.v());
+    const auto &[a0, _] = std::get<typename List<uint64_t>::Cons>(rs.v());
     return a0;
   }
 }
@@ -123,8 +123,7 @@ bool PulseParseCertificateCase::pulse_class_list_eqb(
   if (std::holds_alternative<
           typename List<PulseParseCertificateCase::PulseClass>::Nil>(xs.v())) {
     if (std::holds_alternative<
-            typename List<PulseParseCertificateCase::PulseClass>::Nil>(
-            ys.v())) {
+            typename List<PulseParseCertificateCase::PulseClass>::Nil>(ys.v())) {
       return true;
     } else {
       return false;
@@ -134,8 +133,7 @@ bool PulseParseCertificateCase::pulse_class_list_eqb(
         std::get<typename List<PulseParseCertificateCase::PulseClass>::Cons>(
             xs.v());
     if (std::holds_alternative<
-            typename List<PulseParseCertificateCase::PulseClass>::Nil>(
-            ys.v())) {
+            typename List<PulseParseCertificateCase::PulseClass>::Nil>(ys.v())) {
       return false;
     } else {
       const auto &[a00, a10] =
@@ -151,9 +149,10 @@ bool PulseParseCertificateCase::pulse_parse_certificate_self_consistent(
   return (
       (cert.certificate_base == pulse_base_from_runs(cert.certificate_runs) &&
        cert.certificate_classes.length() == cert.certificate_runs.length()) &&
-      pulse_class_list_eqb(cert.certificate_classes,
-                           classify_runs_with_base(cert.certificate_base,
-                                                   cert.certificate_runs)));
+      pulse_class_list_eqb(
+          cert.certificate_classes,
+          classify_runs_with_base(cert.certificate_base,
+                                  cert.certificate_runs)));
 }
 
 PulseParseCertificateCase::PulseCertificate

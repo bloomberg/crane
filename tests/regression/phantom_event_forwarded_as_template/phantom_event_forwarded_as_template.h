@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -18,15 +17,21 @@ struct Nat;
 template <typename A> struct List;
 struct FailE;
 using ptr = crane::obj;
-template <typename
-I>concept Params = requires {
-    typename I::ptr;
-    { I::width() } -> std::convertible_to<Nat>;
-  } && (requires {
-    { I::zero_ptr() } -> std::convertible_to<typename I::ptr>;
-  } || requires {
-    { I::zero_ptr } -> std::convertible_to<typename I::ptr>;
-  });
+template <typename I>
+concept Params = requires {
+  typename I::ptr;
+  { I::width() } -> std::convertible_to<Nat>;
+} && (requires {
+  {
+    I::zero_ptr()
+  }
+  -> std::convertible_to<typename I::ptr>;
+} || requires {
+  {
+    I::zero_ptr
+  }
+  -> std::convertible_to<typename I::ptr>;
+});
 
 struct Nat {
   // TYPES
@@ -73,8 +78,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -105,16 +110,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -151,8 +157,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -179,22 +185,22 @@ using intrinsic_definitions = List<std::pair<Nat, semantic_function<ptr, e>>>;
 
 template <Params _tcI0, typename T1>
 semantic_function<typename _tcI0::ptr, T1> one() {
-  return [=](List<typename _tcI0::ptr>, std::optional<typename _tcI0::ptr>) {
+  return [=](List<typename _tcI0::ptr>,
+             std::optional<typename _tcI0::ptr>) {
     return itree_ret(_tcI0::width());
   };
 }
 
 template <Params _tcI0, typename T1>
 intrinsic_definitions<typename _tcI0::ptr, T1> defined_intrinsics() {
-  return List<std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
-                                 List<typename _tcI0::ptr>,
-                                 std::optional<typename _tcI0::ptr>)>>>::
-      cons(
-          std::make_pair(Nat::o(), one<_tcI0, T1>()),
-          List<
-              std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
-                                 List<typename _tcI0::ptr>,
-                                 std::optional<typename _tcI0::ptr>)>>>::nil());
+  return List<std::pair<
+      Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
+               List<typename _tcI0::ptr>,
+               std::optional<typename _tcI0::ptr>)>>>::cons(
+      std::make_pair(Nat::o(), one<_tcI0, T1>()),
+      List<std::pair<Nat, crane::fn<std::shared_ptr<ITree<Nat>>(
+                              List<typename _tcI0::ptr>,
+                              std::optional<typename _tcI0::ptr>)>>>::nil());
 }
 
 struct PhantomEventForwardedAsTemplate {

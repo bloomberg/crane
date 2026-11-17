@@ -3,7 +3,6 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <type_traits>
@@ -57,8 +56,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -79,28 +78,21 @@ struct RocqBug7228 {
   };
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &>
+    requires std::is_invocable_r_v<T1, F0 &, const crane::obj &>
   static T1 data_rect(F0 &&f, const data &d) {
     const auto &[t0] = d;
     return crane_any_cast<T1>(f(t0));
   }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, crane::obj &>
   static T1 data_rec(F0 &&f, const data &d) {
-    const auto &[t0] = d;
-    return crane_any_cast<T1>(f(t0));
+    return data_rect<T1>(f, d);
   }
 
   using t_of = crane::obj;
   static t_of v_of(const data &d);
   static inline const data test_data =
-      data::data0(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-          Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-              Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                  Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                      Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
-                          Nat::o())))))))))))))))))))))))))))))))))))))))))));
+      data::data0(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))))));
 };
 
 #endif // INCLUDED_ROCQ_BUG_7228

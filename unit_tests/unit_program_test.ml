@@ -1,0 +1,98 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(* Entity identities, and the check that emission generates what the plan
+   accounts for: {!Cpp_passes.Unit_program.helper} recognises a lifted helper and keys
+   it by its {!Base.Lifted.t}; {!Cpp_passes.Unit_program.record} refuses to run while
+   planning; {!Cpp_passes.Unit_program.check_against_plan} refuses an entity, or a
+   helper lifted out of one, the unit does not declare; and
+   {!Cpp_passes.Unit_program.record_lifted_ahead} accepts one helper handed on twice
+   but refuses two generations lifting the same helper. *)
+
+open Crane_plugin
+
+(* A function [r] returning nothing, of body [body]. *)
+let dfun r body : Cpp_ir.Lowered.Decl.t =
+  Function
+    { path = {outer = (r, []); inner = []};
+      return_type = Void;
+      no_pure = false;
+      constexpr = Undecided;
+      shape = Definition ([], body);
+      binders = [];
+      loop = None }
+
+let check name cond =
+  if not cond then (
+    Printf.eprintf "unit_program: %s\n" name;
+    exit 1 )
+
+let r s = Names.GlobRef.VarRef (Names.Id.of_string s)
+
+let raises_anomaly f =
+  match f () with
+  | () -> false
+  | exception e -> CErrors.is_anomaly e
+
+let raises_user_error f =
+  match f () with
+  | () -> false
+  | exception CErrors.UserError _ -> true
+
+let () =
+  Unix.putenv "CRANE_CHECK_IR" "1";
+  let helper =
+    Base.Lifted.make ~origin:None ~binder:(Names.Id.of_string "go") (Let (Core.Occurrence.fresh ()))
+  in
+  let helper_decl =
+    dfun (Base.Lifted.ref_of helper) [Return (Some (Entity (r "callee", [], None)))]
+  in
+  let h =
+    match Cpp_passes.Unit_program.helper helper_decl with
+    | Some h -> h
+    | None -> check "a lifted helper is recognised" false; assert false
+  in
+  check "a helper lifted outside any declaration has no owner"
+    (Base.Generated_entity_id.owner h.helper_id = None);
+  check "a helper is keyed by itself"
+    (match Base.Generated_entity_id.role h.helper_id with Lifted_helper h -> Base.Lifted.equal h helper);
+  check "an ordinary declaration is not a helper"
+    (Cpp_passes.Unit_program.helper (dfun (r "f") [])
+     = None);
+  check "dependencies are the globals named"
+    (Base.Entity_id.Set.mem (Base.Entity_id.of_ref (r "callee"))
+       (Cpp_passes.Unit_program.dependencies [helper_decl]));
+  let entity name helpers =
+    { Cpp_passes.Unit_program.entity_id = Base.Entity_id.of_ref (r name); declarations = []; helpers }
+  in
+  check "nothing is generated while planning"
+    (raises_anomaly (fun () -> ignore (Cpp_passes.Unit_program.record (entity "a" []))));
+  let declares r' = List.exists (Names.GlobRef.UserOrd.equal r') [r "a"; r "owner"] in
+  let check_plan () = Cpp_passes.Unit_program.check_against_plan ~declares in
+  Base.Common.end_planning ();
+  ignore (Cpp_passes.Unit_program.record (entity "a" [h]));
+  Cpp_passes.Unit_program.record_lifted_ahead [helper_decl];
+  check "emitting what the unit declares passes" (not (raises_anomaly check_plan));
+  check "the files took something generated ahead of nothing"
+    (raises_anomaly Cpp_passes.Unit_program.check_against_ahead);
+  Cpp_passes.Unit_program.record_ahead (entity "a" [h]);
+  check "the files took what was generated ahead of them"
+    (not (raises_anomaly Cpp_passes.Unit_program.check_against_ahead));
+  ignore (Cpp_passes.Unit_program.record (entity "b" []));
+  check "an entity the unit does not declare is refused" (raises_anomaly check_plan);
+  Base.State.reset Base.State.Unit;
+  let owned =
+    Base.Lifted.make ~origin:(Some (r "stray")) ~binder:(Names.Id.of_string "go")
+      (Let (Core.Occurrence.fresh ()))
+  in
+  let owned_decl = dfun (Base.Lifted.ref_of owned) [] in
+  Cpp_passes.Unit_program.record_lifted_ahead [owned_decl];
+  check "a helper lifted out of nothing the unit declares or emits is refused"
+    (raises_anomaly check_plan);
+  Base.State.reset Base.State.Unit;
+  let again = dfun (Base.Lifted.ref_of owned) [] in
+  Cpp_passes.Unit_program.record_lifted_ahead [owned_decl; owned_decl];
+  check "a helper handed on to another generation is one helper"
+    (not (raises_user_error (fun () -> Cpp_passes.Unit_program.record_lifted_ahead [owned_decl])));
+  check "a helper two generations lifted is refused"
+    (raises_user_error (fun () -> Cpp_passes.Unit_program.record_lifted_ahead [again]))

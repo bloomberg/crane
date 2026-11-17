@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -22,13 +22,13 @@ struct WrapperNestedRecursionNoDrain {
     // ACCESSORS
     box<A> clone() const { return {a0}; }
 
-    template <typename _U> operator box<_U>() const {
-      return {[&]() -> _U {
-        if constexpr (crane_convertible<_U, const A &>) {
-          return crane_convert<_U>(a0);
+    template <typename CraneU> operator box<CraneU>() const {
+      return {[&]() -> CraneU {
+        if constexpr (crane_convertible<CraneU, const A &>) {
+          return crane_convert<CraneU>(a0);
         } else {
-          throw std::logic_error(
-              "unreachable: inactive constructor field at this instantiation");
+          throw std::logic_error("unreachable: inactive constructor field at "
+                                 "this instantiation");
         }
       }()};
     }
@@ -36,15 +36,12 @@ struct WrapperNestedRecursionNoDrain {
     // CREATORS
     static box<A> box0(A a0) { return {std::move(a0)}; }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
-    T1 box_rec(F0 &&f) const {
-      const auto &[a0] = *this;
-      return f(a0);
+    template <typename T1, typename F0> T1 box_rec(F0 &&f) const {
+      return this->template box_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, A &>
+      requires std::is_invocable_r_v<T1, F0 &, const A &>
     T1 box_rect(F0 &&f) const {
       const auto &[a0] = *this;
       return f(a0);
@@ -94,6 +91,9 @@ struct WrapperNestedRecursionNoDrain {
 
     // MANIPULATORS
     ~rose() {
+      if (std::holds_alternative<RLeaf>(v_mut())) {
+        return;
+      }
       crane::small_vector<std::shared_ptr<rose>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<RNode>(&_v)) {
@@ -117,8 +117,8 @@ struct WrapperNestedRecursionNoDrain {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -126,21 +126,12 @@ struct WrapperNestedRecursionNoDrain {
     const variant_t &v() const { return v_; }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, box<rose> &>
     T1 rose_rec(F0 &&f, F1 &&f0) const {
-      if (std::holds_alternative<typename rose::RLeaf>(this->v())) {
-        const auto &[a0] = std::get<typename rose::RLeaf>(this->v());
-        return f(a0);
-      } else {
-        const auto &[a0] = std::get<typename rose::RNode>(this->v());
-        return f0(*a0);
-      }
+      return this->template rose_rect<T1>(f, f0);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, box<rose> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 rose_rect(F0 &&f, F1 &&f0) const {
       if (std::holds_alternative<typename rose::RLeaf>(this->v())) {
         const auto &[a0] = std::get<typename rose::RLeaf>(this->v());

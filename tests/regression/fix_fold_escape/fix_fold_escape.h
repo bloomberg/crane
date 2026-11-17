@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -96,8 +97,8 @@ struct FixFoldEscape {
   /// Manual fold_left to avoid stdlib extraction complications.
   template <typename F0>
     requires std::is_invocable_r_v<List<crane::fn<uint64_t(uint64_t)>>, F0 &,
-                                   List<crane::fn<uint64_t(uint64_t)>> &,
-                                   uint64_t &>
+                                   List<crane::fn<uint64_t(uint64_t)>> &&,
+                                   const uint64_t &>
   static List<crane::fn<uint64_t(uint64_t)>>
   fold_left(F0 &&f, List<crane::fn<uint64_t(uint64_t)>> acc,
             const List<uint64_t> &l) {
@@ -126,22 +127,22 @@ struct FixFoldEscape {
                             uint64_t x);
   /// test1: collect_adders 10; 20; 30 -> adder_30; adder_20; adder_10
   /// (reversed by fold_left). apply_head picks adder_30, apply to 5 -> 35.
-  static inline const uint64_t test1 = apply_head(
-      collect_adders(List<uint64_t>::cons(
+  static inline const uint64_t test1 =
+      apply_head(collect_adders(List<uint64_t>::cons(
           UINT64_C(10),
           List<uint64_t>::cons(
               UINT64_C(20),
               List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))),
-      UINT64_C(5));
+                 UINT64_C(5));
   /// test2: Sum all adders applied to 0.
   /// adder_30(0) + adder_20(0) + adder_10(0) = 30 + 20 + 10 = 60.
-  static inline const uint64_t test2 = sum_apply(
-      collect_adders(List<uint64_t>::cons(
+  static inline const uint64_t test2 =
+      sum_apply(collect_adders(List<uint64_t>::cons(
           UINT64_C(10),
           List<uint64_t>::cons(
               UINT64_C(20),
               List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))),
-      UINT64_C(0));
+                UINT64_C(0));
   /// test3: With noise between collection and use.
   static inline const uint64_t test3 = []() {
     List<crane::fn<uint64_t(uint64_t)>> fns =

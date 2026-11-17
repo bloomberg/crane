@@ -2,17 +2,22 @@
 #define INCLUDED_TODO_WITH_MODULE_CONSTRAINT
 
 #include <concepts>
+#include <cstdint>
 
 template <typename M>
 concept INNER = requires {
   typename M::t;
-  requires(
-      requires {
-        { M::zero } -> std::convertible_to<typename M::t>;
-      } ||
-      requires {
-        { M::zero() } -> std::convertible_to<typename M::t>;
-      });
+  requires (requires {
+    {
+      M::zero
+    }
+    -> std::convertible_to<typename M::t>;
+  } || requires {
+    {
+      M::zero()
+    }
+    -> std::convertible_to<typename M::t>;
+  });
 };
 template <typename M>
 concept OUTER = requires {
@@ -27,7 +32,7 @@ concept OUTER_NAT = OUTER<M>;
 struct TodoWithModuleConstraint {
   struct NatInner {
     using t = uint64_t;
-    static inline const uint64_t zero = UINT64_C(0);
+    static constexpr uint64_t zero = UINT64_C(0);
   };
 
   struct NatOuter {

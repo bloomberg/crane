@@ -7,13 +7,13 @@
 void UnitMonostateErase::seq_if(bool b) {
   [&]() -> void {
     if (b) {
-      std::cout << "yes"s << '\n';
+      std::cout << std::string("yes") << '\n';
       return;
     } else {
       return;
     }
   }();
-  std::cout << "done"s << '\n';
+  std::cout << std::string("done") << '\n';
   return;
 }
 
@@ -23,14 +23,14 @@ void UnitMonostateErase::seq_if(bool b) {
 void UnitMonostateErase::seq_if_both(bool b) {
   [&]() -> void {
     if (b) {
-      std::cout << "A"s << '\n';
+      std::cout << std::string("A") << '\n';
       return;
     } else {
-      std::cout << "B"s << '\n';
+      std::cout << std::string("B") << '\n';
       return;
     }
   }();
-  std::cout << "done"s << '\n';
+  std::cout << std::string("done") << '\n';
   return;
 }
 
@@ -42,11 +42,11 @@ void UnitMonostateErase::match_unit_tail(UnitMonostateErase::Color c) {
         return;
       }
       case Color::GREEN: {
-        std::cout << "green"s << '\n';
+        std::cout << std::string("green") << '\n';
         return;
       }
       case Color::BLUE: {
-        std::cout << "blue"s << '\n';
+        std::cout << std::string("blue") << '\n';
         return;
       }
       default:
@@ -65,18 +65,18 @@ void UnitMonostateErase::match_then_next(UnitMonostateErase::Color c) {
       return;
     }
     case Color::GREEN: {
-      std::cout << "green"s << '\n';
+      std::cout << std::string("green") << '\n';
       return;
     }
     case Color::BLUE: {
-      std::cout << "blue"s << '\n';
+      std::cout << std::string("blue") << '\n';
       return;
     }
     default:
       std::unreachable();
     }
   }();
-  std::cout << "after match"s << '\n';
+  std::cout << std::string("after match") << '\n';
   return;
 }
 
@@ -84,7 +84,7 @@ void UnitMonostateErase::match_then_next(UnitMonostateErase::Color c) {
 void UnitMonostateErase::chained_ifs(bool b1, bool b2) {
   [&]() -> void {
     if (b1) {
-      std::cout << "b1"s << '\n';
+      std::cout << std::string("b1") << '\n';
       return;
     } else {
       return;
@@ -92,13 +92,13 @@ void UnitMonostateErase::chained_ifs(bool b1, bool b2) {
   }();
   [&]() -> void {
     if (b2) {
-      std::cout << "b2"s << '\n';
+      std::cout << std::string("b2") << '\n';
       return;
     } else {
       return;
     }
   }();
-  std::cout << "end"s << '\n';
+  std::cout << std::string("end") << '\n';
   return;
 }
 
@@ -111,11 +111,11 @@ void UnitMonostateErase::nested_matches(UnitMonostateErase::Color c1,
       return [&]() -> void {
         switch (c2) {
         case Color::RED: {
-          std::cout << "RR"s << '\n';
+          std::cout << std::string("RR") << '\n';
           return;
         }
         case Color::GREEN: {
-          std::cout << "RG"s << '\n';
+          std::cout << std::string("RG") << '\n';
           return;
         }
         case Color::BLUE: {
@@ -127,7 +127,7 @@ void UnitMonostateErase::nested_matches(UnitMonostateErase::Color c1,
       }();
     }
     case Color::GREEN: {
-      std::cout << "G"s << '\n';
+      std::cout << std::string("G") << '\n';
       return;
     }
     case Color::BLUE: {
@@ -137,6 +137,6 @@ void UnitMonostateErase::nested_matches(UnitMonostateErase::Color c1,
       std::unreachable();
     }
   }();
-  std::cout << "end"s << '\n';
+  std::cout << std::string("end") << '\n';
   return;
 }

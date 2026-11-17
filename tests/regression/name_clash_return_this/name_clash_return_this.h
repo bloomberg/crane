@@ -1,7 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_RETURN_THIS
 #define INCLUDED_NAME_CLASH_RETURN_THIS
 
-#include <atomic>
+#include <cstdint>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -49,8 +49,8 @@ struct NameClashReturnThis {
   };
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
+    requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
+             std::is_invocable_r_v<T1, F1 &, const uint64_t &, const uint64_t &>
   static T1 shape_rect(F0 &&f, F1 &&f0, const shape &s) {
     if (std::holds_alternative<typename shape::Circle>(s.v())) {
       const auto &[a0] = std::get<typename shape::Circle>(s.v());
@@ -62,26 +62,18 @@ struct NameClashReturnThis {
   }
 
   template <typename T1, typename F0, typename F1>
-    requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<T1, F1 &, uint64_t &, uint64_t &>
   static T1 shape_rec(F0 &&f, F1 &&f0, const shape &s) {
-    if (std::holds_alternative<typename shape::Circle>(s.v())) {
-      const auto &[a0] = std::get<typename shape::Circle>(s.v());
-      return f(a0);
-    } else {
-      const auto &[a0, a1] = std::get<typename shape::Square>(s.v());
-      return f0(a0, a1);
-    }
+    return shape_rect<T1>(f, f0, s);
   }
 
   /// Inner match returns shape in all branches, one branch returns the
   /// argument itself. The function takes shape as input, so it gets
   /// methodified. In the Blue branch, `s` becomes `this`.
-  static shape maybe_transform(bool flag, shape s);
+  static shape maybe_transform(bool flag, const shape &s);
   /// Match on shape where one branch returns the same shape unchanged.
   static shape identity_or_double(const shape &s);
   /// Two shapes, return one of them based on a match on the other.
-  static shape pick_shape(shape s1, shape s2);
+  static shape pick_shape(const shape &s1, shape s2);
   /// Nested: match on result of a function that may return this
   static uint64_t nested_this(const shape &s);
 };

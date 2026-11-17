@@ -4,7 +4,6 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <memory>
 #include <optional>
@@ -13,7 +12,22 @@
 #include <variant>
 
 struct Nat;
-template <typename A> struct List;
+template <typename A>
+struct List; /// A match in argument position becomes an immediately invoked lambda,
+
+/// std::make_optional<Nat>([...]() { ... n.v_mut() ... }()).  The
+/// scrutinee n is an owned local, so the match destructures it through
+/// v_mut().  return_captures_by_value made that lambda a Closure
+/// because it sits in a returned expression, and a closure's captures are
+/// const since a0357147d, so v_mut() on the captured Nat did not
+/// compile.  A lambda invoked where it is written is never stored: it stays
+/// Immediate and captures by reference.  Found in Vellvm's
+/// FMapFacts.cardinal_inv_2b.
+struct ImmediateMatchOwnedScrutinee {
+  static Nat count(const List<Nat> &l);
+  static std::optional<Nat> pred_count(List<Nat> l);
+  static bool check();
+};
 
 struct Nat {
   // TYPES
@@ -60,8 +74,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -92,16 +106,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -138,28 +153,13 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-/// A match in argument position becomes an immediately invoked lambda,
-/// std::make_optional<Nat>([...]() { ... n.v_mut() ... }()).  The
-/// scrutinee n is an owned local, so the match destructures it through
-/// v_mut().  return_captures_by_value made that lambda a Closure
-/// because it sits in a returned expression, and a closure's captures are
-/// const since a0357147d, so v_mut() on the captured Nat did not
-/// compile.  A lambda invoked where it is written is never stored: it stays
-/// Immediate and captures by reference.  Found in Vellvm's
-/// FMapFacts.cardinal_inv_2b.
-struct ImmediateMatchOwnedScrutinee {
-  static Nat count(const List<Nat> &l);
-  static std::optional<Nat> pred_count(List<Nat> l);
-  static bool check(std::monostate _x);
 };
 
 #endif // INCLUDED_IMMEDIATE_MATCH_OWNED_SCRUTINEE

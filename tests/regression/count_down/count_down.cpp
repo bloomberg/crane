@@ -2,13 +2,13 @@
 
 /// Single effect then recurse: effect ;; recursive_call
 void CountDown::count_down(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << "tick"s << '\n';
+      std::cout << std::string("tick") << '\n';
       _loop_n = n_;
     }
   }
@@ -17,14 +17,14 @@ void CountDown::count_down(uint64_t n) {
 
 /// Two effects then recurse: effect ;; effect ;; recursive_call
 void CountDown::two_prints(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << "step "s + std::to_string(_loop_n) << '\n';
-      std::cout << "---"s << '\n';
+      std::cout << std::string("step ") + std::to_string(_loop_n) << '\n';
+      std::cout << std::string("---") << '\n';
       _loop_n = n_;
     }
   }
@@ -33,7 +33,7 @@ void CountDown::two_prints(uint64_t n) {
 
 /// Read from user, echo back, then recurse
 void CountDown::echo_loop(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return;
@@ -41,7 +41,7 @@ void CountDown::echo_loop(uint64_t n) {
       uint64_t n_ = _loop_n - 1;
       std::string line;
       std::getline(std::cin, line);
-      std::cout << "echo: "s + line << '\n';
+      std::cout << std::string("echo: ") + std::move(line) << '\n';
       _loop_n = n_;
     }
   }
@@ -50,14 +50,14 @@ void CountDown::echo_loop(uint64_t n) {
 
 /// Effect in base case too: both branches do IO
 void CountDown::announce(uint64_t n) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
-      std::cout << "done"s << '\n';
+      std::cout << std::string("done") << '\n';
       return;
     } else {
       uint64_t n_ = _loop_n - 1;
-      std::cout << "counting "s + std::to_string(_loop_n) << '\n';
+      std::cout << std::string("counting ") + std::to_string(_loop_n) << '\n';
       _loop_n = n_;
     }
   }
@@ -66,7 +66,7 @@ void CountDown::announce(uint64_t n) {
 
 /// Multiple arguments: two nat params, recurse on first
 void CountDown::repeat_msg(uint64_t n, std::string msg) {
-  uint64_t _loop_n = std::move(n);
+  uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
       return;
@@ -90,8 +90,9 @@ void CountDown::run_fixpoint() {
 
 /// Helper: compare two strings
 bool CountDown::string_eq(std::string s1, std::string s2) {
-  switch ((s1 == s2 ? Comparison::EQ
-                    : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
+  switch (
+      (s1 == s2 ? Comparison::EQ
+                : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
   case Comparison::EQ: {
     return true;
   }
@@ -108,7 +109,7 @@ void CountDown::co_count_down() {
     if (string_eq(std::move(line), "stop")) {
       return;
     } else {
-      std::cout << "tick"s << '\n';
+      std::cout << std::string("tick") << '\n';
     }
   }
   return;
@@ -121,8 +122,8 @@ void CountDown::co_two_prints() {
     if (string_eq(line, "stop")) {
       return;
     } else {
-      std::cout << "got: "s + line << '\n';
-      std::cout << "---"s << '\n';
+      std::cout << std::string("got: ") + std::move(line) << '\n';
+      std::cout << std::string("---") << '\n';
     }
   }
   return;
@@ -135,22 +136,22 @@ void CountDown::co_echo_loop() {
     if (string_eq(line, "quit")) {
       return;
     } else {
-      std::cout << "echo: "s + line << '\n';
+      std::cout << std::string("echo: ") + std::move(line) << '\n';
     }
   }
   return;
 }
 
 void CountDown::co_announce(uint64_t round) {
-  uint64_t _loop_round = std::move(round);
+  uint64_t _loop_round = round;
   while (true) {
     std::string line;
     std::getline(std::cin, line);
     if (string_eq(std::move(line), "stop")) {
-      std::cout << "done"s << '\n';
+      std::cout << std::string("done") << '\n';
       return;
     } else {
-      std::cout << "round "s + std::to_string(_loop_round) << '\n';
+      std::cout << std::string("round ") + std::to_string(_loop_round) << '\n';
       _loop_round = (_loop_round + 1);
     }
   }

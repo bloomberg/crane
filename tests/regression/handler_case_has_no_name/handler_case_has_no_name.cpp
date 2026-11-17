@@ -9,8 +9,8 @@ std::shared_ptr<ITree<crane::obj>> h(Sum1<AE, BE, crane::obj> x) {
 }
 
 std::shared_ptr<ITree<Nat>> HandlerCaseHasNoName::use(const Nat &n) {
-  return Interp::template interp<Monad_itree<Eff<crane::obj>>,
-                                 Functor_itree<Eff<crane::obj>>,
-                                 Sum1<AE, BE, crane::obj>, Nat>(
-      MonadIter_itree<void>, h, itree_ret(n));
+  return Interp::template interp<
+      MonadIter_itree<Eff<crane::obj>>, Monad_itree<Eff<crane::obj>>,
+      Functor_itree<Eff<crane::obj>>, Sum1<AE, BE, crane::obj>, Nat>(
+      h, itree_ret(n));
 }

@@ -29,19 +29,19 @@ bool wrap_string(const std::string &s) { return (s == s); }
 
 domty garg(uint64_t n) {
   if (n <= 0) {
-    return std::make_pair(
-        crane::obj(std::string(1, (static_cast<char>(
-                                      (false ? 1 : 0) | (false ? 2 : 0) |
-                                      (false ? 4 : 0) | (true ? 8 : 0) |
-                                      (false ? 16 : 0) | (true ? 32 : 0) |
-                                      (true ? 64 : 0) | (false ? 128 : 0)))) +
-                   std::string(1, (static_cast<char>(
-                                      (true ? 1 : 0) | (false ? 2 : 0) |
-                                      (false ? 4 : 0) | (true ? 8 : 0) |
-                                      (false ? 16 : 0) | (true ? 32 : 0) |
-                                      (true ? 64 : 0) | (false ? 128 : 0)))) +
-                   std::string()),
-        crane::obj(std::monostate{}));
+    return std::make_pair(crane::obj(
+        std::string(1, (static_cast<char>((false ? 1 : 0) | (false ? 2 : 0) |
+                                          (false ? 4 : 0) | (true ? 8 : 0) |
+                                          (false ? 16 : 0) | (true ? 32 : 0) |
+                                          (true ? 64 : 0) |
+                                          (false ? 128 : 0)))) +
+        std::string(1, (static_cast<char>((true ? 1 : 0) | (false ? 2 : 0) |
+                                          (false ? 4 : 0) | (true ? 8 : 0) |
+                                          (false ? 16 : 0) | (true ? 32 : 0) |
+                                          (true ? 64 : 0) |
+                                          (false ? 128 : 0)))) +
+        std::string()),
+                          crane::obj(std::monostate{}));
   } else {
     uint64_t _x = n - 1;
     return std::make_pair(crane::obj(UINT64_C(0)),
@@ -62,4 +62,4 @@ bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
   }
 }
 
-bool check(std::monostate) { return run(my_entry); }
+bool check() { return run(my_entry); }

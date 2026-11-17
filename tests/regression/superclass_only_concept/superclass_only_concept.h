@@ -2,6 +2,7 @@
 #define INCLUDED_SUPERCLASS_ONLY_CONCEPT
 
 #include <concepts>
+#include <cstdint>
 #include <utility>
 
 /// A class whose fields are all superclass instances has no methods of its
@@ -30,7 +31,7 @@ concept Both = requires {
 
 struct SuperclassOnlyConcept {
   struct BN {
-    static uint64_t b0(uint64_t n) { return n; }
+    constexpr static uint64_t b0(uint64_t n) { return n; }
   };
 
   static_assert(Base<BN, uint64_t>);
@@ -38,7 +39,7 @@ struct SuperclassOnlyConcept {
   struct L1N {
     using l1_base = BN;
 
-    static uint64_t l1(uint64_t n) { return (n + UINT64_C(1)); }
+    constexpr static uint64_t l1(uint64_t n) { return (n + UINT64_C(1)); }
   };
 
   static_assert(L1<L1N, uint64_t>);
@@ -46,7 +47,7 @@ struct SuperclassOnlyConcept {
   struct L2N {
     using l2_base = BN;
 
-    static uint64_t l2(uint64_t n) { return (n + UINT64_C(2)); }
+    constexpr static uint64_t l2(uint64_t n) { return (n + UINT64_C(2)); }
   };
 
   static_assert(L2<L2N, uint64_t>);

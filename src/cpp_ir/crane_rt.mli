@@ -1,0 +1,187 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+
+(** The names of the runtime helpers declared in [theories/cpp/].
+
+    These are the only C++ symbols Crane emits that it does not derive from a
+    [GlobRef.t], so they are the only ones a rename in the runtime headers can
+    silently desynchronise from.  Spelling them once here makes the whole
+    runtime surface greppable from one place; every emitter reads them rather
+    than repeating the string. *)
+
+(** {2 [rc.h]} -- reference counting under [Crane NonAtomicRc]. *)
+
+val rc : string  (** [crane::rc<T>] -- the non-atomic [shared_ptr]. *)
+
+val make_rc : string  (** [crane::make_rc<T>] *)
+
+val child_slot : string
+(** [crane::child_slot<T>] -- the parameter type of a factory's field that
+    holds the inductive itself: a value, boxed, or a {!helper.Share_child}
+    reference to an existing cell, shared. *)
+
+val enable_rc_from_this : string  (** [crane::enable_rc_from_this<T>] *)
+
+(** {2 [rc.h]} -- Perceus in-place reuse. *)
+
+val make_rc_reusing : string
+(** [crane::make_rc_reusing<T>] -- rebuild into a token's storage, checking
+    that the token is sole-owned and large enough. *)
+
+val make_rc_reusing_unchecked : string
+(** [crane::make_rc_reusing_unchecked<T>] -- as {!make_rc_reusing}, where the
+    caller has already established the guard. *)
+
+val reuse_step : string
+(** [crane::reuse_step] -- advance a reuse token along a spine. *)
+
+(** {2 [arena.h]} -- arena allocation. *)
+
+val arena_alloc : string  (** [crane::arena_alloc<T>] *)
+
+val arena_shared_alloc : string  (** [crane::arena_shared_alloc<T>] *)
+
+val arena_make_shared : string  (** [crane::arena_make_shared<T>] *)
+
+(** {2 [crane_fn.h]} -- erasure. *)
+
+val any_cast : string
+(** [crane_any_cast<T>] -- the tolerant caster, which defers the shape
+    question to [if constexpr] at instantiation time. *)
+
+val erase_fn : string
+(** [crane_erase_fn<Ret>] -- adapt a concrete callable to the canonical erased
+    signature. *)
+
+val erase_global : string
+(** [crane_erase_global<F, Ret>()] -- {!erase_fn} of the global [F], made
+    once and shared. *)
+
+val call_erased : string
+(** [crane_call_erased] -- apply a callable whose parameter types are only
+    known once C++ instantiates the enclosing template, recovering them by
+    CTAD. *)
+
+val convert : string
+(** [crane_convert<Dst>(e)] -- read a value at another instantiation of its
+    own type, by whichever route that type offers: a converting constructor
+    where it has one, and the [crane_cast_to] hook where it does not. *)
+
+val convertible : string
+(** [crane_convertible<Dst, Src>] -- whether {!convert} has a route. *)
+
+val container_cast : string
+(** [crane_container_cast<Dst>(e)] -- converts a type-erased container
+    elementwise. *)
+
+
+(** {2 Containers} *)
+
+val small_vector : string  (** [crane::small_vector<T>] *)
+
+val lazy_ : string  (** [crane::lazy<T>] *)
+
+val fn : string
+(** [crane::fn<R(A...)>] -- a closure as a shared, immutable value: what a
+    Rocq function type is written as. *)
+
+val obj : string
+(** [crane::obj] -- an erased value, shared rather than copied: what an
+    erased type is written as. *)
+
+val obj_cast : string
+(** [crane::any_cast<T>] -- reads a [crane::obj] back at [T]. *)
+
+val obj_header : string  (** [obj.h] *)
+
+val lazy_header : string  (** [lazy.h] -- {!lazy_}. *)
+
+val erasure_header : string
+(** [crane_fn.h] -- the erasure and conversion helpers: {!erase_fn},
+    {!call_erased}, {!any_cast}, {!convert}, {!container_cast}. *)
+
+val itree : string  (** [ITree<R>], a reified interaction tree. *)
+
+val itree_header : string  (** [crane_itree.h] -- {!itree}. *)
+
+val rebind : string  (** [crane::rebind_t], a plain carrier read at an element *)
+
+val constant_tc : string
+(** [crane::constant_tc<T>::template c], the type function ignoring its
+    argument: the carrier [fun _ => T]. *)
+
+val variant : string  (** [crane::variant], the tagged union of [Crane FastVariant] *)
+
+val variant_header : string  (** [crane_variant.h] -- {!variant}. *)
+
+val shared_variant : string
+(** [crane::shared_variant], the tagged union of [Crane SharedVariant]: one
+    word, the alternative in a counted block. *)
+
+val shared_box : string
+(** [crane::shared_box<T>], the slot a recursive field holds a shared value in. *)
+
+val shared_or : string
+(** [crane::shared_or_t<T, P>], the slot for an inductive whose being a shared
+    variant only a template's instantiation knows: [shared_box<T>] or [P]. *)
+
+val shared_block_header : string
+(** [shared_block.h] -- the counted block header, [crane::make_immortal] and
+    [crane::immortal]. *)
+
+val shared_variant_header : string  (** [shared_variant.h] -- {!shared_variant}, {!shared_box}, {!shared_or}. *)
+
+val field : string
+(** [crane::field<T>], how [Crane BoxedFields] stores a parameter-typed
+    constructor field: [T], or [T] boxed where copying it is not cheap. *)
+
+val field_header : string  (** [field.h] -- {!field} and [crane::unbox]. *)
+
+val fn_header : string
+(** [fn.h], the header declaring {!fn}; demanded by the type printer. *)
+
+val counting_ptr : string
+(** [crane::counting_ptr<T>] -- the measurement-only reference-count-counting
+    shared pointer of count_rc.h, selected by [CRANE_COUNT_RC]. *)
+
+val make_counting : string  (** [crane::make_counting<T>] *)
+
+(** {2 Helpers a CppIR expression may name} *)
+
+(** The runtime helpers that appear in the IR rather than only in the
+    printer.  A [Cpp_ir.Expr.Runtime] carries one of these instead of the helper's
+    spelling, so a call into the runtime cannot be built out of a string that
+    no runtime header defines. *)
+type helper =
+  | Make_rc_reusing_unchecked  (** {!make_rc_reusing_unchecked} *)
+  | Reuse_step  (** {!reuse_step} *)
+  | Raw  (** [crane_raw(p)] -- the raw pointer a smart pointer holds. *)
+  | Unbox_field  (** [crane::unbox(f)] -- a {!field} read as [const T&]. *)
+  | Deep_box
+      (** [crane_deep_box(v)] -- [v] boxed at the shape a value-indexed
+          family's generic consumers read: every component and element boxed
+          in turn, whatever the container. *)
+  | Share_child
+      (** Marks a constructor argument for a field holding the inductive
+          itself.  Printed as [crane::child(p)] when the argument is a field
+          [*p] read out of a matched value, so the new node shares [p]'s cell
+          (see {!child_slot}), and as the argument itself otherwise. *)
+  | Apply2
+      (** [crane::apply2(f, a, b)] -- [f(a)(b)], without boxing [f(a)] where
+          [f] is an {!fn} written as one lambda returning another. *)
+  | Constant of string
+      (** A closed constructor term of a shared variant, marked where
+          translation builds it -- called on the term, and carrying the name
+          it is to be declared under, a hint -- for {!Cpp_passes.Constants} to
+          declare once as a static local.  Never printed.  The name is part
+          of the helper rather than an argument, out of the reach of the
+          passes that rewrite variables. *)
+  | Immortal
+      (** [crane::immortal(v)] -- [v], its blocks made immortal
+          ({!shared_variant_header}). *)
+
+(** [crane_raw], in {!erasure_header}. *)
+val raw : string
+
+val name : helper -> string
+(** [name h] -- the C++ spelling of [h]. *)

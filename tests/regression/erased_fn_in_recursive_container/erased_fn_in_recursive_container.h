@@ -5,8 +5,8 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -39,16 +39,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -85,8 +86,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -94,7 +95,7 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
-    requires std::is_invocable_r_v<T1, F0 &, T1 &, A &>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
@@ -137,23 +138,23 @@ struct ErasedFnInRecursiveContainer {
 
     explicit rose(Node _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    rose(const rose<_U> &_other)
+    template <typename CraneU>
+    rose(const rose<CraneU> &_other)
         : v_([&]() -> variant_t {
             const auto &[a0, a1] =
-                std::get<typename rose<_U>::Node>(_other.v());
-            return Node{[&]() -> A {
-                          if constexpr (crane_convertible<A, const _U &>) {
-                            return crane_convert<A>(a0);
-                          } else {
-                            throw std::logic_error(
-                                "unreachable: inactive constructor field at "
-                                "this instantiation");
-                          }
-                        }(),
-                        (a1 ? std::make_shared<List<rose<A>>>(
-                                  crane_convert<List<rose<A>>>(*a1))
-                            : nullptr)};
+                std::get<typename rose<CraneU>::Node>(_other.v());
+            return Node{
+                [&]() -> A {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
+                    return crane_convert<A>(a0);
+                  } else {
+                    throw std::logic_error("unreachable: inactive constructor "
+                                           "field at this instantiation");
+                  }
+                }(),
+                (a1 ? std::make_shared<List<rose<A>>>(
+                          crane_convert<List<rose<A>>>(*a1))
+                    : nullptr)};
           }()) {}
 
     static rose<A> node(A a0, List<rose<A>> a1) {
@@ -169,8 +170,8 @@ struct ErasedFnInRecursiveContainer {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             auto _lp = _alt->a1.get();
-            while (std::holds_alternative<typename List<rose<A>>::Cons>(
-                _lp->v())) {
+            while (
+                std::holds_alternative<typename List<rose<A>>::Cons>(_lp->v())) {
               auto &_lc = std::get<typename List<rose<A>>::Cons>(_lp->v_mut());
               _stack.push_back(std::make_shared<rose<A>>(std::move(_lc.a)));
               if (_lc.l && _lc.l.use_count() == 1) {
@@ -197,8 +198,8 @@ struct ErasedFnInRecursiveContainer {
 
     rose(const rose &) = default;
     rose &operator=(const rose &) = default;
-    rose(rose &&) noexcept = default;
-    rose &operator=(rose &&) noexcept = default;
+    rose(rose &&) = default;
+    rose &operator=(rose &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -207,21 +208,18 @@ struct ErasedFnInRecursiveContainer {
   };
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &, List<rose<T1>> &>
   static T2 rose_rect(F0 &&f, const rose<T1> &r) {
     const auto &[a0, a1] = std::get<typename rose<T1>::Node>(r.v());
     return f(a0, *a1);
   }
 
   template <typename T1, typename T2, typename F0>
-    requires std::is_invocable_r_v<T2, F0 &, T1 &, List<rose<T1>> &>
   static T2 rose_rec(F0 &&f, const rose<T1> &r) {
-    const auto &[a0, a1] = std::get<typename rose<T1>::Node>(r.v());
-    return f(a0, *a1);
+    return rose_rect<T1, T2>(f, r);
   }
 
   template <typename T1> static uint64_t size(const rose<T1> &x) {
-    const auto &[a0, a1] = std::get<typename rose<T1>::Node>(x.v());
+    const auto &[_, a1] = std::get<typename rose<T1>::Node>(x.v());
     const List<rose<T1>> &a1_value = *a1;
     return (a1_value.template fold_left<uint64_t>(
                 [](uint64_t a, const rose<T1> &y) { return (a + size<T1>(y)); },
@@ -229,18 +227,16 @@ struct ErasedFnInRecursiveContainer {
             1);
   }
 
-  static inline const uint64_t run =
-      size<std::optional<crane::fn<uint64_t(uint64_t)>>>(
+  static inline const uint64_t run = size<
+      std::optional<crane::fn<uint64_t(uint64_t)>>>(rose<
+      std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
+      std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+          [](uint64_t x) { return x; }),
+      List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::cons(
           rose<std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
-              std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-                  [](uint64_t x) { return x; }),
-              List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::cons(
-                  rose<std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
-                      std::optional<crane::fn<uint64_t(uint64_t)>>(),
-                      List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::
-                          nil()),
-                  List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::
-                      nil())));
+              std::optional<crane::fn<uint64_t(uint64_t)>>(),
+              List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::nil()),
+          List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::nil())));
 };
 
 #endif // INCLUDED_ERASED_FN_IN_RECURSIVE_CONTAINER

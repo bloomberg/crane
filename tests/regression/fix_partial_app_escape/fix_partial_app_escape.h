@@ -1,6 +1,7 @@
 #ifndef INCLUDED_FIX_PARTIAL_APP_ESCAPE
 #define INCLUDED_FIX_PARTIAL_APP_ESCAPE
 
+#include <cstdint>
 #include <utility>
 
 struct FixPartialAppEscape {

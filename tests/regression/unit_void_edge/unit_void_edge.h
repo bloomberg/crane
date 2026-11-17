@@ -3,8 +3,8 @@
 
 #include "crane_fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -96,7 +97,6 @@ struct UnitVoidEdge {
   static void return_unit(uint64_t _x);
   static inline const uint64_t let_bind_void_call = []() {
     return_unit(UINT64_C(5));
-    std::monostate x = std::monostate{};
     {
       return UINT64_C(42);
     }
@@ -110,9 +110,7 @@ struct UnitVoidEdge {
     return;
   }
 
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static uint64_t map_to_unit(F0 &&, uint64_t) {
+  template <typename F0> static uint64_t map_to_unit(F0 &&, uint64_t) {
     return UINT64_C(42);
   }
 
@@ -123,18 +121,18 @@ struct UnitVoidEdge {
     return std::monostate{};
   }();
   static void id_unit_fn(uint64_t _x);
-  static inline const uint64_t nested_lets = UINT64_C(42);
+  static constexpr uint64_t nested_lets = UINT64_C(42);
   static inline const std::optional<std::monostate> unit_some =
       std::make_optional<std::monostate>(std::monostate{});
   static inline const std::optional<std::monostate> unit_none =
       std::optional<std::monostate>();
   static uint64_t match_option_unit(const std::optional<std::monostate> &o);
   static std::optional<std::monostate> return_some_tt(uint64_t n);
-  static void unit_chain(std::monostate u);
+  static void unit_chain();
   static void helper_void(uint64_t _x);
   static uint64_t use_helper(uint64_t n);
-  static uint64_t match_unit_nontail(std::monostate u);
-  static void unit_to_unit_with_work(std::monostate u);
+  static uint64_t match_unit_nontail();
+  static void unit_to_unit_with_work();
   static void seq_voids(uint64_t _x);
   static void conditional_unit(bool b);
 
@@ -148,12 +146,10 @@ struct UnitVoidEdge {
       List<std::monostate>::cons(
           std::monostate{}, List<std::monostate>::cons(
                                 std::monostate{}, List<std::monostate>::nil()));
-  static uint64_t double_match_unit(std::monostate u1, std::monostate u2);
+  static uint64_t double_match_unit();
 
-  template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &>
-  static void apply_and_discard(F0 &&f, uint64_t x0_) {
-    f(x0_);
+  template <typename F0> static void apply_and_discard(F0 &&f, uint64_t x0_) {
+    apply_unit_fn(f, x0_);
     return;
   }
 
@@ -173,15 +169,13 @@ struct UnitVoidEdge {
     tagged_nat t = make_tagged(UINT64_C(99));
     return get_value(std::move(t));
   }();
-  static void make_callback(uint64_t n, std::monostate _x);
+  static void make_callback(uint64_t n);
   static inline const std::monostate test_make_callback = []() {
-    make_callback(UINT64_C(5), std::monostate{});
+    make_callback(UINT64_C(5));
     return std::monostate{};
   }();
 
   template <typename F0, typename F1>
-    requires std::is_invocable_r_v<void, F0 &, uint64_t &> &&
-             std::is_invocable_r_v<void, F1 &, bool &>
   static void multi_void_callbacks(F0 &&, F1 &&, uint64_t, bool) {
     return;
   }
@@ -207,10 +201,8 @@ struct UnitVoidEdge {
   static inline const std::optional<std::monostate> test_return_some =
       return_some_tt(UINT64_C(1));
   static inline const uint64_t test_use_helper = use_helper(UINT64_C(7));
-  static inline const uint64_t test_match_nontail =
-      match_unit_nontail(std::monostate{});
-  static inline const uint64_t test_double_match =
-      double_match_unit(std::monostate{}, std::monostate{});
+  static inline const uint64_t test_match_nontail = match_unit_nontail();
+  static inline const uint64_t test_double_match = double_match_unit();
   static inline const uint64_t test_take_tt = take_tt;
 };
 

@@ -80,12 +80,16 @@ public:
     list() noexcept = default;                                   // nil
     list(const list& o) noexcept : p_(o.p_) { incref(p_); }
     list(list&& o) noexcept : p_(o.p_) { o.p_ = nullptr; }
+    // [o] may live in an element of the spine this one releases -- a rose
+    // tree's [l = l.head().children] -- so its pointer is taken before
+    // anything is released.
     list& operator=(const list& o) noexcept {
-        if (p_ != o.p_) { incref(o.p_); decref(p_); p_ = o.p_; }
+        cell* q = o.p_;
+        if (p_ != q) { incref(q); decref(p_); p_ = q; }
         return *this;
     }
     list& operator=(list&& o) noexcept {
-        if (this != &o) { decref(p_); p_ = o.p_; o.p_ = nullptr; }
+        if (this != &o) { cell* q = std::exchange(o.p_, nullptr); decref(p_); p_ = q; }
         return *this;
     }
     ~list() { decref(p_); }

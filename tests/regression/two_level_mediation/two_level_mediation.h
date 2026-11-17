@@ -4,8 +4,8 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
 #include <stdexcept>
 #include <type_traits>
@@ -37,16 +37,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +84,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -101,22 +102,20 @@ struct TwoLevelMediation {
     // ACCESSORS
     w<A> clone() const { return {a0, a1}; }
 
-    template <typename _U> operator w<_U>() const {
-      return {a0, crane_convert<List<_U>>(a1)};
+    template <typename CraneU> operator w<CraneU>() const {
+      return {a0, crane_convert<List<CraneU>>(a1)};
     }
 
     // CREATORS
     static w<A> mkw(uint64_t a0, List<A> a1) { return {a0, std::move(a1)}; }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<A> &>
-    T1 w_rec(F0 &&f) const {
-      const auto &[a0, a1] = *this;
-      return f(a0, a1);
+    template <typename T1, typename F0> T1 w_rec(F0 &&f) const {
+      return this->template w_rect<T1>(f);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &, List<A> &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &,
+                                     const List<A> &>
     T1 w_rect(F0 &&f) const {
       const auto &[a0, a1] = *this;
       return f(a0, a1);
@@ -153,8 +152,8 @@ struct TwoLevelMediation {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
             std::atomic_thread_fence(std::memory_order_acquire);
             crane::small_vector<std::shared_ptr<List<t>>> _hw1;
-            if (auto *_ha5 = std::get_if<typename List<t>::Cons>(
-                    &_alt->a0->a1.v_mut())) {
+            if (auto *_ha5 =
+                    std::get_if<typename List<t>::Cons>(&_alt->a0->a1.v_mut())) {
               _stack.push_back(std::make_shared<t>(std::move(_ha5->a)));
               _hw1.push_back(std::move(_ha5->l));
             }
@@ -189,8 +188,8 @@ struct TwoLevelMediation {
 
     t(const t &) = default;
     t &operator=(const t &) = default;
-    t(t &&) noexcept = default;
-    t &operator=(t &&) noexcept = default;
+    t(t &&) = default;
+    t &operator=(t &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -201,16 +200,11 @@ struct TwoLevelMediation {
       return t::node(w<t>::mkw(k, List<t>::cons(*this, List<t>::nil())));
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, w<t> &>
-    T1 t_rec(F0 &&f) const {
-      const auto &[a0] = std::get<typename t::Node>(this->v());
-      return f(*a0);
+    template <typename T1, typename F0> T1 t_rec(F0 &&f) const {
+      return this->template t_rect<T1>(f);
     }
 
-    template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, w<t> &>
-    T1 t_rect(F0 &&f) const {
+    template <typename T1, typename F0> T1 t_rect(F0 &&f) const {
       const auto &[a0] = std::get<typename t::Node>(this->v());
       return f(*a0);
     }

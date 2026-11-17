@@ -4,9 +4,10 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
-#include <any>
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
@@ -37,16 +38,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -83,8 +85,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -143,8 +145,8 @@ struct DepElim {
 
     fin(const fin &) = default;
     fin &operator=(const fin &) = default;
-    fin(fin &&) noexcept = default;
-    fin &operator=(fin &&) noexcept = default;
+    fin(fin &&) = default;
+    fin &operator=(fin &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -154,25 +156,25 @@ struct DepElim {
     uint64_t fin_to_nat(uint64_t _x) const {
       const fin *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const fin *_self;
         uint64_t _x;
       };
 
-      /// _Cont_FS: resumes after recursive call, then processes rest.
-      struct _Cont_FS {};
+      /// CraneCont_FS: resumes after recursive call, then processes rest.
+      struct CraneCont_FS {};
 
-      using _Frame = std::variant<_Enter, _Cont_FS>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
       uint64_t _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified fin_to_nat: _Enter -> _Cont_FS.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified fin_to_nat: CraneEnter -> CraneCont_FS.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const fin *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -180,11 +182,11 @@ struct DepElim {
             _result = UINT64_C(0);
           } else {
             const auto &[n, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(_Cont_FS{});
-            _stack.emplace_back(_Enter{crane_raw(a1), n});
+            _stack.emplace_back(CraneCont_FS{});
+            _stack.emplace_back(CraneEnter{crane_raw(a1), n});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_FS>(_frame));
+          auto _f = std::move(std::get<CraneCont_FS>(_frame));
           _result = (std::move(_result) + 1);
         }
       }
@@ -192,84 +194,38 @@ struct DepElim {
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, fin &, T1 &>
     T1 fin_rec(F0 &&f, F1 &&f0, uint64_t _x) const {
-      const fin *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const fin *_self;
-        uint64_t _x;
-      };
-
-      /// _Cont_FS: saves [a1, n0], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_FS {
-        std::shared_ptr<fin> a1;
-        uint64_t n0;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_FS>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified fin_rec: _Enter -> _Cont_FS.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const fin *_self = _f._self;
-          uint64_t _x = _f._x;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename fin::FZ>(_sv.v())) {
-            const auto &[n0] = std::get<typename fin::FZ>(_sv.v());
-            _result = f(n0);
-          } else {
-            const auto &[n0, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(_Cont_FS{a1, n0});
-            _stack.emplace_back(_Enter{crane_raw(a1), n0});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_FS>(_frame));
-          std::shared_ptr<fin> a1 = std::move(_f.a1);
-          uint64_t n0 = _f.n0;
-          _result = f0(n0, *a1, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template fin_rect<T1>(f, f0, _x);
     }
 
     template <typename T1, typename F0, typename F1>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &> &&
-               std::is_invocable_r_v<T1, F1 &, uint64_t &, fin &, T1 &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 fin_rect(F0 &&f, F1 &&f0, uint64_t _x) const {
       const fin *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const fin *_self;
         uint64_t _x;
       };
 
-      /// _Cont_FS: saves [a1, n0], resumes after recursive call, then processes
-      /// rest.
-      struct _Cont_FS {
-        std::shared_ptr<fin> a1;
+      /// CraneCont_FS: saves [n0, a1], resumes after recursive call, then
+      /// processes rest.
+      struct CraneCont_FS {
         uint64_t n0;
+        std::shared_ptr<fin> a1;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_FS>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified fin_rect: _Enter -> _Cont_FS.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified fin_rect: CraneEnter -> CraneCont_FS.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const fin *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -278,13 +234,13 @@ struct DepElim {
             _result = f(n0);
           } else {
             const auto &[n0, a1] = std::get<typename fin::FS>(_sv.v());
-            _stack.emplace_back(_Cont_FS{a1, n0});
-            _stack.emplace_back(_Enter{crane_raw(a1), n0});
+            _stack.emplace_back(CraneCont_FS{n0, a1});
+            _stack.emplace_back(CraneEnter{crane_raw(a1), n0});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_FS>(_frame));
-          std::shared_ptr<fin> a1 = std::move(_f.a1);
+          auto _f = std::move(std::get<CraneCont_FS>(_frame));
           uint64_t n0 = _f.n0;
+          std::shared_ptr<fin> a1 = std::move(_f.a1);
           _result = f0(n0, *a1, std::move(_result));
         }
       }
@@ -316,23 +272,23 @@ struct DepElim {
 
     explicit vec(Vcons _v) : v_(std::move(_v)) {}
 
-    template <typename _U>
-    vec(const vec<_U> &_other)
+    template <typename CraneU>
+    vec(const vec<CraneU> &_other)
         : v_([&]() -> variant_t {
-            if (std::holds_alternative<typename vec<_U>::Vnil>(_other.v())) {
+            if (std::holds_alternative<typename vec<CraneU>::Vnil>(_other.v())) {
               return Vnil{};
             } else {
               const auto &[n, a1, a2] =
-                  std::get<typename vec<_U>::Vcons>(_other.v());
+                  std::get<typename vec<CraneU>::Vcons>(_other.v());
               return Vcons{
                   n,
                   [&]() -> A {
-                    if constexpr (crane_convertible<A, const _U &>) {
+                    if constexpr (crane_convertible<A, const CraneU &>) {
                       return crane_convert<A>(a1);
                     } else {
-                      throw std::logic_error(
-                          "unreachable: inactive constructor field at this "
-                          "instantiation");
+                      throw std::logic_error("unreachable: inactive "
+                                             "constructor field at this "
+                                             "instantiation");
                     }
                   }(),
                   (a2 ? std::make_shared<vec<A>>(crane_convert<vec<A>>(*a2))
@@ -366,8 +322,8 @@ struct DepElim {
 
     vec(const vec &) = default;
     vec &operator=(const vec &) = default;
-    vec(vec &&) noexcept = default;
-    vec &operator=(vec &&) noexcept = default;
+    vec(vec &&) = default;
+    vec &operator=(vec &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -376,148 +332,109 @@ struct DepElim {
 
     vec<A> vec_tail(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
-        throw std::logic_error("unreachable");
+        return crane::any_cast<vec<crane::obj>>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
-        const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
+        const auto &[_, _, a2] = std::get<typename vec<A>::Vcons>(this->v());
         return *a2;
       }
     }
 
     A vec_head(uint64_t) const {
       if (std::holds_alternative<typename vec<A>::Vnil>(this->v())) {
-        throw std::logic_error("unreachable");
+        return crane_any_cast<A>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       } else {
-        const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(this->v());
+        const auto &[_, a1, _] = std::get<typename vec<A>::Vcons>(this->v());
         return a1;
       }
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, A &>
+      requires std::is_invocable_r_v<T1, F1 &, const A &>
     vec<T1> vec_map(uint64_t, F1 &&f) const {
-      std::shared_ptr<vec<T1>> _head{};
-      std::shared_ptr<vec<T1>> *_write = &_head;
+      std::optional<vec<T1>> _root{};
+      std::shared_ptr<vec<T1>> *_write = nullptr;
       const vec<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
-          *_write = std::make_shared<vec<T1>>(vec<T1>::vnil());
+          auto _value = vec<T1>::vnil();
+          (_write ? *(*_write = std::make_shared<vec<T1>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
           const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(_sv.v());
-          auto _cell = std::make_shared<vec<T1>>(
-              typename vec<T1>::Vcons(n, f(a1), nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename vec<T1>::Vcons>((*_write)->v_mut()).a2;
+          auto _cell = typename vec<T1>::Vcons(n, f(a1), nullptr);
+          vec<T1> &_node =
+              (_write ? *(*_write = std::make_shared<vec<T1>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename vec<T1>::Vcons>(_node.v_mut()).a2;
           _loop_self = crane_raw(a2);
           continue;
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     List<A> vec_to_list(uint64_t) const {
-      std::shared_ptr<List<A>> _head{};
-      std::shared_ptr<List<A>> *_write = &_head;
+      std::optional<List<A>> _root{};
+      std::shared_ptr<List<A>> *_write = nullptr;
       const vec<A> *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
         if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
-          *_write = std::make_shared<List<A>>(List<A>::nil());
+          auto _value = List<A>::nil();
+          (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
+                  : _root.emplace(std::move(_value)));
           break;
         } else {
-          const auto &[n, a1, a2] = std::get<typename vec<A>::Vcons>(_sv.v());
-          auto _cell =
-              std::make_shared<List<A>>(typename List<A>::Cons(a1, nullptr));
-          *_write = std::move(_cell);
-          _write = &std::get<typename List<A>::Cons>((*_write)->v_mut()).l;
+          const auto &[_, a1, a2] = std::get<typename vec<A>::Vcons>(_sv.v());
+          auto _cell = typename List<A>::Cons(a1, nullptr);
+          List<A> &_node =
+              (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
+                      : _root.emplace(std::move(_cell)));
+          _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
           _loop_self = crane_raw(a2);
           continue;
         }
       }
-      return std::move(*_head);
+      return std::move(*_root);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
     T1 vec_rec(T1 f, F1 &&f0, uint64_t _x) const {
-      const vec<A> *_self = this;
-
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
-        const vec<A> *_self;
-        uint64_t _x;
-      };
-
-      /// _Cont_Vcons: saves [a1, a2, n0], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Vcons {
-        A a1;
-        std::shared_ptr<vec<A>> a2;
-        uint64_t n0;
-      };
-
-      using _Frame = std::variant<_Enter, _Cont_Vcons>;
-      T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified vec_rec: _Enter -> _Cont_Vcons.
-      while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
-        _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
-          const vec<A> *_self = _f._self;
-          uint64_t _x = _f._x;
-          auto &&_sv = *_self;
-          if (std::holds_alternative<typename vec<A>::Vnil>(_sv.v())) {
-            _result = f;
-          } else {
-            const auto &[n0, a1, a2] =
-                std::get<typename vec<A>::Vcons>(_sv.v());
-            _stack.emplace_back(_Cont_Vcons{a1, a2, n0});
-            _stack.emplace_back(_Enter{crane_raw(a2), n0});
-          }
-        } else {
-          auto _f = std::move(std::get<_Cont_Vcons>(_frame));
-          auto a1 = std::move(_f.a1);
-          std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
-          uint64_t n0 = _f.n0;
-          _result = f0(n0, a1, *a2, std::move(_result));
-        }
-      }
-      return _result;
+      return this->template vec_rect<T1>(std::move(f), f0, _x);
     }
 
     template <typename T1, typename F1>
-      requires std::is_invocable_r_v<T1, F1 &, uint64_t &, A &, vec<A> &, T1 &>
     T1 vec_rect(T1 f, F1 &&f0, uint64_t _x) const {
       const vec<A> *_self = this;
 
-      /// _Enter: captures varying parameters for each recursive call.
-      struct _Enter {
+      /// CraneEnter: captures varying parameters for each recursive call.
+      struct CraneEnter {
         const vec<A> *_self;
         uint64_t _x;
       };
 
-      /// _Cont_Vcons: saves [a1, a2, n0], resumes after recursive call, then
-      /// processes rest.
-      struct _Cont_Vcons {
+      /// CraneCont_Vcons: saves [n0, a1, a2], resumes after recursive call,
+      /// then processes rest.
+      struct CraneCont_Vcons {
+        uint64_t n0;
         A a1;
         std::shared_ptr<vec<A>> a2;
-        uint64_t n0;
       };
 
-      using _Frame = std::variant<_Enter, _Cont_Vcons>;
+      using CraneFrame = std::variant<CraneEnter, CraneCont_Vcons>;
       T1 _result{};
-      crane::small_vector<_Frame> _stack;
-      _stack.emplace_back(_Enter{_self, _x});
-      /// Loopified vec_rect: _Enter -> _Cont_Vcons.
+      crane::small_vector<CraneFrame> _stack;
+      _stack.emplace_back(CraneEnter{_self, _x});
+      /// Loopified vec_rect: CraneEnter -> CraneCont_Vcons.
       while (!_stack.empty()) {
-        _Frame _frame = std::move(_stack.back());
+        CraneFrame _frame = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<_Enter>(_frame)) {
-          auto _f = std::move(std::get<_Enter>(_frame));
+        if (std::holds_alternative<CraneEnter>(_frame)) {
+          auto _f = std::move(std::get<CraneEnter>(_frame));
           const vec<A> *_self = _f._self;
           uint64_t _x = _f._x;
           auto &&_sv = *_self;
@@ -526,14 +443,14 @@ struct DepElim {
           } else {
             const auto &[n0, a1, a2] =
                 std::get<typename vec<A>::Vcons>(_sv.v());
-            _stack.emplace_back(_Cont_Vcons{a1, a2, n0});
-            _stack.emplace_back(_Enter{crane_raw(a2), n0});
+            _stack.emplace_back(CraneCont_Vcons{n0, a1, a2});
+            _stack.emplace_back(CraneEnter{crane_raw(a2), n0});
           }
         } else {
-          auto _f = std::move(std::get<_Cont_Vcons>(_frame));
+          auto _f = std::move(std::get<CraneCont_Vcons>(_frame));
+          uint64_t n0 = _f.n0;
           auto a1 = std::move(_f.a1);
           std::shared_ptr<vec<A>> a2 = std::move(_f.a2);
-          uint64_t n0 = _f.n0;
           _result = f0(n0, a1, *a2, std::move(_result));
         }
       }
@@ -578,23 +495,18 @@ struct DepElim {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
         return a0;
       } else {
-        throw std::logic_error("unreachable");
+        return crane::any_cast<uint64_t>(
+            ([]() -> crane::obj { throw std::logic_error("unreachable"); })());
       }
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
-    T1 avail_rec(F0 &&f, T1 f0, bool) const {
-      if (std::holds_alternative<typename avail::Present>(this->v())) {
-        const auto &[a0] = std::get<typename avail::Present>(this->v());
-        return f(a0);
-      } else {
-        return f0;
-      }
+    T1 avail_rec(F0 &&f, T1 f0, bool _x) const {
+      return this->template avail_rect<T1>(f, std::move(f0), _x);
     }
 
     template <typename T1, typename F0>
-      requires std::is_invocable_r_v<T1, F0 &, uint64_t &>
+      requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
     T1 avail_rect(F0 &&f, T1 f0, bool) const {
       if (std::holds_alternative<typename avail::Present>(this->v())) {
         const auto &[a0] = std::get<typename avail::Present>(this->v());
@@ -608,7 +520,8 @@ struct DepElim {
   static inline const uint64_t test_fin0 =
       fin::fz(UINT64_C(2)).fin_to_nat(UINT64_C(3));
   static inline const uint64_t test_fin2 =
-      fin::fs(UINT64_C(2), fin::fs(UINT64_C(1), fin::fz(UINT64_C(0))))
+      fin::fs(UINT64_C(2),
+              fin::fs(UINT64_C(1), fin::fz(UINT64_C(0))))
           .fin_to_nat(UINT64_C(3));
   static inline const vec<uint64_t> my_vec = vec<uint64_t>::vcons(
       UINT64_C(2), UINT64_C(10),
@@ -621,9 +534,9 @@ struct DepElim {
   static inline const List<uint64_t> test_vec_tail_list =
       my_vec.vec_tail(UINT64_C(2)).vec_to_list(UINT64_C(2));
   static inline const List<uint64_t> test_vec_map =
-      my_vec
-          .template vec_map<uint64_t>(
-              UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(1)); })
+      my_vec.template vec_map<uint64_t>(
+          UINT64_C(3),
+          [](uint64_t n) { return (n + UINT64_C(1)); })
           .vec_to_list(UINT64_C(3));
   static inline const uint64_t test_present =
       avail::present(UINT64_C(42)).get_present();

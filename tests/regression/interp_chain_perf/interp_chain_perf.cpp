@@ -2,21 +2,42 @@
 
 Itree<InterpChainPerf::TopE<crane::obj>, Nat>
 InterpChainPerf::prog(const Nat &n) {
+  static const auto resum_inl = crane::immortal(CategoryOps::template ReSum_inl<
+      crane::obj, crane::fn<crane::obj(crane::obj)>>(
+      [](const auto &, const auto &) { return crane::obj(); },
+      [](crane::obj, crane::obj, crane::obj, const auto &x,
+         crane::fn<crane::obj(crane::obj)> x0) {
+        return [=, x0 = std::move(x0)](crane::obj _x0) -> crane::obj {
+          return Function::Cat_IFun(
+              x, crane::any_cast<IFun<crane::obj, crane::obj>>(std::move(x0)),
+              _x0);
+        };
+      },
+      [](crane::obj,
+         crane::obj) {
+        return crane_erase_global<Function::Inl_sum1, crane::obj>();
+      },
+      crane::obj(),
+      crane::obj(),
+      crane::obj(),
+      CategoryOps::template ReSum_id<crane::obj,
+                                     crane::fn<crane::obj(crane::obj)>>(
+          [](crane::obj) {
+            return crane_erase_global<Function::Id_IFun, crane::obj>();
+          },
+          crane::obj())));
   return ITree::template iter<InterpChainPerf::TopE<crane::obj>, Nat,
                               std::pair<Nat, Nat>>(
       [=](std::pair<Nat, Nat> pat) -> Itree<InterpChainPerf::TopE<crane::obj>,
                                             Sum<std::pair<Nat, Nat>, Nat>> {
-        const auto &[i, acc] = pat;
+        auto [i, acc] = std::move(pat);
         if (i.eqb(n)) {
           return Itree<InterpChainPerf::TopE<crane::obj>,
-                       Sum<std::pair<Nat, Nat>, Nat>>::
-              go(ItreeF<Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
-                             crane::obj>,
-                        Sum<std::pair<Nat, Nat>, Nat>,
-                        Itree<Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
-                                   crane::obj>,
-                              Sum<std::pair<Nat, Nat>, Nat>>>::
-                     retf(Sum<std::pair<Nat, Nat>, Nat>::inr(acc)));
+                       Sum<std::pair<Nat, Nat>, Nat>>::go(ItreeF<
+              InterpChainPerf::TopE<crane::obj>, Sum<std::pair<Nat, Nat>, Nat>,
+              Itree<InterpChainPerf::TopE<crane::obj>,
+                    Sum<std::pair<Nat, Nat>, Nat>>>::retf(
+              Sum<std::pair<Nat, Nat>, Nat>::inr(std::move(acc))));
         } else {
           return ITree::template bind<InterpChainPerf::TopE<crane::obj>, Nat,
                                       Sum<std::pair<Nat, Nat>, Nat>>(
@@ -25,86 +46,46 @@ InterpChainPerf::prog(const Nat &n) {
                       InterpChainPerf::GetE,
                       Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
                            crane::obj>,
-                      Nat>(
-                      CategoryOps::template ReSum_inl<
-                          crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                          [](const auto &, const auto &) {
-                            return crane::obj();
-                          },
-                          [](crane::obj, crane::obj, crane::obj, const auto &x,
-                             crane::fn<crane::obj(crane::obj)> x0) {
-                            return [=](crane::obj _x0) -> crane::obj {
-                              return Function::Cat_IFun(
-                                  x,
-                                  crane::any_cast<IFun<crane::obj, crane::obj>>(
-                                      x0),
-                                  _x0);
-                            };
-                          },
-                          [](crane::obj, crane::obj) {
-                            return crane_erase_fn<crane::obj>(
-                                Function::Inl_sum1);
-                          },
-                          crane::obj(), crane::obj(), crane::obj(),
-                          CategoryOps::template ReSum_id<
-                              crane::obj, crane::fn<crane::obj(crane::obj)>>(
-                              [](crane::obj) {
-                                return crane_erase_fn<crane::obj>(
-                                    Function::Id_IFun);
-                              },
-                              crane::obj())),
-                      GetE::GET)),
-              [=](const Nat &x) {
+                      Nat>(resum_inl, GetE::GET)),
+              [=, acc = std::move(acc), i = std::move(i)](Nat x) {
                 return Itree<InterpChainPerf::TopE<crane::obj>,
-                             Sum<std::pair<Nat, Nat>, Nat>>::
-                    lazy_([=]() -> Itree<InterpChainPerf::TopE<crane::obj>,
-                                         Sum<std::pair<Nat, Nat>, Nat>> {
-                      return Itree<InterpChainPerf::TopE<crane::obj>,
-                                   Sum<std::pair<Nat, Nat>, Nat>>::
-                          go(ItreeF<
-                              Sum1<InterpChainPerf::GetE, InterpChainPerf::outE,
-                                   crane::obj>,
-                              Sum<std::pair<Nat, Nat>, Nat>,
-                              Itree<Sum1<InterpChainPerf::GetE,
-                                         InterpChainPerf::outE, crane::obj>,
-                                    Sum<std::pair<Nat, Nat>, Nat>>>::
-                                 retf(Sum<std::pair<Nat, Nat>, Nat>::inl(
-                                     std::make_pair(Nat::s(i), acc.add(x)))));
-                    });
+                             Sum<std::pair<Nat, Nat>, Nat>>::go(ItreeF<
+                    InterpChainPerf::TopE<crane::obj>,
+                    Sum<std::pair<Nat, Nat>, Nat>,
+                    Itree<InterpChainPerf::TopE<crane::obj>,
+                          Sum<std::pair<Nat, Nat>, Nat>>>::retf(
+                    Sum<std::pair<Nat, Nat>, Nat>::inl(
+                        std::make_pair(Nat::s(i), acc.add(std::move(x))))));
               });
         }
       },
       std::make_pair(Nat::o(), Nat::o()));
 }
 
-template <typename _CraneTcArg>
-using _crane_carrier_tc_cd717f5291a145ed =
-    Itree<InterpChainPerf::BotE<crane::obj>, _CraneTcArg>;
+template <typename CraneTcArg>
+using crane_carrier_tc_556dca13c30ca6b8 =
+    Itree<InterpChainPerf::BotE<crane::obj>, CraneTcArg>;
 
 Itree<InterpChainPerf::BotE<crane::obj>, std::pair<Nat, Nat>>
 InterpChainPerf::run_n(const Nat &n) {
   return State::template interp_state<
+      MonadIter_itree<InterpChainPerf::BotE<crane::obj>>,
       Monad_itree<InterpChainPerf::BotE<crane::obj>>,
       Functor_itree<InterpChainPerf::BotE<crane::obj>>,
       InterpChainPerf::TopE<crane::obj>, Nat, Nat>(
-      [](auto &&_ec0, crane::obj _ec1) {
-        return ::template MonadIter_itree<InterpChainPerf::BotE<crane::obj>>(
-            _ec0, _ec1);
-      },
-      [](const auto &a0)
-          -> Monads::template stateT<Nat, _crane_carrier_tc_cd717f5291a145ed,
-                                     crane::obj> {
+      [](const auto &a0) -> Monads::template stateT<
+          Nat, crane_carrier_tc_556dca13c30ca6b8,
+          crane::obj> {
         return h<crane::obj>(
             crane_convert<InterpChainPerf::TopE<crane::obj>>(a0));
       },
-      Interp::template interp<Monad_itree<InterpChainPerf::TopE<crane::obj>>,
-                              Functor_itree<InterpChainPerf::TopE<crane::obj>>>(
-          [](auto &&_ec0, crane::obj _ec1) {
-            return ::template MonadIter_itree<
-                InterpChainPerf::TopE<crane::obj>>(_ec0, _ec1);
-          },
-          [](const auto &a0)
-              -> Itree<InterpChainPerf::TopE<crane::obj>, crane::obj> {
+      Interp::template interp<
+          MonadIter_itree<InterpChainPerf::TopE<crane::obj>>,
+          Monad_itree<InterpChainPerf::TopE<crane::obj>>,
+          Functor_itree<InterpChainPerf::TopE<crane::obj>>,
+          InterpChainPerf::TopE<crane::obj>, Nat>(
+          [](const auto &a0) -> Itree<InterpChainPerf::TopE<crane::obj>,
+                                      crane::obj> {
             return intr<crane::obj>(
                 crane_convert<InterpChainPerf::TopE<crane::obj>>(a0));
           },
@@ -113,9 +94,8 @@ InterpChainPerf::run_n(const Nat &n) {
 
 std::optional<Nat> InterpChainPerf::drive(
     const Nat &fuel,
-    Itree<Sum1<InterpChainPerf::outE, InterpChainPerf::noE, crane::obj>,
-          std::pair<Nat, Nat>>
-        t) {
+    const Itree<Sum1<InterpChainPerf::outE, InterpChainPerf::noE, crane::obj>,
+                std::pair<Nat, Nat>> &t) {
   if (std::holds_alternative<typename Nat::O>(fuel.v())) {
     return std::optional<Nat>();
   } else {

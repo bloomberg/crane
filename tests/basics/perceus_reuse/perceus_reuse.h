@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PERCEUS_REUSE
 #define INCLUDED_PERCEUS_REUSE
 
+#include <cstdint>
 #include <memory>
 #include <type_traits>
 #include <utility>
@@ -34,13 +35,14 @@ struct R {
 
     static lst nil() { return lst(Nil{}); }
 
-    static lst cons(uint64_t a0, lst a1) {
-      return lst(Cons{a0, crane::make_rc<lst>(std::move(a1))});
+    static lst cons(uint64_t a0, crane::child_slot<lst> a1) {
+      return lst(Cons{a0, a1.take()});
     }
 
-    static lst cons__reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
-      return lst(Cons{
-          a0, crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
+    static lst cons_crane_reuse(crane::rc<lst> _tok, uint64_t a0, lst a1) {
+      return lst(
+          Cons{a0,
+               crane::make_rc_reusing<lst>(std::move(_tok), std::move(a1))});
     }
 
     // MANIPULATORS
@@ -61,8 +63,8 @@ struct R {
 
     lst(const lst &) = default;
     lst &operator=(const lst &) = default;
-    lst(lst &&) noexcept = default;
-    lst &operator=(lst &&) noexcept = default;
+    lst(lst &&) = default;
+    lst &operator=(lst &&) = default;
 
     inline variant_t &v_mut() { return v_; }
 
@@ -71,7 +73,6 @@ struct R {
   };
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rect(T1 f, F1 &&f0, const lst &l) {
     if (std::holds_alternative<typename lst::Nil>(l.v())) {
       return f;
@@ -82,26 +83,20 @@ struct R {
   }
 
   template <typename T1, typename F1>
-    requires std::is_invocable_r_v<T1, F1 &, uint64_t &, lst &, T1 &>
   static T1 lst_rec(T1 f, F1 &&f0, const lst &l) {
-    if (std::holds_alternative<typename lst::Nil>(l.v())) {
-      return f;
-    } else {
-      const auto &[a0, a1] = std::get<typename lst::Cons>(l.v());
-      return f0(a0, *a1, lst_rec<T1>(std::move(f), f0, *a1));
-    }
+    return lst_rect<T1>(std::move(f), f0, l);
   }
 
   template <typename F0>
-    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &>
+    requires std::is_invocable_r_v<uint64_t, F0 &, uint64_t &&>
   static lst map1(F0 &&f, lst l) {
     if (l.v().index() == 1) {
       if (std::get<typename lst::Cons>(l.v_mut()).a1.use_count() == 1) {
         uint64_t x = std::move(std::get<typename lst::Cons>(l.v_mut()).a0);
         lst xs = std::move(*std::get<typename lst::Cons>(l.v_mut()).a1);
-        return lst::cons__reuse(
-            std::move(std::get<typename lst::Cons>(l.v_mut()).a1), f(x),
-            map1(f, std::move(xs)));
+        return lst::cons_crane_reuse(
+            std::move(std::get<typename lst::Cons>(l.v_mut()).a1),
+            f(std::move(x)), map1(f, std::move(xs)));
       } else {
         if (std::holds_alternative<typename lst::Nil>(l.v_mut())) {
           return lst::nil();

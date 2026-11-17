@@ -18,10 +18,12 @@ bool PeanoNat::eqb(const Nat &n, const Nat &m) {
   }
 }
 
-Nat AstLike::combine(const Nat &x0_, const Nat &x1_) { return x0_.add(x1_); }
-
 bool AstLike::eq(const Nat &x0_, const Nat &x1_) {
   return PeanoNat::eqb(x0_, x1_);
+}
+
+Nat AstLike::combine(const Nat &x0_, Nat x1_) {
+  return x0_.add(std::move(x1_));
 }
 
 Ident to_ident(const AstLike::Raw_id &k) {

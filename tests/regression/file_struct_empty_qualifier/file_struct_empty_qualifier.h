@@ -4,13 +4,11 @@
 #include "crane_fn.h"
 #include "fn.h"
 #include "obj.h"
-#include <any>
 #include <atomic>
 #include <concepts>
 #include <memory>
 #include <optional>
 #include <stdexcept>
-#include <type_traits>
 #include <utility>
 #include <variant>
 
@@ -28,8 +26,7 @@ concept Monad = requires {
   {
     I::template bind<crane::obj, crane::obj>(
         std::declval<typename I::template m<crane::obj>>(),
-        std::declval<
-            crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
+        std::declval<crane::fn<typename I::template m<crane::obj>(crane::obj)>>())
   } -> std::convertible_to<typename I::template m<crane::obj>>;
 };
 
@@ -87,8 +84,8 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -119,16 +116,17 @@ public:
 
   explicit List(Cons _v) : v_(std::move(_v)) {}
 
-  template <typename _U>
-  List(const List<_U> &_other)
+  template <typename CraneU>
+  List(const List<CraneU> &_other)
       : v_([&]() -> variant_t {
-          if (std::holds_alternative<typename List<_U>::Nil>(_other.v())) {
+          if (std::holds_alternative<typename List<CraneU>::Nil>(_other.v())) {
             return Nil{};
           } else {
-            const auto &[a, l] = std::get<typename List<_U>::Cons>(_other.v());
+            const auto &[a, l] =
+                std::get<typename List<CraneU>::Cons>(_other.v());
             return Cons{
                 [&]() -> A {
-                  if constexpr (crane_convertible<A, const _U &>) {
+                  if constexpr (crane_convertible<A, const CraneU &>) {
                     return crane_convert<A>(a);
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
@@ -165,8 +163,8 @@ public:
 
   List(const List &) = default;
   List &operator=(const List &) = default;
-  List(List &&) noexcept = default;
-  List &operator=(List &&) noexcept = default;
+  List(List &&) = default;
+  List &operator=(List &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -178,7 +176,6 @@ struct Monad0 {
   template <Monad _tcI0, typename T2>
   static typename _tcI0::template m<T2> ret(const T2 &x);
   template <Monad _tcI0, typename T2, typename T3, typename F1>
-    requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
   static typename _tcI0::template m<T3> bind(typename _tcI0::template m<T2> x,
                                              F1 &&x0);
 };
@@ -246,8 +243,8 @@ public:
 
   Positive(const Positive &) = default;
   Positive &operator=(const Positive &) = default;
-  Positive(Positive &&) noexcept = default;
-  Positive &operator=(Positive &&) noexcept = default;
+  Positive(Positive &&) = default;
+  Positive &operator=(Positive &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
@@ -289,20 +286,21 @@ public:
 };
 
 struct Monad_option {
-  template <typename _A0> using m = std::optional<_A0>;
+  template <typename CraneA0> using m = std::optional<CraneA0>;
 
-  template <typename _A0> static std::optional<_A0> ret(_A0 x) {
-    return std::make_optional<_A0>(x);
+  template <typename CraneA0> static std::optional<CraneA0> ret(CraneA0 x) {
+    return std::make_optional<CraneA0>(std::move(x));
   }
 
-  template <typename _A0, typename _A1>
-  static std::optional<_A1> bind(std::optional<_A0> c1,
-                                 crane::fn<std::optional<_A1>(_A0)> c2) {
+  template <typename CraneA0, typename CraneA1>
+  static std::optional<CraneA1>
+  bind(std::optional<CraneA0> c1,
+       crane::fn<std::optional<CraneA1>(CraneA0)> c2) {
     if (c1.has_value()) {
-      const _A0 &v = *c1;
+      const CraneA0 &v = *c1;
       return c2(v);
     } else {
-      return std::optional<_A1>();
+      return std::optional<CraneA1>();
     }
   }
 };
@@ -314,33 +312,32 @@ struct BinNat {
 };
 
 struct Helpers {
-  template <Monad _tcI0, typename T2, typename T3>
-  static typename _tcI0::template m<List<T3>> map_monad(
-      std::type_identity_t<crane::fn<typename _tcI0::template m<T3>(T2)>> f,
-      const List<T2> &l) {
-    if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
-      return Monad0::template ret<_tcI0, List<T3>>(List<T3>::nil());
-    } else {
-      const auto &[a1, a2] = std::get<typename List<T2>::Cons>(l.v());
-      const List<T2> &a2_value = *a2;
-      return Monad0::template bind<_tcI0, T3, List<T3>>(
-          f(a1), [=](const T3 &b0) {
-            return Monad0::template bind<_tcI0, List<T3>, List<T3>>(
-                Helpers::template map_monad<_tcI0, T2, T3>(f, a2_value),
-                [=](const List<T3> &bs) {
-                  return Monad0::template ret<_tcI0, List<T3>>(
-                      List<T3>::cons(b0, bs));
-                });
-          });
-    }
-  }
-
   template <typename T1> static N length(const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return N::n0();
     } else {
-      const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
+      const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
       return BinNat::succ(Helpers::template length<T1>(*a1));
+    }
+  }
+
+  template <Monad _tcI0, typename T2, typename T3>
+  static typename _tcI0::template m<List<T3>>
+  map_monad(const std::type_identity_t<
+      crane::fn<typename _tcI0::template m<T3>(T2)>> &f,
+            const List<T2> &l) {
+    if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+      return _tcI0::template ret<List<T3>>(List<T3>::nil());
+    } else {
+      const auto &[a1, a2] = std::get<typename List<T2>::Cons>(l.v());
+      const List<T2> &a2_value = *a2;
+      return _tcI0::template bind<T3, List<T3>>(f(a1), [=](const T3 &b0) {
+        return _tcI0::template bind<List<T3>, List<T3>>(
+            Helpers::template map_monad<_tcI0, T2, T3>(f, a2_value),
+            [=](const List<T3> &bs) {
+              return _tcI0::template ret<List<T3>>(List<T3>::cons(b0, bs));
+            });
+      });
     }
   }
 };
@@ -351,7 +348,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <Monad _tcI0, typename T2, typename T3, typename F1>
-  requires std::is_invocable_r_v<typename _tcI0::template m<T3>, F1 &, T2 &>
 typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);

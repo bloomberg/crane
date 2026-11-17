@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CRANE_MOVE_HUNT
 #define INCLUDED_CRANE_MOVE_HUNT
 
+#include <cstdint>
 #include <toy_helpers.h>
 #include <utility>
 #include <variant>
@@ -26,7 +27,8 @@ struct CraneMoveHunt {
   static std::pair<bool, state> handle_state(const state &s);
   static inline const box initial_box = box{UINT64_C(41), true};
   static inline const box other_box = box{UINT64_C(1), false};
-  static inline const state initial_state = state{initial_box, other_box, true};
+  [[gnu::used]] static inline const state initial_state =
+      state{initial_box, other_box, true};
   static inline const box record_constant = []() {
     box b = keep_box(initial_box);
     box b1 = clone_box(b);
@@ -41,7 +43,7 @@ struct CraneMoveHunt {
       return b1;
     }
   }();
-  static box record_function(const box &b0);
+  static box record_function(box b0);
   static inline const state state_constant = []() {
     state s1 = render_state(initial_state);
     state s2 = resolve_state(std::move(s1));

@@ -1,8 +1,8 @@
 #include "load_program.h"
 
-LoadProgram::state LoadProgram::set_prom_params(const LoadProgram::state &s,
-                                                uint64_t addr, uint64_t data,
-                                                bool enable) {
+LoadProgram::state
+LoadProgram::set_prom_params(const LoadProgram::state &s, uint64_t addr,
+                             uint64_t data, bool enable) {
   return state{s.rom, addr, data, enable};
 }
 
@@ -16,24 +16,24 @@ LoadProgram::state LoadProgram::execute_wpm(const LoadProgram::state &s) {
   return state{std::move(new_rom), s.prom_addr, s.prom_data, s.prom_enable};
 }
 
-LoadProgram::state LoadProgram::load_program(LoadProgram::state s,
-                                             uint64_t base,
-                                             const List<uint64_t> &bytes) {
+LoadProgram::state
+LoadProgram::load_program(LoadProgram::state s, uint64_t base,
+                          const List<uint64_t> &bytes) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(bytes.v())) {
     return s;
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(bytes.v());
     LoadProgram::state s_ = set_prom_params(std::move(s), base, a0, true);
-    LoadProgram::state s__ = execute_wpm(std::move(s_));
-    return load_program(std::move(s__), (base + UINT64_C(1)), *a1);
+    LoadProgram::state s_p = execute_wpm(std::move(s_));
+    return load_program(std::move(s_p), (base + UINT64_C(1)), *a1);
   }
 }
 
 LoadProgram::state_extended
 LoadProgram::set_prom_params_ext(const LoadProgram::state_extended &s,
                                  uint64_t addr, uint64_t data, bool enable) {
-  return state_extended{s.regs_len, s.rom_ext, s.pc,  s.stack_len,
-                        addr,       data,      enable};
+  return state_extended{s.regs_len, s.rom_ext, s.pc, s.stack_len, addr, data,
+                        enable};
 }
 
 LoadProgram::state_extended
@@ -44,9 +44,8 @@ LoadProgram::execute_wpm_ext(const LoadProgram::state_extended &s) {
   } else {
     new_rom = s.rom_ext;
   }
-  return state_extended{s.regs_len,       std::move(new_rom), s.pc,
-                        s.stack_len,      s.prom_addr_ext,    s.prom_data_ext,
-                        s.prom_enable_ext};
+  return state_extended{s.regs_len, std::move(new_rom), s.pc, s.stack_len,
+                        s.prom_addr_ext, s.prom_data_ext, s.prom_enable_ext};
 }
 
 LoadProgram::state_simple

@@ -2,8 +2,8 @@
 #define INCLUDED_ITREE_INVARIANTS
 
 #include "obj.h"
-#include <any>
 #include <crane_itree.h>
+#include <cstdint>
 
 struct ItreeInvariants {
   /// Emitted so the generated header includes <crane_itree.h>.

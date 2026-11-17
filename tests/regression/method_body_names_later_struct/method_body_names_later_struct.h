@@ -55,14 +55,15 @@ public:
 
   Nat(const Nat &) = default;
   Nat &operator=(const Nat &) = default;
-  Nat(Nat &&) noexcept = default;
-  Nat &operator=(Nat &&) noexcept = default;
+  Nat(Nat &&) = default;
+  Nat &operator=(Nat &&) = default;
 
   inline variant_t &v_mut() { return v_; }
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
+
 enum class Comparison { EQ, LT, GT };
 
 struct PeanoNat {
@@ -108,12 +109,12 @@ public:
 };
 
 struct Arith {
-  static Zed roundtrip(Zed x);
   static Comparison norm(Comparison c);
+  static Zed roundtrip(Zed x);
 };
 
 bool le(const Zed &x0_, const Zed &x1_);
-Zed round(const Zed &x0_);
+Zed round(Zed x0_);
 
 inline bool Zed::le_dec(const Zed &y) const {
   switch (Arith::norm(this->raw_cmp(y))) {

@@ -26,4 +26,4 @@ bool sz_is(const Box<Nat> &b, const Nat &n) {
   return PeanoNat::eqb(b.size(), n);
 }
 
-Box<Nat> round(const Box<Nat> &x0_) { return roundtrip(x0_); }
+Box<Nat> round(Box<Nat> x0_) { return roundtrip(std::move(x0_)); }
