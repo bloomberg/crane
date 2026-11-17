@@ -765,13 +765,19 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
      evaluated twice.  One evaluated not at all reads nothing; one
      [inspected] is read in place. *)
   and unsequenced ?(evaluated = fun _ -> 1) ?(inspected = fun _ -> false) ~pinned parents d live ts =
-    let reads_of = List.map (free ~outside:copied parents d) ts in
+    (* A lone term evaluated once is followed by no other term's reads, so
+       what it reads itself -- a whole subterm's free variables, at every
+       level of a nest of one-argument constructions -- is not worked out. *)
+    let reads_of = lazy (List.map (free ~outside:copied parents d) ts) in
+    let lone = match ts with [_] -> true | _ -> false in
     List.mapi
       (fun k t ->
         match evaluated k with
         | 0 -> live
         | m ->
-          let others = List.filteri (fun j _ -> j <> k || m > 1) reads_of in
+          let others =
+            if lone && m = 1 then [] else List.filteri (fun j _ -> j <> k || m > 1) (Lazy.force reads_of)
+          in
           walk ~consumed:(not (inspected k)) ~pinned parents d (List.fold_left Levels.union live others) t )
       ts
     |> List.fold_left Levels.union live
