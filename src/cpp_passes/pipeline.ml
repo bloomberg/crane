@@ -245,37 +245,18 @@ let mentions p (decl : Erasure.settled) =
   | () -> false
   | exception Found -> true
 
-(** What resolving [decl] meets first: nothing, or a lowered-only form,
-    with the obligation it is the whole of if there is one
-    ({!Cpp_ir.Resolve.Owed}). *)
-let first_owed (decl : Erasure.settled) =
-  match Cpp_ir.Resolve.decl (decl :> Cpp_ir.Lowered.Decl.t) with
-  | _ -> `Clean
-  | exception Cpp_ir.Resolve.Owed (_, o) -> `Owed o
-
 (** Whether [decl] still owes [o].  Every pass that discharges an obligation
     leaves nothing for a second run to do, so a declaration that has paid one
     is a fixed point of the pass that pays it -- a check that cannot drift
-    from what the pass decides.  An obligation that is the whole of a
-    lowered-only form -- an unsettled callable constraint, an undecided
-    [constexpr], an undecided capture -- is owed exactly when the form is
-    held, which resolving the declaration finds ([resolution], {!first_owed})
-    without running the pass: the pass runs only where resolution stopped
-    at another form first.  [u] is the unit the declaration is of. *)
-let owes u ~resolution (decl : Erasure.settled) (o : obligation) =
+    from what the pass decides.  [u] is the unit the declaration is of. *)
+let owes u (decl : Erasure.settled) (o : obligation) =
   let d = (decl :> Cpp_ir.Lowered.Decl.t) in
   let rewrites (p : Erasure.settled Base.Pipeline_trace.pass) = compare (p.run decl) decl <> 0 in
-  let held_or rerun =
-    match Lazy.force resolution with
-    | `Clean -> false
-    | `Owed (Some o') when o' = o -> true
-    | `Owed _ -> rerun ()
-  in
   match o with
   | Unresolved_type -> mentions (function Obligation Unresolved_type -> true | _ -> false) decl
   | Opaque_type -> mentions (function Obligation Opaque_type -> true | _ -> false) decl
   | Unspellable_binder -> Erasure.writes_unspellable_binder decl
-  | Unsettled_callable -> held_or (fun () -> compare (constraints.run d) d <> 0)
+  | Unsettled_callable -> compare (constraints.run d) d <> 0
   | Unresolved_cast -> rewrites casts
   | Free_type_variable -> rewrites free_tvars
   | Implicit_boxed_read -> rewrites boxed_reads
@@ -284,12 +265,12 @@ let owes u ~resolution (decl : Erasure.settled) (o : obligation) =
   | Unlowered_projection -> rewrites projections
   | Unlowered_conditional -> rewrites conditionals
   | Move_under_access -> rewrites access_moves
-  | Undecided_constexpr -> held_or (fun () -> rewrites constexpr)
+  | Undecided_constexpr -> rewrites constexpr
   | Uninstantiated_mapping -> rewrites foreign
   | Unlowered_qualifier -> rewrites qualifiers
   | Unslotted_pointer -> rewrites (pointer_slots u)
   | Unnamed_scrutinee -> rewrites scrutinees
-  | Undecided_capture -> held_or (fun () -> rewrites captures)
+  | Undecided_capture -> rewrites captures
   | Capture_outside_a_block -> rewrites initialisers
 
 (** [check_settled u obligations decl] fails if [decl], of the unit [u], still owes any of
@@ -306,8 +287,7 @@ let owes u ~resolution (decl : Erasure.settled) (o : obligation) =
     any global, since one a pass generated -- a lifted helper -- is not in the
     name table [Printer.pr_global] reads, and would fail the report itself. *)
 let check_settled u obligations (decl : Erasure.settled) =
-  let resolution = lazy (first_owed decl) in
-  match List.filter (owes u ~resolution decl) obligations with
+  match List.filter (owes u decl) obligations with
   | [] -> ()
   | owed ->
     CErrors.user_err
@@ -324,7 +304,7 @@ let check_settled u obligations (decl : Erasure.settled) =
 let resolved (d : Erasure.settled) =
   match Cpp_ir.Resolve.decl (d :> Cpp_ir.Lowered.Decl.t) with
   | d -> d
-  | exception Cpp_ir.Resolve.Owed (form, _) ->
+  | exception Cpp_ir.Resolve.Owed form ->
     CErrors.anomaly
       Pp.(
         str "Crane: a declaration reached the printer holding " ++ str form
@@ -339,7 +319,7 @@ let resolved (d : Erasure.settled) =
 let resolve_with what resolve x =
   match resolve x with
   | x -> x
-  | exception Cpp_ir.Resolve.Owed (form, _) ->
+  | exception Cpp_ir.Resolve.Owed form ->
     CErrors.anomaly
       Pp.(str "Crane: " ++ str what ++ str ": " ++ str form
           ++ str ", which only a lowered declaration may hold, survived resolution")
