@@ -45,6 +45,8 @@ public:
 
   // MANIPULATORS
   ~Tree() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Tree> {
       if (auto *_alt = std::get_if<Node>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -73,35 +75,34 @@ public:
   uint64_t depth() const {
     const Tree *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of depth: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
       const Tree *_self;
     };
 
-    /// CraneCont_Node: resumes after recursive call, then processes rest.
-    struct CraneCont_Node {};
+    struct _after_depth_in_Node {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Node>;
+    using _frame = std::variant<_call, _after_depth_in_Node>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified depth: CraneEnter -> CraneCont_Node.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const Tree *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Tree::Leaf>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, _] = std::get<typename Tree::Node>(_sv.v());
-          _stack.emplace_back(CraneCont_Node{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_depth_in_Node{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        auto _f = std::move(std::get<_after_depth_in_Node>(_popped));
         _result = (std::move(_result) + 1);
       }
     }

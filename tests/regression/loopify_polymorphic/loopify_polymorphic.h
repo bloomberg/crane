@@ -68,6 +68,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -94,6 +96,8 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -120,77 +124,70 @@ public:
 };
 
 struct LoopifyPolymorphic {
-  template <typename T1>
-  static uint64_t
-  poly_length(const List<T1> &l) { /// CraneEnter: captures varying parameters
-                                   /// for each recursive call.
-    struct CraneEnter {
+  template <typename T1> static uint64_t poly_length(const List<T1> &l) {
+    // Explicit stack replaces the non-tail recursion of poly_length: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<T1> *l;
     };
 
-    /// CraneCont_Cons: resumes after recursive call, then processes rest.
-    struct CraneCont_Cons {};
+    struct _after_poly_length_in_Cons {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_poly_length_in_Cons>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified poly_length: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_poly_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_poly_length_in_Cons>(_popped));
         _result = (UINT64_C(1) + std::move(_result));
       }
     }
     return _result;
   }
 
-  template <typename T1>
-  static List<T1>
-  poly_reverse(const List<T1> &l) { /// CraneEnter: captures varying parameters
-                                    /// for each recursive call.
-    struct CraneEnter {
+  template <typename T1> static List<T1> poly_reverse(const List<T1> &l) {
+    // Explicit stack replaces the non-tail recursion of poly_reverse: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<T1> *l;
     };
 
-    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Cons {
+    struct _after_poly_reverse_in_Cons {
       T1 a0;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_poly_reverse_in_Cons>;
     List<T1> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified poly_reverse: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = List<T1>::nil();
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_poly_reverse_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_poly_reverse_in_Cons>(_popped));
         auto a0 = std::move(_f.a0);
         _result = _result.app(List<T1>::cons(std::move(a0), List<T1>::nil()));
       }
@@ -200,6 +197,8 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static List<T1> poly_append(const List<T1> &l1, List<T1> l2) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     const List<T1> *_loop_l1 = &l1;
@@ -224,6 +223,8 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1> static std::optional<T1> poly_last(const List<T1> &l) {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
@@ -242,6 +243,8 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static List<T1> poly_take(uint64_t n, const List<T1> &l) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
@@ -278,6 +281,8 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static List<T1> poly_drop(uint64_t n, const List<T1> &l) {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<T1> *_loop_l = &l;
     uint64_t _loop_n = n;
     while (true) {
@@ -298,6 +303,8 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static std::optional<T1> poly_nth(uint64_t n, const List<T1> &l) {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<T1> *_loop_l = &l;
     uint64_t _loop_n = n;
     while (true) {
@@ -319,6 +326,8 @@ struct LoopifyPolymorphic {
 
   template <typename T1, typename F0>
   static List<T1> poly_filter(F0 &&p, const List<T1> &l) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
@@ -350,6 +359,8 @@ struct LoopifyPolymorphic {
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T2, F0 &, const T1 &>
   static List<T2> poly_map(F0 &&f, const List<T1> &l) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T2>> _root{};
     std::shared_ptr<List<T2>> *_write = nullptr;
     const List<T1> *_loop_l = &l;
@@ -376,6 +387,8 @@ struct LoopifyPolymorphic {
   template <typename T1, typename T2>
   static List<std::pair<T1, T2>> poly_zip(const List<T1> &l1,
                                           const List<T2> &l2) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<std::pair<T1, T2>>> _root{};
     std::shared_ptr<List<std::pair<T1, T2>>> *_write = nullptr;
     const List<T2> *_loop_l2 = &l2;
@@ -416,31 +429,28 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename T2>
-  static std::pair<List<T1>, List<T2>> poly_unzip(
-      const List<std::pair<T1,
-                           T2>> &l) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-    struct CraneEnter {
+  static std::pair<List<T1>, List<T2>>
+  poly_unzip(const List<std::pair<T1, T2>> &l) {
+    // Explicit stack replaces the non-tail recursion of poly_unzip: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<std::pair<T1, T2>> *l;
     };
 
-    /// CraneCont_a: saves [a, b], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_a {
+    struct _after_poly_unzip_in_pair {
       T1 a;
       T2 b;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_a>;
+    using _frame = std::variant<_call, _after_poly_unzip_in_pair>;
     std::pair<List<T1>, List<T2>> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified poly_unzip: CraneEnter -> CraneCont_a.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<std::pair<T1, T2>> &l = *_f.l;
         if (std::holds_alternative<typename List<std::pair<T1, T2>>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T2>::nil());
@@ -448,11 +458,11 @@ struct LoopifyPolymorphic {
           const auto &[a0, a1] =
               std::get<typename List<std::pair<T1, T2>>::Cons>(l.v());
           const auto &[a, b] = a0;
-          _stack.emplace_back(CraneCont_a{a, b});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_poly_unzip_in_pair{a, b});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_a>(_frame));
+        auto _f = std::move(std::get<_after_poly_unzip_in_pair>(_popped));
         auto a = std::move(_f.a);
         auto b = std::move(_f.b);
         auto [as_, bs] = std::move(_result);
@@ -464,40 +474,37 @@ struct LoopifyPolymorphic {
   }
 
   template <typename T1, typename F0>
-  static std::pair<List<T1>, List<T1>>
-  poly_partition(F0 &&p,
-                 const List<T1> &l) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-    struct CraneEnter {
+  static std::pair<List<T1>, List<T1>> poly_partition(F0 &&p,
+                                                      const List<T1> &l) {
+    // Explicit stack replaces the non-tail recursion of poly_partition: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<T1> *l;
     };
 
-    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Cons {
+    struct _after_poly_partition_in_Cons {
       T1 a0;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_poly_partition_in_Cons>;
     std::pair<List<T1>, List<T1>> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified poly_partition: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<T1> &l = *_f.l;
         if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
           _result = std::make_pair(List<T1>::nil(), List<T1>::nil());
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_poly_partition_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_poly_partition_in_Cons>(_popped));
         auto a0 = std::move(_f.a0);
         auto [trues, falses] = std::move(_result);
         if (p(a0)) {
@@ -516,6 +523,8 @@ struct LoopifyPolymorphic {
 
   template <typename T1, typename F0>
   static bool poly_member(F0 &&eq, const T1 &x, const List<T1> &l) {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<T1> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<T1>::Nil>(_loop_l->v())) {
@@ -533,6 +542,8 @@ struct LoopifyPolymorphic {
 
   template <typename T1>
   static List<T1> poly_replicate(uint64_t n, const T1 &x) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     uint64_t _loop_n = n;

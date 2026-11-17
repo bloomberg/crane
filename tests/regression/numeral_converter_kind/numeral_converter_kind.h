@@ -148,6 +148,8 @@ public:
 
   // MANIPULATORS
   ~Uint() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint> {
       if (auto *_alt = std::get_if<D0>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -228,6 +230,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Uint nzhead() const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
@@ -537,6 +541,8 @@ public:
 
   // MANIPULATORS
   ~Uint0() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint0> {
       if (auto *_alt = std::get_if<D10>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -653,6 +659,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Uint0 nzhead0() const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint0 *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;

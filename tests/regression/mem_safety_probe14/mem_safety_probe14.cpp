@@ -1,34 +1,26 @@
 #include "mem_safety_probe14.h"
 
 uint64_t MemSafetyProbe14::sum_fns(
-    const MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> &l) { /// CraneEnter:
-                                                                        /// captures
-                                                                        /// varying
-                                                                        /// parameters
-                                                                        /// for
-                                                                        /// each
-                                                                        /// recursive
-                                                                        /// call.
-  struct CraneEnter {
+    const MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> &l) {
+  // Explicit stack replaces the non-tail recursion of sum_fns: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> *l;
   };
 
-  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Mycons {
+  struct _after_sum_fns_in_Mycons {
     crane::fn<uint64_t(uint64_t)> a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+  using _frame = std::variant<_call, _after_sum_fns_in_Mycons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified sum_fns: CraneEnter -> CraneCont_Mycons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe14::mylist<
               crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
@@ -36,11 +28,11 @@ uint64_t MemSafetyProbe14::sum_fns(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe14::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
-        _stack.emplace_back(CraneCont_Mycons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_sum_fns_in_Mycons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+      auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
       _result = (a0(UINT64_C(0)) + std::move(_result));
     }
@@ -63,27 +55,24 @@ uint64_t MemSafetyProbe14::capture_then_match(MemSafetyProbe14::tree t) {
   }
 }
 
-MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::tree_level_fns(
-    const MemSafetyProbe14::tree &t,
-    uint64_t depth) { /// CraneEnter: captures varying parameters for each
-                      /// recursive call.
-  struct CraneEnter {
+MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>>
+MemSafetyProbe14::tree_level_fns(const MemSafetyProbe14::tree &t,
+                                 uint64_t depth) {
+  // Explicit stack replaces the non-tail recursion of tree_level_fns: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t depth;
     const MemSafetyProbe14::tree *t;
   };
 
-  /// CraneCont_Node: saves [depth, a0, a1, a2], resumes after recursive call,
-  /// then processes rest.
-  struct CraneCont_Node {
+  struct _after_tree_level_fns_in_Node {
     uint64_t depth;
     std::shared_ptr<MemSafetyProbe14::tree> a0;
     uint64_t a1;
     const MemSafetyProbe14::tree *a2;
   };
 
-  /// CraneCont_Node_1: saves [depth, a0, a1, a2, _tmp2], resumes after
-  /// recursive call, then processes rest.
-  struct CraneCont_Node_1 {
+  struct _after_tree_level_fns_in_Node_2 {
     uint64_t depth;
     std::shared_ptr<MemSafetyProbe14::tree> a0;
     uint64_t a1;
@@ -91,17 +80,16 @@ MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::tree_l
     MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+  using _frame = std::variant<_call, _after_tree_level_fns_in_Node,
+                              _after_tree_level_fns_in_Node_2>;
   MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{depth, &t});
-  /// Loopified tree_level_fns: CraneEnter -> CraneCont_Node ->
-  /// CraneCont_Node_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{depth, &t});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t depth = _f.depth;
       const MemSafetyProbe14::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe14::tree::Leaf>(t.v())) {
@@ -111,22 +99,23 @@ MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::tree_l
             std::get<typename MemSafetyProbe14::tree::Node>(t.v());
         const MemSafetyProbe14::tree &a0_value = *a0;
         const MemSafetyProbe14::tree &a2_value = *a2;
-        _stack.emplace_back(CraneCont_Node{depth, a0, a1, crane_raw(a2)});
-        _stack.emplace_back(CraneEnter{(UINT64_C(1) + depth), crane_raw(a0)});
+        _stack.emplace_back(
+            _after_tree_level_fns_in_Node{depth, a0, a1, crane_raw(a2)});
+        _stack.emplace_back(_call{(UINT64_C(1) + depth), crane_raw(a0)});
       }
-    } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Node>(_frame));
+    } else if (std::holds_alternative<_after_tree_level_fns_in_Node>(_popped)) {
+      auto _f = std::move(std::get<_after_tree_level_fns_in_Node>(_popped));
       uint64_t depth = _f.depth;
       std::shared_ptr<MemSafetyProbe14::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
       const MemSafetyProbe14::tree &a2 = *_f.a2;
       const MemSafetyProbe14::tree &a0_value = *a0;
       const MemSafetyProbe14::tree &a2_value = a2;
-      _stack.emplace_back(
-          CraneCont_Node_1{depth, std::move(a0), a1, &a2, std::move(_result)});
-      _stack.emplace_back(CraneEnter{(UINT64_C(1) + depth), &a2_value});
+      _stack.emplace_back(_after_tree_level_fns_in_Node_2{
+          depth, std::move(a0), a1, &a2, std::move(_result)});
+      _stack.emplace_back(_call{(UINT64_C(1) + depth), &a2_value});
     } else {
-      auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+      auto _f = std::move(std::get<_after_tree_level_fns_in_Node_2>(_popped));
       uint64_t depth = _f.depth;
       std::shared_ptr<MemSafetyProbe14::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
@@ -147,6 +136,8 @@ MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::tree_l
 
 /// TEST 8: Large tree stress test. Many closures, deep recursion.
 MemSafetyProbe14::tree MemSafetyProbe14::make_balanced(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<MemSafetyProbe14::tree> _root{};
   std::shared_ptr<MemSafetyProbe14::tree> *_write = nullptr;
   uint64_t _loop_n = n;
@@ -175,38 +166,34 @@ MemSafetyProbe14::tree MemSafetyProbe14::make_balanced(uint64_t n) {
   return std::move(*_root);
 }
 
-MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::collect_closures(
-    const MemSafetyProbe14::tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-  struct CraneEnter {
+MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>>
+MemSafetyProbe14::collect_closures(const MemSafetyProbe14::tree &t) {
+  // Explicit stack replaces the non-tail recursion of collect_closures: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const MemSafetyProbe14::tree *t;
   };
 
-  /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Node {
+  struct _after_collect_closures_in_Node {
     uint64_t a1;
     const MemSafetyProbe14::tree *a2;
   };
 
-  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Node_1 {
+  struct _after_collect_closures_in_Node_2 {
     uint64_t a1;
     MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+  using _frame = std::variant<_call, _after_collect_closures_in_Node,
+                              _after_collect_closures_in_Node_2>;
   MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&t});
-  /// Loopified collect_closures: CraneEnter -> CraneCont_Node ->
-  /// CraneCont_Node_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const MemSafetyProbe14::tree &t = *_f.t;
       if (std::holds_alternative<typename MemSafetyProbe14::tree::Leaf>(t.v())) {
         _result = mylist<crane::fn<uint64_t(uint64_t)>>::mynil();
@@ -215,18 +202,19 @@ MemSafetyProbe14::mylist<crane::fn<uint64_t(uint64_t)>> MemSafetyProbe14::collec
             std::get<typename MemSafetyProbe14::tree::Node>(t.v());
         const MemSafetyProbe14::tree &a0_value = *a0;
         const MemSafetyProbe14::tree &a2_value = *a2;
-        _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
-        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+        _stack.emplace_back(_after_collect_closures_in_Node{a1, crane_raw(a2)});
+        _stack.emplace_back(_call{crane_raw(a0)});
       }
-    } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Node>(_frame));
+    } else if (std::holds_alternative<_after_collect_closures_in_Node>(_popped)) {
+      auto _f = std::move(std::get<_after_collect_closures_in_Node>(_popped));
       uint64_t a1 = _f.a1;
       const MemSafetyProbe14::tree &a2 = *_f.a2;
       const MemSafetyProbe14::tree &a2_value = a2;
-      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
-      _stack.emplace_back(CraneEnter{&a2_value});
+      _stack.emplace_back(
+          _after_collect_closures_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_call{&a2_value});
     } else {
-      auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+      auto _f = std::move(std::get<_after_collect_closures_in_Node_2>(_popped));
       uint64_t a1 = _f.a1;
       _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
           [=](uint64_t n) { return (a1 + n); },

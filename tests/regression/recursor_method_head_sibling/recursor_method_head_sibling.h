@@ -61,6 +61,8 @@ struct RecursorMethodHeadSibling {
 
     // MANIPULATORS
     ~expr() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<expr> {
         if (auto *_alt = std::get_if<SuccE>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -92,27 +94,25 @@ struct RecursorMethodHeadSibling {
     T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1) const {
       const expr *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of expr_rec: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const expr *_self;
       };
 
-      /// CraneCont_SuccE: saves [a0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_SuccE {
+      struct _after_expr_rec_in_SuccE {
         std::shared_ptr<expr> a0;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_SuccE>;
+      using _frame = std::variant<_call, _after_expr_rec_in_SuccE>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified expr_rec: CraneEnter -> CraneCont_SuccE.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -123,11 +123,11 @@ struct RecursorMethodHeadSibling {
             _result = f0(a0);
           } else {
             const auto &[a0] = std::get<typename expr::SuccE>(_sv.v());
-            _stack.emplace_back(CraneCont_SuccE{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_expr_rec_in_SuccE{a0});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_SuccE>(_frame));
+          auto _f = std::move(std::get<_after_expr_rec_in_SuccE>(_popped));
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           _result = f1(*a0, std::move(_result));
         }
@@ -141,27 +141,25 @@ struct RecursorMethodHeadSibling {
     T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1) const {
       const expr *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of expr_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const expr *_self;
       };
 
-      /// CraneCont_SuccE: saves [a0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_SuccE {
+      struct _after_expr_rect_in_SuccE {
         std::shared_ptr<expr> a0;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_SuccE>;
+      using _frame = std::variant<_call, _after_expr_rect_in_SuccE>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified expr_rect: CraneEnter -> CraneCont_SuccE.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -172,11 +170,11 @@ struct RecursorMethodHeadSibling {
             _result = f0(a0);
           } else {
             const auto &[a0] = std::get<typename expr::SuccE>(_sv.v());
-            _stack.emplace_back(CraneCont_SuccE{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_expr_rect_in_SuccE{a0});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_SuccE>(_frame));
+          auto _f = std::move(std::get<_after_expr_rect_in_SuccE>(_popped));
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           _result = f1(*a0, std::move(_result));
         }
@@ -217,6 +215,8 @@ struct RecursorMethodHeadSibling {
 
     // MANIPULATORS
     ~chain() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<chain> {
         if (auto *_alt = std::get_if<Next>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -252,27 +252,25 @@ struct RecursorMethodHeadSibling {
     T1 chain_rect(F0 &&f, F1 &&f0) const {
       const chain *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of chain_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const chain *_self;
       };
 
-      /// CraneCont_Next: saves [a0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Next {
+      struct _after_chain_rect_in_Next {
         std::shared_ptr<chain> a0;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Next>;
+      using _frame = std::variant<_call, _after_chain_rect_in_Next>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified chain_rect: CraneEnter -> CraneCont_Next.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const chain *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename chain::Base>(_sv.v())) {
@@ -280,11 +278,11 @@ struct RecursorMethodHeadSibling {
             _result = f(a0);
           } else {
             const auto &[a0] = std::get<typename chain::Next>(_sv.v());
-            _stack.emplace_back(CraneCont_Next{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_chain_rect_in_Next{a0});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_Next>(_frame));
+          auto _f = std::move(std::get<_after_chain_rect_in_Next>(_popped));
           std::shared_ptr<chain> a0 = std::move(_f.a0);
           _result = f0(*a0, std::move(_result));
         }

@@ -1,40 +1,35 @@
 #include "loopify_advanced_lists.h"
 
-uint64_t
-LoopifyAdvancedLists::product(const List<uint64_t> &l) { /// CraneEnter:
-                                                         /// captures varying
-                                                         /// parameters for each
-                                                         /// recursive call.
-  struct CraneEnter {
+uint64_t LoopifyAdvancedLists::product(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of product: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_product_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_product_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified product: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(1);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_product_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_product_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       _result = (a0 * std::move(_result));
     }
@@ -43,6 +38,8 @@ LoopifyAdvancedLists::product(const List<uint64_t> &l) { /// CraneEnter:
 }
 
 List<uint64_t> LoopifyAdvancedLists::compress(const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -85,6 +82,8 @@ List<uint64_t> LoopifyAdvancedLists::compress(const List<uint64_t> &l) {
 }
 
 List<uint64_t> LoopifyAdvancedLists::pairwise_sum(const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -123,6 +122,8 @@ List<uint64_t> LoopifyAdvancedLists::pairwise_sum(const List<uint64_t> &l) {
 
 List<std::pair<uint64_t, uint64_t>>
 LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -169,6 +170,8 @@ LoopifyAdvancedLists::group_pairs(const List<uint64_t> &l) {
 
 List<uint64_t> LoopifyAdvancedLists::interleave(const List<uint64_t> &l1,
                                                 const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -211,40 +214,38 @@ List<uint64_t> LoopifyAdvancedLists::interleave(const List<uint64_t> &l1,
   return std::move(*_root);
 }
 
-List<uint64_t> LoopifyAdvancedLists::concat_lists(
-    const List<List<uint64_t>> &ll) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-  struct CraneEnter {
+List<uint64_t>
+LoopifyAdvancedLists::concat_lists(const List<List<uint64_t>> &ll) {
+  // Explicit stack replaces the non-tail recursion of concat_lists: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<List<uint64_t>> *ll;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_concat_lists_in_Cons {
     List<uint64_t> a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_concat_lists_in_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&ll});
-  /// Loopified concat_lists: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&ll});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<List<uint64_t>> &ll = *_f.ll;
       if (std::holds_alternative<typename List<List<uint64_t>>::Nil>(ll.v())) {
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] =
             std::get<typename List<List<uint64_t>>::Cons>(ll.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_concat_lists_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_concat_lists_in_Cons>(_popped));
       List<uint64_t> a0 = std::move(_f.a0);
       _result = a0.app(std::move(_result));
     }

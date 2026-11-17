@@ -77,6 +77,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
     while (true) {
@@ -94,6 +96,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     crane::shared_box<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -121,6 +125,8 @@ public:
   }
 
   List<A> app(List<A> m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<A>> _root{};
     crane::shared_box<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;

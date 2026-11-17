@@ -2,6 +2,8 @@
 
 SharedVariantReuse::tree
 SharedVariantReuse::insert(uint64_t k, uint64_t v, SharedVariantReuse::tree t) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (t.v().index() == 1) {
     if (t.v().unique()) {
       SharedVariantReuse::tree l = std::move(
@@ -64,6 +66,8 @@ SharedVariantReuse::insert(uint64_t k, uint64_t v, SharedVariantReuse::tree t) {
 }
 
 SharedVariantReuse::lst SharedVariantReuse::bump(SharedVariantReuse::lst l) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (l.v().index() == 1) {
     if (l.v().unique()) {
       uint64_t x = std::move(

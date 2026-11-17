@@ -68,6 +68,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -96,35 +98,34 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of length: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: resumes after recursive call, then processes rest.
-    struct CraneCont_Cons {};
+    struct _after_length_in_Cons {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_length_in_Cons>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified length: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _result = (std::move(_result) + 1);
       }
     }
@@ -173,6 +174,8 @@ struct DeepPatterns {
 
     // MANIPULATORS
     ~outer() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<OLeft>(&_v)) {
@@ -387,6 +390,8 @@ struct DeepPatterns {
 
     // MANIPULATORS
     ~mylist() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -419,39 +424,37 @@ struct DeepPatterns {
     template <typename T1, typename F1> T1 mylist_rect(T1 f, F1 &&f0) const {
       const mylist<A> *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of mylist_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const mylist<A> *_self;
       };
 
-      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Cons {
+      struct _after_mylist_rect_in_Cons {
         A a0;
         std::shared_ptr<mylist<A>> a1;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+      using _frame = std::variant<_call, _after_mylist_rect_in_Cons>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified mylist_rect: CraneEnter -> CraneCont_Cons.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const mylist<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename mylist<A>::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename mylist<A>::Cons>(_sv.v());
-            _stack.emplace_back(CraneCont_Cons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+            _stack.emplace_back(_after_mylist_rect_in_Cons{a0, a1});
+            _stack.emplace_back(_call{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+          auto _f = std::move(std::get<_after_mylist_rect_in_Cons>(_popped));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<mylist<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));

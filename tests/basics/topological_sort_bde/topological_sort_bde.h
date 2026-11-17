@@ -87,6 +87,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> bsl::shared_ptr<List<t_A>> {
       if (auto *_alt = bsl::get_if<Cons>(&_v)) {
         if (_alt->d_l && _alt->d_l.use_count() == 1) {
@@ -114,6 +116,8 @@ public:
 
   template <typename T1>
   List<bsl::pair<t_A, T1>> combine(const List<T1> &l_) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     bsl::optional<List<bsl::pair<t_A, T1>>> _root{};
     bsl::shared_ptr<List<bsl::pair<t_A, T1>>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
@@ -155,6 +159,8 @@ public:
   }
 
   template <typename F0> bsl::optional<t_A> find(F0 &&f) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<t_A> *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
@@ -172,6 +178,8 @@ public:
   }
 
   template <typename F0> List<t_A> filter(F0 &&f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     bsl::optional<List<t_A>> _root{};
     bsl::shared_ptr<List<t_A>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
@@ -206,27 +214,25 @@ public:
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<t_A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of fold_right: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<t_A> *_self;
     };
 
-    /// CraneCont_Cons: saves [d_a0], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Cons {
+    struct _after_fold_right_in_Cons {
       t_A d_a0;
     };
 
-    using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = bsl::variant<_call, _after_fold_right_in_Cons>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = bsl::move(_stack.back());
+      _frame _popped = bsl::move(_stack.back());
       _stack.pop_back();
-      if (bsl::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(bsl::get<CraneEnter>(_frame));
+      if (bsl::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(bsl::get<_call>(_popped));
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
@@ -234,11 +240,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               bsl::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{d_a0});
-          _stack.emplace_back(CraneEnter{crane_raw(d_a1)});
+          _stack.emplace_back(_after_fold_right_in_Cons{d_a0});
+          _stack.emplace_back(_call{crane_raw(d_a1)});
         }
       } else {
-        auto _f = std::move(bsl::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(bsl::get<_after_fold_right_in_Cons>(_popped));
         auto d_a0 = bsl::move(_f.d_a0);
         _result = f(d_a0, bsl::move(_result));
       }
@@ -249,27 +255,25 @@ public:
   template <typename T1> List<T1> concat() const {
     const List<t_A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of concat: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<t_A> *_self;
     };
 
-    /// CraneCont_Cons: saves [d_a0], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Cons {
+    struct _after_concat_in_Cons {
       List<T1> d_a0;
     };
 
-    using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = bsl::variant<_call, _after_concat_in_Cons>;
     List<T1> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified concat: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = bsl::move(_stack.back());
+      _frame _popped = bsl::move(_stack.back());
       _stack.pop_back();
-      if (bsl::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(bsl::get<CraneEnter>(_frame));
+      if (bsl::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(bsl::get<_call>(_popped));
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
@@ -277,11 +281,11 @@ public:
         } else {
           const auto &[d_a0, d_a1] =
               bsl::get<typename List<List<T1>>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{d_a0});
-          _stack.emplace_back(CraneEnter{crane_raw(d_a1)});
+          _stack.emplace_back(_after_concat_in_Cons{d_a0});
+          _stack.emplace_back(_call{crane_raw(d_a1)});
         }
       } else {
-        auto _f = std::move(bsl::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(bsl::get<_after_concat_in_Cons>(_popped));
         List<T1> d_a0 = bsl::move(_f.d_a0);
         _result = d_a0.app(bsl::move(_result));
       }
@@ -292,6 +296,8 @@ public:
   template <typename T1, typename F0>
     requires bsl::is_invocable_r_v<T1, F0 &, const t_A &>
   List<T1> map(F0 &&f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     bsl::optional<List<T1>> _root{};
     bsl::shared_ptr<List<T1>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
@@ -319,35 +325,34 @@ public:
   unsigned int length() const {
     const List<t_A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of length: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<t_A> *_self;
     };
 
-    /// CraneCont_Cons: resumes after recursive call, then processes rest.
-    struct CraneCont_Cons {};
+    struct _after_length_in_Cons {};
 
-    using CraneFrame = bsl::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = bsl::variant<_call, _after_length_in_Cons>;
     unsigned int _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified length: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = bsl::move(_stack.back());
+      _frame _popped = bsl::move(_stack.back());
       _stack.pop_back();
-      if (bsl::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(bsl::get<CraneEnter>(_frame));
+      if (bsl::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(bsl::get<_call>(_popped));
         const List<t_A> *_self = _f._self;
         auto &&_sv = *_self;
         if (bsl::holds_alternative<typename List<t_A>::Nil>(_sv.v())) {
           _result = 0u;
         } else {
           const auto &[_, d_a1] = bsl::get<typename List<t_A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{});
-          _stack.emplace_back(CraneEnter{crane_raw(d_a1)});
+          _stack.emplace_back(_after_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(d_a1)});
         }
       } else {
-        auto _f = std::move(bsl::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(bsl::get<_after_length_in_Cons>(_popped));
         _result = (bsl::move(_result) + 1);
       }
     }
@@ -355,6 +360,8 @@ public:
   }
 
   List<t_A> app(List<t_A> m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     bsl::optional<List<t_A>> _root{};
     bsl::shared_ptr<List<t_A>> *_write = nullptr;
     const List<t_A> *_loop_self = this;
@@ -435,6 +442,8 @@ struct TopologicalSort {
     {
       const List<bsl::pair<T1, T1>> &_lc1_l0 = l;
       List<T1> _lc1_h = List<T1>::nil();
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       List<T1> _lc1_loop_h = bsl::move(_lc1_h);
       const List<bsl::pair<T1, T1>> *_lc1_loop_l0 = &_lc1_l0;
       while (true) {

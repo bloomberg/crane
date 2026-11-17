@@ -48,6 +48,7 @@ static Nat s(Nat a0) {
 return Nat(S{std::make_shared<Nat>(std::move(a0))});}
   // MANIPULATORS
 ~Nat() {
+// Release the children this node alone owns in a loop, not recursively, so a deep value cannot overflow the stack.
 auto _next = [&](variant_t& _v) -> std::shared_ptr<Nat> {
 if (auto* _alt = std::get_if<S>(&_v)) {
 if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -72,6 +73,7 @@ return v_;}
 const variant_t& v() const {
 return v_;}
 Nat add(Nat m) const {
+// Builds the result front to back: _write points at the empty tail the next cell fills.
 std::optional<Nat> _root{};
 std::shared_ptr<Nat>* _write = nullptr;
 const Nat* _loop_self = this;
@@ -143,7 +145,8 @@ return _tcI0::to_Z(i0);
 const auto& [n0] = std::get<typename Dval<iptr>::DNat>(this->v());
 return n0;
 }}
-};template <IPtr _tcI0>Dval<typename _tcI0::iptr> inner(){return Dval<typename _tcI0::iptr>::diptr(_tcI0::zero_iptr());}struct natIPtr {
+};template <IPtr _tcI0>Dval<typename _tcI0::iptr> inner(){
+return Dval<typename _tcI0::iptr>::diptr(_tcI0::zero_iptr());}struct natIPtr {
 using iptr = Nat;
 static Nat zero_iptr() {
 return Nat::o();}

@@ -44,6 +44,8 @@ struct ReuseMoveShadow {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (auto *_alt = std::get_if<Node>(&v_mut())) {
         if (!((_alt->a1 && _alt->a1.use_count() == 1) ||
               (_alt->a2 && _alt->a2.use_count() == 1))) {

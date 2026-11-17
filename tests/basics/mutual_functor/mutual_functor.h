@@ -64,6 +64,8 @@ template <Elem E> struct MutualTree {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -142,6 +144,8 @@ template <Elem E> struct MutualTree {
 
     // MANIPULATORS
     ~forest() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<FCons>(&_v)) {

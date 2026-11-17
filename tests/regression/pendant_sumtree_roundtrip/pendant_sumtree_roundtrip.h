@@ -79,6 +79,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -109,38 +111,36 @@ public:
   bool forallb(F0 &&f) const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of forallb: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Cons {
+    struct _after_forallb_in_Cons {
       A a0;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_forallb_in_Cons>;
     bool _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified forallb: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = true;
         } else {
           const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_forallb_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_forallb_in_Cons>(_popped));
         auto a0 = std::move(_f.a0);
         _result = (f(a0) && std::move(_result));
       }
@@ -153,38 +153,36 @@ public:
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of fold_right: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Cons {
+    struct _after_fold_right_in_Cons {
       A a1;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_fold_right_in_Cons>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
+          _stack.emplace_back(_after_fold_right_in_Cons{a1});
+          _stack.emplace_back(_call{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_fold_right_in_Cons>(_popped));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -195,27 +193,25 @@ public:
   template <typename T1> List<T1> concat() const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of concat: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Cons {
+    struct _after_concat_in_Cons {
       List<T1> a0;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_concat_in_Cons>;
     List<T1> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified concat: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<List<T1>>::Nil>(_sv.v())) {
@@ -223,11 +219,11 @@ public:
         } else {
           const auto &[a0, a1] =
               std::get<typename List<List<T1>>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_concat_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_concat_in_Cons>(_popped));
         List<T1> a0 = std::move(_f.a0);
         _result = a0.app(std::move(_result));
       }
@@ -238,6 +234,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -265,35 +263,34 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of length: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: resumes after recursive call, then processes rest.
-    struct CraneCont_Cons {};
+    struct _after_length_in_Cons {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_length_in_Cons>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified length: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _result = (std::move(_result) + 1);
       }
     }
@@ -301,6 +298,8 @@ public:
   }
 
   List<A> app(List<A> m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -483,6 +482,8 @@ public:
 
   // MANIPULATORS
   ~T() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<T> {
       if (auto *_alt = std::get_if<FS>(&_v)) {
         if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -659,6 +660,8 @@ struct PendantSumtreeRoundtripCase {
 
     // MANIPULATORS
     ~SumTree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<SumLeaf>(v_mut())) {
         return;
       }
@@ -859,25 +862,24 @@ template <typename T1> List<T1> Vector::to_list(uint64_t n, const T0<T1> &v) {
 inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
   const T *_self = this;
 
-  /// CraneEnter: captures varying parameters for each recursive call.
-  struct CraneEnter {
+  // Explicit stack replaces the non-tail recursion of to_nat: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const T *_self;
     uint64_t _x;
   };
 
-  /// CraneCont_FS: resumes after recursive call, then processes rest.
-  struct CraneCont_FS {};
+  struct _after_to_nat_in_FS {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
+  using _frame = std::variant<_call, _after_to_nat_in_FS>;
   Sig<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{_self, _x});
-  /// Loopified to_nat: CraneEnter -> CraneCont_FS.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{_self, _x});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const T *_self = _f._self;
       uint64_t _x = _f._x;
       auto &&_sv = *_self;
@@ -885,11 +887,11 @@ inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
         _result = Sig<uint64_t>::exist(UINT64_C(0));
       } else {
         const auto &[n1, a1] = std::get<typename T::FS>(_sv.v());
-        _stack.emplace_back(CraneCont_FS{});
-        _stack.emplace_back(CraneEnter{crane_raw(a1), n1});
+        _stack.emplace_back(_after_to_nat_in_FS{});
+        _stack.emplace_back(_call{crane_raw(a1), n1});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_FS>(_frame));
+      auto _f = std::move(std::get<_after_to_nat_in_FS>(_popped));
       Sig<uint64_t> _tmp1 = std::move(_result);
       auto &[x0] = _tmp1;
       _result = Sig<uint64_t>::exist((std::move(x0) + 1));

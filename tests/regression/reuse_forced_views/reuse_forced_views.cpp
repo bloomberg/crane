@@ -42,6 +42,8 @@ ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
 List<ReuseForcedViews::tree>
 ReuseForcedViews::carry(List<ReuseForcedViews::tree> q,
                         ReuseForcedViews::tree t) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills. The input's cells are reused in place while uniquely owned.
   crane::rc<List<ReuseForcedViews::tree>> _head{};
   crane::rc<List<ReuseForcedViews::tree>> *_write = &_head;
   crane::rc<List<ReuseForcedViews::tree>> _own =
@@ -100,21 +102,17 @@ ReuseForcedViews::carry(List<ReuseForcedViews::tree> q,
 }
 
 List<std::pair<uint64_t,
-               std::pair<std::optional<uint64_t>,
-                         std::optional<uint64_t>>>> ReuseForcedViews::combine(
-    List<std::pair<uint64_t, uint64_t>> m,
-    const List<std::pair<uint64_t,
-                         uint64_t>> &x0_) { /// CraneEnter: captures varying
-                                            /// parameters for each recursive
-                                            /// call.
-  struct CraneEnter {
+               std::pair<std::optional<uint64_t>, std::optional<uint64_t>>>>
+ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
+                          const List<std::pair<uint64_t, uint64_t>> &x0_) {
+  // Explicit stack replaces the non-tail recursion of combine: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<std::pair<uint64_t, uint64_t>> *x0_;
     const List<std::pair<uint64_t, uint64_t>> *m;
   };
 
-  /// CraneEnter_combine_aux: captures varying parameters for each recursive
-  /// call.
-  struct CraneEnter_combine_aux {
+  struct _call_combine_aux {
     const List<std::pair<uint64_t, uint64_t>> *m_;
     const List<std::pair<uint64_t, uint64_t>> *a1_value;
     uint64_t e;
@@ -122,41 +120,35 @@ List<std::pair<uint64_t,
     List<std::pair<uint64_t, uint64_t>> m;
   };
 
-  /// CraneCont1: saves [k, e], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont1 {
-    uint64_t k;
-    uint64_t e;
-  };
-
-  /// CraneCont2: saves [k, e, e_], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont2 {
-    uint64_t k;
-    uint64_t e;
-    uint64_t e_;
-  };
-
-  /// CraneCont3: saves [k_, e_], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont3 {
+  struct _after_combine_aux_in_false {
     uint64_t k_;
     uint64_t e_;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneEnter_combine_aux,
-                                  CraneCont1, CraneCont2, CraneCont3>;
+  struct _after_combine_in_true {
+    uint64_t k;
+    uint64_t e;
+  };
+
+  struct _after_combine_in_true_2 {
+    uint64_t k;
+    uint64_t e;
+    uint64_t e_;
+  };
+
+  using _frame =
+      std::variant<_call, _call_combine_aux, _after_combine_aux_in_false,
+                   _after_combine_in_true, _after_combine_in_true_2>;
   List<std::pair<uint64_t,
                  std::pair<std::optional<uint64_t>,
                            std::optional<uint64_t>>>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&x0_, &m});
-  /// Loopified combine: CraneEnter -> CraneCont1 -> CraneCont2 -> CraneCont3.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x0_, &m});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<std::pair<uint64_t, uint64_t>> &x0_ = *_f.x0_;
       const List<std::pair<uint64_t, uint64_t>> &m = *_f.m;
       if (std::holds_alternative<
@@ -175,11 +167,10 @@ List<std::pair<uint64_t,
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(m.v());
         const List<std::pair<uint64_t, uint64_t>> &a1_value = *a1;
         const auto &[k, e] = a0;
-        _stack.emplace_back(
-            CraneEnter_combine_aux{&x0_, crane_raw(a1), e, k, m});
+        _stack.emplace_back(_call_combine_aux{&x0_, crane_raw(a1), e, k, m});
       }
-    } else if (std::holds_alternative<CraneEnter_combine_aux>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_combine_aux>(_frame));
+    } else if (std::holds_alternative<_call_combine_aux>(_popped)) {
+      auto _f = std::move(std::get<_call_combine_aux>(_popped));
       const List<std::pair<uint64_t, uint64_t>> &m_ = *_f.m_;
       const List<std::pair<uint64_t, uint64_t>> &a1_value = *_f.a1_value;
       uint64_t e = _f.e;
@@ -201,21 +192,32 @@ List<std::pair<uint64_t,
             typename List<std::pair<uint64_t, uint64_t>>::Cons>(m_.v());
         const auto &[k_, e_] = a00;
         if (k < k_) {
-          _stack.emplace_back(CraneCont1{k, e});
-          _stack.emplace_back(CraneEnter{&m_, &a1_value});
+          _stack.emplace_back(_after_combine_in_true{k, e});
+          _stack.emplace_back(_call{&m_, &a1_value});
         } else {
           if (k == k_) {
-            _stack.emplace_back(CraneCont2{k, e, e_});
-            _stack.emplace_back(CraneEnter{crane_raw(a10), &a1_value});
+            _stack.emplace_back(_after_combine_in_true_2{k, e, e_});
+            _stack.emplace_back(_call{crane_raw(a10), &a1_value});
           } else {
-            _stack.emplace_back(CraneCont3{k_, e_});
-            _stack.emplace_back(CraneEnter_combine_aux{
-                crane_raw(a10), &a1_value, e, k, std::move(m)});
+            _stack.emplace_back(_after_combine_aux_in_false{k_, e_});
+            _stack.emplace_back(_call_combine_aux{crane_raw(a10), &a1_value, e,
+                                                  k, std::move(m)});
           }
         }
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+    } else if (std::holds_alternative<_after_combine_aux_in_false>(_popped)) {
+      auto _f = std::move(std::get<_after_combine_aux_in_false>(_popped));
+      uint64_t k_ = _f.k_;
+      uint64_t e_ = _f.e_;
+      _result =
+          List<std::pair<uint64_t, std::pair<std::optional<uint64_t>,
+                                             std::optional<uint64_t>>>>::cons(
+              std::make_pair(k_,
+                             std::make_pair(std::optional<uint64_t>(),
+                                            std::make_optional<uint64_t>(e_))),
+              std::move(_result));
+    } else if (std::holds_alternative<_after_combine_in_true>(_popped)) {
+      auto _f = std::move(std::get<_after_combine_in_true>(_popped));
       uint64_t k = _f.k;
       uint64_t e = _f.e;
       _result =
@@ -224,8 +226,8 @@ List<std::pair<uint64_t,
               std::make_pair(k, std::make_pair(std::make_optional<uint64_t>(e),
                                                std::optional<uint64_t>())),
               std::move(_result));
-    } else if (std::holds_alternative<CraneCont2>(_frame)) {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
+    } else {
+      auto _f = std::move(std::get<_after_combine_in_true_2>(_popped));
       uint64_t k = _f.k;
       uint64_t e = _f.e;
       uint64_t e_ = _f.e_;
@@ -234,17 +236,6 @@ List<std::pair<uint64_t,
                                              std::optional<uint64_t>>>>::cons(
               std::make_pair(k,
                              std::make_pair(std::make_optional<uint64_t>(e),
-                                            std::make_optional<uint64_t>(e_))),
-              std::move(_result));
-    } else {
-      auto _f = std::move(std::get<CraneCont3>(_frame));
-      uint64_t k_ = _f.k_;
-      uint64_t e_ = _f.e_;
-      _result =
-          List<std::pair<uint64_t, std::pair<std::optional<uint64_t>,
-                                             std::optional<uint64_t>>>>::cons(
-              std::make_pair(k_,
-                             std::make_pair(std::optional<uint64_t>(),
                                             std::make_optional<uint64_t>(e_))),
               std::move(_result));
     }

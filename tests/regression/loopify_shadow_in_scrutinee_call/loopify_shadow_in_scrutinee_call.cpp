@@ -8,6 +8,8 @@
 /// did not compile.
 Nat LoopifyShadowInScrutineeCall::walk(const Nat &n, const List<Nat> &xs,
                                        Nat acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   Nat _loop_acc = std::move(acc);
   const Nat *_loop_n = &n;
   while (true) {

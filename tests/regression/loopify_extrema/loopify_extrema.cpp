@@ -1,29 +1,25 @@
 #include "loopify_extrema.h"
 
-uint64_t
-LoopifyExtrema::maximum(const List<uint64_t> &l) { /// CraneEnter: captures
-                                                   /// varying parameters for
-                                                   /// each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyExtrema::maximum(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of maximum: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_maximum_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_maximum_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified maximum: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -33,12 +29,12 @@ LoopifyExtrema::maximum(const List<uint64_t> &l) { /// CraneEnter: captures
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_maximum_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_maximum_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       uint64_t max_rest = std::move(_result);
       if (max_rest < a0) {
@@ -51,30 +47,26 @@ LoopifyExtrema::maximum(const List<uint64_t> &l) { /// CraneEnter: captures
   return _result;
 }
 
-uint64_t
-LoopifyExtrema::minimum(const List<uint64_t> &l) { /// CraneEnter: captures
-                                                   /// varying parameters for
-                                                   /// each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyExtrema::minimum(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of minimum: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_minimum_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_minimum_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified minimum: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -84,12 +76,12 @@ LoopifyExtrema::minimum(const List<uint64_t> &l) { /// CraneEnter: captures
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_minimum_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_minimum_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       uint64_t min_rest = std::move(_result);
       if (a0 < min_rest) {
@@ -102,30 +94,26 @@ LoopifyExtrema::minimum(const List<uint64_t> &l) { /// CraneEnter: captures
   return _result;
 }
 
-std::pair<uint64_t, uint64_t>
-LoopifyExtrema::minmax(const List<uint64_t> &l) { /// CraneEnter: captures
-                                                  /// varying parameters for
-                                                  /// each recursive call.
-  struct CraneEnter {
+std::pair<uint64_t, uint64_t> LoopifyExtrema::minmax(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of minmax: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_minmax_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_minmax_in_Cons>;
   std::pair<uint64_t, uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified minmax: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), UINT64_C(0));
@@ -135,12 +123,12 @@ LoopifyExtrema::minmax(const List<uint64_t> &l) { /// CraneEnter: captures
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
           _result = std::make_pair(a0, a0);
         } else {
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_minmax_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_minmax_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
       const auto &[lo, hi] = _tmp1;
@@ -152,6 +140,8 @@ LoopifyExtrema::minmax(const List<uint64_t> &l) { /// CraneEnter: captures
 
 uint64_t LoopifyExtrema::lex_compare(const List<uint64_t> &l1,
                                      const List<uint64_t> &l2) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
@@ -185,6 +175,8 @@ uint64_t LoopifyExtrema::lex_compare(const List<uint64_t> &l1,
 }
 
 bool LoopifyExtrema::all_equal(const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -209,6 +201,8 @@ bool LoopifyExtrema::all_equal(const List<uint64_t> &l) {
 }
 
 bool LoopifyExtrema::is_sorted(const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {

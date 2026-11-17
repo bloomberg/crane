@@ -12,6 +12,8 @@ uint64_t LoopifyTmcLibraryInductive::digit_to_nat(const T &d) {
 }
 
 T Fin::of_nat_lt(uint64_t p, uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<T> _root{};
   std::shared_ptr<T> *_write = nullptr;
   uint64_t _loop_n = n;

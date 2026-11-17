@@ -44,6 +44,8 @@ struct PairSelfDeepCopy {
 
     // MANIPULATORS
     ~chain() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Stop>(v_mut())) {
         return;
       }

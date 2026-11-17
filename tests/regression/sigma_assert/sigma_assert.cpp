@@ -14,12 +14,14 @@ uint64_t Nat::div2(uint64_t n) {
   }
 }
 
-uint64_t SigmaAssert::safe_pred(const uint64_t &n) { // Precondition: n != 0
+uint64_t SigmaAssert::safe_pred(const uint64_t &n) {
+  // Precondition: n != 0
   assert(n != 0);
   return (n ? n - 1 : n);
 }
 
-uint64_t SigmaAssert::safe_div2(const uint64_t &n) { // Precondition: n >= 1
+uint64_t SigmaAssert::safe_div2(const uint64_t &n) {
+  // Precondition: n >= 1
   assert(n >= 1);
   return Nat::div2(n);
 }

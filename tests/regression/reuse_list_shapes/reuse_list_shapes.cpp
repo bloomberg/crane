@@ -1,6 +1,8 @@
 #include "reuse_list_shapes.h"
 
 Positive Pos::pred_double(Positive x) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (x.v().index() == 0) {
     if (crane::get<typename Positive::XI>(x.v_mut()).a0.use_count() == 1) {
       Positive p = std::move(*crane::get<typename Positive::XI>(x.v_mut()).a0);
@@ -298,6 +300,8 @@ uint64_t BinNat::to_nat(const N &a) {
 }
 
 List<uint64_t> ReuseListShapes::bump(List<uint64_t> l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills. The input's cells are reused in place while uniquely owned.
   crane::rc<List<uint64_t>> _head{};
   crane::rc<List<uint64_t>> *_write = &_head;
   crane::rc<List<uint64_t>> _own = crane::rc<List<uint64_t>>();
@@ -325,6 +329,8 @@ List<uint64_t> ReuseListShapes::bump(List<uint64_t> l) {
 }
 
 List<uint64_t> ReuseListShapes::take(uint64_t n, List<uint64_t> l) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (l.v().index() == 1) {
     if (crane::get<typename List<uint64_t>::Cons>(l.v_mut()).l.use_count() ==
         1) {

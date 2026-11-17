@@ -13,6 +13,8 @@ bool DeliftedBinaryFixpoint::same(const Positive &a, const Positive &b) {
   {
     const Positive &_lc1_p = Positive::xo(a);
     const Positive &_lc1_x = Positive::xo(b);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Positive *_lc1_loop_x = &_lc1_x;
     const Positive *_lc1_loop_p = &_lc1_p;
     while (true) {

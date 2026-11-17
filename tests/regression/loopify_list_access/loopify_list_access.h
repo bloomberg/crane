@@ -67,6 +67,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -106,6 +108,8 @@ struct LoopifyListAccess {
   lookup_all(uint64_t key, const List<std::pair<uint64_t, uint64_t>> &l);
 
   template <typename F0> static uint64_t find(F0 &&p, const List<uint64_t> &l) {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<uint64_t> *_loop_l = &l;
     while (true) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -125,42 +129,38 @@ struct LoopifyListAccess {
   static uint64_t count(uint64_t x, const List<uint64_t> &l);
 
   template <typename F0>
-  static uint64_t
-  count_matching(F0 &&p,
-                 const List<uint64_t> &l) { /// CraneEnter: captures varying
-                                            /// parameters for each recursive
-                                            /// call.
-    struct CraneEnter {
+  static uint64_t count_matching(F0 &&p, const List<uint64_t> &l) {
+    // Explicit stack replaces the non-tail recursion of count_matching: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<uint64_t> *l;
     };
 
-    /// CraneCont1: resumes after recursive call, then processes rest.
-    struct CraneCont1 {};
+    struct _after_count_matching_in_true {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+    using _frame = std::variant<_call, _after_count_matching_in_true>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified count_matching: CraneEnter -> CraneCont1.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<uint64_t> &l = *_f.l;
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           if (p(a0)) {
-            _stack.emplace_back(CraneCont1{});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+            _stack.emplace_back(_after_count_matching_in_true{});
+            _stack.emplace_back(_call{crane_raw(a1)});
           } else {
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a1)});
           }
         }
       } else {
-        auto _f = std::move(std::get<CraneCont1>(_frame));
+        auto _f = std::move(std::get<_after_count_matching_in_true>(_popped));
         _result = (UINT64_C(1) + std::move(_result));
       }
     }

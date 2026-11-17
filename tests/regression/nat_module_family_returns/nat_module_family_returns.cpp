@@ -688,22 +688,20 @@ bool Nat::Even_Odd_dec(uint64_t n) {
   }
 }
 
-Nat::EvenT Nat::EvenT_2(uint64_t,
-                        const Sig<uint64_t> &h0) { // Precondition: n == (2 * m)
+Nat::EvenT Nat::EvenT_2(uint64_t, const Sig<uint64_t> &h0) {
+  // Precondition: n == (2 * m)
   const auto &[x0] = h0;
   return Sig<uint64_t>::exist((x0 + 1));
 }
 
-Nat::OddT
-Nat::OddT_2(uint64_t,
-            const Sig<uint64_t> &h0) { // Precondition: n == (2 * m + 1)
+Nat::OddT Nat::OddT_2(uint64_t, const Sig<uint64_t> &h0) {
+  // Precondition: n == (2 * m + 1)
   const auto &[x0] = h0;
   return Sig<uint64_t>::exist((x0 + 1));
 }
 
-Nat::OddT
-Nat::EvenT_S_OddT(uint64_t,
-                  const Sig<uint64_t> &h) { // Precondition: (S n) == (2 * m)
+Nat::OddT Nat::EvenT_S_OddT(uint64_t, const Sig<uint64_t> &h) {
+  // Precondition: (S n) == (2 * m)
   const auto &[x0] = h;
   if (x0 <= 0) {
     throw std::logic_error("absurd case");
@@ -713,10 +711,8 @@ Nat::EvenT_S_OddT(uint64_t,
   }
 }
 
-Nat::EvenT
-Nat::OddT_S_EvenT(uint64_t,
-                  const Sig<uint64_t> &h) { // Precondition: (S n) == (2 * m +
-                                            // 1)
+Nat::EvenT Nat::OddT_S_EvenT(uint64_t, const Sig<uint64_t> &h) {
+  // Precondition: (S n) == (2 * m + 1)
   const auto &[x0] = h;
   return Sig<uint64_t>::exist(x0);
 }

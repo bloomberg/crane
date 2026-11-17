@@ -86,6 +86,8 @@ struct ReuseTwoChildren {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Leaf>(v_mut())) {
         return;
       }
@@ -145,6 +147,8 @@ struct ReuseTwoChildren {
 
   template <typename T1>
   static tree<T1> insert(uint64_t k, const T1 &v, tree<T1> t) {
+    // Reuse the matched cell in place when this is its only owner; otherwise
+    // rebuild.
     if (t.v().index() == 1) {
       if (std::get<typename tree<T1>::Node>(t.v_mut()).a0.use_count() == 1) {
         tree<T1> l =

@@ -50,6 +50,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -129,6 +131,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -157,6 +161,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     std::shared_ptr<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -267,6 +273,8 @@ public:
 
   // MANIPULATORS
   ~Exp() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     if (std::holds_alternative<E_leaf>(v_mut())) {
       return;
     }
@@ -313,34 +321,30 @@ public:
   Exp<T1> exp_map(F0 &&f) const {
     const Exp<t> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of exp_map: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const Exp<t> *_self;
     };
 
-    /// CraneCont_E_node: saves [a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_E_node {
+    struct _after_exp_map_in_E_node {
       const Exp<t> *a1;
     };
 
-    /// CraneCont_E_node_1: saves [_tmp2], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_E_node_1 {
+    struct _after_exp_map_in_E_node_2 {
       Exp<T1> _tmp2;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_E_node, CraneCont_E_node_1>;
+    using _frame = std::variant<_call, _after_exp_map_in_E_node,
+                                _after_exp_map_in_E_node_2>;
     Exp<T1> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified exp_map: CraneEnter -> CraneCont_E_node -> CraneCont_E_node_1.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const Exp<t> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Exp<t>::E_leaf>(_sv.v())) {
@@ -348,16 +352,16 @@ public:
           _result = Exp<T1>::e_leaf(f(a0));
         } else {
           const auto &[a0, a1] = std::get<typename Exp<t>::E_node>(_sv.v());
-          _stack.emplace_back(CraneCont_E_node{crane_raw(a1)});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_exp_map_in_E_node{crane_raw(a1)});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<CraneCont_E_node>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_E_node>(_frame));
+      } else if (std::holds_alternative<_after_exp_map_in_E_node>(_popped)) {
+        auto _f = std::move(std::get<_after_exp_map_in_E_node>(_popped));
         const Exp<t> &a1 = *_f.a1;
-        _stack.emplace_back(CraneCont_E_node_1{std::move(_result)});
-        _stack.emplace_back(CraneEnter{_f.a1});
+        _stack.emplace_back(_after_exp_map_in_E_node_2{std::move(_result)});
+        _stack.emplace_back(_call{_f.a1});
       } else {
-        auto _f = std::move(std::get<CraneCont_E_node_1>(_frame));
+        auto _f = std::move(std::get<_after_exp_map_in_E_node_2>(_popped));
         _result = Exp<T1>::e_node(std::move(_f._tmp2), std::move(_result));
       }
     }

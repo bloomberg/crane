@@ -1,6 +1,8 @@
 #include "family_with_type_binder_at_function.h"
 
 uint64_t FamilyWithTypeBinderAtFunction::use2(uint64_t x0_) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto app2_1 =
       crane::immortal(app2<crane::fn<uint64_t(uint64_t)>>(
           [](uint64_t n) {

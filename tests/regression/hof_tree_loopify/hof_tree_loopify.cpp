@@ -1,6 +1,8 @@
 #include "hof_tree_loopify.h"
 
 HofTreeLoopify::tree<uint64_t> HofTreeLoopify::depth_tree(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<HofTreeLoopify::tree<uint64_t>> _root{};
   std::shared_ptr<HofTreeLoopify::tree<uint64_t>> *_write = nullptr;
   uint64_t _loop_n = n;

@@ -10,6 +10,8 @@
 /// own instance is adapted by crane_erase_fn, and g passes h back
 /// unadapted, as it is already erased.
 uint64_t LocalMutualPolymorphicRecursion::run(uint64_t n) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto erased_fn =
       crane::immortal(crane_erase_fn<uint64_t>([](bool b) {
         if (b) {

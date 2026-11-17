@@ -1,6 +1,8 @@
 #include "sum_drain.h"
 
 SumDrain::t SumDrain::build(uint64_t n, SumDrain::t acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   SumDrain::t _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {
@@ -14,26 +16,24 @@ SumDrain::t SumDrain::build(uint64_t n, SumDrain::t acc) {
   }
 }
 
-uint64_t
-SumDrain::depth(const SumDrain::t &x) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-  struct CraneEnter {
+uint64_t SumDrain::depth(const SumDrain::t &x) {
+  // Explicit stack replaces the non-tail recursion of depth: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const SumDrain::t *x;
   };
 
-  /// CraneCont_Inr: resumes after recursive call, then processes rest.
-  struct CraneCont_Inr {};
+  struct _after_depth_in_Inr {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Inr>;
+  using _frame = std::variant<_call, _after_depth_in_Inr>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&x});
-  /// Loopified depth: CraneEnter -> CraneCont_Inr.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const SumDrain::t &x = *_f.x;
       const auto &[a0] = std::get<typename SumDrain::t::N>(x.v());
       auto &&_sv0 = *a0;
@@ -43,11 +43,11 @@ SumDrain::depth(const SumDrain::t &x) { /// CraneEnter: captures varying
       } else {
         const auto &[a00] =
             std::get<typename Sum<uint64_t, SumDrain::t>::Inr>(_sv0.v());
-        _stack.emplace_back(CraneCont_Inr{});
-        _stack.emplace_back(CraneEnter{&a00});
+        _stack.emplace_back(_after_depth_in_Inr{});
+        _stack.emplace_back(_call{&a00});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Inr>(_frame));
+      auto _f = std::move(std::get<_after_depth_in_Inr>(_popped));
       _result = (std::move(_result) + 1);
     }
   }

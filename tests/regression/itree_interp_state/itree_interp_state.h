@@ -75,6 +75,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -101,6 +103,8 @@ public:
   const variant_t &v() const { return v_; }
 
   bool eqb(const Nat &m) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Nat *_loop_self = this;
     const Nat *_loop_m = &m;
     while (true) {
@@ -125,6 +129,8 @@ public:
   }
 
   Nat add(Nat m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
@@ -683,6 +689,8 @@ struct ItreeInterpState {
                                                            crane::obj()),
                              GetE::GET)),
         [](const Nat &x) {
+          // Built on the first call and immortal: every thread reads it without
+          // touching its counts.
           static const auto resum_id =
               crane::immortal(CategoryOps::template ReSum_id<
                   crane::obj, crane::fn<crane::obj(crane::obj)>>(

@@ -5,6 +5,8 @@
 /// should be optimized to use O(1) extra space via destination-passing style.
 /// range lo hi creates lo, lo+1, ..., hi-1.
 LoopifyTmc::list<uint64_t> LoopifyTmc::range(uint64_t lo, uint64_t hi) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyTmc::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyTmc::list<uint64_t>> *_write = nullptr;
   uint64_t _loop_hi = hi;
@@ -42,6 +44,8 @@ LoopifyTmc::list<uint64_t> LoopifyTmc::range(uint64_t lo, uint64_t hi) {
 /// prefix_sums acc l computes running prefix sums.
 LoopifyTmc::list<uint64_t>
 LoopifyTmc::prefix_sums(uint64_t acc, const LoopifyTmc::list<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyTmc::list<uint64_t>> _root{};
   std::shared_ptr<LoopifyTmc::list<uint64_t>> *_write = nullptr;
   const LoopifyTmc::list<uint64_t> *_loop_l = &l;

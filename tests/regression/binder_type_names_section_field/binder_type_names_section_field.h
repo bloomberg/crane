@@ -51,6 +51,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -77,6 +79,8 @@ public:
   const variant_t &v() const { return v_; }
 
   bool eqb(const Nat &m) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Nat *_loop_self = this;
     const Nat *_loop_m = &m;
     while (true) {
@@ -101,6 +105,8 @@ public:
   }
 
   Nat add(Nat m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
@@ -179,6 +185,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -205,6 +213,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat length() const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -532,6 +542,8 @@ struct BinderTypeNamesSectionField {
   static Monads::template stateT<FusedS<typename _tcI0::ptr>,
                                  crane_carrier_tc_63634b67fb88739b, T1>
   fused(CntE e) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
         crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
       return crane_erase_global<Function::Id_IFun, crane::obj>();
@@ -565,6 +577,8 @@ struct BinderTypeNamesSectionField {
   template <Params _tcI0>
   static Itree<CntE, std::pair<FusedS<typename _tcI0::ptr>, Nat>>
   after_cnt(const Nat &n) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto fused_1 = crane::immortal(fused<_tcI0, Nat>(CntE::CNT));
     return fused_1(start<_tcI0>(n));
   }

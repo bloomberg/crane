@@ -12,44 +12,36 @@
 /// loopify_mutual_result_types (fixed in a9df8ed7e) is the same pair
 /// without the parameters; this is what is left of Vellvm's global
 /// Set Crane Loopify on 19ffa36ec: all 4 of its remaining errors.
-uint64_t LoopifyMutualPartialApp::sum_e(
-    const LoopifyMutualPartialApp::e<uint64_t> &x) { /// CraneEnter: captures
-                                                     /// varying parameters for
-                                                     /// each recursive call.
-  struct CraneEnter {
+uint64_t
+LoopifyMutualPartialApp::sum_e(const LoopifyMutualPartialApp::e<uint64_t> &x) {
+  // Explicit stack replaces the non-tail recursion of sum_e: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyMutualPartialApp::e<uint64_t> *x;
   };
 
-  /// CraneCont_Add: saves [b0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Add {
+  struct _after_sum_e_in_Add {
     const LoopifyMutualPartialApp::e<uint64_t> *b0;
   };
 
-  /// CraneCont_Add_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Add_1 {
+  struct _after_sum_e_in_Add_2 {
     uint64_t _tmp2;
   };
 
-  /// CraneCont_MConst: saves [u0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_MConst {
+  struct _after_sum_e_in_MConst {
     uint64_t u0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1,
-                                  CraneCont_MConst>;
+  using _frame = std::variant<_call, _after_sum_e_in_Add, _after_sum_e_in_Add_2,
+                              _after_sum_e_in_MConst>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&x});
-  /// Loopified sum_e: CraneEnter -> CraneCont_Add -> CraneCont_Add_1 ->
-  /// CraneCont_MConst.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyMutualPartialApp::e<uint64_t> &x = *_f.x;
       if (std::holds_alternative<
               typename LoopifyMutualPartialApp::e<uint64_t>::Leaf>(x.v())) {
@@ -65,8 +57,8 @@ uint64_t LoopifyMutualPartialApp::sum_e(
                      typename LoopifyMutualPartialApp::e<uint64_t>::Add>(x.v())) {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Add>(x.v());
-        _stack.emplace_back(CraneCont_Add{crane_raw(b0)});
-        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+        _stack.emplace_back(_after_sum_e_in_Add{crane_raw(b0)});
+        _stack.emplace_back(_call{crane_raw(a0)});
       } else {
         const auto &[m0] = std::get<
             typename LoopifyMutualPartialApp::e<uint64_t>::Meta>(x.v());
@@ -81,8 +73,8 @@ uint64_t LoopifyMutualPartialApp::sum_e(
           const auto &[u0, x1] =
               std::get<typename LoopifyMutualPartialApp::md<uint64_t>::MConst>(
                   m0_value.v());
-          _stack.emplace_back(CraneCont_MConst{u0});
-          _stack.emplace_back(CraneEnter{crane_raw(x1)});
+          _stack.emplace_back(_after_sum_e_in_MConst{u0});
+          _stack.emplace_back(_call{crane_raw(x1)});
         } else if (std::holds_alternative<
                        typename LoopifyMutualPartialApp::md<uint64_t>::MNode>(
                        m0_value.v())) {
@@ -103,16 +95,16 @@ uint64_t LoopifyMutualPartialApp::sum_e(
           _result = (sum_md(*a0) + sum_md(*b0));
         }
       }
-    } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Add>(_frame));
+    } else if (std::holds_alternative<_after_sum_e_in_Add>(_popped)) {
+      auto _f = std::move(std::get<_after_sum_e_in_Add>(_popped));
       const LoopifyMutualPartialApp::e<uint64_t> &b0 = *_f.b0;
-      _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{&b0});
-    } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+      _stack.emplace_back(_after_sum_e_in_Add_2{std::move(_result)});
+      _stack.emplace_back(_call{&b0});
+    } else if (std::holds_alternative<_after_sum_e_in_Add_2>(_popped)) {
+      auto _f = std::move(std::get<_after_sum_e_in_Add_2>(_popped));
       _result = (_f._tmp2 + std::move(_result));
     } else {
-      auto _f = std::move(std::get<CraneCont_MConst>(_frame));
+      auto _f = std::move(std::get<_after_sum_e_in_MConst>(_popped));
       uint64_t u0 = _f.u0;
       _result = (u0 + std::move(_result));
     }
@@ -121,62 +113,49 @@ uint64_t LoopifyMutualPartialApp::sum_e(
 }
 
 uint64_t LoopifyMutualPartialApp::sum_md(
-    const LoopifyMutualPartialApp::md<uint64_t> &m) { /// CraneEnter: captures
-                                                      /// varying parameters for
-                                                      /// each recursive call.
-  struct CraneEnter {
+    const LoopifyMutualPartialApp::md<uint64_t> &m) {
+  // Explicit stack replaces the non-tail recursion of sum_md: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyMutualPartialApp::md<uint64_t> *m;
   };
 
-  /// CraneEnter_sum_e_entry: captures varying parameters for each recursive
-  /// call.
-  struct CraneEnter_sum_e_entry {
+  struct _call_sum_e_entry {
     const LoopifyMutualPartialApp::e<uint64_t> *x;
   };
 
-  /// CraneCont_Add: saves [b0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Add {
+  struct _after_sum_e_entry_in_Add {
     const LoopifyMutualPartialApp::e<uint64_t> *b0;
   };
 
-  /// CraneCont_Add_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Add_1 {
+  struct _after_sum_e_entry_in_Add_2 {
     uint64_t _tmp2;
   };
 
-  /// CraneCont_MConst: saves [u0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_MConst {
+  struct _after_sum_e_entry_in_MConst {
     uint64_t u0;
   };
 
-  /// CraneCont_MPair: saves [b0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_MPair {
+  struct _after_sum_md_in_MPair {
     const LoopifyMutualPartialApp::md<uint64_t> *b0;
   };
 
-  /// CraneCont_MPair_1: saves [_tmp6], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_MPair_1 {
+  struct _after_sum_md_in_MPair_2 {
     uint64_t _tmp6;
   };
 
-  using CraneFrame = std::variant<
-      CraneEnter, CraneEnter_sum_e_entry, CraneCont_Add, CraneCont_Add_1,
-      CraneCont_MConst, CraneCont_MPair, CraneCont_MPair_1>;
+  using _frame =
+      std::variant<_call, _call_sum_e_entry, _after_sum_e_entry_in_Add,
+                   _after_sum_e_entry_in_Add_2, _after_sum_e_entry_in_MConst,
+                   _after_sum_md_in_MPair, _after_sum_md_in_MPair_2>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&m});
-  /// Loopified sum_md: CraneEnter -> CraneCont_Add -> CraneCont_Add_1 ->
-  /// CraneCont_MConst -> CraneCont_MPair -> CraneCont_MPair_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&m});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyMutualPartialApp::md<uint64_t> &m = *_f.m;
       if (std::holds_alternative<
               typename LoopifyMutualPartialApp::md<uint64_t>::MNull>(m.v())) {
@@ -187,8 +166,8 @@ uint64_t LoopifyMutualPartialApp::sum_md(
         const auto &[u0, x0] =
             std::get<typename LoopifyMutualPartialApp::md<uint64_t>::MConst>(
                 m.v());
-        _stack.emplace_back(CraneCont_MConst{u0});
-        _stack.emplace_back(CraneEnter_sum_e_entry{crane_raw(x0)});
+        _stack.emplace_back(_after_sum_e_entry_in_MConst{u0});
+        _stack.emplace_back(_call_sum_e_entry{crane_raw(x0)});
       } else if (
           std::holds_alternative<
               typename LoopifyMutualPartialApp::md<uint64_t>::MNode>(m.v())) {
@@ -206,11 +185,11 @@ uint64_t LoopifyMutualPartialApp::sum_md(
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualPartialApp::md<uint64_t>::MPair>(
                 m.v());
-        _stack.emplace_back(CraneCont_MPair{crane_raw(b0)});
-        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+        _stack.emplace_back(_after_sum_md_in_MPair{crane_raw(b0)});
+        _stack.emplace_back(_call{crane_raw(a0)});
       }
-    } else if (std::holds_alternative<CraneEnter_sum_e_entry>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_sum_e_entry>(_frame));
+    } else if (std::holds_alternative<_call_sum_e_entry>(_popped)) {
+      auto _f = std::move(std::get<_call_sum_e_entry>(_popped));
       const LoopifyMutualPartialApp::e<uint64_t> &x = *_f.x;
       if (std::holds_alternative<
               typename LoopifyMutualPartialApp::e<uint64_t>::Leaf>(x.v())) {
@@ -226,32 +205,32 @@ uint64_t LoopifyMutualPartialApp::sum_md(
                      typename LoopifyMutualPartialApp::e<uint64_t>::Add>(x.v())) {
         const auto &[a0, b0] =
             std::get<typename LoopifyMutualPartialApp::e<uint64_t>::Add>(x.v());
-        _stack.emplace_back(CraneCont_Add{crane_raw(b0)});
-        _stack.emplace_back(CraneEnter_sum_e_entry{crane_raw(a0)});
+        _stack.emplace_back(_after_sum_e_entry_in_Add{crane_raw(b0)});
+        _stack.emplace_back(_call_sum_e_entry{crane_raw(a0)});
       } else {
         const auto &[m1] = std::get<
             typename LoopifyMutualPartialApp::e<uint64_t>::Meta>(x.v());
-        _stack.emplace_back(CraneEnter{crane_raw(m1)});
+        _stack.emplace_back(_call{crane_raw(m1)});
       }
-    } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Add>(_frame));
+    } else if (std::holds_alternative<_after_sum_e_entry_in_Add>(_popped)) {
+      auto _f = std::move(std::get<_after_sum_e_entry_in_Add>(_popped));
       const LoopifyMutualPartialApp::e<uint64_t> &b0 = *_f.b0;
-      _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sum_e_entry{&b0});
-    } else if (std::holds_alternative<CraneCont_Add_1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+      _stack.emplace_back(_after_sum_e_entry_in_Add_2{std::move(_result)});
+      _stack.emplace_back(_call_sum_e_entry{&b0});
+    } else if (std::holds_alternative<_after_sum_e_entry_in_Add_2>(_popped)) {
+      auto _f = std::move(std::get<_after_sum_e_entry_in_Add_2>(_popped));
       _result = (_f._tmp2 + std::move(_result));
-    } else if (std::holds_alternative<CraneCont_MConst>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_MConst>(_frame));
+    } else if (std::holds_alternative<_after_sum_e_entry_in_MConst>(_popped)) {
+      auto _f = std::move(std::get<_after_sum_e_entry_in_MConst>(_popped));
       uint64_t u0 = _f.u0;
       _result = (u0 + std::move(_result));
-    } else if (std::holds_alternative<CraneCont_MPair>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_MPair>(_frame));
+    } else if (std::holds_alternative<_after_sum_md_in_MPair>(_popped)) {
+      auto _f = std::move(std::get<_after_sum_md_in_MPair>(_popped));
       const LoopifyMutualPartialApp::md<uint64_t> &b0 = *_f.b0;
-      _stack.emplace_back(CraneCont_MPair_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{&b0});
+      _stack.emplace_back(_after_sum_md_in_MPair_2{std::move(_result)});
+      _stack.emplace_back(_call{&b0});
     } else {
-      auto _f = std::move(std::get<CraneCont_MPair_1>(_frame));
+      auto _f = std::move(std::get<_after_sum_md_in_MPair_2>(_popped));
       _result = (_f._tmp6 + std::move(_result));
     }
   }

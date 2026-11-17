@@ -69,6 +69,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -95,6 +97,8 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -154,6 +158,8 @@ struct LoopifyTreePaths {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Leaf>(v_mut())) {
         return;
       }
@@ -198,54 +204,53 @@ struct LoopifyTreePaths {
     List<uint64_t> flatten_paths() const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of flatten_paths: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_flatten_paths_in_Node {
         uint64_t a1;
         const tree *a2;
       };
 
-      /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_flatten_paths_in_Node_2 {
         uint64_t a1;
         List<uint64_t> _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_flatten_paths_in_Node,
+                                  _after_flatten_paths_in_Node_2>;
       List<uint64_t> _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified flatten_paths: CraneEnter -> CraneCont_Node ->
-      /// CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = List<uint64_t>::nil();
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_flatten_paths_in_Node{a1,
+                                                             crane_raw(a2)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (
+                std::holds_alternative<_after_flatten_paths_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_flatten_paths_in_Node>(_popped));
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a2});
+          _stack.emplace_back(
+              _after_flatten_paths_in_Node_2{a1, std::move(_result)});
+          _stack.emplace_back(_call{_f.a2});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f =
+              std::move(std::get<_after_flatten_paths_in_Node_2>(_popped));
           uint64_t a1 = _f.a1;
           _result = List<uint64_t>::cons(a1, _f._tmp2.app(std::move(_result)));
         }
@@ -256,54 +261,50 @@ struct LoopifyTreePaths {
     uint64_t max_path_sum() const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of max_path_sum: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_max_path_sum_in_Node {
         uint64_t a1;
         const tree *a2;
       };
 
-      /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_max_path_sum_in_Node_2 {
         uint64_t a1;
         uint64_t _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_max_path_sum_in_Node,
+                                  _after_max_path_sum_in_Node_2>;
       uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified max_path_sum: CraneEnter -> CraneCont_Node ->
-      /// CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_max_path_sum_in_Node{a1, crane_raw(a2)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_max_path_sum_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_max_path_sum_in_Node>(_popped));
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a2});
+          _stack.emplace_back(
+              _after_max_path_sum_in_Node_2{a1, std::move(_result)});
+          _stack.emplace_back(_call{_f.a2});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_max_path_sum_in_Node_2>(_popped));
           uint64_t a1 = _f.a1;
           _result = (a1 + std::max(_f._tmp2, std::move(_result)));
         }
@@ -315,36 +316,33 @@ struct LoopifyTreePaths {
                                                 uint64_t target) const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of find_path_sum: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
         uint64_t acc;
       };
 
-      /// CraneCont2: saves [a1], resumes after recursive call, then processes
-      /// rest.
-      struct CraneCont2 {
-        uint64_t a1;
-      };
-
-      /// CraneCont_Node: saves [a1, a2, new_acc], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node {
+      struct _after_find_path_sum_in_Node {
         uint64_t a1;
         const tree *a2;
         uint64_t new_acc;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont2, CraneCont_Node>;
+      struct _after_find_path_sum_in_None {
+        uint64_t a1;
+      };
+
+      using _frame = std::variant<_call, _after_find_path_sum_in_Node,
+                                  _after_find_path_sum_in_None>;
       std::optional<List<uint64_t>> _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, acc});
-      /// Loopified find_path_sum: CraneEnter -> CraneCont2 -> CraneCont_Node.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self, acc});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           uint64_t acc = _f.acc;
           auto &&_sv = *_self;
@@ -358,22 +356,13 @@ struct LoopifyTreePaths {
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             uint64_t new_acc = (acc + a1);
-            _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2), new_acc});
-            _stack.emplace_back(CraneEnter{crane_raw(a0), new_acc});
+            _stack.emplace_back(
+                _after_find_path_sum_in_Node{a1, crane_raw(a2), new_acc});
+            _stack.emplace_back(_call{crane_raw(a0), new_acc});
           }
-        } else if (std::holds_alternative<CraneCont2>(_frame)) {
-          auto _f = std::move(std::get<CraneCont2>(_frame));
-          uint64_t a1 = _f.a1;
-          std::optional<List<uint64_t>> _tmp1 = std::move(_result);
-          if (_tmp1.has_value()) {
-            const List<uint64_t> &path = *_tmp1;
-            _result = std::make_optional<List<uint64_t>>(
-                List<uint64_t>::cons(a1, path));
-          } else {
-            _result = std::optional<List<uint64_t>>();
-          }
-        } else {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (
+                std::holds_alternative<_after_find_path_sum_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_find_path_sum_in_Node>(_popped));
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
           uint64_t new_acc = _f.new_acc;
@@ -383,8 +372,19 @@ struct LoopifyTreePaths {
             _result = std::make_optional<List<uint64_t>>(
                 List<uint64_t>::cons(a1, path));
           } else {
-            _stack.emplace_back(CraneCont2{a1});
-            _stack.emplace_back(CraneEnter{_f.a2, new_acc});
+            _stack.emplace_back(_after_find_path_sum_in_None{a1});
+            _stack.emplace_back(_call{_f.a2, new_acc});
+          }
+        } else {
+          auto _f = std::move(std::get<_after_find_path_sum_in_None>(_popped));
+          uint64_t a1 = _f.a1;
+          std::optional<List<uint64_t>> _tmp1 = std::move(_result);
+          if (_tmp1.has_value()) {
+            const List<uint64_t> &path = *_tmp1;
+            _result = std::make_optional<List<uint64_t>>(
+                List<uint64_t>::cons(a1, path));
+          } else {
+            _result = std::optional<List<uint64_t>>();
           }
         }
       }
@@ -398,37 +398,32 @@ struct LoopifyTreePaths {
     uint64_t count_paths_sum_aux(uint64_t acc, uint64_t target) const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of count_paths_sum_aux:
+      // _call frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
         uint64_t acc;
       };
 
-      /// CraneCont_Node: saves [a2, new_acc], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node {
+      struct _after_count_paths_sum_aux_in_Node {
         const tree *a2;
         uint64_t new_acc;
       };
 
-      /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_count_paths_sum_aux_in_Node_2 {
         uint64_t _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_count_paths_sum_aux_in_Node,
+                                  _after_count_paths_sum_aux_in_Node_2>;
       uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, acc});
-      /// Loopified count_paths_sum_aux: CraneEnter -> CraneCont_Node ->
-      /// CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self, acc});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           uint64_t acc = _f.acc;
           auto &&_sv = *_self;
@@ -441,17 +436,22 @@ struct LoopifyTreePaths {
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
             uint64_t new_acc = (acc + a1);
-            _stack.emplace_back(CraneCont_Node{crane_raw(a2), new_acc});
-            _stack.emplace_back(CraneEnter{crane_raw(a0), new_acc});
+            _stack.emplace_back(
+                _after_count_paths_sum_aux_in_Node{crane_raw(a2), new_acc});
+            _stack.emplace_back(_call{crane_raw(a0), new_acc});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_count_paths_sum_aux_in_Node>(
+                       _popped)) {
+          auto _f =
+              std::move(std::get<_after_count_paths_sum_aux_in_Node>(_popped));
           const tree &a2 = *_f.a2;
           uint64_t new_acc = _f.new_acc;
-          _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a2, new_acc});
+          _stack.emplace_back(
+              _after_count_paths_sum_aux_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a2, new_acc});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(
+              std::get<_after_count_paths_sum_aux_in_Node_2>(_popped));
           _result = (_f._tmp2 + std::move(_result));
         }
       }
@@ -461,36 +461,32 @@ struct LoopifyTreePaths {
     List<List<uint64_t>> paths() const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of paths: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_paths_in_Node {
         uint64_t a1;
         const tree *a2;
       };
 
-      /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_paths_in_Node_2 {
         uint64_t a1;
         List<List<uint64_t>> _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame =
+          std::variant<_call, _after_paths_in_Node, _after_paths_in_Node_2>;
       List<List<uint64_t>> _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified paths: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -498,17 +494,17 @@ struct LoopifyTreePaths {
                                                  List<List<uint64_t>>::nil());
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_paths_in_Node{a1, crane_raw(a2)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_paths_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_paths_in_Node>(_popped));
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a2});
+          _stack.emplace_back(_after_paths_in_Node_2{a1, std::move(_result)});
+          _stack.emplace_back(_call{_f.a2});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_paths_in_Node_2>(_popped));
           uint64_t a1 = _f.a1;
           _result =
               map_cons(a1, std::move(_f._tmp2)).app(
@@ -525,58 +521,55 @@ struct LoopifyTreePaths {
     template <typename T1, typename F1> T1 tree_rect(T1 f, F1 &&f0) const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of tree_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [a0, a1, a2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_tree_rect_in_Node {
         std::shared_ptr<tree> a0;
         uint64_t a1;
         const tree *a2;
       };
 
-      /// CraneCont_Node_1: saves [a0, a1, a2, _tmp2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_tree_rect_in_Node_2 {
         std::shared_ptr<tree> a0;
         uint64_t a1;
         const tree *a2;
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_tree_rect_in_Node,
+                                  _after_tree_rect_in_Node_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified tree_rect: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1, a2] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a0, a1, crane_raw(a2)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_tree_rect_in_Node{a0, a1,
+                                                         crane_raw(a2)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
-          _stack.emplace_back(
-              CraneCont_Node_1{std::move(a0), a1, &a2, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a2});
+          _stack.emplace_back(_after_tree_rect_in_Node_2{std::move(a0), a1, &a2,
+                                                         std::move(_result)});
+          _stack.emplace_back(_call{_f.a2});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
           const tree &a2 = *_f.a2;
@@ -624,6 +617,8 @@ struct LoopifyTreePaths {
 
     // MANIPULATORS
     ~bool_tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<BLeaf>(v_mut())) {
         return;
       }
@@ -670,35 +665,30 @@ struct LoopifyTreePaths {
     bool and_search(F0 &&p) const {
       const bool_tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of and_search: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const bool_tree *_self;
       };
 
-      /// CraneCont_BNode: saves [a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_BNode {
+      struct _after_and_search_in_BNode {
         const bool_tree *a1;
       };
 
-      /// CraneCont_BNode_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_BNode_1 {
+      struct _after_and_search_in_BNode_2 {
         bool _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_BNode, CraneCont_BNode_1>;
+      using _frame = std::variant<_call, _after_and_search_in_BNode,
+                                  _after_and_search_in_BNode_2>;
       bool _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified and_search: CraneEnter -> CraneCont_BNode ->
-      /// CraneCont_BNode_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const bool_tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_tree::BLeaf>(_sv.v())) {
@@ -706,16 +696,16 @@ struct LoopifyTreePaths {
             _result = p(a0);
           } else {
             const auto &[a0, a1] = std::get<typename bool_tree::BNode>(_sv.v());
-            _stack.emplace_back(CraneCont_BNode{crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_and_search_in_BNode{crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_BNode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_BNode>(_frame));
+        } else if (std::holds_alternative<_after_and_search_in_BNode>(_popped)) {
+          auto _f = std::move(std::get<_after_and_search_in_BNode>(_popped));
           const bool_tree &a1 = *_f.a1;
-          _stack.emplace_back(CraneCont_BNode_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_and_search_in_BNode_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_BNode_1>(_frame));
+          auto _f = std::move(std::get<_after_and_search_in_BNode_2>(_popped));
           _result = (_f._tmp2 && std::move(_result));
         }
       }
@@ -727,35 +717,30 @@ struct LoopifyTreePaths {
     bool or_search(F0 &&p) const {
       const bool_tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of or_search: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const bool_tree *_self;
       };
 
-      /// CraneCont_BNode: saves [a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_BNode {
+      struct _after_or_search_in_BNode {
         const bool_tree *a1;
       };
 
-      /// CraneCont_BNode_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_BNode_1 {
+      struct _after_or_search_in_BNode_2 {
         bool _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_BNode, CraneCont_BNode_1>;
+      using _frame = std::variant<_call, _after_or_search_in_BNode,
+                                  _after_or_search_in_BNode_2>;
       bool _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified or_search: CraneEnter -> CraneCont_BNode ->
-      /// CraneCont_BNode_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const bool_tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_tree::BLeaf>(_sv.v())) {
@@ -763,16 +748,16 @@ struct LoopifyTreePaths {
             _result = p(a0);
           } else {
             const auto &[a0, a1] = std::get<typename bool_tree::BNode>(_sv.v());
-            _stack.emplace_back(CraneCont_BNode{crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_or_search_in_BNode{crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_BNode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_BNode>(_frame));
+        } else if (std::holds_alternative<_after_or_search_in_BNode>(_popped)) {
+          auto _f = std::move(std::get<_after_or_search_in_BNode>(_popped));
           const bool_tree &a1 = *_f.a1;
-          _stack.emplace_back(CraneCont_BNode_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_or_search_in_BNode_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_BNode_1>(_frame));
+          auto _f = std::move(std::get<_after_or_search_in_BNode_2>(_popped));
           _result = (_f._tmp2 || std::move(_result));
         }
       }
@@ -789,38 +774,33 @@ struct LoopifyTreePaths {
     T1 bool_tree_rect(F0 &&f, F1 &&f0) const {
       const bool_tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of bool_tree_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const bool_tree *_self;
       };
 
-      /// CraneCont_BNode: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_BNode {
+      struct _after_bool_tree_rect_in_BNode {
         std::shared_ptr<bool_tree> a0;
         const bool_tree *a1;
       };
 
-      /// CraneCont_BNode_1: saves [a0, a1, _tmp2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_BNode_1 {
+      struct _after_bool_tree_rect_in_BNode_2 {
         std::shared_ptr<bool_tree> a0;
         const bool_tree *a1;
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_BNode, CraneCont_BNode_1>;
+      using _frame = std::variant<_call, _after_bool_tree_rect_in_BNode,
+                                  _after_bool_tree_rect_in_BNode_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified bool_tree_rect: CraneEnter -> CraneCont_BNode ->
-      /// CraneCont_BNode_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const bool_tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename bool_tree::BLeaf>(_sv.v())) {
@@ -828,18 +808,22 @@ struct LoopifyTreePaths {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename bool_tree::BNode>(_sv.v());
-            _stack.emplace_back(CraneCont_BNode{a0, crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(
+                _after_bool_tree_rect_in_BNode{a0, crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_BNode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_BNode>(_frame));
+        } else if (
+                std::holds_alternative<_after_bool_tree_rect_in_BNode>(_popped)) {
+          auto _f =
+              std::move(std::get<_after_bool_tree_rect_in_BNode>(_popped));
           std::shared_ptr<bool_tree> a0 = std::move(_f.a0);
           const bool_tree &a1 = *_f.a1;
-          _stack.emplace_back(
-              CraneCont_BNode_1{std::move(a0), &a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_bool_tree_rect_in_BNode_2{
+              std::move(a0), &a1, std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_BNode_1>(_frame));
+          auto _f =
+              std::move(std::get<_after_bool_tree_rect_in_BNode_2>(_popped));
           std::shared_ptr<bool_tree> a0 = std::move(_f.a0);
           const bool_tree &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));

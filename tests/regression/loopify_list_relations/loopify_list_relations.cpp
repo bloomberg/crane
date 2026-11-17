@@ -1,36 +1,28 @@
 #include "loopify_list_relations.h"
 
-bool
-LoopifyListRelations::is_prefix_of(const List<uint64_t> &l1,
-                                   const List<uint64_t> &l2) { /// CraneEnter:
-                                                               /// captures
-                                                               /// varying
-                                                               /// parameters
-                                                               /// for each
-                                                               /// recursive
-                                                               /// call.
-  struct CraneEnter {
+bool LoopifyListRelations::is_prefix_of(const List<uint64_t> &l1,
+                                        const List<uint64_t> &l2) {
+  // Explicit stack replaces the non-tail recursion of is_prefix_of: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l2;
     const List<uint64_t> *l1;
   };
 
-  /// CraneCont_Cons: saves [a0, a00], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons {
+  struct _after_is_prefix_of_in_Cons {
     uint64_t a0;
     uint64_t a00;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_is_prefix_of_in_Cons>;
   bool _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l2, &l1});
-  /// Loopified is_prefix_of: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l2, &l1});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l2 = *_f.l2;
       const List<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
@@ -42,12 +34,12 @@ LoopifyListRelations::is_prefix_of(const List<uint64_t> &l1,
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(l2.v());
-          _stack.emplace_back(CraneCont_Cons{a0, a00});
-          _stack.emplace_back(CraneEnter{crane_raw(a10), crane_raw(a1)});
+          _stack.emplace_back(_after_is_prefix_of_in_Cons{a0, a00});
+          _stack.emplace_back(_call{crane_raw(a10), crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_is_prefix_of_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       _result = (a0 == a00 && std::move(_result));
@@ -66,6 +58,8 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
     uint64_t diff = (((len2 - len1) > len2 ? 0 : (len2 - len1)));
     List<uint64_t> suffix;
     auto drop = [](uint64_t n, const List<uint64_t> &xs) -> List<uint64_t> {
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       const List<uint64_t> *_loop_xs = &xs;
       uint64_t _loop_n = n;
       while (true) {
@@ -87,6 +81,8 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
     };
     suffix = drop(diff, l2);
     auto eq = [](const List<uint64_t> &a, const List<uint64_t> &b) -> bool {
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       const List<uint64_t> *_loop_b = &b;
       const List<uint64_t> *_loop_a = &a;
       while (true) {
@@ -120,6 +116,8 @@ bool LoopifyListRelations::is_suffix_of(const List<uint64_t> &l1,
 
 bool LoopifyListRelations::is_infix_of_aux(const List<uint64_t> &needle,
                                            const List<uint64_t> &haystack) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_haystack = &haystack;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(
@@ -149,6 +147,8 @@ bool LoopifyListRelations::is_infix_of(const List<uint64_t> &x0_,
 List<uint64_t> LoopifyListRelations::find_sublists_aux(
     const List<uint64_t> &needle, const List<uint64_t> &haystack,
     uint64_t idx) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_idx = idx;
@@ -189,35 +189,29 @@ LoopifyListRelations::find_sublists(const List<uint64_t> &needle,
   return find_sublists_aux(needle, haystack, UINT64_C(0));
 }
 
-bool
-LoopifyListRelations::list_eq(const List<uint64_t> &l1,
-                              const List<uint64_t> &l2) { /// CraneEnter:
-                                                          /// captures varying
-                                                          /// parameters for
-                                                          /// each recursive
-                                                          /// call.
-  struct CraneEnter {
+bool LoopifyListRelations::list_eq(const List<uint64_t> &l1,
+                                   const List<uint64_t> &l2) {
+  // Explicit stack replaces the non-tail recursion of list_eq: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l2;
     const List<uint64_t> *l1;
   };
 
-  /// CraneCont_Cons: saves [a0, a00], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons {
+  struct _after_list_eq_in_Cons {
     uint64_t a0;
     uint64_t a00;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_list_eq_in_Cons>;
   bool _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l2, &l1});
-  /// Loopified list_eq: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l2, &l1});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l2 = *_f.l2;
       const List<uint64_t> &l1 = *_f.l1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l1.v())) {
@@ -233,12 +227,12 @@ LoopifyListRelations::list_eq(const List<uint64_t> &l1,
         } else {
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(l2.v());
-          _stack.emplace_back(CraneCont_Cons{a0, a00});
-          _stack.emplace_back(CraneEnter{crane_raw(a10), crane_raw(a1)});
+          _stack.emplace_back(_after_list_eq_in_Cons{a0, a00});
+          _stack.emplace_back(_call{crane_raw(a10), crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_list_eq_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       uint64_t a00 = _f.a00;
       _result = (a0 == a00 && std::move(_result));
@@ -249,6 +243,8 @@ LoopifyListRelations::list_eq(const List<uint64_t> &l1,
 
 uint64_t LoopifyListRelations::list_compare(const List<uint64_t> &l1,
                                             const List<uint64_t> &l2) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
@@ -283,6 +279,8 @@ uint64_t LoopifyListRelations::list_compare(const List<uint64_t> &l1,
 
 List<std::pair<uint64_t, uint64_t>>
 LoopifyListRelations::zip(const List<uint64_t> &l1, const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -331,6 +329,8 @@ LoopifyListRelations::zip(const List<uint64_t> &l1, const List<uint64_t> &l2) {
 List<std::pair<std::pair<uint64_t, uint64_t>, uint64_t>>
 LoopifyListRelations::zip3(const List<uint64_t> &l1, const List<uint64_t> &l2,
                            const List<uint64_t> &l3) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<std::pair<std::pair<uint64_t, uint64_t>,
                                uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<std::pair<uint64_t, uint64_t>,
@@ -398,6 +398,8 @@ LoopifyListRelations::zip3(const List<uint64_t> &l1, const List<uint64_t> &l2,
 
 List<uint64_t> LoopifyListRelations::interleave(const List<uint64_t> &l1,
                                                 const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -443,6 +445,8 @@ List<uint64_t> LoopifyListRelations::interleave(const List<uint64_t> &l1,
 List<uint64_t>
 LoopifyListRelations::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -513,6 +517,8 @@ List<uint64_t> LoopifyListRelations::merge(const List<uint64_t> &l1,
 
 List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
                                             List<uint64_t> l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l1 = &l1;
@@ -528,38 +534,36 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
 
       if ([&]() {
         auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {
-          /// CraneEnter: captures varying parameters for each recursive call.
-          struct CraneEnter {
+          // Explicit stack replaces the non-tail recursion of member: _call
+          // frames are pending calls, _after frames resume a caller.
+          struct _call {
             const List<uint64_t> *ys;
           };
 
-          /// CraneCont_Cons: saves [a2], resumes after recursive call, then
-          /// processes rest.
-          struct CraneCont_Cons {
+          struct _after_member_in_Cons {
             uint64_t a2;
           };
 
-          using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+          using _frame = std::variant<_call, _after_member_in_Cons>;
           bool _result{};
-          crane::small_vector<CraneFrame> _stack;
-          _stack.emplace_back(CraneEnter{&ys});
-          /// Loopified member: CraneEnter -> CraneCont_Cons.
+          crane::small_vector<_frame> _stack;
+          _stack.emplace_back(_call{&ys});
           while (!_stack.empty()) {
-            CraneFrame _frame = std::move(_stack.back());
+            _frame _popped = std::move(_stack.back());
             _stack.pop_back();
-            if (std::holds_alternative<CraneEnter>(_frame)) {
-              auto _f = std::move(std::get<CraneEnter>(_frame));
+            if (std::holds_alternative<_call>(_popped)) {
+              auto _f = std::move(std::get<_call>(_popped));
               const List<uint64_t> &ys = *_f.ys;
               if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
                 _result = false;
               } else {
                 const auto &[a2, a3] =
                     std::get<typename List<uint64_t>::Cons>(ys.v());
-                _stack.emplace_back(CraneCont_Cons{a2});
-                _stack.emplace_back(CraneEnter{crane_raw(a3)});
+                _stack.emplace_back(_after_member_in_Cons{a2});
+                _stack.emplace_back(_call{crane_raw(a3)});
               }
             } else {
-              auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+              auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
               uint64_t a2 = _f.a2;
               _result = (y == a2 || std::move(_result));
             }
@@ -587,6 +591,8 @@ List<uint64_t> LoopifyListRelations::union_(const List<uint64_t> &l1,
 
 List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
                                                   const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l1 = &l1;
@@ -602,38 +608,36 @@ List<uint64_t> LoopifyListRelations::intersection(const List<uint64_t> &l1,
 
       if ([&]() {
         auto member = [&](uint64_t y, const List<uint64_t> &ys) -> bool {
-          /// CraneEnter: captures varying parameters for each recursive call.
-          struct CraneEnter {
+          // Explicit stack replaces the non-tail recursion of member: _call
+          // frames are pending calls, _after frames resume a caller.
+          struct _call {
             const List<uint64_t> *ys;
           };
 
-          /// CraneCont_Cons: saves [a2], resumes after recursive call, then
-          /// processes rest.
-          struct CraneCont_Cons {
+          struct _after_member_in_Cons {
             uint64_t a2;
           };
 
-          using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+          using _frame = std::variant<_call, _after_member_in_Cons>;
           bool _result{};
-          crane::small_vector<CraneFrame> _stack;
-          _stack.emplace_back(CraneEnter{&ys});
-          /// Loopified member: CraneEnter -> CraneCont_Cons.
+          crane::small_vector<_frame> _stack;
+          _stack.emplace_back(_call{&ys});
           while (!_stack.empty()) {
-            CraneFrame _frame = std::move(_stack.back());
+            _frame _popped = std::move(_stack.back());
             _stack.pop_back();
-            if (std::holds_alternative<CraneEnter>(_frame)) {
-              auto _f = std::move(std::get<CraneEnter>(_frame));
+            if (std::holds_alternative<_call>(_popped)) {
+              auto _f = std::move(std::get<_call>(_popped));
               const List<uint64_t> &ys = *_f.ys;
               if (std::holds_alternative<typename List<uint64_t>::Nil>(ys.v())) {
                 _result = false;
               } else {
                 const auto &[a2, a3] =
                     std::get<typename List<uint64_t>::Cons>(ys.v());
-                _stack.emplace_back(CraneCont_Cons{a2});
-                _stack.emplace_back(CraneEnter{crane_raw(a3)});
+                _stack.emplace_back(_after_member_in_Cons{a2});
+                _stack.emplace_back(_call{crane_raw(a3)});
               }
             } else {
-              auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+              auto _f = std::move(std::get<_after_member_in_Cons>(_popped));
               uint64_t a2 = _f.a2;
               _result = (y == a2 || std::move(_result));
             }

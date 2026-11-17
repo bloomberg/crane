@@ -1,6 +1,8 @@
 #include "loopify_option_maybe.h"
 
 std::optional<uint64_t> LoopifyOptionMaybe::find_even(const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -19,6 +21,8 @@ std::optional<uint64_t> LoopifyOptionMaybe::find_even(const List<uint64_t> &l) {
 
 std::optional<uint64_t>
 LoopifyOptionMaybe::find_greater(uint64_t threshold, const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
@@ -38,6 +42,8 @@ LoopifyOptionMaybe::find_greater(uint64_t threshold, const List<uint64_t> &l) {
 std::optional<uint64_t>
 LoopifyOptionMaybe::lookup(uint64_t key,
                            const List<std::pair<uint64_t, uint64_t>> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<
@@ -60,6 +66,8 @@ LoopifyOptionMaybe::lookup(uint64_t key,
 List<uint64_t>
 LoopifyOptionMaybe::lookup_all(uint64_t key,
                                const List<std::pair<uint64_t, uint64_t>> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
@@ -114,6 +122,8 @@ LoopifyOptionMaybe::safe_tail(const List<uint64_t> &l) {
 
 List<uint64_t>
 LoopifyOptionMaybe::catMaybes(const List<std::optional<uint64_t>> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<std::optional<uint64_t>> *_loop_l = &l;
@@ -148,6 +158,8 @@ LoopifyOptionMaybe::catMaybes(const List<std::optional<uint64_t>> &l) {
 
 std::optional<uint64_t>
 LoopifyOptionMaybe::find_index_even_aux(const List<uint64_t> &l, uint64_t idx) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_idx = idx;
   const List<uint64_t> *_loop_l = &l;
   while (true) {

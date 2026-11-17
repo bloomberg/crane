@@ -2,6 +2,8 @@
 
 List<BoxedFields::point>
 BoxedFields::shift(uint64_t d, const List<BoxedFields::point> &ps) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<BoxedFields::point>> _root{};
   std::shared_ptr<List<BoxedFields::point>> *_write = nullptr;
   const List<BoxedFields::point> *_loop_ps = &ps;

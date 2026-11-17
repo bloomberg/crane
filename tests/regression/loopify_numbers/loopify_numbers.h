@@ -67,6 +67,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -95,35 +97,34 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of length: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: resumes after recursive call, then processes rest.
-    struct CraneCont_Cons {};
+    struct _after_length_in_Cons {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_length_in_Cons>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified length: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _result = (std::move(_result) + 1);
       }
     }
@@ -160,6 +161,8 @@ struct LoopifyNumbers {
   /// Tests recursive higher-order function application.
   template <typename F1>
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _loop_x = x;
     uint64_t _loop_n = n;
     while (true) {
@@ -180,27 +183,24 @@ struct LoopifyNumbers {
   /// nest_apply n f x nests function application: f(f(...f(x))).
   /// Similar to church but emphasizes nested call structure.
   template <typename F1>
-  static uint64_t
-  nest_apply(uint64_t n, F1 &&f,
-             uint64_t x) { /// CraneEnter: captures varying parameters for each
-                           /// recursive call.
-    struct CraneEnter {
+  static uint64_t nest_apply(uint64_t n, F1 &&f, uint64_t x) {
+    // Explicit stack replaces the non-tail recursion of nest_apply: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       uint64_t n;
     };
 
-    /// CraneCont_px: resumes after recursive call, then processes rest.
-    struct CraneCont_px {};
+    struct _after_nest_apply_in_S {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_px>;
+    using _frame = std::variant<_call, _after_nest_apply_in_S>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{n});
-    /// Loopified nest_apply: CraneEnter -> CraneCont_px.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{n});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         uint64_t n = _f.n;
         if (n <= 0) {
           _result = x;
@@ -210,12 +210,12 @@ struct LoopifyNumbers {
             _result = f(x);
           } else {
             uint64_t _x = n_ - 1;
-            _stack.emplace_back(CraneCont_px{});
-            _stack.emplace_back(CraneEnter{n_});
+            _stack.emplace_back(_after_nest_apply_in_S{});
+            _stack.emplace_back(_call{n_});
           }
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_px>(_frame));
+        auto _f = std::move(std::get<_after_nest_apply_in_S>(_popped));
         _result = f(std::move(_result));
       }
     }

@@ -3,6 +3,8 @@
 /// lookup_opt key l looks up key in an association list.
 std::optional<uint64_t> LoopifyOption::lookup_opt(
     uint64_t key, const LoopifyOption::list<std::pair<uint64_t, uint64_t>> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const LoopifyOption::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<

@@ -10,6 +10,8 @@ using crane_carrier_tc_6f2a644abca70cfd =
 /// parameter ("invalid explicitly-specified argument for template parameter
 /// '_tcI0'").
 Itree<InterpStateDict::Cnt, std::monostate> InterpStateDict::ticks(uint64_t n) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
       crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
     return crane_erase_global<Function::Id_IFun, crane::obj>();
@@ -33,6 +35,8 @@ Itree<InterpStateDict::Cnt, std::monostate> InterpStateDict::ticks(uint64_t n) {
 }
 
 Itree<InterpStateDict::Cnt, uint64_t> InterpStateDict::prog(uint64_t n) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
       crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
     return crane_erase_global<Function::Id_IFun, crane::obj>();

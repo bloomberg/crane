@@ -6,6 +6,8 @@ uint64_t ThreeArgumentCurriedSlot::add3(uint64_t a, uint64_t b, uint64_t c) {
 
 uint64_t ThreeArgumentCurriedSlot::f3(uint64_t x0_, uint64_t x1_,
                                       uint64_t x2_) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto idp_1 = crane::immortal(idp<
       crane::fn<crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>(uint64_t)>>(
       [](uint64_t _ec0) {

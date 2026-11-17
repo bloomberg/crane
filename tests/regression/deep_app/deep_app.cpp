@@ -3,6 +3,8 @@
 /// Tail-recursive builder — loopified.
 DeepApp::mylist<uint64_t> DeepApp::build(uint64_t n,
                                          DeepApp::mylist<uint64_t> acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   DeepApp::mylist<uint64_t> _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {

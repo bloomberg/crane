@@ -46,6 +46,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -72,6 +74,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
@@ -138,6 +142,8 @@ struct Comp {
 
     // MANIPULATORS
     ~expr() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Lit>(v_mut())) {
         return;
       }
@@ -182,50 +188,46 @@ struct Comp {
     Nat esize() const {
       const expr *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of esize: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const expr *_self;
       };
 
-      /// CraneCont_Add: saves [a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add {
+      struct _after_esize_in_Add {
         const expr *a1;
       };
 
-      /// CraneCont_Add_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add_1 {
+      struct _after_esize_in_Add_2 {
         Nat _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1>;
+      using _frame =
+          std::variant<_call, _after_esize_in_Add, _after_esize_in_Add_2>;
       Nat _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified esize: CraneEnter -> CraneCont_Add -> CraneCont_Add_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
             _result = Nat::s(Nat::o());
           } else {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(CraneCont_Add{crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_esize_in_Add{crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add>(_frame));
+        } else if (std::holds_alternative<_after_esize_in_Add>(_popped)) {
+          auto _f = std::move(std::get<_after_esize_in_Add>(_popped));
           const expr &a1 = *_f.a1;
-          _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_esize_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+          auto _f = std::move(std::get<_after_esize_in_Add_2>(_popped));
           _result =
               Nat::s(Nat::o()).add(std::move(_f._tmp2)).add(std::move(_result));
         }
@@ -236,34 +238,30 @@ struct Comp {
     Nat eval() const {
       const expr *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of eval: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const expr *_self;
       };
 
-      /// CraneCont_Add: saves [a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add {
+      struct _after_eval_in_Add {
         const expr *a1;
       };
 
-      /// CraneCont_Add_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add_1 {
+      struct _after_eval_in_Add_2 {
         Nat _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1>;
+      using _frame =
+          std::variant<_call, _after_eval_in_Add, _after_eval_in_Add_2>;
       Nat _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified eval: CraneEnter -> CraneCont_Add -> CraneCont_Add_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -271,16 +269,16 @@ struct Comp {
             _result = std::move(a0);
           } else {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(CraneCont_Add{crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_eval_in_Add{crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add>(_frame));
+        } else if (std::holds_alternative<_after_eval_in_Add>(_popped)) {
+          auto _f = std::move(std::get<_after_eval_in_Add>(_popped));
           const expr &a1 = *_f.a1;
-          _stack.emplace_back(CraneCont_Add_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_eval_in_Add_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+          auto _f = std::move(std::get<_after_eval_in_Add_2>(_popped));
           _result = _f._tmp2.add(std::move(_result));
         }
       }
@@ -297,37 +295,33 @@ struct Comp {
     T1 expr_rect(F0 &&f, F1 &&f0) const {
       const expr *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of expr_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const expr *_self;
       };
 
-      /// CraneCont_Add: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Add {
+      struct _after_expr_rect_in_Add {
         std::shared_ptr<expr> a0;
         const expr *a1;
       };
 
-      /// CraneCont_Add_1: saves [a0, a1, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Add_1 {
+      struct _after_expr_rect_in_Add_2 {
         std::shared_ptr<expr> a0;
         const expr *a1;
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Add, CraneCont_Add_1>;
+      using _frame = std::variant<_call, _after_expr_rect_in_Add,
+                                  _after_expr_rect_in_Add_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified expr_rect: CraneEnter -> CraneCont_Add -> CraneCont_Add_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const expr *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename expr::Lit>(_sv.v())) {
@@ -335,18 +329,19 @@ struct Comp {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename expr::Add>(_sv.v());
-            _stack.emplace_back(CraneCont_Add{a0, crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_expr_rect_in_Add{a0, crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Add>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Add>(_frame));
+        } else if (std::holds_alternative<_after_expr_rect_in_Add>(_popped)) {
+          auto _f = std::move(std::get<_after_expr_rect_in_Add>(_popped));
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_Add_1{std::move(a0), &a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+              _after_expr_rect_in_Add_2{std::move(a0), &a1,
+                                        std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_Add_1>(_frame));
+          auto _f = std::move(std::get<_after_expr_rect_in_Add_2>(_popped));
           std::shared_ptr<expr> a0 = std::move(_f.a0);
           const expr &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
@@ -393,6 +388,8 @@ struct Comp {
 
     // MANIPULATORS
     ~avl() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Leaf>(v_mut())) {
         return;
       }
@@ -437,34 +434,30 @@ struct Comp {
     Nat size() const {
       const avl *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of size: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const avl *_self;
       };
 
-      /// CraneCont_Node: saves [a3], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_size_in_Node {
         const avl *a3;
       };
 
-      /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_size_in_Node_2 {
         Nat _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame =
+          std::variant<_call, _after_size_in_Node, _after_size_in_Node_2>;
       Nat _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified size: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const avl *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
@@ -472,16 +465,16 @@ struct Comp {
           } else {
             const auto &[a0, _, _, a3, _] =
                 std::get<typename avl::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{crane_raw(a3)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_size_in_Node{crane_raw(a3)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_size_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_size_in_Node>(_popped));
           const avl &a3 = *_f.a3;
-          _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a3});
+          _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a3});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
           _result =
               Nat::s(Nat::o()).add(std::move(_f._tmp2)).add(std::move(_result));
         }
@@ -490,6 +483,8 @@ struct Comp {
     }
 
     expr find(const Nat &k) const {
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       const avl *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;
@@ -527,38 +522,34 @@ struct Comp {
     avl insert(const Nat &k, const expr &v) const {
       const avl *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of insert: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const avl *_self;
       };
 
-      /// CraneCont_Node: saves [a1, a2, a3], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_insert_in_Node {
         Nat a1;
         expr a2;
         std::shared_ptr<avl> a3;
       };
 
-      /// CraneCont_Node_1: saves [a0, a1, a2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_insert_in_Node_2 {
         std::shared_ptr<avl> a0;
         Nat a1;
         expr a2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame =
+          std::variant<_call, _after_insert_in_Node, _after_insert_in_Node_2>;
       avl _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified insert: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const avl *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
@@ -568,15 +559,15 @@ struct Comp {
                 std::get<typename avl::Node>(_sv.v());
             switch (PeanoNat::ltb(k, a1)) {
             case Bool0::TRUE_: {
-              _stack.emplace_back(CraneCont_Node{a1, a2, a3});
-              _stack.emplace_back(CraneEnter{crane_raw(a0)});
+              _stack.emplace_back(_after_insert_in_Node{a1, a2, a3});
+              _stack.emplace_back(_call{crane_raw(a0)});
               break;
             }
             case Bool0::FALSE_: {
               switch (PeanoNat::ltb(a1, k)) {
               case Bool0::TRUE_: {
-                _stack.emplace_back(CraneCont_Node_1{a0, a1, a2});
-                _stack.emplace_back(CraneEnter{crane_raw(a3)});
+                _stack.emplace_back(_after_insert_in_Node_2{a0, a1, a2});
+                _stack.emplace_back(_call{crane_raw(a3)});
                 break;
               }
               case Bool0::FALSE_: {
@@ -592,14 +583,14 @@ struct Comp {
               std::unreachable();
             }
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_insert_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_insert_in_Node>(_popped));
           Nat a1 = std::move(_f.a1);
           expr a2 = std::move(_f.a2);
           std::shared_ptr<avl> a3 = std::move(_f.a3);
           _result = _result.balance(a1, a2, *a3);
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_insert_in_Node_2>(_popped));
           std::shared_ptr<avl> a0 = std::move(_f.a0);
           Nat a1 = std::move(_f.a1);
           expr a2 = std::move(_f.a2);
@@ -674,14 +665,13 @@ struct Comp {
     template <typename T1, typename F1> T1 avl_rect(T1 f, F1 &&f0) const {
       const avl *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of avl_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const avl *_self;
       };
 
-      /// CraneCont_Node: saves [a2, a3, a4, a5, a6], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_Node {
+      struct _after_avl_rect_in_Node {
         std::shared_ptr<avl> a2;
         Nat a3;
         expr a4;
@@ -689,9 +679,7 @@ struct Comp {
         Nat a6;
       };
 
-      /// CraneCont_Node_1: saves [a2, a3, a4, a5, a6, _tmp2], resumes after
-      /// recursive call, then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_avl_rect_in_Node_2 {
         std::shared_ptr<avl> a2;
         Nat a3;
         expr a4;
@@ -700,17 +688,16 @@ struct Comp {
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_avl_rect_in_Node,
+                                  _after_avl_rect_in_Node_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified avl_rect: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const avl *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename avl::Leaf>(_sv.v())) {
@@ -718,22 +705,23 @@ struct Comp {
           } else {
             const auto &[a2, a3, a4, a5, a6] =
                 std::get<typename avl::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a2, a3, a4, crane_raw(a5), a6});
-            _stack.emplace_back(CraneEnter{crane_raw(a2)});
+            _stack.emplace_back(
+                _after_avl_rect_in_Node{a2, a3, a4, crane_raw(a5), a6});
+            _stack.emplace_back(_call{crane_raw(a2)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_avl_rect_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_avl_rect_in_Node>(_popped));
           std::shared_ptr<avl> a2 = std::move(_f.a2);
           Nat a3 = std::move(_f.a3);
           expr a4 = std::move(_f.a4);
           const avl &a5 = *_f.a5;
           Nat a6 = std::move(_f.a6);
-          _stack.emplace_back(
-              CraneCont_Node_1{std::move(a2), std::move(a3), std::move(a4), &a5,
-                               std::move(a6), std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a5});
+          _stack.emplace_back(_after_avl_rect_in_Node_2{
+              std::move(a2), std::move(a3), std::move(a4), &a5, std::move(a6),
+              std::move(_result)});
+          _stack.emplace_back(_call{_f.a5});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_avl_rect_in_Node_2>(_popped));
           std::shared_ptr<avl> a2 = std::move(_f.a2);
           Nat a3 = std::move(_f.a3);
           expr a4 = std::move(_f.a4);

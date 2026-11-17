@@ -10,50 +10,48 @@ uint64_t LiftedHelperFramePointer::zigzag(
   return (zigzag_crane_go(t, u) + (UINT64_C(1000) * zigzag_crane_go(s, w)));
 }
 
-LiftedHelperFramePointer::tree<bool> LiftedHelperFramePointer::full_bool(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-  struct CraneEnter {
+LiftedHelperFramePointer::tree<bool>
+LiftedHelperFramePointer::full_bool(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of full_bool: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_k: saves [k], resumes after recursive call, then processes rest.
-  struct CraneCont_k {
+  struct _after_full_bool_in_S {
     uint64_t k;
   };
 
-  /// CraneCont_k_1: saves [k, _tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_k_1 {
+  struct _after_full_bool_in_S_2 {
     uint64_t k;
     LiftedHelperFramePointer::tree<bool> _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_k, CraneCont_k_1>;
+  using _frame =
+      std::variant<_call, _after_full_bool_in_S, _after_full_bool_in_S_2>;
   LiftedHelperFramePointer::tree<bool> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified full_bool: CraneEnter -> CraneCont_k -> CraneCont_k_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree<bool>::leaf();
       } else {
         uint64_t k = n - 1;
-        _stack.emplace_back(CraneCont_k{k});
-        _stack.emplace_back(CraneEnter{k});
+        _stack.emplace_back(_after_full_bool_in_S{k});
+        _stack.emplace_back(_call{k});
       }
-    } else if (std::holds_alternative<CraneCont_k>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_k>(_frame));
+    } else if (std::holds_alternative<_after_full_bool_in_S>(_popped)) {
+      auto _f = std::move(std::get<_after_full_bool_in_S>(_popped));
       uint64_t k = _f.k;
-      _stack.emplace_back(CraneCont_k_1{k, std::move(_result)});
-      _stack.emplace_back(CraneEnter{k});
+      _stack.emplace_back(_after_full_bool_in_S_2{k, std::move(_result)});
+      _stack.emplace_back(_call{k});
     } else {
-      auto _f = std::move(std::get<CraneCont_k_1>(_frame));
+      auto _f = std::move(std::get<_after_full_bool_in_S_2>(_popped));
       uint64_t k = _f.k;
       _result = tree<bool>::node(std::move(_f._tmp2), Nat::even(k),
                                  std::move(_result));
@@ -64,6 +62,8 @@ LiftedHelperFramePointer::tree<bool> LiftedHelperFramePointer::full_bool(
 
 LiftedHelperFramePointer::tree<uint64_t>
 LiftedHelperFramePointer::spine(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LiftedHelperFramePointer::tree<uint64_t>> _root{};
   std::shared_ptr<LiftedHelperFramePointer::tree<uint64_t>> *_write = nullptr;
   uint64_t _loop_n = n;
@@ -97,50 +97,47 @@ LiftedHelperFramePointer::spine(uint64_t n) {
   return std::move(*_root);
 }
 
-LiftedHelperFramePointer::tree<uint64_t> LiftedHelperFramePointer::full(
-    uint64_t n) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-  struct CraneEnter {
+LiftedHelperFramePointer::tree<uint64_t>
+LiftedHelperFramePointer::full(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of full: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_k: saves [k], resumes after recursive call, then processes rest.
-  struct CraneCont_k {
+  struct _after_full_in_S {
     uint64_t k;
   };
 
-  /// CraneCont_k_1: saves [k, _tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_k_1 {
+  struct _after_full_in_S_2 {
     uint64_t k;
     LiftedHelperFramePointer::tree<uint64_t> _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_k, CraneCont_k_1>;
+  using _frame = std::variant<_call, _after_full_in_S, _after_full_in_S_2>;
   LiftedHelperFramePointer::tree<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified full: CraneEnter -> CraneCont_k -> CraneCont_k_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree<uint64_t>::leaf();
       } else {
         uint64_t k = n - 1;
-        _stack.emplace_back(CraneCont_k{k});
-        _stack.emplace_back(CraneEnter{k});
+        _stack.emplace_back(_after_full_in_S{k});
+        _stack.emplace_back(_call{k});
       }
-    } else if (std::holds_alternative<CraneCont_k>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_k>(_frame));
+    } else if (std::holds_alternative<_after_full_in_S>(_popped)) {
+      auto _f = std::move(std::get<_after_full_in_S>(_popped));
       uint64_t k = _f.k;
-      _stack.emplace_back(CraneCont_k_1{k, std::move(_result)});
-      _stack.emplace_back(CraneEnter{k});
+      _stack.emplace_back(_after_full_in_S_2{k, std::move(_result)});
+      _stack.emplace_back(_call{k});
     } else {
-      auto _f = std::move(std::get<CraneCont_k_1>(_frame));
+      auto _f = std::move(std::get<_after_full_in_S_2>(_popped));
       uint64_t k = _f.k;
       _result =
           tree<uint64_t>::node(std::move(_f._tmp2), k, std::move(_result));
@@ -150,6 +147,8 @@ LiftedHelperFramePointer::tree<uint64_t> LiftedHelperFramePointer::full(
 }
 
 bool Nat::even(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {

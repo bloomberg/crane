@@ -1,34 +1,25 @@
 #include "mem_safety_probe7.h"
 
-uint64_t
-MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) { /// CraneEnter:
-                                                                        /// captures
-                                                                        /// varying
-                                                                        /// parameters
-                                                                        /// for
-                                                                        /// each
-                                                                        /// recursive
-                                                                        /// call.
-  struct CraneEnter {
+uint64_t MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of sum_list: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const MemSafetyProbe7::mylist<uint64_t> *l;
   };
 
-  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Mycons {
+  struct _after_sum_list_in_Mycons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+  using _frame = std::variant<_call, _after_sum_list_in_Mycons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified sum_list: CraneEnter -> CraneCont_Mycons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const MemSafetyProbe7::mylist<uint64_t> &l = *_f.l;
       if (std::holds_alternative<
               typename MemSafetyProbe7::mylist<uint64_t>::Mynil>(l.v())) {
@@ -36,11 +27,11 @@ MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) { /// Cran
       } else {
         const auto &[a0, a1] =
             std::get<typename MemSafetyProbe7::mylist<uint64_t>::Mycons>(l.v());
-        _stack.emplace_back(CraneCont_Mycons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_sum_list_in_Mycons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+      auto _f = std::move(std::get<_after_sum_list_in_Mycons>(_popped));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -52,6 +43,8 @@ MemSafetyProbe7::sum_list(const MemSafetyProbe7::mylist<uint64_t> &l) { /// Cran
 /// and computes its length. The tail is unique_ptr.
 MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>>
 MemSafetyProbe7::build_len_closures(const MemSafetyProbe7::mylist<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>>> _root{};
   std::shared_ptr<MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>>> *_write =
       nullptr;
@@ -88,34 +81,26 @@ MemSafetyProbe7::build_len_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
 }
 
 uint64_t MemSafetyProbe7::sum_fns(
-    const MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &l) { /// CraneEnter:
-                                                                             /// captures
-                                                                             /// varying
-                                                                             /// parameters
-                                                                             /// for
-                                                                             /// each
-                                                                             /// recursive
-                                                                             /// call.
-  struct CraneEnter {
+    const MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &l) {
+  // Explicit stack replaces the non-tail recursion of sum_fns: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> *l;
   };
 
-  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Mycons {
+  struct _after_sum_fns_in_Mycons {
     crane::fn<uint64_t(std::monostate)> a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+  using _frame = std::variant<_call, _after_sum_fns_in_Mycons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified sum_fns: CraneEnter -> CraneCont_Mycons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &l =
           *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe7::mylist<
@@ -124,11 +109,11 @@ uint64_t MemSafetyProbe7::sum_fns(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe7::mylist<
             crane::fn<uint64_t(std::monostate)>>::Mycons>(l.v());
-        _stack.emplace_back(CraneCont_Mycons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_sum_fns_in_Mycons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+      auto _f = std::move(std::get<_after_sum_fns_in_Mycons>(_popped));
       crane::fn<uint64_t(std::monostate)> a0 = std::move(_f.a0);
       _result = (a0(std::monostate{}) + std::move(_result));
     }
@@ -140,6 +125,8 @@ uint64_t MemSafetyProbe7::sum_fns(
 /// Each closure captures the entire tail sublist.
 MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>>
 MemSafetyProbe7::build_sum_closures(const MemSafetyProbe7::mylist<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>>> _root{};
   std::shared_ptr<MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>>> *_write =
       nullptr;
@@ -181,6 +168,8 @@ MemSafetyProbe7::build_sum_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
 MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>>
 MemSafetyProbe7::build_accum_closures(
     const MemSafetyProbe7::mylist<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>>> _root{};
   std::shared_ptr<MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>>> *_write =
       nullptr;
@@ -218,28 +207,26 @@ MemSafetyProbe7::build_accum_closures(
 
 uint64_t MemSafetyProbe7::apply_all(
     const MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>> &l,
-    uint64_t x) { /// CraneEnter: captures varying parameters for each recursive
-                  /// call.
-  struct CraneEnter {
+    uint64_t x) {
+  // Explicit stack replaces the non-tail recursion of apply_all: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>> *l;
   };
 
-  /// CraneCont_Mycons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Mycons {
+  struct _after_apply_all_in_Mycons {
     crane::fn<uint64_t(uint64_t)> a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+  using _frame = std::variant<_call, _after_apply_all_in_Mycons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified apply_all: CraneEnter -> CraneCont_Mycons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>> &l = *_f.l;
       if (std::holds_alternative<typename MemSafetyProbe7::mylist<
               crane::fn<uint64_t(uint64_t)>>::Mynil>(l.v())) {
@@ -247,11 +234,11 @@ uint64_t MemSafetyProbe7::apply_all(
       } else {
         const auto &[a0, a1] = std::get<typename MemSafetyProbe7::mylist<
             crane::fn<uint64_t(uint64_t)>>::Mycons>(l.v());
-        _stack.emplace_back(CraneCont_Mycons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_apply_all_in_Mycons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+      auto _f = std::move(std::get<_after_apply_all_in_Mycons>(_popped));
       crane::fn<uint64_t(uint64_t)> a0 = std::move(_f.a0);
       _result = a0(std::move(_result));
     }
@@ -262,6 +249,8 @@ uint64_t MemSafetyProbe7::apply_all(
 /// TEST 6: Stress test — large list, each closure captures
 /// the entire remaining tail.
 MemSafetyProbe7::mylist<uint64_t> MemSafetyProbe7::make_nat_list(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<MemSafetyProbe7::mylist<uint64_t>> _root{};
   std::shared_ptr<MemSafetyProbe7::mylist<uint64_t>> *_write = nullptr;
   uint64_t _loop_n = n;

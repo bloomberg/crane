@@ -106,6 +106,8 @@ struct WfFixSigmaDomain {
 
     // MANIPULATORS
     ~sw_graph() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<sw_graph> {
         if (auto *_alt = std::get_if<Sw_graph_equation_2>(&_v)) {
           if (_alt->hind && _alt->hind.use_count() == 1) {

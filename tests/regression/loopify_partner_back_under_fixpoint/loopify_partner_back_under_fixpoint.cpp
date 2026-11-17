@@ -9,48 +9,40 @@
 /// calls of tree_size in it are turns, and a chain of any depth runs in
 /// one C++ frame.
 uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
-    const LoopifyPartnerBackUnderFixpoint::tree &t) { /// CraneEnter: captures
-                                                      /// varying parameters for
-                                                      /// each recursive call.
-  struct CraneEnter {
+    const LoopifyPartnerBackUnderFixpoint::tree &t) {
+  // Explicit stack replaces the non-tail recursion of tree_size: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyPartnerBackUnderFixpoint::tree *t;
   };
 
-  /// CraneEnter_sizes: captures varying parameters for each recursive call.
-  struct CraneEnter_sizes {
+  struct _call_sizes {
     const List<LoopifyPartnerBackUnderFixpoint::tree> *l;
   };
 
-  /// CraneCont_Cons: saves [a11], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
-    const List<LoopifyPartnerBackUnderFixpoint::tree> *a11;
-  };
-
-  /// CraneCont_Cons_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons_1 {
+  struct _after_sizes_in_Cons {
     uint64_t _tmp2;
   };
 
-  /// CraneCont_Forest0: saves [n0], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Forest0 {
+  struct _after_sizes_in_Forest0 {
     uint64_t n0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneEnter_sizes, CraneCont_Cons,
-                                  CraneCont_Cons_1, CraneCont_Forest0>;
+  struct _after_tree_size_in_Cons {
+    const List<LoopifyPartnerBackUnderFixpoint::tree> *a11;
+  };
+
+  using _frame =
+      std::variant<_call, _call_sizes, _after_sizes_in_Cons,
+                   _after_sizes_in_Forest0, _after_tree_size_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&t});
-  /// Loopified tree_size: CraneEnter -> CraneCont_Cons -> CraneCont_Cons_1 ->
-  /// CraneCont_Forest0.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyPartnerBackUnderFixpoint::tree &t = *_f.t;
       const auto &[n0, kids0] =
           std::get<typename LoopifyPartnerBackUnderFixpoint::tree::Node>(t.v());
@@ -58,10 +50,10 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
       const auto &[ts0] =
           std::get<typename LoopifyPartnerBackUnderFixpoint::forest::Forest0>(
               _sv0.v());
-      _stack.emplace_back(CraneCont_Forest0{n0});
-      _stack.emplace_back(CraneEnter_sizes{crane_raw(ts0)});
-    } else if (std::holds_alternative<CraneEnter_sizes>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_sizes>(_frame));
+      _stack.emplace_back(_after_sizes_in_Forest0{n0});
+      _stack.emplace_back(_call_sizes{crane_raw(ts0)});
+    } else if (std::holds_alternative<_call_sizes>(_popped)) {
+      auto _f = std::move(std::get<_call_sizes>(_popped));
       const List<LoopifyPartnerBackUnderFixpoint::tree> &l = *_f.l;
       if (std::holds_alternative<
               typename List<LoopifyPartnerBackUnderFixpoint::tree>::Nil>(l.v())) {
@@ -69,21 +61,21 @@ uint64_t LoopifyPartnerBackUnderFixpoint::tree_size(
       } else {
         const auto &[a01, a11] = std::get<
             typename List<LoopifyPartnerBackUnderFixpoint::tree>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{crane_raw(a11)});
-        _stack.emplace_back(CraneEnter{&a01});
+        _stack.emplace_back(_after_tree_size_in_Cons{crane_raw(a11)});
+        _stack.emplace_back(_call{&a01});
       }
-    } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
-      const List<LoopifyPartnerBackUnderFixpoint::tree> &a11 = *_f.a11;
-      _stack.emplace_back(CraneCont_Cons_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter_sizes{&a11});
-    } else if (std::holds_alternative<CraneCont_Cons_1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
+    } else if (std::holds_alternative<_after_sizes_in_Cons>(_popped)) {
+      auto _f = std::move(std::get<_after_sizes_in_Cons>(_popped));
       _result = (_f._tmp2 + std::move(_result));
-    } else {
-      auto _f = std::move(std::get<CraneCont_Forest0>(_frame));
+    } else if (std::holds_alternative<_after_sizes_in_Forest0>(_popped)) {
+      auto _f = std::move(std::get<_after_sizes_in_Forest0>(_popped));
       uint64_t n0 = _f.n0;
       _result = (n0 + std::move(_result));
+    } else {
+      auto _f = std::move(std::get<_after_tree_size_in_Cons>(_popped));
+      const List<LoopifyPartnerBackUnderFixpoint::tree> &a11 = *_f.a11;
+      _stack.emplace_back(_after_sizes_in_Cons{std::move(_result)});
+      _stack.emplace_back(_call_sizes{&a11});
     }
   }
   return _result;
@@ -95,27 +87,25 @@ uint64_t LoopifyPartnerBackUnderFixpoint::forest_size(
       typename LoopifyPartnerBackUnderFixpoint::forest::Forest0>(f.v());
   auto sizes =
       [&](const List<LoopifyPartnerBackUnderFixpoint::tree> &l) -> uint64_t {
-        /// CraneEnter: captures varying parameters for each recursive call.
-        struct CraneEnter {
+        // Explicit stack replaces the non-tail recursion of sizes: _call frames
+        // are pending calls, _after frames resume a caller.
+        struct _call {
           const List<LoopifyPartnerBackUnderFixpoint::tree> *l;
         };
 
-        /// CraneCont_Cons: saves [_tmp2], resumes after recursive call, then
-        /// processes rest.
-        struct CraneCont_Cons {
+        struct _after_sizes_in_Cons {
           uint64_t _tmp2;
         };
 
-        using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+        using _frame = std::variant<_call, _after_sizes_in_Cons>;
         uint64_t _result{};
-        crane::small_vector<CraneFrame> _stack;
-        _stack.emplace_back(CraneEnter{&l});
-        /// Loopified sizes: CraneEnter -> CraneCont_Cons.
+        crane::small_vector<_frame> _stack;
+        _stack.emplace_back(_call{&l});
         while (!_stack.empty()) {
-          CraneFrame _frame = std::move(_stack.back());
+          _frame _popped = std::move(_stack.back());
           _stack.pop_back();
-          if (std::holds_alternative<CraneEnter>(_frame)) {
-            auto _f = std::move(std::get<CraneEnter>(_frame));
+          if (std::holds_alternative<_call>(_popped)) {
+            auto _f = std::move(std::get<_call>(_popped));
             const List<LoopifyPartnerBackUnderFixpoint::tree> &l = *_f.l;
             if (std::holds_alternative<
                     typename List<LoopifyPartnerBackUnderFixpoint::tree>::Nil>(
@@ -125,11 +115,11 @@ uint64_t LoopifyPartnerBackUnderFixpoint::forest_size(
               const auto &[a00, a10] = std::get<
                   typename List<LoopifyPartnerBackUnderFixpoint::tree>::Cons>(
                   l.v());
-              _stack.emplace_back(CraneCont_Cons{tree_size(a00)});
-              _stack.emplace_back(CraneEnter{crane_raw(a10)});
+              _stack.emplace_back(_after_sizes_in_Cons{tree_size(a00)});
+              _stack.emplace_back(_call{crane_raw(a10)});
             }
           } else {
-            auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+            auto _f = std::move(std::get<_after_sizes_in_Cons>(_popped));
             _result = (_f._tmp2 + std::move(_result));
           }
         }
@@ -140,6 +130,8 @@ uint64_t LoopifyPartnerBackUnderFixpoint::forest_size(
 
 LoopifyPartnerBackUnderFixpoint::tree LoopifyPartnerBackUnderFixpoint::chain(
     uint64_t k, LoopifyPartnerBackUnderFixpoint::tree t) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   LoopifyPartnerBackUnderFixpoint::tree _loop_t = std::move(t);
   uint64_t _loop_k = k;
   while (true) {

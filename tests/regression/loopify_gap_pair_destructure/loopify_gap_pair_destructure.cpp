@@ -1,36 +1,33 @@
 #include "loopify_gap_pair_destructure.h"
 
-std::pair<uint64_t, uint64_t>
-LoopifyGapPairDestructure::swap_pair(uint64_t n) { /// CraneEnter: captures
-                                                   /// varying parameters for
-                                                   /// each recursive call.
-  struct CraneEnter {
+std::pair<uint64_t, uint64_t> LoopifyGapPairDestructure::swap_pair(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of swap_pair: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_m: resumes after recursive call, then processes rest.
-  struct CraneCont_m {};
+  struct _after_swap_pair_in_S {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_m>;
+  using _frame = std::variant<_call, _after_swap_pair_in_S>;
   std::pair<uint64_t, uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified swap_pair: CraneEnter -> CraneCont_m.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(CraneCont_m{});
-        _stack.emplace_back(CraneEnter{m});
+        _stack.emplace_back(_after_swap_pair_in_S{});
+        _stack.emplace_back(_call{m});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_m>(_frame));
+      auto _f = std::move(std::get<_after_swap_pair_in_S>(_popped));
       std::pair<uint64_t, uint64_t> _tmp1 = std::move(_result);
       const auto &[a, b] = _tmp1;
       _result = std::make_pair(b, (a + 1));

@@ -7,6 +7,8 @@ uint64_t LoopifyItreeSeq::count_down(uint64_t n) {
   {
     uint64_t _lc1_k = n;
     uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
     uint64_t _lc1_loop_k = _lc1_k;
     while (true) {
@@ -26,6 +28,8 @@ uint64_t LoopifyItreeSeq::sum_to(uint64_t n) {
   {
     uint64_t _lc1_k = n;
     uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
     uint64_t _lc1_loop_k = _lc1_k;
     while (true) {
@@ -42,40 +46,36 @@ uint64_t LoopifyItreeSeq::sum_to(uint64_t n) {
 }
 
 /// Non-tail recursive: build a list counting down from n.
-List<uint64_t>
-LoopifyItreeSeq::countdown_list(uint64_t n) { /// CraneEnter: captures varying
-                                              /// parameters for each recursive
-                                              /// call.
-  struct CraneEnter {
+List<uint64_t> LoopifyItreeSeq::countdown_list(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of countdown_list: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [n], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_countdown_list_in_S {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_countdown_list_in_S>;
   List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified countdown_list: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = List<uint64_t>::cons(UINT64_C(0), List<uint64_t>::nil());
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(CraneCont_n_{n});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_countdown_list_in_S{n});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_countdown_list_in_S>(_popped));
       uint64_t n = _f.n;
       List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons(n, std::move(rest));
@@ -85,6 +85,8 @@ LoopifyItreeSeq::countdown_list(uint64_t n) { /// CraneEnter: captures varying
 }
 
 uint64_t LoopifyItreeSeq::delay_ret(uint64_t n, uint64_t v) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -97,12 +99,16 @@ uint64_t LoopifyItreeSeq::delay_ret(uint64_t n, uint64_t v) {
 }
 
 void LoopifyItreeSeq::spin() {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   while (true) {
   }
   return;
 }
 
 void LoopifyItreeSeq::forever(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     _loop_n = (_loop_n + 1);

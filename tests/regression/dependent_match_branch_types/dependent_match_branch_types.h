@@ -39,6 +39,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -105,6 +107,8 @@ struct DependentMatchBranchTypes {
 
     // MANIPULATORS
     ~vec() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<vec> {
         if (auto *_alt = std::get_if<Vcons>(&_v)) {
           if (_alt->a2 && _alt->a2.use_count() == 1) {

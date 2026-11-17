@@ -19,6 +19,8 @@ StateTAliasReified::twice(std::type_identity_t<
 
 std::shared_ptr<ITree<std::pair<uint64_t, uint64_t>>>
 StateTAliasReified::run(uint64_t n) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto twice_1 = crane::immortal(twice(tick));
   return twice_1(n);
 }

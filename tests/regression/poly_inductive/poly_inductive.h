@@ -254,6 +254,8 @@ struct PolyInductive {
 
     // MANIPULATORS
     ~ptree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<PLeaf>(v_mut())) {
         return;
       }
@@ -298,51 +300,46 @@ struct PolyInductive {
     uint64_t ptree_size() const {
       const ptree<A> *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of ptree_size: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const ptree<A> *_self;
       };
 
-      /// CraneCont_PNode: saves [a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_PNode {
+      struct _after_ptree_size_in_PNode {
         const ptree<A> *a1;
       };
 
-      /// CraneCont_PNode_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_PNode_1 {
+      struct _after_ptree_size_in_PNode_2 {
         uint64_t _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_PNode, CraneCont_PNode_1>;
+      using _frame = std::variant<_call, _after_ptree_size_in_PNode,
+                                  _after_ptree_size_in_PNode_2>;
       uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified ptree_size: CraneEnter -> CraneCont_PNode ->
-      /// CraneCont_PNode_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const ptree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
             _result = UINT64_C(1);
           } else {
             const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(_sv.v());
-            _stack.emplace_back(CraneCont_PNode{crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_ptree_size_in_PNode{crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_PNode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_PNode>(_frame));
+        } else if (std::holds_alternative<_after_ptree_size_in_PNode>(_popped)) {
+          auto _f = std::move(std::get<_after_ptree_size_in_PNode>(_popped));
           const ptree<A> &a1 = *_f.a1;
-          _stack.emplace_back(CraneCont_PNode_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_ptree_size_in_PNode_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_PNode_1>(_frame));
+          auto _f = std::move(std::get<_after_ptree_size_in_PNode_2>(_popped));
           _result = ((_f._tmp2 + std::move(_result)) + 1);
         }
       }
@@ -359,38 +356,33 @@ struct PolyInductive {
     T1 ptree_rect(F0 &&f, F1 &&f0) const {
       const ptree<A> *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of ptree_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const ptree<A> *_self;
       };
 
-      /// CraneCont_PNode: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_PNode {
+      struct _after_ptree_rect_in_PNode {
         std::shared_ptr<ptree<A>> a0;
         const ptree<A> *a1;
       };
 
-      /// CraneCont_PNode_1: saves [a0, a1, _tmp2], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_PNode_1 {
+      struct _after_ptree_rect_in_PNode_2 {
         std::shared_ptr<ptree<A>> a0;
         const ptree<A> *a1;
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_PNode, CraneCont_PNode_1>;
+      using _frame = std::variant<_call, _after_ptree_rect_in_PNode,
+                                  _after_ptree_rect_in_PNode_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified ptree_rect: CraneEnter -> CraneCont_PNode ->
-      /// CraneCont_PNode_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const ptree<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ptree<A>::PLeaf>(_sv.v())) {
@@ -398,18 +390,18 @@ struct PolyInductive {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename ptree<A>::PNode>(_sv.v());
-            _stack.emplace_back(CraneCont_PNode{a0, crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_ptree_rect_in_PNode{a0, crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_PNode>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_PNode>(_frame));
+        } else if (std::holds_alternative<_after_ptree_rect_in_PNode>(_popped)) {
+          auto _f = std::move(std::get<_after_ptree_rect_in_PNode>(_popped));
           std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
           const ptree<A> &a1 = *_f.a1;
-          _stack.emplace_back(
-              CraneCont_PNode_1{std::move(a0), &a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_ptree_rect_in_PNode_2{std::move(a0), &a1,
+                                                           std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_PNode_1>(_frame));
+          auto _f = std::move(std::get<_after_ptree_rect_in_PNode_2>(_popped));
           std::shared_ptr<ptree<A>> a0 = std::move(_f.a0);
           const ptree<A> &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));

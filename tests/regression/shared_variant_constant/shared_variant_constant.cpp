@@ -1,6 +1,8 @@
 #include "shared_variant_constant.h"
 
 Positive Pos::succ(const Positive &x) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto pos_2 = crane::immortal(Positive::xo(Positive::xh()));
   if (crane::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XI>(x.v());
@@ -14,6 +16,8 @@ Positive Pos::succ(const Positive &x) {
 }
 
 Positive Pos::add(const Positive &x, const Positive &y) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto pos_2 = crane::immortal(Positive::xo(Positive::xh()));
   if (crane::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XI>(x.v());
@@ -51,6 +55,8 @@ Positive Pos::add(const Positive &x, const Positive &y) {
 }
 
 Positive Pos::add_carry(const Positive &x, const Positive &y) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto pos_3 = crane::immortal(Positive::xi(Positive::xh()));
   if (crane::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = crane::get<typename Positive::XI>(x.v());
@@ -88,12 +94,16 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
 }
 
 Positive SharedVariantConstant::seven() {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto pos_7 =
       crane::immortal(Positive::xi(Positive::xi(Positive::xh())));
   return pos_7;
 }
 
 std::pair<Positive, Positive> SharedVariantConstant::pair_of() {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto pos_12 =
       crane::immortal(Positive::xo(Positive::xo(Positive::xi(Positive::xh()))));
   static const auto pos_6 =
@@ -102,6 +112,8 @@ std::pair<Positive, Positive> SharedVariantConstant::pair_of() {
 }
 
 Positive SharedVariantConstant::add_ten(const Positive &p) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto pos_10 =
       crane::immortal(Positive::xo(Positive::xi(Positive::xo(Positive::xh()))));
   return Pos::add(p, pos_10);
@@ -119,6 +131,8 @@ Positive SharedVariantConstant::sum_tens(uint64_t n, Positive acc) {
 /// 2^110: a constant nested deeper than a compiler parses, whose
 /// initialiser is split into bindings that run once.
 Positive SharedVariantConstant::huge() {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto pos = []() {
     auto _lit0 =
         Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xo(Positive::xh()))))))))))))))))))))))))))))));
@@ -135,6 +149,8 @@ Positive SharedVariantConstant::huge() {
 /// last -- and so moved -- where the constant is built.
 std::pair<List<Positive>, List<Positive>>
 SharedVariantConstant::with_k(const List<Positive> &k) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto k_1 = crane::immortal(List<Positive>::cons(
       Positive::xi(Positive::xh()),
       List<Positive>::cons(Positive::xi(Positive::xo(Positive::xh())),

@@ -76,6 +76,8 @@ struct LoopifyCoercedScrutinee {
 
     // MANIPULATORS
     ~expr() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Lit>(v_mut())) {
         return;
       }
@@ -139,39 +141,31 @@ struct LoopifyCoercedScrutinee {
             typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, const bool &>
-  static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2,
-                      const expr &e) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-    struct CraneEnter {
+  static T1 expr_rect(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const expr &e) {
+    // Explicit stack replaces the non-tail recursion of expr_rect: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const expr *e;
     };
 
-    /// CraneCont_Iszero: saves [a0], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Iszero {
+    struct _after_expr_rect_in_Iszero {
       std::shared_ptr<expr> a0;
     };
 
-    /// CraneCont_Ite: saves [a, a1, a2], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Ite {
+    struct _after_expr_rect_in_Ite {
       std::shared_ptr<expr> a;
       const expr *a1;
       const expr *a2;
     };
 
-    /// CraneCont_Ite_1: saves [a, a1, a2, _tmp3], resumes after recursive call,
-    /// then processes rest.
-    struct CraneCont_Ite_1 {
+    struct _after_expr_rect_in_Ite_2 {
       std::shared_ptr<expr> a;
       const expr *a1;
       const expr *a2;
       T1 _tmp3;
     };
 
-    /// CraneCont_Ite_2: saves [a, a1, a2, _tmp3, _tmp2], resumes after
-    /// recursive call, then processes rest.
-    struct CraneCont_Ite_2 {
+    struct _after_expr_rect_in_Ite_3 {
       std::shared_ptr<expr> a;
       const expr *a1;
       const expr *a2;
@@ -179,18 +173,17 @@ struct LoopifyCoercedScrutinee {
       T1 _tmp2;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Iszero, CraneCont_Ite,
-                                    CraneCont_Ite_1, CraneCont_Ite_2>;
+    using _frame =
+        std::variant<_call, _after_expr_rect_in_Iszero, _after_expr_rect_in_Ite,
+                     _after_expr_rect_in_Ite_2, _after_expr_rect_in_Ite_3>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&e});
-    /// Loopified expr_rect: CraneEnter -> CraneCont_Iszero -> CraneCont_Ite ->
-    /// CraneCont_Ite_1 -> CraneCont_Ite_2.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&e});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const expr &e = *_f.e;
         if (std::holds_alternative<typename expr::Lit>(e.v())) {
           const auto &[a0] = std::get<typename expr::Lit>(e.v());
@@ -200,35 +193,36 @@ struct LoopifyCoercedScrutinee {
           _result = f0(a0);
         } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
           const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-          _stack.emplace_back(CraneCont_Ite{a, crane_raw(a1), crane_raw(a2)});
-          _stack.emplace_back(CraneEnter{crane_raw(a)});
+          _stack.emplace_back(
+              _after_expr_rect_in_Ite{a, crane_raw(a1), crane_raw(a2)});
+          _stack.emplace_back(_call{crane_raw(a)});
         } else {
           const auto &[a0] = std::get<typename expr::Iszero>(e.v());
-          _stack.emplace_back(CraneCont_Iszero{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_expr_rect_in_Iszero{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<CraneCont_Iszero>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Iszero>(_frame));
+      } else if (std::holds_alternative<_after_expr_rect_in_Iszero>(_popped)) {
+        auto _f = std::move(std::get<_after_expr_rect_in_Iszero>(_popped));
         std::shared_ptr<expr> a0 = std::move(_f.a0);
         _result = f2(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_Ite>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Ite>(_frame));
+      } else if (std::holds_alternative<_after_expr_rect_in_Ite>(_popped)) {
+        auto _f = std::move(std::get<_after_expr_rect_in_Ite>(_popped));
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Ite_1{std::move(a), &a1, &a2, std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a1});
-      } else if (std::holds_alternative<CraneCont_Ite_1>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Ite_1>(_frame));
+        _stack.emplace_back(_after_expr_rect_in_Ite_2{std::move(a), &a1, &a2,
+                                                      std::move(_result)});
+        _stack.emplace_back(_call{&a1});
+      } else if (std::holds_alternative<_after_expr_rect_in_Ite_2>(_popped)) {
+        auto _f = std::move(std::get<_after_expr_rect_in_Ite_2>(_popped));
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Ite_2{
+        _stack.emplace_back(_after_expr_rect_in_Ite_3{
             std::move(a), &a1, &a2, std::move(_f._tmp3), std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a2});
+        _stack.emplace_back(_call{&a2});
       } else {
-        auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
+        auto _f = std::move(std::get<_after_expr_rect_in_Ite_3>(_popped));
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -244,39 +238,31 @@ struct LoopifyCoercedScrutinee {
             typename F2, typename F3>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &> &&
              std::is_invocable_r_v<T1, F1 &, const bool &>
-  static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2,
-                     const expr &e) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-    struct CraneEnter {
+  static T1 expr_rec(F0 &&f, F1 &&f0, F2 &&f1, F3 &&f2, const expr &e) {
+    // Explicit stack replaces the non-tail recursion of expr_rec: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const expr *e;
     };
 
-    /// CraneCont_Iszero: saves [a0], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Iszero {
+    struct _after_expr_rec_in_Iszero {
       std::shared_ptr<expr> a0;
     };
 
-    /// CraneCont_Ite: saves [a, a1, a2], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Ite {
+    struct _after_expr_rec_in_Ite {
       std::shared_ptr<expr> a;
       const expr *a1;
       const expr *a2;
     };
 
-    /// CraneCont_Ite_1: saves [a, a1, a2, _tmp3], resumes after recursive call,
-    /// then processes rest.
-    struct CraneCont_Ite_1 {
+    struct _after_expr_rec_in_Ite_2 {
       std::shared_ptr<expr> a;
       const expr *a1;
       const expr *a2;
       T1 _tmp3;
     };
 
-    /// CraneCont_Ite_2: saves [a, a1, a2, _tmp3, _tmp2], resumes after
-    /// recursive call, then processes rest.
-    struct CraneCont_Ite_2 {
+    struct _after_expr_rec_in_Ite_3 {
       std::shared_ptr<expr> a;
       const expr *a1;
       const expr *a2;
@@ -284,18 +270,17 @@ struct LoopifyCoercedScrutinee {
       T1 _tmp2;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Iszero, CraneCont_Ite,
-                                    CraneCont_Ite_1, CraneCont_Ite_2>;
+    using _frame =
+        std::variant<_call, _after_expr_rec_in_Iszero, _after_expr_rec_in_Ite,
+                     _after_expr_rec_in_Ite_2, _after_expr_rec_in_Ite_3>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&e});
-    /// Loopified expr_rec: CraneEnter -> CraneCont_Iszero -> CraneCont_Ite ->
-    /// CraneCont_Ite_1 -> CraneCont_Ite_2.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&e});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const expr &e = *_f.e;
         if (std::holds_alternative<typename expr::Lit>(e.v())) {
           const auto &[a0] = std::get<typename expr::Lit>(e.v());
@@ -305,35 +290,36 @@ struct LoopifyCoercedScrutinee {
           _result = f0(a0);
         } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
           const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-          _stack.emplace_back(CraneCont_Ite{a, crane_raw(a1), crane_raw(a2)});
-          _stack.emplace_back(CraneEnter{crane_raw(a)});
+          _stack.emplace_back(
+              _after_expr_rec_in_Ite{a, crane_raw(a1), crane_raw(a2)});
+          _stack.emplace_back(_call{crane_raw(a)});
         } else {
           const auto &[a0] = std::get<typename expr::Iszero>(e.v());
-          _stack.emplace_back(CraneCont_Iszero{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_expr_rec_in_Iszero{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<CraneCont_Iszero>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Iszero>(_frame));
+      } else if (std::holds_alternative<_after_expr_rec_in_Iszero>(_popped)) {
+        auto _f = std::move(std::get<_after_expr_rec_in_Iszero>(_popped));
         std::shared_ptr<expr> a0 = std::move(_f.a0);
         _result = f2(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_Ite>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Ite>(_frame));
+      } else if (std::holds_alternative<_after_expr_rec_in_Ite>(_popped)) {
+        auto _f = std::move(std::get<_after_expr_rec_in_Ite>(_popped));
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(
-            CraneCont_Ite_1{std::move(a), &a1, &a2, std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a1});
-      } else if (std::holds_alternative<CraneCont_Ite_1>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Ite_1>(_frame));
+        _stack.emplace_back(_after_expr_rec_in_Ite_2{std::move(a), &a1, &a2,
+                                                     std::move(_result)});
+        _stack.emplace_back(_call{&a1});
+      } else if (std::holds_alternative<_after_expr_rec_in_Ite_2>(_popped)) {
+        auto _f = std::move(std::get<_after_expr_rec_in_Ite_2>(_popped));
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
-        _stack.emplace_back(CraneCont_Ite_2{
+        _stack.emplace_back(_after_expr_rec_in_Ite_3{
             std::move(a), &a1, &a2, std::move(_f._tmp3), std::move(_result)});
-        _stack.emplace_back(CraneEnter{&a2});
+        _stack.emplace_back(_call{&a2});
       } else {
-        auto _f = std::move(std::get<CraneCont_Ite_2>(_frame));
+        auto _f = std::move(std::get<_after_expr_rec_in_Ite_3>(_popped));
         std::shared_ptr<expr> a = std::move(_f.a);
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
@@ -345,35 +331,30 @@ struct LoopifyCoercedScrutinee {
     return _result;
   }
 
-  template <typename T1 = void>
-  static crane::obj
-  eval(const expr &e) { /// CraneEnter: captures varying parameters for each
-                        /// recursive call.
-    struct CraneEnter {
+  template <typename T1 = void> static crane::obj eval(const expr &e) {
+    // Explicit stack replaces the non-tail recursion of eval: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
       const expr *e;
     };
 
-    /// CraneCont_Iszero: resumes after recursive call, then processes rest.
-    struct CraneCont_Iszero {};
+    struct _after_eval_in_Iszero {};
 
-    /// CraneCont_Ite: saves [a1, a2], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Ite {
+    struct _after_eval_in_Ite {
       const expr *a1;
       const expr *a2;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_Iszero, CraneCont_Ite>;
+    using _frame =
+        std::variant<_call, _after_eval_in_Iszero, _after_eval_in_Ite>;
     crane::obj _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&e});
-    /// Loopified eval: CraneEnter -> CraneCont_Iszero -> CraneCont_Ite.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&e});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const expr &e = *_f.e;
         if (std::holds_alternative<typename expr::Lit>(e.v())) {
           const auto &[a0] = std::get<typename expr::Lit>(e.v());
@@ -383,24 +364,24 @@ struct LoopifyCoercedScrutinee {
           _result = std::move(a0);
         } else if (std::holds_alternative<typename expr::Ite>(e.v())) {
           const auto &[a, a1, a2] = std::get<typename expr::Ite>(e.v());
-          _stack.emplace_back(CraneCont_Ite{crane_raw(a1), crane_raw(a2)});
-          _stack.emplace_back(CraneEnter{crane_raw(a)});
+          _stack.emplace_back(_after_eval_in_Ite{crane_raw(a1), crane_raw(a2)});
+          _stack.emplace_back(_call{crane_raw(a)});
         } else {
           const auto &[a0] = std::get<typename expr::Iszero>(e.v());
-          _stack.emplace_back(CraneCont_Iszero{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_eval_in_Iszero{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<CraneCont_Iszero>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Iszero>(_frame));
+      } else if (std::holds_alternative<_after_eval_in_Iszero>(_popped)) {
+        auto _f = std::move(std::get<_after_eval_in_Iszero>(_popped));
         _result = crane::any_cast<uint64_t>(std::move(_result)) == UINT64_C(0);
       } else {
-        auto _f = std::move(std::get<CraneCont_Ite>(_frame));
+        auto _f = std::move(std::get<_after_eval_in_Ite>(_popped));
         const expr &a1 = *_f.a1;
         const expr &a2 = *_f.a2;
         if (crane::any_cast<bool>(std::move(_result))) {
-          _stack.emplace_back(CraneEnter{&a1});
+          _stack.emplace_back(_call{&a1});
         } else {
-          _stack.emplace_back(CraneEnter{&a2});
+          _stack.emplace_back(_call{&a2});
         }
       }
     }

@@ -1,31 +1,25 @@
 #include "loopify_comparators.h"
 
-uint64_t
-LoopifyComparators::maximum_by(const List<uint64_t> &l) { /// CraneEnter:
-                                                          /// captures varying
-                                                          /// parameters for
-                                                          /// each recursive
-                                                          /// call.
-  struct CraneEnter {
+uint64_t LoopifyComparators::maximum_by(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of maximum_by: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_maximum_by_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_maximum_by_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified maximum_by: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -35,12 +29,12 @@ LoopifyComparators::maximum_by(const List<uint64_t> &l) { /// CraneEnter:
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_maximum_by_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_maximum_by_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       uint64_t m = std::move(_result);
       if (m < a0) {
@@ -53,32 +47,26 @@ LoopifyComparators::maximum_by(const List<uint64_t> &l) { /// CraneEnter:
   return _result;
 }
 
-uint64_t
-LoopifyComparators::minimum_by(const List<uint64_t> &l) { /// CraneEnter:
-                                                          /// captures varying
-                                                          /// parameters for
-                                                          /// each recursive
-                                                          /// call.
-  struct CraneEnter {
+uint64_t LoopifyComparators::minimum_by(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of minimum_by: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_minimum_by_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_minimum_by_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified minimum_by: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -88,12 +76,12 @@ LoopifyComparators::minimum_by(const List<uint64_t> &l) { /// CraneEnter:
         if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
           _result = std::move(a0);
         } else {
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_minimum_by_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_minimum_by_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       uint64_t m = std::move(_result);
       if (a0 < m) {
@@ -109,6 +97,8 @@ LoopifyComparators::minimum_by(const List<uint64_t> &l) { /// CraneEnter:
 List<uint64_t>
 LoopifyComparators::merge_by_fuel(uint64_t fuel, const List<uint64_t> &l1,
                                   const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -179,6 +169,8 @@ List<uint64_t> LoopifyComparators::merge_by(const List<uint64_t> &l1,
 
 List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x,
                                                  const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -212,43 +204,36 @@ List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x,
   return std::move(*_root);
 }
 
-List<uint64_t>
-LoopifyComparators::insertion_sort(const List<uint64_t> &l) { /// CraneEnter:
-                                                              /// captures
-                                                              /// varying
-                                                              /// parameters for
-                                                              /// each recursive
-                                                              /// call.
-  struct CraneEnter {
+List<uint64_t> LoopifyComparators::insertion_sort(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of insertion_sort: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_insertion_sort_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_insertion_sort_in_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified insertion_sort: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_insertion_sort_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_insertion_sort_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       _result = insert_sorted(a0, std::move(_result));
     }
@@ -258,6 +243,8 @@ LoopifyComparators::insertion_sort(const List<uint64_t> &l) { /// CraneEnter:
 
 bool LoopifyComparators::is_sorted_fuel(uint64_t fuel,
                                         const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   List<uint64_t> _loop_l = l;
   uint64_t _loop_fuel = fuel;
   while (true) {

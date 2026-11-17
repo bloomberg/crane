@@ -5,7 +5,8 @@
 /// directly rather than through an erased-function cast.
 uint64_t
 SigFunParamResultCast::apply_sig(const Sig<crane::fn<uint64_t(uint64_t)>> &f,
-                                 uint64_t n) { // Precondition: (g 0) == 0
+                                 uint64_t n) {
+  // Precondition: (g 0) == 0
   const auto &[x] = f;
   return x(n);
 }

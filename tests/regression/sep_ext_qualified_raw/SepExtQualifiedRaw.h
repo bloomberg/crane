@@ -73,6 +73,8 @@ template <OrderedType X> struct Make {
 
     // MANIPULATORS
     ~Fmap() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<Fmap<A>> {
         if (auto *_alt = std::get_if<Node>(&_v)) {
           if (_alt->a2 && _alt->a2.use_count() == 1) {

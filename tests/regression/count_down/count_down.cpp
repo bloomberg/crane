@@ -2,6 +2,8 @@
 
 /// Single effect then recurse: effect ;; recursive_call
 void CountDown::count_down(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -17,6 +19,8 @@ void CountDown::count_down(uint64_t n) {
 
 /// Two effects then recurse: effect ;; effect ;; recursive_call
 void CountDown::two_prints(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -33,6 +37,8 @@ void CountDown::two_prints(uint64_t n) {
 
 /// Read from user, echo back, then recurse
 void CountDown::echo_loop(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -50,6 +56,8 @@ void CountDown::echo_loop(uint64_t n) {
 
 /// Effect in base case too: both branches do IO
 void CountDown::announce(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -66,6 +74,8 @@ void CountDown::announce(uint64_t n) {
 
 /// Multiple arguments: two nat params, recurse on first
 void CountDown::repeat_msg(uint64_t n, std::string msg) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -103,6 +113,8 @@ bool CountDown::string_eq(std::string s1, std::string s2) {
 }
 
 void CountDown::co_count_down() {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   while (true) {
     std::string line;
     std::getline(std::cin, line);
@@ -116,6 +128,8 @@ void CountDown::co_count_down() {
 }
 
 void CountDown::co_two_prints() {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   while (true) {
     std::string line;
     std::getline(std::cin, line);
@@ -130,6 +144,8 @@ void CountDown::co_two_prints() {
 }
 
 void CountDown::co_echo_loop() {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   while (true) {
     std::string line;
     std::getline(std::cin, line);
@@ -143,6 +159,8 @@ void CountDown::co_echo_loop() {
 }
 
 void CountDown::co_announce(uint64_t round) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_round = round;
   while (true) {
     std::string line;
@@ -159,6 +177,8 @@ void CountDown::co_announce(uint64_t round) {
 }
 
 void CountDown::co_repeat(std::string msg) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   while (true) {
     std::string line;
     std::getline(std::cin, line);

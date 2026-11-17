@@ -67,6 +67,8 @@ struct ListOfListDrain {
 
     // MANIPULATORS
     ~lst() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<lst<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -99,39 +101,37 @@ struct ListOfListDrain {
     template <typename T1, typename F1> T1 lst_rect(T1 f, F1 &&f0) const {
       const lst<A> *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of lst_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const lst<A> *_self;
       };
 
-      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Cons {
+      struct _after_lst_rect_in_Cons {
         A a0;
         std::shared_ptr<lst<A>> a1;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+      using _frame = std::variant<_call, _after_lst_rect_in_Cons>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified lst_rect: CraneEnter -> CraneCont_Cons.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const lst<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename lst<A>::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename lst<A>::Cons>(_sv.v());
-            _stack.emplace_back(CraneCont_Cons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+            _stack.emplace_back(_after_lst_rect_in_Cons{a0, a1});
+            _stack.emplace_back(_call{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+          auto _f = std::move(std::get<_after_lst_rect_in_Cons>(_popped));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<lst<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));
@@ -166,6 +166,8 @@ struct ListOfListDrain {
 
     // MANIPULATORS
     ~t() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<std::shared_ptr<t>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {

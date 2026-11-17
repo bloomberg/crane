@@ -2,6 +2,8 @@
 
 List<List<uint64_t>>
 LoopifyTreePaths::map_cons(uint64_t x, const List<List<uint64_t>> &ll) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   const List<List<uint64_t>> *_loop_ll = &ll;

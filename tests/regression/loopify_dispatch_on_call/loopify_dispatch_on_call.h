@@ -42,6 +42,8 @@ struct LoopifyDispatchOnCall {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Leaf>(v_mut())) {
         return;
       }
@@ -85,56 +87,51 @@ struct LoopifyDispatchOnCall {
   };
 
   template <typename T1, typename F1>
-  static T1 tree_rect(T1 f, F1 &&f0,
-                      const tree &t) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-    struct CraneEnter {
+  static T1 tree_rect(T1 f, F1 &&f0, const tree &t) {
+    // Explicit stack replaces the non-tail recursion of tree_rect: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const tree *t;
     };
 
-    /// CraneCont_Node: saves [l0, r0], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Node {
+    struct _after_tree_rect_in_Node {
       std::shared_ptr<tree> l0;
       const tree *r0;
     };
 
-    /// CraneCont_Node_1: saves [l0, r0, _tmp2], resumes after recursive call,
-    /// then processes rest.
-    struct CraneCont_Node_1 {
+    struct _after_tree_rect_in_Node_2 {
       std::shared_ptr<tree> l0;
       const tree *r0;
       T1 _tmp2;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+    using _frame = std::variant<_call, _after_tree_rect_in_Node,
+                                _after_tree_rect_in_Node_2>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&t});
-    /// Loopified tree_rect: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&t});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const tree &t = *_f.t;
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
           _result = f;
         } else {
           const auto &[l0, r0] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(CraneCont_Node{l0, crane_raw(r0)});
-          _stack.emplace_back(CraneEnter{crane_raw(l0)});
+          _stack.emplace_back(_after_tree_rect_in_Node{l0, crane_raw(r0)});
+          _stack.emplace_back(_call{crane_raw(l0)});
         }
-      } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_Node>(_frame));
+      } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
+        auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
         std::shared_ptr<tree> l0 = std::move(_f.l0);
         const tree &r0 = *_f.r0;
         _stack.emplace_back(
-            CraneCont_Node_1{std::move(l0), &r0, std::move(_result)});
-        _stack.emplace_back(CraneEnter{&r0});
+            _after_tree_rect_in_Node_2{std::move(l0), &r0, std::move(_result)});
+        _stack.emplace_back(_call{&r0});
       } else {
-        auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+        auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
         std::shared_ptr<tree> l0 = std::move(_f.l0);
         const tree &r0 = *_f.r0;
         _result = f0(*l0, std::move(_f._tmp2), r0, std::move(_result));

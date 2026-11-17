@@ -1,33 +1,28 @@
 #include "loopify_numeric_sequences.h"
 
-uint64_t
-LoopifyNumericSequences::collatz_length_fuel(uint64_t fuel,
-                                             uint64_t n) { /// CraneEnter:
-                                                           /// captures varying
-                                                           /// parameters for
-                                                           /// each recursive
-                                                           /// call.
-  struct CraneEnter {
+uint64_t LoopifyNumericSequences::collatz_length_fuel(uint64_t fuel,
+                                                      uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of collatz_length_fuel:
+  // _call frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: resumes after recursive call, then processes rest.
-  struct CraneCont1 {};
+  struct _after_collatz_length_fuel_in_false {};
 
-  /// CraneCont2: resumes after recursive call, then processes rest.
-  struct CraneCont2 {};
+  struct _after_collatz_length_fuel_in_true {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
+  using _frame = std::variant<_call, _after_collatz_length_fuel_in_false,
+                              _after_collatz_length_fuel_in_true>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, fuel});
-  /// Loopified collatz_length_fuel: CraneEnter -> CraneCont1 -> CraneCont2.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -38,21 +33,24 @@ LoopifyNumericSequences::collatz_length_fuel(uint64_t fuel,
           _result = UINT64_C(0);
         } else {
           if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-            _stack.emplace_back(CraneCont1{});
+            _stack.emplace_back(_after_collatz_length_fuel_in_true{});
             _stack.emplace_back(
-                CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), fuel_});
+                _call{(UINT64_C(2) ? n / UINT64_C(2) : 0), fuel_});
           } else {
-            _stack.emplace_back(CraneCont2{});
-            _stack.emplace_back(
-                CraneEnter{((UINT64_C(3) * n) + UINT64_C(1)), fuel_});
+            _stack.emplace_back(_after_collatz_length_fuel_in_false{});
+            _stack.emplace_back(_call{((UINT64_C(3) * n) + UINT64_C(1)),
+                                      fuel_});
           }
         }
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+    } else if (std::holds_alternative<_after_collatz_length_fuel_in_false>(
+                   _popped)) {
+      auto _f =
+          std::move(std::get<_after_collatz_length_fuel_in_false>(_popped));
       _result = (UINT64_C(1) + std::move(_result));
     } else {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
+      auto _f =
+          std::move(std::get<_after_collatz_length_fuel_in_true>(_popped));
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
@@ -65,6 +63,8 @@ uint64_t LoopifyNumericSequences::collatz_length(uint64_t n) {
 
 List<uint64_t> LoopifyNumericSequences::collatz_sequence_fuel(uint64_t fuel,
                                                               uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_n = n;
@@ -115,51 +115,41 @@ List<uint64_t> LoopifyNumericSequences::collatz_sequence(uint64_t n) {
   return collatz_sequence_fuel((n * UINT64_C(100)), n);
 }
 
-uint64_t
-LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel,
-                                         uint64_t n) { /// CraneEnter: captures
-                                                       /// varying parameters
-                                                       /// for each recursive
-                                                       /// call.
-  struct CraneEnter {
+uint64_t LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel, uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of tribonacci_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont1 {
+  struct _after_tribonacci_fuel_in_false {
     uint64_t n;
     uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [n, fuel_, _tmp3], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont2 {
+  struct _after_tribonacci_fuel_in_false_2 {
     uint64_t n;
     uint64_t fuel_;
     uint64_t _tmp3;
   };
 
-  /// CraneCont3: saves [_tmp3, _tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont3 {
+  struct _after_tribonacci_fuel_in_false_3 {
     uint64_t _tmp3;
     uint64_t _tmp2;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneCont1, CraneCont2, CraneCont3>;
+  using _frame = std::variant<_call, _after_tribonacci_fuel_in_false,
+                              _after_tribonacci_fuel_in_false_2,
+                              _after_tribonacci_fuel_in_false_3>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, fuel});
-  /// Loopified tribonacci_fuel: CraneEnter -> CraneCont1 -> CraneCont2 ->
-  /// CraneCont3.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -175,29 +165,32 @@ LoopifyNumericSequences::tribonacci_fuel(uint64_t fuel,
             if (n == UINT64_C(2)) {
               _result = UINT64_C(1);
             } else {
-              _stack.emplace_back(CraneCont1{n, fuel_});
-              _stack.emplace_back(CraneEnter{
+              _stack.emplace_back(_after_tribonacci_fuel_in_false{n, fuel_});
+              _stack.emplace_back(_call{
                   (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
             }
           }
         }
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+    } else if (std::holds_alternative<_after_tribonacci_fuel_in_false>(_popped)) {
+      auto _f = std::move(std::get<_after_tribonacci_fuel_in_false>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
-      _stack.emplace_back(CraneCont2{n, fuel_, std::move(_result)});
       _stack.emplace_back(
-          CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
-    } else if (std::holds_alternative<CraneCont2>(_frame)) {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
+          _after_tribonacci_fuel_in_false_2{n, fuel_, std::move(_result)});
+      _stack.emplace_back(
+          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+    } else if (
+            std::holds_alternative<_after_tribonacci_fuel_in_false_2>(_popped)) {
+      auto _f = std::move(std::get<_after_tribonacci_fuel_in_false_2>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
-      _stack.emplace_back(CraneCont3{_f._tmp3, std::move(_result)});
       _stack.emplace_back(
-          CraneEnter{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
+          _after_tribonacci_fuel_in_false_3{_f._tmp3, std::move(_result)});
+      _stack.emplace_back(
+          _call{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
     } else {
-      auto _f = std::move(std::get<CraneCont3>(_frame));
+      auto _f = std::move(std::get<_after_tribonacci_fuel_in_false_3>(_popped));
       _result = ((_f._tmp3 + _f._tmp2) + std::move(_result));
     }
   }
@@ -208,50 +201,41 @@ uint64_t LoopifyNumericSequences::tribonacci(uint64_t n) {
   return tribonacci_fuel((n * UINT64_C(3)), n);
 }
 
-uint64_t
-LoopifyNumericSequences::staircase_fuel(uint64_t fuel,
-                                        uint64_t n) { /// CraneEnter: captures
-                                                      /// varying parameters for
-                                                      /// each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyNumericSequences::staircase_fuel(uint64_t fuel, uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of staircase_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont1 {
+  struct _after_staircase_fuel_in_false {
     uint64_t n;
     uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [n, fuel_, _tmp3], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont2 {
+  struct _after_staircase_fuel_in_false_2 {
     uint64_t n;
     uint64_t fuel_;
     uint64_t _tmp3;
   };
 
-  /// CraneCont3: saves [_tmp3, _tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont3 {
+  struct _after_staircase_fuel_in_false_3 {
     uint64_t _tmp3;
     uint64_t _tmp2;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneCont1, CraneCont2, CraneCont3>;
+  using _frame = std::variant<_call, _after_staircase_fuel_in_false,
+                              _after_staircase_fuel_in_false_2,
+                              _after_staircase_fuel_in_false_3>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, fuel});
-  /// Loopified staircase_fuel: CraneEnter -> CraneCont1 -> CraneCont2 ->
-  /// CraneCont3.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -264,28 +248,32 @@ LoopifyNumericSequences::staircase_fuel(uint64_t fuel,
           if (n == UINT64_C(1)) {
             _result = UINT64_C(1);
           } else {
-            _stack.emplace_back(CraneCont1{n, fuel_});
-            _stack.emplace_back(CraneEnter{
-                (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+            _stack.emplace_back(_after_staircase_fuel_in_false{n, fuel_});
+            _stack.emplace_back(
+                _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))),
+                      fuel_});
           }
         }
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+    } else if (std::holds_alternative<_after_staircase_fuel_in_false>(_popped)) {
+      auto _f = std::move(std::get<_after_staircase_fuel_in_false>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
-      _stack.emplace_back(CraneCont2{n, fuel_, std::move(_result)});
       _stack.emplace_back(
-          CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
-    } else if (std::holds_alternative<CraneCont2>(_frame)) {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
+          _after_staircase_fuel_in_false_2{n, fuel_, std::move(_result)});
+      _stack.emplace_back(
+          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+    } else if (
+            std::holds_alternative<_after_staircase_fuel_in_false_2>(_popped)) {
+      auto _f = std::move(std::get<_after_staircase_fuel_in_false_2>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
-      _stack.emplace_back(CraneCont3{_f._tmp3, std::move(_result)});
       _stack.emplace_back(
-          CraneEnter{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
+          _after_staircase_fuel_in_false_3{_f._tmp3, std::move(_result)});
+      _stack.emplace_back(
+          _call{(((n - UINT64_C(3)) > n ? 0 : (n - UINT64_C(3)))), fuel_});
     } else {
-      auto _f = std::move(std::get<CraneCont3>(_frame));
+      auto _f = std::move(std::get<_after_staircase_fuel_in_false_3>(_popped));
       _result = ((_f._tmp3 + _f._tmp2) + std::move(_result));
     }
   }
@@ -296,31 +284,27 @@ uint64_t LoopifyNumericSequences::staircase(uint64_t n) {
   return staircase_fuel((n * UINT64_C(3)), n);
 }
 
-uint64_t
-LoopifyNumericSequences::digitsum_fuel(uint64_t fuel,
-                                       uint64_t n) { /// CraneEnter: captures
-                                                     /// varying parameters for
-                                                     /// each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyNumericSequences::digitsum_fuel(uint64_t fuel, uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of digitsum_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [n], resumes after recursive call, then processes rest.
-  struct CraneCont1 {
+  struct _after_digitsum_fuel_in_false {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  using _frame = std::variant<_call, _after_digitsum_fuel_in_false>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, fuel});
-  /// Loopified digitsum_fuel: CraneEnter -> CraneCont1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -330,13 +314,13 @@ LoopifyNumericSequences::digitsum_fuel(uint64_t fuel,
         if (n <= UINT64_C(0)) {
           _result = UINT64_C(0);
         } else {
-          _stack.emplace_back(CraneCont1{n});
+          _stack.emplace_back(_after_digitsum_fuel_in_false{n});
           _stack.emplace_back(
-              CraneEnter{(UINT64_C(10) ? n / UINT64_C(10) : 0), fuel_});
+              _call{(UINT64_C(10) ? n / UINT64_C(10) : 0), fuel_});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+      auto _f = std::move(std::get<_after_digitsum_fuel_in_false>(_popped));
       uint64_t n = _f.n;
       _result = ((UINT64_C(10) ? n % UINT64_C(10) : n) + std::move(_result));
     }
@@ -348,32 +332,27 @@ uint64_t LoopifyNumericSequences::digitsum(uint64_t n) {
   return digitsum_fuel((n + UINT64_C(1)), n);
 }
 
-uint64_t
-LoopifyNumericSequences::dec_to_bin_fuel(uint64_t fuel,
-                                         uint64_t n) { /// CraneEnter: captures
-                                                       /// varying parameters
-                                                       /// for each recursive
-                                                       /// call.
-  struct CraneEnter {
+uint64_t LoopifyNumericSequences::dec_to_bin_fuel(uint64_t fuel, uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of dec_to_bin_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [n], resumes after recursive call, then processes rest.
-  struct CraneCont1 {
+  struct _after_dec_to_bin_fuel_in_false {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  using _frame = std::variant<_call, _after_dec_to_bin_fuel_in_false>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, fuel});
-  /// Loopified dec_to_bin_fuel: CraneEnter -> CraneCont1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -383,13 +362,13 @@ LoopifyNumericSequences::dec_to_bin_fuel(uint64_t fuel,
         if (n <= UINT64_C(0)) {
           _result = UINT64_C(0);
         } else {
-          _stack.emplace_back(CraneCont1{n});
-          _stack.emplace_back(
-              CraneEnter{(UINT64_C(2) ? n / UINT64_C(2) : 0), fuel_});
+          _stack.emplace_back(_after_dec_to_bin_fuel_in_false{n});
+          _stack.emplace_back(_call{(UINT64_C(2) ? n / UINT64_C(2) : 0),
+                                    fuel_});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+      auto _f = std::move(std::get<_after_dec_to_bin_fuel_in_false>(_popped));
       uint64_t n = _f.n;
       _result = ((UINT64_C(2) ? n % UINT64_C(2) : n) +
                  (UINT64_C(10) * std::move(_result)));
@@ -404,6 +383,8 @@ uint64_t LoopifyNumericSequences::dec_to_bin(uint64_t n) {
 
 uint64_t LoopifyNumericSequences::alternate_sum(bool sign, uint64_t acc,
                                                 const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_acc = acc;
   bool _loop_sign = sign;
@@ -432,45 +413,40 @@ uint64_t LoopifyNumericSequences::alternate_sum(bool sign, uint64_t acc,
   }
 }
 
-uint64_t
-LoopifyNumericSequences::sum_divisors_aux(uint64_t n,
-                                          uint64_t d) { /// CraneEnter: captures
-                                                        /// varying parameters
-                                                        /// for each recursive
-                                                        /// call.
-  struct CraneEnter {
+uint64_t LoopifyNumericSequences::sum_divisors_aux(uint64_t n, uint64_t d) {
+  // Explicit stack replaces the non-tail recursion of sum_divisors_aux: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t d;
   };
 
-  /// CraneCont1: saves [d], resumes after recursive call, then processes rest.
-  struct CraneCont1 {
+  struct _after_sum_divisors_aux_in_true {
     uint64_t d;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  using _frame = std::variant<_call, _after_sum_divisors_aux_in_true>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{d});
-  /// Loopified sum_divisors_aux: CraneEnter -> CraneCont1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{d});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t d = _f.d;
       if (d <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t d_ = d - 1;
         if ((d ? n % d : n) == UINT64_C(0)) {
-          _stack.emplace_back(CraneCont1{d});
-          _stack.emplace_back(CraneEnter{d_});
+          _stack.emplace_back(_after_sum_divisors_aux_in_true{d});
+          _stack.emplace_back(_call{d_});
         } else {
-          _stack.emplace_back(CraneEnter{d_});
+          _stack.emplace_back(_call{d_});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+      auto _f = std::move(std::get<_after_sum_divisors_aux_in_true>(_popped));
       uint64_t d = _f.d;
       _result = (d + std::move(_result));
     }

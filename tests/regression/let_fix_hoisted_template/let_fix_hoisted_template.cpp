@@ -4,6 +4,8 @@ List<uint64_t> LetFixHoistedTemplate::reverse_onto(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_xs = l;
     List<uint64_t> _lc1_acc = List<uint64_t>::nil();
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     List<uint64_t> _lc1_loop_acc = std::move(_lc1_acc);
     const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
     while (true) {

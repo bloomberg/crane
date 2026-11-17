@@ -17,10 +17,13 @@ struct Nat {
 };
 
 enum class Comparison { EQ, LT, GT };
+/// A type with a single carrier type t.
 template <typename M>
 concept BaseType = requires {
   typename M::t;
 };
+/// An ordered type with a carrier type t and a compare function
+/// returning Lt, Eq, or Gt.
 template <typename M>
 concept OrderedType = requires {
   typename M::t;
@@ -28,6 +31,8 @@ concept OrderedType = requires {
     M::compare(std::declval<typename M::t>(), std::declval<typename M::t>())
   } -> std::same_as<Comparison>;
 };
+/// Signature for finite maps from key to value. Provides
+/// empty, add, and find operations.
 template <typename M>
 concept Map = requires {
   typename M::key;
@@ -93,6 +98,8 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Empty>(v_mut())) {
         return;
       }

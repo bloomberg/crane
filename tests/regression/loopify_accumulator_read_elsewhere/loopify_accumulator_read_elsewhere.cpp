@@ -4,35 +4,31 @@
 /// value reads it for the last time in the turn
 /// (Ownership_ir.continue_moves).
 uint64_t LoopifyAccumulatorReadElsewhere::size(
-    const LoopifyAccumulatorReadElsewhere::tree &t) { /// CraneEnter: captures
-                                                      /// varying parameters for
-                                                      /// each recursive call.
-  struct CraneEnter {
+    const LoopifyAccumulatorReadElsewhere::tree &t) {
+  // Explicit stack replaces the non-tail recursion of size: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyAccumulatorReadElsewhere::tree *t;
   };
 
-  /// CraneCont_Node: saves [a2], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Node {
+  struct _after_size_in_Node {
     const LoopifyAccumulatorReadElsewhere::tree *a2;
   };
 
-  /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Node_1 {
+  struct _after_size_in_Node_2 {
     uint64_t _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+  using _frame =
+      std::variant<_call, _after_size_in_Node, _after_size_in_Node_2>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&t});
-  /// Loopified size: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyAccumulatorReadElsewhere::tree &t = *_f.t;
       if (std::holds_alternative<
               typename LoopifyAccumulatorReadElsewhere::tree::Leaf>(t.v())) {
@@ -41,16 +37,16 @@ uint64_t LoopifyAccumulatorReadElsewhere::size(
         const auto &[a0, _, a2] =
             std::get<typename LoopifyAccumulatorReadElsewhere::tree::Node>(
                 t.v());
-        _stack.emplace_back(CraneCont_Node{crane_raw(a2)});
-        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+        _stack.emplace_back(_after_size_in_Node{crane_raw(a2)});
+        _stack.emplace_back(_call{crane_raw(a0)});
       }
-    } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Node>(_frame));
+    } else if (std::holds_alternative<_after_size_in_Node>(_popped)) {
+      auto _f = std::move(std::get<_after_size_in_Node>(_popped));
       const LoopifyAccumulatorReadElsewhere::tree &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{&a2});
+      _stack.emplace_back(_after_size_in_Node_2{std::move(_result)});
+      _stack.emplace_back(_call{&a2});
     } else {
-      auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+      auto _f = std::move(std::get<_after_size_in_Node_2>(_popped));
       _result = ((_f._tmp2 + UINT64_C(1)) + std::move(_result));
     }
   }
@@ -58,37 +54,33 @@ uint64_t LoopifyAccumulatorReadElsewhere::size(
 }
 
 uint64_t LoopifyAccumulatorReadElsewhere::keys(
-    const LoopifyAccumulatorReadElsewhere::tree &t) { /// CraneEnter: captures
-                                                      /// varying parameters for
-                                                      /// each recursive call.
-  struct CraneEnter {
+    const LoopifyAccumulatorReadElsewhere::tree &t) {
+  // Explicit stack replaces the non-tail recursion of keys: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyAccumulatorReadElsewhere::tree *t;
   };
 
-  /// CraneCont_Node: saves [a1, a2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Node {
+  struct _after_keys_in_Node {
     uint64_t a1;
     const LoopifyAccumulatorReadElsewhere::tree *a2;
   };
 
-  /// CraneCont_Node_1: saves [a1, _tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Node_1 {
+  struct _after_keys_in_Node_2 {
     uint64_t a1;
     uint64_t _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+  using _frame =
+      std::variant<_call, _after_keys_in_Node, _after_keys_in_Node_2>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&t});
-  /// Loopified keys: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyAccumulatorReadElsewhere::tree &t = *_f.t;
       if (std::holds_alternative<
               typename LoopifyAccumulatorReadElsewhere::tree::Leaf>(t.v())) {
@@ -97,17 +89,17 @@ uint64_t LoopifyAccumulatorReadElsewhere::keys(
         const auto &[a0, a1, a2] =
             std::get<typename LoopifyAccumulatorReadElsewhere::tree::Node>(
                 t.v());
-        _stack.emplace_back(CraneCont_Node{a1, crane_raw(a2)});
-        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+        _stack.emplace_back(_after_keys_in_Node{a1, crane_raw(a2)});
+        _stack.emplace_back(_call{crane_raw(a0)});
       }
-    } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Node>(_frame));
+    } else if (std::holds_alternative<_after_keys_in_Node>(_popped)) {
+      auto _f = std::move(std::get<_after_keys_in_Node>(_popped));
       uint64_t a1 = _f.a1;
       const LoopifyAccumulatorReadElsewhere::tree &a2 = *_f.a2;
-      _stack.emplace_back(CraneCont_Node_1{a1, std::move(_result)});
-      _stack.emplace_back(CraneEnter{&a2});
+      _stack.emplace_back(_after_keys_in_Node_2{a1, std::move(_result)});
+      _stack.emplace_back(_call{&a2});
     } else {
-      auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+      auto _f = std::move(std::get<_after_keys_in_Node_2>(_popped));
       uint64_t a1 = _f.a1;
       _result = ((_f._tmp2 + a1) + std::move(_result));
     }
@@ -119,6 +111,8 @@ uint64_t LoopifyAccumulatorReadElsewhere::keys(
 /// as an if: the one read is the turn's last, and is moved.
 LoopifyAccumulatorReadElsewhere::tree LoopifyAccumulatorReadElsewhere::grow(
     uint64_t n, LoopifyAccumulatorReadElsewhere::tree acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   LoopifyAccumulatorReadElsewhere::tree _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {
@@ -138,6 +132,8 @@ std::pair<uint64_t, LoopifyAccumulatorReadElsewhere::tree>
 LoopifyAccumulatorReadElsewhere::grow_counted(
     uint64_t n, const LoopifyAccumulatorReadElsewhere::tree &acc,
     uint64_t count) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_count = count;
   LoopifyAccumulatorReadElsewhere::tree _loop_acc = acc;
   uint64_t _loop_n = n;
@@ -160,6 +156,8 @@ LoopifyAccumulatorReadElsewhere::grow_counted(
 LoopifyAccumulatorReadElsewhere::tree LoopifyAccumulatorReadElsewhere::graft(
     const LoopifyAccumulatorReadElsewhere::tree &t,
     LoopifyAccumulatorReadElsewhere::tree acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   LoopifyAccumulatorReadElsewhere::tree _loop_acc = std::move(acc);
   const LoopifyAccumulatorReadElsewhere::tree *_loop_t = &t;
   while (true) {

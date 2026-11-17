@@ -181,6 +181,8 @@ struct DoubleOppositeWitnessesCase {
 
   template <PreCategory _tcI0>
   static Functor<typename _tcI0::Obj> into_double_opposite_functor() {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto erased_fn = crane::immortal(crane_erase_fn<Hom>(
         [](const typename _tcI0::Obj &, const typename _tcI0::Obj &,
            const auto &f) { return f; }));

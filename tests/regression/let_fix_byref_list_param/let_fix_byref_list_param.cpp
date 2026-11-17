@@ -13,6 +13,8 @@ uint64_t LetFixByrefListParam::sum_with_acc(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_xs = l;
     uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
     while (true) {

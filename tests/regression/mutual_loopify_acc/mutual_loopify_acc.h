@@ -47,6 +47,8 @@ struct MutualLoopifyAcc {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -125,6 +127,8 @@ struct MutualLoopifyAcc {
 
     // MANIPULATORS
     ~forest() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Fcons>(&_v)) {
@@ -189,41 +193,37 @@ struct MutualLoopifyAcc {
   }
 
   template <typename T1, typename F1>
-  static T1
-  forest_rect(T1 f, F1 &&f0,
-              const forest &f1) { /// CraneEnter: captures varying parameters
-                                  /// for each recursive call.
-    struct CraneEnter {
+  static T1 forest_rect(T1 f, F1 &&f0, const forest &f1) {
+    // Explicit stack replaces the non-tail recursion of forest_rect: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const forest *f1;
     };
 
-    /// CraneCont_Fcons: saves [a0, a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Fcons {
+    struct _after_forest_rect_in_Fcons {
       std::shared_ptr<tree> a0;
       std::shared_ptr<forest> a1;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Fcons>;
+    using _frame = std::variant<_call, _after_forest_rect_in_Fcons>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&f1});
-    /// Loopified forest_rect: CraneEnter -> CraneCont_Fcons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&f1});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const forest &f1 = *_f.f1;
         if (std::holds_alternative<typename forest::Fnil>(f1.v())) {
           _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename forest::Fcons>(f1.v());
-          _stack.emplace_back(CraneCont_Fcons{a0, a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_forest_rect_in_Fcons{a0, a1});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
+        auto _f = std::move(std::get<_after_forest_rect_in_Fcons>(_popped));
         std::shared_ptr<tree> a0 = std::move(_f.a0);
         std::shared_ptr<forest> a1 = std::move(_f.a1);
         _result = f0(*a0, *a1, std::move(_result));

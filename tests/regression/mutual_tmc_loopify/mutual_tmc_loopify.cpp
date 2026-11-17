@@ -1,66 +1,60 @@
 #include "mutual_tmc_loopify.h"
 
-MutualTmcLoopify::mylist
-MutualTmcLoopify::evens(const Nat &n) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-  struct CraneEnter {
+MutualTmcLoopify::mylist MutualTmcLoopify::evens(const Nat &n) {
+  // Explicit stack replaces the non-tail recursion of evens: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const Nat *n;
   };
 
-  /// CraneEnter_odds_entry: captures varying parameters for each recursive
-  /// call.
-  struct CraneEnter_odds_entry {
+  struct _call_odds_entry {
     const Nat *n0;
   };
 
-  /// CraneCont_S: saves [n], resumes after recursive call, then processes rest.
-  struct CraneCont_S {
-    Nat n;
-  };
-
-  /// CraneCont_S_1: saves [n0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_S_1 {
+  struct _after_evens_in_S {
     Nat n0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneEnter_odds_entry,
-                                  CraneCont_S, CraneCont_S_1>;
+  struct _after_odds_entry_in_S {
+    Nat n;
+  };
+
+  using _frame = std::variant<_call, _call_odds_entry, _after_evens_in_S,
+                              _after_odds_entry_in_S>;
   MutualTmcLoopify::mylist _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&n});
-  /// Loopified evens: CraneEnter -> CraneCont_S -> CraneCont_S_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const Nat &n = *_f.n;
       if (std::holds_alternative<typename Nat::O>(n.v())) {
         _result = mylist::mnil();
       } else {
         const auto &[a00] = std::get<typename Nat::S>(n.v());
-        _stack.emplace_back(CraneCont_S{n});
-        _stack.emplace_back(CraneEnter_odds_entry{crane_raw(a00)});
+        _stack.emplace_back(_after_odds_entry_in_S{n});
+        _stack.emplace_back(_call_odds_entry{crane_raw(a00)});
       }
-    } else if (std::holds_alternative<CraneEnter_odds_entry>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_odds_entry>(_frame));
+    } else if (std::holds_alternative<_call_odds_entry>(_popped)) {
+      auto _f = std::move(std::get<_call_odds_entry>(_popped));
       const Nat &n0 = *_f.n0;
       if (std::holds_alternative<typename Nat::O>(n0.v())) {
         _result = mylist::mnil();
       } else {
         const auto &[a0] = std::get<typename Nat::S>(n0.v());
-        _stack.emplace_back(CraneCont_S_1{n0});
-        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+        _stack.emplace_back(_after_evens_in_S{n0});
+        _stack.emplace_back(_call{crane_raw(a0)});
       }
-    } else if (std::holds_alternative<CraneCont_S>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_S>(_frame));
-      Nat n = std::move(_f.n);
-      _result = mylist::mcons(std::move(n), std::move(_result));
-    } else {
-      auto _f = std::move(std::get<CraneCont_S_1>(_frame));
+    } else if (std::holds_alternative<_after_evens_in_S>(_popped)) {
+      auto _f = std::move(std::get<_after_evens_in_S>(_popped));
       Nat n0 = std::move(_f.n0);
       _result = mylist::mcons(std::move(n0), std::move(_result));
+    } else {
+      auto _f = std::move(std::get<_after_odds_entry_in_S>(_popped));
+      Nat n = std::move(_f.n);
+      _result = mylist::mcons(std::move(n), std::move(_result));
     }
   }
   return _result;

@@ -1,35 +1,34 @@
 #include "deque_deep_tree_stackoverflow.h"
 
-DequeDeepTreeStackoverflow::rose DequeDeepTreeStackoverflow::deep_tree(
-    uint64_t depth) { /// CraneEnter: captures varying parameters for each
-                      /// recursive call.
-  struct CraneEnter {
+DequeDeepTreeStackoverflow::rose
+DequeDeepTreeStackoverflow::deep_tree(uint64_t depth) {
+  // Explicit stack replaces the non-tail recursion of deep_tree: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t depth;
   };
 
-  /// CraneCont_n: resumes after recursive call, then processes rest.
-  struct CraneCont_n {};
+  struct _after_deep_tree_in_S {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n>;
+  using _frame = std::variant<_call, _after_deep_tree_in_S>;
   DequeDeepTreeStackoverflow::rose _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{depth});
-  /// Loopified deep_tree: CraneEnter -> CraneCont_n.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{depth});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t depth = _f.depth;
       if (depth <= 0) {
         _result = rose::rleaf(UINT64_C(42));
       } else {
         uint64_t n = depth - 1;
-        _stack.emplace_back(CraneCont_n{});
-        _stack.emplace_back(CraneEnter{n});
+        _stack.emplace_back(_after_deep_tree_in_S{});
+        _stack.emplace_back(_call{n});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n>(_frame));
+      auto _f = std::move(std::get<_after_deep_tree_in_S>(_popped));
       _result = rose::rnode([](auto _a0, auto _a1) {
         _a1.push_front(_a0);
         return _a1;

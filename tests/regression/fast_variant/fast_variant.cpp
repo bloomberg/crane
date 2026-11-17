@@ -14,6 +14,8 @@ FastVariant::stream FastVariant::from(uint64_t n) {
 }
 
 List<uint64_t> FastVariant::take(uint64_t n, const FastVariant::stream &s) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   FastVariant::stream _loop_s = s;

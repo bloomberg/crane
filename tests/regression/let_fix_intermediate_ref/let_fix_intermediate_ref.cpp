@@ -4,6 +4,8 @@ uint64_t LetFixIntermediateRef::sum_heads(const List<List<uint64_t>> &ll) {
   {
     const List<List<uint64_t>> &_lc1_xss = ll;
     uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
     const List<List<uint64_t>> *_lc1_loop_xss = &_lc1_xss;
     while (true) {

@@ -49,6 +49,8 @@ struct LoopifyTmcSwitchBase {
 
     // MANIPULATORS
     ~num() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<num> {
         if (auto *_alt = std::get_if<Su>(&_v)) {
           if (_alt->n && _alt->n.use_count() == 1) {
@@ -76,39 +78,36 @@ struct LoopifyTmcSwitchBase {
   };
 
   template <typename T1, typename F1>
-  static T1 num_rect(T1 f0, F1 &&f1,
-                     const num &n) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-    struct CraneEnter {
+  static T1 num_rect(T1 f0, F1 &&f1, const num &n) {
+    // Explicit stack replaces the non-tail recursion of num_rect: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const num *n;
     };
 
-    /// CraneCont_Su: saves [n1], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Su {
+    struct _after_num_rect_in_Su {
       std::shared_ptr<num> n1;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Su>;
+    using _frame = std::variant<_call, _after_num_rect_in_Su>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&n});
-    /// Loopified num_rect: CraneEnter -> CraneCont_Su.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&n});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const num &n = *_f.n;
         if (std::holds_alternative<typename num::Z>(n.v())) {
           _result = f0;
         } else {
           const auto &[n1] = std::get<typename num::Su>(n.v());
-          _stack.emplace_back(CraneCont_Su{n1});
-          _stack.emplace_back(CraneEnter{crane_raw(n1)});
+          _stack.emplace_back(_after_num_rect_in_Su{n1});
+          _stack.emplace_back(_call{crane_raw(n1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Su>(_frame));
+        auto _f = std::move(std::get<_after_num_rect_in_Su>(_popped));
         std::shared_ptr<num> n1 = std::move(_f.n1);
         _result = f1(*n1, std::move(_result));
       }

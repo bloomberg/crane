@@ -67,6 +67,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -95,6 +97,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
     while (true) {
@@ -149,6 +153,8 @@ struct LoopifyPartnerSelfInClosure {
 
     // MANIPULATORS
     ~e() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Meta>(&_v)) {
@@ -232,6 +238,8 @@ struct LoopifyPartnerSelfInClosure {
 
     // MANIPULATORS
     ~md() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<MNode>(&_v)) {

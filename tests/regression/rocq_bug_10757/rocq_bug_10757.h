@@ -38,9 +38,8 @@ struct RocqBug10757 {
   template <typename T1>
   static Sig<T1>
   iterate_func(std::type_identity_t<crane::fn<Bool0(T1, T1)>> beq,
-               std::type_identity_t<crane::fn<T1(T1)>> f,
-               const Sig<T1> &x) { // Precondition: (exists _ : le x (F x),
-                                   // forall z : A, le (F z) z -> le x z)
+               std::type_identity_t<crane::fn<T1(T1)>> f, const Sig<T1> &x) {
+    // Precondition: (exists _ : le x (F x), forall z : A, le (F z) z -> le x z)
     T1 x0 = [&]() {
       const auto &[x1] = x;
       return x1;

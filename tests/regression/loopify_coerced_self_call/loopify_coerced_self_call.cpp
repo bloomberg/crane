@@ -1,34 +1,31 @@
 #include "loopify_coerced_self_call.h"
 
-Nat::EvenT Nat::EvenT_2(uint64_t,
-                        const Sig<uint64_t> &h0) { // Precondition: n == (2 * m)
+Nat::EvenT Nat::EvenT_2(uint64_t, const Sig<uint64_t> &h0) {
+  // Precondition: n == (2 * m)
   const auto &[x0] = h0;
   return Sig<uint64_t>::exist((x0 + 1));
 }
 
-Nat::EvenT
-Nat::even_EvenT(uint64_t n) { /// CraneEnter: captures varying parameters for
-                              /// each recursive call.
-  struct CraneEnter {
+Nat::EvenT Nat::even_EvenT(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of even_EvenT: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n1: saves [n1], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n1 {
+  struct _after_even_EvenT_in_S {
     uint64_t n1;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n1>;
+  using _frame = std::variant<_call, _after_even_EvenT_in_S>;
   Nat::EvenT _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified even_EvenT: CraneEnter -> CraneCont_n1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = EvenT_0;
@@ -38,12 +35,12 @@ Nat::even_EvenT(uint64_t n) { /// CraneEnter: captures varying parameters for
           throw std::logic_error("absurd case");
         } else {
           uint64_t n1 = n0 - 1;
-          _stack.emplace_back(CraneCont_n1{n1});
-          _stack.emplace_back(CraneEnter{n1});
+          _stack.emplace_back(_after_even_EvenT_in_S{n1});
+          _stack.emplace_back(_call{n1});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n1>(_frame));
+      auto _f = std::move(std::get<_after_even_EvenT_in_S>(_popped));
       uint64_t n1 = _f.n1;
       Nat::EvenT he = std::move(_result);
       _result = EvenT_2(n1, std::move(he));

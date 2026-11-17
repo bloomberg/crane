@@ -2,6 +2,8 @@
 
 void LoopifyUnitVoidRepro::loop(uint64_t x, uint64_t y,
                                 const List<bool> &cells) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<bool> *_loop_cells = &cells;
   uint64_t _loop_x = x;
   while (true) {

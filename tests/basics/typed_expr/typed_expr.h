@@ -83,6 +83,8 @@ public:
 
   // MANIPULATORS
   ~Expr() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     if (std::holds_alternative<ENat>(v_mut())) {
       return;
     }
@@ -165,57 +167,46 @@ public:
 inline crane::obj Expr::eval(Ty _x) const {
   const Expr *_self = this;
 
-  /// CraneEnter: captures varying parameters for each recursive call.
-  struct CraneEnter {
+  // Explicit stack replaces the non-tail recursion of eval: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const Expr *_self;
     Ty _x;
   };
 
-  /// CraneCont_EAdd: saves [a1], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_EAdd {
+  struct _after_eval_in_EAdd {
     const Expr *a1;
   };
 
-  /// CraneCont_EAdd_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_EAdd_1 {
+  struct _after_eval_in_EAdd_2 {
     crane::obj _tmp2;
   };
 
-  /// CraneCont_EEq: saves [a1], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_EEq {
+  struct _after_eval_in_EEq {
     const Expr *a1;
   };
 
-  /// CraneCont_EEq_1: saves [_tmp4], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_EEq_1 {
+  struct _after_eval_in_EEq_2 {
     crane::obj _tmp4;
   };
 
-  /// CraneCont_EIf: saves [t, a2, a3], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_EIf {
+  struct _after_eval_in_EIf {
     Ty t;
     const Expr *a2;
     const Expr *a3;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneCont_EAdd, CraneCont_EAdd_1, CraneCont_EEq,
-                   CraneCont_EEq_1, CraneCont_EIf>;
+  using _frame = std::variant<_call, _after_eval_in_EAdd, _after_eval_in_EAdd_2,
+                              _after_eval_in_EEq, _after_eval_in_EEq_2,
+                              _after_eval_in_EIf>;
   crane::obj _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{_self, _x});
-  /// Loopified eval: CraneEnter -> CraneCont_EAdd -> CraneCont_EAdd_1 ->
-  /// CraneCont_EEq -> CraneCont_EEq_1 -> CraneCont_EIf.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{_self, _x});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const Expr *_self = _f._self;
       Ty _x = _f._x;
       auto &&_sv = *_self;
@@ -227,44 +218,45 @@ inline crane::obj Expr::eval(Ty _x) const {
         _result = std::move(a0);
       } else if (std::holds_alternative<typename Expr::EAdd>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename Expr::EAdd>(_sv.v());
-        _stack.emplace_back(CraneCont_EAdd{crane_raw(a1)});
-        _stack.emplace_back(CraneEnter{crane_raw(a0), Ty::TNAT});
+        _stack.emplace_back(_after_eval_in_EAdd{crane_raw(a1)});
+        _stack.emplace_back(_call{crane_raw(a0), Ty::TNAT});
       } else if (std::holds_alternative<typename Expr::EEq>(_sv.v())) {
         const auto &[a0, a1] = std::get<typename Expr::EEq>(_sv.v());
-        _stack.emplace_back(CraneCont_EEq{crane_raw(a1)});
-        _stack.emplace_back(CraneEnter{crane_raw(a0), Ty::TNAT});
+        _stack.emplace_back(_after_eval_in_EEq{crane_raw(a1)});
+        _stack.emplace_back(_call{crane_raw(a0), Ty::TNAT});
       } else {
         const auto &[t, a1, a2, a3] = std::get<typename Expr::EIf>(_sv.v());
-        _stack.emplace_back(CraneCont_EIf{t, crane_raw(a2), crane_raw(a3)});
-        _stack.emplace_back(CraneEnter{crane_raw(a1), Ty::TBOOL});
+        _stack.emplace_back(_after_eval_in_EIf{t, crane_raw(a2),
+                                               crane_raw(a3)});
+        _stack.emplace_back(_call{crane_raw(a1), Ty::TBOOL});
       }
-    } else if (std::holds_alternative<CraneCont_EAdd>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_EAdd>(_frame));
+    } else if (std::holds_alternative<_after_eval_in_EAdd>(_popped)) {
+      auto _f = std::move(std::get<_after_eval_in_EAdd>(_popped));
       const Expr &a1 = *_f.a1;
-      _stack.emplace_back(CraneCont_EAdd_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{_f.a1, Ty::TNAT});
-    } else if (std::holds_alternative<CraneCont_EAdd_1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_EAdd_1>(_frame));
+      _stack.emplace_back(_after_eval_in_EAdd_2{std::move(_result)});
+      _stack.emplace_back(_call{_f.a1, Ty::TNAT});
+    } else if (std::holds_alternative<_after_eval_in_EAdd_2>(_popped)) {
+      auto _f = std::move(std::get<_after_eval_in_EAdd_2>(_popped));
       _result = (crane::any_cast<uint64_t>(std::move(_f._tmp2)) +
                  crane::any_cast<uint64_t>(std::move(_result)));
-    } else if (std::holds_alternative<CraneCont_EEq>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_EEq>(_frame));
+    } else if (std::holds_alternative<_after_eval_in_EEq>(_popped)) {
+      auto _f = std::move(std::get<_after_eval_in_EEq>(_popped));
       const Expr &a1 = *_f.a1;
-      _stack.emplace_back(CraneCont_EEq_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{_f.a1, Ty::TNAT});
-    } else if (std::holds_alternative<CraneCont_EEq_1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_EEq_1>(_frame));
+      _stack.emplace_back(_after_eval_in_EEq_2{std::move(_result)});
+      _stack.emplace_back(_call{_f.a1, Ty::TNAT});
+    } else if (std::holds_alternative<_after_eval_in_EEq_2>(_popped)) {
+      auto _f = std::move(std::get<_after_eval_in_EEq_2>(_popped));
       _result = crane::any_cast<uint64_t>(std::move(_f._tmp4)) ==
                 crane::any_cast<uint64_t>(std::move(_result));
     } else {
-      auto _f = std::move(std::get<CraneCont_EIf>(_frame));
+      auto _f = std::move(std::get<_after_eval_in_EIf>(_popped));
       Ty t = _f.t;
       const Expr &a2 = *_f.a2;
       const Expr &a3 = *_f.a3;
       if (crane::any_cast<bool>(std::move(_result))) {
-        _stack.emplace_back(CraneEnter{_f.a2, t});
+        _stack.emplace_back(_call{_f.a2, t});
       } else {
-        _stack.emplace_back(CraneEnter{_f.a3, t});
+        _stack.emplace_back(_call{_f.a3, t});
       }
     }
   }

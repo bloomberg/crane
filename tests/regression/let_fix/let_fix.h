@@ -65,6 +65,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -98,6 +100,8 @@ struct LetFix {
     {
       List<T1> _lc1_acc = List<T1>::nil();
       const List<T1> &_lc1_xs = l;
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       const List<T1> *_lc1_loop_xs = &_lc1_xs;
       List<T1> _lc1_loop_acc = std::move(_lc1_acc);
       while (true) {

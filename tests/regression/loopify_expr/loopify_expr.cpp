@@ -2,33 +2,26 @@
 
 /// sum_shapes l sums values from shapes using unified pattern.
 /// Tests or-pattern style matching in Coq.
-uint64_t
-LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) { /// CraneEnter:
-                                                             /// captures
-                                                             /// varying
-                                                             /// parameters for
-                                                             /// each recursive
-                                                             /// call.
-  struct CraneEnter {
+uint64_t LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) {
+  // Explicit stack replaces the non-tail recursion of sum_shapes: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<LoopifyExpr::shape> *l;
   };
 
-  /// CraneCont_Cons: saves [val], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_sum_shapes_in_Cons {
     uint64_t val;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_sum_shapes_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified sum_shapes: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<LoopifyExpr::shape> &l = *_f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -53,11 +46,11 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) { /// CraneEnter:
             return a00;
           }
         }();
-        _stack.emplace_back(CraneCont_Cons{val});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_sum_shapes_in_Cons{val});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_sum_shapes_in_Cons>(_popped));
       uint64_t val = _f.val;
       _result = (val + std::move(_result));
     }
@@ -66,29 +59,27 @@ LoopifyExpr::sum_shapes(const List<LoopifyExpr::shape> &l) { /// CraneEnter:
 }
 
 /// count_by_shape l counts shapes: (circles, squares, triangles).
-std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
-    const List<LoopifyExpr::shape> &l) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-  struct CraneEnter {
+std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
+LoopifyExpr::count_by_shape(const List<LoopifyExpr::shape> &l) {
+  // Explicit stack replaces the non-tail recursion of count_by_shape: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<LoopifyExpr::shape> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_count_by_shape_in_Cons {
     LoopifyExpr::shape a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_count_by_shape_in_Cons>;
   std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified count_by_shape: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<LoopifyExpr::shape> &l = *_f.l;
       if (std::holds_alternative<typename List<LoopifyExpr::shape>::Nil>(l.v())) {
         _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
@@ -96,11 +87,11 @@ std::pair<std::pair<uint64_t, uint64_t>, uint64_t> LoopifyExpr::count_by_shape(
       } else {
         const auto &[a0, a1] =
             std::get<typename List<LoopifyExpr::shape>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_count_by_shape_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_count_by_shape_in_Cons>(_popped));
       LoopifyExpr::shape a0 = std::move(_f.a0);
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
           std::move(_result);

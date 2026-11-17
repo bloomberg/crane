@@ -8,72 +8,65 @@ MemSafetyProbe29::dup_inner(const MemSafetyProbe29::inner &i) {
 }
 
 /// TEST 5: Deep 3-child tree to stress clone/destructor.
-MemSafetyProbe29::tree3
-MemSafetyProbe29::build_tree3(uint64_t n) { /// CraneEnter: captures varying
-                                            /// parameters for each recursive
-                                            /// call.
-  struct CraneEnter {
+MemSafetyProbe29::tree3 MemSafetyProbe29::build_tree3(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of build_tree3: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [n, n_], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_build_tree3_in_S {
     uint64_t n;
     uint64_t n_;
   };
 
-  /// CraneCont_n__1: saves [n, n_, _tmp3], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_n__1 {
+  struct _after_build_tree3_in_S_2 {
     uint64_t n;
     uint64_t n_;
     MemSafetyProbe29::tree3 _tmp3;
   };
 
-  /// CraneCont_n__2: saves [n, _tmp3, _tmp2], resumes after recursive call,
-  /// then processes rest.
-  struct CraneCont_n__2 {
+  struct _after_build_tree3_in_S_3 {
     uint64_t n;
     MemSafetyProbe29::tree3 _tmp3;
     MemSafetyProbe29::tree3 _tmp2;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneCont_n_, CraneCont_n__1, CraneCont_n__2>;
+  using _frame =
+      std::variant<_call, _after_build_tree3_in_S, _after_build_tree3_in_S_2,
+                   _after_build_tree3_in_S_3>;
   MemSafetyProbe29::tree3 _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified build_tree3: CraneEnter -> CraneCont_n_ -> CraneCont_n__1 ->
-  /// CraneCont_n__2.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = tree3::t3leaf();
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(CraneCont_n_{n, n_});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_build_tree3_in_S{n, n_});
+        _stack.emplace_back(_call{n_});
       }
-    } else if (std::holds_alternative<CraneCont_n_>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+    } else if (std::holds_alternative<_after_build_tree3_in_S>(_popped)) {
+      auto _f = std::move(std::get<_after_build_tree3_in_S>(_popped));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
-      _stack.emplace_back(CraneCont_n__1{n, n_, std::move(_result)});
-      _stack.emplace_back(CraneEnter{n_});
-    } else if (std::holds_alternative<CraneCont_n__1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_n__1>(_frame));
+      _stack.emplace_back(_after_build_tree3_in_S_2{n, n_, std::move(_result)});
+      _stack.emplace_back(_call{n_});
+    } else if (std::holds_alternative<_after_build_tree3_in_S_2>(_popped)) {
+      auto _f = std::move(std::get<_after_build_tree3_in_S_2>(_popped));
       uint64_t n = _f.n;
       uint64_t n_ = _f.n_;
       _stack.emplace_back(
-          CraneCont_n__2{n, std::move(_f._tmp3), std::move(_result)});
-      _stack.emplace_back(CraneEnter{n_});
+          _after_build_tree3_in_S_3{n, std::move(_f._tmp3),
+                                    std::move(_result)});
+      _stack.emplace_back(_call{n_});
     } else {
-      auto _f = std::move(std::get<CraneCont_n__2>(_frame));
+      auto _f = std::move(std::get<_after_build_tree3_in_S_3>(_popped));
       uint64_t n = _f.n;
       _result = tree3::t3node(std::move(_f._tmp3), std::move(_f._tmp2),
                               std::move(_result), n);

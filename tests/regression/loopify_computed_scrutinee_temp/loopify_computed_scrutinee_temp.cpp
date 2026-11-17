@@ -39,33 +39,30 @@ LoopifyComputedScrutineeTemp::wrap(uint64_t m,
   return lst::cons(UINT64_C(7), lst::cons(m, l));
 }
 
-uint64_t LoopifyComputedScrutineeTemp::walk(
-    uint64_t n,
-    const LoopifyComputedScrutineeTemp::lst &l) { /// CraneEnter: captures
-                                                  /// varying parameters for
-                                                  /// each recursive call.
-  struct CraneEnter {
+uint64_t
+LoopifyComputedScrutineeTemp::walk(uint64_t n,
+                                   const LoopifyComputedScrutineeTemp::lst &l) {
+  // Explicit stack replaces the non-tail recursion of walk: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     LoopifyComputedScrutineeTemp::lst l;
     uint64_t n;
   };
 
-  /// CraneCont_Cons: saves [l, a0], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons {
+  struct _after_walk_in_Cons {
     LoopifyComputedScrutineeTemp::lst l;
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_walk_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{l, n});
-  /// Loopified walk: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{l, n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyComputedScrutineeTemp::lst &l = _f.l;
       uint64_t n = _f.n;
       if (n <= 0) {
@@ -80,12 +77,12 @@ uint64_t LoopifyComputedScrutineeTemp::walk(
           const auto &[a0, a1] =
               std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(
                   _sv.v());
-          _stack.emplace_back(CraneCont_Cons{l, a0});
-          _stack.emplace_back(CraneEnter{*a1, m});
+          _stack.emplace_back(_after_walk_in_Cons{l, a0});
+          _stack.emplace_back(_call{*a1, m});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_walk_in_Cons>(_popped));
       LoopifyComputedScrutineeTemp::lst l = std::move(_f.l);
       uint64_t a0 = _f.a0;
       _result = ((a0 + hd(std::move(l))) + std::move(_result));

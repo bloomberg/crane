@@ -2,6 +2,8 @@
 
 List<uint64_t> LoopifyLocalCofix::take(uint64_t n,
                                        const LoopifyLocalCofix::stream &s) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   LoopifyLocalCofix::stream _loop_s = s;

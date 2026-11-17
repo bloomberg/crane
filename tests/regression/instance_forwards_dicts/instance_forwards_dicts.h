@@ -214,6 +214,8 @@ struct InstanceForwardsDicts {
 
     // MANIPULATORS
     ~exp() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Neg>(&_v)) {
@@ -306,6 +308,8 @@ struct InstanceForwardsDicts {
 
     // MANIPULATORS
     ~meta() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<MExp>(&_v)) {

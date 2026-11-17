@@ -7,6 +7,8 @@ LocalTailLoopCallsBack::find(const LocalTailLoopCallsBack::tree &t,
       [](const List<LocalTailLoopCallsBack::tree> &ts,
          uint64_t k0)
            -> std::optional<uint64_t> {
+        // Loop replaces the tail recursion: each recursive call updates the
+        // loop variables.
         uint64_t _loop_k0 = k0;
         const List<LocalTailLoopCallsBack::tree> *_loop_ts = &ts;
         while (true) {

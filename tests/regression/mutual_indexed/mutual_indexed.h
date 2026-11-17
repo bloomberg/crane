@@ -45,6 +45,8 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~EvenTree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ENode>(&_v)) {
@@ -114,6 +116,8 @@ struct MutualIndexed {
 
     // MANIPULATORS
     ~OddTree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ONode>(&_v)) {

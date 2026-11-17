@@ -22,6 +22,8 @@ uint64_t LoopifyCaptureMoveRenamed::count_odds(const List<uint64_t> &l) {
 }
 
 bool Nat::even(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {

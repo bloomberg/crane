@@ -67,6 +67,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -114,6 +116,8 @@ struct Rank2CallbackKeptAsFn {
   }
 
   template <typename T1> static uint64_t len(const List<T1> &l) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto erased_fn = crane::immortal(crane_erase_fn<uint64_t>(
         [](crane::obj, List<crane::obj>, uint64_t k) { return (k + 1); }));
     return both<uint64_t, T1>([]() { return UINT64_C(0); }(), erased_fn,

@@ -98,6 +98,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -128,38 +130,36 @@ public:
   T1 fold_right(F0 &&f, T1 a0) const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of fold_right: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Cons {
+    struct _after_fold_right_in_Cons {
       A a1;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_fold_right_in_Cons>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified fold_right: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = a0;
         } else {
           const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a2)});
+          _stack.emplace_back(_after_fold_right_in_Cons{a1});
+          _stack.emplace_back(_call{crane_raw(a2)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_fold_right_in_Cons>(_popped));
         auto a1 = std::move(_f.a1);
         _result = f(a1, std::move(_result));
       }
@@ -170,35 +170,34 @@ public:
   uint64_t length() const {
     const List<A> *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of length: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<A> *_self;
     };
 
-    /// CraneCont_Cons: resumes after recursive call, then processes rest.
-    struct CraneCont_Cons {};
+    struct _after_length_in_Cons {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_length_in_Cons>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified length: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<A> *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else {
           const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
-          _stack.emplace_back(CraneCont_Cons{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
         _result = (std::move(_result) + 1);
       }
     }
@@ -337,6 +336,8 @@ public:
 
   // MANIPULATORS
   ~Uint() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint> {
       if (auto *_alt = std::get_if<D0>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -417,6 +418,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Uint revapp(Uint d_) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint *_loop_self = this;
     Uint _loop_d_ = std::move(d_);
     while (true) {
@@ -686,6 +689,8 @@ public:
 
   // MANIPULATORS
   ~Uint0() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint0> {
       if (auto *_alt = std::get_if<D10>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -802,6 +807,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Uint0 revapp0(Uint0 d_) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint0 *_loop_self = this;
     Uint0 _loop_d_ = std::move(d_);
     while (true) {
@@ -959,6 +966,8 @@ public:
 
   // MANIPULATORS
   ~Positive() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Positive> {
       if (auto *_alt = std::get_if<XI>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -1516,6 +1525,8 @@ struct Coq_Pos {
 
     // MANIPULATORS
     ~PeanoView() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<PeanoView> {
         if (auto *_alt = std::get_if<PeanoSucc>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -1546,28 +1557,26 @@ struct Coq_Pos {
     T1 PeanoView_iter(T1 a, F1 &&f, const Positive &_x) const {
       const PeanoView *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of PeanoView_iter: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const PeanoView *_self;
         const Positive *_x;
       };
 
-      /// CraneCont_PeanoSucc: saves [p], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_PeanoSucc {
+      struct _after_PeanoView_iter_in_PeanoSucc {
         Positive p;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_PeanoSucc>;
+      using _frame = std::variant<_call, _after_PeanoView_iter_in_PeanoSucc>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, &_x});
-      /// Loopified PeanoView_iter: CraneEnter -> CraneCont_PeanoSucc.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self, &_x});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const PeanoView *_self = _f._self;
           const Positive &_x = *_f._x;
           auto &&_sv = *_self;
@@ -1576,11 +1585,12 @@ struct Coq_Pos {
           } else {
             const auto &[p, a1] =
                 std::get<typename PeanoView::PeanoSucc>(_sv.v());
-            _stack.emplace_back(CraneCont_PeanoSucc{p});
-            _stack.emplace_back(CraneEnter{crane_raw(a1), &p});
+            _stack.emplace_back(_after_PeanoView_iter_in_PeanoSucc{p});
+            _stack.emplace_back(_call{crane_raw(a1), &p});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_PeanoSucc>(_frame));
+          auto _f =
+              std::move(std::get<_after_PeanoView_iter_in_PeanoSucc>(_popped));
           Positive p = std::move(_f.p);
           _result = f(p, std::move(_result));
         }
@@ -1589,6 +1599,8 @@ struct Coq_Pos {
     }
 
     PeanoView peanoView_xI(const Positive &) const {
+      // Builds the result front to back: _write points at the empty tail the
+      // next cell fills.
       std::optional<PeanoView> _root{};
       std::shared_ptr<PeanoView> *_write = nullptr;
       const PeanoView *_loop_self = this;
@@ -1623,6 +1635,8 @@ struct Coq_Pos {
     }
 
     PeanoView peanoView_xO(const Positive &) const {
+      // Builds the result front to back: _write points at the empty tail the
+      // next cell fills.
       std::optional<PeanoView> _root{};
       std::shared_ptr<PeanoView> *_write = nullptr;
       const PeanoView *_loop_self = this;
@@ -1664,29 +1678,27 @@ struct Coq_Pos {
     T1 PeanoView_rect(T1 f, F1 &&f0, const Positive &_x) const {
       const PeanoView *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of PeanoView_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const PeanoView *_self;
         const Positive *_x;
       };
 
-      /// CraneCont_PeanoSucc: saves [p2, a1], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_PeanoSucc {
+      struct _after_PeanoView_rect_in_PeanoSucc {
         Positive p2;
         std::shared_ptr<PeanoView> a1;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_PeanoSucc>;
+      using _frame = std::variant<_call, _after_PeanoView_rect_in_PeanoSucc>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, &_x});
-      /// Loopified PeanoView_rect: CraneEnter -> CraneCont_PeanoSucc.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self, &_x});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const PeanoView *_self = _f._self;
           const Positive &_x = *_f._x;
           auto &&_sv = *_self;
@@ -1695,11 +1707,12 @@ struct Coq_Pos {
           } else {
             const auto &[p2, a1] =
                 std::get<typename PeanoView::PeanoSucc>(_sv.v());
-            _stack.emplace_back(CraneCont_PeanoSucc{p2, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1), &p2});
+            _stack.emplace_back(_after_PeanoView_rect_in_PeanoSucc{p2, a1});
+            _stack.emplace_back(_call{crane_raw(a1), &p2});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_PeanoSucc>(_frame));
+          auto _f =
+              std::move(std::get<_after_PeanoView_rect_in_PeanoSucc>(_popped));
           Positive p2 = std::move(_f.p2);
           std::shared_ptr<PeanoView> a1 = std::move(_f.a1);
           _result = f0(p2, *a1, std::move(_result));

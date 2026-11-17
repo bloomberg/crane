@@ -2,6 +2,8 @@
 
 OptionDeepDrain::chain OptionDeepDrain::build(uint64_t n,
                                               OptionDeepDrain::chain acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   OptionDeepDrain::chain _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {

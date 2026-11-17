@@ -14,6 +14,8 @@
 /// treated as recursion would be a wrong program, not just a slow one.
 Itree<LoopifyInnerInstanceCall::Ev, std::pair<uint64_t, uint64_t>>
 LoopifyInnerInstanceCall::bumped() {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto fmap = crane::immortal(Monads::template Functor_stateT<
       Functor_itree<LoopifyInnerInstanceCall::Ev>, uint64_t>::template fmap<
       uint64_t, uint64_t>([](uint64_t x) { return (x + UINT64_C(1)); }, st));

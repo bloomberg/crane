@@ -21,6 +21,8 @@
 LoopifyReuseBoolQualified::lst
 LoopifyReuseBoolQualified::build(uint64_t n,
                                  LoopifyReuseBoolQualified::lst acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   LoopifyReuseBoolQualified::lst _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {
@@ -36,34 +38,26 @@ LoopifyReuseBoolQualified::build(uint64_t n,
 }
 
 uint64_t
-LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) { /// CraneEnter:
-                                                                          /// captures
-                                                                          /// varying
-                                                                          /// parameters
-                                                                          /// for
-                                                                          /// each
-                                                                          /// recursive
-                                                                          /// call.
-  struct CraneEnter {
+LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) {
+  // Explicit stack replaces the non-tail recursion of sum: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyReuseBoolQualified::lst *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_sum_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_sum_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified sum: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyReuseBoolQualified::lst &l = *_f.l;
       if (std::holds_alternative<typename LoopifyReuseBoolQualified::lst::Nil>(
               l.v())) {
@@ -71,11 +65,11 @@ LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) { /// Cr
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyReuseBoolQualified::lst::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_sum_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_sum_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -85,6 +79,8 @@ LoopifyReuseBoolQualified::sum(const LoopifyReuseBoolQualified::lst &l) { /// Cr
 
 LoopifyReuseBoolQualified::lst
 LoopifyReuseBoolQualified::incr(LoopifyReuseBoolQualified::lst l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills. The input's cells are reused in place while uniquely owned.
   crane::rc<LoopifyReuseBoolQualified::lst> _head{};
   crane::rc<LoopifyReuseBoolQualified::lst> *_write = &_head;
   crane::rc<LoopifyReuseBoolQualified::lst> _own =

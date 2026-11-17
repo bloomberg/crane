@@ -1,43 +1,37 @@
 #include "loopify_equations_with_clause.h"
 
-uint64_t
-LoopifyEquationsWithClause::zeros(const List<uint64_t> &x) { /// CraneEnter:
-                                                             /// captures
-                                                             /// varying
-                                                             /// parameters for
-                                                             /// each recursive
-                                                             /// call.
-  struct CraneEnter {
+uint64_t LoopifyEquationsWithClause::zeros(const List<uint64_t> &x) {
+  // Explicit stack replaces the non-tail recursion of zeros: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *x;
   };
 
-  /// CraneCont1: resumes after recursive call, then processes rest.
-  struct CraneCont1 {};
+  struct _after_zeros_in_true {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  using _frame = std::variant<_call, _after_zeros_in_true>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&x});
-  /// Loopified zeros: CraneEnter -> CraneCont1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &x = *_f.x;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(x.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(x.v());
         if (a0 == UINT64_C(0)) {
-          _stack.emplace_back(CraneCont1{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_zeros_in_true{});
+          _stack.emplace_back(_call{crane_raw(a1)});
         } else {
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+      auto _f = std::move(std::get<_after_zeros_in_true>(_popped));
       _result = (std::move(_result) + 1);
     }
   }
@@ -82,43 +76,36 @@ LoopifyEquationsWithClause::zeros_graph_correct(const List<uint64_t> &x) {
   }
 }
 
-uint64_t
-LoopifyEquationsWithClause::plain(const List<uint64_t> &x) { /// CraneEnter:
-                                                             /// captures
-                                                             /// varying
-                                                             /// parameters for
-                                                             /// each recursive
-                                                             /// call.
-  struct CraneEnter {
+uint64_t LoopifyEquationsWithClause::plain(const List<uint64_t> &x) {
+  // Explicit stack replaces the non-tail recursion of plain: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *x;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_plain_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_plain_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&x});
-  /// Loopified plain: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &x = *_f.x;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(x.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(x.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_plain_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_plain_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -137,6 +124,8 @@ uint64_t LoopifyEquationsWithClause::plain_unfold(const List<uint64_t> &l) {
 
 LoopifyEquationsWithClause::plain_graph
 LoopifyEquationsWithClause::plain_graph_correct(const List<uint64_t> &x) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyEquationsWithClause::plain_graph> _root{};
   std::shared_ptr<LoopifyEquationsWithClause::plain_graph> *_write = nullptr;
   const List<uint64_t> *_loop_x = &x;

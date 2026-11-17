@@ -9,6 +9,8 @@ TailrecReorderProbe::dual_accum(
     const TailrecReorderProbe::mylist<uint64_t> &l,
     const TailrecReorderProbe::mylist<uint64_t> &acc1,
     const TailrecReorderProbe::mylist<uint64_t> &acc2) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   TailrecReorderProbe::mylist<uint64_t> _loop_acc2 = acc2;
   TailrecReorderProbe::mylist<uint64_t> _loop_acc1 = acc1;
   const TailrecReorderProbe::mylist<uint64_t> *_loop_l = &l;
@@ -34,6 +36,8 @@ TailrecReorderProbe::mylist<uint64_t>
 TailrecReorderProbe::weave(TailrecReorderProbe::mylist<uint64_t> l1,
                            TailrecReorderProbe::mylist<uint64_t> l2,
                            const TailrecReorderProbe::mylist<uint64_t> &acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   TailrecReorderProbe::mylist<uint64_t> _loop_acc = acc;
   TailrecReorderProbe::mylist<uint64_t> _loop_l2 = std::move(l2);
   TailrecReorderProbe::mylist<uint64_t> _loop_l1 = std::move(l1);

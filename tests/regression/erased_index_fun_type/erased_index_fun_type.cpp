@@ -4,6 +4,8 @@
 /// declared as returning std::any, and the call site then applies the result
 /// directly: "type 'std::any' does not provide a call operator".
 Nat ErasedIndexFunType::ex(const Nat &x0_) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto dflt_1 =
       crane::immortal(dflt<crane::fn<Nat(Nat)>>(ty::tf(ty::tn(), ty::tn())));
   return crane::any_cast<Nat>(

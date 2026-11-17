@@ -74,6 +74,8 @@ public:
 
   // MANIPULATORS
   ~T() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<T> {
       if (auto *_alt = std::get_if<FS>(&_v)) {
         if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -102,25 +104,24 @@ public:
   Sig<uint64_t> to_nat(uint64_t _x) const {
     const T *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of to_nat: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const T *_self;
       uint64_t _x;
     };
 
-    /// CraneCont_FS: resumes after recursive call, then processes rest.
-    struct CraneCont_FS {};
+    struct _after_to_nat_in_FS {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_FS>;
+    using _frame = std::variant<_call, _after_to_nat_in_FS>;
     Sig<uint64_t> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self, _x});
-    /// Loopified to_nat: CraneEnter -> CraneCont_FS.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self, _x});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const T *_self = _f._self;
         uint64_t _x = _f._x;
         auto &&_sv = *_self;
@@ -128,11 +129,11 @@ public:
           _result = Sig<uint64_t>::exist(UINT64_C(0));
         } else {
           const auto &[n1, a1] = std::get<typename T::FS>(_sv.v());
-          _stack.emplace_back(CraneCont_FS{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1), n1});
+          _stack.emplace_back(_after_to_nat_in_FS{});
+          _stack.emplace_back(_call{crane_raw(a1), n1});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_FS>(_frame));
+        auto _f = std::move(std::get<_after_to_nat_in_FS>(_popped));
         Sig<uint64_t> _tmp1 = std::move(_result);
         auto &[x0] = _tmp1;
         _result = Sig<uint64_t>::exist((std::move(x0) + 1));

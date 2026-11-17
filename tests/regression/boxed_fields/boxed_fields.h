@@ -70,6 +70,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -98,6 +100,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &&, A>
   T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
     while (true) {
@@ -281,6 +285,8 @@ struct BoxedFields {
 
     // MANIPULATORS
     ~scene() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<scene> {
         if (auto *_alt = std::get_if<Layer>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -307,6 +313,8 @@ struct BoxedFields {
     const variant_t &v() const { return v_; }
 
     scene move_all(uint64_t d) const {
+      // Builds the result front to back: _write points at the empty tail the
+      // next cell fills.
       std::optional<scene> _root{};
       std::shared_ptr<scene> *_write = nullptr;
       const scene *_loop_self = this;
@@ -364,38 +372,36 @@ struct BoxedFields {
     uint64_t total() const {
       const scene *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of total: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const scene *_self;
       };
 
-      /// CraneCont_Layer: saves [a0], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Layer {
+      struct _after_total_in_Layer {
         std::shared_ptr<shape> a0;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Layer>;
+      using _frame = std::variant<_call, _after_total_in_Layer>;
       uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified total: CraneEnter -> CraneCont_Layer.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const scene *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
             _result = UINT64_C(0);
           } else {
             const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
-            _stack.emplace_back(CraneCont_Layer{a0});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+            _stack.emplace_back(_after_total_in_Layer{a0});
+            _stack.emplace_back(_call{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_Layer>(_frame));
+          auto _f = std::move(std::get<_after_total_in_Layer>(_popped));
           std::shared_ptr<shape> a0 = std::move(_f.a0);
           _result = (a0->weight() + std::move(_result));
         }
@@ -410,39 +416,37 @@ struct BoxedFields {
     template <typename T1, typename F1> T1 scene_rect(T1 f, F1 &&f0) const {
       const scene *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of scene_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const scene *_self;
       };
 
-      /// CraneCont_Layer: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Layer {
+      struct _after_scene_rect_in_Layer {
         std::shared_ptr<shape> a0;
         std::shared_ptr<scene> a1;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Layer>;
+      using _frame = std::variant<_call, _after_scene_rect_in_Layer>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified scene_rect: CraneEnter -> CraneCont_Layer.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const scene *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename scene::Empty>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename scene::Layer>(_sv.v());
-            _stack.emplace_back(CraneCont_Layer{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+            _stack.emplace_back(_after_scene_rect_in_Layer{a0, a1});
+            _stack.emplace_back(_call{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_Layer>(_frame));
+          auto _f = std::move(std::get<_after_scene_rect_in_Layer>(_popped));
           std::shared_ptr<shape> a0 = std::move(_f.a0);
           std::shared_ptr<scene> a1 = std::move(_f.a1);
           _result = f0(*a0, *a1, std::move(_result));

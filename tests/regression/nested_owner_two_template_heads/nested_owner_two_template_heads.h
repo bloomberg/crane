@@ -40,6 +40,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -127,6 +129,8 @@ struct Bag {
 
     // MANIPULATORS
     ~bag() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next =
           [&](variant_t &_v) -> std::shared_ptr<typename Bag::template bag<A>> {
             if (auto *_alt = std::get_if<Add>(&_v)) {
@@ -183,24 +187,23 @@ template <typename A>
 template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
   const typename Bag::template bag<A> *_self = this;
 
-  /// CraneEnter: captures varying parameters for each recursive call.
-  struct CraneEnter {
+  // Explicit stack replaces the non-tail recursion of countIf: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const typename Bag::template bag<A> *_self;
   };
 
-  /// CraneCont1: resumes after recursive call, then processes rest.
-  struct CraneCont1 {};
+  struct _after_countIf_in_true {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  using _frame = std::variant<_call, _after_countIf_in_true>;
   Nat _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{_self});
-  /// Loopified countIf: CraneEnter -> CraneCont1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{_self});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const typename Bag::template bag<A> *_self = _f._self;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename Bag::bag<A>::Empty>(_sv.v())) {
@@ -208,14 +211,14 @@ template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
       } else {
         const auto &[a0, a1] = std::get<typename Bag::bag<A>::Add>(_sv.v());
         if (p(a0)) {
-          _stack.emplace_back(CraneCont1{});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_countIf_in_true{});
+          _stack.emplace_back(_call{crane_raw(a1)});
         } else {
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+      auto _f = std::move(std::get<_after_countIf_in_true>(_popped));
       _result = Tally::bump(std::move(_result));
     }
   }

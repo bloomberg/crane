@@ -46,6 +46,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -125,6 +127,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -467,6 +471,8 @@ struct PatternBinderStateBoxed {
 
   template <Params _tcI0>
   static Itree<noE, std::pair<FusedS<typename _tcI0::ptr>, Nat>> go() {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto on_genv_1 = crane::immortal(on_genv<_tcI0, Nat>(incr));
     return on_genv_1(
         std::make_pair(MemStateV<_tcI0>::initial_state(),

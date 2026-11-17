@@ -84,6 +84,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -347,42 +349,39 @@ template <typename T1> struct Monad_itree {
 /// are this one, in ListUtil.monad_fold_right and ListUtil.map_monad.
 struct LoopifyResultNoDefault {
   template <Monad _tcI0, typename T2, typename T3>
-  static typename _tcI0::template m<T3>
-  mfr(const std::type_identity_t<
+  static typename _tcI0::template m<T3> mfr(const std::type_identity_t<
       crane::fn<typename _tcI0::template m<T3>(T3, T2)>> &f,
-      const List<T2> &l, const T3 &b) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-    struct CraneEnter {
+                                            const List<T2> &l, const T3 &b) {
+    // Explicit stack replaces the non-tail recursion of mfr: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
       const List<T2> *l;
     };
 
-    /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_Cons {
+    struct _after_mfr_in_Cons {
       T2 a0;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+    using _frame = std::variant<_call, _after_mfr_in_Cons>;
     typename _tcI0::template m<T3> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&l});
-    /// Loopified mfr: CraneEnter -> CraneCont_Cons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&l});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<T2> &l = *_f.l;
         if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
           _result = _tcI0::template ret<T3>(b);
         } else {
           const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
           const List<T2> &a1_value = *a1;
-          _stack.emplace_back(CraneCont_Cons{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_mfr_in_Cons{a0});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+        auto _f = std::move(std::get<_after_mfr_in_Cons>(_popped));
         auto a0 = std::move(_f.a0);
         _result = _tcI0::template bind<T3, T3>(
             std::move(_result),

@@ -31,6 +31,8 @@ template <HasKey K> struct Collector {
   rhss_for(const typename Datatypes::template List<std::pair<
       typename K::key, typename Datatypes::template List<typename K::key>>> &ps,
            typename K::key x) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<typename Datatypes::template List<
         typename Datatypes::template List<typename K::key>>> _root{};
     std::shared_ptr<typename Datatypes::template List<

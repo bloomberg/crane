@@ -68,6 +68,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -158,6 +160,8 @@ template <SEM S> struct Make {
   using entry = SigT<prod2, psem>;
 
   static entry mk_entry(typename S::idx a) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto erased_fn =
         crane::immortal(crane_erase_fn([](const auto &tup) {
           const auto &[_x, _x0] =

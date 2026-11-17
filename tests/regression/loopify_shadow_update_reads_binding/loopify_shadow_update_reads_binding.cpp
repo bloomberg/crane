@@ -10,6 +10,8 @@
 /// function.
 uint64_t LoopifyShadowUpdateReadsBinding::apply_n(
     uint64_t n, uint64_t v, const List<crane::fn<uint64_t(uint64_t)>> &fs) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   List<crane::fn<uint64_t(uint64_t)>> _loop_fs = fs;
   uint64_t _loop_v = v;
   uint64_t _loop_n = n;

@@ -45,31 +45,27 @@ struct DequeAnyCast {
   static_assert(Monoid<nat_monoid>);
 
   template <Monoid _tcI0>
-  static typename _tcI0::m_carrier mfold(
-      const std::deque<typename _tcI0::m_carrier> &l) { /// CraneEnter: captures
-                                                        /// varying parameters
-                                                        /// for each recursive
-                                                        /// call.
-    struct CraneEnter {
+  static typename _tcI0::m_carrier
+  mfold(const std::deque<typename _tcI0::m_carrier> &l) {
+    // Explicit stack replaces the non-tail recursion of mfold: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
       std::deque<typename _tcI0::m_carrier> l;
     };
 
-    /// CraneCont_x: saves [x], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_x {
+    struct _after_mfold_in_cons {
       typename _tcI0::m_carrier x;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_x>;
+    using _frame = std::variant<_call, _after_mfold_in_cons>;
     typename _tcI0::m_carrier _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{l});
-    /// Loopified mfold: CraneEnter -> CraneCont_x.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{l});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const std::deque<typename _tcI0::m_carrier> &l = _f.l;
         if (l.empty()) {
           _result = _tcI0::m_id();
@@ -78,11 +74,11 @@ struct DequeAnyCast {
           std::deque<typename _tcI0::m_carrier> rest(l.begin()+1, l.end());
           const auto &m_op0 = _tcI0::m_op;
           crane::obj _x = _tcI0::m_id;
-          _stack.emplace_back(CraneCont_x{x});
-          _stack.emplace_back(CraneEnter{rest});
+          _stack.emplace_back(_after_mfold_in_cons{x});
+          _stack.emplace_back(_call{rest});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_x>(_frame));
+        auto _f = std::move(std::get<_after_mfold_in_cons>(_popped));
         typename _tcI0::m_carrier x = std::move(_f.x);
         const auto &m_op0 = _tcI0::m_op;
         _result = m_op0(std::move(x), std::move(_result));

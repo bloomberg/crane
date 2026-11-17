@@ -76,6 +76,8 @@ public:
 
   // MANIPULATORS
   ~Forest() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     if (std::holds_alternative<Leaf>(v_mut())) {
       return;
     }

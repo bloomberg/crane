@@ -1,6 +1,8 @@
 #include "loopify_scans.h"
 
 List<uint64_t> LoopifyScans::scanl(uint64_t acc, const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -29,6 +31,8 @@ List<uint64_t> LoopifyScans::scanl(uint64_t acc, const List<uint64_t> &l) {
 }
 
 List<uint64_t> LoopifyScans::scanl_mult(uint64_t acc, const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -58,6 +62,8 @@ List<uint64_t> LoopifyScans::scanl_mult(uint64_t acc, const List<uint64_t> &l) {
 
 List<uint64_t> LoopifyScans::running_max(uint64_t current,
                                          const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -93,6 +99,8 @@ List<uint64_t> LoopifyScans::running_max(uint64_t current,
 
 List<uint64_t> LoopifyScans::running_min(uint64_t current,
                                          const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -128,6 +136,8 @@ List<uint64_t> LoopifyScans::running_min(uint64_t current,
 
 List<uint64_t> LoopifyScans::pairwise_diff(uint64_t prev,
                                            const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -174,6 +184,8 @@ List<uint64_t> LoopifyScans::pairwise_diff(uint64_t prev,
 
 List<uint64_t> LoopifyScans::accumulate_if_even(uint64_t acc,
                                                 const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;

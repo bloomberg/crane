@@ -2,6 +2,8 @@
 
 ReusePerFunctionOff::lst
 ReusePerFunctionOff::incr_reused(ReusePerFunctionOff::lst l) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (l.v().index() == 1) {
     if (std::get<typename ReusePerFunctionOff::lst::Cons>(l.v_mut()).a1.use_count() ==
         1) {

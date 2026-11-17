@@ -37,6 +37,8 @@ struct DoubleOptionNest {
 
     // MANIPULATORS
     ~t() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<std::shared_ptr<t>> _stack = {};
       auto _drain = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Node>(&_v)) {

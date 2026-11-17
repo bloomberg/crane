@@ -11,6 +11,8 @@
 /// the call it re-enters by.
 /// n conditionals, each taking its else branch until the innermost.
 LoopifyCoercedScrutinee::expr LoopifyCoercedScrutinee::nest(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyCoercedScrutinee::expr> _root{};
   std::shared_ptr<LoopifyCoercedScrutinee::expr> *_write = nullptr;
   uint64_t _loop_n = n;

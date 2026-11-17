@@ -11,6 +11,8 @@ uint64_t ReuseTokenInClosure::suml(const ReuseTokenInClosure::lst &l) {
 }
 
 ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (l.v().index() == 1) {
     if (std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a1.use_count() ==
         1) {
@@ -55,6 +57,8 @@ ReuseTokenInClosure::lst ReuseTokenInClosure::g(ReuseTokenInClosure::lst l) {
 }
 
 ReuseTokenInClosure::lst ReuseTokenInClosure::h(ReuseTokenInClosure::lst l) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (l.v().index() == 1) {
     if (std::get<typename ReuseTokenInClosure::lst::Cons>(l.v_mut()).a1.use_count() ==
         1) {

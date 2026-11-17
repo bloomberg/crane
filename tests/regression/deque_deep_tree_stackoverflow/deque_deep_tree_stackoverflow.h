@@ -43,6 +43,8 @@ struct DequeDeepTreeStackoverflow {
 
     // MANIPULATORS
     ~rose() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<RLeaf>(v_mut())) {
         return;
       }

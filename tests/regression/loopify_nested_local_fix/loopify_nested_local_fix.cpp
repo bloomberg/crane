@@ -4,6 +4,8 @@ uint64_t LoopifyNestedLocalFix::count(const List<uint64_t> &ns) {
   {
     const List<uint64_t> &_lc1_ms = ns;
     uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_ms = &_lc1_ms;
     while (true) {
@@ -14,6 +16,8 @@ uint64_t LoopifyNestedLocalFix::count(const List<uint64_t> &ns) {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_lc1_loop_ms->v());
         auto inner = [](uint64_t k, uint64_t a) -> uint64_t {
+          // Loop replaces the tail recursion: each recursive call updates the
+          // loop variables.
           uint64_t _loop_a = a;
           uint64_t _loop_k = k;
           while (true) {

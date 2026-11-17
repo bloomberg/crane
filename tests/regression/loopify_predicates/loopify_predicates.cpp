@@ -2,6 +2,8 @@
 
 List<uint64_t> LoopifyPredicates::remove_all(uint64_t x,
                                              const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;

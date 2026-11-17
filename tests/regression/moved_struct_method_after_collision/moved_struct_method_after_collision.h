@@ -43,6 +43,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -69,6 +71,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
@@ -127,6 +131,8 @@ public:
 
   // MANIPULATORS
   ~Shape() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Shape> {
       if (auto *_alt = std::get_if<Square>(&_v)) {
         if (_alt->t && _alt->t.use_count() == 1) {
@@ -213,6 +219,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -262,27 +270,25 @@ struct MovedStructMethodAfterCollision {
 inline Nat Shape::size() const {
   const Shape *_self = this;
 
-  /// CraneEnter: captures varying parameters for each recursive call.
-  struct CraneEnter {
+  // Explicit stack replaces the non-tail recursion of size: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const Shape *_self;
   };
 
-  /// CraneCont_Square: saves [s0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Square {
+  struct _after_size_in_Square {
     Nat s0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Square>;
+  using _frame = std::variant<_call, _after_size_in_Square>;
   Nat _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{_self});
-  /// Loopified size: CraneEnter -> CraneCont_Square.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{_self});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const Shape *_self = _f._self;
       auto &&_sv = *_self;
       if (std::holds_alternative<typename Shape::Circle>(_sv.v())) {
@@ -290,11 +296,11 @@ inline Nat Shape::size() const {
         _result = MovedStructMethodAfterCollision::Helpers::inc(r0);
       } else {
         const auto &[s0, t0] = std::get<typename Shape::Square>(_sv.v());
-        _stack.emplace_back(CraneCont_Square{s0});
-        _stack.emplace_back(CraneEnter{crane_raw(t0)});
+        _stack.emplace_back(_after_size_in_Square{s0});
+        _stack.emplace_back(_call{crane_raw(t0)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Square>(_frame));
+      auto _f = std::move(std::get<_after_size_in_Square>(_popped));
       Nat s0 = std::move(_f.s0);
       _result = s0.add(std::move(_result));
     }

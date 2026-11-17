@@ -29,6 +29,8 @@ struct StateMonadTypeSynonym {
       [](uint64_t s) { return std::make_pair(s, (s + 1)); };
   static inline const st<uint64_t> prog = []() {
     return [](uint64_t eta0_) {
+      // Built on the first call and immortal: every thread reads it without
+      // touching its counts.
       static const auto bind_1 =
           crane::immortal(bind<uint64_t, uint64_t>(tick, [](uint64_t a) {
             return bind<uint64_t, uint64_t>(

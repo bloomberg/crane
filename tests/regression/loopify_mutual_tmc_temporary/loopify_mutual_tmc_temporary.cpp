@@ -10,34 +10,30 @@
 /// put back, the transform found no constructor around the call and left it
 /// a call, and under CRANE_CHECK_IR the plan's chains were contradicted.
 /// db meets the same through da's match on an enum.
-LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::ea(
-    const LoopifyMutualTmcTemporary::num &n) { /// CraneEnter: captures varying
-                                               /// parameters for each recursive
-                                               /// call.
-  struct CraneEnter {
+LoopifyMutualTmcTemporary::num
+LoopifyMutualTmcTemporary::ea(const LoopifyMutualTmcTemporary::num &n) {
+  // Explicit stack replaces the non-tail recursion of ea: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyMutualTmcTemporary::num *n;
   };
 
-  /// CraneEnter_eb_entry: captures varying parameters for each recursive call.
-  struct CraneEnter_eb_entry {
+  struct _call_eb_entry {
     LoopifyMutualTmcTemporary::num x;
     const LoopifyMutualTmcTemporary::num *n0;
   };
 
-  /// CraneCont_Su: resumes after recursive call, then processes rest.
-  struct CraneCont_Su {};
+  struct _after_eb_entry_in_Su {};
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneEnter_eb_entry, CraneCont_Su>;
+  using _frame = std::variant<_call, _call_eb_entry, _after_eb_entry_in_Su>;
   LoopifyMutualTmcTemporary::num _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&n});
-  /// Loopified ea: CraneEnter -> CraneCont_Su.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyMutualTmcTemporary::num &n = *_f.n;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
               n.v())) {
@@ -45,8 +41,8 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::ea(
       } else {
         const auto &[n0] =
             std::get<typename LoopifyMutualTmcTemporary::num::Su>(n.v());
-        _stack.emplace_back(CraneCont_Su{});
-        _stack.emplace_back(CraneEnter_eb_entry{
+        _stack.emplace_back(_after_eb_entry_in_Su{});
+        _stack.emplace_back(_call_eb_entry{
             [&]() {
               auto &&_sv1 = *n0;
               if (std::holds_alternative<
@@ -61,8 +57,8 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::ea(
             }(),
             crane_raw(n0)});
       }
-    } else if (std::holds_alternative<CraneEnter_eb_entry>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_eb_entry>(_frame));
+    } else if (std::holds_alternative<_call_eb_entry>(_popped)) {
+      auto _f = std::move(std::get<_call_eb_entry>(_popped));
       LoopifyMutualTmcTemporary::num x = std::move(_f.x);
       const LoopifyMutualTmcTemporary::num &n0 = *_f.n0;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
@@ -71,10 +67,10 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::ea(
       } else {
         const auto &[n1] =
             std::get<typename LoopifyMutualTmcTemporary::num::Su>(n0.v());
-        _stack.emplace_back(CraneEnter{crane_raw(n1)});
+        _stack.emplace_back(_call{crane_raw(n1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Su>(_frame));
+      auto _f = std::move(std::get<_after_eb_entry_in_Su>(_popped));
       _result = num::su(std::move(_result));
     }
   }
@@ -84,6 +80,8 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::ea(
 LoopifyMutualTmcTemporary::num
 LoopifyMutualTmcTemporary::eb(const LoopifyMutualTmcTemporary::num &n,
                               LoopifyMutualTmcTemporary::num x) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyMutualTmcTemporary::num> _root{};
   std::shared_ptr<LoopifyMutualTmcTemporary::num> *_write = nullptr;
   LoopifyMutualTmcTemporary::num _loop_x = std::move(x);
@@ -142,6 +140,8 @@ LoopifyMutualTmcTemporary::eb(const LoopifyMutualTmcTemporary::num &n,
 LoopifyMutualTmcTemporary::num
 LoopifyMutualTmcTemporary::da(LoopifyMutualTmcTemporary::Color c,
                               const LoopifyMutualTmcTemporary::num &n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const LoopifyMutualTmcTemporary::num *_loop_n = &n;
   LoopifyMutualTmcTemporary::Color _loop_c = c;
   while (true) {
@@ -172,6 +172,8 @@ LoopifyMutualTmcTemporary::da(LoopifyMutualTmcTemporary::Color c,
 
 LoopifyMutualTmcTemporary::num
 LoopifyMutualTmcTemporary::db(const LoopifyMutualTmcTemporary::num &n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyMutualTmcTemporary::num> _root{};
   std::shared_ptr<LoopifyMutualTmcTemporary::num> *_write = nullptr;
   const LoopifyMutualTmcTemporary::num *_loop_n = &n;
@@ -238,6 +240,8 @@ LoopifyMutualTmcTemporary::db(const LoopifyMutualTmcTemporary::num &n) {
 }
 
 LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::of_nat(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyMutualTmcTemporary::num> _root{};
   std::shared_ptr<LoopifyMutualTmcTemporary::num> *_write = nullptr;
   uint64_t _loop_n = n;
@@ -264,27 +268,25 @@ LoopifyMutualTmcTemporary::num LoopifyMutualTmcTemporary::of_nat(uint64_t n) {
   return std::move(*_root);
 }
 
-uint64_t LoopifyMutualTmcTemporary::to_nat(
-    const LoopifyMutualTmcTemporary::num &n) { /// CraneEnter: captures varying
-                                               /// parameters for each recursive
-                                               /// call.
-  struct CraneEnter {
+uint64_t
+LoopifyMutualTmcTemporary::to_nat(const LoopifyMutualTmcTemporary::num &n) {
+  // Explicit stack replaces the non-tail recursion of to_nat: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyMutualTmcTemporary::num *n;
   };
 
-  /// CraneCont_Su: resumes after recursive call, then processes rest.
-  struct CraneCont_Su {};
+  struct _after_to_nat_in_Su {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Su>;
+  using _frame = std::variant<_call, _after_to_nat_in_Su>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&n});
-  /// Loopified to_nat: CraneEnter -> CraneCont_Su.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyMutualTmcTemporary::num &n = *_f.n;
       if (std::holds_alternative<typename LoopifyMutualTmcTemporary::num::Z>(
               n.v())) {
@@ -292,11 +294,11 @@ uint64_t LoopifyMutualTmcTemporary::to_nat(
       } else {
         const auto &[n0] =
             std::get<typename LoopifyMutualTmcTemporary::num::Su>(n.v());
-        _stack.emplace_back(CraneCont_Su{});
-        _stack.emplace_back(CraneEnter{crane_raw(n0)});
+        _stack.emplace_back(_after_to_nat_in_Su{});
+        _stack.emplace_back(_call{crane_raw(n0)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Su>(_frame));
+      auto _f = std::move(std::get<_after_to_nat_in_Su>(_popped));
       _result = (std::move(_result) + 1);
     }
   }

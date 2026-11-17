@@ -5,27 +5,25 @@
 /// sum_md also calls itself inside the closure it folds a list with, and
 /// the copy a machine enters is no value a closure could call.  Its body
 /// runs in place of the call instead.
-uint64_t LoopifyPartnerSelfInClosure::sum_e(
-    const LoopifyPartnerSelfInClosure::e &x) { /// CraneEnter: captures varying
-                                               /// parameters for each recursive
-                                               /// call.
-  struct CraneEnter {
+uint64_t
+LoopifyPartnerSelfInClosure::sum_e(const LoopifyPartnerSelfInClosure::e &x) {
+  // Explicit stack replaces the non-tail recursion of sum_e: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyPartnerSelfInClosure::e *x;
   };
 
-  /// CraneCont_MConst: resumes after recursive call, then processes rest.
-  struct CraneCont_MConst {};
+  struct _after_sum_e_in_MConst {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_MConst>;
+  using _frame = std::variant<_call, _after_sum_e_in_MConst>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&x});
-  /// Loopified sum_e: CraneEnter -> CraneCont_MConst.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyPartnerSelfInClosure::e &x = *_f.x;
       if (std::holds_alternative<typename LoopifyPartnerSelfInClosure::e::Leaf>(
               x.v())) {
@@ -57,39 +55,37 @@ uint64_t LoopifyPartnerSelfInClosure::sum_e(
           const auto &[x1] =
               std::get<typename LoopifyPartnerSelfInClosure::md::MConst>(
                   m0_value.v());
-          _stack.emplace_back(CraneCont_MConst{});
-          _stack.emplace_back(CraneEnter{crane_raw(x1)});
+          _stack.emplace_back(_after_sum_e_in_MConst{});
+          _stack.emplace_back(_call{crane_raw(x1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_MConst>(_frame));
+      auto _f = std::move(std::get<_after_sum_e_in_MConst>(_popped));
       _result = (UINT64_C(1) + std::move(_result));
     }
   }
   return _result;
 }
 
-uint64_t LoopifyPartnerSelfInClosure::sum_md(
-    const LoopifyPartnerSelfInClosure::md &m) { /// CraneEnter: captures varying
-                                                /// parameters for each
-                                                /// recursive call.
-  struct CraneEnter {
+uint64_t
+LoopifyPartnerSelfInClosure::sum_md(const LoopifyPartnerSelfInClosure::md &m) {
+  // Explicit stack replaces the non-tail recursion of sum_md: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyPartnerSelfInClosure::md *m;
   };
 
-  /// CraneCont_Meta: resumes after recursive call, then processes rest.
-  struct CraneCont_Meta {};
+  struct _after_sum_md_in_Meta {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Meta>;
+  using _frame = std::variant<_call, _after_sum_md_in_Meta>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&m});
-  /// Loopified sum_md: CraneEnter -> CraneCont_Meta.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&m});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyPartnerSelfInClosure::md &m = *_f.m;
       if (std::holds_alternative<typename LoopifyPartnerSelfInClosure::md::MNil>(
               m.v())) {
@@ -117,12 +113,12 @@ uint64_t LoopifyPartnerSelfInClosure::sum_md(
         } else {
           const auto &[m1] =
               std::get<typename LoopifyPartnerSelfInClosure::e::Meta>(_sv0.v());
-          _stack.emplace_back(CraneCont_Meta{});
-          _stack.emplace_back(CraneEnter{crane_raw(m1)});
+          _stack.emplace_back(_after_sum_md_in_Meta{});
+          _stack.emplace_back(_call{crane_raw(m1)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Meta>(_frame));
+      auto _f = std::move(std::get<_after_sum_md_in_Meta>(_popped));
       _result = (UINT64_C(1) + std::move(_result));
     }
   }

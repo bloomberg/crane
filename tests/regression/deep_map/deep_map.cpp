@@ -4,6 +4,8 @@
 /// Tail-recursive via accumulator, should be loopified.
 DeepMap::tree<uint64_t> DeepMap::build_right(uint64_t n,
                                              DeepMap::tree<uint64_t> acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   DeepMap::tree<uint64_t> _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {

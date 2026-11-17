@@ -48,6 +48,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> bsl::shared_ptr<Nat> {
       if (auto *_alt = bsl::get_if<S>(&_v)) {
         if (_alt->d_n && _alt->d_n.use_count() == 1) {

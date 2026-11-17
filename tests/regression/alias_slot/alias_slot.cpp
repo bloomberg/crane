@@ -2,6 +2,8 @@
 
 AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
                                        const List<String> &k) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto k_1 = crane::immortal(String::string0(
       Ascii::ascii0(true, true, false, true, false, true, false, false),
       String::emptystring()));
@@ -12,31 +14,29 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
       Ascii::ascii0(false, false, false, true, false, true, false, false),
       String::emptystring()));
 
-  /// CraneEnter: captures varying parameters for each recursive call.
-  struct CraneEnter {
+  // Explicit stack replaces the non-tail recursion of expr_parts: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     List<String> k;
     const AliasSlot::expr *e;
   };
 
-  /// CraneCont_EAdd: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_EAdd {
+  struct _after_expr_parts_in_EAdd {
     const AliasSlot::expr *a0;
   };
 
-  /// CraneCont_EAdd_1: resumes after recursive call, then processes rest.
-  struct CraneCont_EAdd_1 {};
+  struct _after_expr_parts_in_EAdd_2 {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_EAdd, CraneCont_EAdd_1>;
+  using _frame = std::variant<_call, _after_expr_parts_in_EAdd,
+                              _after_expr_parts_in_EAdd_2>;
   AliasSlot::parts _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{k, &e});
-  /// Loopified expr_parts: CraneEnter -> CraneCont_EAdd -> CraneCont_EAdd_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{k, &e});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (crane::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(crane::get<CraneEnter>(_frame));
+    if (crane::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(crane::get<_call>(_popped));
       const List<String> &k = _f.k;
       const AliasSlot::expr &e = *_f.e;
       if (crane::holds_alternative<typename AliasSlot::expr::ELit>(e.v())) {
@@ -45,22 +45,22 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
       } else {
         const auto &[a0, b0] =
             crane::get<typename AliasSlot::expr::EAdd>(e.v());
-        _stack.emplace_back(CraneCont_EAdd{crane_raw(a0)});
-        _stack.emplace_back(CraneEnter{k, crane_raw(b0)});
+        _stack.emplace_back(_after_expr_parts_in_EAdd{crane_raw(a0)});
+        _stack.emplace_back(_call{k, crane_raw(b0)});
       }
-    } else if (crane::holds_alternative<CraneCont_EAdd>(_frame)) {
-      auto _f = std::move(crane::get<CraneCont_EAdd>(_frame));
+    } else if (crane::holds_alternative<_after_expr_parts_in_EAdd>(_popped)) {
+      auto _f = std::move(crane::get<_after_expr_parts_in_EAdd>(_popped));
       const AliasSlot::expr &a0 = *_f.a0;
       List<String> rest = List<String>::cons(k_1, std::move(_result));
       if (crane::holds_alternative<typename AliasSlot::expr::ELit>(a0.v())) {
-        _stack.emplace_back(CraneEnter{std::move(rest), &a0});
+        _stack.emplace_back(_call{std::move(rest), &a0});
       } else {
-        _stack.emplace_back(CraneCont_EAdd_1{});
+        _stack.emplace_back(_after_expr_parts_in_EAdd_2{});
         _stack.emplace_back(
-            CraneEnter{List<String>::cons(k_2, std::move(rest)), &a0});
+            _call{List<String>::cons(k_2, std::move(rest)), &a0});
       }
     } else {
-      auto _f = std::move(crane::get<CraneCont_EAdd_1>(_frame));
+      auto _f = std::move(crane::get<_after_expr_parts_in_EAdd_2>(_popped));
       _result = List<String>::cons(k_3, std::move(_result));
     }
   }
@@ -71,9 +71,13 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
 /// tail of the cell before, a cell whose type is the alias.
 AliasSlot::parts AliasSlot::comma_parts(const List<String> &xs,
                                         List<String> k) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto k_1 = crane::immortal(String::string0(
       Ascii::ascii0(false, false, true, true, false, true, false, false),
       String::emptystring()));
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<AliasSlot::parts> _root{};
   crane::shared_box<AliasSlot::parts> *_write = nullptr;
   const List<String> *_loop_xs = &xs;

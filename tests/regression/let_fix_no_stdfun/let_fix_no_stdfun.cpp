@@ -4,6 +4,8 @@ uint64_t LetFixNoStdfun::sum_list(const List<uint64_t> &l) {
   {
     const List<uint64_t> &_lc1_xs = l;
     uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
     const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
     while (true) {
@@ -27,6 +29,8 @@ uint64_t LetFixNoStdfun::flat_map_sum(const List<List<uint64_t>> &xss) {
     const auto &[a0, a1] =
         std::get<typename List<List<uint64_t>>::Cons>(xss.v());
     auto inner_sum = [](const List<uint64_t> &ys, uint64_t acc) -> uint64_t {
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       uint64_t _loop_acc = acc;
       const List<uint64_t> *_loop_ys = &ys;
       while (true) {

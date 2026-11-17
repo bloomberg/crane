@@ -1,38 +1,35 @@
 #include "loopify_classics.h"
 
-uint64_t
-LoopifyClassics::factorial(uint64_t n) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyClassics::factorial(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of factorial: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [n], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_factorial_in_S {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_factorial_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified factorial: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(1);
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(CraneCont_n_{n});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_factorial_in_S{n});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_factorial_in_S>(_popped));
       uint64_t n = _f.n;
       _result = (n * std::move(_result));
     }
@@ -40,35 +37,30 @@ LoopifyClassics::factorial(uint64_t n) { /// CraneEnter: captures varying
   return _result;
 }
 
-uint64_t
-LoopifyClassics::fib(uint64_t n) { /// CraneEnter: captures varying parameters
-                                   /// for each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyClassics::fib(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of fib: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_p: saves [n_p], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_p {
+  struct _after_fib_in_S {
     uint64_t n_p;
   };
 
-  /// CraneCont_n_p_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_n_p_1 {
+  struct _after_fib_in_S_2 {
     uint64_t _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_p, CraneCont_n_p_1>;
+  using _frame = std::variant<_call, _after_fib_in_S, _after_fib_in_S_2>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified fib: CraneEnter -> CraneCont_n_p -> CraneCont_n_p_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -78,50 +70,46 @@ LoopifyClassics::fib(uint64_t n) { /// CraneEnter: captures varying parameters
           _result = UINT64_C(1);
         } else {
           uint64_t n_p = n_ - 1;
-          _stack.emplace_back(CraneCont_n_p{n_p});
-          _stack.emplace_back(CraneEnter{n_});
+          _stack.emplace_back(_after_fib_in_S{n_p});
+          _stack.emplace_back(_call{n_});
         }
       }
-    } else if (std::holds_alternative<CraneCont_n_p>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_n_p>(_frame));
+    } else if (std::holds_alternative<_after_fib_in_S>(_popped)) {
+      auto _f = std::move(std::get<_after_fib_in_S>(_popped));
       uint64_t n_p = _f.n_p;
-      _stack.emplace_back(CraneCont_n_p_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{n_p});
+      _stack.emplace_back(_after_fib_in_S_2{std::move(_result)});
+      _stack.emplace_back(_call{n_p});
     } else {
-      auto _f = std::move(std::get<CraneCont_n_p_1>(_frame));
+      auto _f = std::move(std::get<_after_fib_in_S_2>(_popped));
       _result = (_f._tmp2 + std::move(_result));
     }
   }
   return _result;
 }
 
-uint64_t
-LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
-                          uint64_t n) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m, uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of ack_fuel: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t m;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [m, fuel_], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont1 {
+  struct _after_ack_fuel_in_false {
     uint64_t m;
     uint64_t fuel_;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  using _frame = std::variant<_call, _after_ack_fuel_in_false>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, m, fuel});
-  /// Loopified ack_fuel: CraneEnter -> CraneCont1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, m, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t m = _f.m;
       uint64_t fuel = _f.fuel;
@@ -133,22 +121,23 @@ LoopifyClassics::ack_fuel(uint64_t fuel, uint64_t m,
           _result = (n + UINT64_C(1));
         } else {
           if (n == UINT64_C(0)) {
-            _stack.emplace_back(CraneEnter{
-                UINT64_C(1), (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
-                fuel_});
+            _stack.emplace_back(
+                _call{UINT64_C(1),
+                      (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))),
+                      fuel_});
           } else {
-            _stack.emplace_back(CraneCont1{m, fuel_});
-            _stack.emplace_back(CraneEnter{
+            _stack.emplace_back(_after_ack_fuel_in_false{m, fuel_});
+            _stack.emplace_back(_call{
                 (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), m, fuel_});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+      auto _f = std::move(std::get<_after_ack_fuel_in_false>(_popped));
       uint64_t m = _f.m;
       uint64_t fuel_ = _f.fuel_;
       uint64_t inner = std::move(_result);
-      _stack.emplace_back(CraneEnter{
+      _stack.emplace_back(_call{
           inner, (((m - UINT64_C(1)) > m ? 0 : (m - UINT64_C(1)))), fuel_});
     }
   }
@@ -160,41 +149,35 @@ uint64_t LoopifyClassics::ack(uint64_t m, uint64_t n) {
                   n);
 }
 
-uint64_t
-LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n,
-                               uint64_t k) { /// CraneEnter: captures varying
-                                             /// parameters for each recursive
-                                             /// call.
-  struct CraneEnter {
+uint64_t LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n, uint64_t k) {
+  // Explicit stack replaces the non-tail recursion of binomial_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t k;
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [n, k, fuel_], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont1 {
+  struct _after_binomial_fuel_in_false {
     uint64_t n;
     uint64_t k;
     uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [_tmp2], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont2 {
+  struct _after_binomial_fuel_in_false_2 {
     uint64_t _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
+  using _frame = std::variant<_call, _after_binomial_fuel_in_false,
+                              _after_binomial_fuel_in_false_2>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{k, n, fuel});
-  /// Loopified binomial_fuel: CraneEnter -> CraneCont1 -> CraneCont2.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{k, n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t k = _f.k;
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
@@ -205,22 +188,22 @@ LoopifyClassics::binomial_fuel(uint64_t fuel, uint64_t n,
         if ((k == UINT64_C(0) || k == n)) {
           _result = UINT64_C(1);
         } else {
-          _stack.emplace_back(CraneCont1{n, k, fuel_});
-          _stack.emplace_back(CraneEnter{
-              (((k - UINT64_C(1)) > k ? 0 : (k - UINT64_C(1)))),
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(_after_binomial_fuel_in_false{n, k, fuel_});
+          _stack.emplace_back(
+              _call{(((k - UINT64_C(1)) > k ? 0 : (k - UINT64_C(1)))),
+                    (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+    } else if (std::holds_alternative<_after_binomial_fuel_in_false>(_popped)) {
+      auto _f = std::move(std::get<_after_binomial_fuel_in_false>(_popped));
       uint64_t n = _f.n;
       uint64_t k = _f.k;
       uint64_t fuel_ = _f.fuel_;
-      _stack.emplace_back(CraneCont2{std::move(_result)});
-      _stack.emplace_back(CraneEnter{
-          k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+      _stack.emplace_back(_after_binomial_fuel_in_false_2{std::move(_result)});
+      _stack.emplace_back(
+          _call{k, (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
     } else {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
+      auto _f = std::move(std::get<_after_binomial_fuel_in_false_2>(_popped));
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -241,6 +224,8 @@ uint64_t LoopifyClassics::pascal(uint64_t row, uint64_t col) {
 }
 
 uint64_t LoopifyClassics::gcd_fuel(uint64_t fuel, uint64_t a, uint64_t b) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_b = b;
   uint64_t _loop_a = a;
   uint64_t _loop_fuel = fuel;
@@ -266,76 +251,70 @@ uint64_t LoopifyClassics::gcd(uint64_t a, uint64_t b) {
   return gcd_fuel((a + b), a, b);
 }
 
-uint64_t
-LoopifyClassics::power(uint64_t base,
-                       uint64_t exp) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyClassics::power(uint64_t base, uint64_t exp) {
+  // Explicit stack replaces the non-tail recursion of power: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t exp;
   };
 
-  /// CraneCont_exp_: resumes after recursive call, then processes rest.
-  struct CraneCont_exp_ {};
+  struct _after_power_in_S {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_exp_>;
+  using _frame = std::variant<_call, _after_power_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{exp});
-  /// Loopified power: CraneEnter -> CraneCont_exp_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{exp});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t exp = _f.exp;
       if (exp <= 0) {
         _result = UINT64_C(1);
       } else {
         uint64_t exp_ = exp - 1;
-        _stack.emplace_back(CraneCont_exp_{});
-        _stack.emplace_back(CraneEnter{exp_});
+        _stack.emplace_back(_after_power_in_S{});
+        _stack.emplace_back(_call{exp_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_exp_>(_frame));
+      auto _f = std::move(std::get<_after_power_in_S>(_popped));
       _result = (base * std::move(_result));
     }
   }
   return _result;
 }
 
-uint64_t
-LoopifyClassics::sum_to(uint64_t n) { /// CraneEnter: captures varying
-                                      /// parameters for each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyClassics::sum_to(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of sum_to: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [n], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_sum_to_in_S {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_sum_to_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified sum_to: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(CraneCont_n_{n});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_sum_to_in_S{n});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_sum_to_in_S>(_popped));
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }
@@ -343,40 +322,36 @@ LoopifyClassics::sum_to(uint64_t n) { /// CraneEnter: captures varying
   return _result;
 }
 
-uint64_t
-LoopifyClassics::sum_squares(uint64_t n) { /// CraneEnter: captures varying
-                                           /// parameters for each recursive
-                                           /// call.
-  struct CraneEnter {
+uint64_t LoopifyClassics::sum_squares(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of sum_squares: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [n], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_sum_squares_in_S {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_sum_squares_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified sum_squares: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(CraneCont_n_{n});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_sum_squares_in_S{n});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_sum_squares_in_S>(_popped));
       uint64_t n = _f.n;
       _result = ((n * n) + std::move(_result));
     }

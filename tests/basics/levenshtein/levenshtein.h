@@ -53,6 +53,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -79,6 +81,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Bool0 leb(const Nat &m) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Nat *_loop_self = this;
     const Nat *_loop_m = &m;
     while (true) {
@@ -193,6 +197,8 @@ public:
 
   // MANIPULATORS
   ~String() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<String> {
       if (auto *_alt = std::get_if<String0>(&_v)) {
         if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -221,6 +227,8 @@ public:
   String append(String s2) const;
 
   Nat length() const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const String *_loop_self = this;
@@ -378,6 +386,8 @@ struct Levenshtein {
 
     // MANIPULATORS
     ~chain() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<chain> {
         if (auto *_alt = std::get_if<Skip>(&_v)) {
           if (_alt->a4 && _alt->a4.use_count() == 1) {
@@ -464,17 +474,16 @@ struct Levenshtein {
                   const Nat &_x1) const {
       const chain *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of chain_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const chain *_self;
         const String *_x;
         const String *_x0;
         const Nat *_x1;
       };
 
-      /// CraneCont_Change: saves [s0, t0, u0, n0, a4, a5], resumes after
-      /// recursive call, then processes rest.
-      struct CraneCont_Change {
+      struct _after_chain_rect_in_Change {
         String s0;
         String t0;
         String u0;
@@ -483,9 +492,7 @@ struct Levenshtein {
         std::shared_ptr<chain> a5;
       };
 
-      /// CraneCont_Skip: saves [a0, s0, t0, n0, a4], resumes after recursive
-      /// call, then processes rest.
-      struct CraneCont_Skip {
+      struct _after_chain_rect_in_Skip {
         Ascii a0;
         String s0;
         String t0;
@@ -493,18 +500,16 @@ struct Levenshtein {
         std::shared_ptr<chain> a4;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Change, CraneCont_Skip>;
+      using _frame = std::variant<_call, _after_chain_rect_in_Change,
+                                  _after_chain_rect_in_Skip>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self, &_x, &_x0, &_x1});
-      /// Loopified chain_rect: CraneEnter -> CraneCont_Change ->
-      /// CraneCont_Skip.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self, &_x, &_x0, &_x1});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const chain *_self = _f._self;
           const String &_x = *_f._x;
           const String &_x0 = *_f._x0;
@@ -515,16 +520,17 @@ struct Levenshtein {
           } else if (std::holds_alternative<typename chain::Skip>(_sv.v())) {
             const auto &[a0, s0, t0, n0, a4] =
                 std::get<typename chain::Skip>(_sv.v());
-            _stack.emplace_back(CraneCont_Skip{a0, s0, t0, n0, a4});
-            _stack.emplace_back(CraneEnter{crane_raw(a4), &s0, &t0, &n0});
+            _stack.emplace_back(_after_chain_rect_in_Skip{a0, s0, t0, n0, a4});
+            _stack.emplace_back(_call{crane_raw(a4), &s0, &t0, &n0});
           } else {
             const auto &[s0, t0, u0, n0, a4, a5] =
                 std::get<typename chain::Change>(_sv.v());
-            _stack.emplace_back(CraneCont_Change{s0, t0, u0, n0, a4, a5});
-            _stack.emplace_back(CraneEnter{crane_raw(a5), &t0, &u0, &n0});
+            _stack.emplace_back(
+                _after_chain_rect_in_Change{s0, t0, u0, n0, a4, a5});
+            _stack.emplace_back(_call{crane_raw(a5), &t0, &u0, &n0});
           }
-        } else if (std::holds_alternative<CraneCont_Change>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Change>(_frame));
+        } else if (std::holds_alternative<_after_chain_rect_in_Change>(_popped)) {
+          auto _f = std::move(std::get<_after_chain_rect_in_Change>(_popped));
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
           String u0 = std::move(_f.u0);
@@ -533,7 +539,7 @@ struct Levenshtein {
           std::shared_ptr<chain> a5 = std::move(_f.a5);
           _result = f1(s0, t0, u0, n0, a4, *a5, std::move(_result));
         } else {
-          auto _f = std::move(std::get<CraneCont_Skip>(_frame));
+          auto _f = std::move(std::get<_after_chain_rect_in_Skip>(_popped));
           Ascii a0 = std::move(_f.a0);
           String s0 = std::move(_f.s0);
           String t0 = std::move(_f.t0);
@@ -682,6 +688,8 @@ inline Sumbool Ascii::ascii_dec(const Ascii &b) const {
 }
 
 inline String String::append(String s2) const {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<String> _root{};
   std::shared_ptr<String> *_write = nullptr;
   const String *_loop_self = this;

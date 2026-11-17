@@ -17,6 +17,8 @@ uint64_t LocalFixPolymorphicRecursion::run(uint64_t k, uint64_t n) {
                          UINT64_C(2), List<uint64_t>::cons(
                                           UINT64_C(3), List<uint64_t>::nil())));
     uint64_t _lc1_n0 = n;
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_n0 = _lc1_n0;
     crane::obj _lc1_loop_y = _lc1_y;
     crane::fn<uint64_t(crane::obj)> _lc1_loop_h = _lc1_h;

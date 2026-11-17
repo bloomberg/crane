@@ -44,6 +44,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -72,6 +74,8 @@ public:
   bool ltb(const Nat &m) const { return Nat::s(*this).leb(m); }
 
   bool leb(const Nat &m) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Nat *_loop_self = this;
     const Nat *_loop_m = &m;
     while (true) {
@@ -92,6 +96,8 @@ public:
   }
 
   Nat sub(const Nat &m) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Nat *_loop_self = this;
     const Nat *_loop_m = &m;
     while (true) {
@@ -112,6 +118,8 @@ public:
   }
 
   Nat add(Nat m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
@@ -190,6 +198,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -254,6 +264,8 @@ struct LoopifyFixCapturesClassParam {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Leaf>(v_mut())) {
         return;
       }
@@ -316,31 +328,28 @@ struct LoopifyFixCapturesClassParam {
     return tree_rect<T1>(f0, f1, t);
   }
 
-  template <Sized _tcI0>
-  static std::optional<Nat> f(const tree &t,
-                              Nat i) { /// CraneEnter: captures varying
-                                       /// parameters for each recursive call.
-    struct CraneEnter {
+  template <Sized _tcI0> static std::optional<Nat> f(const tree &t, Nat i) {
+    // Explicit stack replaces the non-tail recursion of f: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
       Nat i;
       const tree *t;
     };
 
-    /// CraneEnter_loop: captures varying parameters for each recursive call.
-    struct CraneEnter_loop {
+    struct _call_loop {
       Nat k;
       const List<tree> *ts;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneEnter_loop>;
+    using _frame = std::variant<_call, _call_loop>;
     std::optional<Nat> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{std::move(i), &t});
-    /// Loopified f: CraneEnter.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{std::move(i), &t});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         Nat i = std::move(_f.i);
         const tree &t = *_f.t;
         if (std::holds_alternative<typename tree::Leaf>(t.v())) {
@@ -348,10 +357,10 @@ struct LoopifyFixCapturesClassParam {
           _result = std::make_optional<Nat>(n0.add(std::move(i)));
         } else {
           const auto &[ts0] = std::get<typename tree::Node>(t.v());
-          _stack.emplace_back(CraneEnter_loop{std::move(i), crane_raw(ts0)});
+          _stack.emplace_back(_call_loop{std::move(i), crane_raw(ts0)});
         }
       } else {
-        auto _f = std::move(std::get<CraneEnter_loop>(_frame));
+        auto _f = std::move(std::get<_call_loop>(_popped));
         Nat k = std::move(_f.k);
         const List<tree> &ts = *_f.ts;
         if (std::holds_alternative<typename List<tree>::Nil>(ts.v())) {
@@ -359,9 +368,9 @@ struct LoopifyFixCapturesClassParam {
         } else {
           const auto &[a0, a1] = std::get<typename List<tree>::Cons>(ts.v());
           if (k.ltb(_tcI0::size(Nat::s(Nat::s(Nat::o()))))) {
-            _stack.emplace_back(CraneEnter{std::move(k), &a0});
+            _stack.emplace_back(_call{std::move(k), &a0});
           } else {
-            _stack.emplace_back(CraneEnter_loop{
+            _stack.emplace_back(_call_loop{
                 k.sub(_tcI0::size(Nat::s(Nat::s(Nat::o())))), crane_raw(a1)});
           }
         }

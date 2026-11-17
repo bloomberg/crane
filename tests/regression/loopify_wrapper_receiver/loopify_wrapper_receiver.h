@@ -76,6 +76,8 @@ struct LoopifyWrapperReceiver {
 
     // MANIPULATORS
     ~t() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<L>(v_mut())) {
         return;
       }
@@ -112,6 +114,8 @@ struct LoopifyWrapperReceiver {
 
     t build(uint64_t n) const {
       t _self_store;
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       const t *_loop_self = this;
       uint64_t _loop_n = n;
       while (true) {

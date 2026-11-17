@@ -47,6 +47,8 @@ struct DeepPattern {
 
     // MANIPULATORS
     ~tree() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<Leaf>(v_mut())) {
         return;
       }
@@ -145,34 +147,30 @@ struct DeepPattern {
     bool has_value(uint64_t target) const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of has_value: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_has_value_in_Node {
         const tree *a1;
       };
 
-      /// CraneCont_Node_1: saves [_tmp2], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_has_value_in_Node_2 {
         bool _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_has_value_in_Node,
+                                  _after_has_value_in_Node_2>;
       bool _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified has_value: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -180,16 +178,16 @@ struct DeepPattern {
             _result = a0 == target;
           } else {
             const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_has_value_in_Node{crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_has_value_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_has_value_in_Node>(_popped));
           const tree &a1 = *_f.a1;
-          _stack.emplace_back(CraneCont_Node_1{std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_has_value_in_Node_2{std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_has_value_in_Node_2>(_popped));
           _result = (_f._tmp2 || std::move(_result));
         }
       }
@@ -386,37 +384,33 @@ struct DeepPattern {
     T1 tree_rect(F0 &&f, F1 &&f0) const {
       const tree *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of tree_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const tree *_self;
       };
 
-      /// CraneCont_Node: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Node {
+      struct _after_tree_rect_in_Node {
         std::shared_ptr<tree> a0;
         const tree *a1;
       };
 
-      /// CraneCont_Node_1: saves [a0, a1, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_Node_1 {
+      struct _after_tree_rect_in_Node_2 {
         std::shared_ptr<tree> a0;
         const tree *a1;
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Node, CraneCont_Node_1>;
+      using _frame = std::variant<_call, _after_tree_rect_in_Node,
+                                  _after_tree_rect_in_Node_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified tree_rect: CraneEnter -> CraneCont_Node -> CraneCont_Node_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const tree *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename tree::Leaf>(_sv.v())) {
@@ -424,18 +418,18 @@ struct DeepPattern {
             _result = f(a0);
           } else {
             const auto &[a0, a1] = std::get<typename tree::Node>(_sv.v());
-            _stack.emplace_back(CraneCont_Node{a0, crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_tree_rect_in_Node{a0, crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_Node>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_Node>(_frame));
+        } else if (std::holds_alternative<_after_tree_rect_in_Node>(_popped)) {
+          auto _f = std::move(std::get<_after_tree_rect_in_Node>(_popped));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           const tree &a1 = *_f.a1;
-          _stack.emplace_back(
-              CraneCont_Node_1{std::move(a0), &a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+          _stack.emplace_back(_after_tree_rect_in_Node_2{std::move(a0), &a1,
+                                                         std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_Node_1>(_frame));
+          auto _f = std::move(std::get<_after_tree_rect_in_Node_2>(_popped));
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           const tree &a1 = *_f.a1;
           _result = f0(*a0, std::move(_f._tmp2), a1, std::move(_result));
@@ -500,6 +494,8 @@ struct DeepPattern {
 
     // MANIPULATORS
     ~list() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<list<A>> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -532,39 +528,37 @@ struct DeepPattern {
     template <typename T1, typename F1> T1 list_rect(T1 f, F1 &&f0) const {
       const list<A> *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of list_rect: _call
+      // frames are pending calls, _after frames resume a caller.
+      struct _call {
         const list<A> *_self;
       };
 
-      /// CraneCont_Cons: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_Cons {
+      struct _after_list_rect_in_Cons {
         A a0;
         std::shared_ptr<list<A>> a1;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+      using _frame = std::variant<_call, _after_list_rect_in_Cons>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified list_rect: CraneEnter -> CraneCont_Cons.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const list<A> *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename list<A>::Nil>(_sv.v())) {
             _result = f;
           } else {
             const auto &[a0, a1] = std::get<typename list<A>::Cons>(_sv.v());
-            _stack.emplace_back(CraneCont_Cons{a0, a1});
-            _stack.emplace_back(CraneEnter{crane_raw(a1)});
+            _stack.emplace_back(_after_list_rect_in_Cons{a0, a1});
+            _stack.emplace_back(_call{crane_raw(a1)});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+          auto _f = std::move(std::get<_after_list_rect_in_Cons>(_popped));
           auto a0 = std::move(_f.a0);
           std::shared_ptr<list<A>> a1 = std::move(_f.a1);
           _result = f0(a0, *a1, std::move(_result));

@@ -71,6 +71,7 @@ static Nat s(Nat a0) {
 return Nat(S{std::make_shared<Nat>(std::move(a0))});}
   // MANIPULATORS
 ~Nat() {
+// Release the children this node alone owns in a loop, not recursively, so a deep value cannot overflow the stack.
 auto _next = [&](variant_t& _v) -> std::shared_ptr<Nat> {
 if (auto* _alt = std::get_if<S>(&_v)) {
 if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -200,7 +201,8 @@ return Nat::o();
 const auto& [i0] = std::get<typename Dval<ptr, iptr>::DIptr>(this->v());
 return _tcI0::IPTR::to_Z(i0);
 }}
-};template <Params _tcI0>Sum<Nat, Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> runS(const Nat&){return Sum<Nat, Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::inr(Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>::diptr(_tcI0::IPTR::zero_iptr()));}struct natIPtr {
+};template <Params _tcI0>Sum<Nat, Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>> runS(const Nat&){
+return Sum<Nat, Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>>::inr(Dval<typename _tcI0::PTR::ptr, typename _tcI0::IPTR::iptr>::diptr(_tcI0::IPTR::zero_iptr()));}struct natIPtr {
 using iptr = Nat;
 static Nat zero_iptr() {
 return Nat::o();}

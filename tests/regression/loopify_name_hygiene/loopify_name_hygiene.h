@@ -50,6 +50,8 @@ struct LoopifyNameHygiene {
 
     // MANIPULATORS
     ~Frame_() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<Frame_> {
         if (auto *_alt = std::get_if<Resume_Cons_>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -78,41 +80,38 @@ struct LoopifyNameHygiene {
 
   template <typename T1, typename F0, typename F1>
     requires std::is_invocable_r_v<T1, F0 &, const uint64_t &>
-  static T1
-  Frame_rect_(F0 &&f, F1 &&f0,
-              const Frame_ &f_) { /// CraneEnter: captures varying parameters
-                                  /// for each recursive call.
-    struct CraneEnter {
+  static T1 Frame_rect_(F0 &&f, F1 &&f0, const Frame_ &f_) {
+    // Explicit stack replaces the non-tail recursion of _Frame_rect: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const Frame_ *f_;
     };
 
-    /// CraneCont_Resume_Cons_: saves [a0], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Resume_Cons_ {
+    struct _after_pFrame_rect_in_Resume_Cons_ {
       std::shared_ptr<Frame_> a0;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Resume_Cons_>;
+    using _frame = std::variant<_call, _after_pFrame_rect_in_Resume_Cons_>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&f_});
-    /// Loopified _Frame_rect: CraneEnter -> CraneCont_Resume_Cons_.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&f_});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const Frame_ &f_ = *_f.f_;
         if (std::holds_alternative<typename Frame_::Enter_>(f_.v())) {
           const auto &[a0] = std::get<typename Frame_::Enter_>(f_.v());
           _result = f(a0);
         } else {
           const auto &[a0] = std::get<typename Frame_::Resume_Cons_>(f_.v());
-          _stack.emplace_back(CraneCont_Resume_Cons_{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_pFrame_rect_in_Resume_Cons_{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Resume_Cons_>(_frame));
+        auto _f =
+            std::move(std::get<_after_pFrame_rect_in_Resume_Cons_>(_popped));
         std::shared_ptr<Frame_> a0 = std::move(_f.a0);
         _result = f0(*a0, std::move(_result));
       }

@@ -1,29 +1,25 @@
 #include "loopify_nested_constructs.h"
 
-uint64_t
-LoopifyNestedConstructs::multi_let(uint64_t n) { /// CraneEnter: captures
-                                                 /// varying parameters for each
-                                                 /// recursive call.
-  struct CraneEnter {
+uint64_t LoopifyNestedConstructs::multi_let(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of multi_let: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [c], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_multi_let_in_S {
     uint64_t c;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_multi_let_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified multi_let: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -31,11 +27,11 @@ LoopifyNestedConstructs::multi_let(uint64_t n) { /// CraneEnter: captures
         uint64_t n_ = n - 1;
         uint64_t b = (n_ * UINT64_C(2));
         uint64_t c = (b + UINT64_C(3));
-        _stack.emplace_back(CraneCont_n_{c});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_multi_let_in_S{c});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_multi_let_in_S>(_popped));
       uint64_t c = _f.c;
       _result = (c + std::move(_result));
     }
@@ -44,6 +40,8 @@ LoopifyNestedConstructs::multi_let(uint64_t n) { /// CraneEnter: captures
 }
 
 uint64_t LoopifyNestedConstructs::nested_if_fuel(uint64_t fuel, uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   uint64_t _loop_fuel = fuel;
   while (true) {
@@ -84,37 +82,34 @@ uint64_t LoopifyNestedConstructs::nested_if(uint64_t n) {
   return nested_if_fuel(n, n);
 }
 
-uint64_t
-LoopifyNestedConstructs::deep_nest(uint64_t n) { /// CraneEnter: captures
-                                                 /// varying parameters for each
-                                                 /// recursive call.
-  struct CraneEnter {
+uint64_t LoopifyNestedConstructs::deep_nest(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of deep_nest: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: resumes after recursive call, then processes rest.
-  struct CraneCont_n_ {};
+  struct _after_deep_nest_in_S {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_deep_nest_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified deep_nest: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(CraneCont_n_{});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_deep_nest_in_S{});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_deep_nest_in_S>(_popped));
       uint64_t inner = std::move(_result);
       uint64_t mid = (inner + UINT64_C(1));
       _result = (mid * UINT64_C(2));
@@ -123,41 +118,37 @@ LoopifyNestedConstructs::deep_nest(uint64_t n) { /// CraneEnter: captures
   return _result;
 }
 
-uint64_t
-LoopifyNestedConstructs::let_nested(uint64_t n) { /// CraneEnter: captures
-                                                  /// varying parameters for
-                                                  /// each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyNestedConstructs::let_nested(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of let_nested: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [a], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_let_nested_in_S {
     uint64_t a;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_let_nested_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified let_nested: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
         uint64_t a = (n_ + UINT64_C(1));
-        _stack.emplace_back(CraneCont_n_{a});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_let_nested_in_S{a});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_let_nested_in_S>(_popped));
       uint64_t a = _f.a;
       _result = (a + std::move(_result));
     }
@@ -165,32 +156,27 @@ LoopifyNestedConstructs::let_nested(uint64_t n) { /// CraneEnter: captures
   return _result;
 }
 
-uint64_t
-LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel,
-                                          uint64_t n) { /// CraneEnter: captures
-                                                        /// varying parameters
-                                                        /// for each recursive
-                                                        /// call.
-  struct CraneEnter {
+uint64_t LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel, uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of mod_pattern_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [n], resumes after recursive call, then processes rest.
-  struct CraneCont1 {
+  struct _after_mod_pattern_fuel_in_false {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+  using _frame = std::variant<_call, _after_mod_pattern_fuel_in_false>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, fuel});
-  /// Loopified mod_pattern_fuel: CraneEnter -> CraneCont1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -200,13 +186,13 @@ LoopifyNestedConstructs::mod_pattern_fuel(uint64_t fuel,
         if (n <= UINT64_C(1)) {
           _result = UINT64_C(1);
         } else {
-          _stack.emplace_back(CraneCont1{n});
-          _stack.emplace_back(CraneEnter{
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(_after_mod_pattern_fuel_in_false{n});
+          _stack.emplace_back(
+              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+      auto _f = std::move(std::get<_after_mod_pattern_fuel_in_false>(_popped));
       uint64_t n = _f.n;
       auto &&_once1 = (UINT64_C(1) + std::move(_result));
       _result = (_once1 ? n % _once1 : n);
@@ -220,40 +206,37 @@ uint64_t LoopifyNestedConstructs::mod_pattern(uint64_t n) {
 }
 
 std::pair<std::pair<uint64_t, uint64_t>, uint64_t>
-LoopifyNestedConstructs::tuple_constr(uint64_t n) { /// CraneEnter: captures
-                                                    /// varying parameters for
-                                                    /// each recursive call.
-  struct CraneEnter {
+LoopifyNestedConstructs::tuple_constr(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of tuple_constr: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_: saves [n], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_ {
+  struct _after_tuple_constr_in_S {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_>;
+  using _frame = std::variant<_call, _after_tuple_constr_in_S>;
   std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified tuple_constr: CraneEnter -> CraneCont_n_.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = std::make_pair(std::make_pair(UINT64_C(0), UINT64_C(0)),
                                  UINT64_C(0));
       } else {
         uint64_t n_ = n - 1;
-        _stack.emplace_back(CraneCont_n_{n});
-        _stack.emplace_back(CraneEnter{n_});
+        _stack.emplace_back(_after_tuple_constr_in_S{n});
+        _stack.emplace_back(_call{n_});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_>(_frame));
+      auto _f = std::move(std::get<_after_tuple_constr_in_S>(_popped));
       uint64_t n = _f.n;
       std::pair<std::pair<uint64_t, uint64_t>, uint64_t> _tmp1 =
           std::move(_result);
@@ -266,95 +249,84 @@ LoopifyNestedConstructs::tuple_constr(uint64_t n) { /// CraneEnter: captures
   return _result;
 }
 
-uint64_t
-LoopifyNestedConstructs::alternating_ops(uint64_t n) { /// CraneEnter: captures
-                                                       /// varying parameters
-                                                       /// for each recursive
-                                                       /// call.
-  struct CraneEnter {
+uint64_t LoopifyNestedConstructs::alternating_ops(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of alternating_ops: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont1: saves [n], resumes after recursive call, then processes rest.
-  struct CraneCont1 {
+  struct _after_alternating_ops_in_false {
     uint64_t n;
   };
 
-  /// CraneCont2: saves [n], resumes after recursive call, then processes rest.
-  struct CraneCont2 {
+  struct _after_alternating_ops_in_true {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
+  using _frame = std::variant<_call, _after_alternating_ops_in_false,
+                              _after_alternating_ops_in_true>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified alternating_ops: CraneEnter -> CraneCont1 -> CraneCont2.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
       } else {
         uint64_t n_ = n - 1;
         if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
-          _stack.emplace_back(CraneCont1{n});
-          _stack.emplace_back(CraneEnter{n_});
+          _stack.emplace_back(_after_alternating_ops_in_true{n});
+          _stack.emplace_back(_call{n_});
         } else {
-          _stack.emplace_back(CraneCont2{n});
-          _stack.emplace_back(CraneEnter{n_});
+          _stack.emplace_back(_after_alternating_ops_in_false{n});
+          _stack.emplace_back(_call{n_});
         }
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
-      uint64_t n = _f.n;
-      _result = (n + std::move(_result));
-    } else {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
+    } else if (std::holds_alternative<_after_alternating_ops_in_false>(_popped)) {
+      auto _f = std::move(std::get<_after_alternating_ops_in_false>(_popped));
       uint64_t n = _f.n;
       _result = ((n * UINT64_C(2)) + std::move(_result));
+    } else {
+      auto _f = std::move(std::get<_after_alternating_ops_in_true>(_popped));
+      uint64_t n = _f.n;
+      _result = (n + std::move(_result));
     }
   }
   return _result;
 }
 
-bool
-LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel,
-                                           uint64_t n) { /// CraneEnter:
-                                                         /// captures varying
-                                                         /// parameters for each
-                                                         /// recursive call.
-  struct CraneEnter {
+bool LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel, uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of chained_comp_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
     uint64_t fuel;
   };
 
-  /// CraneCont1: saves [n, fuel_], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont1 {
+  struct _after_chained_comp_fuel_in_false {
     uint64_t n;
     uint64_t fuel_;
   };
 
-  /// CraneCont2: saves [_tmp2], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont2 {
+  struct _after_chained_comp_fuel_in_false_2 {
     bool _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont1, CraneCont2>;
+  using _frame = std::variant<_call, _after_chained_comp_fuel_in_false,
+                              _after_chained_comp_fuel_in_false_2>;
   bool _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n, fuel});
-  /// Loopified chained_comp_fuel: CraneEnter -> CraneCont1 -> CraneCont2.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -364,20 +336,23 @@ LoopifyNestedConstructs::chained_comp_fuel(uint64_t fuel,
         if (n <= UINT64_C(2)) {
           _result = true;
         } else {
-          _stack.emplace_back(CraneCont1{n, fuel_});
-          _stack.emplace_back(CraneEnter{
-              (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
+          _stack.emplace_back(_after_chained_comp_fuel_in_false{n, fuel_});
+          _stack.emplace_back(
+              _call{(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1)))), fuel_});
         }
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
+    } else if (
+            std::holds_alternative<_after_chained_comp_fuel_in_false>(_popped)) {
+      auto _f = std::move(std::get<_after_chained_comp_fuel_in_false>(_popped));
       uint64_t n = _f.n;
       uint64_t fuel_ = _f.fuel_;
-      _stack.emplace_back(CraneCont2{std::move(_result)});
       _stack.emplace_back(
-          CraneEnter{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
+          _after_chained_comp_fuel_in_false_2{std::move(_result)});
+      _stack.emplace_back(
+          _call{(((n - UINT64_C(2)) > n ? 0 : (n - UINT64_C(2)))), fuel_});
     } else {
-      auto _f = std::move(std::get<CraneCont2>(_frame));
+      auto _f =
+          std::move(std::get<_after_chained_comp_fuel_in_false_2>(_popped));
       _result = (_f._tmp2 && std::move(_result));
     }
   }
@@ -392,38 +367,31 @@ uint64_t LoopifyNestedConstructs::chained_comp(uint64_t n) {
   }
 }
 
-uint64_t
-LoopifyNestedConstructs::compute_with_lets(uint64_t n) { /// CraneEnter:
-                                                         /// captures varying
-                                                         /// parameters for each
-                                                         /// recursive call.
-  struct CraneEnter {
+uint64_t LoopifyNestedConstructs::compute_with_lets(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of compute_with_lets: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_p: saves [n_p], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_p {
+  struct _after_compute_with_lets_in_S {
     uint64_t n_p;
   };
 
-  /// CraneCont_n_p_1: saves [x], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_p_1 {
+  struct _after_compute_with_lets_in_S_2 {
     uint64_t x;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_p, CraneCont_n_p_1>;
+  using _frame = std::variant<_call, _after_compute_with_lets_in_S,
+                              _after_compute_with_lets_in_S_2>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified compute_with_lets: CraneEnter -> CraneCont_n_p ->
-  /// CraneCont_n_p_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -433,18 +401,18 @@ LoopifyNestedConstructs::compute_with_lets(uint64_t n) { /// CraneEnter:
           _result = UINT64_C(1);
         } else {
           uint64_t n_p = n_ - 1;
-          _stack.emplace_back(CraneCont_n_p{n_p});
-          _stack.emplace_back(CraneEnter{n_});
+          _stack.emplace_back(_after_compute_with_lets_in_S{n_p});
+          _stack.emplace_back(_call{n_});
         }
       }
-    } else if (std::holds_alternative<CraneCont_n_p>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_n_p>(_frame));
+    } else if (std::holds_alternative<_after_compute_with_lets_in_S>(_popped)) {
+      auto _f = std::move(std::get<_after_compute_with_lets_in_S>(_popped));
       uint64_t n_p = _f.n_p;
       uint64_t x = std::move(_result);
-      _stack.emplace_back(CraneCont_n_p_1{x});
-      _stack.emplace_back(CraneEnter{n_p});
+      _stack.emplace_back(_after_compute_with_lets_in_S_2{x});
+      _stack.emplace_back(_call{n_p});
     } else {
-      auto _f = std::move(std::get<CraneCont_n_p_1>(_frame));
+      auto _f = std::move(std::get<_after_compute_with_lets_in_S_2>(_popped));
       uint64_t x = _f.x;
       uint64_t y = std::move(_result);
       uint64_t z = (x + y);
@@ -454,30 +422,26 @@ LoopifyNestedConstructs::compute_with_lets(uint64_t n) { /// CraneEnter:
   return _result;
 }
 
-uint64_t
-LoopifyNestedConstructs::nested_match(uint64_t n) { /// CraneEnter: captures
-                                                    /// varying parameters for
-                                                    /// each recursive call.
-  struct CraneEnter {
+uint64_t LoopifyNestedConstructs::nested_match(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of nested_match: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_n_p: saves [n], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_n_p {
+  struct _after_nested_match_in_S {
     uint64_t n;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_n_p>;
+  using _frame = std::variant<_call, _after_nested_match_in_S>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified nested_match: CraneEnter -> CraneCont_n_p.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -487,12 +451,12 @@ LoopifyNestedConstructs::nested_match(uint64_t n) { /// CraneEnter: captures
           _result = UINT64_C(1);
         } else {
           uint64_t n_p = n_ - 1;
-          _stack.emplace_back(CraneCont_n_p{n});
-          _stack.emplace_back(CraneEnter{n_p});
+          _stack.emplace_back(_after_nested_match_in_S{n});
+          _stack.emplace_back(_call{n_p});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_n_p>(_frame));
+      auto _f = std::move(std::get<_after_nested_match_in_S>(_popped));
       uint64_t n = _f.n;
       _result = (n + std::move(_result));
     }

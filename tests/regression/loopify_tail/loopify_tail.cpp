@@ -2,6 +2,8 @@
 
 /// Tail-recursive: membership test
 bool LoopifyTail::member(uint64_t x, const LoopifyTail::list<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const LoopifyTail::list<uint64_t> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename LoopifyTail::list<uint64_t>::Nil>(
@@ -22,6 +24,8 @@ bool LoopifyTail::member(uint64_t x, const LoopifyTail::list<uint64_t> &l) {
 /// Tail-recursive: nth element
 uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
                           uint64_t default0) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const LoopifyTail::list<uint64_t> *_loop_l = &l;
   uint64_t _loop_n = n;
   while (true) {
@@ -46,6 +50,8 @@ uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
 uint64_t
 LoopifyTail::lookup(uint64_t key,
                     const LoopifyTail::list<std::pair<uint64_t, uint64_t>> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const LoopifyTail::list<std::pair<uint64_t, uint64_t>> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<

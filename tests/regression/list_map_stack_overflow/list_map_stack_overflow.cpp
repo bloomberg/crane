@@ -4,6 +4,8 @@
 /// list itself is stack-safe: only the generated List method under test
 /// can overflow.
 List<uint64_t> ListMapStackOverflow::bld(uint64_t n, List<uint64_t> acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   List<uint64_t> _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {

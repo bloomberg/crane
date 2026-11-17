@@ -7,6 +7,8 @@ uint64_t LocalTailLoopDefault::sum_to(uint64_t n) {
   {
     uint64_t _lc1_k = n;
     uint64_t _lc1_acc = UINT64_C(0);
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _lc1_loop_acc = _lc1_acc;
     uint64_t _lc1_loop_k = _lc1_k;
     while (true) {

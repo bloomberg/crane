@@ -78,6 +78,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> crane::rc<List<A>> {
       if (auto *_alt = crane::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -103,6 +105,8 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1> List<std::pair<A, T1>> combine(List<T1> l_) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<std::pair<A, T1>>> _root{};
     crane::rc<List<std::pair<A, T1>>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -146,6 +150,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &&, A>
   T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
     while (true) {
@@ -161,6 +167,8 @@ public:
   }
 
   List<A> firstn(uint64_t n) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<A>> _root{};
     crane::rc<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -248,6 +256,8 @@ public:
 
   // MANIPULATORS
   ~Positive() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> crane::rc<Positive> {
       if (auto *_alt = crane::get_if<XI>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -465,6 +475,8 @@ struct ReuseListShapes {
 
     // MANIPULATORS
     ~frames() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> crane::rc<frames> {
         if (auto *_alt = crane::get_if<Push>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {

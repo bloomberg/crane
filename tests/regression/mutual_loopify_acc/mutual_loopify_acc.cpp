@@ -1,32 +1,25 @@
 #include "mutual_loopify_acc.h"
 
-uint64_t
-MutualLoopifyAcc::tsum(uint64_t acc,
-                       const MutualLoopifyAcc::tree &t) { /// CraneEnter:
-                                                          /// captures varying
-                                                          /// parameters for
-                                                          /// each recursive
-                                                          /// call.
-  struct CraneEnter {
+uint64_t MutualLoopifyAcc::tsum(uint64_t acc, const MutualLoopifyAcc::tree &t) {
+  // Explicit stack replaces the non-tail recursion of tsum: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const MutualLoopifyAcc::tree *t;
   };
 
-  /// CraneCont_Fcons: saves [a10], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Fcons {
+  struct _after_tsum_in_Fcons {
     std::shared_ptr<MutualLoopifyAcc::forest> a10;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Fcons>;
+  using _frame = std::variant<_call, _after_tsum_in_Fcons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&t});
-  /// Loopified tsum: CraneEnter -> CraneCont_Fcons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&t});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const MutualLoopifyAcc::tree &t = *_f.t;
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
         const auto &[a0] =
@@ -42,12 +35,12 @@ MutualLoopifyAcc::tsum(uint64_t acc,
         } else {
           const auto &[a00, a10] =
               std::get<typename MutualLoopifyAcc::forest::Fcons>(_sv0.v());
-          _stack.emplace_back(CraneCont_Fcons{a10});
-          _stack.emplace_back(CraneEnter{crane_raw(a00)});
+          _stack.emplace_back(_after_tsum_in_Fcons{a10});
+          _stack.emplace_back(_call{crane_raw(a00)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
+      auto _f = std::move(std::get<_after_tsum_in_Fcons>(_popped));
       std::shared_ptr<MutualLoopifyAcc::forest> a10 = std::move(_f.a10);
       _result = fsum(std::move(_result), *a10);
     }
@@ -55,42 +48,34 @@ MutualLoopifyAcc::tsum(uint64_t acc,
   return _result;
 }
 
-uint64_t
-MutualLoopifyAcc::fsum(uint64_t acc,
-                       const MutualLoopifyAcc::forest &f) { /// CraneEnter:
-                                                            /// captures varying
-                                                            /// parameters for
-                                                            /// each recursive
-                                                            /// call.
-  struct CraneEnter {
+uint64_t MutualLoopifyAcc::fsum(uint64_t acc,
+                                const MutualLoopifyAcc::forest &f) {
+  // Explicit stack replaces the non-tail recursion of fsum: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const MutualLoopifyAcc::forest *f;
     uint64_t acc;
   };
 
-  /// CraneEnter_tsum_entry: captures varying parameters for each recursive
-  /// call.
-  struct CraneEnter_tsum_entry {
+  struct _call_tsum_entry {
     const MutualLoopifyAcc::tree *t;
     uint64_t acc0;
   };
 
-  /// CraneCont_Fcons: saves [a10], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Fcons {
+  struct _after_tsum_entry_in_Fcons {
     const MutualLoopifyAcc::forest *a10;
   };
 
-  using CraneFrame =
-      std::variant<CraneEnter, CraneEnter_tsum_entry, CraneCont_Fcons>;
+  using _frame =
+      std::variant<_call, _call_tsum_entry, _after_tsum_entry_in_Fcons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&f, acc});
-  /// Loopified fsum: CraneEnter -> CraneCont_Fcons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&f, acc});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const MutualLoopifyAcc::forest &f = *_f.f;
       uint64_t acc = _f.acc;
       if (std::holds_alternative<typename MutualLoopifyAcc::forest::Fnil>(f.v())) {
@@ -98,11 +83,11 @@ MutualLoopifyAcc::fsum(uint64_t acc,
       } else {
         const auto &[a00, a10] =
             std::get<typename MutualLoopifyAcc::forest::Fcons>(f.v());
-        _stack.emplace_back(CraneCont_Fcons{crane_raw(a10)});
-        _stack.emplace_back(CraneEnter_tsum_entry{crane_raw(a00), acc});
+        _stack.emplace_back(_after_tsum_entry_in_Fcons{crane_raw(a10)});
+        _stack.emplace_back(_call_tsum_entry{crane_raw(a00), acc});
       }
-    } else if (std::holds_alternative<CraneEnter_tsum_entry>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_tsum_entry>(_frame));
+    } else if (std::holds_alternative<_call_tsum_entry>(_popped)) {
+      auto _f = std::move(std::get<_call_tsum_entry>(_popped));
       const MutualLoopifyAcc::tree &t = *_f.t;
       uint64_t acc0 = _f.acc0;
       if (std::holds_alternative<typename MutualLoopifyAcc::tree::Leaf>(t.v())) {
@@ -112,12 +97,12 @@ MutualLoopifyAcc::fsum(uint64_t acc,
       } else {
         const auto &[a0] =
             std::get<typename MutualLoopifyAcc::tree::Node>(t.v());
-        _stack.emplace_back(CraneEnter{crane_raw(a0), acc0});
+        _stack.emplace_back(_call{crane_raw(a0), acc0});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Fcons>(_frame));
+      auto _f = std::move(std::get<_after_tsum_entry_in_Fcons>(_popped));
       const MutualLoopifyAcc::forest &a10 = *_f.a10;
-      _stack.emplace_back(CraneEnter{&a10, std::move(_result)});
+      _stack.emplace_back(_call{&a10, std::move(_result)});
     }
   }
   return _result;
@@ -125,6 +110,8 @@ MutualLoopifyAcc::fsum(uint64_t acc,
 
 MutualLoopifyAcc::tree MutualLoopifyAcc::chain(uint64_t n,
                                                MutualLoopifyAcc::tree acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   MutualLoopifyAcc::tree _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {

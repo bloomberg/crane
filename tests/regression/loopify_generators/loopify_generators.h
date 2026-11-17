@@ -68,6 +68,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -94,6 +96,8 @@ public:
   const variant_t &v() const { return v_; }
 
   List<A> app(List<A> m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<A>> _root{};
     std::shared_ptr<List<A>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -127,6 +131,8 @@ struct LoopifyGenerators {
   /// iterate f n x applies f repeatedly n times: iterate (+1) 3 5 -> 5,6,7.
   template <typename F0>
   static List<uint64_t> iterate(F0 &&f, uint64_t n, uint64_t x) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     uint64_t _loop_x = x;
@@ -160,6 +166,8 @@ struct LoopifyGenerators {
                                    const uint64_t &>
   static List<uint64_t> zip_with(F0 &&f, const List<uint64_t> &l1,
                                  const List<uint64_t> &l2) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     const List<uint64_t> *_loop_l2 = &l2;
@@ -218,6 +226,8 @@ struct LoopifyGenerators {
   template <typename F1>
   static List<uint64_t> unfold_fuel(uint64_t fuel, F1 &&f, uint64_t n,
                                     uint64_t seed) {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<uint64_t>> _root{};
     std::shared_ptr<List<uint64_t>> *_write = nullptr;
     uint64_t _loop_seed = seed;
@@ -271,37 +281,35 @@ struct LoopifyGenerators {
     {
       uint64_t _lc1_i = n;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of go: _call frames are
+      // pending calls, _after frames resume a caller.
+      struct _call {
         uint64_t i;
       };
 
-      /// CraneCont_j: saves [i], resumes after recursive call, then processes
-      /// rest.
-      struct CraneCont_j {
+      struct _after_go_in_S {
         uint64_t i;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_j>;
+      using _frame = std::variant<_call, _after_go_in_S>;
       List<uint64_t> _lc1_result{};
-      crane::small_vector<CraneFrame> _lc1_stack;
-      _lc1_stack.emplace_back(CraneEnter{_lc1_i});
-      /// Loopified go: CraneEnter -> CraneCont_j.
+      crane::small_vector<_frame> _lc1_stack;
+      _lc1_stack.emplace_back(_call{_lc1_i});
       while (!_lc1_stack.empty()) {
-        CraneFrame _frame = std::move(_lc1_stack.back());
+        _frame _popped = std::move(_lc1_stack.back());
         _lc1_stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           uint64_t _lc1_i = _f.i;
           if (_lc1_i <= 0) {
             _lc1_result = List<uint64_t>::nil();
           } else {
             uint64_t j = _lc1_i - 1;
-            _lc1_stack.emplace_back(CraneCont_j{_lc1_i});
-            _lc1_stack.emplace_back(CraneEnter{j});
+            _lc1_stack.emplace_back(_after_go_in_S{_lc1_i});
+            _lc1_stack.emplace_back(_call{j});
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_j>(_frame));
+          auto _f = std::move(std::get<_after_go_in_S>(_popped));
           uint64_t _lc1_i = _f.i;
           _lc1_result =
               List<uint64_t>::cons(f((((n - _lc1_i) > n ? 0 : (n - _lc1_i)))),

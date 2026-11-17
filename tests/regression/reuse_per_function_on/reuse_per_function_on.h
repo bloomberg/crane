@@ -46,6 +46,8 @@ struct ReusePerFunctionOn {
 
     // MANIPULATORS
     ~lst() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> crane::rc<lst> {
         if (auto *_alt = std::get_if<Cons>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {

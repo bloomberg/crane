@@ -4,6 +4,8 @@ uint64_t LetFix::local_sum(const List<uint64_t> &l) {
   {
     uint64_t _lc1_acc = UINT64_C(0);
     const List<uint64_t> &_lc1_xs = l;
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<uint64_t> *_lc1_loop_xs = &_lc1_xs;
     uint64_t _lc1_loop_acc = _lc1_acc;
     while (true) {

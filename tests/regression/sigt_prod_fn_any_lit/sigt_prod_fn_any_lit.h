@@ -69,6 +69,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -127,6 +129,29 @@ template <typename A, typename P> struct SigT {
   static SigT<A, P> existt(A x, P a1) { return {std::move(x), std::move(a1)}; }
 };
 
+/// Minimal reproduction of the parse-a-lot LL-parser bad_any_cast, now fixed.
+///
+/// The previous repro (sigt_prod_fn_any) stored the predicate/action via a
+/// *named* mk parameter of (abstract, erased) function type, so Crane
+/// emitted std::make_pair(std::any(f), std::any(g)) — an explicit
+/// std::any(...) wrap of a variable. That case was handled first.
+///
+/// But parse-a-lot never calls such an mk. It builds each grammar entry with
+/// *inline lambda literals* placed directly where the erased payload
+/// production_semty p = std::pair<std::any, std::any> is expected (see
+/// jsonGrammarEntries in examples/JSON/Parser/JSON.v). Crane previously
+/// emitted the two lambdas converted to std::any *implicitly* through the
+/// std::pair converting constructor, storing the raw closures — but
+/// Parser.h reads them back with any_cast<std::function<std::any(std::any)>>,
+/// which crashed.
+///
+/// gen_expr_custom_cons's constructor-arg boxing now checks whether the arg
+/// is a function value (whether or not it is a CPPlambda) and routes it
+/// through crane_erase_fn, which adapts even *generic* lambdas
+/// ( [](const auto&){...} , produced here because the lambda's domain is the
+/// abstract S.sem a) via a compile-time dispatch on std::function CTAD
+/// viability. This file reproduces the exact inline-lambda-literal shape that
+/// the earlier fix (a named mk parameter) didn't cover.
 template <typename M>
 concept SEM = requires {
   typename M::idx;
@@ -147,6 +172,8 @@ template <SEM S> struct Make {
   /// grammar produces — and now wraps each with crane_erase_fn before storing
   /// it into the pair<std::any,std::any> payload.
   static entry mk_entry(typename S::idx a) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto erased_fn = crane::immortal(
         crane_erase_fn([](const auto &) { return UINT64_C(0); }));
     static const auto erased_fn_1 =

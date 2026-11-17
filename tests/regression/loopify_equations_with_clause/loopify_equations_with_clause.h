@@ -86,6 +86,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -178,6 +180,8 @@ struct LoopifyEquationsWithClause {
 
     // MANIPULATORS
     ~zeros_graph() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Zeros_graph_refinement_2>(&_v)) {
@@ -278,6 +282,8 @@ struct LoopifyEquationsWithClause {
 
     // MANIPULATORS
     ~zeros_clause_2_graph() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<Zeros_clause_2_graph_equation_1>(&_v)) {
@@ -544,6 +550,8 @@ struct LoopifyEquationsWithClause {
 
     // MANIPULATORS
     ~plain_graph() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<plain_graph> {
         if (auto *_alt = std::get_if<Plain_graph_equation_2>(&_v)) {
           if (_alt->hind && _alt->hind.use_count() == 1) {
@@ -571,37 +579,32 @@ struct LoopifyEquationsWithClause {
   };
 
   template <typename T1, typename F1>
-  static T1
-  plain_graph_rect(T1 f, F1 &&f0, const List<uint64_t> &_x, uint64_t _x0,
-                   const plain_graph &p) { /// CraneEnter: captures varying
-                                           /// parameters for each recursive
-                                           /// call.
-    struct CraneEnter {
+  static T1 plain_graph_rect(T1 f, F1 &&f0, const List<uint64_t> &_x,
+                             uint64_t _x0, const plain_graph &p) {
+    // Explicit stack replaces the non-tail recursion of plain_graph_rect: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const plain_graph *p;
       uint64_t _x0;
       const List<uint64_t> *_x;
     };
 
-    /// CraneCont_Plain_graph_equation_2: saves [x0, xs0, hind0], resumes after
-    /// recursive call, then processes rest.
-    struct CraneCont_Plain_graph_equation_2 {
+    struct _after_plain_graph_rect_in_Plain_graph_equation_2 {
       uint64_t x0;
       List<uint64_t> xs0;
       std::shared_ptr<plain_graph> hind0;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_Plain_graph_equation_2>;
+    using _frame =
+        std::variant<_call, _after_plain_graph_rect_in_Plain_graph_equation_2>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&p, _x0, &_x});
-    /// Loopified plain_graph_rect: CraneEnter ->
-    /// CraneCont_Plain_graph_equation_2.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&p, _x0, &_x});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const plain_graph &p = *_f.p;
         uint64_t _x0 = _f._x0;
         const List<uint64_t> &_x = *_f._x;
@@ -611,11 +614,16 @@ struct LoopifyEquationsWithClause {
         } else {
           const auto &[x0, xs0, hind0] =
               std::get<typename plain_graph::Plain_graph_equation_2>(p.v());
-          _stack.emplace_back(CraneCont_Plain_graph_equation_2{x0, xs0, hind0});
-          _stack.emplace_back(CraneEnter{crane_raw(hind0), plain(xs0), &xs0});
+          _stack.emplace_back(
+              _after_plain_graph_rect_in_Plain_graph_equation_2{x0, xs0,
+                                                                hind0});
+          _stack.emplace_back(_call{crane_raw(hind0), plain(xs0), &xs0});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Plain_graph_equation_2>(_frame));
+        auto _f =
+            std::move(
+                std::get<_after_plain_graph_rect_in_Plain_graph_equation_2>(
+                    _popped));
         uint64_t x0 = _f.x0;
         List<uint64_t> xs0 = std::move(_f.xs0);
         std::shared_ptr<plain_graph> hind0 = std::move(_f.hind0);
@@ -636,31 +644,28 @@ struct LoopifyEquationsWithClause {
       uint64_t _lc1_x0 = plain(l);
       const plain_graph &_lc1_p = plain_graph_correct(l);
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of f1: _call frames are
+      // pending calls, _after frames resume a caller.
+      struct _call {
         const plain_graph *p;
         uint64_t _x0;
         const List<uint64_t> *_x;
       };
 
-      /// CraneCont_Plain_graph_equation_2: saves [x0, xs0], resumes after
-      /// recursive call, then processes rest.
-      struct CraneCont_Plain_graph_equation_2 {
+      struct _after_f1_in_Plain_graph_equation_2 {
         uint64_t x0;
         List<uint64_t> xs0;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_Plain_graph_equation_2>;
+      using _frame = std::variant<_call, _after_f1_in_Plain_graph_equation_2>;
       T1 _lc1_result{};
-      crane::small_vector<CraneFrame> _lc1_stack;
-      _lc1_stack.emplace_back(CraneEnter{&_lc1_p, _lc1_x0, &_lc1_x});
-      /// Loopified f1: CraneEnter -> CraneCont_Plain_graph_equation_2.
+      crane::small_vector<_frame> _lc1_stack;
+      _lc1_stack.emplace_back(_call{&_lc1_p, _lc1_x0, &_lc1_x});
       while (!_lc1_stack.empty()) {
-        CraneFrame _frame = std::move(_lc1_stack.back());
+        _frame _popped = std::move(_lc1_stack.back());
         _lc1_stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const plain_graph &_lc1_p = *_f.p;
           uint64_t _lc1_x0 = _f._x0;
           const List<uint64_t> &_lc1_x = *_f._x;
@@ -671,13 +676,13 @@ struct LoopifyEquationsWithClause {
             const auto &[x0, xs0, hind0] =
                 std::get<typename plain_graph::Plain_graph_equation_2>(
                     _lc1_p.v());
-            _lc1_stack.emplace_back(CraneCont_Plain_graph_equation_2{x0, xs0});
             _lc1_stack.emplace_back(
-                CraneEnter{crane_raw(hind0), plain(xs0), &xs0});
+                _after_f1_in_Plain_graph_equation_2{x0, xs0});
+            _lc1_stack.emplace_back(_call{crane_raw(hind0), plain(xs0), &xs0});
           }
         } else {
           auto _f =
-              std::move(std::get<CraneCont_Plain_graph_equation_2>(_frame));
+              std::move(std::get<_after_f1_in_Plain_graph_equation_2>(_popped));
           uint64_t x0 = _f.x0;
           List<uint64_t> xs0 = std::move(_f.xs0);
           _lc1_result = f0(x0, xs0, std::move(_lc1_result));

@@ -14,6 +14,8 @@ namespace ListDef {
 template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T2, F0 &, const T1 &>
 Datatypes::List<T2> map(F0 &&f, const Datatypes::List<T1> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<Datatypes::List<T2>> _root{};
   std::shared_ptr<Datatypes::List<T2>> *_write = nullptr;
   const Datatypes::List<T1> *_loop_l = &l;

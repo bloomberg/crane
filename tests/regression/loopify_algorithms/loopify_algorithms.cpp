@@ -1,38 +1,34 @@
 #include "loopify_algorithms.h"
 
 /// Consolidated UNIQUE list/sequence algorithms.
-uint64_t
-LoopifyAlgorithms::len_impl(const List<uint64_t> &l) { /// CraneEnter: captures
-                                                       /// varying parameters
-                                                       /// for each recursive
-                                                       /// call.
-  struct CraneEnter {
+uint64_t LoopifyAlgorithms::len_impl(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of len_impl: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: resumes after recursive call, then processes rest.
-  struct CraneCont_Cons {};
+  struct _after_len_impl_in_Cons {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_len_impl_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified len_impl: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_len_impl_in_Cons{});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_len_impl_in_Cons>(_popped));
       _result = (std::move(_result) + 1);
     }
   }
@@ -42,6 +38,8 @@ LoopifyAlgorithms::len_impl(const List<uint64_t> &l) { /// CraneEnter: captures
 /// sieve l Sieve of Eratosthenes - filters out multiples.
 List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
                                              const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   List<uint64_t> _loop_l = l;
@@ -65,28 +63,27 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
         auto filter_multiples =
             [&](uint64_t p, const List<uint64_t> &rest) -> List<uint64_t> {
-              /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-              struct CraneEnter {
+              // Explicit stack replaces the non-tail recursion of
+              // filter_multiples: _call frames are pending calls, _after frames
+              // resume a caller.
+              struct _call {
                 const List<uint64_t> *rest;
               };
 
-              /// CraneCont1: saves [a00], resumes after recursive call, then
-              /// processes rest.
-              struct CraneCont1 {
+              struct _after_filter_multiples_in_false {
                 uint64_t a00;
               };
 
-              using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+              using _frame =
+                  std::variant<_call, _after_filter_multiples_in_false>;
               List<uint64_t> _result{};
-              crane::small_vector<CraneFrame> _stack;
-              _stack.emplace_back(CraneEnter{&rest});
-              /// Loopified filter_multiples: CraneEnter -> CraneCont1.
+              crane::small_vector<_frame> _stack;
+              _stack.emplace_back(_call{&rest});
               while (!_stack.empty()) {
-                CraneFrame _frame = std::move(_stack.back());
+                _frame _popped = std::move(_stack.back());
                 _stack.pop_back();
-                if (std::holds_alternative<CraneEnter>(_frame)) {
-                  auto _f = std::move(std::get<CraneEnter>(_frame));
+                if (std::holds_alternative<_call>(_popped)) {
+                  auto _f = std::move(std::get<_call>(_popped));
                   const List<uint64_t> &rest = *_f.rest;
                   if (std::holds_alternative<typename List<uint64_t>::Nil>(
                           rest.v())) {
@@ -95,14 +92,15 @@ List<uint64_t> LoopifyAlgorithms::sieve_fuel(uint64_t fuel,
                     const auto &[a00, a10] =
                         std::get<typename List<uint64_t>::Cons>(rest.v());
                     if ((p ? a00 % p : a00) == UINT64_C(0)) {
-                      _stack.emplace_back(CraneEnter{crane_raw(a10)});
+                      _stack.emplace_back(_call{crane_raw(a10)});
                     } else {
-                      _stack.emplace_back(CraneCont1{a00});
-                      _stack.emplace_back(CraneEnter{crane_raw(a10)});
+                      _stack.emplace_back(_after_filter_multiples_in_false{a00});
+                      _stack.emplace_back(_call{crane_raw(a10)});
                     }
                   }
                 } else {
-                  auto _f = std::move(std::get<CraneCont1>(_frame));
+                  auto _f = std::move(
+                      std::get<_after_filter_multiples_in_false>(_popped));
                   uint64_t a00 = _f.a00;
                   _result = List<uint64_t>::cons(a00, std::move(_result));
                 }
@@ -130,39 +128,37 @@ List<uint64_t> LoopifyAlgorithms::sieve(const List<uint64_t> &l) {
 
 /// run_length_encode l encodes consecutive runs: 1,1,2,3,3,3 ->
 /// (1,2),(2,1),(3,3).
-List<std::pair<uint64_t, uint64_t>> LoopifyAlgorithms::run_length_encode(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-  struct CraneEnter {
+List<std::pair<uint64_t, uint64_t>>
+LoopifyAlgorithms::run_length_encode(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of run_length_encode: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_run_length_encode_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_run_length_encode_in_Cons>;
   List<std::pair<uint64_t, uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified run_length_encode: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<std::pair<uint64_t, uint64_t>>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_run_length_encode_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_run_length_encode_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       List<std::pair<uint64_t, uint64_t>> _tmp1 = std::move(_result);
       if (std::holds_alternative<
@@ -193,6 +189,8 @@ List<std::pair<uint64_t, uint64_t>> LoopifyAlgorithms::run_length_encode(
 /// prefix_sums acc l cumulative sums: 1,2,3 with acc=0 -> 0,1,3,6.
 List<uint64_t> LoopifyAlgorithms::prefix_sums(uint64_t acc,
                                               const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -222,6 +220,8 @@ List<uint64_t> LoopifyAlgorithms::prefix_sums(uint64_t acc,
 
 /// differences l consecutive differences: 5,3,8,2 -> -2,5,-6.
 List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -262,6 +262,8 @@ List<uint64_t> LoopifyAlgorithms::differences(const List<uint64_t> &l) {
 /// rotate_left n l rotates list left by n positions.
 List<uint64_t> LoopifyAlgorithms::rotate_left_fuel(uint64_t fuel, uint64_t n,
                                                    const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   List<uint64_t> _loop_l = l;
   uint64_t _loop_n = n;
   uint64_t _loop_fuel = fuel;
@@ -297,6 +299,8 @@ List<uint64_t> LoopifyAlgorithms::rotate_left(uint64_t n,
 /// nub l removes ALL duplicates (not just consecutive): 1,2,1,3,2 -> 1,2,3.
 List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
                                           uint64_t fuel) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_fuel = fuel;
@@ -320,28 +324,25 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
             std::get<typename List<uint64_t>::Cons>(_loop_l.v());
         auto filter_out =
             [&](uint64_t val, const List<uint64_t> &rest) -> List<uint64_t> {
-              /// CraneEnter: captures varying parameters for each recursive
-              /// call.
-              struct CraneEnter {
+              // Explicit stack replaces the non-tail recursion of filter_out:
+              // _call frames are pending calls, _after frames resume a caller.
+              struct _call {
                 const List<uint64_t> *rest;
               };
 
-              /// CraneCont1: saves [a00], resumes after recursive call, then
-              /// processes rest.
-              struct CraneCont1 {
+              struct _after_filter_out_in_false {
                 uint64_t a00;
               };
 
-              using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+              using _frame = std::variant<_call, _after_filter_out_in_false>;
               List<uint64_t> _result{};
-              crane::small_vector<CraneFrame> _stack;
-              _stack.emplace_back(CraneEnter{&rest});
-              /// Loopified filter_out: CraneEnter -> CraneCont1.
+              crane::small_vector<_frame> _stack;
+              _stack.emplace_back(_call{&rest});
               while (!_stack.empty()) {
-                CraneFrame _frame = std::move(_stack.back());
+                _frame _popped = std::move(_stack.back());
                 _stack.pop_back();
-                if (std::holds_alternative<CraneEnter>(_frame)) {
-                  auto _f = std::move(std::get<CraneEnter>(_frame));
+                if (std::holds_alternative<_call>(_popped)) {
+                  auto _f = std::move(std::get<_call>(_popped));
                   const List<uint64_t> &rest = *_f.rest;
                   if (std::holds_alternative<typename List<uint64_t>::Nil>(
                           rest.v())) {
@@ -350,14 +351,15 @@ List<uint64_t> LoopifyAlgorithms::nub_aux(const List<uint64_t> &l,
                     const auto &[a00, a10] =
                         std::get<typename List<uint64_t>::Cons>(rest.v());
                     if (val == a00) {
-                      _stack.emplace_back(CraneEnter{crane_raw(a10)});
+                      _stack.emplace_back(_call{crane_raw(a10)});
                     } else {
-                      _stack.emplace_back(CraneCont1{a00});
-                      _stack.emplace_back(CraneEnter{crane_raw(a10)});
+                      _stack.emplace_back(_after_filter_out_in_false{a00});
+                      _stack.emplace_back(_call{crane_raw(a10)});
                     }
                   }
                 } else {
-                  auto _f = std::move(std::get<CraneCont1>(_frame));
+                  auto _f =
+                      std::move(std::get<_after_filter_out_in_false>(_popped));
                   uint64_t a00 = _f.a00;
                   _result = List<uint64_t>::cons(a00, std::move(_result));
                 }
@@ -386,6 +388,8 @@ List<uint64_t> LoopifyAlgorithms::nub(const List<uint64_t> &l) {
 /// Internal helpers for palindrome check.
 List<uint64_t> LoopifyAlgorithms::rev_impl(List<uint64_t> acc,
                                            const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l = &l;
   List<uint64_t> _loop_acc = std::move(acc);
   while (true) {
@@ -402,6 +406,8 @@ List<uint64_t> LoopifyAlgorithms::rev_impl(List<uint64_t> acc,
 
 bool LoopifyAlgorithms::list_eq_impl(const List<uint64_t> &l1,
                                      const List<uint64_t> &l2) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l2 = &l2;
   const List<uint64_t> *_loop_l1 = &l1;
   while (true) {
@@ -439,6 +445,8 @@ bool LoopifyAlgorithms::is_palindrome(const List<uint64_t> &l) {
 /// [1,2],[2,3],[3,4].
 List<uint64_t> LoopifyAlgorithms::take_impl(uint64_t k,
                                             const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -478,6 +486,8 @@ List<uint64_t> LoopifyAlgorithms::take_impl(uint64_t k,
 List<List<uint64_t>>
 LoopifyAlgorithms::windows_aux(uint64_t n, const List<uint64_t> &l,
                                uint64_t fuel) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<List<uint64_t>>> _root{};
   std::shared_ptr<List<List<uint64_t>>> *_write = nullptr;
   uint64_t _loop_fuel = fuel;
@@ -533,6 +543,8 @@ List<List<uint64_t>> LoopifyAlgorithms::windows(uint64_t n,
 /// sliding_pairs l returns consecutive pairs: 1,2,3,4 -> (1,2),(2,3),(3,4).
 List<std::pair<uint64_t, uint64_t>>
 LoopifyAlgorithms::sliding_pairs(const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -578,43 +590,36 @@ LoopifyAlgorithms::sliding_pairs(const List<uint64_t> &l) {
 }
 
 /// max_prefix_sum l maximum sum of prefix (Kadane-like pattern).
-uint64_t
-LoopifyAlgorithms::max_prefix_sum(const List<uint64_t> &l) { /// CraneEnter:
-                                                             /// captures
-                                                             /// varying
-                                                             /// parameters for
-                                                             /// each recursive
-                                                             /// call.
-  struct CraneEnter {
+uint64_t LoopifyAlgorithms::max_prefix_sum(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of max_prefix_sum: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_max_prefix_sum_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_max_prefix_sum_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified max_prefix_sum: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_max_prefix_sum_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_max_prefix_sum_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       uint64_t rest = std::move(_result);
       uint64_t sum = (a0 + rest);
@@ -633,46 +638,39 @@ LoopifyAlgorithms::max_prefix_sum(const List<uint64_t> &l) { /// CraneEnter:
 }
 
 /// weighted_sum i l computes weighted sum with increasing index.
-uint64_t
-LoopifyAlgorithms::weighted_sum(uint64_t i,
-                                const List<uint64_t> &l) { /// CraneEnter:
-                                                           /// captures varying
-                                                           /// parameters for
-                                                           /// each recursive
-                                                           /// call.
-  struct CraneEnter {
+uint64_t LoopifyAlgorithms::weighted_sum(uint64_t i, const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of weighted_sum: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
     uint64_t i;
   };
 
-  /// CraneCont_Cons: saves [i, a0], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons {
+  struct _after_weighted_sum_in_Cons {
     uint64_t i;
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_weighted_sum_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l, i});
-  /// Loopified weighted_sum: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l, i});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       uint64_t i = _f.i;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{i, a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1), (i + 1)});
+        _stack.emplace_back(_after_weighted_sum_in_Cons{i, a0});
+        _stack.emplace_back(_call{crane_raw(a1), (i + 1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_weighted_sum_in_Cons>(_popped));
       uint64_t i = _f.i;
       uint64_t a0 = _f.a0;
       _result = ((i * a0) + std::move(_result));
@@ -682,31 +680,26 @@ LoopifyAlgorithms::weighted_sum(uint64_t i,
 }
 
 /// step_sum l sums with conditional doubling for odd numbers.
-uint64_t
-LoopifyAlgorithms::step_sum(const List<uint64_t> &l) { /// CraneEnter: captures
-                                                       /// varying parameters
-                                                       /// for each recursive
-                                                       /// call.
-  struct CraneEnter {
+uint64_t LoopifyAlgorithms::step_sum(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of step_sum: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [contribution], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons {
+  struct _after_step_sum_in_Cons {
     uint64_t contribution;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_step_sum_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified step_sum: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = UINT64_C(0);
@@ -718,11 +711,11 @@ LoopifyAlgorithms::step_sum(const List<uint64_t> &l) { /// CraneEnter: captures
         } else {
           contribution = (a0 * UINT64_C(2));
         }
-        _stack.emplace_back(CraneCont_Cons{contribution});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_step_sum_in_Cons{contribution});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_step_sum_in_Cons>(_popped));
       uint64_t contribution = _f.contribution;
       _result = (contribution + std::move(_result));
     }
@@ -741,42 +734,36 @@ uint64_t LoopifyAlgorithms::head_nat(uint64_t d, const List<uint64_t> &l) {
 }
 
 /// suffix_sums l computes suffix sums (reverse of prefix sums).
-List<uint64_t>
-LoopifyAlgorithms::suffix_sums(const List<uint64_t> &l) { /// CraneEnter:
-                                                          /// captures varying
-                                                          /// parameters for
-                                                          /// each recursive
-                                                          /// call.
-  struct CraneEnter {
+List<uint64_t> LoopifyAlgorithms::suffix_sums(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of suffix_sums: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_suffix_sums_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_suffix_sums_in_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified suffix_sums: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_suffix_sums_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_suffix_sums_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       List<uint64_t> rest = std::move(_result);
       _result = List<uint64_t>::cons((a0 + head_nat(UINT64_C(0), rest)), rest);

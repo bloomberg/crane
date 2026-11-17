@@ -4,6 +4,8 @@ Nat LocalFixHigherOrderProbe::sample(const Nat &n) {
   {
     const crane::fn<Nat(Nat)> &_lc1_k = [](Nat x) { return x; };
     const Nat &_lc1_n0 = n;
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Nat *_lc1_loop_n0 = &_lc1_n0;
     crane::fn<Nat(Nat)> _lc1_loop_k = _lc1_k;
     while (true) {

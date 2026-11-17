@@ -42,6 +42,8 @@ uint64_t LoopifyAdoptedFixAliasResult::sum(
 /// multiple.
 LoopifyAdoptedFixAliasResult::t<uint64_t>
 LoopifyAdoptedFixAliasResult::keys(uint64_t n, uint64_t i, uint64_t step) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyAdoptedFixAliasResult::t<uint64_t>> _root{};
   std::shared_ptr<LoopifyAdoptedFixAliasResult::t<uint64_t>> *_write = nullptr;
   uint64_t _loop_i = i;

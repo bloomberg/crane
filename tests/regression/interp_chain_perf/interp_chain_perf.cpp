@@ -2,6 +2,8 @@
 
 Itree<InterpChainPerf::TopE<crane::obj>, Nat>
 InterpChainPerf::prog(const Nat &n) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto resum_inl = crane::immortal(CategoryOps::template ReSum_inl<
       crane::obj, crane::fn<crane::obj(crane::obj)>>(
       [](const auto &, const auto &) { return crane::obj(); },

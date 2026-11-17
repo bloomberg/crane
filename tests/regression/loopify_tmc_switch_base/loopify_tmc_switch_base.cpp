@@ -11,6 +11,8 @@
 LoopifyTmcSwitchBase::num
 LoopifyTmcSwitchBase::f(LoopifyTmcSwitchBase::Color c,
                         const LoopifyTmcSwitchBase::num &n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyTmcSwitchBase::num> _root{};
   std::shared_ptr<LoopifyTmcSwitchBase::num> *_write = nullptr;
   const LoopifyTmcSwitchBase::num *_loop_n = &n;
@@ -71,6 +73,8 @@ LoopifyTmcSwitchBase::f(LoopifyTmcSwitchBase::Color c,
 }
 
 LoopifyTmcSwitchBase::num LoopifyTmcSwitchBase::of_nat(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyTmcSwitchBase::num> _root{};
   std::shared_ptr<LoopifyTmcSwitchBase::num> *_write = nullptr;
   uint64_t _loop_n = n;
@@ -97,42 +101,35 @@ LoopifyTmcSwitchBase::num LoopifyTmcSwitchBase::of_nat(uint64_t n) {
   return std::move(*_root);
 }
 
-uint64_t
-LoopifyTmcSwitchBase::to_nat(const LoopifyTmcSwitchBase::num &n) { /// CraneEnter:
-                                                                   /// captures
-                                                                   /// varying
-                                                                   /// parameters
-                                                                   /// for each
-                                                                   /// recursive
-                                                                   /// call.
-  struct CraneEnter {
+uint64_t LoopifyTmcSwitchBase::to_nat(const LoopifyTmcSwitchBase::num &n) {
+  // Explicit stack replaces the non-tail recursion of to_nat: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyTmcSwitchBase::num *n;
   };
 
-  /// CraneCont_Su: resumes after recursive call, then processes rest.
-  struct CraneCont_Su {};
+  struct _after_to_nat_in_Su {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Su>;
+  using _frame = std::variant<_call, _after_to_nat_in_Su>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&n});
-  /// Loopified to_nat: CraneEnter -> CraneCont_Su.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyTmcSwitchBase::num &n = *_f.n;
       if (std::holds_alternative<typename LoopifyTmcSwitchBase::num::Z>(n.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[n0] =
             std::get<typename LoopifyTmcSwitchBase::num::Su>(n.v());
-        _stack.emplace_back(CraneCont_Su{});
-        _stack.emplace_back(CraneEnter{crane_raw(n0)});
+        _stack.emplace_back(_after_to_nat_in_Su{});
+        _stack.emplace_back(_call{crane_raw(n0)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Su>(_frame));
+      auto _f = std::move(std::get<_after_to_nat_in_Su>(_popped));
       _result = (std::move(_result) + 1);
     }
   }

@@ -1,29 +1,26 @@
 #include "loopify_shadow_from_reference.h"
 
-uint64_t LoopifyShadowFromReference::suml(
-    const LoopifyShadowFromReference::lst &l) { /// CraneEnter: captures varying
-                                                /// parameters for each
-                                                /// recursive call.
-  struct CraneEnter {
+uint64_t
+LoopifyShadowFromReference::suml(const LoopifyShadowFromReference::lst &l) {
+  // Explicit stack replaces the non-tail recursion of suml: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const LoopifyShadowFromReference::lst *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_suml_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_suml_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified suml: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyShadowFromReference::lst &l = *_f.l;
       if (std::holds_alternative<typename LoopifyShadowFromReference::lst::Nil>(
               l.v())) {
@@ -31,11 +28,11 @@ uint64_t LoopifyShadowFromReference::suml(
       } else {
         const auto &[a0, a1] =
             std::get<typename LoopifyShadowFromReference::lst::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_suml_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_suml_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       _result = (a0 + std::move(_result));
     }
@@ -45,6 +42,8 @@ uint64_t LoopifyShadowFromReference::suml(
 
 LoopifyShadowFromReference::lst
 LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills. The input's cells are reused in place while uniquely owned.
   crane::rc<LoopifyShadowFromReference::lst> _head{};
   crane::rc<LoopifyShadowFromReference::lst> *_write = &_head;
   crane::rc<LoopifyShadowFromReference::lst> _own =
@@ -80,6 +79,8 @@ LoopifyShadowFromReference::g(LoopifyShadowFromReference::lst l) {
 }
 
 LoopifyShadowFromReference::lst LoopifyShadowFromReference::upto(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<LoopifyShadowFromReference::lst> _root{};
   crane::rc<LoopifyShadowFromReference::lst> *_write = nullptr;
   uint64_t _loop_n = n;

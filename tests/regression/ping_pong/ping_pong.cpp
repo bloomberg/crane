@@ -15,6 +15,8 @@ bool PingPong::string_eq(std::string s1, std::string s2) {
 }
 
 void PingPong::run_game(uint64_t round) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_round = round;
   while (true) {
     std::cout << std::string("ping") << '\n';

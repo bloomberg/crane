@@ -58,6 +58,8 @@ struct Nat {
 
     // MANIPULATORS
     ~nat() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat::nat> {
         if (auto *_alt = std::get_if<S>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -208,6 +210,8 @@ public:
 
   // MANIPULATORS
   ~Uint() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint> {
       if (auto *_alt = std::get_if<D0>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -288,6 +292,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Uint revapp(Uint d_) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint *_loop_self = this;
     Uint _loop_d_ = std::move(d_);
     while (true) {
@@ -394,6 +400,8 @@ public:
 
   // MANIPULATORS
   ~String() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<String> {
       if (auto *_alt = std::get_if<String0>(&_v)) {
         if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -420,6 +428,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat::nat length() const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat::nat> _root{};
     std::shared_ptr<Nat::nat> *_write = nullptr;
     const String *_loop_self = this;

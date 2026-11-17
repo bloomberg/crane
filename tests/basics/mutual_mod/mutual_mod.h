@@ -44,6 +44,8 @@ struct EvenOdd {
 
     // MANIPULATORS
     ~even_list() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<ECons>(&_v)) {
@@ -112,6 +114,8 @@ struct EvenOdd {
 
     // MANIPULATORS
     ~odd_list() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       crane::small_vector<crane::obj> _stack = {};
       auto _drain_self = [&](variant_t &_v) {
         if (auto *_alt = std::get_if<OCons>(&_v)) {

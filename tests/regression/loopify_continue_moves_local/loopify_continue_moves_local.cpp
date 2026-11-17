@@ -8,6 +8,8 @@
 /// argument keeps it copied.
 List<uint64_t> LoopifyContinueMovesLocal::count_down(uint64_t n,
                                                      List<uint64_t> acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   List<uint64_t> _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {
@@ -26,6 +28,8 @@ List<uint64_t> LoopifyContinueMovesLocal::count_down(uint64_t n,
 std::pair<List<uint64_t>, uint64_t>
 LoopifyContinueMovesLocal::count_both(uint64_t n, const List<uint64_t> &acc,
                                       uint64_t k) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_k = k;
   List<uint64_t> _loop_acc = acc;
   uint64_t _loop_n = n;
@@ -47,6 +51,8 @@ LoopifyContinueMovesLocal::count_both(uint64_t n, const List<uint64_t> &acc,
 std::pair<List<uint64_t>, List<uint64_t>>
 LoopifyContinueMovesLocal::split_off(uint64_t n, const List<uint64_t> &acc,
                                      const List<uint64_t> &rest) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   List<uint64_t> _loop_rest = rest;
   List<uint64_t> _loop_acc = acc;
   uint64_t _loop_n = n;
@@ -68,6 +74,8 @@ LoopifyContinueMovesLocal::split_off(uint64_t n, const List<uint64_t> &acc,
 std::pair<List<uint64_t>, List<uint64_t>>
 LoopifyContinueMovesLocal::peel(uint64_t n, const List<uint64_t> &acc,
                                 const List<uint64_t> &rest) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   List<uint64_t> _loop_rest = rest;
   List<uint64_t> _loop_acc = acc;
   uint64_t _loop_n = n;

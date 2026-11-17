@@ -1,89 +1,77 @@
 #include "inner_fix_captures_ind.h"
 
-uint64_t
-InnerFixCapturesInd::len(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
-                                                              /// captures
-                                                              /// varying
-                                                              /// parameters for
-                                                              /// each recursive
-                                                              /// call.
-  struct CraneEnter {
+uint64_t InnerFixCapturesInd::len(const InnerFixCapturesInd::lst &l) {
+  // Explicit stack replaces the non-tail recursion of len: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const InnerFixCapturesInd::lst *l;
   };
 
-  /// CraneCont_Cons: resumes after recursive call, then processes rest.
-  struct CraneCont_Cons {};
+  struct _after_len_in_Cons {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_len_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified len: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const InnerFixCapturesInd::lst &l = *_f.l;
       if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[_, a1] =
             std::get<typename InnerFixCapturesInd::lst::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_len_in_Cons{});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_len_in_Cons>(_popped));
       _result = (std::move(_result) + 1);
     }
   }
   return _result;
 }
 
-uint64_t
-InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
-                                                                /// captures
-                                                                /// varying
-                                                                /// parameters
-                                                                /// for each
-                                                                /// recursive
-                                                                /// call.
-  struct CraneEnter {
+uint64_t InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) {
+  // Explicit stack replaces the non-tail recursion of outer: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const InnerFixCapturesInd::lst *l;
   };
 
-  /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_outer_in_Cons {
     std::shared_ptr<InnerFixCapturesInd::lst> a1;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_outer_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified outer: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const InnerFixCapturesInd::lst &l = *_f.l;
       if (std::holds_alternative<typename InnerFixCapturesInd::lst::Nil>(l.v())) {
         _result = UINT64_C(0);
       } else {
         const auto &[_, a1] =
             std::get<typename InnerFixCapturesInd::lst::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a1});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_outer_in_Cons{a1});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_outer_in_Cons>(_popped));
       std::shared_ptr<InnerFixCapturesInd::lst> a1 = std::move(_f.a1);
       _result = ([&]() {
         auto inner =
             [&](const InnerFixCapturesInd::lst &m, uint64_t a) -> uint64_t {
+              // Loop replaces the tail recursion: each recursive call updates
+              // the loop variables.
               uint64_t _loop_a = a;
               const InnerFixCapturesInd::lst *_loop_m = &m;
               while (true) {
@@ -107,6 +95,8 @@ InnerFixCapturesInd::outer(const InnerFixCapturesInd::lst &l) { /// CraneEnter:
 }
 
 InnerFixCapturesInd::lst InnerFixCapturesInd::mk(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<InnerFixCapturesInd::lst> _root{};
   std::shared_ptr<InnerFixCapturesInd::lst> *_write = nullptr;
   uint64_t _loop_n = n;

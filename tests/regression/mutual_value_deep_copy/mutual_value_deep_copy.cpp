@@ -1,6 +1,8 @@
 #include "mutual_value_deep_copy.h"
 
 bool MutualValueDeepCopy::reaches_end_a(const MutualValueDeepCopy::a &x) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const MutualValueDeepCopy::a *_loop_x = &x;
   while (true) {
     if (std::holds_alternative<typename MutualValueDeepCopy::a::AEnd>(
@@ -18,6 +20,8 @@ bool MutualValueDeepCopy::reaches_end_a(const MutualValueDeepCopy::a &x) {
 }
 
 bool MutualValueDeepCopy::reaches_end_b(const MutualValueDeepCopy::b &y) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const MutualValueDeepCopy::b *_loop_y = &y;
   while (true) {
     const auto &[a0] =

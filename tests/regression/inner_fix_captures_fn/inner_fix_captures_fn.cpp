@@ -1,6 +1,8 @@
 #include "inner_fix_captures_fn.h"
 
 InnerFixCapturesFn::lst InnerFixCapturesFn::mk(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<InnerFixCapturesFn::lst> _root{};
   std::shared_ptr<InnerFixCapturesFn::lst> *_write = nullptr;
   uint64_t _loop_n = n;

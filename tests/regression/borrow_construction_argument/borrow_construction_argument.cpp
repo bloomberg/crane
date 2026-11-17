@@ -14,6 +14,8 @@ BorrowConstructionArgument::test(uint64_t a) {
 
 std::pair<uint64_t, BorrowConstructionArgument::big>
 BorrowConstructionArgument::run(const BorrowConstructionArgument::big &b) {
+  // Built on the first call and immortal: every thread reads it without
+  // touching its counts.
   static const auto test_1 = crane::immortal(test(UINT64_C(5)));
   auto [s_, v] = test_1(b);
   return std::make_pair(v, std::move(s_));

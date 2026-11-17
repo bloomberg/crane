@@ -1,33 +1,30 @@
 #include "global_state.h"
 
-uint64_t
-GlobalStateTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-  struct CraneEnter {
+uint64_t GlobalStateTests::fib_fun(uint64_t n) {
+  // Explicit stack replaces the non-tail recursion of fib_fun: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_m: saves [m], resumes after recursive call, then processes rest.
-  struct CraneCont_m {
+  struct _after_fib_fun_in_S {
     uint64_t m;
   };
 
-  /// CraneCont_m_1: saves [_tmp2], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_m_1 {
+  struct _after_fib_fun_in_S_2 {
     uint64_t _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_m, CraneCont_m_1>;
+  using _frame =
+      std::variant<_call, _after_fib_fun_in_S, _after_fib_fun_in_S_2>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified fib_fun: CraneEnter -> CraneCont_m -> CraneCont_m_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -37,17 +34,17 @@ GlobalStateTests::fib_fun(uint64_t n) { /// CraneEnter: captures varying
           _result = UINT64_C(1);
         } else {
           uint64_t m = m0 - 1;
-          _stack.emplace_back(CraneCont_m{m});
-          _stack.emplace_back(CraneEnter{m0});
+          _stack.emplace_back(_after_fib_fun_in_S{m});
+          _stack.emplace_back(_call{m0});
         }
       }
-    } else if (std::holds_alternative<CraneCont_m>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_m>(_frame));
+    } else if (std::holds_alternative<_after_fib_fun_in_S>(_popped)) {
+      auto _f = std::move(std::get<_after_fib_fun_in_S>(_popped));
       uint64_t m = _f.m;
-      _stack.emplace_back(CraneCont_m_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{m});
+      _stack.emplace_back(_after_fib_fun_in_S_2{std::move(_result)});
+      _stack.emplace_back(_call{m});
     } else {
-      auto _f = std::move(std::get<CraneCont_m_1>(_frame));
+      auto _f = std::move(std::get<_after_fib_fun_in_S_2>(_popped));
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -72,6 +69,8 @@ std::string GlobalStateTests::gensym(uint64_t counter0, std::string prefix) {
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_len = len;

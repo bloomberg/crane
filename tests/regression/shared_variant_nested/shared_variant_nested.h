@@ -78,6 +78,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
     while (true) {
@@ -95,6 +97,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<List<T1>> _root{};
     crane::shared_box<List<T1>> *_write = nullptr;
     const List<A> *_loop_self = this;
@@ -222,36 +226,35 @@ struct SharedVariantNested {
     uint64_t clen() const {
       const chain *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of clen: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const chain *_self;
       };
 
-      /// CraneCont_c_: resumes after recursive call, then processes rest.
-      struct CraneCont_c_ {};
+      struct _after_clen_in_Some {};
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_c_>;
+      using _frame = std::variant<_call, _after_clen_in_Some>;
       uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified clen: CraneEnter -> CraneCont_c_.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (crane::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(crane::get<CraneEnter>(_frame));
+        if (crane::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(crane::get<_call>(_popped));
           const chain *_self = _f._self;
           auto &&_sv = *_self;
           const auto &[_, a1] = crane::get<typename chain::Link>(_sv.v());
           if ((*a1).has_value()) {
             const chain &c_ = *(*a1);
-            _stack.emplace_back(CraneCont_c_{});
-            _stack.emplace_back(CraneEnter{&c_});
+            _stack.emplace_back(_after_clen_in_Some{});
+            _stack.emplace_back(_call{&c_});
           } else {
             _result = UINT64_C(1);
           }
         } else {
-          auto _f = std::move(crane::get<CraneCont_c_>(_frame));
+          auto _f = std::move(crane::get<_after_clen_in_Some>(_popped));
           _result = (std::move(_result) + 1);
         }
       }

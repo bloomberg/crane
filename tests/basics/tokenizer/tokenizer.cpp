@@ -9,6 +9,8 @@ Tokenizer::next_token(std::basic_string_view<char> input,
     uint64_t _lc1_fuel = static_cast<uint64_t>(input.length());
     int64_t _lc1_index = INT64_C(0);
     std::basic_string_view<char> _lc1_s = input;
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     std::basic_string_view<char> _lc1_loop_s = std::move(_lc1_s);
     int64_t _lc1_loop_index = _lc1_index;
     uint64_t _lc1_loop_fuel = _lc1_fuel;

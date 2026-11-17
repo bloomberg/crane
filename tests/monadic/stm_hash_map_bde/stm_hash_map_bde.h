@@ -89,6 +89,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> bsl::shared_ptr<List<t_A>> {
       if (auto *_alt = bsl::get_if<Cons>(&_v)) {
         if (_alt->d_l && _alt->d_l.use_count() == 1) {
@@ -272,6 +274,8 @@ template <typename K, typename V> struct CHT {
     bsl::vector<stm::TVar<List<bsl::pair<T1, T2>>>> buckets = {};
     {
       unsigned int _lc1_n = static_cast<unsigned int>(num);
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       unsigned int _lc1_loop_n = _lc1_n;
       while (true) {
         if (_lc1_loop_n <= 0) {

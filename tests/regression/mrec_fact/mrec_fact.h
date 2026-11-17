@@ -442,6 +442,8 @@ struct MrecFact {
 
   template <typename T1>
   static Itree<Sum1<call, crane::obj, crane::obj>, T1> body(const call &c) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto resum_id = crane::immortal(CategoryOps::template ReSum_id<
         crane::obj, crane::fn<crane::obj(crane::obj)>>([](crane::obj) {
       return crane_erase_global<Function::Id_IFun, crane::obj>();

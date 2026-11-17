@@ -1,6 +1,8 @@
 #include "frame_kept_consumed_before_call.h"
 
 List<uint64_t> FrameKeptConsumedBeforeCall::snoc(List<uint64_t> x) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills. The input's cells are reused in place while uniquely owned.
   crane::rc<List<uint64_t>> _head{};
   crane::rc<List<uint64_t>> *_write = &_head;
   crane::rc<List<uint64_t>> _own = crane::rc<List<uint64_t>>();
@@ -28,35 +30,28 @@ List<uint64_t> FrameKeptConsumedBeforeCall::snoc(List<uint64_t> x) {
 }
 
 List<List<uint64_t>>
-FrameKeptConsumedBeforeCall::pairs(uint64_t fuel,
-                                   List<List<uint64_t>> l) { /// CraneEnter:
-                                                             /// captures
-                                                             /// varying
-                                                             /// parameters for
-                                                             /// each recursive
-                                                             /// call.
-  struct CraneEnter {
+FrameKeptConsumedBeforeCall::pairs(uint64_t fuel, List<List<uint64_t>> l) {
+  // Explicit stack replaces the non-tail recursion of pairs: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     List<List<uint64_t>> l;
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, y], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons {
+  struct _after_pairs_in_Cons {
     List<uint64_t> a0;
     List<uint64_t> y;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_pairs_in_Cons>;
   List<List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l), fuel});
-  /// Loopified pairs: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{std::move(l), fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       List<List<uint64_t>> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -78,14 +73,15 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel,
             const auto &[a00, a10] =
                 std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
             List<uint64_t> y = snoc(a0);
-            _stack.emplace_back(CraneCont_Cons{std::move(a0), std::move(y)});
-            _stack.emplace_back(CraneEnter{
-                List<List<uint64_t>>::cons(a00, crane::child(a10)), k});
+            _stack.emplace_back(
+                _after_pairs_in_Cons{std::move(a0), std::move(y)});
+            _stack.emplace_back(
+                _call{List<List<uint64_t>>::cons(a00, crane::child(a10)), k});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_pairs_in_Cons>(_popped));
       List<uint64_t> a0 = std::move(_f.a0);
       List<uint64_t> y = std::move(_f.y);
       List<List<uint64_t>> r = std::move(_result);
@@ -98,35 +94,28 @@ FrameKeptConsumedBeforeCall::pairs(uint64_t fuel,
 }
 
 List<List<uint64_t>>
-FrameKeptConsumedBeforeCall::again(uint64_t fuel,
-                                   List<List<uint64_t>> l) { /// CraneEnter:
-                                                             /// captures
-                                                             /// varying
-                                                             /// parameters for
-                                                             /// each recursive
-                                                             /// call.
-  struct CraneEnter {
+FrameKeptConsumedBeforeCall::again(uint64_t fuel, List<List<uint64_t>> l) {
+  // Explicit stack replaces the non-tail recursion of again: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     List<List<uint64_t>> l;
     uint64_t fuel;
   };
 
-  /// CraneCont_Cons: saves [a0, y], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons {
+  struct _after_again_in_Cons {
     List<uint64_t> a0;
     List<uint64_t> y;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_again_in_Cons>;
   List<List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{std::move(l), fuel});
-  /// Loopified again: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{std::move(l), fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       List<List<uint64_t>> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -148,15 +137,15 @@ FrameKeptConsumedBeforeCall::again(uint64_t fuel,
             const auto &[_, a10] =
                 std::get<typename List<List<uint64_t>>::Cons>(_sv0.v());
             List<uint64_t> y = snoc(a0);
-            _stack.emplace_back(CraneCont_Cons{a0, std::move(y)});
-            _stack.emplace_back(CraneEnter{
+            _stack.emplace_back(_after_again_in_Cons{a0, std::move(y)});
+            _stack.emplace_back(_call{
                 List<List<uint64_t>>::cons(std::move(a0), crane::child(a10)),
                 k});
           }
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_again_in_Cons>(_popped));
       List<uint64_t> a0 = std::move(_f.a0);
       List<uint64_t> y = std::move(_f.y);
       List<List<uint64_t>> r = std::move(_result);

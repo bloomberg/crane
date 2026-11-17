@@ -27,6 +27,8 @@
 /// Without Set Crane Loopify the same file extracts to correct code.
 LoopifyMutualInlineTemp::lst
 LoopifyMutualInlineTemp::build(uint64_t n, LoopifyMutualInlineTemp::lst acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   LoopifyMutualInlineTemp::lst _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {
@@ -54,6 +56,8 @@ uint64_t LoopifyMutualInlineTemp::hd(const LoopifyMutualInlineTemp::lst &l) {
 uint64_t LoopifyMutualInlineTemp::even_step(
     uint64_t n, const LoopifyMutualInlineTemp::lst &l,
     const LoopifyMutualInlineTemp::lst &keep, uint64_t s) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_s = s;
   LoopifyMutualInlineTemp::lst _loop_keep = keep;
   LoopifyMutualInlineTemp::lst _loop_l = l;
@@ -97,6 +101,8 @@ uint64_t LoopifyMutualInlineTemp::even_step(
 uint64_t LoopifyMutualInlineTemp::odd_step(
     uint64_t n, const LoopifyMutualInlineTemp::lst &l,
     const LoopifyMutualInlineTemp::lst &keep, uint64_t s) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_s = s;
   LoopifyMutualInlineTemp::lst _loop_keep = keep;
   LoopifyMutualInlineTemp::lst _loop_l = l;

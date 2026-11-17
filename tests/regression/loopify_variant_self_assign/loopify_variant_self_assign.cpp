@@ -28,6 +28,8 @@
 /// Without Set Crane Loopify the same file extracts to correct code.
 uint64_t LoopifyVariantSelfAssign::drain(
     uint64_t n, const LoopifyVariantSelfAssign::lst &l, uint64_t s) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_s = s;
   LoopifyVariantSelfAssign::lst _loop_l = l;
   uint64_t _loop_n = n;

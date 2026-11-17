@@ -3,29 +3,25 @@
 #include "Datatypes.h"
 
 namespace PairDerefValue {
-bool
-NatKey::key_eq_dec(const Datatypes::Nat &n,
-                   const Datatypes::Nat &x0) { /// CraneEnter: captures varying
-                                               /// parameters for each recursive
-                                               /// call.
-  struct CraneEnter {
+bool NatKey::key_eq_dec(const Datatypes::Nat &n, const Datatypes::Nat &x0) {
+  // Explicit stack replaces the non-tail recursion of key_eq_dec: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const Datatypes::Nat *x0;
     const Datatypes::Nat *n;
   };
 
-  /// CraneCont_S: resumes after recursive call, then processes rest.
-  struct CraneCont_S {};
+  struct _after_key_eq_dec_in_S {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_S>;
+  using _frame = std::variant<_call, _after_key_eq_dec_in_S>;
   bool _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&x0, &n});
-  /// Loopified key_eq_dec: CraneEnter -> CraneCont_S.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&x0, &n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const Datatypes::Nat &x0 = *_f.x0;
       const Datatypes::Nat &n = *_f.n;
       if (std::holds_alternative<typename Datatypes::Nat::O>(n.v())) {
@@ -40,12 +36,12 @@ NatKey::key_eq_dec(const Datatypes::Nat &n,
           _result = false;
         } else {
           const auto &[a00] = std::get<typename Datatypes::Nat::S>(x0.v());
-          _stack.emplace_back(CraneCont_S{});
-          _stack.emplace_back(CraneEnter{crane_raw(a00), crane_raw(a0)});
+          _stack.emplace_back(_after_key_eq_dec_in_S{});
+          _stack.emplace_back(_call{crane_raw(a00), crane_raw(a0)});
         }
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_S>(_frame));
+      auto _f = std::move(std::get<_after_key_eq_dec_in_S>(_popped));
       if (std::move(_result)) {
         _result = true;
       } else {

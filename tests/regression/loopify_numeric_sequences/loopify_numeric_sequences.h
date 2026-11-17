@@ -67,6 +67,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -105,6 +107,8 @@ struct LoopifyNumericSequences {
 
   template <typename F1>
   static uint64_t church(uint64_t n, F1 &&f, uint64_t x) {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     uint64_t _loop_x = x;
     uint64_t _loop_n = n;
     while (true) {

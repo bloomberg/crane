@@ -42,6 +42,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -68,6 +70,8 @@ public:
   const variant_t &v() const { return v_; }
 
   Nat add(Nat m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;
@@ -146,6 +150,8 @@ public:
 
   // MANIPULATORS
   ~Lst() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Lst<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->xs && _alt->xs.use_count() == 1) {
@@ -175,6 +181,8 @@ public:
   /// it
   /// through unchanged.
   template <typename T1> Lst<T1> map_In(crane::fn<T1(A)> f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Lst<T1>> _root{};
     std::shared_ptr<Lst<T1>> *_write = nullptr;
     const Lst<A> *_loop_self = this;

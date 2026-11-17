@@ -127,6 +127,8 @@ template <typename A> Tree<A> Tree<A>::node(A a0, Forest<A> a1) {
 }
 
 template <typename A> Tree<A>::~Tree() {
+  // Release the children this node alone owns in a loop, not recursively, so a
+  // deep value cannot overflow the stack.
   crane::small_vector<crane::obj> _stack = {};
   auto _drain_self = [&](variant_t &_v) {
     if (auto *_alt = std::get_if<Node>(&_v)) {
@@ -170,6 +172,8 @@ template <typename A> Forest<A> Forest<A>::cons(Tree<A> a0, Forest<A> a1) {
 }
 
 template <typename A> Forest<A>::~Forest() {
+  // Release the children this node alone owns in a loop, not recursively, so a
+  // deep value cannot overflow the stack.
   crane::small_vector<crane::obj> _stack = {};
   auto _drain_self = [&](variant_t &_v) {
     if (auto *_alt = std::get_if<Cons>(&_v)) {

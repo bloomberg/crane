@@ -2,6 +2,8 @@
 
 /// Consolidated UNIQUE sorting algorithms and related operations.
 List<uint64_t> LoopifySorting::insert(uint64_t x, const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -35,42 +37,36 @@ List<uint64_t> LoopifySorting::insert(uint64_t x, const List<uint64_t> &l) {
   return std::move(*_root);
 }
 
-List<uint64_t>
-LoopifySorting::insertion_sort(const List<uint64_t> &l) { /// CraneEnter:
-                                                          /// captures varying
-                                                          /// parameters for
-                                                          /// each recursive
-                                                          /// call.
-  struct CraneEnter {
+List<uint64_t> LoopifySorting::insertion_sort(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of insertion_sort: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_insertion_sort_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_insertion_sort_in_Cons>;
   List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified insertion_sort: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = List<uint64_t>::nil();
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_insertion_sort_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_insertion_sort_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       _result = insert(a0, std::move(_result));
     }
@@ -81,6 +77,8 @@ LoopifySorting::insertion_sort(const List<uint64_t> &l) { /// CraneEnter:
 List<uint64_t>
 LoopifySorting::merge_fuel(uint64_t fuel, const List<uint64_t> &l1,
                            const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;
@@ -147,41 +145,34 @@ List<uint64_t> LoopifySorting::merge(const List<uint64_t> &l1,
   return merge_fuel((len_impl<uint64_t>(l1) + len_impl<uint64_t>(l2)), l1, l2);
 }
 
-List<uint64_t>
-LoopifySorting::merge_sort_fuel(uint64_t fuel,
-                                const List<uint64_t> &l) { /// CraneEnter:
-                                                           /// captures varying
-                                                           /// parameters for
-                                                           /// each recursive
-                                                           /// call.
-  struct CraneEnter {
+List<uint64_t> LoopifySorting::merge_sort_fuel(uint64_t fuel,
+                                               const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of merge_sort_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     List<uint64_t> l;
     uint64_t fuel;
   };
 
-  /// CraneCont_l1: saves [f, l2], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_l1 {
+  struct _after_merge_sort_fuel_in_pair {
     uint64_t f;
     List<uint64_t> l2;
   };
 
-  /// CraneCont_l1_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_l1_1 {
+  struct _after_merge_sort_fuel_in_pair_2 {
     List<uint64_t> _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_l1, CraneCont_l1_1>;
+  using _frame = std::variant<_call, _after_merge_sort_fuel_in_pair,
+                              _after_merge_sort_fuel_in_pair_2>;
   List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{l, fuel});
-  /// Loopified merge_sort_fuel: CraneEnter -> CraneCont_l1 -> CraneCont_l1_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       List<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -197,19 +188,20 @@ LoopifySorting::merge_sort_fuel(uint64_t fuel,
             _result = std::move(l);
           } else {
             auto [l1, l2] = split<uint64_t>(l);
-            _stack.emplace_back(CraneCont_l1{f, std::move(l2)});
-            _stack.emplace_back(CraneEnter{std::move(l1), f});
+            _stack.emplace_back(
+                _after_merge_sort_fuel_in_pair{f, std::move(l2)});
+            _stack.emplace_back(_call{std::move(l1), f});
           }
         }
       }
-    } else if (std::holds_alternative<CraneCont_l1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_l1>(_frame));
+    } else if (std::holds_alternative<_after_merge_sort_fuel_in_pair>(_popped)) {
+      auto _f = std::move(std::get<_after_merge_sort_fuel_in_pair>(_popped));
       uint64_t f = _f.f;
       List<uint64_t> l2 = std::move(_f.l2);
-      _stack.emplace_back(CraneCont_l1_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter{std::move(l2), f});
+      _stack.emplace_back(_after_merge_sort_fuel_in_pair_2{std::move(_result)});
+      _stack.emplace_back(_call{std::move(l2), f});
     } else {
-      auto _f = std::move(std::get<CraneCont_l1_1>(_frame));
+      auto _f = std::move(std::get<_after_merge_sort_fuel_in_pair_2>(_popped));
       _result = merge(std::move(_f._tmp2), std::move(_result));
     }
   }
@@ -220,40 +212,37 @@ List<uint64_t> LoopifySorting::merge_sort(const List<uint64_t> &l) {
   return merge_sort_fuel(len_impl<uint64_t>(l), l);
 }
 
-std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
-    uint64_t pivot,
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-  struct CraneEnter {
+std::pair<List<uint64_t>, List<uint64_t>>
+LoopifySorting::partition(uint64_t pivot, const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of partition: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_partition_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_partition_in_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified partition: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_partition_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_partition_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       auto [lo, hi] = std::move(_result);
       if (a0 <= pivot) {
@@ -268,43 +257,36 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifySorting::partition(
   return _result;
 }
 
-List<uint64_t>
-LoopifySorting::quicksort_fuel(uint64_t fuel,
-                               const List<uint64_t> &l) { /// CraneEnter:
-                                                          /// captures varying
-                                                          /// parameters for
-                                                          /// each recursive
-                                                          /// call.
-  struct CraneEnter {
+List<uint64_t> LoopifySorting::quicksort_fuel(uint64_t fuel,
+                                              const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of quicksort_fuel: _call
+  // frames are pending calls, _after frames resume a caller.
+  struct _call {
     List<uint64_t> l;
     uint64_t fuel;
   };
 
-  /// CraneCont_lo: saves [f, a0, hi], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_lo {
+  struct _after_quicksort_fuel_in_pair {
     uint64_t f;
     uint64_t a0;
     List<uint64_t> hi;
   };
 
-  /// CraneCont_lo_1: saves [a0, _tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_lo_1 {
+  struct _after_quicksort_fuel_in_pair_2 {
     uint64_t a0;
     List<uint64_t> _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_lo, CraneCont_lo_1>;
+  using _frame = std::variant<_call, _after_quicksort_fuel_in_pair,
+                              _after_quicksort_fuel_in_pair_2>;
   List<uint64_t> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{l, fuel});
-  /// Loopified quicksort_fuel: CraneEnter -> CraneCont_lo -> CraneCont_lo_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{l, fuel});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       List<uint64_t> l = std::move(_f.l);
       uint64_t fuel = _f.fuel;
       if (fuel <= 0) {
@@ -316,19 +298,21 @@ LoopifySorting::quicksort_fuel(uint64_t fuel,
         } else {
           const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
           auto [lo, hi] = partition(a0, *a1);
-          _stack.emplace_back(CraneCont_lo{f, a0, std::move(hi)});
-          _stack.emplace_back(CraneEnter{std::move(lo), f});
+          _stack.emplace_back(
+              _after_quicksort_fuel_in_pair{f, a0, std::move(hi)});
+          _stack.emplace_back(_call{std::move(lo), f});
         }
       }
-    } else if (std::holds_alternative<CraneCont_lo>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_lo>(_frame));
+    } else if (std::holds_alternative<_after_quicksort_fuel_in_pair>(_popped)) {
+      auto _f = std::move(std::get<_after_quicksort_fuel_in_pair>(_popped));
       uint64_t f = _f.f;
       uint64_t a0 = _f.a0;
       List<uint64_t> hi = std::move(_f.hi);
-      _stack.emplace_back(CraneCont_lo_1{a0, std::move(_result)});
-      _stack.emplace_back(CraneEnter{std::move(hi), f});
+      _stack.emplace_back(
+          _after_quicksort_fuel_in_pair_2{a0, std::move(_result)});
+      _stack.emplace_back(_call{std::move(hi), f});
     } else {
-      auto _f = std::move(std::get<CraneCont_lo_1>(_frame));
+      auto _f = std::move(std::get<_after_quicksort_fuel_in_pair_2>(_popped));
       uint64_t a0 = _f.a0;
       _result = _f._tmp2.app(List<uint64_t>::cons(a0, std::move(_result)));
     }
@@ -341,6 +325,8 @@ List<uint64_t> LoopifySorting::quicksort(const List<uint64_t> &l) {
 }
 
 bool LoopifySorting::is_sorted_aux(uint64_t prev, const List<uint64_t> &l) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   const List<uint64_t> *_loop_l = &l;
   uint64_t _loop_prev = prev;
   while (true) {
@@ -370,6 +356,8 @@ bool LoopifySorting::is_sorted(const List<uint64_t> &l) {
 
 /// remove_duplicates removes consecutive duplicates from sorted list.
 List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;
@@ -414,6 +402,8 @@ List<uint64_t> LoopifySorting::remove_duplicates(const List<uint64_t> &l) {
 /// uniq_sorted variant that preserves order.
 List<uint64_t> LoopifySorting::uniq_sorted_aux(uint64_t prev, bool seen,
                                                const List<uint64_t> &l) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l = &l;

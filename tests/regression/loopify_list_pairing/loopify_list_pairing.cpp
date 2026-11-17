@@ -1,31 +1,27 @@
 #include "loopify_list_pairing.h"
 
-std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::unzip(
-    const List<std::pair<uint64_t,
-                         uint64_t>> &l) { /// CraneEnter: captures varying
-                                          /// parameters for each recursive
-                                          /// call.
-  struct CraneEnter {
+std::pair<List<uint64_t>, List<uint64_t>>
+LoopifyListPairing::unzip(const List<std::pair<uint64_t, uint64_t>> &l) {
+  // Explicit stack replaces the non-tail recursion of unzip: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<std::pair<uint64_t, uint64_t>> *l;
   };
 
-  /// CraneCont_a: saves [a, b], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_a {
+  struct _after_unzip_in_pair {
     uint64_t a;
     uint64_t b;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_a>;
+  using _frame = std::variant<_call, _after_unzip_in_pair>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified unzip: CraneEnter -> CraneCont_a.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<std::pair<uint64_t, uint64_t>> &l = *_f.l;
       if (std::holds_alternative<
               typename List<std::pair<uint64_t, uint64_t>>::Nil>(l.v())) {
@@ -34,11 +30,11 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::unzip(
         const auto &[a0, a1] =
             std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(l.v());
         const auto &[a, b] = a0;
-        _stack.emplace_back(CraneCont_a{a, b});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_unzip_in_pair{a, b});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_a>(_frame));
+      auto _f = std::move(std::get<_after_unzip_in_pair>(_popped));
       uint64_t a = _f.a;
       uint64_t b = _f.b;
       auto [xs, ys] = std::move(_result);
@@ -49,39 +45,37 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::unzip(
   return _result;
 }
 
-std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::swizzle(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-  struct CraneEnter {
+std::pair<List<uint64_t>, List<uint64_t>>
+LoopifyListPairing::swizzle(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of swizzle: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_swizzle_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_swizzle_in_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified swizzle: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_swizzle_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_swizzle_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       auto [odds, evens] = std::move(_result);
       _result = std::make_pair(List<uint64_t>::cons(a0, std::move(evens)),
@@ -91,39 +85,37 @@ std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::swizzle(
   return _result;
 }
 
-std::pair<List<uint64_t>, List<uint64_t>> LoopifyListPairing::partition(
-    const List<uint64_t> &l) { /// CraneEnter: captures varying parameters for
-                               /// each recursive call.
-  struct CraneEnter {
+std::pair<List<uint64_t>, List<uint64_t>>
+LoopifyListPairing::partition(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of partition: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const List<uint64_t> *l;
   };
 
-  /// CraneCont_Cons: saves [a0], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_partition_in_Cons {
     uint64_t a0;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Cons>;
+  using _frame = std::variant<_call, _after_partition_in_Cons>;
   std::pair<List<uint64_t>, List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&l});
-  /// Loopified partition: CraneEnter -> CraneCont_Cons.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = *_f.l;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(List<uint64_t>::nil(), List<uint64_t>::nil());
       } else {
         const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        _stack.emplace_back(CraneCont_Cons{a0});
-        _stack.emplace_back(CraneEnter{crane_raw(a1)});
+        _stack.emplace_back(_after_partition_in_Cons{a0});
+        _stack.emplace_back(_call{crane_raw(a1)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+      auto _f = std::move(std::get<_after_partition_in_Cons>(_popped));
       uint64_t a0 = _f.a0;
       auto [yes, no] = std::move(_result);
       if ((UINT64_C(2) ? a0 % UINT64_C(2) : a0) == UINT64_C(0)) {
@@ -142,6 +134,8 @@ List<std::pair<uint64_t, uint64_t>>
 LoopifyListPairing::zip_longest_fuel(uint64_t fuel, const List<uint64_t> &l1,
                                      const List<uint64_t> &l2,
                                      uint64_t default0) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<std::pair<uint64_t, uint64_t>>> _root{};
   std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> *_write = nullptr;
   List<uint64_t> _loop_l2 = l2;
@@ -244,6 +238,8 @@ LoopifyListPairing::zip_longest(const List<uint64_t> &l1,
 
 List<uint64_t> LoopifyListPairing::zipWith(const List<uint64_t> &l1,
                                            const List<uint64_t> &l2) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   std::shared_ptr<List<uint64_t>> *_write = nullptr;
   const List<uint64_t> *_loop_l2 = &l2;

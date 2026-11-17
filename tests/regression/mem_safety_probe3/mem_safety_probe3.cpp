@@ -3,6 +3,8 @@
 /// TEST 10: Large tree with deep recursion — stresses the
 /// loopified tree traversal and clone mechanisms.
 MemSafetyProbe3::tree MemSafetyProbe3::build_deep(uint64_t n) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<MemSafetyProbe3::tree> _root{};
   std::shared_ptr<MemSafetyProbe3::tree> *_write = nullptr;
   uint64_t _loop_n = n;

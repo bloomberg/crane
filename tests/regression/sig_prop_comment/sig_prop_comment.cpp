@@ -1,7 +1,7 @@
 #include "sig_prop_comment.h"
 
-uint64_t
-SigSubset::head(const Sig<SigSubset::lst> &p) { // Precondition: match l with
+uint64_t SigSubset::head(const Sig<SigSubset::lst> &p) {
+  // Precondition: match l with
   // | SigSubset.nil => False
   // | SigSubset.cons _ _ => True
   // end

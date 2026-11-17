@@ -1,6 +1,8 @@
 #include "tmc_value_root.h"
 
 TmcValueRoot::lst TmcValueRoot::range(uint64_t start, uint64_t count) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<TmcValueRoot::lst> _root{};
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
   uint64_t _loop_count = count;
@@ -30,6 +32,8 @@ TmcValueRoot::lst TmcValueRoot::range(uint64_t start, uint64_t count) {
 
 TmcValueRoot::lst TmcValueRoot::app(const TmcValueRoot::lst &xs,
                                     TmcValueRoot::lst ys) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<TmcValueRoot::lst> _root{};
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
   const TmcValueRoot::lst *_loop_xs = &xs;
@@ -58,6 +62,8 @@ TmcValueRoot::lst TmcValueRoot::app(const TmcValueRoot::lst &xs,
 
 /// Two cells per step: the second is allocated and linked into the first.
 TmcValueRoot::lst TmcValueRoot::stutter(const TmcValueRoot::lst &xs) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<TmcValueRoot::lst> _root{};
   std::shared_ptr<TmcValueRoot::lst> *_write = nullptr;
   const TmcValueRoot::lst *_loop_xs = &xs;

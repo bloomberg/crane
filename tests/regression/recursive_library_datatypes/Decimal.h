@@ -140,6 +140,8 @@ public:
 
   // MANIPULATORS
   ~Uint() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Uint> {
       if (auto *_alt = std::get_if<D0>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -226,169 +228,148 @@ public:
                F7 &&f6, F8 &&f7, F9 &&f8, F10 &&f9) const {
     const Uint *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of uint_rect: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const Uint *_self;
     };
 
-    /// CraneCont_D0: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D0 {
+    struct _after_uint_rect_in_D0 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D1: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D1 {
+    struct _after_uint_rect_in_D1 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D2: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D2 {
+    struct _after_uint_rect_in_D2 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D3: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D3 {
+    struct _after_uint_rect_in_D3 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D4: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D4 {
+    struct _after_uint_rect_in_D4 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D5: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D5 {
+    struct _after_uint_rect_in_D5 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D6: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D6 {
+    struct _after_uint_rect_in_D6 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D7: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D7 {
+    struct _after_uint_rect_in_D7 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D8: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D8 {
+    struct _after_uint_rect_in_D8 {
       std::shared_ptr<Uint> a0;
     };
 
-    /// CraneCont_D9: saves [a0], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_D9 {
+    struct _after_uint_rect_in_D9 {
       std::shared_ptr<Uint> a0;
     };
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_D0, CraneCont_D1, CraneCont_D2,
-                     CraneCont_D3, CraneCont_D4, CraneCont_D5, CraneCont_D6,
-                     CraneCont_D7, CraneCont_D8, CraneCont_D9>;
+    using _frame = std::variant<
+        _call, _after_uint_rect_in_D0, _after_uint_rect_in_D1,
+        _after_uint_rect_in_D2, _after_uint_rect_in_D3, _after_uint_rect_in_D4,
+        _after_uint_rect_in_D5, _after_uint_rect_in_D6, _after_uint_rect_in_D7,
+        _after_uint_rect_in_D8, _after_uint_rect_in_D9>;
     T1 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified uint_rect: CraneEnter -> CraneCont_D0 -> CraneCont_D1 ->
-    /// CraneCont_D2 -> CraneCont_D3 -> CraneCont_D4 -> CraneCont_D5 ->
-    /// CraneCont_D6 -> CraneCont_D7 -> CraneCont_D8 -> CraneCont_D9.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const Uint *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Uint::Nil>(_sv.v())) {
           _result = f;
         } else if (std::holds_alternative<typename Uint::D0>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D0>(_sv.v());
-          _stack.emplace_back(CraneCont_D0{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D0{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D1>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D1>(_sv.v());
-          _stack.emplace_back(CraneCont_D1{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D1{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D2>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D2>(_sv.v());
-          _stack.emplace_back(CraneCont_D2{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D2{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D3>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D3>(_sv.v());
-          _stack.emplace_back(CraneCont_D3{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D3{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D4>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D4>(_sv.v());
-          _stack.emplace_back(CraneCont_D4{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D4{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D5>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D5>(_sv.v());
-          _stack.emplace_back(CraneCont_D5{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D5{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D6>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D6>(_sv.v());
-          _stack.emplace_back(CraneCont_D6{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D6{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D7>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D7>(_sv.v());
-          _stack.emplace_back(CraneCont_D7{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D7{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D8>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D8>(_sv.v());
-          _stack.emplace_back(CraneCont_D8{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D8{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else {
           const auto &[a0] = std::get<typename Uint::D9>(_sv.v());
-          _stack.emplace_back(CraneCont_D9{a0});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_uint_rect_in_D9{a0});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<CraneCont_D0>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D0>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D0>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D0>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f0(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D1>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D1>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D1>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D1>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f1(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D2>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D2>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D2>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D2>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f2(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D3>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D3>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D3>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D3>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f3(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D4>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D4>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D4>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D4>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f4(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D5>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D5>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D5>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D5>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f5(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D6>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D6>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D6>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D6>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f6(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D7>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D7>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D7>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D7>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f7(*a0, std::move(_result));
-      } else if (std::holds_alternative<CraneCont_D8>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D8>(_frame));
+      } else if (std::holds_alternative<_after_uint_rect_in_D8>(_popped)) {
+        auto _f = std::move(std::get<_after_uint_rect_in_D8>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f8(*a0, std::move(_result));
       } else {
-        auto _f = std::move(std::get<CraneCont_D9>(_frame));
+        auto _f = std::move(std::get<_after_uint_rect_in_D9>(_popped));
         std::shared_ptr<Uint> a0 = std::move(_f.a0);
         _result = f9(*a0, std::move(_result));
       }
@@ -406,6 +387,8 @@ public:
   }
 
   bool uint_beq(const Uint &y) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint *_loop_self = this;
     const Uint *_loop_y = &y;
     while (true) {
@@ -528,130 +511,119 @@ public:
   uint64_t nb_digits() const {
     const Uint *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of nb_digits: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const Uint *_self;
     };
 
-    /// CraneCont_D0: resumes after recursive call, then processes rest.
-    struct CraneCont_D0 {};
+    struct _after_nb_digits_in_D0 {};
 
-    /// CraneCont_D1: resumes after recursive call, then processes rest.
-    struct CraneCont_D1 {};
+    struct _after_nb_digits_in_D1 {};
 
-    /// CraneCont_D2: resumes after recursive call, then processes rest.
-    struct CraneCont_D2 {};
+    struct _after_nb_digits_in_D2 {};
 
-    /// CraneCont_D3: resumes after recursive call, then processes rest.
-    struct CraneCont_D3 {};
+    struct _after_nb_digits_in_D3 {};
 
-    /// CraneCont_D4: resumes after recursive call, then processes rest.
-    struct CraneCont_D4 {};
+    struct _after_nb_digits_in_D4 {};
 
-    /// CraneCont_D5: resumes after recursive call, then processes rest.
-    struct CraneCont_D5 {};
+    struct _after_nb_digits_in_D5 {};
 
-    /// CraneCont_D6: resumes after recursive call, then processes rest.
-    struct CraneCont_D6 {};
+    struct _after_nb_digits_in_D6 {};
 
-    /// CraneCont_D7: resumes after recursive call, then processes rest.
-    struct CraneCont_D7 {};
+    struct _after_nb_digits_in_D7 {};
 
-    /// CraneCont_D8: resumes after recursive call, then processes rest.
-    struct CraneCont_D8 {};
+    struct _after_nb_digits_in_D8 {};
 
-    /// CraneCont_D9: resumes after recursive call, then processes rest.
-    struct CraneCont_D9 {};
+    struct _after_nb_digits_in_D9 {};
 
-    using CraneFrame =
-        std::variant<CraneEnter, CraneCont_D0, CraneCont_D1, CraneCont_D2,
-                     CraneCont_D3, CraneCont_D4, CraneCont_D5, CraneCont_D6,
-                     CraneCont_D7, CraneCont_D8, CraneCont_D9>;
+    using _frame = std::variant<
+        _call, _after_nb_digits_in_D0, _after_nb_digits_in_D1,
+        _after_nb_digits_in_D2, _after_nb_digits_in_D3, _after_nb_digits_in_D4,
+        _after_nb_digits_in_D5, _after_nb_digits_in_D6, _after_nb_digits_in_D7,
+        _after_nb_digits_in_D8, _after_nb_digits_in_D9>;
     uint64_t _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified nb_digits: CraneEnter -> CraneCont_D0 -> CraneCont_D1 ->
-    /// CraneCont_D2 -> CraneCont_D3 -> CraneCont_D4 -> CraneCont_D5 ->
-    /// CraneCont_D6 -> CraneCont_D7 -> CraneCont_D8 -> CraneCont_D9.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const Uint *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Uint::Nil>(_sv.v())) {
           _result = UINT64_C(0);
         } else if (std::holds_alternative<typename Uint::D0>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D0>(_sv.v());
-          _stack.emplace_back(CraneCont_D0{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D0{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D1>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D1>(_sv.v());
-          _stack.emplace_back(CraneCont_D1{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D1{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D2>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D2>(_sv.v());
-          _stack.emplace_back(CraneCont_D2{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D2{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D3>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D3>(_sv.v());
-          _stack.emplace_back(CraneCont_D3{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D3{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D4>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D4>(_sv.v());
-          _stack.emplace_back(CraneCont_D4{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D4{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D5>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D5>(_sv.v());
-          _stack.emplace_back(CraneCont_D5{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D5{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D6>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D6>(_sv.v());
-          _stack.emplace_back(CraneCont_D6{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D6{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D7>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D7>(_sv.v());
-          _stack.emplace_back(CraneCont_D7{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D7{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else if (std::holds_alternative<typename Uint::D8>(_sv.v())) {
           const auto &[a0] = std::get<typename Uint::D8>(_sv.v());
-          _stack.emplace_back(CraneCont_D8{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D8{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         } else {
           const auto &[a0] = std::get<typename Uint::D9>(_sv.v());
-          _stack.emplace_back(CraneCont_D9{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_nb_digits_in_D9{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
-      } else if (std::holds_alternative<CraneCont_D0>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D0>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D0>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D0>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D1>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D1>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D1>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D1>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D2>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D2>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D2>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D2>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D3>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D3>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D3>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D3>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D4>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D4>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D4>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D4>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D5>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D5>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D5>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D5>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D6>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D6>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D6>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D6>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D7>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D7>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D7>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D7>(_popped));
         _result = (std::move(_result) + 1);
-      } else if (std::holds_alternative<CraneCont_D8>(_frame)) {
-        auto _f = std::move(std::get<CraneCont_D8>(_frame));
+      } else if (std::holds_alternative<_after_nb_digits_in_D8>(_popped)) {
+        auto _f = std::move(std::get<_after_nb_digits_in_D8>(_popped));
         _result = (std::move(_result) + 1);
       } else {
-        auto _f = std::move(std::get<CraneCont_D9>(_frame));
+        auto _f = std::move(std::get<_after_nb_digits_in_D9>(_popped));
         _result = (std::move(_result) + 1);
       }
     }
@@ -659,6 +631,8 @@ public:
   }
 
   Uint nzhead() const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint *_loop_self = this;
     while (true) {
       auto &&_sv = *_loop_self;
@@ -709,6 +683,8 @@ public:
   }
 
   Uint revapp(Uint d_) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint *_loop_self = this;
     Uint _loop_d_ = std::move(d_);
     while (true) {
@@ -784,6 +760,8 @@ public:
   }
 
   Uint del_head(uint64_t n) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const Uint *_loop_self = this;
     uint64_t _loop_n = n;
     while (true) {

@@ -69,6 +69,8 @@ struct DeepDestruct {
 
     // MANIPULATORS
     ~mylist() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<mylist<A>> {
         if (auto *_alt = std::get_if<Mycons>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -96,41 +98,37 @@ struct DeepDestruct {
   };
 
   template <typename T1, typename T2, typename F1>
-  static T2
-  mylist_rect(T2 f, F1 &&f0,
-              const mylist<T1> &m) { /// CraneEnter: captures varying parameters
-                                     /// for each recursive call.
-    struct CraneEnter {
+  static T2 mylist_rect(T2 f, F1 &&f0, const mylist<T1> &m) {
+    // Explicit stack replaces the non-tail recursion of mylist_rect: _call
+    // frames are pending calls, _after frames resume a caller.
+    struct _call {
       const mylist<T1> *m;
     };
 
-    /// CraneCont_Mycons: saves [a0, a1], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont_Mycons {
+    struct _after_mylist_rect_in_Mycons {
       T1 a0;
       std::shared_ptr<mylist<T1>> a1;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_Mycons>;
+    using _frame = std::variant<_call, _after_mylist_rect_in_Mycons>;
     T2 _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&m});
-    /// Loopified mylist_rect: CraneEnter -> CraneCont_Mycons.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const mylist<T1> &m = *_f.m;
         if (std::holds_alternative<typename mylist<T1>::Mynil>(m.v())) {
           _result = f;
         } else {
           const auto &[a0, a1] = std::get<typename mylist<T1>::Mycons>(m.v());
-          _stack.emplace_back(CraneCont_Mycons{a0, a1});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_mylist_rect_in_Mycons{a0, a1});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_Mycons>(_frame));
+        auto _f = std::move(std::get<_after_mylist_rect_in_Mycons>(_popped));
         auto a0 = std::move(_f.a0);
         std::shared_ptr<mylist<T1>> a1 = std::move(_f.a1);
         _result = f0(a0, *a1, std::move(_result));

@@ -39,6 +39,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -67,35 +69,34 @@ public:
   Nat mul(const Nat &m) const {
     const Nat *_self = this;
 
-    /// CraneEnter: captures varying parameters for each recursive call.
-    struct CraneEnter {
+    // Explicit stack replaces the non-tail recursion of mul: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
       const Nat *_self;
     };
 
-    /// CraneCont_S: resumes after recursive call, then processes rest.
-    struct CraneCont_S {};
+    struct _after_mul_in_S {};
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_S>;
+    using _frame = std::variant<_call, _after_mul_in_S>;
     Nat _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{_self});
-    /// Loopified mul: CraneEnter -> CraneCont_S.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const Nat *_self = _f._self;
         auto &&_sv = *_self;
         if (std::holds_alternative<typename Nat::O>(_sv.v())) {
           _result = Nat::o();
         } else {
           const auto &[a0] = std::get<typename Nat::S>(_sv.v());
-          _stack.emplace_back(CraneCont_S{});
-          _stack.emplace_back(CraneEnter{crane_raw(a0)});
+          _stack.emplace_back(_after_mul_in_S{});
+          _stack.emplace_back(_call{crane_raw(a0)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_S>(_frame));
+        auto _f = std::move(std::get<_after_mul_in_S>(_popped));
         _result = m.add(std::move(_result));
       }
     }
@@ -103,6 +104,8 @@ public:
   }
 
   Nat add(Nat m) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
     std::optional<Nat> _root{};
     std::shared_ptr<Nat> *_write = nullptr;
     const Nat *_loop_self = this;

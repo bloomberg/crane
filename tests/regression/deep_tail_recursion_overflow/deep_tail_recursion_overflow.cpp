@@ -3,6 +3,8 @@
 DeepTailRecursionOverflow::chain
 DeepTailRecursionOverflow::build(uint64_t n,
                                  DeepTailRecursionOverflow::chain acc) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   DeepTailRecursionOverflow::chain _loop_acc = std::move(acc);
   uint64_t _loop_n = n;
   while (true) {
@@ -17,30 +19,27 @@ DeepTailRecursionOverflow::build(uint64_t n,
   }
 }
 
-uint64_t DeepTailRecursionOverflow::total_of(
-    const DeepTailRecursionOverflow::chain &c) { /// CraneEnter: captures
-                                                 /// varying parameters for each
-                                                 /// recursive call.
-  struct CraneEnter {
+uint64_t
+DeepTailRecursionOverflow::total_of(const DeepTailRecursionOverflow::chain &c) {
+  // Explicit stack replaces the non-tail recursion of total_of: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     const DeepTailRecursionOverflow::chain *c;
   };
 
-  /// CraneCont_Link: saves [a1], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Link {
+  struct _after_total_of_in_Link {
     uint64_t a1;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_Link>;
+  using _frame = std::variant<_call, _after_total_of_in_Link>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{&c});
-  /// Loopified total_of: CraneEnter -> CraneCont_Link.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&c});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const DeepTailRecursionOverflow::chain &c = *_f.c;
       if (std::holds_alternative<
               typename DeepTailRecursionOverflow::chain::End_>(c.v())) {
@@ -50,11 +49,11 @@ uint64_t DeepTailRecursionOverflow::total_of(
       } else {
         const auto &[a0, a1] =
             std::get<typename DeepTailRecursionOverflow::chain::Link>(c.v());
-        _stack.emplace_back(CraneCont_Link{a1});
-        _stack.emplace_back(CraneEnter{crane_raw(a0)});
+        _stack.emplace_back(_after_total_of_in_Link{a1});
+        _stack.emplace_back(_call{crane_raw(a0)});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_Link>(_frame));
+      auto _f = std::move(std::get<_after_total_of_in_Link>(_popped));
       uint64_t a1 = _f.a1;
       _result = (a1 + std::move(_result));
     }

@@ -58,6 +58,8 @@ uint64_t SharedVariantBasic::long_result(uint64_t n) {
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
+  // Builds the result front to back: _write points at the empty tail the next
+  // cell fills.
   std::optional<List<uint64_t>> _root{};
   crane::shared_box<List<uint64_t>> *_write = nullptr;
   uint64_t _loop_len = len;

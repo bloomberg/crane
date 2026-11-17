@@ -13,27 +13,25 @@ uint64_t
 LoopifyLocalFixInnerCallback::ack(const std::pair<uint64_t, uint64_t> &p) {
   auto f_impl = [&](auto &_self_f, uint64_t m, uint64_t n) -> uint64_t {
     auto ack_m = [&](uint64_t n0) -> uint64_t {
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of ack_m: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         uint64_t n0;
       };
 
-      /// CraneCont_pn: saves [pm], resumes after recursive call, then processes
-      /// rest.
-      struct CraneCont_pn {
+      struct _after_ack_m_in_S {
         uint64_t pm;
       };
 
-      using CraneFrame = std::variant<CraneEnter, CraneCont_pn>;
+      using _frame = std::variant<_call, _after_ack_m_in_S>;
       uint64_t _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{n0});
-      /// Loopified ack_m: CraneEnter -> CraneCont_pn.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{n0});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           uint64_t n0 = _f.n0;
           if (m <= 0) {
             _result = (n0 + 1);
@@ -43,12 +41,12 @@ LoopifyLocalFixInnerCallback::ack(const std::pair<uint64_t, uint64_t> &p) {
               _result = _self_f(_self_f, pm, UINT64_C(1));
             } else {
               uint64_t pn = n0 - 1;
-              _stack.emplace_back(CraneCont_pn{pm});
-              _stack.emplace_back(CraneEnter{pn});
+              _stack.emplace_back(_after_ack_m_in_S{pm});
+              _stack.emplace_back(_call{pn});
             }
           }
         } else {
-          auto _f = std::move(std::get<CraneCont_pn>(_frame));
+          auto _f = std::move(std::get<_after_ack_m_in_S>(_popped));
           uint64_t pm = _f.pm;
           _result = _self_f(_self_f, pm, std::move(_result));
         }

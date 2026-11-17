@@ -40,6 +40,8 @@ uint64_t LoopifyTailPtrAlias::hd(const LoopifyTailPtrAlias::lst &l) {
 uint64_t LoopifyTailPtrAlias::rot(uint64_t n, const LoopifyTailPtrAlias::lst &l,
                                   const LoopifyTailPtrAlias::lst &acc,
                                   uint64_t s) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_s = s;
   LoopifyTailPtrAlias::lst _loop_acc = acc;
   LoopifyTailPtrAlias::lst _loop_l = l;

@@ -14,42 +14,39 @@ LoopifyNontailPair::classify(const List<uint64_t> &l) {
 }
 
 std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>>
-LoopifyNontailPair::countdown(const List<uint64_t> &l) { /// CraneEnter:
-                                                         /// captures varying
-                                                         /// parameters for each
-                                                         /// recursive call.
-  struct CraneEnter {
+LoopifyNontailPair::countdown(const List<uint64_t> &l) {
+  // Explicit stack replaces the non-tail recursion of countdown: _call frames
+  // are pending calls, _after frames resume a caller.
+  struct _call {
     List<uint64_t> l;
   };
 
-  /// CraneCont_x: saves [x], resumes after recursive call, then processes rest.
-  struct CraneCont_x {
+  struct _after_countdown_in_pair {
     uint64_t x;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_x>;
+  using _frame = std::variant<_call, _after_countdown_in_pair>;
   std::pair<std::pair<uint64_t, List<uint64_t>>, List<uint64_t>> _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{l});
-  /// Loopified countdown: CraneEnter -> CraneCont_x.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{l});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const List<uint64_t> &l = _f.l;
       auto [_x, o] = classify(l);
       if (o.has_value()) {
         const std::pair<uint64_t, List<uint64_t>> &p = *o;
         const auto &[x, xs] = p;
-        _stack.emplace_back(CraneCont_x{x});
-        _stack.emplace_back(CraneEnter{xs});
+        _stack.emplace_back(_after_countdown_in_pair{x});
+        _stack.emplace_back(_call{xs});
       } else {
         _result = std::make_pair(
             std::make_pair(UINT64_C(0), List<uint64_t>::nil()), l);
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_x>(_frame));
+      auto _f = std::move(std::get<_after_countdown_in_pair>(_popped));
       uint64_t x = _f.x;
       auto [p0, rest] = std::move(_result);
       auto [cnt, acc] = std::move(p0);

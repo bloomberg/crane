@@ -68,6 +68,8 @@ public:
 
   // MANIPULATORS
   ~List() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<List<A>> {
       if (auto *_alt = std::get_if<Cons>(&_v)) {
         if (_alt->l && _alt->l.use_count() == 1) {
@@ -96,6 +98,8 @@ public:
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
   T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
     const List<A> *_loop_self = this;
     T1 _loop_a0 = std::move(a0);
     while (true) {
@@ -136,32 +140,27 @@ struct LoopifyAdoptedFixAliasResult {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-  static t<T3>
-  map2_l(F0 &&f,
-         const List<std::pair<uint64_t,
-                              T1>> &m) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-    struct CraneEnter {
+  static t<T3> map2_l(F0 &&f, const List<std::pair<uint64_t, T1>> &m) {
+    // Explicit stack replaces the non-tail recursion of map2_l: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<std::pair<uint64_t, T1>> *m;
     };
 
-    /// CraneCont_k: saves [k, e], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_k {
+    struct _after_map2_l_in_pair {
       uint64_t k;
       T1 e;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_k>;
+    using _frame = std::variant<_call, _after_map2_l_in_pair>;
     t<T3> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&m});
-    /// Loopified map2_l: CraneEnter -> CraneCont_k.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<std::pair<uint64_t, T1>> &m = *_f.m;
         if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
                 m.v())) {
@@ -170,11 +169,11 @@ struct LoopifyAdoptedFixAliasResult {
           const auto &[a0, a1] =
               std::get<typename List<std::pair<uint64_t, T1>>::Cons>(m.v());
           const auto &[k, e] = a0;
-          _stack.emplace_back(CraneCont_k{k, e});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_map2_l_in_pair{k, e});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_k>(_frame));
+        auto _f = std::move(std::get<_after_map2_l_in_pair>(_popped));
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
         _result = option_cons<T3>(
@@ -186,32 +185,27 @@ struct LoopifyAdoptedFixAliasResult {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-  static t<T3>
-  map2_r(F0 &&f,
-         const List<std::pair<uint64_t,
-                              T2>> &m) { /// CraneEnter: captures varying
-                                         /// parameters for each recursive call.
-    struct CraneEnter {
+  static t<T3> map2_r(F0 &&f, const List<std::pair<uint64_t, T2>> &m) {
+    // Explicit stack replaces the non-tail recursion of map2_r: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
       const List<std::pair<uint64_t, T2>> *m;
     };
 
-    /// CraneCont_k: saves [k, e], resumes after recursive call, then processes
-    /// rest.
-    struct CraneCont_k {
+    struct _after_map2_r_in_pair {
       uint64_t k;
       T2 e;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneCont_k>;
+    using _frame = std::variant<_call, _after_map2_r_in_pair>;
     t<T3> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&m});
-    /// Loopified map2_r: CraneEnter -> CraneCont_k.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&m});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const List<std::pair<uint64_t, T2>> &m = *_f.m;
         if (std::holds_alternative<typename List<std::pair<uint64_t, T2>>::Nil>(
                 m.v())) {
@@ -220,11 +214,11 @@ struct LoopifyAdoptedFixAliasResult {
           const auto &[a0, a1] =
               std::get<typename List<std::pair<uint64_t, T2>>::Cons>(m.v());
           const auto &[k, e] = a0;
-          _stack.emplace_back(CraneCont_k{k, e});
-          _stack.emplace_back(CraneEnter{crane_raw(a1)});
+          _stack.emplace_back(_after_map2_r_in_pair{k, e});
+          _stack.emplace_back(_call{crane_raw(a1)});
         }
       } else {
-        auto _f = std::move(std::get<CraneCont_k>(_frame));
+        auto _f = std::move(std::get<_after_map2_r_in_pair>(_popped));
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
         _result = option_cons<T3>(
@@ -236,17 +230,15 @@ struct LoopifyAdoptedFixAliasResult {
   }
 
   template <typename T1, typename T2, typename T3, typename F0>
-  static t<T3> map2(F0 &&f, List<std::pair<uint64_t, T1>> m,
-                    const t<T2> &x0_) { /// CraneEnter: captures varying
-                                        /// parameters for each recursive call.
-    struct CraneEnter {
+  static t<T3> map2(F0 &&f, List<std::pair<uint64_t, T1>> m, const t<T2> &x0_) {
+    // Explicit stack replaces the non-tail recursion of map2: _call frames are
+    // pending calls, _after frames resume a caller.
+    struct _call {
       const t<T2> *x0_;
       List<std::pair<uint64_t, T1>> m;
     };
 
-    /// CraneEnter_map2_aux: captures varying parameters for each recursive
-    /// call.
-    struct CraneEnter_map2_aux {
+    struct _call_map2_aux {
       const List<std::pair<uint64_t, T2>> *m_;
       std::shared_ptr<List<std::pair<uint64_t, T1>>> a1;
       T1 e;
@@ -255,42 +247,35 @@ struct LoopifyAdoptedFixAliasResult {
       List<std::pair<uint64_t, T1>> m;
     };
 
-    /// CraneCont1: saves [f, k, e], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont1 {
-      std::decay_t<F0> f;
-      uint64_t k;
-      T1 e;
-    };
-
-    /// CraneCont2: saves [f, k_, e_], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont2 {
+    struct _after_map2_aux_in_true {
       std::decay_t<F0> f;
       uint64_t k_;
       T2 e_;
     };
 
-    /// CraneCont3: saves [f, k, e, e_], resumes after recursive call, then
-    /// processes rest.
-    struct CraneCont3 {
+    struct _after_map2_in_false {
       std::decay_t<F0> f;
       uint64_t k;
       T1 e;
       T2 e_;
     };
 
-    using CraneFrame = std::variant<CraneEnter, CraneEnter_map2_aux, CraneCont1,
-                                    CraneCont2, CraneCont3>;
+    struct _after_map2_in_true {
+      std::decay_t<F0> f;
+      uint64_t k;
+      T1 e;
+    };
+
+    using _frame = std::variant<_call, _call_map2_aux, _after_map2_aux_in_true,
+                                _after_map2_in_false, _after_map2_in_true>;
     t<T3> _result{};
-    crane::small_vector<CraneFrame> _stack;
-    _stack.emplace_back(CraneEnter{&x0_, std::move(m)});
-    /// Loopified map2: CraneEnter -> CraneCont1 -> CraneCont2 -> CraneCont3.
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{&x0_, std::move(m)});
     while (!_stack.empty()) {
-      CraneFrame _frame = std::move(_stack.back());
+      _frame _popped = std::move(_stack.back());
       _stack.pop_back();
-      if (std::holds_alternative<CraneEnter>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter>(_frame));
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
         const t<T2> &x0_ = *_f.x0_;
         List<std::pair<uint64_t, T1>> m = std::move(_f.m);
         if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
@@ -300,10 +285,10 @@ struct LoopifyAdoptedFixAliasResult {
           auto &[a0, a1] =
               std::get<typename List<std::pair<uint64_t, T1>>::Cons>(m.v_mut());
           const auto &[k, e] = a0;
-          _stack.emplace_back(CraneEnter_map2_aux{&x0_, a1, e, f, k, m});
+          _stack.emplace_back(_call_map2_aux{&x0_, a1, e, f, k, m});
         }
-      } else if (std::holds_alternative<CraneEnter_map2_aux>(_frame)) {
-        auto _f = std::move(std::get<CraneEnter_map2_aux>(_frame));
+      } else if (std::holds_alternative<_call_map2_aux>(_popped)) {
+        auto _f = std::move(std::get<_call_map2_aux>(_popped));
         const List<std::pair<uint64_t, T2>> &m_ = *_f.m_;
         std::shared_ptr<List<std::pair<uint64_t, T1>>> a1 = std::move(_f.a1);
         auto e = std::move(_f.e);
@@ -318,44 +303,44 @@ struct LoopifyAdoptedFixAliasResult {
               std::get<typename List<std::pair<uint64_t, T2>>::Cons>(m_.v());
           const auto &[k_, e_] = a00;
           if (k < k_) {
-            _stack.emplace_back(CraneCont1{f, k, std::move(e)});
-            _stack.emplace_back(CraneEnter{&m_, *a1});
+            _stack.emplace_back(_after_map2_in_true{f, k, std::move(e)});
+            _stack.emplace_back(_call{&m_, *a1});
           } else {
             if (k_ < k) {
-              _stack.emplace_back(CraneCont2{f, k_, e_});
+              _stack.emplace_back(_after_map2_aux_in_true{f, k_, e_});
               _stack.emplace_back(
-                  CraneEnter_map2_aux{crane_raw(a10), std::move(a1),
-                                      std::move(e), f, k, std::move(m)});
+                  _call_map2_aux{crane_raw(a10), std::move(a1), std::move(e), f,
+                                 k, std::move(m)});
             } else {
-              _stack.emplace_back(CraneCont3{f, k, std::move(e), e_});
-              _stack.emplace_back(CraneEnter{crane_raw(a10), *a1});
+              _stack.emplace_back(_after_map2_in_false{f, k, std::move(e), e_});
+              _stack.emplace_back(_call{crane_raw(a10), *a1});
             }
           }
         }
-      } else if (std::holds_alternative<CraneCont1>(_frame)) {
-        auto _f = std::move(std::get<CraneCont1>(_frame));
-        std::decay_t<F0> f = std::move(_f.f);
-        uint64_t k = _f.k;
-        auto e = std::move(_f.e);
-        _result = option_cons<T3>(
-            k, f(std::make_optional<T1>(e), std::optional<T2>()),
-            std::move(_result));
-      } else if (std::holds_alternative<CraneCont2>(_frame)) {
-        auto _f = std::move(std::get<CraneCont2>(_frame));
+      } else if (std::holds_alternative<_after_map2_aux_in_true>(_popped)) {
+        auto _f = std::move(std::get<_after_map2_aux_in_true>(_popped));
         std::decay_t<F0> f = std::move(_f.f);
         uint64_t k_ = _f.k_;
         auto e_ = std::move(_f.e_);
         _result = option_cons<T3>(
             k_, f(std::optional<T1>(), std::make_optional<T2>(e_)),
             std::move(_result));
-      } else {
-        auto _f = std::move(std::get<CraneCont3>(_frame));
+      } else if (std::holds_alternative<_after_map2_in_false>(_popped)) {
+        auto _f = std::move(std::get<_after_map2_in_false>(_popped));
         std::decay_t<F0> f = std::move(_f.f);
         uint64_t k = _f.k;
         auto e = std::move(_f.e);
         auto e_ = std::move(_f.e_);
         _result = option_cons<T3>(
             k, f(std::make_optional<T1>(e), std::make_optional<T2>(e_)),
+            std::move(_result));
+      } else {
+        auto _f = std::move(std::get<_after_map2_in_true>(_popped));
+        std::decay_t<F0> f = std::move(_f.f);
+        uint64_t k = _f.k;
+        auto e = std::move(_f.e);
+        _result = option_cons<T3>(
+            k, f(std::make_optional<T1>(e), std::optional<T2>()),
             std::move(_result));
       }
     }

@@ -50,6 +50,8 @@ struct DepMatchWildcardUnitArm {
 
     // MANIPULATORS
     ~ty() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       if (std::holds_alternative<TNat>(v_mut())) {
         return;
       }
@@ -101,37 +103,33 @@ struct DepMatchWildcardUnitArm {
     template <typename T1, typename F2> T1 ty_rect(T1 f, T1 f0, F2 &&f1) const {
       const ty *_self = this;
 
-      /// CraneEnter: captures varying parameters for each recursive call.
-      struct CraneEnter {
+      // Explicit stack replaces the non-tail recursion of ty_rect: _call frames
+      // are pending calls, _after frames resume a caller.
+      struct _call {
         const ty *_self;
       };
 
-      /// CraneCont_TArr: saves [a0, a1], resumes after recursive call, then
-      /// processes rest.
-      struct CraneCont_TArr {
+      struct _after_ty_rect_in_TArr {
         std::shared_ptr<ty> a0;
         const ty *a1;
       };
 
-      /// CraneCont_TArr_1: saves [a0, a1, _tmp2], resumes after recursive call,
-      /// then processes rest.
-      struct CraneCont_TArr_1 {
+      struct _after_ty_rect_in_TArr_2 {
         std::shared_ptr<ty> a0;
         const ty *a1;
         T1 _tmp2;
       };
 
-      using CraneFrame =
-          std::variant<CraneEnter, CraneCont_TArr, CraneCont_TArr_1>;
+      using _frame =
+          std::variant<_call, _after_ty_rect_in_TArr, _after_ty_rect_in_TArr_2>;
       T1 _result{};
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{_self});
-      /// Loopified ty_rect: CraneEnter -> CraneCont_TArr -> CraneCont_TArr_1.
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{_self});
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           const ty *_self = _f._self;
           auto &&_sv = *_self;
           if (std::holds_alternative<typename ty::TNat>(_sv.v())) {
@@ -140,18 +138,18 @@ struct DepMatchWildcardUnitArm {
             _result = f0;
           } else {
             const auto &[a0, a1] = std::get<typename ty::TArr>(_sv.v());
-            _stack.emplace_back(CraneCont_TArr{a0, crane_raw(a1)});
-            _stack.emplace_back(CraneEnter{crane_raw(a0)});
+            _stack.emplace_back(_after_ty_rect_in_TArr{a0, crane_raw(a1)});
+            _stack.emplace_back(_call{crane_raw(a0)});
           }
-        } else if (std::holds_alternative<CraneCont_TArr>(_frame)) {
-          auto _f = std::move(std::get<CraneCont_TArr>(_frame));
+        } else if (std::holds_alternative<_after_ty_rect_in_TArr>(_popped)) {
+          auto _f = std::move(std::get<_after_ty_rect_in_TArr>(_popped));
           std::shared_ptr<ty> a0 = std::move(_f.a0);
           const ty &a1 = *_f.a1;
           _stack.emplace_back(
-              CraneCont_TArr_1{std::move(a0), &a1, std::move(_result)});
-          _stack.emplace_back(CraneEnter{_f.a1});
+              _after_ty_rect_in_TArr_2{std::move(a0), &a1, std::move(_result)});
+          _stack.emplace_back(_call{_f.a1});
         } else {
-          auto _f = std::move(std::get<CraneCont_TArr_1>(_frame));
+          auto _f = std::move(std::get<_after_ty_rect_in_TArr_2>(_popped));
           std::shared_ptr<ty> a0 = std::move(_f.a0);
           const ty &a1 = *_f.a1;
           _result = f1(*a0, std::move(_f._tmp2), a1, std::move(_result));
@@ -202,6 +200,8 @@ struct DepMatchWildcardUnitArm {
 
     // MANIPULATORS
     ~exp() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<exp> {
         if (auto *_alt = std::get_if<EIf>(&_v)) {
           if (_alt->a1 && _alt->a1.use_count() == 1) {
@@ -228,6 +228,8 @@ struct DepMatchWildcardUnitArm {
     const variant_t &v() const { return v_; }
 
     uint64_t evn() const {
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       const exp *_loop_self = this;
       while (true) {
         auto &&_sv = *_loop_self;

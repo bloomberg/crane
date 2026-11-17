@@ -9,6 +9,8 @@
 /// compile.  The call now continues in the partner's body, every path of
 /// which ends in a return, and the group is a tail loop.
 void LoopifyMutualVoid::even_void(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -27,6 +29,8 @@ void LoopifyMutualVoid::even_void(uint64_t n) {
 }
 
 void LoopifyMutualVoid::odd_void(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {

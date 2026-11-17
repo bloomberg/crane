@@ -13,6 +13,8 @@ uint64_t ReuseArmFieldUsedTwice::len(const ReuseArmFieldUsedTwice::lst &l) {
 ReuseArmFieldUsedTwice::lst
 ReuseArmFieldUsedTwice::app2(ReuseArmFieldUsedTwice::lst a,
                              ReuseArmFieldUsedTwice::lst b) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (a.v().index() == 1) {
     if (std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(a.v_mut()).a1.use_count() ==
         1) {
@@ -48,6 +50,8 @@ ReuseArmFieldUsedTwice::app2(ReuseArmFieldUsedTwice::lst a,
 
 ReuseArmFieldUsedTwice::lst
 ReuseArmFieldUsedTwice::dbl(ReuseArmFieldUsedTwice::lst l) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (l.v().index() == 1) {
     if (std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1.use_count() ==
         1) {
@@ -82,6 +86,8 @@ ReuseArmFieldUsedTwice::dbl(ReuseArmFieldUsedTwice::lst l) {
 
 ReuseArmFieldUsedTwice::lst
 ReuseArmFieldUsedTwice::pairs(ReuseArmFieldUsedTwice::lst l) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
   if (l.v().index() == 1) {
     if (std::get<typename ReuseArmFieldUsedTwice::lst::Cons>(l.v_mut()).a1.use_count() ==
         1) {

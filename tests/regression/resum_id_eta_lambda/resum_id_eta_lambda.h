@@ -47,6 +47,8 @@ public:
 
   // MANIPULATORS
   ~Nat() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
     auto _next = [&](variant_t &_v) -> std::shared_ptr<Nat> {
       if (auto *_alt = std::get_if<S>(&_v)) {
         if (_alt->a0 && _alt->a0.use_count() == 1) {
@@ -490,6 +492,8 @@ struct ResumIdEtaLambda {
   template <Params _tcI0, typename T1>
   static stateT<Nat, crane_carrier_tch_6c159993d2c4c06f<_tcI0>::template c, T1>
   h(Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, T1> x) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto case_1 = crane::immortal(CategoryOps::template case_<
         crane::obj, crane::fn<crane::obj(crane::obj)>>(
         [](const auto &, const auto &) { return crane::obj(); },
@@ -672,6 +676,8 @@ struct ResumIdEtaLambda {
   template <Params _tcI0>
   static Itree<BotE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, Nat>>
   use_c(const Nat &s) {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
     static const auto h_1 =
         crane::immortal(h<_tcI0, Nat>(
             Sum1<aE<typename _tcI0::ptr>, Sum1<BE, CE, crane::obj>, Nat>::inr1(

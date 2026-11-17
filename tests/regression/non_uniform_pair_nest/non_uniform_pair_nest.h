@@ -43,6 +43,8 @@ struct NonUniformPairNest {
 
     // MANIPULATORS
     ~nest() {
+      // Release the children this node alone owns in a loop, not recursively,
+      // so a deep value cannot overflow the stack.
       auto _next = [&](variant_t &_v) -> std::shared_ptr<nest> {
         if (auto *_alt = std::get_if<NS>(&_v)) {
           if (_alt->a0 && _alt->a0.use_count() == 1) {

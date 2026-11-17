@@ -357,8 +357,8 @@ template <typename A, typename P, typename Q> struct SigT2 {
   }
 };
 
-template <typename T1>
-SigT<T1, crane::obj> sigT_of_sig(const Sig<T1> &x) { // Precondition: P
+template <typename T1> SigT<T1, crane::obj> sigT_of_sig(const Sig<T1> &x) {
+  // Precondition: P
   return SigT<T1, crane::obj>::existt(
       [&]() {
         const auto &[x0] = x;

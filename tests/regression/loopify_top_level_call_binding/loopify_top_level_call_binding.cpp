@@ -23,53 +23,45 @@ LoopifyTopLevelCallBinding::kids(const LoopifyTopLevelCallBinding::cell &c) {
   return *kids1;
 }
 
-uint64_t LoopifyTopLevelCallBinding::csum(
-    const LoopifyTopLevelCallBinding::cell &c) { /// CraneEnter: captures
-                                                 /// varying parameters for each
-                                                 /// recursive call.
-  struct CraneEnter {
+uint64_t
+LoopifyTopLevelCallBinding::csum(const LoopifyTopLevelCallBinding::cell &c) {
+  // Explicit stack replaces the non-tail recursion of csum: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     LoopifyTopLevelCallBinding::cell c;
   };
 
-  /// CraneEnter_go: captures varying parameters for each recursive call.
-  struct CraneEnter_go {
+  struct _call_go {
     List<LoopifyTopLevelCallBinding::cell> l;
   };
 
-  /// CraneCont1: saves [c], resumes after recursive call, then processes rest.
-  struct CraneCont1 {
-    LoopifyTopLevelCallBinding::cell c;
-  };
-
-  /// CraneCont_Cons: saves [a1], resumes after recursive call, then processes
-  /// rest.
-  struct CraneCont_Cons {
+  struct _after_csum_in_Cons {
     std::shared_ptr<List<LoopifyTopLevelCallBinding::cell>> a1;
   };
 
-  /// CraneCont_Cons_1: saves [_tmp2], resumes after recursive call, then
-  /// processes rest.
-  struct CraneCont_Cons_1 {
+  struct _after_go {
+    LoopifyTopLevelCallBinding::cell c;
+  };
+
+  struct _after_go_in_Cons {
     uint64_t _tmp2;
   };
 
-  using CraneFrame = std::variant<CraneEnter, CraneEnter_go, CraneCont1,
-                                  CraneCont_Cons, CraneCont_Cons_1>;
+  using _frame = std::variant<_call, _call_go, _after_csum_in_Cons, _after_go,
+                              _after_go_in_Cons>;
   uint64_t _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{c});
-  /// Loopified csum: CraneEnter -> CraneCont1 -> CraneCont_Cons ->
-  /// CraneCont_Cons_1.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{c});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       const LoopifyTopLevelCallBinding::cell &c = _f.c;
-      _stack.emplace_back(CraneCont1{c});
-      _stack.emplace_back(CraneEnter_go{kids(c)});
-    } else if (std::holds_alternative<CraneEnter_go>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter_go>(_frame));
+      _stack.emplace_back(_after_go{c});
+      _stack.emplace_back(_call_go{kids(c)});
+    } else if (std::holds_alternative<_call_go>(_popped)) {
+      auto _f = std::move(std::get<_call_go>(_popped));
       const List<LoopifyTopLevelCallBinding::cell> &l = _f.l;
       if (std::holds_alternative<
               typename List<LoopifyTopLevelCallBinding::cell>::Nil>(l.v())) {
@@ -78,21 +70,21 @@ uint64_t LoopifyTopLevelCallBinding::csum(
         const auto &[a0, a1] =
             std::get<typename List<LoopifyTopLevelCallBinding::cell>::Cons>(
                 l.v());
-        _stack.emplace_back(CraneCont_Cons{a1});
-        _stack.emplace_back(CraneEnter{a0});
+        _stack.emplace_back(_after_csum_in_Cons{a1});
+        _stack.emplace_back(_call{a0});
       }
-    } else if (std::holds_alternative<CraneCont1>(_frame)) {
-      auto _f = std::move(std::get<CraneCont1>(_frame));
-      LoopifyTopLevelCallBinding::cell c = std::move(_f.c);
-      _result = (key(std::move(c)) + std::move(_result));
-    } else if (std::holds_alternative<CraneCont_Cons>(_frame)) {
-      auto _f = std::move(std::get<CraneCont_Cons>(_frame));
+    } else if (std::holds_alternative<_after_csum_in_Cons>(_popped)) {
+      auto _f = std::move(std::get<_after_csum_in_Cons>(_popped));
       std::shared_ptr<List<LoopifyTopLevelCallBinding::cell>> a1 =
           std::move(_f.a1);
-      _stack.emplace_back(CraneCont_Cons_1{std::move(_result)});
-      _stack.emplace_back(CraneEnter_go{*a1});
+      _stack.emplace_back(_after_go_in_Cons{std::move(_result)});
+      _stack.emplace_back(_call_go{*a1});
+    } else if (std::holds_alternative<_after_go>(_popped)) {
+      auto _f = std::move(std::get<_after_go>(_popped));
+      LoopifyTopLevelCallBinding::cell c = std::move(_f.c);
+      _result = (key(std::move(c)) + std::move(_result));
     } else {
-      auto _f = std::move(std::get<CraneCont_Cons_1>(_frame));
+      auto _f = std::move(std::get<_after_go_in_Cons>(_popped));
       _result = (_f._tmp2 + std::move(_result));
     }
   }
@@ -100,39 +92,36 @@ uint64_t LoopifyTopLevelCallBinding::csum(
 }
 
 /// A chain n cells deep, each holding k.
-LoopifyTopLevelCallBinding::cell
-LoopifyTopLevelCallBinding::chain(uint64_t n,
-                                  uint64_t k) { /// CraneEnter: captures varying
-                                                /// parameters for each
-                                                /// recursive call.
-  struct CraneEnter {
+LoopifyTopLevelCallBinding::cell LoopifyTopLevelCallBinding::chain(uint64_t n,
+                                                                   uint64_t k) {
+  // Explicit stack replaces the non-tail recursion of chain: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
     uint64_t n;
   };
 
-  /// CraneCont_m: resumes after recursive call, then processes rest.
-  struct CraneCont_m {};
+  struct _after_chain_in_S {};
 
-  using CraneFrame = std::variant<CraneEnter, CraneCont_m>;
+  using _frame = std::variant<_call, _after_chain_in_S>;
   LoopifyTopLevelCallBinding::cell _result{};
-  crane::small_vector<CraneFrame> _stack;
-  _stack.emplace_back(CraneEnter{n});
-  /// Loopified chain: CraneEnter -> CraneCont_m.
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{n});
   while (!_stack.empty()) {
-    CraneFrame _frame = std::move(_stack.back());
+    _frame _popped = std::move(_stack.back());
     _stack.pop_back();
-    if (std::holds_alternative<CraneEnter>(_frame)) {
-      auto _f = std::move(std::get<CraneEnter>(_frame));
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
       uint64_t n = _f.n;
       if (n <= 0) {
         _result =
             cell::mkcell(k, List<LoopifyTopLevelCallBinding::cell>::nil());
       } else {
         uint64_t m = n - 1;
-        _stack.emplace_back(CraneCont_m{});
-        _stack.emplace_back(CraneEnter{m});
+        _stack.emplace_back(_after_chain_in_S{});
+        _stack.emplace_back(_call{m});
       }
     } else {
-      auto _f = std::move(std::get<CraneCont_m>(_frame));
+      auto _f = std::move(std::get<_after_chain_in_S>(_popped));
       _result =
           cell::mkcell(k, List<LoopifyTopLevelCallBinding::cell>::cons(
                               std::move(_result),

@@ -27,6 +27,8 @@ template <SymTypes Ty> struct ListCollect {
       const typename Datatypes::Nat &_lc1_n0 = n;
       typename Datatypes::template List<symbols_semty> _lc1_acc =
           Datatypes::template List<symbols_semty>::nil();
+      // Loop replaces the tail recursion: each recursive call updates the loop
+      // variables.
       typename Datatypes::template List<symbols_semty> _lc1_loop_acc =
           std::move(_lc1_acc);
       const typename Datatypes::Nat *_lc1_loop_n0 = &_lc1_n0;

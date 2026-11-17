@@ -7,6 +7,8 @@
 /// recursive C++ calls instead of a loop, so a deep countdown overflows the C++
 /// stack.
 bool LoopifyMutualCountdown::even_countdown(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
@@ -24,6 +26,8 @@ bool LoopifyMutualCountdown::even_countdown(uint64_t n) {
 }
 
 bool LoopifyMutualCountdown::odd_countdown(uint64_t n) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
   uint64_t _loop_n = n;
   while (true) {
     if (_loop_n <= 0) {
