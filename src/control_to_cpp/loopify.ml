@@ -35,14 +35,14 @@
     {3 Non-Tail Recursion (Single Call)}
     [f x = if base(x) then result else combine(x, f(next(x)))]
 
-    Uses an explicit stack with [CraneEnter] and [CraneContN] frames.  The
-    [CraneEnter] frame initiates a computation; a [CraneContN] frame saves
+    Uses an explicit stack with [_call] and [_after_f] frames.  The
+    [_call] frame initiates a computation; a [_after_f] frame saves
     what runs after the call returns.
 
     {3 Multi-Recursion (2+ Calls per Branch)}
     [fib n = if n < 2 then 1 else fib(n-1) + fib(n-2)]
 
-    Uses chained [CraneContN] frames, one per point a call returns to, for
+    Uses chained [_after_f] frames, one per point a call returns to, for
     several recursive calls in the same expression.
 
     {2 Architecture}
@@ -62,8 +62,8 @@
        call in evaluation order before translation, so the transforms meet
        each one as a statement; tail modulo cons reads the body with those
        bindings put back ({!Cpp_passes.Temporaries.own_stmts}).}
-    {- {b Frame generation}: typed frame structs ([CraneEnter],
-       [CraneContN]) and a dispatch loop that tests the popped frame with
+    {- {b Frame generation}: typed frame structs ([_call],
+       [_after_f]) and a dispatch loop that tests the popped frame with
        [std::holds_alternative] in an if/else-if chain.}
     {- {b Postcondition}: {!classify} runs again on the finished body; a
        surviving self-call turns the outcome into a decline
@@ -83,7 +83,7 @@
     is not loopified on its own: two machines cannot share
     a stack, so each would unwind through the other and the C++ would still
     recurse.  Instead it is {e adopted} as a second entry point of the
-    enclosing machine -- its own [CraneEnter_<name>] frame carrying its parameters
+    enclosing machine -- its own [_call_<name>] frame carrying its parameters
     and the variables it captures, dispatched from the same loop over the same
     [std::variant] stack.  See {!Frame.adopted} for how the two
     shapes are made alike, {!Frame.find_in_flow} for which

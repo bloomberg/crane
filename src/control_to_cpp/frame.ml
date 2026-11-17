@@ -69,7 +69,7 @@ end
 module Call_frame_info = struct
   type t = {
     name : string;
-        (** e.g. [CraneCont0] — assigned when the push statement is generated *)
+        (** e.g. [_after_f] — assigned when the push statement is generated *)
     slots : Saved_slot.t list;
     env : (Id.t * ty) list;
         (** type env at frame creation, for the [decltype] fallback *)
@@ -239,7 +239,7 @@ let make_cont_env cont_vars cont_types env =
 (** Register a call frame in the mutable [frames_ref] accumulator.
 
     @param frames_ref Mutable reference to the list of collected frames
-    @param name Frame struct name (e.g., [CraneCont0])
+    @param name Frame struct name (e.g., [_after_f])
     @param saved_types Types of the saved locals
     @param saved_locals The saved locals
     @param env Type environment at frame creation point
@@ -257,8 +257,9 @@ let register_frame frames_ref ~name ~saved_types ~saved_locals ~env ~handler ~po
     frame pushes. Collects [call_frame_info] for each call site so that the
     caller can generate the corresponding handler lambdas.
 
-    The [call_counter] ref assigns sequential IDs (starting from 1). The
-    [frames_ref] accumulates call frame info in order. *)
+    Each frame is named after the call it resumes after
+    ({!make_call_frame_name}).  The [frames_ref] accumulates call frame info
+    in order. *)
 
 (** Build a stack push expression. Uses
     [Call (Access (Dot, ...))] so that
@@ -282,27 +283,34 @@ let ctor_type_short_name : ty -> string option = function
   | Member (_, id) -> Some (Id.to_string id)
   | _ -> None
 
-(** Generate a unique call frame name from a role prefix (e.g. [CraneCont])
-    and optional branch context.
+(** The name of a continuation frame: the point the machine resumes at once
+    the call to [callee] returns, inside the arm of the constructor
+    [branch_ctx] when there is one -- [_after_size_in_Node] -- or [_resume]
+    when the callee is not known.  The second frame of the same name is
+    [_after_size_in_Node_2], and so on; [seen] holds the names already
+    given, so a numbered name never lands on another frame's.
 
-    When [branch_ctx] is [Some "Node"], produces [CraneCont_Node] instead of
-    [CraneCont0].  Falls back to a numeric suffix when no context is available.
-    The [seen] table tracks used names for deduplication: if a context-derived
-    name collides, a numeric suffix is appended ([CraneCont_Node_1]). *)
-let make_call_frame_name (prefix : string) (counter : int ref)
-    (seen : (string, int) Hashtbl.t) ?(branch_ctx : string option) () : string =
-  let id = !counter in
-  counter := id + 1;
-  let candidate =
-    Base.Generated_name.separate_underscores
-      (match branch_ctx with
-       | Some s -> prefix ^ "_" ^ s
-       | None -> prefix ^ string_of_int id)
+    Spelled with a leading underscore and a lowercase letter, the space
+    Crane keeps for its own locals: no source name is spelled so, and only
+    the global namespace reserves it ({!Analysis.id_enter}). *)
+let make_call_frame_name (seen : (string, int) Hashtbl.t) ~(callee : string option) ?(branch_ctx : string option) ()
+    : string =
+  let word =
+    String.map (function ('a' .. 'z' | 'A' .. 'Z' | '0' .. '9' | '_') as c -> c | _ -> '_')
   in
-  let n = try Hashtbl.find seen candidate with Not_found -> 0 in
-  Hashtbl.replace seen candidate (n + 1);
-  if n = 0 then candidate
-  else candidate ^ "_" ^ string_of_int n
+  let base =
+    Base.Generated_name.separate_underscores
+      ( (match callee with Some f -> "_after_" ^ word f | None -> "_resume")
+      ^ match branch_ctx with Some c -> "_in_" ^ word c | None -> "" )
+  in
+  let rec pick k =
+    let candidate = if k = 1 then base else base ^ "_" ^ string_of_int k in
+    if Hashtbl.mem seen candidate then pick (k + 1)
+    else (
+      Hashtbl.replace seen candidate k;
+      candidate )
+  in
+  pick 1
 
 (** The types a frame keeps [locals] at ({!saved_local_type}).
 
@@ -335,7 +343,7 @@ end
 (** One entry point of a frame machine.
 
     An entry is what a call needs in order to become a stack push: the
-    [CraneEnter]-style frame struct that entering it goes through, the parameters
+    [_call]-style frame struct that entering it goes through, the parameters
     that entry binds, and the mask saying which of them vary across calls and
     so have to be carried in the frame. A function loopified on its own has a
     single entry; the representation is a table so that an enclosing function
@@ -527,7 +535,7 @@ let find_fix_wrapper fixpoint stmts =
 
 (** A body this machine adopts as an extra entry point: a fixpoint local to
     the function, whose calls belong to this machine's recursion but sit
-    where the [CraneEnter] rewriter does not go, so that a single-entry
+    where the [_call] rewriter does not go, so that a single-entry
     machine cannot linearise them.
 
     {!Adopted.install} rewrites the enclosing body so that the calls that enter
@@ -536,7 +544,7 @@ let find_fix_wrapper fixpoint stmts =
     name. *)
 module Adopted = struct
   type t = {
-    name : string;  (** Names the entry's frame, [CraneEnter_<name>] *)
+    name : string;  (** Names the entry's frame, [_call_<name>] *)
     entry_id : Id.t;
         (** The synthetic name {!Adopted.install} routes this entry's calls through *)
     params : (Id.t * ty) list;  (** Parameters, in call-argument order *)
@@ -566,7 +574,7 @@ module Adopted = struct
 end
 
 (** The synthetic name calls entering an entry called [name] are routed
-    through.  Lowercase and prefixed, so it cannot collide with the [CraneEnter_]
+    through.  Lowercase and prefixed, so it cannot collide with the [_call_]
     frame struct nor with a binder translation emits. *)
 let adopted_entry_id name = Id.of_string ("_adopted_" ^ name)
 
@@ -745,8 +753,9 @@ type enter_rewrite_ctx = {
   binders : (Id.t * Core.Binder.t option) list;
       (** The Core binder each local in scope stands for, innermost first,
           where translation declared it for one ({!Core.Binder}) *)
-  call_counter : int ref;
-      (** Mutable counter for generating unique frame names *)
+  callees : string option list;
+      (** The name each entry of the machine is called by, by entry index,
+          for naming the frames that resume after a call to it *)
   frames_ref : Call_frame_info.t list ref;
       (** Mutable accumulator for generated {!call_frame_info} records *)
   branch_ctx : string option;
@@ -844,7 +853,7 @@ let bound_after bound = function Bind_variable (id, Declare _, _) as stmt -> (id
 (** The Core binder the local [x] stands for, if any. *)
 let binder_of ctx x = Option.flatten (List.assoc_opt x ctx.binders)
 
-(** The [CraneEnter]-style frame expression that enters [cs]'s target, the
+(** The [_call]-style frame expression that enters [cs]'s target, the
     call [called] made.  An entry's frame holds what it takes by value
     where the callee may have lent it -- the call's arguments, and, an
     adopted entry's, the captures it is entered with besides them
@@ -1013,12 +1022,12 @@ let resume_disagreement =
 (* Report {!resume_disagreement} under [CRANE_CHECK_IR]. *)
 let resume_violation () = Base.Probe.violation "resume plan" (Pp.str resume_disagreement)
 
-(** Rewrite a single return statement for the [CraneEnter] handler in frame-based
+(** Rewrite a single return statement for the [_call] handler in frame-based
     non-tail recursion transformation.
 
     A returned expression made of one of the loop's Continues, which the
     machine's checker recognises, is a tail call, and re-enters by
-    [CraneEnter]; any other is the result.  A call it holds that its
+    [_call]; any other is the result.  A call it holds that its
     ControlIR takes is left there, which {!Lower}
     reports of the lowered loop.
 
@@ -1046,13 +1055,17 @@ let rec rewrite_enter_lambda_return ctx stmt =
       Custom_match
         { m with
           branches =
-          List.map
-            (fun (b : custom_branch) ->
+          List.mapi
+            (fun i (b : custom_branch) ->
               let ps = b.params in
               let lenv = List.map (fun (p : custom_param) -> (p.name, p.type_)) ps @ env in
-              let br_ctx = match ps with
-                | p :: _ -> Some (Id.to_string p.name)
-                | [] -> None
+              (* Branch [i] is the inductive's constructor [i]. *)
+              let br_ctx =
+                match m.inductive with
+                | Names.GlobRef.IndRef ind -> (
+                  try Some (Id.to_string (Nametab.basename_of_global (Names.GlobRef.ConstructRef (ind, i + 1))))
+                  with Not_found -> None )
+                | _ -> None
               in
               { b with body =
                 rewrite_enter_stmts
@@ -1123,17 +1136,17 @@ let rec rewrite_enter_lambda_return ctx stmt =
     "continuation" that is embedded in the Call frame's handler.
 
     {b Stack frame chaining strategy.}  For [let x = f(a) in rest]:
-    + Push [CraneContN\{saved_fields\}]: saves continuation variables live
+    + Push [_after_f\{saved_fields\}]: saves continuation variables live
       across the call.
-    + Push [CraneEnter\{args\}]: provides the recursive call's arguments.
-    + The loop pops [CraneEnter], executes the call, stores the result in
-      [_result], then pops [CraneContN] whose handler binds [x = _result],
+    + Push [_call\{args\}]: provides the recursive call's arguments.
+    + The loop pops [_call], executes the call, stores the result in
+      [_result], then pops [_after_f] whose handler binds [x = _result],
       restores saved fields, and processes [rest].
 
     For nested calls like [let x = f(a) in let y = f(b) in rest], frames
-    chain: [CraneCont1]'s handler processes the [let y = ...] assignment,
-    which pushes [CraneCont2] + [CraneEnter] for the second call.  The final
-    handler, in [CraneCont2], processes [rest].  A frame made inside a match
+    chain: [_after_f]'s handler processes the [let y = ...] assignment,
+    which pushes [_after_f_2] + [_call] for the second call.  The final
+    handler, in [_after_f_2], processes [rest].  A frame made inside a match
     branch is named after the branch's constructor instead
     ({!make_call_frame_name}).
 
@@ -1151,7 +1164,7 @@ let rec rewrite_enter_lambda_return ctx stmt =
 and rewrite_enter_stmts ctx stmts =
   let { check = check;
         env = env;
-        call_counter = call_counter; frames_ref = frames_ref;
+        callees = callees; frames_ref = frames_ref;
         branch_ctx = branch_ctx;
         seen_frame_names = seen; _ } = ctx
   in
@@ -1220,7 +1233,12 @@ and rewrite_enter_stmts ctx stmts =
       if Base.Probe.checking ()
         && List.exists (function (Obligation Unresolved_type) | Auto -> true | _ -> false) cont_types then
         Base.Probe.violation "frame plan" (Pp.str "a frame keeps a binder whose local was declared at no type");
-      let call_name = make_call_frame_name (Base.Generated_name.role "Cont") call_counter seen ?branch_ctx () in
+      let callee =
+        match collect_expr check e with
+        | cs :: _ -> Option.flatten (List.nth_opt ctx.callees cs.entry)
+        | [] -> None
+      in
+      let call_name = make_call_frame_name seen ~callee ?branch_ctx () in
       let field_names = derive_field_names cont_vars in
       let bindings = make_cont_bindings ~field_names cont_vars cont_types in
       (* The rest sees the result binding too: a later frame saving it needs
@@ -1236,7 +1254,7 @@ and rewrite_enter_stmts ctx stmts =
         bound @ make_cont_env cont_vars cont_types env
       in
       (* When tgt is Existing (a bare assignment), the variable was declared
-         in the CraneEnter handler scope and does not exist in the CraneCont handler
+         in the _call handler scope and does not exist in the _after_f handler
          scope.  Promote to [auto] so the handler declares it. *)
       let handler_ty : binding = match tgt with Existing -> Declare (Auto, None) | t -> t in
       let remat_stmts = List.map snd remat in
@@ -1386,7 +1404,7 @@ and rewrite_enter_stmts ctx stmts =
       raise (Not_linearisable no_resume_plan) )
   (* Conditional recursion: at least one branch has a recursive call and there
      are continuation statements after.  Merge the continuation into each branch
-     so the recursive branch captures it via the Bind_variable::rest CraneCont pattern while
+     so the recursive branch captures it via the Bind_variable::rest _after_f pattern while
      the non-recursive branch processes it inline.
      Non-recursive branches wrap [rest] in Block to prevent name collisions
      with bindings generated by custom match destructuring in the branch. *)
@@ -1504,7 +1522,7 @@ let rewrite_enter_stmt ctx stmt =
     stack initialization, parameter copies from frame, frame lambdas, and the
     while-loop dispatch. These helpers factor out the common patterns. *)
 
-(** Generate the initial [_stack.emplace_back(CraneEnter\{...\})] statement.
+(** Generate the initial [_stack.emplace_back(_call\{...\})] statement.
 
     @param varying_params The parameters to include in the Enter frame
     @return A raw C++ statement pushing the initial Enter frame *)
@@ -1575,7 +1593,7 @@ let make_param_copies ~unit varying_params =
 
 (** Rewrite frame push expressions so that pointer-safe positions use
     [&x] (for variables) or [crane_raw(x)] (for dereferences) instead of
-    deep-copying.  Handles both [CraneEnter] and [CraneContN] pushes.
+    deep-copying.  Handles both [_call] and [_after_f] pushes.
 
     A [Local x] at a pointer-safe position is looked up among the bindings
     in scope where the push stands: if [x = *(sp)], emit [crane_raw(sp)]
@@ -1717,7 +1735,7 @@ let make_owned_param_matches owned_names stmts =
     instead, moved out of the frame: the handler owns its frame ([_f] was
     moved off the stack), and a move out of a const reference copies.  A
     lent parameter or a saved local is held by value in a frame not pointing
-    into it -- [CraneEnter{l, fuel}] -- and its handler's read of it last,
+    into it -- [_call{l, fuel}] -- and its handler's read of it last,
     [_result = std::move(l)], is such a move. *)
 let own_moved_bindings body =
   let rec go = function
@@ -1741,7 +1759,7 @@ let own_moved_bindings body =
     that [Named] would add); [_f] is the frame, moved off it, that gives the
     handler body access to the saved frame fields ({!own_moved_bindings}).
 
-    @param frame_name Name of the frame struct (e.g. [CraneEnter], [CraneCont1])
+    @param frame_name Name of the frame struct (e.g. [_call], [_after_f])
     @param body       Handler body statements
     @return A branch for use under {!frame_scrutinee} *)
 let make_frame_branch frame_name body : branch =
@@ -1763,12 +1781,12 @@ let frame_scrutinee : scrutinee =
     frame-dispatch loop.  Each iteration moves the top frame into a local,
     pops the stack, then dispatches via an [Match] if/else-if chain.
 
-    @param struct_defs The struct definitions ([CraneEnter], [CraneContN], etc.)
+    @param struct_defs The struct definitions ([_call], [_after_f], etc.)
     @param ret_ty      Return type for the [_result] declaration
     @param init_push   The initial stack-push statement
     @param branches    One [branch] per frame type, in dispatch order
     @return Complete statement list for the loopified function body *)
-let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches ~frame_names =
+let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push branches =
   let result_decl = Declare_value_initialized (id_result, ret_ty) in
   let frame_ty = External (Id.to_string id_Frame, []) in
   (* [crane::small_vector] rather than [std::vector]: the frame stack is only
@@ -1800,20 +1818,19 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
       dispatch_stmt;
     ]
   in
+  (* One comment for the whole construct, ahead of its frame types: what a
+     reader of the C++ cannot tell from the types is that this replaces a
+     recursion, and which frames stand for what. *)
   let loop_comment =
-    let all_names = Id.to_string id_enter :: frame_names in
-    let prefix = match fn_name with
-      | Some name -> "Loopified " ^ name ^ ": "
-      | None -> "Frame dispatch: "
-    in
-    prefix ^ String.concat " -> " all_names ^ "."
+    Printf.sprintf "Explicit stack replaces the non-tail recursion%s: %s frames are pending calls, %s frames resume a caller."
+      (match fn_name with Some name -> " of " ^ name | None -> "")
+      (Id.to_string id_enter) "_after"
   in
-  struct_defs
+  (Comment loop_comment :: struct_defs)
   @ [
       result_decl;
       stack_decl;
       init_push;
-      Comment loop_comment;
       While
         (Unary (Not,
                   Call
@@ -1853,8 +1870,8 @@ let decltype_of_saved_local env id =
     - Method calls ([id.foo()]) work directly without an extra dereference
     - [&id] in pointer-safe push args gives back the original raw pointer
 
-    The subsequent [adjust_frame_push_args] pass then rewrites [CraneEnter{id}] and
-    [CraneContN{..., id, ...}] push arguments at pointer-safe positions to [&id],
+    The subsequent [adjust_frame_push_args] pass then rewrites [_call{id}] and
+    [_after_f{..., id, ...}] push arguments at pointer-safe positions to [&id],
     recovering the [const T*] that those frames expect.
 
     Only processes top-level [Bind_variable] statements in the handler body, which is
@@ -1927,26 +1944,26 @@ let fix_handler_bindings field_names cf_ps handler =
 
     becomes:
 
-    struct CraneEnter { T x; };
-    struct CraneCont1 { T x; };  // saves 'x' for combine step
-    using CraneFrame = std::variant<CraneEnter, CraneCont1>;
+    struct _call { T x; };
+    struct _after_f { T x; };  // saves 'x' for combine step
+    using _frame = std::variant<_call, _after_f>;
 
     let f x_init =
-      crane::small_vector<CraneFrame> _stack;
-      _stack.emplace_back(CraneEnter{x_init});
+      crane::small_vector<_frame> _stack;
+      _stack.emplace_back(_call{x_init});
       T _result;
       while (!_stack.empty()) {
-        CraneFrame _frame = std::move(_stack.back());
+        _frame _popped = std::move(_stack.back());
         _stack.pop_back();
-        if (std::holds_alternative<CraneEnter>(_frame)) {
-          auto _f = std::move(std::get<CraneEnter>(_frame));
+        if (std::holds_alternative<_call>(_popped)) {
+          auto _f = std::move(std::get<_call>(_popped));
           if (base(_f.x)) { _result = result; }
           else {
-            _stack.emplace_back(CraneCont1{_f.x});    // save x
-            _stack.emplace_back(CraneEnter{next(_f.x)});  // recurse
+            _stack.emplace_back(_after_f{_f.x});    // save x
+            _stack.emplace_back(_call{next(_f.x)});  // recurse
           }
         } else {
-          auto _f = std::move(std::get<CraneCont1>(_frame));
+          auto _f = std::move(std::get<_after_f>(_popped));
           _result = combine(_f.x, _result);
         }
       }
@@ -1954,13 +1971,13 @@ let fix_handler_bindings field_names cf_ps handler =
     v}
 
     Frame types:
-    - [CraneEnter]: Captures function arguments (the "call" part of a recursive call)
-    - [CraneContN]: Captures continuation context (values needed after a call returns)
+    - [_call]: Captures function arguments (the "call" part of a recursive call)
+    - [_after_f]: Captures continuation context (values needed after a call returns)
 
     The transformation:
     1. Adopts a local fixpoint as a second entry point, if [adopted] gives one
-    2. Rewrites [CraneEnter] handler: returns → frame pushes
-    3. Collects [CraneContN] frame info during rewriting
+    2. Rewrites [_call] handler: returns → frame pushes
+    3. Collects [_after_f] frame info during rewriting
     4. Generates frame struct definitions
     5. Generates the dispatch loop as an if/else-if chain over the frame
 
@@ -2068,7 +2085,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   in
   let pointer_safe = pointer_safe_flags unit ~parts params in
   (* Loopifying a function on its own gives a machine with one entry: the
-     function itself, entered through [CraneEnter]. *)
+     function itself, entered through [_call]. *)
   let own_entry = machine_entry ~enter_id:id_enter ~params ~varying in
   let pointer_safe_varying = filter_by_mask varying pointer_safe in
   (* The type environment is lexical: the parameters and what the enclosing
@@ -2143,7 +2160,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   in
   (
   (* Rewrite body for Enter handler and collect call frame info *)
-  let call_counter = ref 1 in
   let frames_ref = ref [] in
   (* What no re-entry rebinds: the parameters that do not vary, and what the
      body reads from an enclosing scope -- a local fixpoint's captures, bound
@@ -2163,7 +2179,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
         let params = ad.Adopted.params @ capture_params in
         ( ad,
           machine_entry
-            ~enter_id:(Id.of_string (Id.to_string id_enter ^ "_" ^ ad.name))
+            ~enter_id:(Id.of_string (Base.Generated_name.separate_underscores (Id.to_string id_enter ^ "_" ^ ad.name)))
             ~params
             ~varying:(List.map (fun _ -> true) params) ) )
       adopted
@@ -2181,7 +2197,8 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
                env = env;
                result_ty = ret_ty;
                binders = List.map (fun (id, b) -> (id, Some b)) binders;
-               call_counter = call_counter; frames_ref = frames_ref;
+               callees = fn_name :: Option.cata (fun (ad, _) -> [Some ad.Adopted.name]) [] adopted;
+               frames_ref = frames_ref;
                branch_ctx = None;
                seen_frame_names = Hashtbl.create 16;
                invariant_params = invariant_params;
@@ -2269,16 +2286,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
         | _ -> (p.name, frame_field_type p.ty) )
       ee.Entry_emission.params
   in
-  let frame_description cf =
-    let field_names_str =
-      if (cf_field_names cf) = [] then ""
-      else
-        let names = List.map Id.to_string (cf_field_names cf) in
-        " saves [" ^ String.concat ", " names ^ "],"
-    in
-    cf.name ^ ":" ^ field_names_str
-    ^ " resumes after recursive call, then processes rest."
-  in
   let compute_frame_field_types (cf : Call_frame_info.t) cf_ps =
     map2_exn ~what:"compute_frame_field_types"
       (fun ps {Saved_slot.ty = ty; local = id; _} ->
@@ -2307,8 +2314,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
             (fun s ty -> (s.Saved_slot.field, ty))
             cf.slots field_tys
         in
-        [Comment (frame_description cf);
-         Local_struct (Id.of_string cf.name, fields)])
+        [Local_struct (Id.of_string cf.name, fields)])
       frames
   in
   let call_names = List.map (fun cf -> cf.Call_frame_info.name) frames in
@@ -2316,14 +2322,10 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
     List.map (fun ee -> External (ee_name ee, [])) emissions
     @ List.map (fun name -> External (name, [])) call_names
   in
+  (* The frames' names say what each is ({!make_call_frame_name}); the
+     machine's one comment says the rest ({!make_loop_and_return}). *)
   let struct_defs =
-    List.concat_map
-      (fun ee ->
-        [Comment
-           (ee_name ee
-           ^ ": captures varying parameters for each recursive call.");
-         Local_struct (ee.id, entry_fields ee)])
-      emissions
+    List.map (fun (ee : Entry_emission.t) -> Local_struct (ee.id, entry_fields ee)) emissions
     @ call_structs
     @ [Local_type_alias (id_Frame, Variant (Inline, variant_tys))]
   in
@@ -2337,7 +2339,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   (* Identify varying params that are moved into the Enter handler (not passed
      as pointers).  For these, the Match scrutinee should use [v_mut()] so
      that [shared_ptr] child fields are mutable and can be moved into the next
-     [CraneEnter] frame (avoiding an unnecessary refcount bump).
+     [_call] frame (avoiding an unnecessary refcount bump).
 
      Mirrors [make_param_copies.bind_field] exactly: use [strip_ref_type]
      (not [strip_ref_and_const_type]) so that [const T&] params (which are
@@ -2387,10 +2389,10 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
         in
         (* Step 2: adjust push arguments at pointer-safe positions.  After
            fix_handler_bindings, pointer-safe locals are [const T&] references;
-           [adjust_frame_push_args] converts [CraneEnter{id}] → [CraneEnter{&id}] so
+           [adjust_frame_push_args] converts [_call{id}] → [_call{&id}] so
            that [const T&] is passed as [const T*] as the frame struct expects. *)
         (* Guard on [all_frame_ps], not [frame_ps_map]: a handler that has no
-           pointer-safe fields of its own can still push an [CraneEnter] frame whose
+           pointer-safe fields of its own can still push a [_call] frame whose
            fields are pointer-safe, and that push needs adjusting too. *)
         let handler =
           if all_frame_ps <> [] then
@@ -2401,6 +2403,6 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
       frames
   in
   make_loop_and_return ?fn_name struct_defs ret_ty init_push
-    (enter_branches @ call_branches) ~frame_names:call_names
+    (enter_branches @ call_branches)
   |> unmove_invariant_params invariant_params
   )

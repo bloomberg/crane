@@ -5,12 +5,13 @@
 
     C++ reserves to the implementation, in every scope, an identifier that
     begins with an underscore and an uppercase letter, or that holds two
-    consecutive underscores.  So the types and template parameters Crane
-    invents -- loop frames, conversion parameters, carrier aliases' element
-    parameters -- are spelled [Crane<Role>] ([CraneEnter], [CraneU0]), and the
-    locals it derives from another name are joined to it without doubling an
-    underscore.  A local keeps its leading underscore and lowercase letter,
-    which only the global namespace reserves.
+    consecutive underscores.  So the template parameters Crane invents --
+    conversion parameters, carrier aliases' element parameters -- are
+    spelled [Crane<Role>] ([CraneU0]), and the locals it derives from another
+    name are joined to it without doubling an underscore.  A local keeps its
+    leading underscore and lowercase letter, which only the global namespace
+    reserves; the loop frames, types local to a function body, are spelled
+    the same way ([_call], [_after_size_in_Node]).
 
     Every invented name of these kinds is spelled here, so the convention has
     one statement. *)

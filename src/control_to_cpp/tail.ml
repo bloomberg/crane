@@ -1108,7 +1108,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~v
   @ [While (Literal (Bool true), body'')]
   @ (if is_void then [Return None] else [])
 
-(* Non-tail recursion uses a frame-based stack with [CraneEnter] and
+(* Non-tail recursion uses a frame-based stack with [_call] and
    continuation variants and a dispatch loop; see
    {!Frame.transform_nontail}. *)
 

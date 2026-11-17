@@ -80,7 +80,7 @@ let id_of_name = function
   | Name.Name id -> id
 
 (** Move a name out of the space Crane reserves for the names it invents
-    itself -- the loopified frames ([CraneFrame], [CraneEnter], [_stack], [_result])
+    itself -- the loopified frames ([_frame], [_call], [_stack], [_result])
     and the generated members -- by carrying its leading underscores to the
     end.  C++ reserves [_X] at global scope to the implementation anyway.
     Returns the name unchanged when it does not start with an underscore, when

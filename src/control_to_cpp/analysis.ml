@@ -139,14 +139,19 @@ let converting_ctor (ty : ty) (args : expr list) : expr =
     Frequently used [Core.Binder_name.Source.t] values, defined once to avoid repeated
     [Core.Binder_name.Source.of_string] allocations across the loopify modules. *)
 
+(* The frame machine's types are spelled like its locals, with a leading
+   underscore and a lowercase letter: Crane moves every source name out of
+   that space ({!Base.Core_util.unreserve_leading_underscore}), and only the
+   global namespace reserves it, so these names collide with no user name in
+   the function body they are declared in. *)
 let id_result       = Id.of_string "_result"
-let id_enter        = Base.Generated_name.id "Enter"
+let id_enter        = Id.of_string "_call"
 let id_f            = Id.of_string "_f"
 let id_stack        = Id.of_string "_stack"
 let id_head         = Id.of_string "_head"
 let id_write        = Id.of_string "_write"
-let id_frame        = Id.of_string "_frame"
-let id_Frame        = Base.Generated_name.id "Frame"
+let id_frame        = Id.of_string "_popped"
+let id_Frame        = Id.of_string "_frame"
 let id_self         = Id.of_string "_self"
 
 (** The move-analysis key for a read of the frame field [_f.x].  Reads of a
@@ -377,7 +382,7 @@ type call_site = {
           into the machine's entry table. A function loopified on its own has
           exactly one entry, so this is [0]; it becomes meaningful once an
           enclosing function and a fixpoint local to it share a single stack,
-          where a call selects which [CraneEnter]-style frame to push and hence
+          where a call selects which [_call]-style frame to push and hence
           which parameter analysis applies. *)
   recv : expr option;
       (** For a method call, the receiver expression {e as written}, before
