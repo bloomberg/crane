@@ -54,6 +54,26 @@ let let_fix_entries = ref (None : (EConstr.t * EConstr.t array list) option)
    [cons] meta is resolved to [nat]) is left alone. *)
 let pending_cpp_meta_fills : (Core.Extracted.Meta.t * Core.Type.extracted) list ref = ref []
 
+(* The number of outermost binders of the constant {!extract_std_constant} is
+   extracting whose type variables are the constant's own: a constructor
+   parameter naming one of them ([@nil A] in [f {A} ...]) names the type
+   variable the constant's type numbers the same way.  [0] elsewhere. *)
+let constant_binders = ref 0
+
+(* The constructor parameters that name one of those type variables, with
+   the variable: filled like {!pending_cpp_meta_fills}, but through a meta
+   unified with another since, to the open cell it ends in -- the element
+   meta of [@nil A] is unified with the expected type's before anything
+   could constrain either. *)
+let pending_cpp_tvar_fills : (Core.Extracted.Meta.t * Core.Type.extracted) list ref = ref []
+
+(* The open cell a meta ends in: unified with another meta, it stands for
+   that one. *)
+let rec open_cell = function
+  | Core.Type.Meta ({contents = None; _} as r) -> Some r
+  | Core.Type.Meta {contents = Some (Core.Type.Meta _ as m)} -> open_cell m
+  | _ -> None
+
 (* NB: [type_of] and [sort_of] might raise
    [SingletonInductiveBecomesProp]. This exception is caught in late
    wrappers around the exported functions of this file, in order to display the
@@ -2290,16 +2310,30 @@ and extract_cons_app env sg type_env extracted_ty ((((kn, i) as ip), j) as cp) a
               let idx = !tvar_idx in
               incr tvar_idx;
               if idx < Array.length result_metas then
-                ( match result_metas.(idx) with
-                | Core.Type.Meta r when r.contents = None ->
+                let direct = match result_metas.(idx) with
+                  | Core.Type.Meta ({contents = None} as r) -> Some r | _ -> None in
+                ( match open_cell result_metas.(idx) with
+                | Some cell ->
                   ( try
                       let ty = extract_type env sg db 0 coq_arg [] in
                       ( match type_simpl ty with
-                      (* A type variable is not an erased position: left open,
-                         it generalises with the term that names it -- [B] in
-                         [fun (B : Type) (x : B) => [x]], a binding of its own. *)
+                      (* A type variable of the constant's own, written as
+                         the parameter ([@nil A], whose [A] nothing else
+                         constrains): the variable its type gives [A]. *)
+                      | Core.Type.Variable {variable = v; _}
+                        when (match EConstr.kind sg coq_arg with
+                              | Rel n -> Environ.nb_rel env - n < !constant_binders
+                              | _ -> false) ->
+                        pending_cpp_tvar_fills :=
+                          (cell, Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = v})
+                          :: !pending_cpp_tvar_fills
+                      (* Another type variable is not an erased position: left
+                         open, it generalises with the term that names it --
+                         [B] in [fun (B : Type) (x : B) => [x]], a binding of
+                         its own. *)
                       | Core.Type.Unknown | Core.Type.Erased _ | Core.Type.Variable _ -> ()
-                      | concrete ->
+                      | concrete when direct <> None ->
+                        let r = Option.get direct in
                         let rec erase_leaves = function
                           | Core.Type.Global_app {type_arguments = []; _} ->
                             Core.Type.Erased Core.Erasure_reason.Type_argument
@@ -2312,9 +2346,10 @@ and extract_cons_app env sg type_env extracted_ty ((((kn, i) as ip), j) as cp) a
                           | _ -> Core.Type.Erased Core.Erasure_reason.Type_argument
                         in
                         pending_cpp_meta_fills :=
-                          (r, erase_leaves concrete) :: !pending_cpp_meta_fills )
+                          (r, erase_leaves concrete) :: !pending_cpp_meta_fills
+                      | _ -> () )
                     with e when best_effort_failure e -> () )
-                | _ -> () )
+                | None -> () )
             | Core.Signature.Argument.Erased _ -> () ))
           param_sign param_args
       end
@@ -2862,6 +2897,7 @@ let detect_sigma_assertions env sg kn typ =
 let extract_std_constant env sg kn body typ =
   reset_meta_count ();
   pending_cpp_meta_fills := [];
+  pending_cpp_tvar_fills := [];
   (* The short type [t] (i.e. possibly with abbreviations). *)
   let schema = record_constant_type env sg kn (Some typ) in
   let numtvars = Core.Schema.arity schema and t = Core.Widen.type_ (Core.Schema.body schema) in
@@ -2930,16 +2966,26 @@ let extract_std_constant env sg kn body typ =
   (* The according Rocq environment. *)
   let env = push_rels_assum rels env in
   (* The real extraction: *)
-  let e = extract_term env sg type_env t' c [] in
+  let e =
+    let saved = !constant_binders in
+    constant_binders := Environ.nb_rel env;
+    Fun.protect ~finally:(fun () -> constant_binders := saved) (fun () -> extract_term env sg type_env t' c [])
+  in
   (* For C++: fill any type-param metas that remained unresolved after full extraction.
      These represent genuinely erased type positions (e.g. the element type of nil
      inside a lambda whose return type is a dependent/erased type). *)
-  if lang () == Cpp then
+  if lang () == Cpp then begin
     List.iter
       (fun ((r : Core.Extracted.Meta.t), erased) ->
         if r.contents = None then Core.Extracted.Meta.solve r erased)
       !pending_cpp_meta_fills;
+    List.iter
+      (fun ((r : Core.Extracted.Meta.t), tvar) ->
+        Option.iter (fun r -> Core.Extracted.Meta.solve r tvar) (open_cell (Core.Type.Meta r)))
+      !pending_cpp_tvar_fills
+  end;
   pending_cpp_meta_fills := [];
+  pending_cpp_tvar_fills := [];
   (* Expunging term and type from dummy lambdas. *)
   let trm = term_expunge s (List.combine ids (List.rev l), e) in
   (* Only the arrows the short type writes are expunged from it. *)

@@ -2,6 +2,7 @@
 
 #include "crane_fn.h"
 #include "obj.h"
+#include "small_vector.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -110,6 +111,44 @@ public:
       }
     }
   }
+
+  uint64_t length() const {
+    const List<A> *_self = this;
+
+    // Explicit stack replaces the non-tail recursion of length: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
+      const List<A> *_self;
+    };
+
+    struct _after_length_in_Cons {};
+
+    using _frame = std::variant<_call, _after_length_in_Cons>;
+    uint64_t _result{};
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
+    while (!_stack.empty()) {
+      _frame &_popped = _stack.back();
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
+        const List<A> *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(_after_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
+        _result = (std::move(_result) + 1);
+      }
+    }
+    return _result;
+  }
 };
 
 /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
@@ -119,12 +158,26 @@ public:
 /// instead of List<T1>::nil(), so fold_left's requires clause rejects
 /// the step function (const crane::obj & is not a T1).  The same erasure
 /// shows as "no viable conversion from 'List<crane::obj>'" when a local
-/// fixpoint's accumulator is a literal list of @nil A.
+/// fixpoint's accumulator is a literal list of @nil A; g is that list
+/// without the fixpoint.
+///
+/// Nothing but the parameter written at nil says what the list holds; it
+/// names one of the definition's own type variables, which the constructor
+/// now takes when unification leaves its type argument open.
 struct PolyNilTypeErased {
   template <typename T1> static T1 f(T1 a) {
-    return List<crane::obj>::nil().template fold_left<T1>(
+    return List<T1>::nil().template fold_left<T1>(
         [](T1 acc, T1) { return acc; }, std::move(a));
   }
 
   static inline const uint64_t t = f<uint64_t>(UINT64_C(4));
+
+  template <typename T1> static uint64_t g(const T1 &) {
+    return List<List<T1>>::cons(
+        List<T1>::nil(),
+        List<List<T1>>::cons(List<T1>::nil(), List<List<T1>>::nil()))
+               .length();
+  }
+
+  static inline const uint64_t u = g<bool>(true);
 };

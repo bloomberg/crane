@@ -372,14 +372,3 @@
   (alias runtest)
   (deps inlined_local_fix_param_type.t.exe)
   (action (run ./inlined_local_fix_param_type.t.exe))))
-
-(subdir poly_nil_type_erased
- (rule
-  (targets poly_nil_type_erased.t.exe)
-  (deps PolyNilTypeErased.vo poly_nil_type_erased.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_nil_type_erased.t.exe poly_nil_type_erased.t.cpp poly_nil_type_erased.cpp)))
- (rule
-  (alias runtest)
-  (deps poly_nil_type_erased.t.exe)
-  (action (run ./poly_nil_type_erased.t.exe))))
