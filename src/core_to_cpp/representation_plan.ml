@@ -449,12 +449,19 @@ let region cx body =
               Core_plan.Callable_abi.deduces_callable ctx.input.unit.context.callables use.callee
                 (Core_plan.Param_pos.of_regular ~leading i)
             in
+            (* Its arrows grouped as the declaration groups them
+               ({!Calls.spell_as_declared}), as lowering expects it. *)
+            let declared c =
+              match Core_plan.Param_pos.nth inst.params_orig (Core_plan.Param_pos.of_regular ~leading i) with
+              | Some orig -> Calls.spell_as_declared ~declared:(Core_plan.Param_pos.to_list inst.params_orig) orig c
+              | None -> c
+            in
             let slot_ty =
               match param_core_ty i with
               | Some t -> (
                 match Types.cpp_of_core cx (Base.Common.empty_env ()) t with
                 | c when Cpp_ir.Types.prints_as_any c -> None
-                | c -> Some (if deduced then Calls.deduce_erased_domains c else c)
+                | c -> Some (declared (if deduced then Calls.deduce_erased_domains c else c))
                 | exception _ -> None )
               | None -> None
             in

@@ -14562,3 +14562,14 @@
   (alias runtest)
   (deps let_lambda_slot_binder.t.exe)
   (action (run ./let_lambda_slot_binder.t.exe))))
+
+(subdir fold_curried_accumulator
+ (rule
+  (targets fold_curried_accumulator.t.exe)
+  (deps FoldCurriedAccumulator.vo fold_curried_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_curried_accumulator.t.exe fold_curried_accumulator.t.cpp fold_curried_accumulator.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_curried_accumulator.t.exe)
+  (action (run ./fold_curried_accumulator.t.exe))))

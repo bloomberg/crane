@@ -1994,6 +1994,66 @@ let local_callable cx env j occ =
     [i]th regular argument [core_arg] of the call to [id] planned as [plan]
     ({!plan_call}) is generated: {!argument_position}.  [local_callable j
     occ] says whether the variable [j] read at [occ] holds a function. *)
+
+(** [spell_as_declared ~declared orig t]: [t], the C++ type of a callee's
+    parameter declared at the Core type [orig] once the call's instantiation
+    is substituted, with its arrows grouped as the declaration groups them
+    ({!Cpp_ir.Types.arrow_site}): flat where [orig] writes an arrow chain,
+    curried past the arrows it writes and wherever, in a domain, one of the
+    callee's type variables stands that C++ is told explicitly -- not one it
+    deduces from an inductive's argument, which keeps the flat spelling the
+    inductive's instantiation gives it.  [declared] are the callee's declared
+    parameter types, where those inductives are found.  [fold_left]'s step,
+    declared [B -> A -> B], takes its accumulator curried when [B] is
+    [nat -> nat -> nat], and its element, [A] of [list A], flat. *)
+let spell_as_declared ~(declared : Core.Type.t list) (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) :
+    Cpp_ir.Lowered.Type.t =
+  (* The variables an inductive's argument mentions somewhere in the
+     declaration. *)
+  let deduced =
+    let acc = ref Base.Core_util.IntSet.empty in
+    let rec under_inductive inside = function
+      | Core.Type.Meta {contents = Some o} -> under_inductive inside o
+      | Core.Type.Variable {variable = j; _} -> if inside then acc := Base.Core_util.IntSet.add j !acc
+      | Core.Type.Variable_app {head = j; arguments = l} ->
+        if inside then acc := Base.Core_util.IntSet.add j !acc;
+        List.iter (under_inductive inside) l
+      | Core.Type.Arrow {parameter = a; result = b} ->
+        under_inductive inside a;
+        under_inductive inside b
+      | Core.Type.Global_app {type_arguments = l; _} -> List.iter (under_inductive true) l
+      | _ -> ()
+    in
+    List.iter (under_inductive false) declared;
+    !acc
+  in
+  let rec spell ~in_domain (orig : Core.Type.t) (t : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+    match (orig, t) with
+    | Core.Type.Meta {contents = Some o}, _ -> spell ~in_domain o t
+    | Core.Type.Variable {variable = j; _}, _ when in_domain && Base.Core_util.IntSet.mem j deduced -> t
+    | (Core.Type.Variable _ | Core.Type.Variable_app _), _ -> Cpp_ir.Types.spell_arrows Through_tvar t
+    | Core.Type.Arrow _, Function (doms, cod) ->
+      let odoms = core_value_domains orig in
+      let k = List.length odoms in
+      if k = 0 then
+        (* Every arrow erased: the C++ type is the codomain's. *)
+        let rec codomain = function
+          | Core.Type.Arrow {result; _} -> codomain result
+          | Core.Type.Meta {contents = Some o} -> codomain o
+          | o -> o
+        in
+        spell ~in_domain (codomain orig) t
+      else if List.length doms < k then t
+      else
+        let here = List.filteri (fun i _ -> i < k) doms and rest = List.filteri (fun i _ -> i >= k) doms in
+        let ocod = core_drop_arrows k orig in
+        let cod = spell ~in_domain ocod (if rest = [] then cod else Function (rest, cod)) in
+        Function (List.map2 (spell ~in_domain:true) odoms here, cod)
+    (* Past the arrows the declaration writes, every arrow is curried. *)
+    | _ -> if in_domain then t else Cpp_ir.Types.spell_arrows Through_tvar t
+  in
+  spell ~in_domain:false orig t
+
 let argument_position cx ~local_callable env id plan i core_arg =
   let {
     instantiated =
@@ -2074,8 +2134,11 @@ let argument_position cx ~local_callable env id plan i core_arg =
   let param_expected_recurried () =
     match Core_plan.Param_pos.nth fn_param_core_tys_orig param_index with
     | Some orig ->
-      Option.bind (param_expected_subst ())
-        (Cpp_ir.Types.respell_arrows (Cpp_ir.Types.Declared_at (count_core_value_arrows orig)))
+      Option.bind (param_expected_subst ()) (fun t ->
+          let spelled =
+            spell_as_declared ~declared:(Core_plan.Param_pos.to_list fn_param_core_tys_orig) orig t
+          in
+          if spelled = t then None else Some spelled )
     | None -> None
   in
   let param_expected_at_declared_arity () =

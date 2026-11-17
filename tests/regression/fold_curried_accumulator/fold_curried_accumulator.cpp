@@ -13,9 +13,9 @@ uint64_t FoldCurriedAccumulator::g(const List<uint64_t> &l, uint64_t x0_,
                                    uint64_t x1_) {
   return l.template fold_left<
       crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)>>(
-      [](crane::fn<uint64_t(uint64_t, uint64_t)> acc, uint64_t e) {
+      [](crane::fn<crane::fn<uint64_t(uint64_t)>(uint64_t)> acc, uint64_t e) {
         return [=, acc = std::move(acc)](uint64_t x) {
-          return [=](uint64_t y) { return acc(y, (x + e)); };
+          return [=](uint64_t y) { return crane::apply2(acc, y, (x + e)); };
         };
       },
       [](uint64_t x) {
