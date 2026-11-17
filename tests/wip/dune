@@ -428,17 +428,6 @@
   (deps inlined_local_fix_param_type.t.exe)
   (action (run ./inlined_local_fix_param_type.t.exe))))
 
-(subdir reuse_nonatomic_const_v_mut
- (rule
-  (targets reuse_nonatomic_const_v_mut.t.exe)
-  (deps ReuseNonatomicConstVMut.vo reuse_nonatomic_const_v_mut.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_nonatomic_const_v_mut.t.exe reuse_nonatomic_const_v_mut.t.cpp reuse_nonatomic_const_v_mut.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_nonatomic_const_v_mut.t.exe)
-  (action (run ./reuse_nonatomic_const_v_mut.t.exe))))
-
 (subdir poly_nil_type_erased
  (rule
   (targets poly_nil_type_erased.t.exe)

@@ -125,8 +125,11 @@ let borrow_matches_on ids (stmts : stmt list) =
                 {b with body = strip_moves bound (List.map (stmt views) b.body)} )
             branches,
           Option.map (List.map (stmt ids)) default )
-    | s -> Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:(stmt ids) ~type_:Fun.id ()) s
-  in
+    | s -> Cpp_ir.Map.stmt (within ids) s
+  (* A lambda in a branch -- an immediately invoked one computing a value
+     -- sees the same views: its matches on them borrow too. *)
+  and within ids = Cpp_ir.Map.make ~expr:(expr ids) ~stmt:(stmt ids) ~type_:Fun.id ()
+  and expr ids e = Cpp_ir.Map.expr (within ids) e in
   List.map (stmt ids) stmts
 
 (* [stmts] with every match on a local bound by [const] reference or by

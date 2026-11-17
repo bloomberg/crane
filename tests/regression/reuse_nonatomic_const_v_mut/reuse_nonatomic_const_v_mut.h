@@ -241,7 +241,7 @@ struct ReuseNonatomicConstVMut {
                 std::get<typename List<tree>::Cons>(_loop_l->v());
             const List<tree> &a1_value = *a1;
             _loop_acc = [&]() {
-              if (std::holds_alternative<typename tree::Leaf>(a0.v_mut())) {
+              if (std::holds_alternative<typename tree::Leaf>(a0.v())) {
                 if (List<uint64_t>::nil().template fold_left<bool>(
                         [](bool, uint64_t) { return true; }, true)) {
                   return _loop_acc;
