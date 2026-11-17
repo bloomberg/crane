@@ -1368,6 +1368,14 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
             | Call
                 (_, Entity (_, _, Some {inline = Some {shape = Pair_projection _; _}; _}), [e]) ->
               eta_arg_is_cheap e
+            (* A dictionary built from cheap parts -- [ReSum_inr] over a
+               handler, say -- costs a few closures, no more than the call
+               it feeds.  Bound outside, it is built wherever the closure is,
+               including every time a handler sum is formed for an event
+               the closure never sees. *)
+            | Call (_, Entity (r, _, _), args) when Base.Table.builds_instance r ->
+              List.for_all eta_arg_is_cheap args
+            | Converting_construct (_, args) -> List.for_all eta_arg_is_cheap args
             | _ -> false
           in
           (* The number of arguments the callee itself takes.  An
