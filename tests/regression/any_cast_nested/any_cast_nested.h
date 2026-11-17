@@ -55,7 +55,7 @@ struct AnyCastNested {
       return crane_any_cast<T1>(v);
     } else {
       uint64_t _x = x0 - 1;
-      return crane_any_cast<T1>(a1);
+      return crane_any_cast<T1>(crane_any_cast<T1>(a1));
     }
   }
 

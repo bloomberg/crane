@@ -106,14 +106,13 @@ struct DoubleOppositeWitnessesCase {
     using Obj = typename _tcI0::Obj;
 
     static crane::obj identity(typename _tcI0::Obj x) {
-      return crane_erase_fn(_tcI0::identity(std::move(x)));
+      return _tcI0::identity(std::move(x));
     }
 
     static crane::obj compose(typename _tcI0::Obj x, typename _tcI0::Obj y,
                               typename _tcI0::Obj z, crane::obj f,
                               crane::obj g) {
-      return crane_erase_fn(
-          _tcI0::compose(std::move(z), std::move(y), std::move(x), g, f));
+      return _tcI0::compose(std::move(z), std::move(y), std::move(x), g, f);
     }
   };
 
@@ -134,7 +133,7 @@ struct DoubleOppositeWitnessesCase {
             [=](const typename _tcI0::Obj &x, const typename _tcI0::Obj &y,
                 const auto &f0) {
               return f.morphism_of(g.object_of(x), g.object_of(y),
-                                   crane_erase_fn(g.morphism_of(x, y, f0)));
+                                   g.morphism_of(x, y, f0));
             })};
   }
 

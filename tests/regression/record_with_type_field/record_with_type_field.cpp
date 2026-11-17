@@ -6,5 +6,5 @@
 RecordWithTypeField::ty
 RecordWithTypeField::fold3(const RecordWithTypeField::alg &a,
                            RecordWithTypeField::ty x) {
-  return a.op(x, crane_erase_fn(a.op(x, a.unit_)));
+  return a.op(x, a.op(x, a.unit_));
 }

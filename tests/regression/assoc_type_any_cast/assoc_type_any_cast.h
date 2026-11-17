@@ -1,6 +1,5 @@
 #pragma once
 
-#include "crane_fn.h"
 #include "obj.h"
 #include <concepts>
 #include <cstdint>
@@ -35,7 +34,7 @@ struct AssocTypeAnyCast {
   static_assert(Wrap<PairWrap>);
 
   template <Wrap _tcI0> constexpr static uint64_t roundtrip(uint64_t n) {
-    return _tcI0::unwrap(crane_erase_fn(_tcI0::wrap(n)));
+    return _tcI0::unwrap(_tcI0::wrap(n));
   }
 
   static uint64_t run(uint64_t k);
