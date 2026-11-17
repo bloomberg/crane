@@ -87,6 +87,10 @@ type token = {
 let is_ident_start c =
   c = '_' || (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || Char.code c >= 128
 
+(** Whether [s] is one of the strings [l]: [List.mem] compared through
+    polymorphic comparison, which the token tests make on every token. *)
+let one_of s l = List.exists (String.equal s) l
+
 let is_digit c = c >= '0' && c <= '9'
 let is_ident_char c = is_ident_start c || is_digit c
 
@@ -198,10 +202,10 @@ let lex (s : string) : token array =
     else if is_ident_start c then (
       let j = suffix !i in
       let word = String.sub s !i (j - !i) in
-      if j < n && s.[j] = '"' && List.mem word string_prefixes then
+      if j < n && s.[j] = '"' && one_of word string_prefixes then
         let stop = if word.[String.length word - 1] = 'R' then raw_string j else quoted '"' (j + 1) in
         emit Literal !i (suffix stop)
-      else if j < n && s.[j] = '\'' && List.mem word ["L"; "u"; "U"; "u8"] then
+      else if j < n && s.[j] = '\'' && one_of word ["L"; "u"; "U"; "u8"] then
         emit Literal !i (suffix (quoted '\'' (j + 1)))
       else emit Word !i j )
     else if c = '"' then emit Literal !i (suffix (quoted '"' (!i + 1)))
@@ -239,7 +243,7 @@ let normalise_spacing (toks : token array) =
     if t.kind = Punct && (t.text = "&" || t.text = "&&" || t.text = "*") && not t.space then
       match prev with
       | Some p
-        when (p.kind = Word && not (List.mem p.text operand_keywords)) || is_punct p ">" ->
+        when (p.kind = Word && not (one_of p.text operand_keywords)) || is_punct p ">" ->
         t.gap <- true;
         ( match next with
         | Some x when x.space && (x.kind = Word || is_punct x "[" || is_punct x "...") -> x.gap <- false
@@ -307,9 +311,9 @@ let opens_block ~prev ~lambda t =
     || t.space
        &&
        match p.kind with
-       | Word -> not (List.mem p.text list_keywords)
+       | Word -> not (one_of p.text list_keywords)
        | Literal -> true
-       | Punct -> List.mem p.text [")"; "]"; ">"; "}"; "&"; "&&"; "*"]
+       | Punct -> one_of p.text [")"; "]"; ">"; "}"; "&"; "&&"; "*"]
        | _ -> false )
 
 let control_words = ["if"; "else"; "for"; "while"; "do"; "switch"; "try"; "catch"]
@@ -322,7 +326,7 @@ let classify ~lambda ~depth (header : token list) =
   else if header = [] then Plain
   else
     match header with
-    | t :: _ when t.kind = Word && List.mem t.text control_words -> Control
+    | t :: _ when t.kind = Word && one_of t.text control_words -> Control
     | _ -> (
       match List.rev header with
       | t :: _ when is_word t "requires" -> Requirement
@@ -364,8 +368,8 @@ let lambda_introducer ~prev ~next =
   | None -> true
   | Some p -> (
     match p.kind with
-    | Word -> List.mem p.text ["return"; "co_return"; "co_yield"; "throw"]
-    | Punct -> not (List.mem p.text [")"; "]"; ">"; "["; "&"; "&&"; "*"])
+    | Word -> one_of p.text ["return"; "co_return"; "co_yield"; "throw"]
+    | Punct -> not (one_of p.text [")"; "]"; ">"; "["; "&"; "&&"; "*"])
     | _ -> false )
 
 let rec parse_items p ~inside ~kind : item list =
@@ -393,7 +397,7 @@ let rec parse_items p ~inside ~kind : item list =
         items := Comment t :: !items )
       else if
         t.kind = Word
-        && List.mem t.text ["public"; "private"; "protected"]
+        && one_of t.text ["public"; "private"; "protected"]
         && p.pos + 1 < Array.length p.toks
         && is_punct p.toks.(p.pos + 1) ":"
       then (
@@ -455,7 +459,7 @@ and parse_stmt ?(comma = false) p ~kind : elem list =
           (match !stack with _ :: rest -> stack := rest | [] -> ());
           push t )
         else if is_punct t "{" then (
-          let lambda = List.mem depth !lambdas in
+          let lambda = List.exists (Int.equal depth) !lambdas in
           let compound = at_start && kind = Requirement in
           if compound || opens_block ~prev:!prev ~lambda t then (
             let hdr = List.rev !header in
@@ -782,8 +786,8 @@ let rec bracket (elems : elem array) i ~closer : node list list * token option *
         match closer with
         | Some c when t.kind = Punct && t.text = c && (c <> ">" || not t.space) -> (Some t, i + 1)
         | _ ->
-          if t.kind = Punct && List.mem t.text [")"; "]"; "}"] && closer <> None then raise Mismatch
-          else if t.kind = Punct && List.mem t.text ["("; "["; "{"] then (
+          if t.kind = Punct && one_of t.text [")"; "]"; "}"] && closer <> None then raise Mismatch
+          else if t.kind = Punct && one_of t.text ["("; "["; "{"] then (
             match bracket elems (i + 1) ~closer:(Some (closer_of t.text)) with
             | inner, cl, j ->
               cur := Brack (t, inner, cl) :: !cur;
@@ -836,7 +840,7 @@ let assignment_ops = ["="; "+="; "-="; "*="; "/="; "%="; "&="; "|="; "^="; "<<="
     with a space on both sides. *)
 let is_binary (nodes : node array) k ops =
   match nodes.(k) with
-  | Atom t when t.kind = Punct && List.mem t.text ops && t.space && k > 0 && k + 1 < Array.length nodes ->
+  | Atom t when t.kind = Punct && one_of t.text ops && t.space && k > 0 && k + 1 < Array.length nodes ->
     gap_before nodes.(k + 1)
   | _ -> false
 
@@ -855,7 +859,7 @@ let leading_keywords = ["return"; "throw"; "co_return"; "co_yield"; "co_await"; 
 let rec seq_doc (nodes : node list) : doc =
   match nodes with
   | [] -> Text ""
-  | Atom t :: (nd :: _ as rest) when t.kind = Word && List.mem t.text leading_keywords ->
+  | Atom t :: (nd :: _ as rest) when t.kind = Word && one_of t.text leading_keywords ->
     Cat [Text t.text; (if gap_before nd then Text " " else Text ""); seq_doc rest]
   | _ -> (
     let arr = Array.of_list nodes in
@@ -937,7 +941,7 @@ and atoms_doc nodes =
               &&
               match if i > 0 then Some arr.(i - 1) else None with
               | None -> true
-              | Some (Atom p) when p.kind = Word -> List.mem p.text grouping_keywords
+              | Some (Atom p) when p.kind = Word -> one_of p.text grouping_keywords
               | Some (Atom p) -> not (is_punct p ">" || is_punct p ")" || is_punct p "]")
               | Some _ -> false
             in
@@ -1073,14 +1077,14 @@ let return_type_split (nodes : node list) =
     let ret = sub_list arr 0 !q in
     let typed =
       List.exists
-        (function Atom t -> t.kind = Word && not (List.mem t.text specifiers) | Brack _ -> true | Blk _ -> false)
+        (function Atom t -> t.kind = Word && not (one_of t.text specifiers) | Brack _ -> true | Blk _ -> false)
         ret
     in
     let expression =
       List.exists
         (function
           | Atom t ->
-            List.mem t.text ["return"; "co_return"; "throw"; "delete"; "new"; "."; "->"; "="; "?"; "<<"; "co_await"]
+            one_of t.text ["return"; "co_return"; "throw"; "delete"; "new"; "."; "->"; "="; "?"; "<<"; "co_await"]
           | _ -> false)
         ret
     in
@@ -1278,7 +1282,7 @@ let reflow_comment text ~col =
     List.rev (!cur :: !lines)
 
 let is_access = function
-  | Label (t :: _) -> List.mem t.text ["public"; "private"; "protected"]
+  | Label (t :: _) -> one_of t.text ["public"; "private"; "protected"]
   | _ -> false
 
 (** Whether an item is a definition: a function or record with
