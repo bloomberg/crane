@@ -38,7 +38,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -99,9 +99,9 @@ struct ErasedIndexFunType {
 
     static ty tn() { return ty(TN{}); }
 
-    static ty tf(ty a, ty b) {
-      return ty(TF{std::make_shared<ty>(std::move(a)),
-                   std::make_shared<ty>(std::move(b))});
+    static ty tf(crane::shared_child_slot<ty> a,
+                 crane::shared_child_slot<ty> b) {
+      return ty(TF{a.take(), b.take()});
     }
 
     // MANIPULATORS

@@ -65,9 +65,9 @@ struct HofTreeLoopify {
 
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
-    static tree<A> node(tree<A> l, A x, tree<A> r) {
-      return tree<A>(Node{std::make_shared<tree<A>>(std::move(l)), std::move(x),
-                          std::make_shared<tree<A>>(std::move(r))});
+    static tree<A> node(crane::shared_child_slot<tree<A>> l, A x,
+                        crane::shared_child_slot<tree<A>> r) {
+      return tree<A>(Node{l.take(), std::move(x), r.take()});
     }
 
     // MANIPULATORS

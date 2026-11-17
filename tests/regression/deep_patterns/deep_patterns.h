@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -384,9 +384,8 @@ struct DeepPatterns {
 
     static mylist<A> nil() { return mylist<A>(Nil{}); }
 
-    static mylist<A> cons(A a0, mylist<A> a1) {
-      return mylist<A>(
-          Cons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    static mylist<A> cons(A a0, crane::shared_child_slot<mylist<A>> a1) {
+      return mylist<A>(Cons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

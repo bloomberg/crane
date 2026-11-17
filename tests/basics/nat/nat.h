@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAT
 #define INCLUDED_NAT
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -31,7 +32,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat n) { return Nat(S{std::make_shared<Nat>(std::move(n))}); }
+  static Nat s(crane::shared_child_slot<Nat> n) { return Nat(S{n.take()}); }
 
   // MANIPULATORS
   ~Nat() {

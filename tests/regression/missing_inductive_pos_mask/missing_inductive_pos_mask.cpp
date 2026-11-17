@@ -3,7 +3,7 @@
 Positive Coq_Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xi(Positive::xo(*a0));
+    return Positive::xi(Positive::xo(crane::shared_child(a0)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
     return Positive::xi(pred_double(*a0));
@@ -37,7 +37,7 @@ Coq_Pos::mask Coq_Pos::double_mask(const Coq_Pos::mask &x) {
 Coq_Pos::mask Coq_Pos::double_pred_mask(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return mask::ispos(Positive::xo(Positive::xo(*a0)));
+    return mask::ispos(Positive::xo(Positive::xo(crane::shared_child(a0))));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
     return mask::ispos(Positive::xo(pred_double(*a0)));
@@ -56,7 +56,7 @@ Coq_Pos::mask Coq_Pos::sub_mask(const Positive &x, const Positive &y) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
       return succ_double_mask(sub_mask(*a0, *a00));
     } else {
-      return mask::ispos(Positive::xo(*a0));
+      return mask::ispos(Positive::xo(crane::shared_child(a0)));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());

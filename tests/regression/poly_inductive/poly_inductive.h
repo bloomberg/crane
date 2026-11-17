@@ -247,9 +247,9 @@ struct PolyInductive {
 
     static ptree<A> pleaf(A a0) { return ptree<A>(PLeaf{std::move(a0)}); }
 
-    static ptree<A> pnode(ptree<A> a0, ptree<A> a1) {
-      return ptree<A>(PNode{std::make_shared<ptree<A>>(std::move(a0)),
-                            std::make_shared<ptree<A>>(std::move(a1))});
+    static ptree<A> pnode(crane::shared_child_slot<ptree<A>> a0,
+                          crane::shared_child_slot<ptree<A>> a1) {
+      return ptree<A>(PNode{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

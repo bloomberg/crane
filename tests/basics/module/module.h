@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MODULE
 #define INCLUDED_MODULE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <concepts>
@@ -91,9 +92,9 @@ template <OrderedType K, BaseType V> struct MakeMap {
 
     static tree empty() { return tree(Empty{}); }
 
-    static tree node(tree a0, key a1, value a2, tree a3) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), std::move(a1),
-                       std::move(a2), std::make_shared<tree>(std::move(a3))});
+    static tree node(crane::shared_child_slot<tree> a0, key a1, value a2,
+                     crane::shared_child_slot<tree> a3) {
+      return tree(Node{a0.take(), std::move(a1), std::move(a2), a3.take()});
     }
 
     // MANIPULATORS
@@ -157,13 +158,16 @@ template <OrderedType K, BaseType V> struct MakeMap {
       const auto &[a0, a1, a2, a3] = std::get<typename tree::Node>(m.v());
       switch (K::compare(k, a1)) {
       case Comparison::EQ: {
-        return tree::node(*a0, std::move(k), std::move(v), *a3);
+        return tree::node(crane::shared_child(a0), std::move(k), std::move(v),
+                          crane::shared_child(a3));
       }
       case Comparison::LT: {
-        return tree::node(add(std::move(k), std::move(v), *a0), a1, a2, *a3);
+        return tree::node(add(std::move(k), std::move(v), *a0), a1, a2,
+                          crane::shared_child(a3));
       }
       case Comparison::GT: {
-        return tree::node(*a0, a1, a2, add(std::move(k), std::move(v), *a3));
+        return tree::node(crane::shared_child(a0), a1, a2,
+                          add(std::move(k), std::move(v), *a3));
       }
       default:
         std::unreachable();

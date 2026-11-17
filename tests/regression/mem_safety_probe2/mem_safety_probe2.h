@@ -41,9 +41,9 @@ struct MemSafetyProbe2 {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -202,7 +202,7 @@ struct MemSafetyProbe2 {
     /// TEST 4: Partial application of a wrapper that stores its arg in a
     /// constructor.
     tree make_node(uint64_t v, const tree &r) const {
-      return tree::node(*this, v, r);
+      return tree::node(crane::shared_child(this), v, r);
     }
 
     /// TEST 3: Compose two closures, each capturing a different tree.
@@ -224,8 +224,9 @@ struct MemSafetyProbe2 {
     /// constructor arg.
     /// Tests whether the move analysis correctly handles double-use.
     std::pair<tree, uint64_t> dup_tree() const {
-      return std::make_pair(tree::node(*this, UINT64_C(0), tree::leaf()),
-                            this->sum_values(UINT64_C(0)));
+      return std::make_pair(
+          tree::node(crane::shared_child(this), UINT64_C(0), tree::leaf()),
+          this->sum_values(UINT64_C(0)));
     }
 
     uint64_t sum_values(uint64_t x) const {
@@ -367,9 +368,8 @@ struct MemSafetyProbe2 {
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
-    static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist<A>(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    static mylist<A> mycons(A a0, crane::shared_child_slot<mylist<A>> a1) {
+      return mylist<A>(Mycons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

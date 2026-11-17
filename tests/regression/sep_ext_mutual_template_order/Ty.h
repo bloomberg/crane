@@ -107,7 +107,7 @@ public:
         }()) {}
 
   static Forest<A> nil();
-  static Forest<A> cons(Tree<A> a0, Forest<A> a1);
+  static Forest<A> cons(Tree<A> a0, crane::shared_child_slot<Forest<A>> a1);
   // MANIPULATORS
   ~Forest();
   Forest(const Forest &) = default;
@@ -166,9 +166,9 @@ template <typename A> Tree<A>::~Tree() {
 
 template <typename A> Forest<A> Forest<A>::nil() { return Forest<A>(Nil{}); }
 
-template <typename A> Forest<A> Forest<A>::cons(Tree<A> a0, Forest<A> a1) {
-  return Forest<A>(Cons{std::make_shared<Tree<A>>(std::move(a0)),
-                        std::make_shared<Forest<A>>(std::move(a1))});
+template <typename A>
+Forest<A> Forest<A>::cons(Tree<A> a0, crane::shared_child_slot<Forest<A>> a1) {
+  return Forest<A>(Cons{std::make_shared<Tree<A>>(std::move(a0)), a1.take()});
 }
 
 template <typename A> Forest<A>::~Forest() {

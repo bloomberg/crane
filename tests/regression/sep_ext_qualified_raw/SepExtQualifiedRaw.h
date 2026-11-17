@@ -66,9 +66,9 @@ template <OrderedType X> struct Make {
 
     static Fmap<A> empty() { return Fmap<A>(Empty{}); }
 
-    static Fmap<A> node(typename X::t a0, A a1, Fmap<A> a2) {
-      return Fmap<A>(Node{std::move(a0), std::move(a1),
-                          std::make_shared<Fmap<A>>(std::move(a2))});
+    static Fmap<A> node(typename X::t a0, A a1,
+                        crane::shared_child_slot<Fmap<A>> a2) {
+      return Fmap<A>(Node{std::move(a0), std::move(a1), a2.take()});
     }
 
     // MANIPULATORS

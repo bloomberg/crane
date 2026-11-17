@@ -39,8 +39,8 @@ public:
 
   static Tree leaf() { return Tree(Leaf{}); }
 
-  static Tree node(Tree a0, uint64_t a1) {
-    return Tree(Node{std::make_shared<Tree>(std::move(a0)), a1});
+  static Tree node(crane::shared_child_slot<Tree> a0, uint64_t a1) {
+    return Tree(Node{a0.take(), a1});
   }
 
   // MANIPULATORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NUM
 #define INCLUDED_NUM
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -33,8 +34,8 @@ public:
 
   static Num zero() { return Num(Zero{}); }
 
-  static Num succ(Num n) {
-    return Num(Succ{std::make_shared<Num>(std::move(n))});
+  static Num succ(crane::shared_child_slot<Num> n) {
+    return Num(Succ{n.take()});
   }
 
   // MANIPULATORS

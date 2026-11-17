@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LIFTED_LAMBDA_NESTED
 #define INCLUDED_LIFTED_LAMBDA_NESTED
 
+#include "crane_fn.h"
 #include "fn.h"
 #include <atomic>
 #include <cstdint>
@@ -33,7 +34,7 @@ struct LiftedLambdaNested {
 
     static t l() { return t(L{}); }
 
-    static t n(t a0) { return t(N{std::make_shared<t>(std::move(a0))}); }
+    static t n(crane::shared_child_slot<t> a0) { return t(N{a0.take()}); }
 
     // MANIPULATORS
     ~t() {

@@ -62,8 +62,8 @@ struct CallableConstraintCategories {
 
     static lst<A> nil() { return lst<A>(Nil{}); }
 
-    static lst<A> cons(A a, lst<A> l) {
-      return lst<A>(Cons{std::move(a), std::make_shared<lst<A>>(std::move(l))});
+    static lst<A> cons(A a, crane::shared_child_slot<lst<A>> l) {
+      return lst<A>(Cons{std::move(a), l.take()});
     }
 
     // MANIPULATORS

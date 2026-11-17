@@ -44,7 +44,7 @@ ReuseUseAfterMove::rewrite_head(const ReuseUseAfterMove::mylist &l, bool b) {
             l.v())) {
       const auto &[_, a1] =
           std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
-      return mylist::mycons(length(l), *a1);
+      return mylist::mycons(length(l), crane::shared_child(a1));
     } else {
       return mylist::mynil();
     }
@@ -62,7 +62,7 @@ ReuseUseAfterMove::rewrite_head_sum(const ReuseUseAfterMove::mylist &l,
             l.v())) {
       const auto &[_, a1] =
           std::get<typename ReuseUseAfterMove::mylist::Mycons>(l.v());
-      return mylist::mycons(sum(l), *a1);
+      return mylist::mycons(sum(l), crane::shared_child(a1));
     } else {
       return mylist::mynil();
     }

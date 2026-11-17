@@ -69,10 +69,9 @@ struct List {
       return typename List::template list<A>(Nil{});
     }
 
-    static typename List::template list<A> cons(A a, List::list<A> l) {
-      return typename List::template list<A>(
-          Cons{std::move(a),
-               std::make_shared<typename List::template list<A>>(std::move(l))});
+    static typename List::template list<A>
+    cons(A a, crane::shared_child_slot<typename List::template list<A>> l) {
+      return typename List::template list<A>(Cons{std::move(a), l.take()});
     }
 
     // MANIPULATORS

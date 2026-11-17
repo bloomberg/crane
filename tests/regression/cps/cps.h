@@ -66,8 +66,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -195,9 +195,9 @@ struct CPS {
 
     static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
-    static tree node(tree a0, tree a1) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)),
-                       std::make_shared<tree>(std::move(a1))});
+    static tree node(crane::shared_child_slot<tree> a0,
+                     crane::shared_child_slot<tree> a1) {
+      return tree(Node{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

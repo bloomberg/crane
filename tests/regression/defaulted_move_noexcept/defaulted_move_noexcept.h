@@ -35,7 +35,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -119,8 +119,8 @@ struct DefaultedMoveNoexcept {
 
     static seq<A> nil() { return seq<A>(Nil{}); }
 
-    static seq<A> cons(A a, seq<A> s) {
-      return seq<A>(Cons{std::move(a), std::make_shared<seq<A>>(std::move(s))});
+    static seq<A> cons(A a, crane::shared_child_slot<seq<A>> s) {
+      return seq<A>(Cons{std::move(a), s.take()});
     }
 
     // MANIPULATORS

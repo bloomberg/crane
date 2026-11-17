@@ -52,8 +52,8 @@ struct Nat {
 
     static Nat::nat o() { return Nat::nat(O{}); }
 
-    static Nat::nat s(Nat::nat a0) {
-      return Nat::nat(S{std::make_shared<Nat::nat>(std::move(a0))});
+    static Nat::nat s(crane::shared_child_slot<Nat::nat> a0) {
+      return Nat::nat(S{a0.take()});
     }
 
     // MANIPULATORS
@@ -168,44 +168,44 @@ public:
 
   static Uint nil() { return Uint(Nil{}); }
 
-  static Uint d0(Uint a0) {
-    return Uint(D0{std::make_shared<Uint>(std::move(a0))});
+  static Uint d0(crane::shared_child_slot<Uint> a0) {
+    return Uint(D0{a0.take()});
   }
 
-  static Uint d1(Uint a0) {
-    return Uint(D1{std::make_shared<Uint>(std::move(a0))});
+  static Uint d1(crane::shared_child_slot<Uint> a0) {
+    return Uint(D1{a0.take()});
   }
 
-  static Uint d2(Uint a0) {
-    return Uint(D2{std::make_shared<Uint>(std::move(a0))});
+  static Uint d2(crane::shared_child_slot<Uint> a0) {
+    return Uint(D2{a0.take()});
   }
 
-  static Uint d3(Uint a0) {
-    return Uint(D3{std::make_shared<Uint>(std::move(a0))});
+  static Uint d3(crane::shared_child_slot<Uint> a0) {
+    return Uint(D3{a0.take()});
   }
 
-  static Uint d4(Uint a0) {
-    return Uint(D4{std::make_shared<Uint>(std::move(a0))});
+  static Uint d4(crane::shared_child_slot<Uint> a0) {
+    return Uint(D4{a0.take()});
   }
 
-  static Uint d5(Uint a0) {
-    return Uint(D5{std::make_shared<Uint>(std::move(a0))});
+  static Uint d5(crane::shared_child_slot<Uint> a0) {
+    return Uint(D5{a0.take()});
   }
 
-  static Uint d6(Uint a0) {
-    return Uint(D6{std::make_shared<Uint>(std::move(a0))});
+  static Uint d6(crane::shared_child_slot<Uint> a0) {
+    return Uint(D6{a0.take()});
   }
 
-  static Uint d7(Uint a0) {
-    return Uint(D7{std::make_shared<Uint>(std::move(a0))});
+  static Uint d7(crane::shared_child_slot<Uint> a0) {
+    return Uint(D7{a0.take()});
   }
 
-  static Uint d8(Uint a0) {
-    return Uint(D8{std::make_shared<Uint>(std::move(a0))});
+  static Uint d8(crane::shared_child_slot<Uint> a0) {
+    return Uint(D8{a0.take()});
   }
 
-  static Uint d9(Uint a0) {
-    return Uint(D9{std::make_shared<Uint>(std::move(a0))});
+  static Uint d9(crane::shared_child_slot<Uint> a0) {
+    return Uint(D9{a0.take()});
   }
 
   // MANIPULATORS
@@ -393,9 +393,8 @@ public:
 
   static String emptystring() { return String(EmptyString{}); }
 
-  static String string0(Ascii a0, String a1) {
-    return String(
-        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
+  static String string0(Ascii a0, crane::shared_child_slot<String> a1) {
+    return String(String0{std::move(a0), a1.take()});
   }
 
   // MANIPULATORS

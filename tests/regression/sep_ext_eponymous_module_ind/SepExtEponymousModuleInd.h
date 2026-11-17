@@ -55,10 +55,10 @@ public:
 
   static Trie<A> leaf() { return Trie<A>(Leaf{}); }
 
-  static Trie<A> branch(std::optional<A> t, Trie<A> t0, Trie<A> t1) {
-    return Trie<A>(
-        Branch{std::move(t), std::make_shared<Trie<A>>(std::move(t0)),
-               std::make_shared<Trie<A>>(std::move(t1))});
+  static Trie<A> branch(std::optional<A> t,
+                        crane::shared_child_slot<Trie<A>> t0,
+                        crane::shared_child_slot<Trie<A>> t1) {
+    return Trie<A>(Branch{std::move(t), t0.take(), t1.take()});
   }
 
   // MANIPULATORS

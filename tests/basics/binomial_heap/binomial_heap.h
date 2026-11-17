@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -123,9 +123,9 @@ struct BinomialHeap {
 
     explicit tree(Leaf _v) : v_(_v) {}
 
-    static tree node(key a0, tree a1, tree a2) {
-      return tree(Node{std::move(a0), std::make_shared<tree>(std::move(a1)),
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(key a0, crane::shared_child_slot<tree> a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{std::move(a0), a1.take(), a2.take()});
     }
 
     static tree leaf() { return tree(Leaf{}); }

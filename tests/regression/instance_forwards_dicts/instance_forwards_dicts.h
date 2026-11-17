@@ -204,8 +204,8 @@ struct InstanceForwardsDicts {
       return exp<T>(Ops{a0, a1, a2});
     }
 
-    static exp<T> neg(uint64_t a0, exp<T> a1) {
-      return exp<T>(Neg{a0, std::make_shared<exp<T>>(std::move(a1))});
+    static exp<T> neg(uint64_t a0, crane::shared_child_slot<exp<T>> a1) {
+      return exp<T>(Neg{a0, a1.take()});
     }
 
     static exp<T> emeta(meta<T> a0) {

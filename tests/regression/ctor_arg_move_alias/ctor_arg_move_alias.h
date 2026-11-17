@@ -72,8 +72,8 @@ struct CtorArgMoveAlias {
 
     static inner inil() { return inner(INil{}); }
 
-    static inner icons(uint64_t a0, inner a1) {
-      return inner(ICons{a0, std::make_shared<inner>(std::move(a1))});
+    static inner icons(uint64_t a0, crane::shared_child_slot<inner> a1) {
+      return inner(ICons{a0, a1.take()});
     }
 
     // MANIPULATORS
@@ -244,9 +244,8 @@ struct CtorArgMoveAlias {
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
-    static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist<A>(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    static mylist<A> mycons(A a0, crane::shared_child_slot<mylist<A>> a1) {
+      return mylist<A>(Mycons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

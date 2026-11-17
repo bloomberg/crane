@@ -7,7 +7,7 @@ List<uint64_t> LoadProgramHeadWrite::update_nth(uint64_t n, uint64_t x,
       return l;
     } else {
       const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-      return List<uint64_t>::cons(x, *a1);
+      return List<uint64_t>::cons(x, crane::shared_child(a1));
     }
   } else {
     uint64_t n_ = n - 1;

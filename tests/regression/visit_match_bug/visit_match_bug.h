@@ -1,6 +1,7 @@
 #ifndef INCLUDED_VISIT_MATCH_BUG
 #define INCLUDED_VISIT_MATCH_BUG
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -38,9 +39,9 @@ struct VisitMatchBug {
 
     static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
-    static Tree node(Tree a0, uint64_t a1, Tree a2) {
-      return Tree(Node{std::make_shared<Tree>(std::move(a0)), a1,
-                       std::make_shared<Tree>(std::move(a2))});
+    static Tree node(crane::shared_child_slot<Tree> a0, uint64_t a1,
+                     crane::shared_child_slot<Tree> a2) {
+      return Tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS

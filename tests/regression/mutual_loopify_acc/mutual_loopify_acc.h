@@ -120,9 +120,8 @@ struct MutualLoopifyAcc {
 
     static forest fnil() { return forest(Fnil{}); }
 
-    static forest fcons(tree a0, forest a1) {
-      return forest(Fcons{std::make_shared<tree>(std::move(a0)),
-                          std::make_shared<forest>(std::move(a1))});
+    static forest fcons(tree a0, crane::shared_child_slot<forest> a1) {
+      return forest(Fcons{std::make_shared<tree>(std::move(a0)), a1.take()});
     }
 
     // MANIPULATORS

@@ -59,8 +59,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -107,7 +107,7 @@ struct RamAccessor {
         return List<T1>::nil();
       } else {
         const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
-        return List<T1>::cons(x, *a1);
+        return List<T1>::cons(x, crane::shared_child(a1));
       }
     } else {
       uint64_t n_ = n - 1;

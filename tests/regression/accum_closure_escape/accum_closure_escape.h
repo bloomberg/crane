@@ -72,9 +72,8 @@ struct AccumClosureEscape {
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
-    static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist<A>(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    static mylist<A> mycons(A a0, crane::shared_child_slot<mylist<A>> a1) {
+      return mylist<A>(Mycons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS
@@ -209,9 +208,9 @@ struct AccumClosureEscape {
 
     static tree tleaf() { return tree(TLeaf{}); }
 
-    static tree tnode(tree a0, uint64_t a1, tree a2) {
-      return tree(TNode{std::make_shared<tree>(std::move(a0)), a1,
-                        std::make_shared<tree>(std::move(a2))});
+    static tree tnode(crane::shared_child_slot<tree> a0, uint64_t a1,
+                      crane::shared_child_slot<tree> a2) {
+      return tree(TNode{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS

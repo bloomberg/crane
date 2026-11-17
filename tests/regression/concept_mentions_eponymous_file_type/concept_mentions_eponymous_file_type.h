@@ -39,7 +39,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -125,10 +125,9 @@ struct List {
       return typename List::template list<A>(Nil{});
     }
 
-    static typename List::template list<A> cons(A a, List::list<A> l) {
-      return typename List::template list<A>(
-          Cons{std::move(a),
-               std::make_shared<typename List::template list<A>>(std::move(l))});
+    static typename List::template list<A>
+    cons(A a, crane::shared_child_slot<typename List::template list<A>> l) {
+      return typename List::template list<A>(Cons{std::move(a), l.take()});
     }
 
     // MANIPULATORS

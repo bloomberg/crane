@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -246,7 +246,7 @@ struct LoopifyHofs {
         if (p(a0)) {
           _loop_l = crane_raw(a1);
         } else {
-          return List<T1>::cons(a0, *a1);
+          return List<T1>::cons(a0, crane::shared_child(a1));
         }
       }
     }
@@ -620,7 +620,8 @@ struct LoopifyHofs {
                                 std::move(_cell)))
                         : _root.emplace(std::move(_cell)));
             _write = &std::get<typename List<uint64_t>::Cons>(_node.v_mut()).l;
-            _loop_l = List<uint64_t>::cons(f(a0, a00), *a10);
+            _loop_l =
+                List<uint64_t>::cons(f(a0, a00), crane::shared_child(a10));
             _loop_fuel = g;
             continue;
           }
@@ -1333,8 +1334,9 @@ struct LoopifyHofs {
             _stack.emplace_back(_after_span_split_in_true{a0});
             _stack.emplace_back(_call{crane_raw(a1)});
           } else {
-            _result = std::make_pair(List<uint64_t>::nil(),
-                                     List<uint64_t>::cons(a0, *a1));
+            _result = std::make_pair(
+                List<uint64_t>::nil(),
+                List<uint64_t>::cons(a0, crane::shared_child(a1)));
           }
         }
       } else {
@@ -1430,7 +1432,8 @@ struct LoopifyHofs {
           auto &[a01, a11] =
               std::get<typename List<List<uint64_t>>::Cons>(_tmp1.v_mut());
           _result = List<List<uint64_t>>::cons(
-              List<uint64_t>::cons(a0, std::move(a01)), *a11);
+              List<uint64_t>::cons(a0, std::move(a01)),
+              crane::shared_child(a11));
         }
       }
     }

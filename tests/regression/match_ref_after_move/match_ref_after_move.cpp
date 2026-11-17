@@ -55,7 +55,8 @@ MatchRefAfterMove::match_into_pair(const MatchRefAfterMove::mylist<uint64_t> &l)
     const auto &[a0, a1] =
         std::get<typename MatchRefAfterMove::mylist<uint64_t>::Mycons>(l.v());
     return mypair<uint64_t, MatchRefAfterMove::mylist<uint64_t>>::mkpair(
-        a0, mylist<uint64_t>::mycons((a0 + UINT64_C(1)), *a1));
+        a0,
+        mylist<uint64_t>::mycons((a0 + UINT64_C(1)), crane::shared_child(a1)));
   }
 }
 

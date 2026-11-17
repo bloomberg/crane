@@ -39,7 +39,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -206,8 +206,8 @@ struct TfunctorRecordOptionField {
 
     static exp<T> lit(T t) { return exp<T>(Lit{std::move(t)}); }
 
-    static exp<T> neg(exp<T> e) {
-      return exp<T>(Neg{std::make_shared<exp<T>>(std::move(e))});
+    static exp<T> neg(crane::shared_child_slot<exp<T>> e) {
+      return exp<T>(Neg{e.take()});
     }
 
     // MANIPULATORS

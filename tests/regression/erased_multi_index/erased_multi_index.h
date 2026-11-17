@@ -88,8 +88,8 @@ struct ErasedMultiIndex {
 
     static hlist hnil() { return hlist(HNil{}); }
 
-    static hlist hcons(crane::obj a, hlist a1) {
-      return hlist(HCons{std::move(a), std::make_shared<hlist>(std::move(a1))});
+    static hlist hcons(crane::obj a, crane::shared_child_slot<hlist> a1) {
+      return hlist(HCons{std::move(a), a1.take()});
     }
 
     // MANIPULATORS

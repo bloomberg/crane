@@ -64,14 +64,14 @@ struct LoopifyCoercedScrutinee {
 
     static expr bl(bool a0) { return expr(Bl{a0}); }
 
-    static expr ite(expr a, expr a1, expr a2) {
-      return expr(Ite{std::make_shared<expr>(std::move(a)),
-                      std::make_shared<expr>(std::move(a1)),
-                      std::make_shared<expr>(std::move(a2))});
+    static expr ite(crane::shared_child_slot<expr> a,
+                    crane::shared_child_slot<expr> a1,
+                    crane::shared_child_slot<expr> a2) {
+      return expr(Ite{a.take(), a1.take(), a2.take()});
     }
 
-    static expr iszero(expr a0) {
-      return expr(Iszero{std::make_shared<expr>(std::move(a0))});
+    static expr iszero(crane::shared_child_slot<expr> a0) {
+      return expr(Iszero{a0.take()});
     }
 
     // MANIPULATORS

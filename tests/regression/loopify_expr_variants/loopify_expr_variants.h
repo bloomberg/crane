@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -163,15 +163,15 @@ struct LoopifyExprVariants {
 
     static cond_expr lit(uint64_t a0) { return cond_expr(Lit{a0}); }
 
-    static cond_expr add(cond_expr a0, cond_expr a1) {
-      return cond_expr(Add{std::make_shared<cond_expr>(std::move(a0)),
-                           std::make_shared<cond_expr>(std::move(a1))});
+    static cond_expr add(crane::shared_child_slot<cond_expr> a0,
+                         crane::shared_child_slot<cond_expr> a1) {
+      return cond_expr(Add{a0.take(), a1.take()});
     }
 
-    static cond_expr cond(cond_expr a0, cond_expr a1, cond_expr a2) {
-      return cond_expr(Cond{std::make_shared<cond_expr>(std::move(a0)),
-                            std::make_shared<cond_expr>(std::move(a1)),
-                            std::make_shared<cond_expr>(std::move(a2))});
+    static cond_expr cond(crane::shared_child_slot<cond_expr> a0,
+                          crane::shared_child_slot<cond_expr> a1,
+                          crane::shared_child_slot<cond_expr> a2) {
+      return cond_expr(Cond{a0.take(), a1.take(), a2.take()});
     }
 
     // MANIPULATORS
@@ -579,19 +579,19 @@ struct LoopifyExprVariants {
 
     static arith_expr anum(uint64_t a0) { return arith_expr(ANum{a0}); }
 
-    static arith_expr aadd(arith_expr a0, arith_expr a1) {
-      return arith_expr(AAdd{std::make_shared<arith_expr>(std::move(a0)),
-                             std::make_shared<arith_expr>(std::move(a1))});
+    static arith_expr aadd(crane::shared_child_slot<arith_expr> a0,
+                           crane::shared_child_slot<arith_expr> a1) {
+      return arith_expr(AAdd{a0.take(), a1.take()});
     }
 
-    static arith_expr amul(arith_expr a0, arith_expr a1) {
-      return arith_expr(AMul{std::make_shared<arith_expr>(std::move(a0)),
-                             std::make_shared<arith_expr>(std::move(a1))});
+    static arith_expr amul(crane::shared_child_slot<arith_expr> a0,
+                           crane::shared_child_slot<arith_expr> a1) {
+      return arith_expr(AMul{a0.take(), a1.take()});
     }
 
-    static arith_expr adiv(arith_expr a0, arith_expr a1) {
-      return arith_expr(ADiv{std::make_shared<arith_expr>(std::move(a0)),
-                             std::make_shared<arith_expr>(std::move(a1))});
+    static arith_expr adiv(crane::shared_child_slot<arith_expr> a0,
+                           crane::shared_child_slot<arith_expr> a1) {
+      return arith_expr(ADiv{a0.take(), a1.take()});
     }
 
     // MANIPULATORS
@@ -1056,18 +1056,18 @@ struct LoopifyExprVariants {
 
     static bool_expr bfalse() { return bool_expr(BFalse{}); }
 
-    static bool_expr band(bool_expr a0, bool_expr a1) {
-      return bool_expr(BAnd{std::make_shared<bool_expr>(std::move(a0)),
-                            std::make_shared<bool_expr>(std::move(a1))});
+    static bool_expr band(crane::shared_child_slot<bool_expr> a0,
+                          crane::shared_child_slot<bool_expr> a1) {
+      return bool_expr(BAnd{a0.take(), a1.take()});
     }
 
-    static bool_expr bor(bool_expr a0, bool_expr a1) {
-      return bool_expr(BOr{std::make_shared<bool_expr>(std::move(a0)),
-                           std::make_shared<bool_expr>(std::move(a1))});
+    static bool_expr bor(crane::shared_child_slot<bool_expr> a0,
+                         crane::shared_child_slot<bool_expr> a1) {
+      return bool_expr(BOr{a0.take(), a1.take()});
     }
 
-    static bool_expr bnot(bool_expr a0) {
-      return bool_expr(BNot{std::make_shared<bool_expr>(std::move(a0))});
+    static bool_expr bnot(crane::shared_child_slot<bool_expr> a0) {
+      return bool_expr(BNot{a0.take()});
     }
 
     // MANIPULATORS
@@ -1240,18 +1240,20 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp5.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp5.v_mut());
-            bool_expr a_ = bool_expr::band(*a00, *a10);
+            bool_expr a_ = bool_expr::band(crane::shared_child(a00),
+                                           crane::shared_child(a10));
             _stack.emplace_back(_after_simplify_bool_in_BAnd_2{std::move(a_)});
             _stack.emplace_back(_call{_f.a1});
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp5.v_mut())) {
             auto &[a00, a10] = std::get<typename bool_expr::BOr>(_tmp5.v_mut());
-            bool_expr a_ = bool_expr::bor(*a00, *a10);
+            bool_expr a_ = bool_expr::bor(crane::shared_child(a00),
+                                          crane::shared_child(a10));
             _stack.emplace_back(_after_simplify_bool_in_BOr{std::move(a_)});
             _stack.emplace_back(_call{_f.a1});
           } else {
             auto &[a00] = std::get<typename bool_expr::BNot>(_tmp5.v_mut());
-            bool_expr a_ = bool_expr::bnot(*a00);
+            bool_expr a_ = bool_expr::bnot(crane::shared_child(a00));
             _stack.emplace_back(_after_simplify_bool_in_BNot{std::move(a_)});
             _stack.emplace_back(_call{_f.a1});
           }
@@ -1271,16 +1273,20 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp2.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp2.v_mut());
-            _result =
-                bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+            _result = bool_expr::band(std::move(a_),
+                                      bool_expr::band(crane::shared_child(a01),
+                                                      crane::shared_child(a11)));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp2.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp2.v_mut());
-            _result =
-                bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+            _result = bool_expr::band(std::move(a_),
+                                      bool_expr::bor(crane::shared_child(a01),
+                                                     crane::shared_child(a11)));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp2.v_mut());
-            _result = bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+            _result =
+                bool_expr::band(std::move(a_),
+                                bool_expr::bnot(crane::shared_child(a01)));
           }
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BAnd_3>(_popped)) {
@@ -1298,15 +1304,19 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp7.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp7.v_mut());
-            _result =
-                bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::band(crane::shared_child(a01),
+                                                     crane::shared_child(a11)));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp7.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp7.v_mut());
-            _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::bor(crane::shared_child(a01),
+                                                    crane::shared_child(a11)));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp7.v_mut());
-            _result = bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::bnot(crane::shared_child(a01)));
           }
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BFalse>(_popped)) {
@@ -1323,14 +1333,16 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp6.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp6.v_mut());
-            _result = bool_expr::band(*a01, *a11);
+            _result = bool_expr::band(crane::shared_child(a01),
+                                      crane::shared_child(a11));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp6.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp6.v_mut());
-            _result = bool_expr::bor(*a01, *a11);
+            _result = bool_expr::bor(crane::shared_child(a01),
+                                     crane::shared_child(a11));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp6.v_mut());
-            _result = bool_expr::bnot(*a01);
+            _result = bool_expr::bnot(crane::shared_child(a01));
           }
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BNot>(_popped)) {
@@ -1347,16 +1359,20 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp4.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp4.v_mut());
-            _result =
-                bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+            _result = bool_expr::band(std::move(a_),
+                                      bool_expr::band(crane::shared_child(a01),
+                                                      crane::shared_child(a11)));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp4.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp4.v_mut());
-            _result =
-                bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+            _result = bool_expr::band(std::move(a_),
+                                      bool_expr::bor(crane::shared_child(a01),
+                                                     crane::shared_child(a11)));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp4.v_mut());
-            _result = bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+            _result =
+                bool_expr::band(std::move(a_),
+                                bool_expr::bnot(crane::shared_child(a01)));
           }
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BNot_2>(_popped)) {
@@ -1374,15 +1390,19 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp9.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp9.v_mut());
-            _result =
-                bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::band(crane::shared_child(a01),
+                                                     crane::shared_child(a11)));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp9.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp9.v_mut());
-            _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::bor(crane::shared_child(a01),
+                                                    crane::shared_child(a11)));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp9.v_mut());
-            _result = bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::bnot(crane::shared_child(a01)));
           }
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BNot_3>(_popped)) {
@@ -1399,15 +1419,19 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp11.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp11.v_mut());
-            _result = bool_expr::bnot(bool_expr::band(*a00, *a10));
+            _result =
+                bool_expr::bnot(bool_expr::band(crane::shared_child(a00),
+                                                crane::shared_child(a10)));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp11.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BOr>(_tmp11.v_mut());
-            _result = bool_expr::bnot(bool_expr::bor(*a00, *a10));
+            _result = bool_expr::bnot(bool_expr::bor(crane::shared_child(a00),
+                                                     crane::shared_child(a10)));
           } else {
             auto &[a00] = std::get<typename bool_expr::BNot>(_tmp11.v_mut());
-            _result = bool_expr::bnot(bool_expr::bnot(*a00));
+            _result =
+                bool_expr::bnot(bool_expr::bnot(crane::shared_child(a00)));
           }
         } else if (std::holds_alternative<_after_simplify_bool_in_BOr>(_popped)) {
           auto _f = std::move(std::get<_after_simplify_bool_in_BOr>(_popped));
@@ -1423,16 +1447,20 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp3.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp3.v_mut());
-            _result =
-                bool_expr::band(std::move(a_), bool_expr::band(*a01, *a11));
+            _result = bool_expr::band(std::move(a_),
+                                      bool_expr::band(crane::shared_child(a01),
+                                                      crane::shared_child(a11)));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp3.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp3.v_mut());
-            _result =
-                bool_expr::band(std::move(a_), bool_expr::bor(*a01, *a11));
+            _result = bool_expr::band(std::move(a_),
+                                      bool_expr::bor(crane::shared_child(a01),
+                                                     crane::shared_child(a11)));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp3.v_mut());
-            _result = bool_expr::band(std::move(a_), bool_expr::bnot(*a01));
+            _result =
+                bool_expr::band(std::move(a_),
+                                bool_expr::bnot(crane::shared_child(a01)));
           }
         } else if (
                 std::holds_alternative<_after_simplify_bool_in_BOr_2>(_popped)) {
@@ -1450,19 +1478,21 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp10.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BAnd>(_tmp10.v_mut());
-            bool_expr a_ = bool_expr::band(*a00, *a10);
+            bool_expr a_ = bool_expr::band(crane::shared_child(a00),
+                                           crane::shared_child(a10));
             _stack.emplace_back(_after_simplify_bool_in_BAnd_3{std::move(a_)});
             _stack.emplace_back(_call{_f.a1});
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp10.v_mut())) {
             auto &[a00, a10] =
                 std::get<typename bool_expr::BOr>(_tmp10.v_mut());
-            bool_expr a_ = bool_expr::bor(*a00, *a10);
+            bool_expr a_ = bool_expr::bor(crane::shared_child(a00),
+                                          crane::shared_child(a10));
             _stack.emplace_back(_after_simplify_bool_in_BOr_3{std::move(a_)});
             _stack.emplace_back(_call{_f.a1});
           } else {
             auto &[a00] = std::get<typename bool_expr::BNot>(_tmp10.v_mut());
-            bool_expr a_ = bool_expr::bnot(*a00);
+            bool_expr a_ = bool_expr::bnot(crane::shared_child(a00));
             _stack.emplace_back(_after_simplify_bool_in_BNot_2{std::move(a_)});
             _stack.emplace_back(_call{_f.a1});
           }
@@ -1481,15 +1511,19 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp8.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp8.v_mut());
-            _result =
-                bool_expr::bor(std::move(a_), bool_expr::band(*a01, *a11));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::band(crane::shared_child(a01),
+                                                     crane::shared_child(a11)));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp8.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp8.v_mut());
-            _result = bool_expr::bor(std::move(a_), bool_expr::bor(*a01, *a11));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::bor(crane::shared_child(a01),
+                                                    crane::shared_child(a11)));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp8.v_mut());
-            _result = bool_expr::bor(std::move(a_), bool_expr::bnot(*a01));
+            _result = bool_expr::bor(std::move(a_),
+                                     bool_expr::bnot(crane::shared_child(a01)));
           }
         } else {
           auto _f = std::move(std::get<_after_simplify_bool_in_BTrue>(_popped));
@@ -1504,14 +1538,16 @@ struct LoopifyExprVariants {
               std::holds_alternative<typename bool_expr::BAnd>(_tmp1.v_mut())) {
             auto &[a01, a11] =
                 std::get<typename bool_expr::BAnd>(_tmp1.v_mut());
-            _result = bool_expr::band(*a01, *a11);
+            _result = bool_expr::band(crane::shared_child(a01),
+                                      crane::shared_child(a11));
           } else if (
               std::holds_alternative<typename bool_expr::BOr>(_tmp1.v_mut())) {
             auto &[a01, a11] = std::get<typename bool_expr::BOr>(_tmp1.v_mut());
-            _result = bool_expr::bor(*a01, *a11);
+            _result = bool_expr::bor(crane::shared_child(a01),
+                                     crane::shared_child(a11));
           } else {
             auto &[a01] = std::get<typename bool_expr::BNot>(_tmp1.v_mut());
-            _result = bool_expr::bnot(*a01);
+            _result = bool_expr::bnot(crane::shared_child(a01));
           }
         }
       }
@@ -1767,13 +1803,14 @@ struct LoopifyExprVariants {
 
     static list_expr lnil() { return list_expr(LNil{}); }
 
-    static list_expr lcons(uint64_t a0, list_expr a1) {
-      return list_expr(LCons{a0, std::make_shared<list_expr>(std::move(a1))});
+    static list_expr lcons(uint64_t a0,
+                           crane::shared_child_slot<list_expr> a1) {
+      return list_expr(LCons{a0, a1.take()});
     }
 
-    static list_expr lappend(list_expr a0, list_expr a1) {
-      return list_expr(LAppend{std::make_shared<list_expr>(std::move(a0)),
-                               std::make_shared<list_expr>(std::move(a1))});
+    static list_expr lappend(crane::shared_child_slot<list_expr> a0,
+                             crane::shared_child_slot<list_expr> a1) {
+      return list_expr(LAppend{a0.take(), a1.take()});
     }
 
     static list_expr lreplicate(uint64_t a0, uint64_t a1) {

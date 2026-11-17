@@ -106,44 +106,44 @@ public:
 
   static Uint nil() { return Uint(Nil{}); }
 
-  static Uint d0(Uint a0) {
-    return Uint(D0{std::make_shared<Uint>(std::move(a0))});
+  static Uint d0(crane::shared_child_slot<Uint> a0) {
+    return Uint(D0{a0.take()});
   }
 
-  static Uint d1(Uint a0) {
-    return Uint(D1{std::make_shared<Uint>(std::move(a0))});
+  static Uint d1(crane::shared_child_slot<Uint> a0) {
+    return Uint(D1{a0.take()});
   }
 
-  static Uint d2(Uint a0) {
-    return Uint(D2{std::make_shared<Uint>(std::move(a0))});
+  static Uint d2(crane::shared_child_slot<Uint> a0) {
+    return Uint(D2{a0.take()});
   }
 
-  static Uint d3(Uint a0) {
-    return Uint(D3{std::make_shared<Uint>(std::move(a0))});
+  static Uint d3(crane::shared_child_slot<Uint> a0) {
+    return Uint(D3{a0.take()});
   }
 
-  static Uint d4(Uint a0) {
-    return Uint(D4{std::make_shared<Uint>(std::move(a0))});
+  static Uint d4(crane::shared_child_slot<Uint> a0) {
+    return Uint(D4{a0.take()});
   }
 
-  static Uint d5(Uint a0) {
-    return Uint(D5{std::make_shared<Uint>(std::move(a0))});
+  static Uint d5(crane::shared_child_slot<Uint> a0) {
+    return Uint(D5{a0.take()});
   }
 
-  static Uint d6(Uint a0) {
-    return Uint(D6{std::make_shared<Uint>(std::move(a0))});
+  static Uint d6(crane::shared_child_slot<Uint> a0) {
+    return Uint(D6{a0.take()});
   }
 
-  static Uint d7(Uint a0) {
-    return Uint(D7{std::make_shared<Uint>(std::move(a0))});
+  static Uint d7(crane::shared_child_slot<Uint> a0) {
+    return Uint(D7{a0.take()});
   }
 
-  static Uint d8(Uint a0) {
-    return Uint(D8{std::make_shared<Uint>(std::move(a0))});
+  static Uint d8(crane::shared_child_slot<Uint> a0) {
+    return Uint(D8{a0.take()});
   }
 
-  static Uint d9(Uint a0) {
-    return Uint(D9{std::make_shared<Uint>(std::move(a0))});
+  static Uint d9(crane::shared_child_slot<Uint> a0) {
+    return Uint(D9{a0.take()});
   }
 
   // MANIPULATORS
@@ -250,34 +250,34 @@ public:
       return Uint::d0(Uint::nil());
     } else if (std::holds_alternative<typename Uint::D0>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D0>(_sv.v());
-      return Uint::d0(*a0);
+      return Uint::d0(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D1>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D1>(_sv.v());
-      return Uint::d1(*a0);
+      return Uint::d1(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D2>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D2>(_sv.v());
-      return Uint::d2(*a0);
+      return Uint::d2(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D3>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D3>(_sv.v());
-      return Uint::d3(*a0);
+      return Uint::d3(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D4>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D4>(_sv.v());
-      return Uint::d4(*a0);
+      return Uint::d4(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D5>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D5>(_sv.v());
-      return Uint::d5(*a0);
+      return Uint::d5(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D6>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D6>(_sv.v());
-      return Uint::d6(*a0);
+      return Uint::d6(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D7>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D7>(_sv.v());
-      return Uint::d7(*a0);
+      return Uint::d7(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint::D8>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint::D8>(_sv.v());
-      return Uint::d8(*a0);
+      return Uint::d8(crane::shared_child(a0));
     } else {
       const auto &[a0] = std::get<typename Uint::D9>(_sv.v());
-      return Uint::d9(*a0);
+      return Uint::d9(crane::shared_child(a0));
     }
   }
 };
@@ -327,34 +327,34 @@ public:
         return Signed_int::pos(Uint::d0(Uint::nil()));
       } else if (std::holds_alternative<typename Uint::D0>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D0>(_sv0.v());
-        return Signed_int::neg(Uint::d0(*a00));
+        return Signed_int::neg(Uint::d0(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D1>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D1>(_sv0.v());
-        return Signed_int::neg(Uint::d1(*a00));
+        return Signed_int::neg(Uint::d1(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D2>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D2>(_sv0.v());
-        return Signed_int::neg(Uint::d2(*a00));
+        return Signed_int::neg(Uint::d2(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D3>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D3>(_sv0.v());
-        return Signed_int::neg(Uint::d3(*a00));
+        return Signed_int::neg(Uint::d3(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D4>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D4>(_sv0.v());
-        return Signed_int::neg(Uint::d4(*a00));
+        return Signed_int::neg(Uint::d4(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D5>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D5>(_sv0.v());
-        return Signed_int::neg(Uint::d5(*a00));
+        return Signed_int::neg(Uint::d5(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D6>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D6>(_sv0.v());
-        return Signed_int::neg(Uint::d6(*a00));
+        return Signed_int::neg(Uint::d6(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D7>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D7>(_sv0.v());
-        return Signed_int::neg(Uint::d7(*a00));
+        return Signed_int::neg(Uint::d7(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint::D8>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint::D8>(_sv0.v());
-        return Signed_int::neg(Uint::d8(*a00));
+        return Signed_int::neg(Uint::d8(crane::shared_child(a00)));
       } else {
         const auto &[a00] = std::get<typename Uint::D9>(_sv0.v());
-        return Signed_int::neg(Uint::d9(*a00));
+        return Signed_int::neg(Uint::d9(crane::shared_child(a00)));
       }
     }
   }
@@ -475,68 +475,68 @@ public:
 
   static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  static Uint0 d10(Uint0 a0) {
-    return Uint0(D10{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d10(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D10{a0.take()});
   }
 
-  static Uint0 d11(Uint0 a0) {
-    return Uint0(D11{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d11(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D11{a0.take()});
   }
 
-  static Uint0 d12(Uint0 a0) {
-    return Uint0(D12{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d12(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D12{a0.take()});
   }
 
-  static Uint0 d13(Uint0 a0) {
-    return Uint0(D13{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d13(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D13{a0.take()});
   }
 
-  static Uint0 d14(Uint0 a0) {
-    return Uint0(D14{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d14(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D14{a0.take()});
   }
 
-  static Uint0 d15(Uint0 a0) {
-    return Uint0(D15{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d15(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D15{a0.take()});
   }
 
-  static Uint0 d16(Uint0 a0) {
-    return Uint0(D16{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d16(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D16{a0.take()});
   }
 
-  static Uint0 d17(Uint0 a0) {
-    return Uint0(D17{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d17(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D17{a0.take()});
   }
 
-  static Uint0 d18(Uint0 a0) {
-    return Uint0(D18{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d18(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D18{a0.take()});
   }
 
-  static Uint0 d19(Uint0 a0) {
-    return Uint0(D19{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d19(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D19{a0.take()});
   }
 
-  static Uint0 da(Uint0 a0) {
-    return Uint0(Da{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 da(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Da{a0.take()});
   }
 
-  static Uint0 db(Uint0 a0) {
-    return Uint0(Db{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 db(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Db{a0.take()});
   }
 
-  static Uint0 dc(Uint0 a0) {
-    return Uint0(Dc{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 dc(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Dc{a0.take()});
   }
 
-  static Uint0 dd(Uint0 a0) {
-    return Uint0(Dd{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 dd(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Dd{a0.take()});
   }
 
-  static Uint0 de(Uint0 a0) {
-    return Uint0(De{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 de(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(De{a0.take()});
   }
 
-  static Uint0 df(Uint0 a0) {
-    return Uint0(Df{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 df(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Df{a0.take()});
   }
 
   // MANIPULATORS
@@ -679,52 +679,52 @@ public:
       return Uint0::d10(Uint0::nil0());
     } else if (std::holds_alternative<typename Uint0::D10>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D10>(_sv.v());
-      return Uint0::d10(*a0);
+      return Uint0::d10(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D11>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D11>(_sv.v());
-      return Uint0::d11(*a0);
+      return Uint0::d11(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D12>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D12>(_sv.v());
-      return Uint0::d12(*a0);
+      return Uint0::d12(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D13>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D13>(_sv.v());
-      return Uint0::d13(*a0);
+      return Uint0::d13(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D14>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D14>(_sv.v());
-      return Uint0::d14(*a0);
+      return Uint0::d14(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D15>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D15>(_sv.v());
-      return Uint0::d15(*a0);
+      return Uint0::d15(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D16>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D16>(_sv.v());
-      return Uint0::d16(*a0);
+      return Uint0::d16(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D17>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D17>(_sv.v());
-      return Uint0::d17(*a0);
+      return Uint0::d17(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D18>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D18>(_sv.v());
-      return Uint0::d18(*a0);
+      return Uint0::d18(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::D19>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::D19>(_sv.v());
-      return Uint0::d19(*a0);
+      return Uint0::d19(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::Da>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::Da>(_sv.v());
-      return Uint0::da(*a0);
+      return Uint0::da(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::Db>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::Db>(_sv.v());
-      return Uint0::db(*a0);
+      return Uint0::db(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::Dc>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::Dc>(_sv.v());
-      return Uint0::dc(*a0);
+      return Uint0::dc(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::Dd>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::Dd>(_sv.v());
-      return Uint0::dd(*a0);
+      return Uint0::dd(crane::shared_child(a0));
     } else if (std::holds_alternative<typename Uint0::De>(_sv.v())) {
       const auto &[a0] = std::get<typename Uint0::De>(_sv.v());
-      return Uint0::de(*a0);
+      return Uint0::de(crane::shared_child(a0));
     } else {
       const auto &[a0] = std::get<typename Uint0::Df>(_sv.v());
-      return Uint0::df(*a0);
+      return Uint0::df(crane::shared_child(a0));
     }
   }
 };
@@ -774,52 +774,52 @@ public:
         return Signed_int0::pos0(Uint0::d10(Uint0::nil0()));
       } else if (std::holds_alternative<typename Uint0::D10>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D10>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d10(*a00));
+        return Signed_int0::neg0(Uint0::d10(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D11>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D11>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d11(*a00));
+        return Signed_int0::neg0(Uint0::d11(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D12>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D12>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d12(*a00));
+        return Signed_int0::neg0(Uint0::d12(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D13>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D13>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d13(*a00));
+        return Signed_int0::neg0(Uint0::d13(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D14>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D14>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d14(*a00));
+        return Signed_int0::neg0(Uint0::d14(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D15>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D15>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d15(*a00));
+        return Signed_int0::neg0(Uint0::d15(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D16>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D16>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d16(*a00));
+        return Signed_int0::neg0(Uint0::d16(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D17>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D17>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d17(*a00));
+        return Signed_int0::neg0(Uint0::d17(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D18>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D18>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d18(*a00));
+        return Signed_int0::neg0(Uint0::d18(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::D19>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::D19>(_sv0.v());
-        return Signed_int0::neg0(Uint0::d19(*a00));
+        return Signed_int0::neg0(Uint0::d19(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::Da>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::Da>(_sv0.v());
-        return Signed_int0::neg0(Uint0::da(*a00));
+        return Signed_int0::neg0(Uint0::da(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::Db>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::Db>(_sv0.v());
-        return Signed_int0::neg0(Uint0::db(*a00));
+        return Signed_int0::neg0(Uint0::db(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::Dc>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::Dc>(_sv0.v());
-        return Signed_int0::neg0(Uint0::dc(*a00));
+        return Signed_int0::neg0(Uint0::dc(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::Dd>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::Dd>(_sv0.v());
-        return Signed_int0::neg0(Uint0::dd(*a00));
+        return Signed_int0::neg0(Uint0::dd(crane::shared_child(a00)));
       } else if (std::holds_alternative<typename Uint0::De>(_sv0.v())) {
         const auto &[a00] = std::get<typename Uint0::De>(_sv0.v());
-        return Signed_int0::neg0(Uint0::de(*a00));
+        return Signed_int0::neg0(Uint0::de(crane::shared_child(a00)));
       } else {
         const auto &[a00] = std::get<typename Uint0::Df>(_sv0.v());
-        return Signed_int0::neg0(Uint0::df(*a00));
+        return Signed_int0::neg0(Uint0::df(crane::shared_child(a00)));
       }
     }
   }

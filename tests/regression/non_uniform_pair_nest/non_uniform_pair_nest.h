@@ -37,8 +37,8 @@ struct NonUniformPairNest {
 
     static nest nz(crane::obj a0) { return nest(NZ{std::move(a0)}); }
 
-    static nest ns(nest a0) {
-      return nest(NS{std::make_shared<nest>(std::move(a0))});
+    static nest ns(crane::shared_child_slot<nest> a0) {
+      return nest(NS{a0.take()});
     }
 
     // MANIPULATORS

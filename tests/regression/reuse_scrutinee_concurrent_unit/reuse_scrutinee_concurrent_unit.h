@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REUSE_SCRUTINEE_CONCURRENT_UNIT
 #define INCLUDED_REUSE_SCRUTINEE_CONCURRENT_UNIT
 
+#include "crane_fn.h"
 #include "shared_block.h"
 #include <atomic>
 #include <crane_thread.h>
@@ -40,8 +41,8 @@ struct ReuseScrutineeConcurrentUnit {
 
     static lst nil() { return lst(Nil{}); }
 
-    static lst cons(uint64_t a0, lst a1) {
-      return lst(Cons{a0, std::make_shared<lst>(std::move(a1))});
+    static lst cons(uint64_t a0, crane::shared_child_slot<lst> a1) {
+      return lst(Cons{a0, a1.take()});
     }
 
     // MANIPULATORS

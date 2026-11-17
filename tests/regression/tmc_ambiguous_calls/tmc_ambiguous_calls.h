@@ -46,9 +46,10 @@ struct TmcAmbiguousCalls {
 
     static exp var(uint64_t v_0) { return exp(Var{v_0}); }
 
-    static exp let(std::pair<uint64_t, exp> b, exp body) {
+    static exp let(std::pair<uint64_t, exp> b,
+                   crane::shared_child_slot<exp> body) {
       return exp(Let{std::make_shared<std::pair<uint64_t, exp>>(std::move(b)),
-                     std::make_shared<exp>(std::move(body))});
+                     body.take()});
     }
 
     // MANIPULATORS
@@ -269,9 +270,9 @@ struct TmcAmbiguousCalls {
 
     static bexp bvar(uint64_t v_0) { return bexp(BVar{v_0}); }
 
-    static bexp blet(binding<bexp> b, bexp body) {
-      return bexp(BLet{std::make_shared<binding<bexp>>(std::move(b)),
-                       std::make_shared<bexp>(std::move(body))});
+    static bexp blet(binding<bexp> b, crane::shared_child_slot<bexp> body) {
+      return bexp(
+          BLet{std::make_shared<binding<bexp>>(std::move(b)), body.take()});
     }
 
     // MANIPULATORS
@@ -459,9 +460,9 @@ struct TmcAmbiguousCalls {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree l, uint64_t x, tree r) {
-      return tree(Node{std::make_shared<tree>(std::move(l)), x,
-                       std::make_shared<tree>(std::move(r))});
+    static tree node(crane::shared_child_slot<tree> l, uint64_t x,
+                     crane::shared_child_slot<tree> r) {
+      return tree(Node{l.take(), x, r.take()});
     }
 
     // MANIPULATORS
@@ -669,13 +670,13 @@ struct TmcAmbiguousCalls {
 
     static term lit(uint64_t n) { return term(Lit{n}); }
 
-    static term neg(term t) {
-      return term(Neg{std::make_shared<term>(std::move(t))});
+    static term neg(crane::shared_child_slot<term> t) {
+      return term(Neg{t.take()});
     }
 
-    static term add(term a, term b) {
-      return term(Add{std::make_shared<term>(std::move(a)),
-                      std::make_shared<term>(std::move(b))});
+    static term add(crane::shared_child_slot<term> a,
+                    crane::shared_child_slot<term> b) {
+      return term(Add{a.take(), b.take()});
     }
 
     // MANIPULATORS

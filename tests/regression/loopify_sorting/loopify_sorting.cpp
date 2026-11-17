@@ -17,7 +17,7 @@ List<uint64_t> LoopifySorting::insert(uint64_t x, const List<uint64_t> &l) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
-        auto _value = List<uint64_t>::cons(x, *_loop_l);
+        auto _value = List<uint64_t>::cons(x, crane::shared_child(_loop_l));
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));

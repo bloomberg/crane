@@ -64,10 +64,9 @@ struct LoopifyFilterFnRef {
 
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
-    static tree<A> node(tree<A> a0, A a1, tree<A> a2) {
-      return tree<A>(
-          Node{std::make_shared<tree<A>>(std::move(a0)), std::move(a1),
-               std::make_shared<tree<A>>(std::move(a2))});
+    static tree<A> node(crane::shared_child_slot<tree<A>> a0, A a1,
+                        crane::shared_child_slot<tree<A>> a2) {
+      return tree<A>(Node{a0.take(), std::move(a1), a2.take()});
     }
 
     // MANIPULATORS

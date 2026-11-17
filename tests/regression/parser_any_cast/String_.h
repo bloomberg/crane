@@ -1,6 +1,7 @@
 #ifndef INCLUDED_STRING_
 #define INCLUDED_STRING_
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -36,9 +37,8 @@ public:
 
   static String emptystring() { return String(EmptyString{}); }
 
-  static String string0(Ascii::Ascii a0, String a1) {
-    return String(
-        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
+  static String string0(Ascii::Ascii a0, crane::shared_child_slot<String> a1) {
+    return String(String0{std::move(a0), a1.take()});
   }
 
   // MANIPULATORS

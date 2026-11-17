@@ -43,9 +43,7 @@ struct LoopifyTmcSwitchBase {
 
     static num z() { return num(Z{}); }
 
-    static num su(num n) {
-      return num(Su{std::make_shared<num>(std::move(n))});
-    }
+    static num su(crane::shared_child_slot<num> n) { return num(Su{n.take()}); }
 
     // MANIPULATORS
     ~num() {

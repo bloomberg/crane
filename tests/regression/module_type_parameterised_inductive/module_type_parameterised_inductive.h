@@ -70,9 +70,9 @@ struct ModuleTypeParameterisedInductive {
 
       static tr<A> l() { return tr<A>(L{}); }
 
-      static tr<A> n(tr<A> a0, A a1, tr<A> a2) {
-        return tr<A>(N{std::make_shared<tr<A>>(std::move(a0)), std::move(a1),
-                       std::make_shared<tr<A>>(std::move(a2))});
+      static tr<A> n(crane::shared_child_slot<tr<A>> a0, A a1,
+                     crane::shared_child_slot<tr<A>> a2) {
+        return tr<A>(N{a0.take(), std::move(a1), a2.take()});
       }
 
       // MANIPULATORS

@@ -38,9 +38,9 @@ struct MoveSafety {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -95,7 +95,7 @@ struct MoveSafety {
     /// A function that stores its tree argument inside a constructor.
     /// This causes the parameter to be passed by value (it "escapes").
     tree wrap_tree() const {
-      return tree::node(*this, UINT64_C(0), tree::leaf());
+      return tree::node(crane::shared_child(this), UINT64_C(0), tree::leaf());
     }
 
     uint64_t sum_values(uint64_t x) const {

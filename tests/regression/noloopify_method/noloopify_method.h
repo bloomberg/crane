@@ -37,9 +37,9 @@ struct NoloopifyMethod {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, tree a1) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)),
-                       std::make_shared<tree>(std::move(a1))});
+    static tree node(crane::shared_child_slot<tree> a0,
+                     crane::shared_child_slot<tree> a1) {
+      return tree(Node{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

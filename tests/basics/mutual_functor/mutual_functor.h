@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_FUNCTOR
 #define INCLUDED_MUTUAL_FUNCTOR
 
+#include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -137,9 +138,8 @@ template <Elem E> struct MutualTree {
 
     static forest fnil() { return forest(FNil{}); }
 
-    static forest fcons(tree a0, forest a1) {
-      return forest(FCons{std::make_shared<tree>(std::move(a0)),
-                          std::make_shared<forest>(std::move(a1))});
+    static forest fcons(tree a0, crane::shared_child_slot<forest> a1) {
+      return forest(FCons{std::make_shared<tree>(std::move(a0)), a1.take()});
     }
 
     // MANIPULATORS

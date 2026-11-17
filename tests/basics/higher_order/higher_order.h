@@ -61,9 +61,8 @@ struct HigherOrder {
 
     static list<A> nil() { return list<A>(Nil{}); }
 
-    static list<A> cons(A a0, list<A> a1) {
-      return list<A>(
-          Cons{std::move(a0), std::make_shared<list<A>>(std::move(a1))});
+    static list<A> cons(A a0, crane::shared_child_slot<list<A>> a1) {
+      return list<A>(Cons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

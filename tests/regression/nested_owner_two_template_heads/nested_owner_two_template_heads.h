@@ -36,7 +36,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -121,10 +121,9 @@ struct Bag {
       return typename Bag::template bag<A>(Empty{});
     }
 
-    static typename Bag::template bag<A> add(A a0, Bag::bag<A> a1) {
-      return typename Bag::template bag<A>(
-          Add{std::move(a0),
-              std::make_shared<typename Bag::template bag<A>>(std::move(a1))});
+    static typename Bag::template bag<A>
+    add(A a0, crane::shared_child_slot<typename Bag::template bag<A>> a1) {
+      return typename Bag::template bag<A>(Add{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

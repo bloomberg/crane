@@ -62,9 +62,8 @@ struct LoopifyPairs {
 
     static list<A> nil() { return list<A>(Nil{}); }
 
-    static list<A> cons(A a, list<A> l) {
-      return list<A>(
-          Cons{std::move(a), std::make_shared<list<A>>(std::move(l))});
+    static list<A> cons(A a, crane::shared_child_slot<list<A>> l) {
+      return list<A>(Cons{std::move(a), l.take()});
     }
 
     // MANIPULATORS
@@ -436,7 +435,8 @@ struct LoopifyPairs {
             _stack.emplace_back(_after_span_in_true{a0});
             _stack.emplace_back(_call{crane_raw(a1)});
           } else {
-            _result = std::make_pair(list<T1>::nil(), list<T1>::cons(a0, *a1));
+            _result = std::make_pair(
+                list<T1>::nil(), list<T1>::cons(a0, crane::shared_child(a1)));
           }
         }
       } else {

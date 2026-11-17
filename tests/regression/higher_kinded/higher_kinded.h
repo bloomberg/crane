@@ -72,9 +72,9 @@ struct HigherKinded {
 
     static Tree<A> leaf(A a0) { return Tree<A>(Leaf{std::move(a0)}); }
 
-    static Tree<A> branch(Tree<A> a0, Tree<A> a1) {
-      return Tree<A>(Branch{std::make_shared<Tree<A>>(std::move(a0)),
-                            std::make_shared<Tree<A>>(std::move(a1))});
+    static Tree<A> branch(crane::shared_child_slot<Tree<A>> a0,
+                          crane::shared_child_slot<Tree<A>> a1) {
+      return Tree<A>(Branch{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

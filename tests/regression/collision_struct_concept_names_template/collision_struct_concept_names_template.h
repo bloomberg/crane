@@ -39,7 +39,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -125,9 +125,9 @@ public:
 
   static Color red(Nat k) { return Color(Red{std::move(k)}); }
 
-  static Color mix(Color a, Color b) {
-    return Color(Mix{std::make_shared<Color>(std::move(a)),
-                     std::make_shared<Color>(std::move(b))});
+  static Color mix(crane::shared_child_slot<Color> a,
+                   crane::shared_child_slot<Color> b) {
+    return Color(Mix{a.take(), b.take()});
   }
 
   // MANIPULATORS
@@ -206,8 +206,8 @@ public:
     return Shape(Circle{std::move(r), std::move(c)});
   }
 
-  static Shape square(Nat s, Shape t) {
-    return Shape(Square{std::move(s), std::make_shared<Shape>(std::move(t))});
+  static Shape square(Nat s, crane::shared_child_slot<Shape> t) {
+    return Shape(Square{std::move(s), t.take()});
   }
 
   // MANIPULATORS
@@ -317,8 +317,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS

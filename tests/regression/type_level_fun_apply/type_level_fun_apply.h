@@ -37,7 +37,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -95,9 +95,9 @@ struct TypeLevelFunApply {
 
     static ty tnat() { return ty(TNat{}); }
 
-    static ty tarr(ty a0, ty a1) {
-      return ty(TArr{std::make_shared<ty>(std::move(a0)),
-                     std::make_shared<ty>(std::move(a1))});
+    static ty tarr(crane::shared_child_slot<ty> a0,
+                   crane::shared_child_slot<ty> a1) {
+      return ty(TArr{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

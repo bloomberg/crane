@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -267,7 +267,8 @@ struct LoopifyFolds {
         } else {
           auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_tmp1.v_mut());
-          _result = List<uint64_t>::cons(f(a0, std::move(a00)), *a10);
+          _result = List<uint64_t>::cons(f(a0, std::move(a00)),
+                                         crane::shared_child(a10));
         }
       }
     }
@@ -296,7 +297,8 @@ struct LoopifyFolds {
           } else {
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
-            _loop_l = List<uint64_t>::cons(f(a0, a00), *a10);
+            _loop_l =
+                List<uint64_t>::cons(f(a0, a00), crane::shared_child(a10));
             _loop_fuel = fuel_;
           }
         }

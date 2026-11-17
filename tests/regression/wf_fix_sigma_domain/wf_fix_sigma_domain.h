@@ -99,9 +99,10 @@ struct WfFixSigmaDomain {
       return sw_graph(Sw_graph_equation_1{b});
     }
 
-    static sw_graph sw_graph_equation_2(uint64_t a, uint64_t b, sw_graph hind) {
-      return sw_graph(Sw_graph_equation_2{
-          a, b, std::make_shared<sw_graph>(std::move(hind))});
+    static sw_graph
+    sw_graph_equation_2(uint64_t a, uint64_t b,
+                        crane::shared_child_slot<sw_graph> hind) {
+      return sw_graph(Sw_graph_equation_2{a, b, hind.take()});
     }
 
     // MANIPULATORS

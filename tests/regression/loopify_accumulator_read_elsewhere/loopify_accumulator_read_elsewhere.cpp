@@ -172,7 +172,7 @@ LoopifyAccumulatorReadElsewhere::tree LoopifyAccumulatorReadElsewhere::graft(
       const auto &[a0, a1, a2] =
           std::get<typename LoopifyAccumulatorReadElsewhere::tree::Node>(
               _loop_t->v());
-      _loop_acc = tree::node(std::move(_loop_acc), a1, *a0);
+      _loop_acc = tree::node(std::move(_loop_acc), a1, crane::shared_child(a0));
       _loop_t = crane_raw(a2);
     }
   }

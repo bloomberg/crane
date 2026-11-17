@@ -11,8 +11,8 @@ Sig<List<uint64_t>> Sort::sort_cons_prog(uint64_t a, const List<uint64_t> &,
     auto &[x0] = s;
     bool s0 = a <= a0;
     if (s0) {
-      return Sig<List<uint64_t>>::exist(
-          List<uint64_t>::cons(a, List<uint64_t>::cons(a0, *a1)));
+      return Sig<List<uint64_t>>::exist(List<uint64_t>::cons(
+          a, List<uint64_t>::cons(a0, crane::shared_child(a1))));
     } else {
       return Sig<List<uint64_t>>::exist(List<uint64_t>::cons(a0,
                                                              std::move(x0)));

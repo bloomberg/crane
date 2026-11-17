@@ -11,7 +11,8 @@ LoopifyGrouping::prepend_to_groups(uint64_t x, bool same,
     } else {
       const auto &[a0, a1] =
           std::get<typename List<List<uint64_t>>::Cons>(groups.v());
-      return List<List<uint64_t>>::cons(List<uint64_t>::cons(x, a0), *a1);
+      return List<List<uint64_t>>::cons(List<uint64_t>::cons(x, a0),
+                                        crane::shared_child(a1));
     }
   } else {
     return List<List<uint64_t>>::cons(
@@ -61,7 +62,8 @@ List<List<uint64_t>> LoopifyGrouping::group_fuel(uint64_t fuel,
             const auto &[a00, a10] =
                 std::get<typename List<uint64_t>::Cons>(_sv0.v());
             _stack.emplace_back(_after_group_fuel_in_Cons{a0, a00});
-            _stack.emplace_back(_call{List<uint64_t>::cons(a00, *a10), fuel_});
+            _stack.emplace_back(_call{
+                List<uint64_t>::cons(a00, crane::shared_child(a10)), fuel_});
           }
         }
       }

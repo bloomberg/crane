@@ -73,8 +73,8 @@ struct Nat {
 
     static Nat::nat o() { return Nat::nat(O{}); }
 
-    static Nat::nat s(Nat::nat a0) {
-      return Nat::nat(S{std::make_shared<Nat::nat>(std::move(a0))});
+    static Nat::nat s(crane::shared_child_slot<Nat::nat> a0) {
+      return Nat::nat(S{a0.take()});
     }
 
     // MANIPULATORS

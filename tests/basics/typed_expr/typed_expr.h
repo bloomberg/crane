@@ -65,20 +65,20 @@ public:
 
   static Expr ebool(bool a0) { return Expr(EBool{a0}); }
 
-  static Expr eadd(Expr a0, Expr a1) {
-    return Expr(EAdd{std::make_shared<Expr>(std::move(a0)),
-                     std::make_shared<Expr>(std::move(a1))});
+  static Expr eadd(crane::shared_child_slot<Expr> a0,
+                   crane::shared_child_slot<Expr> a1) {
+    return Expr(EAdd{a0.take(), a1.take()});
   }
 
-  static Expr eeq(Expr a0, Expr a1) {
-    return Expr(EEq{std::make_shared<Expr>(std::move(a0)),
-                    std::make_shared<Expr>(std::move(a1))});
+  static Expr eeq(crane::shared_child_slot<Expr> a0,
+                  crane::shared_child_slot<Expr> a1) {
+    return Expr(EEq{a0.take(), a1.take()});
   }
 
-  static Expr eif(Ty t, Expr a1, Expr a2, Expr a3) {
-    return Expr(EIf{t, std::make_shared<Expr>(std::move(a1)),
-                    std::make_shared<Expr>(std::move(a2)),
-                    std::make_shared<Expr>(std::move(a3))});
+  static Expr eif(Ty t, crane::shared_child_slot<Expr> a1,
+                  crane::shared_child_slot<Expr> a2,
+                  crane::shared_child_slot<Expr> a3) {
+    return Expr(EIf{t, a1.take(), a2.take(), a3.take()});
   }
 
   // MANIPULATORS

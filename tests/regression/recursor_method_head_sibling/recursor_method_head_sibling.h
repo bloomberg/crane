@@ -55,8 +55,8 @@ struct RecursorMethodHeadSibling {
 
     static expr bl(bool a0) { return expr(Bl{a0}); }
 
-    static expr succe(expr a0) {
-      return expr(SuccE{std::make_shared<expr>(std::move(a0))});
+    static expr succe(crane::shared_child_slot<expr> a0) {
+      return expr(SuccE{a0.take()});
     }
 
     // MANIPULATORS
@@ -211,8 +211,8 @@ struct RecursorMethodHeadSibling {
 
     static chain base(uint64_t a0) { return chain(Base{a0}); }
 
-    static chain next(chain a0) {
-      return chain(Next{std::make_shared<chain>(std::move(a0))});
+    static chain next(crane::shared_child_slot<chain> a0) {
+      return chain(Next{a0.take()});
     }
 
     // MANIPULATORS

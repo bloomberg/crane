@@ -176,12 +176,12 @@ LoopifyAlgorithms::run_length_encode(const List<uint64_t> &l) {
         auto [y, n] = std::move(a00);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(y, (n + 1)), *a10);
+              std::make_pair(y, (n + 1)), crane::shared_child(a10));
         } else {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(a0, UINT64_C(1)),
-              List<std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
-                                                        *a10));
+              List<std::pair<uint64_t, uint64_t>>::cons(
+                  std::make_pair(y, n), crane::shared_child(a10)));
         }
       }
     }

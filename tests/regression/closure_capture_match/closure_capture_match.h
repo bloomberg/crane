@@ -38,9 +38,9 @@ struct ClosureCaptureMatch {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -134,7 +134,7 @@ struct ClosureCaptureMatch {
         return tree::node(tree::leaf(), v, tree::leaf());
       } else {
         const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
-        return tree::node(*a0, v, *a2);
+        return tree::node(crane::shared_child(a0), v, crane::shared_child(a2));
       }
     }
 

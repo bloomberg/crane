@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CLOSURE_RECURSIVE_BUILD
 #define INCLUDED_CLOSURE_RECURSIVE_BUILD
 
+#include "crane_fn.h"
 #include "fn.h"
 #include <atomic>
 #include <cstdint>
@@ -35,9 +36,9 @@ struct ClosureRecursiveBuild {
 
     static fn_list fnil() { return fn_list(FNil{}); }
 
-    static fn_list fcons(crane::fn<uint64_t(uint64_t)> a0, fn_list a1) {
-      return fn_list(
-          FCons{std::move(a0), std::make_shared<fn_list>(std::move(a1))});
+    static fn_list fcons(crane::fn<uint64_t(uint64_t)> a0,
+                         crane::shared_child_slot<fn_list> a1) {
+      return fn_list(FCons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

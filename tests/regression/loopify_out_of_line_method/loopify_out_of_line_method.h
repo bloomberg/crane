@@ -47,7 +47,7 @@ public:
   explicit Tree(Node _v) : v_(std::move(_v)) {}
 
   static Tree leaf();
-  static Tree node(Forest a0, Tree a1);
+  static Tree node(Forest a0, crane::shared_child_slot<Tree> a1);
   // MANIPULATORS
   ~Tree();
   Tree(const Tree &) = default;
@@ -87,7 +87,7 @@ public:
   explicit Forest(Grove _v) : v_(std::move(_v)) {}
 
   static Forest bare();
-  static Forest grove(Tree a0, Forest a1);
+  static Forest grove(Tree a0, crane::shared_child_slot<Forest> a1);
   // MANIPULATORS
   ~Forest();
   Forest(const Forest &) = default;
@@ -103,9 +103,8 @@ public:
 
 inline Tree Tree::leaf() { return Tree(Leaf{}); }
 
-inline Tree Tree::node(Forest a0, Tree a1) {
-  return Tree(Node{std::make_shared<Forest>(std::move(a0)),
-                   std::make_shared<Tree>(std::move(a1))});
+inline Tree Tree::node(Forest a0, crane::shared_child_slot<Tree> a1) {
+  return Tree(Node{std::make_shared<Forest>(std::move(a0)), a1.take()});
 }
 
 inline Tree::~Tree() {
@@ -189,9 +188,8 @@ inline uint64_t Tree::depth() const {
 
 inline Forest Forest::bare() { return Forest(Bare{}); }
 
-inline Forest Forest::grove(Tree a0, Forest a1) {
-  return Forest(Grove{std::make_shared<Tree>(std::move(a0)),
-                      std::make_shared<Forest>(std::move(a1))});
+inline Forest Forest::grove(Tree a0, crane::shared_child_slot<Forest> a1) {
+  return Forest(Grove{std::make_shared<Tree>(std::move(a0)), a1.take()});
 }
 
 inline Forest::~Forest() {

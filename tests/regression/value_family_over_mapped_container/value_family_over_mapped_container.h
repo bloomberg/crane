@@ -1,6 +1,7 @@
 #ifndef INCLUDED_VALUE_FAMILY_OVER_MAPPED_CONTAINER
 #define INCLUDED_VALUE_FAMILY_OVER_MAPPED_CONTAINER
 
+#include "crane_fn.h"
 #include "obj.h"
 #include <atomic>
 #include <cstdint>
@@ -34,8 +35,8 @@ struct ValueFamilyOverMappedContainer {
 
     static ty tnat() { return ty(TNat{}); }
 
-    static ty topt(ty a0) {
-      return ty(TOpt{std::make_shared<ty>(std::move(a0))});
+    static ty topt(crane::shared_child_slot<ty> a0) {
+      return ty(TOpt{a0.take()});
     }
 
     // MANIPULATORS

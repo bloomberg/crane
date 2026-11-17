@@ -35,8 +35,8 @@ struct MethodifiedMemberNameClash {
 
     static other o1() { return other(O1{}); }
 
-    static other o2(other a0) {
-      return other(O2{std::make_shared<other>(std::move(a0))});
+    static other o2(crane::shared_child_slot<other> a0) {
+      return other(O2{a0.take()});
     }
 
     // MANIPULATORS
@@ -140,8 +140,8 @@ struct MethodifiedMemberNameClash {
 
     static wrap w(other a0) { return wrap(W{std::move(a0)}); }
 
-    static wrap ww(wrap a0) {
-      return wrap(WW{std::make_shared<wrap>(std::move(a0))});
+    static wrap ww(crane::shared_child_slot<wrap> a0) {
+      return wrap(WW{a0.take()});
     }
 
     // MANIPULATORS

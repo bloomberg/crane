@@ -17,9 +17,13 @@ BinomialHeap::tree BinomialHeap::smash(const BinomialHeap::tree &t,
           return tree::leaf();
         } else {
           if (a01 < a0) {
-            return tree::node(a0, tree::node(a01, *a11, *a1), tree::leaf());
+            return tree::node(a0, tree::node(a01, crane::shared_child(a11),
+                                             crane::shared_child(a1)),
+                              tree::leaf());
           } else {
-            return tree::node(a01, tree::node(a0, *a1, *a11), tree::leaf());
+            return tree::node(a01, tree::node(a0, crane::shared_child(a1),
+                                              crane::shared_child(a11)),
+                              tree::leaf());
           }
         }
       } else {
@@ -47,10 +51,10 @@ List<BinomialHeap::tree> BinomialHeap::carry(const List<BinomialHeap::tree> &q,
         return List<BinomialHeap::tree>::cons(tree::leaf(),
                                               carry(*a1, smash(t, a0)));
       } else {
-        return List<BinomialHeap::tree>::cons(a0, *a1);
+        return List<BinomialHeap::tree>::cons(a0, crane::shared_child(a1));
       }
     } else {
-      return List<BinomialHeap::tree>::cons(t, *a1);
+      return List<BinomialHeap::tree>::cons(t, crane::shared_child(a1));
     }
   }
 }
@@ -185,12 +189,15 @@ BinomialHeap::delete_max_aux(uint64_t m, const List<BinomialHeap::tree> &p) {
         if (a00 < m) {
           auto [j, k] = delete_max_aux(m, *a1);
           return std::make_pair(List<BinomialHeap::tree>::cons(
-              tree::node(a00, *a10, tree::leaf()), std::move(j)),
+              tree::node(a00, crane::shared_child(a10), tree::leaf()),
+              std::move(j)),
                                 std::move(k));
         } else {
           return std::make_pair(
-              List<BinomialHeap::tree>::cons(tree::leaf(), *a1),
-              heap_delete_max(tree::node(a00, *a10, tree::leaf())));
+              List<BinomialHeap::tree>::cons(tree::leaf(),
+                                             crane::shared_child(a1)),
+              heap_delete_max(
+                  tree::node(a00, crane::shared_child(a10), tree::leaf())));
         }
       }
     } else {

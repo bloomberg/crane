@@ -63,8 +63,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -151,9 +151,9 @@ struct LoopifyTreePaths {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -622,9 +622,9 @@ struct LoopifyTreePaths {
 
     static bool_tree bleaf(uint64_t a0) { return bool_tree(BLeaf{a0}); }
 
-    static bool_tree bnode(bool_tree a0, bool_tree a1) {
-      return bool_tree(BNode{std::make_shared<bool_tree>(std::move(a0)),
-                             std::make_shared<bool_tree>(std::move(a1))});
+    static bool_tree bnode(crane::shared_child_slot<bool_tree> a0,
+                           crane::shared_child_slot<bool_tree> a1) {
+      return bool_tree(BNode{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

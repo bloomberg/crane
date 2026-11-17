@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MULTI_IND_FUNCTOR
 #define INCLUDED_MULTI_IND_FUNCTOR
 
+#include "crane_fn.h"
 #include <atomic>
 #include <concepts>
 #include <cstdint>
@@ -100,9 +101,8 @@ template <Elem E> struct Container {
 
     static mlist mnil() { return mlist(MNil{}); }
 
-    static mlist mcons(maybe a0, mlist a1) {
-      return mlist(MCons{std::move(a0),
-                         std::make_shared<mlist>(std::move(a1))});
+    static mlist mcons(maybe a0, crane::shared_child_slot<mlist> a1) {
+      return mlist(MCons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

@@ -66,8 +66,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -180,13 +180,13 @@ struct FamilyCallResultDeepShape {
 
     static ty tnat() { return ty(TNat{}); }
 
-    static ty tpair(ty a0, ty a1) {
-      return ty(TPair{std::make_shared<ty>(std::move(a0)),
-                      std::make_shared<ty>(std::move(a1))});
+    static ty tpair(crane::shared_child_slot<ty> a0,
+                    crane::shared_child_slot<ty> a1) {
+      return ty(TPair{a0.take(), a1.take()});
     }
 
-    static ty tlist(ty a0) {
-      return ty(TList{std::make_shared<ty>(std::move(a0))});
+    static ty tlist(crane::shared_child_slot<ty> a0) {
+      return ty(TList{a0.take()});
     }
 
     // MANIPULATORS

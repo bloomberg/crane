@@ -38,7 +38,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -165,8 +165,8 @@ public:
 
   static Exp0<T> ev(T a0) { return Exp0<T>(EV{std::move(a0)}); }
 
-  static Exp0<T> eself(Exp0<T> a0) {
-    return Exp0<T>(ESELF{std::make_shared<Exp0<T>>(std::move(a0))});
+  static Exp0<T> eself(crane::shared_child_slot<Exp0<T>> a0) {
+    return Exp0<T>(ESELF{a0.take()});
   }
 
   static Exp0<T> eneg(std::pair<T, Exp0<T>> a0) {

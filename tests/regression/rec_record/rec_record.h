@@ -61,9 +61,8 @@ struct RecRecord {
 
     static rlist<A> rnil() { return rlist<A>(Rnil{}); }
 
-    static rlist<A> rcons(A a0, rlist<A> a1) {
-      return rlist<A>(
-          Rcons{std::move(a0), std::make_shared<rlist<A>>(std::move(a1))});
+    static rlist<A> rcons(A a0, crane::shared_child_slot<rlist<A>> a1) {
+      return rlist<A>(Rcons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

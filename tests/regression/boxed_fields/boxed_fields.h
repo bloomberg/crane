@@ -63,9 +63,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{crane::field<A>(std::move(a)),
-                        std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{crane::field<A>(std::move(a)), l.take()});
   }
 
   // MANIPULATORS
@@ -278,9 +277,8 @@ struct BoxedFields {
 
     static scene empty() { return scene(Empty{}); }
 
-    static scene layer(shape a0, scene a1) {
-      return scene(Layer{std::make_shared<shape>(std::move(a0)),
-                         std::make_shared<scene>(std::move(a1))});
+    static scene layer(shape a0, crane::shared_child_slot<scene> a1) {
+      return scene(Layer{std::make_shared<shape>(std::move(a0)), a1.take()});
     }
 
     // MANIPULATORS

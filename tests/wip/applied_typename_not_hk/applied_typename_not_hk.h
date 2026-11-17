@@ -1,6 +1,7 @@
 #ifndef INCLUDED_APPLIED_TYPENAME_NOT_HK
 #define INCLUDED_APPLIED_TYPENAME_NOT_HK
 
+#include "crane_fn.h"
 #include "obj.h"
 #include <atomic>
 #include <crane_itree.h>
@@ -39,7 +40,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {

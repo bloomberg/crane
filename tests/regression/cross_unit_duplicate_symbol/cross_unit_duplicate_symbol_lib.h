@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL_LIB
 #define INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL_LIB
 
+#include "crane_fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -33,8 +34,8 @@ struct Lib {
 
     static lst nil() { return lst(Nil{}); }
 
-    static lst cons(uint64_t a0, lst a1) {
-      return lst(Cons{a0, std::make_shared<lst>(std::move(a1))});
+    static lst cons(uint64_t a0, crane::shared_child_slot<lst> a1) {
+      return lst(Cons{a0, a1.take()});
     }
 
     // MANIPULATORS

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SELF_PARTIAL_APP_IN_LET
 #define INCLUDED_SELF_PARTIAL_APP_IN_LET
 
+#include "crane_fn.h"
 #include "fn.h"
 #include <atomic>
 #include <memory>
@@ -34,7 +35,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -94,12 +95,12 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  static Positive xi(Positive a0) {
-    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
+  static Positive xi(crane::shared_child_slot<Positive> a0) {
+    return Positive(XI{a0.take()});
   }
 
-  static Positive xo(Positive a0) {
-    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
+  static Positive xo(crane::shared_child_slot<Positive> a0) {
+    return Positive(XO{a0.take()});
   }
 
   static Positive xh() { return Positive(XH{}); }
@@ -158,7 +159,7 @@ struct Pos {
     };
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
-      return f(Positive::xo(*a0), f2(*a0));
+      return f(Positive::xo(crane::shared_child(a0)), f2(*a0));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XO>(p.v());
       return f2(*a0);

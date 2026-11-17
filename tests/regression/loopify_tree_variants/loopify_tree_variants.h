@@ -38,10 +38,10 @@ struct LoopifyTreeVariants {
 
     static ternary tleaf() { return ternary(TLeaf{}); }
 
-    static ternary tnode(ternary a0, uint64_t a1, ternary a2, ternary a3) {
-      return ternary(TNode{std::make_shared<ternary>(std::move(a0)), a1,
-                           std::make_shared<ternary>(std::move(a2)),
-                           std::make_shared<ternary>(std::move(a3))});
+    static ternary tnode(crane::shared_child_slot<ternary> a0, uint64_t a1,
+                         crane::shared_child_slot<ternary> a2,
+                         crane::shared_child_slot<ternary> a3) {
+      return ternary(TNode{a0.take(), a1, a2.take(), a3.take()});
     }
 
     // MANIPULATORS
@@ -373,11 +373,11 @@ struct LoopifyTreeVariants {
 
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
-    static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad{std::make_shared<quadtree>(std::move(a0)),
-                           std::make_shared<quadtree>(std::move(a1)),
-                           std::make_shared<quadtree>(std::move(a2)),
-                           std::make_shared<quadtree>(std::move(a3))});
+    static quadtree quad(crane::shared_child_slot<quadtree> a0,
+                         crane::shared_child_slot<quadtree> a1,
+                         crane::shared_child_slot<quadtree> a2,
+                         crane::shared_child_slot<quadtree> a3) {
+      return quadtree(Quad{a0.take(), a1.take(), a2.take(), a3.take()});
     }
 
     // MANIPULATORS
@@ -676,9 +676,9 @@ struct LoopifyTreeVariants {
 
     static leaf_tree lleaf(uint64_t a0) { return leaf_tree(LLeaf{a0}); }
 
-    static leaf_tree lnode(leaf_tree a0, leaf_tree a1) {
-      return leaf_tree(LNode{std::make_shared<leaf_tree>(std::move(a0)),
-                             std::make_shared<leaf_tree>(std::move(a1))});
+    static leaf_tree lnode(crane::shared_child_slot<leaf_tree> a0,
+                           crane::shared_child_slot<leaf_tree> a1) {
+      return leaf_tree(LNode{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

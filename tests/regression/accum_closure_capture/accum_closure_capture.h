@@ -39,9 +39,9 @@ struct AccumClosureCapture {
 
     static fn_list fnil() { return fn_list(FNil{}); }
 
-    static fn_list fcons(crane::fn<uint64_t(uint64_t)> a0, fn_list a1) {
-      return fn_list(
-          FCons{std::move(a0), std::make_shared<fn_list>(std::move(a1))});
+    static fn_list fcons(crane::fn<uint64_t(uint64_t)> a0,
+                         crane::shared_child_slot<fn_list> a1) {
+      return fn_list(FCons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS
@@ -164,9 +164,9 @@ struct AccumClosureCapture {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS

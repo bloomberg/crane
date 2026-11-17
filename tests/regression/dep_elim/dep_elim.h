@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -124,8 +124,8 @@ struct DepElim {
 
     static fin fz(uint64_t n) { return fin(FZ{n}); }
 
-    static fin fs(uint64_t n, fin a1) {
-      return fin(FS{n, std::make_shared<fin>(std::move(a1))});
+    static fin fs(uint64_t n, crane::shared_child_slot<fin> a1) {
+      return fin(FS{n, a1.take()});
     }
 
     // MANIPULATORS
@@ -301,9 +301,8 @@ struct DepElim {
 
     static vec<A> vnil() { return vec<A>(Vnil{}); }
 
-    static vec<A> vcons(uint64_t n, A a1, vec<A> a2) {
-      return vec<A>(
-          Vcons{n, std::move(a1), std::make_shared<vec<A>>(std::move(a2))});
+    static vec<A> vcons(uint64_t n, A a1, crane::shared_child_slot<vec<A>> a2) {
+      return vec<A>(Vcons{n, std::move(a1), a2.take()});
     }
 
     // MANIPULATORS

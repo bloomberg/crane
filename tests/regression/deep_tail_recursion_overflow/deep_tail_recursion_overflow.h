@@ -42,8 +42,8 @@ struct DeepTailRecursionOverflow {
 
     static chain end_(uint64_t a0) { return chain(End_{a0}); }
 
-    static chain link(chain a0, uint64_t a1) {
-      return chain(Link{std::make_shared<chain>(std::move(a0)), a1});
+    static chain link(crane::shared_child_slot<chain> a0, uint64_t a1) {
+      return chain(Link{a0.take(), a1});
     }
 
     // MANIPULATORS

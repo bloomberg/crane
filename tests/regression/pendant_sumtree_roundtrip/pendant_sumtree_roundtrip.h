@@ -73,8 +73,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -480,8 +480,8 @@ public:
 
   static T f1(uint64_t n) { return T(F1{n}); }
 
-  static T fs(uint64_t n, T a1) {
-    return T(FS{n, std::make_shared<T>(std::move(a1))});
+  static T fs(uint64_t n, crane::shared_child_slot<T> a1) {
+    return T(FS{n, a1.take()});
   }
 
   // MANIPULATORS

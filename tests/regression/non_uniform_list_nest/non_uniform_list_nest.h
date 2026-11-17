@@ -60,8 +60,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -121,7 +121,7 @@ struct NonUniformListNest {
 
     static n2 z2(crane::obj a0) { return n2(Z2{std::move(a0)}); }
 
-    static n2 s2(n2 a0) { return n2(S2{std::make_shared<n2>(std::move(a0))}); }
+    static n2 s2(crane::shared_child_slot<n2> a0) { return n2(S2{a0.take()}); }
 
     // MANIPULATORS
     ~n2() {

@@ -42,7 +42,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -73,7 +73,9 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  bool ltb(const Nat &m) const { return Nat::s(*this).leb(m); }
+  bool ltb(const Nat &m) const {
+    return Nat::s(crane::shared_child(this)).leb(m);
+  }
 
   bool leb(const Nat &m) const {
     // Loop replaces the tail recursion: each recursive call updates the loop

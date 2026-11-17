@@ -69,8 +69,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -224,7 +224,8 @@ template <typename K, typename V> struct CHT {
           std::get<typename List<std::pair<T1, T2>>::Cons>(xs.v());
       const auto &[k_, v_] = a0;
       if (eqb(k, k_)) {
-        return List<std::pair<T1, T2>>::cons(std::make_pair(k, v), *a1);
+        return List<std::pair<T1, T2>>::cons(std::make_pair(k, v),
+                                             crane::shared_child(a1));
       } else {
         return List<std::pair<T1, T2>>::cons(
             std::make_pair(k_, v_),

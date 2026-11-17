@@ -6,7 +6,7 @@ Positive Pos::succ(const Positive &x) {
     return Positive::xo(succ(*a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*a0);
+    return Positive::xi(crane::shared_child(a0));
   } else {
     return Positive::xo(Positive::xh());
   }

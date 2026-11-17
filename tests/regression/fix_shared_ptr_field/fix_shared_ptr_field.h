@@ -54,8 +54,8 @@ struct FixSharedPtrField {
 
     static mylist mynil() { return mylist(Mynil{}); }
 
-    static mylist mycons(uint64_t a0, mylist a1) {
-      return mylist(Mycons{a0, std::make_shared<mylist>(std::move(a1))});
+    static mylist mycons(uint64_t a0, crane::shared_child_slot<mylist> a1) {
+      return mylist(Mycons{a0, a1.take()});
     }
 
     // MANIPULATORS

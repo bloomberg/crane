@@ -49,7 +49,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -190,9 +190,8 @@ public:
 
   static String emptystring() { return String(EmptyString{}); }
 
-  static String string0(Ascii a0, String a1) {
-    return String(
-        String0{std::move(a0), std::make_shared<String>(std::move(a1))});
+  static String string0(Ascii a0, crane::shared_child_slot<String> a1) {
+    return String(String0{std::move(a0), a1.take()});
   }
 
   // MANIPULATORS
@@ -372,16 +371,16 @@ struct Levenshtein {
 
     static chain empty() { return chain(Empty{}); }
 
-    static chain skip(Ascii a, String s, String t, Nat n, chain a4) {
+    static chain skip(Ascii a, String s, String t, Nat n,
+                      crane::shared_child_slot<chain> a4) {
       return chain(Skip{std::move(a), std::move(s), std::move(t), std::move(n),
-                        std::make_shared<chain>(std::move(a4))});
+                        a4.take()});
     }
 
     static chain change(String s, String t, String u, Nat n, edit a4,
-                        chain a5) {
-      return chain(
-          Change{std::move(s), std::move(t), std::move(u), std::move(n),
-                 std::move(a4), std::make_shared<chain>(std::move(a5))});
+                        crane::shared_child_slot<chain> a5) {
+      return chain(Change{std::move(s), std::move(t), std::move(u),
+                          std::move(n), std::move(a4), a5.take()});
     }
 
     // MANIPULATORS
@@ -422,7 +421,7 @@ struct Levenshtein {
     chain aux_eq_char(const String &, const String &, const Ascii &,
                       const String &xs, const Ascii &y, const String &ys,
                       const Nat &n) const {
-      return chain::skip(y, xs, ys, n, *this);
+      return chain::skip(y, xs, ys, n, crane::shared_child(this));
     }
 
     chain aux_update(const String &, const String &, const Ascii &x,
@@ -445,22 +444,24 @@ struct Levenshtein {
 
     chain update_chain(const Ascii &c, const Ascii &c_, const String &s1,
                        const String &s2, const Nat &n) const {
-      return chain::change(String::string0(c, s1), String::string0(c_, s1),
-                           String::string0(c_, s2), n, edit::update(c, c_, s1),
-                           chain::skip(c_, s1, s2, n, *this));
+      return chain::change(
+          String::string0(c, s1), String::string0(c_, s1),
+          String::string0(c_, s2), n, edit::update(c, c_, s1),
+          chain::skip(c_, s1, s2, n, crane::shared_child(this)));
     }
 
     chain delete_chain(const Ascii &c, const String &s1, const String &s2,
                        const Nat &n) const {
       return chain::change(String::string0(c, s1), s1, s2, n,
-                           edit::deletion(c, s1), *this);
+                           edit::deletion(c, s1), crane::shared_child(this));
     }
 
     chain insert_chain(const Ascii &c, const String &s1, const String &s2,
                        const Nat &n) const {
       return chain::change(s1, String::string0(c, s1), String::string0(c, s2),
                            n, edit::insertion(c, s1),
-                           chain::skip(c, s1, s2, n, *this));
+                           chain::skip(c, s1, s2, n,
+                                       crane::shared_child(this)));
     }
 
     template <typename T1, typename F1, typename F2>

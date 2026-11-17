@@ -1,6 +1,7 @@
 #ifndef INCLUDED_TRANSLATE_CALLEE_HAS_NO_NAME
 #define INCLUDED_TRANSLATE_CALLEE_HAS_NO_NAME
 
+#include "crane_fn.h"
 #include <atomic>
 #include <crane_itree.h>
 #include <memory>
@@ -39,7 +40,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {

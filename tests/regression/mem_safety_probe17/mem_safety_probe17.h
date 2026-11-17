@@ -50,11 +50,11 @@ struct MemSafetyProbe17 {
 
     static qtree qleaf() { return qtree(QLeaf{}); }
 
-    static qtree qnode(qtree a0, qtree a1, uint64_t a2, qtree a3, qtree a4) {
-      return qtree(QNode{std::make_shared<qtree>(std::move(a0)),
-                         std::make_shared<qtree>(std::move(a1)), a2,
-                         std::make_shared<qtree>(std::move(a3)),
-                         std::make_shared<qtree>(std::move(a4))});
+    static qtree qnode(crane::shared_child_slot<qtree> a0,
+                       crane::shared_child_slot<qtree> a1, uint64_t a2,
+                       crane::shared_child_slot<qtree> a3,
+                       crane::shared_child_slot<qtree> a4) {
+      return qtree(QNode{a0.take(), a1.take(), a2, a3.take(), a4.take()});
     }
 
     // MANIPULATORS
@@ -964,9 +964,8 @@ struct MemSafetyProbe17 {
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
-    static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist<A>(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    static mylist<A> mycons(A a0, crane::shared_child_slot<mylist<A>> a1) {
+      return mylist<A>(Mycons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

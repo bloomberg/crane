@@ -68,8 +68,8 @@ explicit Nat(O _v) : v_(_v) {}
 explicit Nat(S _v) : v_(std::move(_v)) {}
 static Nat o() {
 return Nat(O{});}
-static Nat s(Nat a0) {
-return Nat(S{std::make_shared<Nat>(std::move(a0))});}
+static Nat s(crane::shared_child_slot<Nat> a0) {
+return Nat(S{a0.take()});}
   // MANIPULATORS
 ~Nat() {
 // Release the children this node alone owns in a loop, not recursively, so a deep value cannot overflow the stack.
@@ -152,8 +152,8 @@ throw std::logic_error("unreachable: inactive constructor field at this instanti
 }()) {}
 static List<A> nil() {
 return List<A>(Nil{});}
-static List<A> cons(A a, List<A> l) {
-return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});}
+static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+return List<A>(Cons{std::move(a), l.take()});}
   // MANIPULATORS
 ~List() {
 // Release the children this node alone owns in a loop, not recursively, so a deep value cannot overflow the stack.

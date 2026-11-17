@@ -1,6 +1,7 @@
 #ifndef INCLUDED_NAME_CLASH_NESTED_DEEP
 #define INCLUDED_NAME_CLASH_NESTED_DEEP
 
+#include "crane_fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -35,8 +36,8 @@ struct NameClashNestedDeep {
 
     static mylist mynil() { return mylist(MyNil{}); }
 
-    static mylist mycons(uint64_t a0, mylist a1) {
-      return mylist(MyCons{a0, std::make_shared<mylist>(std::move(a1))});
+    static mylist mycons(uint64_t a0, crane::shared_child_slot<mylist> a1) {
+      return mylist(MyCons{a0, a1.take()});
     }
 
     // MANIPULATORS

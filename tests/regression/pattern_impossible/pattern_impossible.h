@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PATTERN_IMPOSSIBLE
 #define INCLUDED_PATTERN_IMPOSSIBLE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -59,9 +60,9 @@ struct PatternImpossible {
 
     static nested leaf(uint64_t a0) { return nested(Leaf{a0}); }
 
-    static nested node(nested a0, nested a1) {
-      return nested(Node{std::make_shared<nested>(std::move(a0)),
-                         std::make_shared<nested>(std::move(a1))});
+    static nested node(crane::shared_child_slot<nested> a0,
+                       crane::shared_child_slot<nested> a1) {
+      return nested(Node{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -234,9 +234,9 @@ struct InductiveLetinParams {
 
     static tagged<A, B> tnil() { return tagged<A, B>(Tnil{}); }
 
-    static tagged<A, B> tcons(std::pair<A, B> a0, tagged<A, B> a1) {
-      return tagged<A, B>(
-          Tcons{std::move(a0), std::make_shared<tagged<A, B>>(std::move(a1))});
+    static tagged<A, B> tcons(std::pair<A, B> a0,
+                              crane::shared_child_slot<tagged<A, B>> a1) {
+      return tagged<A, B>(Tcons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

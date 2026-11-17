@@ -40,7 +40,7 @@ ReuseMoveShadow::tree ReuseMoveShadow::dup_left(const ReuseMoveShadow::tree &t,
     if (std::holds_alternative<typename ReuseMoveShadow::tree::Node>(t.v())) {
       const auto &[a0, a1, _] =
           std::get<typename ReuseMoveShadow::tree::Node>(t.v());
-      return tree::node(a0, *a1, *a1);
+      return tree::node(a0, crane::shared_child(a1), crane::shared_child(a1));
     } else {
       return tree::leaf();
     }

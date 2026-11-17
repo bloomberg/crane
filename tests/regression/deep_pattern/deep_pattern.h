@@ -40,9 +40,9 @@ struct DeepPattern {
 
     static tree leaf(uint64_t a0) { return tree(Leaf{a0}); }
 
-    static tree node(tree a0, tree a1) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)),
-                       std::make_shared<tree>(std::move(a1))});
+    static tree node(crane::shared_child_slot<tree> a0,
+                     crane::shared_child_slot<tree> a1) {
+      return tree(Node{a0.take(), a1.take()});
     }
 
     // MANIPULATORS
@@ -491,9 +491,8 @@ struct DeepPattern {
 
     static list<A> nil() { return list<A>(Nil{}); }
 
-    static list<A> cons(A a0, list<A> a1) {
-      return list<A>(
-          Cons{std::move(a0), std::make_shared<list<A>>(std::move(a1))});
+    static list<A> cons(A a0, crane::shared_child_slot<list<A>> a1) {
+      return list<A>(Cons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

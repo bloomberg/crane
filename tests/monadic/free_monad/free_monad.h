@@ -51,8 +51,9 @@ struct FreeMonad {
 
     static IO pure(crane::obj a) { return IO(Pure{std::move(a)}); }
 
-    static IO bind(IO a, crane::fn<IO(crane::obj)> b) {
-      return IO(Bind{std::make_shared<IO>(std::move(a)), std::move(b)});
+    static IO bind(crane::shared_child_slot<IO> a,
+                   crane::fn<IO(crane::obj)> b) {
+      return IO(Bind{a.take(), std::move(b)});
     }
 
     static IO get_line() { return IO(Get_line{}); }

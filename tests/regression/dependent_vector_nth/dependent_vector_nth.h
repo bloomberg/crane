@@ -41,8 +41,8 @@ public:
 
   static T f1(uint64_t n) { return T(F1{n}); }
 
-  static T fs(uint64_t n, T a1) {
-    return T(FS{n, std::make_shared<T>(std::move(a1))});
+  static T fs(uint64_t n, crane::shared_child_slot<T> a1) {
+    return T(FS{n, a1.take()});
   }
 
   // MANIPULATORS

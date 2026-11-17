@@ -64,8 +64,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -482,9 +482,9 @@ struct ComprehensivePatterns {
 
     static Tree leaf(uint64_t a0) { return Tree(Leaf{a0}); }
 
-    static Tree node(Tree a0, uint64_t a1, Tree a2) {
-      return Tree(Node{std::make_shared<Tree>(std::move(a0)), a1,
-                       std::make_shared<Tree>(std::move(a2))});
+    static Tree node(crane::shared_child_slot<Tree> a0, uint64_t a1,
+                     crane::shared_child_slot<Tree> a2) {
+      return Tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -540,7 +540,8 @@ struct ComprehensivePatterns {
     Tree flip_tree() const {
       if (std::holds_alternative<typename Tree::Leaf>(this->v())) {
         const auto &[a0] = std::get<typename Tree::Leaf>(this->v());
-        return Tree::node(*this, a0, *this);
+        return Tree::node(crane::shared_child(this), a0,
+                          crane::shared_child(this));
       } else {
         const auto &[_, a1, _] = std::get<typename Tree::Node>(this->v());
         return Tree::leaf(a1);
@@ -553,7 +554,8 @@ struct ComprehensivePatterns {
         return Tree::leaf((a0 + UINT64_C(1)));
       } else {
         const auto &[a0, a1, a2] = std::get<typename Tree::Node>(this->v());
-        return Tree::node(*a0, (a1 + UINT64_C(1)), *a2);
+        return Tree::node(crane::shared_child(a0), (a1 + UINT64_C(1)),
+                          crane::shared_child(a2));
       }
     }
 

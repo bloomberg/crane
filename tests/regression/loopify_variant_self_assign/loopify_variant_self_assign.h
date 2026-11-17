@@ -70,8 +70,8 @@ struct LoopifyVariantSelfAssign {
 
     static lst one(uint64_t a0) { return lst(One{a0}); }
 
-    static lst cons(uint64_t a0, lst a1) {
-      return lst(Cons{a0, std::make_shared<lst>(std::move(a1))});
+    static lst cons(uint64_t a0, crane::shared_child_slot<lst> a1) {
+      return lst(Cons{a0, a1.take()});
     }
 
     // MANIPULATORS

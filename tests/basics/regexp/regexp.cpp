@@ -164,7 +164,7 @@ Matcher::regexp Matcher::deriv(const Matcher::regexp &r, int64_t c) {
     return OptAlt(deriv(*r4, c), deriv(*r5, c));
   } else if (std::holds_alternative<typename Matcher::regexp::Star>(r.v())) {
     const auto &[r2] = std::get<typename Matcher::regexp::Star>(r.v());
-    return OptCat(deriv(*r2, c), regexp::star(*r2));
+    return OptCat(deriv(*r2, c), regexp::star(crane::shared_child(r2)));
   } else {
     return regexp::zero();
   }

@@ -39,7 +39,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -125,8 +125,8 @@ public:
 
   static Shape circle(Nat r) { return Shape(Circle{std::move(r)}); }
 
-  static Shape square(Nat s, Shape t) {
-    return Shape(Square{std::move(s), std::make_shared<Shape>(std::move(t))});
+  static Shape square(Nat s, crane::shared_child_slot<Shape> t) {
+    return Shape(Square{std::move(s), t.take()});
   }
 
   // MANIPULATORS
@@ -213,8 +213,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS

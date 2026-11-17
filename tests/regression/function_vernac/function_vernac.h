@@ -63,8 +63,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -174,9 +174,9 @@ struct FunctionVernac {
 
     static R_div2 r_div2_1(uint64_t n) { return R_div2(R_div2_1{n}); }
 
-    static R_div2 r_div2_2(uint64_t n, uint64_t p, uint64_t a2, R_div2 _res) {
-      return R_div2(
-          R_div2_2{n, p, a2, std::make_shared<R_div2>(std::move(_res))});
+    static R_div2 r_div2_2(uint64_t n, uint64_t p, uint64_t a2,
+                           crane::shared_child_slot<R_div2> _res) {
+      return R_div2(R_div2_2{n, p, a2, _res.take()});
     }
 
     // MANIPULATORS
@@ -351,10 +351,9 @@ struct FunctionVernac {
 
     static R_list_sum r_list_sum_1(List<uint64_t> l, uint64_t x,
                                    List<uint64_t> xs, uint64_t a3,
-                                   R_list_sum _res) {
+                                   crane::shared_child_slot<R_list_sum> _res) {
       return R_list_sum(
-          R_list_sum_1{std::move(l), x, std::move(xs), a3,
-                       std::make_shared<R_list_sum>(std::move(_res))});
+          R_list_sum_1{std::move(l), x, std::move(xs), a3, _res.take()});
     }
 
     // MANIPULATORS

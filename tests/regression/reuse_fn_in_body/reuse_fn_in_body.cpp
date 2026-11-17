@@ -42,7 +42,7 @@ ReuseFnInBody::mylist ReuseFnInBody::prefix_sum(const ReuseFnInBody::mylist &l,
     if (std::holds_alternative<typename ReuseFnInBody::mylist::Mycons>(l.v())) {
       const auto &[a0, a1] =
           std::get<typename ReuseFnInBody::mylist::Mycons>(l.v());
-      return mylist::mycons((sum(l) + a0), *a1);
+      return mylist::mycons((sum(l) + a0), crane::shared_child(a1));
     } else {
       return mylist::mynil();
     }

@@ -1,6 +1,7 @@
 #ifndef INCLUDED_IND_SHADOWS_GENERATED_MEMBERS
 #define INCLUDED_IND_SHADOWS_GENERATED_MEMBERS
 
+#include "crane_fn.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
@@ -39,8 +40,8 @@ struct IndShadowsGeneratedMembers {
 
     static variant_t0 V_mut_(uint64_t a0) { return variant_t0(V_mut{a0}); }
 
-    static variant_t0 V_p(variant_t0 a0) {
-      return variant_t0(V_{std::make_shared<variant_t0>(std::move(a0))});
+    static variant_t0 V_p(crane::shared_child_slot<variant_t0> a0) {
+      return variant_t0(V_{a0.take()});
     }
 
     // MANIPULATORS

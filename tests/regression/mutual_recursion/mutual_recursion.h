@@ -1,6 +1,7 @@
 #ifndef INCLUDED_MUTUAL_RECURSION
 #define INCLUDED_MUTUAL_RECURSION
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -52,13 +53,13 @@ struct MutualRecursion {
 
     static expr val(uint64_t a0) { return expr(Val{a0}); }
 
-    static expr binop(uint64_t a0, expr a1, expr a2) {
-      return expr(BinOp{a0, std::make_shared<expr>(std::move(a1)),
-                        std::make_shared<expr>(std::move(a2))});
+    static expr binop(uint64_t a0, crane::shared_child_slot<expr> a1,
+                      crane::shared_child_slot<expr> a2) {
+      return expr(BinOp{a0, a1.take(), a2.take()});
     }
 
-    static expr unop(uint64_t a0, expr a1) {
-      return expr(UnOp{a0, std::make_shared<expr>(std::move(a1))});
+    static expr unop(uint64_t a0, crane::shared_child_slot<expr> a1) {
+      return expr(UnOp{a0, a1.take()});
     }
 
     // MANIPULATORS

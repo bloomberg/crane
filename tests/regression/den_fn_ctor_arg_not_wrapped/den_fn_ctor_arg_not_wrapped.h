@@ -39,9 +39,9 @@ struct DenFnCtorArgNotWrapped {
 
     static ty tnat() { return ty(TNat{}); }
 
-    static ty tfun(ty a0, ty a1) {
-      return ty(TFun{std::make_shared<ty>(std::move(a0)),
-                     std::make_shared<ty>(std::move(a1))});
+    static ty tfun(crane::shared_child_slot<ty> a0,
+                   crane::shared_child_slot<ty> a1) {
+      return ty(TFun{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

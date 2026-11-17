@@ -179,7 +179,7 @@ LoopifySpecialRecursion::reverse_insert(uint64_t x, const List<uint64_t> &l) {
         _loop_l = crane_raw(a1);
         continue;
       } else {
-        auto _value = List<uint64_t>::cons(x, *_loop_l);
+        auto _value = List<uint64_t>::cons(x, crane::shared_child(_loop_l));
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));

@@ -442,7 +442,7 @@ List<uint64_t> LoopifyAdvancedPatterns::replace_at(uint64_t idx, uint64_t value,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_idx == UINT64_C(0)) {
-        auto _value = List<uint64_t>::cons(value, *a1);
+        auto _value = List<uint64_t>::cons(value, crane::shared_child(a1));
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));

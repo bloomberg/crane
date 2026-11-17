@@ -1,6 +1,7 @@
 #ifndef INCLUDED_CONCEPT_AFTER_USE
 #define INCLUDED_CONCEPT_AFTER_USE
 
+#include "crane_fn.h"
 #include <atomic>
 #include <concepts>
 #include <memory>
@@ -49,12 +50,12 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  static Positive xi(Positive a0) {
-    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
+  static Positive xi(crane::shared_child_slot<Positive> a0) {
+    return Positive(XI{a0.take()});
   }
 
-  static Positive xo(Positive a0) {
-    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
+  static Positive xo(crane::shared_child_slot<Positive> a0) {
+    return Positive(XO{a0.take()});
   }
 
   static Positive xh() { return Positive(XH{}); }
@@ -231,8 +232,8 @@ struct ConceptAfterUse {
 
     static ty tb(Positive n) { return ty(TB{std::move(n)}); }
 
-    static ty ta(N sz, ty t) {
-      return ty(TA{std::move(sz), std::make_shared<ty>(std::move(t))});
+    static ty ta(N sz, crane::shared_child_slot<ty> t) {
+      return ty(TA{std::move(sz), t.take()});
     }
 
     // MANIPULATORS

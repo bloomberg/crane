@@ -64,8 +64,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -168,9 +168,9 @@ struct FastVariant {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -372,13 +372,13 @@ struct FastVariant {
           _stack.pop_back();
           std::shared_ptr<tree> a0 = std::move(_f.a0);
           uint64_t a1 = _f.a1;
-          _result = tree::node(*a0, a1, std::move(_result));
+          _result = tree::node(crane::shared_child(a0), a1, std::move(_result));
         } else {
           auto _f = std::move(crane::get<_after_insert_in_true>(_popped));
           _stack.pop_back();
           uint64_t a1 = _f.a1;
           std::shared_ptr<tree> a2 = std::move(_f.a2);
-          _result = tree::node(std::move(_result), a1, *a2);
+          _result = tree::node(std::move(_result), a1, crane::shared_child(a2));
         }
       }
       return _result;

@@ -2,39 +2,322 @@
 
 ReuseForcedViews::tree ReuseForcedViews::smash(ReuseForcedViews::tree t,
                                                ReuseForcedViews::tree u) {
-  if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(t.v_mut())) {
-    return tree::leaf();
-  } else {
-    auto &[a0, a1, a2] =
-        std::get<typename ReuseForcedViews::tree::Node>(t.v_mut());
-    auto &&_sv = *a2;
-    if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(_sv.v())) {
+  // Reuse the matched cell in place when this is its only owner; otherwise
+  // rebuild.
+  if (t.v().index() == 1) {
+    if (std::get<typename ReuseForcedViews::tree::Node>(t.v_mut()).a1.use_count() ==
+        1) {
+      uint64_t x = std::move(
+          std::get<typename ReuseForcedViews::tree::Node>(t.v_mut()).a0);
+      ReuseForcedViews::tree t1 = std::move(
+          *std::get<typename ReuseForcedViews::tree::Node>(t.v_mut()).a1);
+      ReuseForcedViews::tree t0 =
+          *std::get<typename ReuseForcedViews::tree::Node>(t.v_mut()).a2;
       if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
-              u.v_mut())) {
+              t0.v_mut())) {
+        // Reuse the matched cell in place when this is its only owner;
+        // otherwise rebuild.
+        if (u.v().index() == 1) {
+          if (std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a1.use_count() ==
+              1) {
+            uint64_t y = std::move(
+                std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a0);
+            ReuseForcedViews::tree u1 = std::move(
+                *std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a1);
+            ReuseForcedViews::tree t2 =
+                *std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a2;
+            if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                    t2.v_mut())) {
+              if (y < x) {
+                return tree::node_crane_reuse(
+                    std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                        u.v_mut())
+                                  .a1),
+                    std::move(x),
+                    tree::node(std::move(y), std::move(u1), std::move(t1)),
+                    tree::leaf());
+              } else {
+                return tree::node_crane_reuse(
+                    std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                        u.v_mut())
+                                  .a1),
+                    std::move(y),
+                    tree::node(std::move(x), std::move(t1), std::move(u1)),
+                    tree::leaf());
+              }
+            } else {
+              return tree::leaf();
+            }
+          } else {
+            if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                    u.v_mut())) {
+              return tree::leaf();
+            } else {
+              auto &[a01, a11, a21] =
+                  std::get<typename ReuseForcedViews::tree::Node>(u.v_mut());
+              auto &&_sv = *a21;
+              if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                      _sv.v())) {
+                if (a01 < x) {
+                  return tree::node_crane_reuse(
+                      std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                          t.v_mut())
+                                    .a1),
+                      std::move(x),
+                      tree::node(std::move(a01), crane::child(a11),
+                                 std::move(t1)),
+                      tree::leaf());
+                } else {
+                  return tree::node_crane_reuse(
+                      std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                          t.v_mut())
+                                    .a1),
+                      std::move(a01), tree::node(std::move(x), std::move(t1),
+                                                 crane::child(a11)),
+                      tree::leaf());
+                }
+              } else {
+                return tree::leaf();
+              }
+            }
+          }
+        } else {
+          if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                  u.v_mut())) {
+            return tree::leaf();
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename ReuseForcedViews::tree::Node>(u.v_mut());
+            auto &&_sv = *a21;
+            if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                    _sv.v())) {
+              if (a01 < x) {
+                return tree::node_crane_reuse(
+                    std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                        t.v_mut())
+                                  .a1),
+                    std::move(x), tree::node(std::move(a01), crane::child(a11),
+                                             std::move(t1)),
+                    tree::leaf());
+              } else {
+                return tree::node_crane_reuse(
+                    std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                        t.v_mut())
+                                  .a1),
+                    std::move(a01),
+                    tree::node(std::move(x), std::move(t1), crane::child(a11)),
+                    tree::leaf());
+              }
+            } else {
+              return tree::leaf();
+            }
+          }
+        }
+      } else {
+        return tree::leaf();
+      }
+    } else {
+      if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+              t.v_mut())) {
         return tree::leaf();
       } else {
-        auto &[a01, a11, a21] =
-            std::get<typename ReuseForcedViews::tree::Node>(u.v_mut());
-        auto &&_sv = *a21;
+        auto &[a0, a1, a2] =
+            std::get<typename ReuseForcedViews::tree::Node>(t.v_mut());
+        auto &&_sv = *a2;
         if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
                 _sv.v())) {
-          if (a01 < a0) {
-            return tree::node(
-                std::move(a0),
-                tree::node(std::move(a01), crane::child(a11), crane::child(a1)),
-                tree::leaf());
+          // Reuse the matched cell in place when this is its only owner;
+          // otherwise rebuild.
+          if (u.v().index() == 1) {
+            if (std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a1.use_count() ==
+                1) {
+              uint64_t y =
+                  std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                      u.v_mut())
+                                .a0);
+              ReuseForcedViews::tree u1 =
+                  std::move(*std::get<typename ReuseForcedViews::tree::Node>(
+                      u.v_mut())
+                                .a1);
+              ReuseForcedViews::tree t2 =
+                  *std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a2;
+              if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                      t2.v_mut())) {
+                if (y < a0) {
+                  return tree::node_crane_reuse(
+                      std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                          u.v_mut())
+                                    .a1),
+                      std::move(a0),
+                      tree::node(std::move(y), std::move(u1), crane::child(a1)),
+                      tree::leaf());
+                } else {
+                  return tree::node_crane_reuse(
+                      std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                          u.v_mut())
+                                    .a1),
+                      std::move(y), tree::node(std::move(a0), crane::child(a1),
+                                               std::move(u1)),
+                      tree::leaf());
+                }
+              } else {
+                return tree::leaf();
+              }
+            } else {
+              if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                      u.v_mut())) {
+                return tree::leaf();
+              } else {
+                auto &[a01, a11, a21] =
+                    std::get<typename ReuseForcedViews::tree::Node>(u.v_mut());
+                auto &&_sv = *a21;
+                if (std::holds_alternative<
+                        typename ReuseForcedViews::tree::Leaf>(_sv.v())) {
+                  if (a01 < a0) {
+                    return tree::node(
+                        std::move(a0),
+                        tree::node(std::move(a01), crane::child(a11),
+                                   crane::child(a1)),
+                        tree::leaf());
+                  } else {
+                    return tree::node(
+                        std::move(a01),
+                        tree::node(std::move(a0), crane::child(a1),
+                                   crane::child(a11)),
+                        tree::leaf());
+                  }
+                } else {
+                  return tree::leaf();
+                }
+              }
+            }
           } else {
-            return tree::node(
-                std::move(a01),
-                tree::node(std::move(a0), crane::child(a1), crane::child(a11)),
-                tree::leaf());
+            if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                    u.v_mut())) {
+              return tree::leaf();
+            } else {
+              auto &[a01, a11, a21] =
+                  std::get<typename ReuseForcedViews::tree::Node>(u.v_mut());
+              auto &&_sv = *a21;
+              if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                      _sv.v())) {
+                if (a01 < a0) {
+                  return tree::node(std::move(a0), tree::node(std::move(a01),
+                                                              crane::child(a11),
+                                                              crane::child(a1)),
+                                    tree::leaf());
+                } else {
+                  return tree::node(std::move(a01),
+                                    tree::node(std::move(a0), crane::child(a1),
+                                               crane::child(a11)),
+                                    tree::leaf());
+                }
+              } else {
+                return tree::leaf();
+              }
+            }
           }
         } else {
           return tree::leaf();
         }
       }
-    } else {
+    }
+  } else {
+    if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(t.v_mut())) {
       return tree::leaf();
+    } else {
+      auto &[a0, a1, a2] =
+          std::get<typename ReuseForcedViews::tree::Node>(t.v_mut());
+      auto &&_sv = *a2;
+      if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(_sv.v())) {
+        // Reuse the matched cell in place when this is its only owner;
+        // otherwise rebuild.
+        if (u.v().index() == 1) {
+          if (std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a1.use_count() ==
+              1) {
+            uint64_t y = std::move(
+                std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a0);
+            ReuseForcedViews::tree u1 = std::move(
+                *std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a1);
+            ReuseForcedViews::tree t2 =
+                *std::get<typename ReuseForcedViews::tree::Node>(u.v_mut()).a2;
+            if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                    t2.v_mut())) {
+              if (y < a0) {
+                return tree::node_crane_reuse(
+                    std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                        u.v_mut())
+                                  .a1),
+                    std::move(a0),
+                    tree::node(std::move(y), std::move(u1), crane::child(a1)),
+                    tree::leaf());
+              } else {
+                return tree::node_crane_reuse(
+                    std::move(std::get<typename ReuseForcedViews::tree::Node>(
+                        u.v_mut())
+                                  .a1),
+                    std::move(y),
+                    tree::node(std::move(a0), crane::child(a1), std::move(u1)),
+                    tree::leaf());
+              }
+            } else {
+              return tree::leaf();
+            }
+          } else {
+            if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                    u.v_mut())) {
+              return tree::leaf();
+            } else {
+              auto &[a01, a11, a21] =
+                  std::get<typename ReuseForcedViews::tree::Node>(u.v_mut());
+              auto &&_sv = *a21;
+              if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                      _sv.v())) {
+                if (a01 < a0) {
+                  return tree::node(std::move(a0), tree::node(std::move(a01),
+                                                              crane::child(a11),
+                                                              crane::child(a1)),
+                                    tree::leaf());
+                } else {
+                  return tree::node(std::move(a01),
+                                    tree::node(std::move(a0), crane::child(a1),
+                                               crane::child(a11)),
+                                    tree::leaf());
+                }
+              } else {
+                return tree::leaf();
+              }
+            }
+          }
+        } else {
+          if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                  u.v_mut())) {
+            return tree::leaf();
+          } else {
+            auto &[a01, a11, a21] =
+                std::get<typename ReuseForcedViews::tree::Node>(u.v_mut());
+            auto &&_sv = *a21;
+            if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
+                    _sv.v())) {
+              if (a01 < a0) {
+                return tree::node(std::move(a0),
+                                  tree::node(std::move(a01), crane::child(a11),
+                                             crane::child(a1)),
+                                  tree::leaf());
+              } else {
+                return tree::node(std::move(a01),
+                                  tree::node(std::move(a0), crane::child(a1),
+                                             crane::child(a11)),
+                                  tree::leaf());
+              }
+            } else {
+              return tree::leaf();
+            }
+          }
+        }
+      } else {
+        return tree::leaf();
+      }
     }
   }
 }

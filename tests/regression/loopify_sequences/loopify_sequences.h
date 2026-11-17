@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -559,7 +559,7 @@ struct LoopifySequences {
         if (p(a0)) {
           _loop_l = crane_raw(a1);
         } else {
-          return List<uint64_t>::cons(a0, *a1);
+          return List<uint64_t>::cons(a0, crane::shared_child(a1));
         }
       }
     }

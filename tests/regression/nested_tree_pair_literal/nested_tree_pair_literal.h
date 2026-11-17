@@ -41,8 +41,8 @@ struct NestedTreePairLiteral {
 
     static tree lf(crane::obj a0) { return tree(Lf{std::move(a0)}); }
 
-    static tree nd(tree a0) {
-      return tree(Nd{std::make_shared<tree>(std::move(a0))});
+    static tree nd(crane::shared_child_slot<tree> a0) {
+      return tree(Nd{a0.take()});
     }
 
     // MANIPULATORS

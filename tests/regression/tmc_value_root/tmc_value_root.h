@@ -39,8 +39,8 @@ struct TmcValueRoot {
 
     static lst nil() { return lst(Nil{}); }
 
-    static lst cons(uint64_t x, lst l) {
-      return lst(Cons{x, std::make_shared<lst>(std::move(l))});
+    static lst cons(uint64_t x, crane::shared_child_slot<lst> l) {
+      return lst(Cons{x, l.take()});
     }
 
     // MANIPULATORS

@@ -45,14 +45,14 @@ struct WhereClause {
 
     static Expr num(uint64_t a0) { return Expr(Num{a0}); }
 
-    static Expr plus(Expr a0, Expr a1) {
-      return Expr(Plus{std::make_shared<Expr>(std::move(a0)),
-                       std::make_shared<Expr>(std::move(a1))});
+    static Expr plus(crane::shared_child_slot<Expr> a0,
+                     crane::shared_child_slot<Expr> a1) {
+      return Expr(Plus{a0.take(), a1.take()});
     }
 
-    static Expr times(Expr a0, Expr a1) {
-      return Expr(Times{std::make_shared<Expr>(std::move(a0)),
-                        std::make_shared<Expr>(std::move(a1))});
+    static Expr times(crane::shared_child_slot<Expr> a0,
+                      crane::shared_child_slot<Expr> a1) {
+      return Expr(Times{a0.take(), a1.take()});
     }
 
     // MANIPULATORS
@@ -404,18 +404,18 @@ struct WhereClause {
 
     static BExpr bfalse() { return BExpr(BFalse{}); }
 
-    static BExpr band(BExpr a0, BExpr a1) {
-      return BExpr(BAnd{std::make_shared<BExpr>(std::move(a0)),
-                        std::make_shared<BExpr>(std::move(a1))});
+    static BExpr band(crane::shared_child_slot<BExpr> a0,
+                      crane::shared_child_slot<BExpr> a1) {
+      return BExpr(BAnd{a0.take(), a1.take()});
     }
 
-    static BExpr bor(BExpr a0, BExpr a1) {
-      return BExpr(BOr{std::make_shared<BExpr>(std::move(a0)),
-                       std::make_shared<BExpr>(std::move(a1))});
+    static BExpr bor(crane::shared_child_slot<BExpr> a0,
+                     crane::shared_child_slot<BExpr> a1) {
+      return BExpr(BOr{a0.take(), a1.take()});
     }
 
-    static BExpr bnot(BExpr a0) {
-      return BExpr(BNot{std::make_shared<BExpr>(std::move(a0))});
+    static BExpr bnot(crane::shared_child_slot<BExpr> a0) {
+      return BExpr(BNot{a0.take()});
     }
 
     // MANIPULATORS
@@ -723,14 +723,14 @@ struct WhereClause {
 
     static AExpr anum(uint64_t a0) { return AExpr(ANum{a0}); }
 
-    static AExpr aplus(AExpr a0, AExpr a1) {
-      return AExpr(APlus{std::make_shared<AExpr>(std::move(a0)),
-                         std::make_shared<AExpr>(std::move(a1))});
+    static AExpr aplus(crane::shared_child_slot<AExpr> a0,
+                       crane::shared_child_slot<AExpr> a1) {
+      return AExpr(APlus{a0.take(), a1.take()});
     }
 
-    static AExpr aif(BExpr a0, AExpr a1, AExpr a2) {
-      return AExpr(AIf{std::move(a0), std::make_shared<AExpr>(std::move(a1)),
-                       std::make_shared<AExpr>(std::move(a2))});
+    static AExpr aif(BExpr a0, crane::shared_child_slot<AExpr> a1,
+                     crane::shared_child_slot<AExpr> a2) {
+      return AExpr(AIf{std::move(a0), a1.take(), a2.take()});
     }
 
     // MANIPULATORS

@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -411,9 +411,9 @@ struct LoopifySearch {
 
     static btree bleaf(uint64_t a0) { return btree(BLeaf{a0}); }
 
-    static btree bnode(btree a0, btree a1) {
-      return btree(BNode{std::make_shared<btree>(std::move(a0)),
-                         std::make_shared<btree>(std::move(a1))});
+    static btree bnode(crane::shared_child_slot<btree> a0,
+                       crane::shared_child_slot<btree> a1) {
+      return btree(BNode{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

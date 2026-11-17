@@ -61,9 +61,8 @@ struct DepMatchUnitVec {
 
     static vec<A> vnil() { return vec<A>(Vnil{}); }
 
-    static vec<A> vcons(uint64_t n, A a1, vec<A> a2) {
-      return vec<A>(
-          Vcons{n, std::move(a1), std::make_shared<vec<A>>(std::move(a2))});
+    static vec<A> vcons(uint64_t n, A a1, crane::shared_child_slot<vec<A>> a2) {
+      return vec<A>(Vcons{n, std::move(a1), a2.take()});
     }
 
     // MANIPULATORS

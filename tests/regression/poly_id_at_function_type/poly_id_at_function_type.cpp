@@ -16,11 +16,7 @@ uint64_t PolyIdAtFunctionType::apply_id2(uint64_t n) {
       [](crane::fn<uint64_t(uint64_t)> f) {
         return [=, f = std::move(f)](uint64_t x) { return f(f(x)); };
       }));
-  return crane::apply2(
-      id2_1,
-      [](uint64_t _x0) -> uint64_t {
-        return id2<crane::fn<uint64_t(uint64_t)>>(
-            [](uint64_t k) { return (k * UINT64_C(3)); })(_x0);
-      },
-      n);
+  return crane::apply2(id2_1, id2<crane::fn<uint64_t(uint64_t)>>(
+                                  [](uint64_t k) { return (k * UINT64_C(3)); }),
+                       n);
 }

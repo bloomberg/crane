@@ -1,6 +1,7 @@
 #ifndef INCLUDED_REUSE_SCRUTINEE
 #define INCLUDED_REUSE_SCRUTINEE
 
+#include "crane_fn.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
@@ -35,9 +36,9 @@ struct ReuseScrutinee {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -136,7 +137,7 @@ struct ReuseScrutinee {
       return tree::leaf();
     } else {
       auto &[_, _, a2] = std::get<typename tree::Node>(t.v_mut());
-      return tree::node(tree::leaf(), subtree_sum(t), *a2);
+      return tree::node(tree::leaf(), subtree_sum(t), crane::shared_child(a2));
     }
   }();
   /// Expected: subtree_sum on Node(Node(Leaf,10,Leaf), 20, Node(Leaf,30,Leaf))

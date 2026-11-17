@@ -1,6 +1,7 @@
 #ifndef INCLUDED_SEPEXTUNMERGEDSTRUCTCAP
 #define INCLUDED_SEPEXTUNMERGEDSTRUCTCAP
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -36,8 +37,8 @@ struct Exprs {
 
     static Expr lit(Datatypes::Nat a0) { return Expr(Lit{std::move(a0)}); }
 
-    static Expr neg(Expr a0) {
-      return Expr(Neg{std::make_shared<Expr>(std::move(a0))});
+    static Expr neg(crane::shared_child_slot<Expr> a0) {
+      return Expr(Neg{a0.take()});
     }
 
     // MANIPULATORS

@@ -63,8 +63,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -251,9 +251,9 @@ struct LoopifyMutualPartialApp {
 
     static e<U> tag(U u) { return e<U>(Tag{std::move(u)}); }
 
-    static e<U> add(e<U> a, e<U> b) {
-      return e<U>(Add{std::make_shared<e<U>>(std::move(a)),
-                      std::make_shared<e<U>>(std::move(b))});
+    static e<U> add(crane::shared_child_slot<e<U>> a,
+                    crane::shared_child_slot<e<U>> b) {
+      return e<U>(Add{a.take(), b.take()});
     }
 
     static e<U> meta(md<U> m) {
@@ -412,9 +412,9 @@ struct LoopifyMutualPartialApp {
       return md<U>(MNode{std::make_shared<List<md<U>>>(std::move(l))});
     }
 
-    static md<U> mpair(md<U> a, md<U> b) {
-      return md<U>(MPair{std::make_shared<md<U>>(std::move(a)),
-                         std::make_shared<md<U>>(std::move(b))});
+    static md<U> mpair(crane::shared_child_slot<md<U>> a,
+                       crane::shared_child_slot<md<U>> b) {
+      return md<U>(MPair{a.take(), b.take()});
     }
 
     // MANIPULATORS

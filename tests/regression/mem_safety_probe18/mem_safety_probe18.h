@@ -52,9 +52,9 @@ struct MemSafetyProbe18 {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -106,7 +106,8 @@ struct MemSafetyProbe18 {
     /// again
     uint64_t triple_use() const {
       uint64_t s1 = this->tree_sum();
-      tree t2 = tree::node(*this, s1, *this);
+      tree t2 =
+          tree::node(crane::shared_child(this), s1, crane::shared_child(this));
       uint64_t s2 = t2.tree_sum();
       return (s1 + s2);
     }
@@ -114,17 +115,20 @@ struct MemSafetyProbe18 {
     /// TEST 7: Use a value type in a chain of let-bindings where
     /// each binding transforms the tree.
     uint64_t chain_transforms() const {
-      tree t1 = tree::node(*this, UINT64_C(0), tree::leaf());
+      tree t1 =
+          tree::node(crane::shared_child(this), UINT64_C(0), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(0), std::move(t1));
-      tree t3 = tree::node(std::move(t2), UINT64_C(0), *this);
+      tree t3 =
+          tree::node(std::move(t2), UINT64_C(0), crane::shared_child(this));
       return t3.tree_sum();
     }
 
     /// TEST 4: Build a tree from a tree, using it at multiple levels.
     tree tree_from_tree() const {
-      return tree::node(tree::node(*this, UINT64_C(0), tree::leaf()),
-                        this->tree_sum(),
-                        tree::node(tree::leaf(), UINT64_C(0), *this));
+      return tree::node(
+          tree::node(crane::shared_child(this), UINT64_C(0), tree::leaf()),
+          this->tree_sum(),
+          tree::node(tree::leaf(), UINT64_C(0), crane::shared_child(this)));
     }
 
     /// TEST 2: Let-bind tree_sum, then use the tree again.
@@ -136,7 +140,10 @@ struct MemSafetyProbe18 {
 
     /// TEST 1: Same tree used in TWO different positions of a single
     /// constructor. Tests whether the tree is properly cloned.
-    tree dup_tree() const { return tree::node(*this, UINT64_C(0), *this); }
+    tree dup_tree() const {
+      return tree::node(crane::shared_child(this), UINT64_C(0),
+                        crane::shared_child(this));
+    }
 
     uint64_t tree_sum() const {
       const tree *_self = this;
@@ -312,9 +319,8 @@ struct MemSafetyProbe18 {
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
-    static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist<A>(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    static mylist<A> mycons(A a0, crane::shared_child_slot<mylist<A>> a1) {
+      return mylist<A>(Mycons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

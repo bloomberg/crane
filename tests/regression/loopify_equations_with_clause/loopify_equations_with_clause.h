@@ -80,8 +80,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -542,10 +542,10 @@ struct LoopifyEquationsWithClause {
       return plain_graph(Plain_graph_equation_1{});
     }
 
-    static plain_graph plain_graph_equation_2(uint64_t x, List<uint64_t> xs,
-                                              plain_graph hind) {
-      return plain_graph(Plain_graph_equation_2{
-          x, std::move(xs), std::make_shared<plain_graph>(std::move(hind))});
+    static plain_graph
+    plain_graph_equation_2(uint64_t x, List<uint64_t> xs,
+                           crane::shared_child_slot<plain_graph> hind) {
+      return plain_graph(Plain_graph_equation_2{x, std::move(xs), hind.take()});
     }
 
     // MANIPULATORS

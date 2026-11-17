@@ -41,7 +41,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -184,8 +184,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -297,9 +297,9 @@ public:
 
   static Tree<A> leaf() { return Tree<A>(Leaf{}); }
 
-  static Tree<A> node(Tree<A> t1, A x, Tree<A> t2) {
-    return Tree<A>(Node{std::make_shared<Tree<A>>(std::move(t1)), std::move(x),
-                        std::make_shared<Tree<A>>(std::move(t2))});
+  static Tree<A> node(crane::shared_child_slot<Tree<A>> t1, A x,
+                      crane::shared_child_slot<Tree<A>> t2) {
+    return Tree<A>(Node{t1.take(), std::move(x), t2.take()});
   }
 
   // MANIPULATORS

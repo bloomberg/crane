@@ -115,7 +115,9 @@ LoopifyDispatchOnCall::graft(const LoopifyDispatchOnCall::tree &t) {
       _stack.pop_back();
       std::shared_ptr<LoopifyDispatchOnCall::tree> l1 = std::move(_f.l1);
       std::shared_ptr<LoopifyDispatchOnCall::tree> r1 = std::move(_f.r1);
-      _result = tree::node(std::move(_result), tree::node(*r1, *l1));
+      _result =
+          tree::node(std::move(_result), tree::node(crane::shared_child(r1),
+                                                    crane::shared_child(l1)));
     }
   }
   return _result;

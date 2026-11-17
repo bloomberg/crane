@@ -38,7 +38,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -144,8 +144,8 @@ public:
 
   static Lst<A> nil() { return Lst<A>(Nil{}); }
 
-  static Lst<A> cons(A x, Lst<A> xs) {
-    return Lst<A>(Cons{std::move(x), std::make_shared<Lst<A>>(std::move(xs))});
+  static Lst<A> cons(A x, crane::shared_child_slot<Lst<A>> xs) {
+    return Lst<A>(Cons{std::move(x), xs.take()});
   }
 
   // MANIPULATORS

@@ -76,23 +76,23 @@ struct IndexedFamilyDeepDestructor {
 
     static expr bl(bool a0) { return expr(Bl{a0}); }
 
-    static expr succe(expr a0) {
-      return expr(SuccE{std::make_shared<expr>(std::move(a0))});
+    static expr succe(crane::shared_child_slot<expr> a0) {
+      return expr(SuccE{a0.take()});
     }
 
-    static expr ite(expr a, expr a1, expr a2) {
-      return expr(Ite{std::make_shared<expr>(std::move(a)),
-                      std::make_shared<expr>(std::move(a1)),
-                      std::make_shared<expr>(std::move(a2))});
+    static expr ite(crane::shared_child_slot<expr> a,
+                    crane::shared_child_slot<expr> a1,
+                    crane::shared_child_slot<expr> a2) {
+      return expr(Ite{a.take(), a1.take(), a2.take()});
     }
 
-    static expr paire(expr a, expr b) {
-      return expr(PairE{std::make_shared<expr>(std::move(a)),
-                        std::make_shared<expr>(std::move(b))});
+    static expr paire(crane::shared_child_slot<expr> a,
+                      crane::shared_child_slot<expr> b) {
+      return expr(PairE{a.take(), b.take()});
     }
 
-    static expr fste(expr a) {
-      return expr(FstE{std::make_shared<expr>(std::move(a))});
+    static expr fste(crane::shared_child_slot<expr> a) {
+      return expr(FstE{a.take()});
     }
 
     // MANIPULATORS

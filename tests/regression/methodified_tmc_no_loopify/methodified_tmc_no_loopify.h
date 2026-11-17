@@ -37,8 +37,8 @@ struct MethodifiedTmcNoLoopify {
 
     static lst nil() { return lst(Nil{}); }
 
-    static lst cons(uint64_t a0, lst a1) {
-      return lst(Cons{a0, std::make_shared<lst>(std::move(a1))});
+    static lst cons(uint64_t a0, crane::shared_child_slot<lst> a1) {
+      return lst(Cons{a0, a1.take()});
     }
 
     // MANIPULATORS
@@ -144,8 +144,8 @@ struct MethodifiedTmcNoLoopify {
 
     static wrap w(lst a0) { return wrap(W{std::move(a0)}); }
 
-    static wrap ww(wrap a0) {
-      return wrap(WW{std::make_shared<wrap>(std::move(a0))});
+    static wrap ww(crane::shared_child_slot<wrap> a0) {
+      return wrap(WW{a0.take()});
     }
 
     // MANIPULATORS

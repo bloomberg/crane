@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DOUBLE_INVOKE_MOVE
 #define INCLUDED_DOUBLE_INVOKE_MOVE
 
+#include "crane_fn.h"
 #include "fn.h"
 #include "small_vector.h"
 #include <atomic>
@@ -36,9 +37,9 @@ struct DoubleInvokeMove {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS

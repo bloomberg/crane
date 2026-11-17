@@ -40,7 +40,7 @@ Positive Pos::succ(const Positive &x) {
     return Positive::xo(succ(*a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*a0);
+    return Positive::xi(crane::shared_child(a0));
   } else {
     return Positive::xo(Positive::xh());
   }
@@ -67,7 +67,7 @@ Positive Pos::add(const Positive &x, const Positive &y) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
       return Positive::xo(add(*a0, *a00));
     } else {
-      return Positive::xi(*a0);
+      return Positive::xi(crane::shared_child(a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -75,7 +75,7 @@ Positive Pos::add(const Positive &x, const Positive &y) {
       return Positive::xo(succ(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(*a00);
+      return Positive::xi(crane::shared_child(a00));
     } else {
       return Positive::xo(Positive::xh());
     }
@@ -121,7 +121,7 @@ Positive Pos::add_carry(const Positive &x, const Positive &y) {
 Positive Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xi(Positive::xo(*a0));
+    return Positive::xi(Positive::xo(crane::shared_child(a0)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
     return Positive::xi(pred_double(*a0));
@@ -251,7 +251,7 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
       return BinInt::succ_double(BinInt::pos_sub(*a0, *a00));
     } else {
-      return Z::zpos(Positive::xo(*a0));
+      return Z::zpos(Positive::xo(crane::shared_child(a0)));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
@@ -267,7 +267,7 @@ Z BinInt::pos_sub(const Positive &x, const Positive &y) {
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
       const auto &[a00] = std::get<typename Positive::XI>(y.v());
-      return Z::zneg(Positive::xo(*a00));
+      return Z::zneg(Positive::xo(crane::shared_child(a00)));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
       return Z::zneg(Pos::pred_double(*a00));

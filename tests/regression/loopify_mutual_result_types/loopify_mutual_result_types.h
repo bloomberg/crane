@@ -58,9 +58,8 @@ struct LoopifyMutualResultTypes {
 
     static e leaf(uint64_t n) { return e(Leaf{n}); }
 
-    static e add(e a, e b) {
-      return e(Add{std::make_shared<e>(std::move(a)),
-                   std::make_shared<e>(std::move(b))});
+    static e add(crane::shared_child_slot<e> a, crane::shared_child_slot<e> b) {
+      return e(Add{a.take(), b.take()});
     }
 
     static e meta(md m) { return e(Meta{std::make_shared<md>(std::move(m))}); }
@@ -163,9 +162,9 @@ struct LoopifyMutualResultTypes {
       return md(MConst{std::make_shared<e>(std::move(x))});
     }
 
-    static md mpair(md a, md b) {
-      return md(MPair{std::make_shared<md>(std::move(a)),
-                      std::make_shared<md>(std::move(b))});
+    static md mpair(crane::shared_child_slot<md> a,
+                    crane::shared_child_slot<md> b) {
+      return md(MPair{a.take(), b.take()});
     }
 
     // MANIPULATORS

@@ -82,7 +82,8 @@ Levenshtein::levenshtein_chain(String s, const String &x0_) {
           const auto &[a0, a1] = std::get<typename String::String0>(s.v());
           if (std::holds_alternative<typename String::EmptyString>(t.v())) {
             return SigT<Nat, Levenshtein::chain>::existt(
-                s.length(), deletes_chain_empty(String::string0(a0, *a1)));
+                s.length(), deletes_chain_empty(
+                                String::string0(a0, crane::shared_child(a1))));
           } else {
             const auto &[a00, a10] = std::get<typename String::String0>(t.v());
             switch (a0.ascii_dec(a00)) {
@@ -97,8 +98,8 @@ Levenshtein::levenshtein_chain(String s, const String &x0_) {
               const auto &_sv2 =
                   _self_levenshtein_chain1(_self_levenshtein_chain1, *a10);
               const auto &[x2, a12] = _sv2;
-              const auto &_sv3 =
-                  levenshtein_chain(*a1, String::string0(a00, *a10));
+              const auto &_sv3 = levenshtein_chain(
+                  *a1, String::string0(a00, crane::shared_child(a10)));
               const auto &[x3, a13] = _sv3;
               const auto &_sv4 = levenshtein_chain(*a1, *a10);
               const auto &[x4, a14] = _sv4;

@@ -35,7 +35,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -135,9 +135,9 @@ struct MethodReturnsFunctionAlias {
 
       static tree leaf() { return tree(Leaf{}); }
 
-      static tree node(tree l, tree r) {
-        return tree(Node{std::make_shared<tree>(std::move(l)),
-                         std::make_shared<tree>(std::move(r))});
+      static tree node(crane::shared_child_slot<tree> l,
+                       crane::shared_child_slot<tree> r) {
+        return tree(Node{l.take(), r.take()});
       }
 
       // MANIPULATORS

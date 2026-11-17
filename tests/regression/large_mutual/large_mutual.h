@@ -1,6 +1,7 @@
 #ifndef INCLUDED_LARGE_MUTUAL
 #define INCLUDED_LARGE_MUTUAL
 
+#include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
@@ -64,20 +65,19 @@ struct LargeMutual {
       return stmt(SAssign{a0, std::make_shared<expr>(std::move(a1))});
     }
 
-    static stmt sseq(stmt a0, stmt a1) {
-      return stmt(SSeq{std::make_shared<stmt>(std::move(a0)),
-                       std::make_shared<stmt>(std::move(a1))});
+    static stmt sseq(crane::shared_child_slot<stmt> a0,
+                     crane::shared_child_slot<stmt> a1) {
+      return stmt(SSeq{a0.take(), a1.take()});
     }
 
-    static stmt sif(bexpr a0, stmt a1, stmt a2) {
-      return stmt(SIf{std::make_shared<bexpr>(std::move(a0)),
-                      std::make_shared<stmt>(std::move(a1)),
-                      std::make_shared<stmt>(std::move(a2))});
+    static stmt sif(bexpr a0, crane::shared_child_slot<stmt> a1,
+                    crane::shared_child_slot<stmt> a2) {
+      return stmt(
+          SIf{std::make_shared<bexpr>(std::move(a0)), a1.take(), a2.take()});
     }
 
-    static stmt swhile(bexpr a0, stmt a1) {
-      return stmt(SWhile{std::make_shared<bexpr>(std::move(a0)),
-                         std::make_shared<stmt>(std::move(a1))});
+    static stmt swhile(bexpr a0, crane::shared_child_slot<stmt> a1) {
+      return stmt(SWhile{std::make_shared<bexpr>(std::move(a0)), a1.take()});
     }
 
     static stmt sskip() { return stmt(SSkip{}); }
@@ -271,20 +271,20 @@ struct LargeMutual {
 
     static expr evar(uint64_t a0) { return expr(EVar{a0}); }
 
-    static expr eadd(expr a0, expr a1) {
-      return expr(EAdd{std::make_shared<expr>(std::move(a0)),
-                       std::make_shared<expr>(std::move(a1))});
+    static expr eadd(crane::shared_child_slot<expr> a0,
+                     crane::shared_child_slot<expr> a1) {
+      return expr(EAdd{a0.take(), a1.take()});
     }
 
-    static expr emul(expr a0, expr a1) {
-      return expr(EMul{std::make_shared<expr>(std::move(a0)),
-                       std::make_shared<expr>(std::move(a1))});
+    static expr emul(crane::shared_child_slot<expr> a0,
+                     crane::shared_child_slot<expr> a1) {
+      return expr(EMul{a0.take(), a1.take()});
     }
 
-    static expr econd(bexpr a0, expr a1, expr a2) {
-      return expr(ECond{std::make_shared<bexpr>(std::move(a0)),
-                        std::make_shared<expr>(std::move(a1)),
-                        std::make_shared<expr>(std::move(a2))});
+    static expr econd(bexpr a0, crane::shared_child_slot<expr> a1,
+                      crane::shared_child_slot<expr> a2) {
+      return expr(
+          ECond{std::make_shared<bexpr>(std::move(a0)), a1.take(), a2.take()});
     }
 
     // MANIPULATORS
@@ -494,18 +494,18 @@ struct LargeMutual {
                        std::make_shared<expr>(std::move(a1))});
     }
 
-    static bexpr band(bexpr a0, bexpr a1) {
-      return bexpr(BAnd{std::make_shared<bexpr>(std::move(a0)),
-                        std::make_shared<bexpr>(std::move(a1))});
+    static bexpr band(crane::shared_child_slot<bexpr> a0,
+                      crane::shared_child_slot<bexpr> a1) {
+      return bexpr(BAnd{a0.take(), a1.take()});
     }
 
-    static bexpr bor(bexpr a0, bexpr a1) {
-      return bexpr(BOr{std::make_shared<bexpr>(std::move(a0)),
-                       std::make_shared<bexpr>(std::move(a1))});
+    static bexpr bor(crane::shared_child_slot<bexpr> a0,
+                     crane::shared_child_slot<bexpr> a1) {
+      return bexpr(BOr{a0.take(), a1.take()});
     }
 
-    static bexpr bnot(bexpr a0) {
-      return bexpr(BNot{std::make_shared<bexpr>(std::move(a0))});
+    static bexpr bnot(crane::shared_child_slot<bexpr> a0) {
+      return bexpr(BNot{a0.take()});
     }
 
     // MANIPULATORS

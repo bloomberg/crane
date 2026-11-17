@@ -65,7 +65,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -171,8 +171,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -309,12 +309,12 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  static Positive xi(Positive a0) {
-    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
+  static Positive xi(crane::shared_child_slot<Positive> a0) {
+    return Positive(XI{a0.take()});
   }
 
-  static Positive xo(Positive a0) {
-    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
+  static Positive xo(crane::shared_child_slot<Positive> a0) {
+    return Positive(XO{a0.take()});
   }
 
   static Positive xh() { return Positive(XH{}); }
@@ -582,7 +582,7 @@ template <OrderedType X> struct Coq_Raw {
       } else if (
           std::holds_alternative<typename Compare<typename X::t>::EQ>(_sv.v())) {
         return List<std::pair<typename X::t, T1>>::cons(
-            std::make_pair(std::move(k), x), *a1);
+            std::make_pair(std::move(k), x), crane::shared_child(a1));
       } else {
         return List<std::pair<typename X::t, T1>>::cons(
             std::make_pair(k_, y), add<T1>(std::move(k), x, *a1));
@@ -1096,12 +1096,11 @@ template <Int I, OrderedType X> struct Raw {
 
     static tree<elt> leaf() { return tree<elt>(Leaf{}); }
 
-    static tree<elt> node(tree<elt> a0, key a1, elt a2, tree<elt> a3,
+    static tree<elt> node(crane::shared_child_slot<tree<elt>> a0, key a1,
+                          elt a2, crane::shared_child_slot<tree<elt>> a3,
                           typename I::t a4) {
-      return tree<elt>(
-          Node{std::make_shared<tree<elt>>(std::move(a0)), std::move(a1),
-               std::move(a2), std::make_shared<tree<elt>>(std::move(a3)),
-               std::move(a4)});
+      return tree<elt>(Node{a0.take(), std::move(a1), std::move(a2), a3.take(),
+                            std::move(a4)});
     }
 
     // MANIPULATORS
@@ -1313,7 +1312,8 @@ template <Int I, OrderedType X> struct Raw {
         return bal<T1>(add<T1>(std::move(x), d, *a0), a1, a2, *a3);
       } else if (
           std::holds_alternative<typename Compare<typename X::t>::EQ>(_sv.v())) {
-        return tree<T1>::node(*a0, a1, d, *a3, a4);
+        return tree<T1>::node(crane::shared_child(a0), a1, d,
+                              crane::shared_child(a3), a4);
       } else {
         return bal<T1>(*a0, a1, a2, add<T1>(std::move(x), d, *a3));
       }
@@ -1550,11 +1550,11 @@ template <Int I, OrderedType X> struct Raw {
 
     static enumeration<elt> end() { return enumeration<elt>(End{}); }
 
-    static enumeration<elt> more(key a0, elt a1, tree<elt> a2,
-                                 enumeration<elt> a3) {
+    static enumeration<elt>
+    more(key a0, elt a1, tree<elt> a2,
+         crane::shared_child_slot<enumeration<elt>> a3) {
       return enumeration<elt>(
-          More{std::move(a0), std::move(a1), std::move(a2),
-               std::make_shared<enumeration<elt>>(std::move(a3))});
+          More{std::move(a0), std::move(a1), std::move(a2), a3.take()});
     }
 
     // MANIPULATORS

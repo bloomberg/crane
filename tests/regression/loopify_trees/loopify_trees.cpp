@@ -188,13 +188,15 @@ LoopifyTrees::insert_bst(uint64_t x, const LoopifyTrees::tree<uint64_t> &t) {
       _stack.pop_back();
       std::shared_ptr<LoopifyTrees::tree<uint64_t>> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
-      _result = tree<uint64_t>::node(*a0, a1, std::move(_result));
+      _result =
+          tree<uint64_t>::node(crane::shared_child(a0), a1, std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_insert_bst_in_true>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       std::shared_ptr<LoopifyTrees::tree<uint64_t>> a2 = std::move(_f.a2);
-      _result = tree<uint64_t>::node(std::move(_result), a1, *a2);
+      _result =
+          tree<uint64_t>::node(std::move(_result), a1, crane::shared_child(a2));
     }
   }
   return _result;
@@ -1061,7 +1063,8 @@ List<uint64_t> LoopifyTrees::insert_sorted(uint64_t x,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
-        auto _value = List<uint64_t>::cons(x, List<uint64_t>::cons(a0, *a1));
+        auto _value = List<uint64_t>::cons(
+            x, List<uint64_t>::cons(a0, crane::shared_child(a1)));
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));

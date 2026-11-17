@@ -92,8 +92,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -296,44 +296,44 @@ public:
 
   static Uint nil() { return Uint(Nil{}); }
 
-  static Uint d0(Uint a0) {
-    return Uint(D0{std::make_shared<Uint>(std::move(a0))});
+  static Uint d0(crane::shared_child_slot<Uint> a0) {
+    return Uint(D0{a0.take()});
   }
 
-  static Uint d1(Uint a0) {
-    return Uint(D1{std::make_shared<Uint>(std::move(a0))});
+  static Uint d1(crane::shared_child_slot<Uint> a0) {
+    return Uint(D1{a0.take()});
   }
 
-  static Uint d2(Uint a0) {
-    return Uint(D2{std::make_shared<Uint>(std::move(a0))});
+  static Uint d2(crane::shared_child_slot<Uint> a0) {
+    return Uint(D2{a0.take()});
   }
 
-  static Uint d3(Uint a0) {
-    return Uint(D3{std::make_shared<Uint>(std::move(a0))});
+  static Uint d3(crane::shared_child_slot<Uint> a0) {
+    return Uint(D3{a0.take()});
   }
 
-  static Uint d4(Uint a0) {
-    return Uint(D4{std::make_shared<Uint>(std::move(a0))});
+  static Uint d4(crane::shared_child_slot<Uint> a0) {
+    return Uint(D4{a0.take()});
   }
 
-  static Uint d5(Uint a0) {
-    return Uint(D5{std::make_shared<Uint>(std::move(a0))});
+  static Uint d5(crane::shared_child_slot<Uint> a0) {
+    return Uint(D5{a0.take()});
   }
 
-  static Uint d6(Uint a0) {
-    return Uint(D6{std::make_shared<Uint>(std::move(a0))});
+  static Uint d6(crane::shared_child_slot<Uint> a0) {
+    return Uint(D6{a0.take()});
   }
 
-  static Uint d7(Uint a0) {
-    return Uint(D7{std::make_shared<Uint>(std::move(a0))});
+  static Uint d7(crane::shared_child_slot<Uint> a0) {
+    return Uint(D7{a0.take()});
   }
 
-  static Uint d8(Uint a0) {
-    return Uint(D8{std::make_shared<Uint>(std::move(a0))});
+  static Uint d8(crane::shared_child_slot<Uint> a0) {
+    return Uint(D8{a0.take()});
   }
 
-  static Uint d9(Uint a0) {
-    return Uint(D9{std::make_shared<Uint>(std::move(a0))});
+  static Uint d9(crane::shared_child_slot<Uint> a0) {
+    return Uint(D9{a0.take()});
   }
 
   // MANIPULATORS
@@ -625,68 +625,68 @@ public:
 
   static Uint0 nil0() { return Uint0(Nil0{}); }
 
-  static Uint0 d10(Uint0 a0) {
-    return Uint0(D10{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d10(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D10{a0.take()});
   }
 
-  static Uint0 d11(Uint0 a0) {
-    return Uint0(D11{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d11(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D11{a0.take()});
   }
 
-  static Uint0 d12(Uint0 a0) {
-    return Uint0(D12{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d12(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D12{a0.take()});
   }
 
-  static Uint0 d13(Uint0 a0) {
-    return Uint0(D13{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d13(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D13{a0.take()});
   }
 
-  static Uint0 d14(Uint0 a0) {
-    return Uint0(D14{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d14(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D14{a0.take()});
   }
 
-  static Uint0 d15(Uint0 a0) {
-    return Uint0(D15{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d15(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D15{a0.take()});
   }
 
-  static Uint0 d16(Uint0 a0) {
-    return Uint0(D16{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d16(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D16{a0.take()});
   }
 
-  static Uint0 d17(Uint0 a0) {
-    return Uint0(D17{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d17(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D17{a0.take()});
   }
 
-  static Uint0 d18(Uint0 a0) {
-    return Uint0(D18{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d18(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D18{a0.take()});
   }
 
-  static Uint0 d19(Uint0 a0) {
-    return Uint0(D19{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 d19(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(D19{a0.take()});
   }
 
-  static Uint0 da(Uint0 a0) {
-    return Uint0(Da{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 da(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Da{a0.take()});
   }
 
-  static Uint0 db(Uint0 a0) {
-    return Uint0(Db{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 db(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Db{a0.take()});
   }
 
-  static Uint0 dc(Uint0 a0) {
-    return Uint0(Dc{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 dc(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Dc{a0.take()});
   }
 
-  static Uint0 dd(Uint0 a0) {
-    return Uint0(Dd{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 dd(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Dd{a0.take()});
   }
 
-  static Uint0 de(Uint0 a0) {
-    return Uint0(De{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 de(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(De{a0.take()});
   }
 
-  static Uint0 df(Uint0 a0) {
-    return Uint0(Df{std::make_shared<Uint0>(std::move(a0))});
+  static Uint0 df(crane::shared_child_slot<Uint0> a0) {
+    return Uint0(Df{a0.take()});
   }
 
   // MANIPULATORS
@@ -956,12 +956,12 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  static Positive xi(Positive a0) {
-    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
+  static Positive xi(crane::shared_child_slot<Positive> a0) {
+    return Positive(XI{a0.take()});
   }
 
-  static Positive xo(Positive a0) {
-    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
+  static Positive xo(crane::shared_child_slot<Positive> a0) {
+    return Positive(XO{a0.take()});
   }
 
   static Positive xh() { return Positive(XH{}); }
@@ -1481,7 +1481,7 @@ struct Coq_Pos {
     };
     if (std::holds_alternative<typename Positive::XI>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XI>(p.v());
-      return f(Positive::xo(*a0), f2(*a0));
+      return f(Positive::xo(crane::shared_child(a0)), f2(*a0));
     } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
       const auto &[a0] = std::get<typename Positive::XO>(p.v());
       return f2(*a0);
@@ -1520,9 +1520,9 @@ struct Coq_Pos {
 
     static PeanoView peanoone() { return PeanoView(PeanoOne{}); }
 
-    static PeanoView peanosucc(Positive p, PeanoView a1) {
-      return PeanoView(
-          PeanoSucc{std::move(p), std::make_shared<PeanoView>(std::move(a1))});
+    static PeanoView peanosucc(Positive p,
+                               crane::shared_child_slot<PeanoView> a1) {
+      return PeanoView(PeanoSucc{std::move(p), a1.take()});
     }
 
     // MANIPULATORS
@@ -1905,7 +1905,7 @@ template <OrderedType X> struct Raw {
       } else if (
           std::holds_alternative<typename Compare<typename X::t>::EQ>(_sv.v())) {
         return List<std::pair<typename X::t, T1>>::cons(
-            std::make_pair(std::move(k), x), *a1);
+            std::make_pair(std::move(k), x), crane::shared_child(a1));
       } else {
         return List<std::pair<typename X::t, T1>>::cons(
             std::make_pair(k_, y), add<T1>(std::move(k), x, *a1));

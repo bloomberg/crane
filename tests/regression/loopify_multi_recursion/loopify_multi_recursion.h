@@ -48,11 +48,11 @@ struct LoopifyMultiRecursion {
 
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
-    static quadtree qquad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(QQuad{std::make_shared<quadtree>(std::move(a0)),
-                            std::make_shared<quadtree>(std::move(a1)),
-                            std::make_shared<quadtree>(std::move(a2)),
-                            std::make_shared<quadtree>(std::move(a3))});
+    static quadtree qquad(crane::shared_child_slot<quadtree> a0,
+                          crane::shared_child_slot<quadtree> a1,
+                          crane::shared_child_slot<quadtree> a2,
+                          crane::shared_child_slot<quadtree> a3) {
+      return quadtree(QQuad{a0.take(), a1.take(), a2.take(), a3.take()});
     }
 
     // MANIPULATORS

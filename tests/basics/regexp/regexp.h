@@ -61,8 +61,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -155,20 +155,20 @@ struct Matcher {
 
     static regexp eps() { return regexp(Eps{}); }
 
-    static regexp cat(regexp r1, regexp r2) {
-      return regexp(Cat{std::make_shared<regexp>(std::move(r1)),
-                        std::make_shared<regexp>(std::move(r2))});
+    static regexp cat(crane::shared_child_slot<regexp> r1,
+                      crane::shared_child_slot<regexp> r2) {
+      return regexp(Cat{r1.take(), r2.take()});
     }
 
-    static regexp alt(regexp r1, regexp r2) {
-      return regexp(Alt{std::make_shared<regexp>(std::move(r1)),
-                        std::make_shared<regexp>(std::move(r2))});
+    static regexp alt(crane::shared_child_slot<regexp> r1,
+                      crane::shared_child_slot<regexp> r2) {
+      return regexp(Alt{r1.take(), r2.take()});
     }
 
     static regexp zero() { return regexp(Zero{}); }
 
-    static regexp star(regexp r) {
-      return regexp(Star{std::make_shared<regexp>(std::move(r))});
+    static regexp star(crane::shared_child_slot<regexp> r) {
+      return regexp(Star{r.take()});
     }
 
     // MANIPULATORS

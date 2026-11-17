@@ -34,7 +34,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -99,9 +99,8 @@ struct MutualTmcLoopify {
 
     static mylist mnil() { return mylist(Mnil{}); }
 
-    static mylist mcons(Nat a0, mylist a1) {
-      return mylist(
-          Mcons{std::move(a0), std::make_shared<mylist>(std::move(a1))});
+    static mylist mcons(Nat a0, crane::shared_child_slot<mylist> a1) {
+      return mylist(Mcons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

@@ -9,7 +9,7 @@ RegionPatchWrite::update_region(const List<uint64_t> &rom, uint64_t base,
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(rom.v());
     if (base <= 0) {
       if (std::holds_alternative<typename List<uint64_t>::Nil>(bytes.v())) {
-        return List<uint64_t>::cons(a0, *a1);
+        return List<uint64_t>::cons(a0, crane::shared_child(a1));
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(bytes.v());

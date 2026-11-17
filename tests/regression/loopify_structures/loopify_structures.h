@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -294,11 +294,11 @@ struct LoopifyStructures {
 
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
-    static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad{std::make_shared<quadtree>(std::move(a0)),
-                           std::make_shared<quadtree>(std::move(a1)),
-                           std::make_shared<quadtree>(std::move(a2)),
-                           std::make_shared<quadtree>(std::move(a3))});
+    static quadtree quad(crane::shared_child_slot<quadtree> a0,
+                         crane::shared_child_slot<quadtree> a1,
+                         crane::shared_child_slot<quadtree> a2,
+                         crane::shared_child_slot<quadtree> a3) {
+      return quadtree(Quad{a0.take(), a1.take(), a2.take(), a3.take()});
     }
 
     // MANIPULATORS
@@ -904,9 +904,9 @@ struct LoopifyStructures {
 
     static ltree lleaf(uint64_t a0) { return ltree(LLeaf{a0}); }
 
-    static ltree lnode(uint64_t a0, ltree a1, ltree a2) {
-      return ltree(LNode{a0, std::make_shared<ltree>(std::move(a1)),
-                         std::make_shared<ltree>(std::move(a2))});
+    static ltree lnode(uint64_t a0, crane::shared_child_slot<ltree> a1,
+                       crane::shared_child_slot<ltree> a2) {
+      return ltree(LNode{a0, a1.take(), a2.take()});
     }
 
     // MANIPULATORS

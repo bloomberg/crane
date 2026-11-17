@@ -81,7 +81,8 @@ List<uint64_t> ComputationalProof::insert_dec(uint64_t x,
   } else {
     const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
     if (le_dec(x, a0)) {
-      return List<uint64_t>::cons(x, List<uint64_t>::cons(a0, *a1));
+      return List<uint64_t>::cons(
+          x, List<uint64_t>::cons(a0, crane::shared_child(a1)));
     } else {
       return List<uint64_t>::cons(a0, insert_dec(x, *a1));
     }

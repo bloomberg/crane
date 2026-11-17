@@ -409,13 +409,13 @@ LoopifyMoreTrees::insert_bst(uint64_t x, const LoopifyMoreTrees::tree &t) {
       _stack.pop_back();
       std::shared_ptr<LoopifyMoreTrees::tree> a0 = std::move(_f.a0);
       uint64_t a1 = _f.a1;
-      _result = tree::node(*a0, a1, std::move(_result));
+      _result = tree::node(crane::shared_child(a0), a1, std::move(_result));
     } else {
       auto _f = std::move(std::get<_after_insert_bst_in_true>(_popped));
       _stack.pop_back();
       uint64_t a1 = _f.a1;
       std::shared_ptr<LoopifyMoreTrees::tree> a2 = std::move(_f.a2);
-      _result = tree::node(std::move(_result), a1, *a2);
+      _result = tree::node(std::move(_result), a1, crane::shared_child(a2));
     }
   }
   return _result;

@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -212,15 +212,15 @@ struct GadtIndexErasure {
 
     static expr bl(bool a0) { return expr(Bl{a0}); }
 
-    static expr ite(expr a, expr a1, expr a2) {
-      return expr(Ite{std::make_shared<expr>(std::move(a)),
-                      std::make_shared<expr>(std::move(a1)),
-                      std::make_shared<expr>(std::move(a2))});
+    static expr ite(crane::shared_child_slot<expr> a,
+                    crane::shared_child_slot<expr> a1,
+                    crane::shared_child_slot<expr> a2) {
+      return expr(Ite{a.take(), a1.take(), a2.take()});
     }
 
-    static expr pair(expr a, expr b) {
-      return expr(Pair{std::make_shared<expr>(std::move(a)),
-                       std::make_shared<expr>(std::move(b))});
+    static expr pair(crane::shared_child_slot<expr> a,
+                     crane::shared_child_slot<expr> b) {
+      return expr(Pair{a.take(), b.take()});
     }
 
     // MANIPULATORS

@@ -186,7 +186,7 @@ Positive Coq_Pos::succ(const Positive &x) {
     return Positive::xo(succ(*a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
-    return Positive::xi(*a0);
+    return Positive::xi(crane::shared_child(a0));
   } else {
     return Positive::xo(Positive::xh());
   }
@@ -213,7 +213,7 @@ Positive Coq_Pos::add(const Positive &x, const Positive &y) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
       return Positive::xo(add(*a0, *a00));
     } else {
-      return Positive::xi(*a0);
+      return Positive::xi(crane::shared_child(a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(y.v())) {
@@ -221,7 +221,7 @@ Positive Coq_Pos::add(const Positive &x, const Positive &y) {
       return Positive::xo(succ(*a00));
     } else if (std::holds_alternative<typename Positive::XO>(y.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
-      return Positive::xi(*a00);
+      return Positive::xi(crane::shared_child(a00));
     } else {
       return Positive::xo(Positive::xh());
     }
@@ -267,7 +267,7 @@ Positive Coq_Pos::add_carry(const Positive &x, const Positive &y) {
 Positive Coq_Pos::pred_double(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xi(Positive::xo(*a0));
+    return Positive::xi(Positive::xo(crane::shared_child(a0)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
     return Positive::xi(pred_double(*a0));
@@ -279,7 +279,7 @@ Positive Coq_Pos::pred_double(const Positive &x) {
 N Coq_Pos::pred_N(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return N::npos(Positive::xo(*a0));
+    return N::npos(Positive::xo(crane::shared_child(a0)));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
     return N::npos(pred_double(*a0));
@@ -291,7 +291,7 @@ N Coq_Pos::pred_N(const Positive &x) {
 Coq_Pos::mask Coq_Pos::double_pred_mask(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return mask::ispos(Positive::xo(Positive::xo(*a0)));
+    return mask::ispos(Positive::xo(Positive::xo(crane::shared_child(a0))));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
     return mask::ispos(Positive::xo(pred_double(*a0)));
@@ -310,7 +310,7 @@ Coq_Pos::mask Coq_Pos::sub_mask(const Positive &x, const Positive &y) {
       const auto &[a00] = std::get<typename Positive::XO>(y.v());
       return sub_mask(*a0, *a00).succ_double_mask();
     } else {
-      return mask::ispos(Positive::xo(*a0));
+      return mask::ispos(Positive::xo(crane::shared_child(a0)));
     }
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
@@ -564,12 +564,12 @@ Positive Coq_Pos::lor(const Positive &p, const Positive &q) {
       const auto &[a00] = std::get<typename Positive::XO>(q.v());
       return Positive::xo(lor(*a0, *a00));
     } else {
-      return Positive::xi(*a0);
+      return Positive::xi(crane::shared_child(a0));
     }
   } else {
     if (std::holds_alternative<typename Positive::XO>(q.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(q.v());
-      return Positive::xi(*a00);
+      return Positive::xi(crane::shared_child(a00));
     } else {
       return q;
     }
@@ -618,7 +618,7 @@ N Coq_Pos::ldiff(const Positive &p, const Positive &q) {
       const auto &[a00] = std::get<typename Positive::XO>(q.v());
       return Nsucc_double(ldiff(*a0, *a00));
     } else {
-      return N::npos(Positive::xo(*a0));
+      return N::npos(Positive::xo(crane::shared_child(a0)));
     }
   } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(p.v());
@@ -650,7 +650,7 @@ N Coq_Pos::lxor(const Positive &p, const Positive &q) {
       const auto &[a00] = std::get<typename Positive::XO>(q.v());
       return Nsucc_double(lxor(*a0, *a00));
     } else {
-      return N::npos(Positive::xo(*a0));
+      return N::npos(Positive::xo(crane::shared_child(a0)));
     }
   } else if (std::holds_alternative<typename Positive::XO>(p.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(p.v());
@@ -661,15 +661,15 @@ N Coq_Pos::lxor(const Positive &p, const Positive &q) {
       const auto &[a00] = std::get<typename Positive::XO>(q.v());
       return Ndouble(lxor(*a0, *a00));
     } else {
-      return N::npos(Positive::xi(*a0));
+      return N::npos(Positive::xi(crane::shared_child(a0)));
     }
   } else {
     if (std::holds_alternative<typename Positive::XI>(q.v())) {
       const auto &[a00] = std::get<typename Positive::XI>(q.v());
-      return N::npos(Positive::xo(*a00));
+      return N::npos(Positive::xo(crane::shared_child(a00)));
     } else if (std::holds_alternative<typename Positive::XO>(q.v())) {
       const auto &[a00] = std::get<typename Positive::XO>(q.v());
-      return N::npos(Positive::xi(*a00));
+      return N::npos(Positive::xi(crane::shared_child(a00)));
     } else {
       return N::n0();
     }
@@ -694,7 +694,7 @@ Positive Coq_Pos::of_succ_nat(uint64_t n) {
 Positive Coq_Pos::pred(const Positive &x) {
   if (std::holds_alternative<typename Positive::XI>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XI>(x.v());
-    return Positive::xo(*a0);
+    return Positive::xo(crane::shared_child(a0));
   } else if (std::holds_alternative<typename Positive::XO>(x.v())) {
     const auto &[a0] = std::get<typename Positive::XO>(x.v());
     return pred_double(*a0);

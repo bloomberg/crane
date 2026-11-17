@@ -63,8 +63,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -175,10 +175,9 @@ struct NestedInd {
 
     static custom_list<A> cnil() { return custom_list<A>(Cnil{}); }
 
-    static custom_list<A> ccons(A a0, custom_list<A> a1) {
-      return custom_list<A>(
-          Ccons{std::move(a0),
-                std::make_shared<custom_list<A>>(std::move(a1))});
+    static custom_list<A> ccons(A a0,
+                                crane::shared_child_slot<custom_list<A>> a1) {
+      return custom_list<A>(Ccons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

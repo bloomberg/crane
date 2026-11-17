@@ -64,9 +64,8 @@ struct LoopifyLists {
 
     static list<A> nil() { return list<A>(Nil{}); }
 
-    static list<A> cons(A a, list<A> l) {
-      return list<A>(
-          Cons{std::move(a), std::make_shared<list<A>>(std::move(l))});
+    static list<A> cons(A a, crane::shared_child_slot<list<A>> l) {
+      return list<A>(Cons{std::move(a), l.take()});
     }
 
     // MANIPULATORS

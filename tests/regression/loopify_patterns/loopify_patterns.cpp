@@ -558,7 +558,7 @@ LoopifyPatterns::replace_at(uint64_t idx, uint64_t value,
       const auto &[a0, a1] = std::get<
           typename LoopifyPatterns::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_idx <= 0) {
-        auto _value = list<uint64_t>::cons(value, *a1);
+        auto _value = list<uint64_t>::cons(value, crane::shared_child(a1));
         (_write ? *(*_write = std::make_shared<LoopifyPatterns::list<uint64_t>>(
                         std::move(_value)))
                 : _root.emplace(std::move(_value)));
@@ -815,7 +815,8 @@ LoopifyPatterns::as_guard_fuel(uint64_t fuel,
         const auto &[a0, a1] =
             std::get<typename LoopifyPatterns::list<uint64_t>::Cons>(
                 _loop_l->v());
-        LoopifyPatterns::list<uint64_t> all = list<uint64_t>::cons(a0, *a1);
+        LoopifyPatterns::list<uint64_t> all =
+            list<uint64_t>::cons(a0, crane::shared_child(a1));
         if (UINT64_C(3) < list_len(std::move(all))) {
           auto _cell =
               typename LoopifyPatterns::list<uint64_t>::Cons(a0, nullptr);

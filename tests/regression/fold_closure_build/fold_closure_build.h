@@ -78,9 +78,8 @@ struct FoldClosureBuild {
 
     static mylist<A> mynil() { return mylist<A>(Mynil{}); }
 
-    static mylist<A> mycons(A a0, mylist<A> a1) {
-      return mylist<A>(
-          Mycons{std::move(a0), std::make_shared<mylist<A>>(std::move(a1))});
+    static mylist<A> mycons(A a0, crane::shared_child_slot<mylist<A>> a1) {
+      return mylist<A>(Mycons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS
@@ -164,14 +163,18 @@ struct FoldClosureBuild {
   /// might read clobbered stack memory.
   static inline const uint64_t test2 = []() {
     return []() {
-      crane::fn<uint64_t(uint64_t)> f = []() {
-        auto _pa0 = mylist<uint64_t>::mycons(
-            UINT64_C(5),
-            mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil()));
-        return [=](uint64_t _x0) -> uint64_t {
-          return compose_adders(_pa0, _x0);
-        };
-      }();
+      mylist<uint64_t> l = mylist<uint64_t>::mycons(
+          UINT64_C(5),
+          mylist<uint64_t>::mycons(UINT64_C(10), mylist<uint64_t>::mynil()));
+      crane::fn<uint64_t(uint64_t)> f =
+          fold_left<crane::fn<uint64_t(uint64_t)>, uint64_t>(
+              [](crane::fn<uint64_t(uint64_t)> acc, uint64_t h) {
+                return [=, acc = std::move(acc)](uint64_t x) {
+                  return acc((h + x));
+                };
+              },
+              [](uint64_t x) { return x; },
+              std::move(l));
       return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();

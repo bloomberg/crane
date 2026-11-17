@@ -579,7 +579,8 @@ struct Comp {
                 break;
               }
               case Bool0::FALSE_: {
-                _result = avl::node(*a0, k, v, *a3, a4);
+                _result = avl::node(crane::shared_child(a0), k, v,
+                                    crane::shared_child(a3), a4);
                 break;
               }
               default:
@@ -655,8 +656,9 @@ struct Comp {
     }
 
     avl mk(const Nat &k, const expr &v, const avl &r) const {
-      return avl::node(*this, k, v, r, Nat::s(Nat::o()).add(PeanoNat::max(
-                                           this->height(), r.height())));
+      return avl::node(
+          crane::shared_child(this), k, v, r,
+          Nat::s(Nat::o()).add(PeanoNat::max(this->height(), r.height())));
     }
 
     Nat height() const {

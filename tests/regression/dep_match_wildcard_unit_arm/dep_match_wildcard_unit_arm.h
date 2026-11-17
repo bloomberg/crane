@@ -43,9 +43,9 @@ struct DepMatchWildcardUnitArm {
 
     static ty tbool() { return ty(TBool{}); }
 
-    static ty tarr(ty a0, ty a1) {
-      return ty(TArr{std::make_shared<ty>(std::move(a0)),
-                     std::make_shared<ty>(std::move(a1))});
+    static ty tarr(crane::shared_child_slot<ty> a0,
+                   crane::shared_child_slot<ty> a1) {
+      return ty(TArr{a0.take(), a1.take()});
     }
 
     // MANIPULATORS
@@ -196,8 +196,8 @@ struct DepMatchWildcardUnitArm {
 
     static exp eb(bool a0) { return exp(EB{a0}); }
 
-    static exp eif(ty t, exp a1) {
-      return exp(EIf{std::move(t), std::make_shared<exp>(std::move(a1))});
+    static exp eif(ty t, crane::shared_child_slot<exp> a1) {
+      return exp(EIf{std::move(t), a1.take()});
     }
 
     // MANIPULATORS

@@ -164,9 +164,9 @@ struct MutualRecursion {
 
     static forest<A> empty() { return forest<A>(Empty{}); }
 
-    static forest<A> trees(tree<A> a0, forest<A> a1) {
-      return forest<A>(Trees{std::make_shared<tree<A>>(std::move(a0)),
-                             std::make_shared<forest<A>>(std::move(a1))});
+    static forest<A> trees(tree<A> a0, crane::shared_child_slot<forest<A>> a1) {
+      return forest<A>(
+          Trees{std::make_shared<tree<A>>(std::move(a0)), a1.take()});
     }
 
     // MANIPULATORS

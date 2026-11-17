@@ -49,12 +49,12 @@ public:
 
   explicit Positive(XH _v) : v_(_v) {}
 
-  static Positive xi(Positive a0) {
-    return Positive(XI{std::make_shared<Positive>(std::move(a0))});
+  static Positive xi(crane::shared_child_slot<Positive> a0) {
+    return Positive(XI{a0.take()});
   }
 
-  static Positive xo(Positive a0) {
-    return Positive(XO{std::make_shared<Positive>(std::move(a0))});
+  static Positive xo(crane::shared_child_slot<Positive> a0) {
+    return Positive(XO{a0.take()});
   }
 
   static Positive xh() { return Positive(XH{}); }

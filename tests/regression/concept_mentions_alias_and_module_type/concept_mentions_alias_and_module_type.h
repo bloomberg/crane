@@ -63,9 +63,8 @@ struct Coll {
 
     static bag<A> nil() { return bag<A>(Nil{}); }
 
-    static bag<A> cons(A a0, bag<A> a1) {
-      return bag<A>(
-          Cons{std::move(a0), std::make_shared<bag<A>>(std::move(a1))});
+    static bag<A> cons(A a0, crane::shared_child_slot<bag<A>> a1) {
+      return bag<A>(Cons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS
@@ -131,7 +130,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {

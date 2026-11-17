@@ -1,6 +1,7 @@
 #ifndef INCLUDED_POLY_FN_AS_ARG_TVAR_LEAK
 #define INCLUDED_POLY_FN_AS_ARG_TVAR_LEAK
 
+#include "crane_fn.h"
 #include "fn.h"
 #include <atomic>
 #include <memory>
@@ -34,7 +35,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {

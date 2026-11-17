@@ -1,6 +1,7 @@
 #ifndef INCLUDED_DEPENDENT_MATCH_BRANCH_TYPES
 #define INCLUDED_DEPENDENT_MATCH_BRANCH_TYPES
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <stdexcept>
@@ -35,7 +36,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {
@@ -100,9 +101,8 @@ struct DependentMatchBranchTypes {
 
     static vec vnil() { return vec(Vnil{}); }
 
-    static vec vcons(Nat n, Nat a1, vec a2) {
-      return vec(Vcons{std::move(n), std::move(a1),
-                       std::make_shared<vec>(std::move(a2))});
+    static vec vcons(Nat n, Nat a1, crane::shared_child_slot<vec> a2) {
+      return vec(Vcons{std::move(n), std::move(a1), a2.take()});
     }
 
     // MANIPULATORS

@@ -64,8 +64,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -142,8 +142,8 @@ struct DenValueNotDeepErased {
 
     static ty tnat() { return ty(TNat{}); }
 
-    static ty tlist(ty a0) {
-      return ty(TList{std::make_shared<ty>(std::move(a0))});
+    static ty tlist(crane::shared_child_slot<ty> a0) {
+      return ty(TList{a0.take()});
     }
 
     // MANIPULATORS

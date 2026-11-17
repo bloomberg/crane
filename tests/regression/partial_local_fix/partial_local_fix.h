@@ -1,6 +1,7 @@
 #ifndef INCLUDED_PARTIAL_LOCAL_FIX
 #define INCLUDED_PARTIAL_LOCAL_FIX
 
+#include "crane_fn.h"
 #include <atomic>
 #include <memory>
 #include <utility>
@@ -34,7 +35,7 @@ public:
 
   static Nat o() { return Nat(O{}); }
 
-  static Nat s(Nat a0) { return Nat(S{std::make_shared<Nat>(std::move(a0))}); }
+  static Nat s(crane::shared_child_slot<Nat> a0) { return Nat(S{a0.take()}); }
 
   // MANIPULATORS
   ~Nat() {

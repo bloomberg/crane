@@ -44,8 +44,8 @@ struct LoopifyNameHygiene {
 
     static Frame_ enter_(uint64_t a0) { return Frame_(Enter_{a0}); }
 
-    static Frame_ resume_cons_(Frame_ a0) {
-      return Frame_(Resume_Cons_{std::make_shared<Frame_>(std::move(a0))});
+    static Frame_ resume_cons_(crane::shared_child_slot<Frame_> a0) {
+      return Frame_(Resume_Cons_{a0.take()});
     }
 
     // MANIPULATORS

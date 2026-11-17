@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -176,9 +176,9 @@ struct LoopifyTrees {
 
     static tree<A> leaf() { return tree<A>(Leaf{}); }
 
-    static tree<A> node(tree<A> l, A x, tree<A> r) {
-      return tree<A>(Node{std::make_shared<tree<A>>(std::move(l)), std::move(x),
-                          std::make_shared<tree<A>>(std::move(r))});
+    static tree<A> node(crane::shared_child_slot<tree<A>> l, A x,
+                        crane::shared_child_slot<tree<A>> r) {
+      return tree<A>(Node{l.take(), std::move(x), r.take()});
     }
 
     // MANIPULATORS
@@ -836,10 +836,10 @@ struct LoopifyTrees {
 
     static ternary tleaf() { return ternary(TLeaf{}); }
 
-    static ternary tnode(ternary a0, ternary a1, ternary a2, uint64_t a3) {
-      return ternary(TNode{std::make_shared<ternary>(std::move(a0)),
-                           std::make_shared<ternary>(std::move(a1)),
-                           std::make_shared<ternary>(std::move(a2)), a3});
+    static ternary tnode(crane::shared_child_slot<ternary> a0,
+                         crane::shared_child_slot<ternary> a1,
+                         crane::shared_child_slot<ternary> a2, uint64_t a3) {
+      return ternary(TNode{a0.take(), a1.take(), a2.take(), a3});
     }
 
     // MANIPULATORS
@@ -1456,11 +1456,11 @@ struct LoopifyTrees {
 
     static quadtree qleaf(uint64_t a0) { return quadtree(QLeaf{a0}); }
 
-    static quadtree quad(quadtree a0, quadtree a1, quadtree a2, quadtree a3) {
-      return quadtree(Quad{std::make_shared<quadtree>(std::move(a0)),
-                           std::make_shared<quadtree>(std::move(a1)),
-                           std::make_shared<quadtree>(std::move(a2)),
-                           std::make_shared<quadtree>(std::move(a3))});
+    static quadtree quad(crane::shared_child_slot<quadtree> a0,
+                         crane::shared_child_slot<quadtree> a1,
+                         crane::shared_child_slot<quadtree> a2,
+                         crane::shared_child_slot<quadtree> a3) {
+      return quadtree(Quad{a0.take(), a1.take(), a2.take(), a3.take()});
     }
 
     // MANIPULATORS
@@ -1854,9 +1854,9 @@ struct LoopifyTrees {
 
     static simple_tree sleaf(uint64_t a0) { return simple_tree(SLeaf{a0}); }
 
-    static simple_tree snode(simple_tree a0, simple_tree a1) {
-      return simple_tree(SNode{std::make_shared<simple_tree>(std::move(a0)),
-                               std::make_shared<simple_tree>(std::move(a1))});
+    static simple_tree snode(crane::shared_child_slot<simple_tree> a0,
+                             crane::shared_child_slot<simple_tree> a1) {
+      return simple_tree(SNode{a0.take(), a1.take()});
     }
 
     // MANIPULATORS

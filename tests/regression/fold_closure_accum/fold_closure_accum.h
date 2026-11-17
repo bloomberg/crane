@@ -62,8 +62,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -166,9 +166,9 @@ struct FoldClosureAccum {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree a0, uint64_t a1, tree a2) {
-      return tree(Node{std::make_shared<tree>(std::move(a0)), a1,
-                       std::make_shared<tree>(std::move(a2))});
+    static tree node(crane::shared_child_slot<tree> a0, uint64_t a1,
+                     crane::shared_child_slot<tree> a2) {
+      return tree(Node{a0.take(), a1, a2.take()});
     }
 
     // MANIPULATORS
@@ -277,13 +277,16 @@ struct FoldClosureAccum {
     return []() {
       tree t1 = tree::node(tree::leaf(), UINT64_C(10), tree::leaf());
       tree t2 = tree::node(tree::leaf(), UINT64_C(20), tree::leaf());
-      crane::fn<uint64_t(uint64_t)> f = [&]() {
-        auto _pa0 = List<tree>::cons(
-            std::move(t1), List<tree>::cons(std::move(t2), List<tree>::nil()));
-        return [=](uint64_t _x0) -> uint64_t {
-          return compose_adders(_pa0, _x0);
-        };
-      }();
+      List<tree> trees = List<tree>::cons(
+          std::move(t1), List<tree>::cons(std::move(t2), List<tree>::nil()));
+      crane::fn<uint64_t(uint64_t)> f =
+          trees.template fold_right<crane::fn<uint64_t(uint64_t)>>(
+              [](tree t, crane::fn<uint64_t(uint64_t)> acc) {
+                return [=, acc = std::move(acc), t = std::move(t)](uint64_t x) {
+                  return (acc(x) + tree_sum(t));
+                };
+              },
+              [](uint64_t x) { return x; });
       return (f(UINT64_C(0)) + f(UINT64_C(100)));
     }();
   }();

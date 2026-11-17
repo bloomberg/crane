@@ -60,9 +60,8 @@ struct NestedInductiveNoDrain {
 
     static lst<A> nil() { return lst<A>(Nil{}); }
 
-    static lst<A> cons(A a0, lst<A> a1) {
-      return lst<A>(
-          Cons{std::move(a0), std::make_shared<lst<A>>(std::move(a1))});
+    static lst<A> cons(A a0, crane::shared_child_slot<lst<A>> a1) {
+      return lst<A>(Cons{std::move(a0), a1.take()});
     }
 
     // MANIPULATORS

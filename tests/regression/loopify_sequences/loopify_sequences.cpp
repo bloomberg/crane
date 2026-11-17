@@ -411,7 +411,7 @@ List<uint64_t> LoopifySequences::replace_at(uint64_t idx, uint64_t value,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_idx == UINT64_C(0)) {
-        auto _value = List<uint64_t>::cons(value, *a1);
+        auto _value = List<uint64_t>::cons(value, crane::shared_child(a1));
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
@@ -1013,7 +1013,7 @@ List<List<uint64_t>> LoopifySequences::group_fuel(uint64_t fuel,
         auto &[a01, a11] =
             std::get<typename List<List<uint64_t>>::Cons>(_tmp1.v_mut());
         _result = List<List<uint64_t>>::cons(
-            List<uint64_t>::cons(a0, std::move(a01)), *a11);
+            List<uint64_t>::cons(a0, std::move(a01)), crane::shared_child(a11));
       }
     }
   }
@@ -1133,12 +1133,12 @@ LoopifySequences::run_length_encode_fuel(uint64_t fuel,
         auto [y, n] = std::move(a01);
         if (a0 == y) {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
-              std::make_pair(y, (n + 1)), *a11);
+              std::make_pair(y, (n + 1)), crane::shared_child(a11));
         } else {
           _result = List<std::pair<uint64_t, uint64_t>>::cons(
               std::make_pair(a0, UINT64_C(1)),
-              List<std::pair<uint64_t, uint64_t>>::cons(std::make_pair(y, n),
-                                                        *a11));
+              List<std::pair<uint64_t, uint64_t>>::cons(
+                  std::make_pair(y, n), crane::shared_child(a11)));
         }
       }
     }

@@ -72,10 +72,11 @@ template <S X> struct HashTrie {
 
     static Trie<V> empty() { return Trie<V>(Empty{}); }
 
-    static Trie<V> node(typename X::t k, V v_1, Trie<V> left, Trie<V> right) {
-      return Trie<V>(Node{std::move(k), std::move(v_1),
-                          std::make_shared<Trie<V>>(std::move(left)),
-                          std::make_shared<Trie<V>>(std::move(right))});
+    static Trie<V> node(typename X::t k, V v_1,
+                        crane::shared_child_slot<Trie<V>> left,
+                        crane::shared_child_slot<Trie<V>> right) {
+      return Trie<V>(
+          Node{std::move(k), std::move(v_1), left.take(), right.take()});
     }
 
     // MANIPULATORS

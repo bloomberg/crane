@@ -918,7 +918,8 @@ LoopifyLists::list<uint64_t> LoopifyLists::flatten_nested_fuel(
               &std::get<typename LoopifyLists::list<uint64_t>::Cons>(
                   _node.v_mut())
                   .l;
-          _loop_l = list<LoopifyLists::list<uint64_t>>::cons(*a10, *a1);
+          _loop_l = list<LoopifyLists::list<uint64_t>>::cons(
+              *a10, crane::shared_child(a1));
           _loop_fuel = f;
           continue;
         }
@@ -1273,7 +1274,7 @@ LoopifyLists::group_fuel(uint64_t fuel, const LoopifyLists::list<uint64_t> &l) {
             typename LoopifyLists::list<LoopifyLists::list<uint64_t>>::Cons>(
             _tmp1.v_mut());
         _result = list<LoopifyLists::list<uint64_t>>::cons(
-            list<uint64_t>::cons(a0, std::move(a01)), *a11);
+            list<uint64_t>::cons(a0, std::move(a01)), crane::shared_child(a11));
       }
     }
   }

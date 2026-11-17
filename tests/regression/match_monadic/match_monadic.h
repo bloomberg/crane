@@ -69,9 +69,9 @@ public:
 
   static Tree<A> leaf() { return Tree<A>(Leaf{}); }
 
-  static Tree<A> node(Tree<A> a0, A a1, Tree<A> a2) {
-    return Tree<A>(Node{std::make_shared<Tree<A>>(std::move(a0)), std::move(a1),
-                        std::make_shared<Tree<A>>(std::move(a2))});
+  static Tree<A> node(crane::shared_child_slot<Tree<A>> a0, A a1,
+                      crane::shared_child_slot<Tree<A>> a2) {
+    return Tree<A>(Node{a0.take(), std::move(a1), a2.take()});
   }
 
   // MANIPULATORS

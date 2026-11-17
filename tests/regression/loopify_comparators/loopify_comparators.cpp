@@ -186,7 +186,7 @@ List<uint64_t> LoopifyComparators::insert_sorted(uint64_t x,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (x <= a0) {
-        auto _value = List<uint64_t>::cons(x, *_loop_l);
+        auto _value = List<uint64_t>::cons(x, crane::shared_child(_loop_l));
         (_write ? *(*_write =
                         std::make_shared<List<uint64_t>>(std::move(_value)))
                 : _root.emplace(std::move(_value)));
@@ -267,7 +267,7 @@ bool LoopifyComparators::is_sorted_fuel(uint64_t fuel,
           const auto &[a00, a10] =
               std::get<typename List<uint64_t>::Cons>(_sv0.v());
           if (a0 <= a00) {
-            _loop_l = List<uint64_t>::cons(a00, *a10);
+            _loop_l = List<uint64_t>::cons(a00, crane::shared_child(a10));
             _loop_fuel = fuel_;
           } else {
             return false;

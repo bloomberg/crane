@@ -61,8 +61,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -183,7 +183,8 @@ std::optional<List<T1>> Regs::replace_nth(const List<T1> &l, uint64_t i,
   } else {
     const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
     if (i <= 0) {
-      return std::make_optional<List<T1>>(List<T1>::cons(x, *a1));
+      return std::make_optional<List<T1>>(
+          List<T1>::cons(x, crane::shared_child(a1)));
     } else {
       uint64_t i_ = i - 1;
       auto _cs = Regs::template replace_nth<T1>(*a1, i_, x);

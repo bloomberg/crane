@@ -35,9 +35,9 @@ struct LoopifyOperandMatchCall {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree l, tree r) {
-      return tree(Node{std::make_shared<tree>(std::move(l)),
-                       std::make_shared<tree>(std::move(r))});
+    static tree node(crane::shared_child_slot<tree> l,
+                     crane::shared_child_slot<tree> r) {
+      return tree(Node{l.take(), r.take()});
     }
 
     // MANIPULATORS
