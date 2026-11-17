@@ -469,6 +469,39 @@ let eta_body ty b =
       Base.Core_util.named_lams (missing @ params)
         (Base.Core_util.apply_eta_args (Base.Core_util.ast_lift (List.length missing) body) args)
 
+(* Every local fixpoint in [e] as {!eta_body} generates a definition: a
+   function of the group binding a parameter at each arrow of its type.  A
+   local [fix go (l : list nat) (acc : nat -> nat) : nat -> nat] is lowered
+   as a function, and lowering counts its parameters by its lambdas, its
+   calls by its type: [go l acc 1] would pass three arguments to a function
+   of two, returning [nat]. *)
+let rec eta_local_fixpoints e =
+  match Base.Core_util.ast_map eta_local_fixpoints e with
+  | Core.Expr.Fixpoint group ->
+    let types = Core.Recursion.Group.functions group in
+    Core.Expr.Fixpoint
+      (Core.Recursion.Group.with_bodies group
+         (Array.mapi (fun i b -> if writes_leading_domains (snd types.(i)) b then eta_body (snd types.(i)) b else b)
+            (Core.Recursion.Group.bodies group)))
+  | e -> e
+
+(* Whether the lambdas of [b] stand for the leading domains of [ty], each
+   erased where its domain is, and the domains past them are values of a
+   type extraction kept: the parameters {!eta_body} adds are then the
+   trailing ones, each a value the function is applied to.  A group typed
+   from its declared types ({!Rocq_to_core.Extraction}'s [erased_fix_types])
+   may write fewer; a well-founded fixpoint's [Fix_F] has an accessibility
+   proof past its argument, typed [Unknown], which no call passes. *)
+and writes_leading_domains ty b =
+  let ty = Base.Core_util.type_simpl ty in
+  let params, _ = Base.Type_util.collect_typed_lams ty b in
+  let doms = Base.Type_util.core_domains ty in
+  let n = List.length params in
+  let erased = Base.Type_util.erased_by_extraction in
+  List.compare_lengths params doms < 0
+  && List.for_all2 (fun (_, p) d -> erased p = erased d) (List.rev params) (List.filteri (fun i _ -> i < n) doms)
+  && List.for_all (fun d -> not (erased d || Base.Core_util.has_unknown d)) (List.filteri (fun i _ -> i >= n) doms)
+
 (* A definition that computes before taking every parameter its type gives
    it: [mk fs := fold_right compose id fs] at [list (nat -> nat) -> nat ->
    nat] folds once and returns the closure.  Generated, it takes all of
@@ -649,6 +682,7 @@ let eta_expand struc =
           | d -> d )
         struc
   in
+  let eta_body ty b = eta_body ty (eta_local_fixpoints b) in
   Core_passes.Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
       Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
