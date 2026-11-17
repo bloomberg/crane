@@ -808,15 +808,15 @@ let type_pieces r text (tys : ty list) =
   foreign_pieces ~element:(fun i -> Option.map wrapper_pieces (boxed_by ~boxing:true r tys i)) tokens
 
 (* A custom match is instantiated on its instantiated scrutinee: the one
-   that is written. *)
+   that is written.  Its children are instantiated first, the scrutinee
+   included: a scrutinee computed by a local function or an invoked lambda
+   holds custom matches of its own. *)
 let instantiate_foreign (d : settled) : settled =
   let boxing = true in
   let rec fs (s : stmt) : stmt =
-    match instantiated_stmt ~boxing s with
-    | Custom_match m ->
-      let branches = List.map (fun (b : phase Custom_match.branch) -> {b with body = List.map fs b.body}) m.branches in
-      Custom_match {m with branches; pieces = Instantiated (match_pieces m m.scrutinee)}
-    | s -> Map.stmt (rw ()) s
+    match Map.stmt (rw ()) (instantiated_stmt ~boxing s) with
+    | Custom_match m -> Custom_match {m with pieces = Instantiated (match_pieces m m.scrutinee)}
+    | s -> s
   and fe e = Map.expr (rw ()) e
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
   Map.decl (rw ()) (Map.decl (instantiating ~boxing) d)

@@ -14320,3 +14320,14 @@
   (alias runtest)
   (deps tmc_ambiguous_calls.t.exe)
   (action (run ./tmc_ambiguous_calls.t.exe))))
+
+(subdir custom_match_lambda_scrutinee
+ (rule
+  (targets custom_match_lambda_scrutinee.t.exe)
+  (deps CustomMatchLambdaScrutinee.vo custom_match_lambda_scrutinee.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} custom_match_lambda_scrutinee.t.exe custom_match_lambda_scrutinee.t.cpp custom_match_lambda_scrutinee.cpp)))
+ (rule
+  (alias runtest)
+  (deps custom_match_lambda_scrutinee.t.exe)
+  (action (run ./custom_match_lambda_scrutinee.t.exe))))
