@@ -133,9 +133,9 @@ let is_tmp = function
 let meta_count = ref 0
 
 (** Metavariables standing for an application whose head is itself an
-    unresolved metavariable, keyed by that head's id and the arguments.  See
+    unresolved metavariable, keyed by that head and the arguments.  See
     {!apply_core_type}. *)
-let pending_applications : (int * Core.Type.extracted list * Core.Type.extracted) list ref = ref []
+let pending_applications : (Core.Extracted.Meta.t * Core.Type.extracted list * Core.Type.extracted) list ref = ref []
 
 (** An open annotation standing for an application whose head is an open
     annotation, keyed by the head's id and the arguments, which may be of
@@ -323,17 +323,19 @@ let fill_placeholders ?(generated = true) ?(constructors = []) pre args =
    resolves the other at the wrong instantiation.  Stand for the application
    by an unknown of its own -- but the same one for the same head and
    arguments, so that the two occurrences of [M B] in [bind]'s type still
-   unify with each other. *)
-let pending_application id args =
+   unify with each other.  The head is kept, not its number, for what the
+   unknown is later unified with to be read through it
+   ({!discharge_pending_applications}). *)
+let pending_application (head : Core.Extracted.Meta.t) args =
   match
     List.find_opt
-      (fun (id', a, _) -> Int.equal id id' && List.equal eq_core_type a args)
+      (fun ((h : Core.Extracted.Meta.t), a, _) -> Int.equal head.id h.id && List.equal eq_core_type a args)
       !pending_applications
   with
   | Some (_, _, u) -> u
   | None ->
     let u = new_meta () in
-    pending_applications := (id, args, u) :: !pending_applications;
+    pending_applications := (head, args, u) :: !pending_applications;
     u
 
 (** {!pending_application} for the open annotation [id] as the head: an
@@ -389,7 +391,7 @@ let rec apply_core_type : type p. p Core.Type.at -> p Core.Type.at list -> p Cor
                               ~constructors:(constructor_params r) pre args;
                             index_arguments = es}
     | Core.Type.Meta {contents = Some u} -> apply_core_type u args
-    | Core.Type.Meta {contents = None; id; phase = Core.Phase.Extracted} -> pending_application id args
+    | Core.Type.Meta ({contents = None; phase = Core.Phase.Extracted; _} as m) -> pending_application m args
     | Core.Type.Open o -> pending_open_application (Core.Open.id o) args
     | Core.Type.Arrow _ when type_has_hole head -> (
       (* A carrier that is a type-level lambda has no Core spelling, so what
@@ -501,7 +503,7 @@ let rec type_occurs alpha t =
 
 (** {2 Most General Unificator} *)
 
-let rec mgu = function
+let rec mgu : type p. p Core.Type.at * p Core.Type.at -> unit = function
   | Core.Type.Meta (m : _ Core.Extracted.Meta.cell), Core.Type.Meta (m' : _ Core.Extracted.Meta.cell)
     when Int.equal m.id m'.id ->
     ()
@@ -509,7 +511,9 @@ let rec mgu = function
     ( match m.contents with
     | Some u -> mgu (u, t)
     | None when type_occurs m.id t -> raise Impossible
-    | None -> Core.Extracted.Meta.solve m t )
+    | None ->
+      Core.Extracted.Meta.solve m t;
+      discharge_pending_applications () )
   (* Frozen, an open annotation unifies with itself alone. *)
   | Core.Type.Open o, Core.Type.Open o' when Int.equal (Core.Open.id o) (Core.Open.id o') -> ()
   | Core.Type.Arrow {parameter = a; result = b}, Core.Type.Arrow {parameter = a'; result = b'} ->
@@ -548,6 +552,32 @@ let rec mgu = function
   | Core.Type.Axiom, Core.Type.Axiom -> ()
   | Core.Type.String, Core.Type.String -> ()
   | _ -> raise Impossible
+
+(* An unknown standing for the application [M B] of an unsolved head
+   ({!pending_application}) that is unified with [m C] -- a type variable
+   applied, at as many arguments -- is that application read as [m B], so
+   [B] is [C].  This is how a class method instantiated in a body generic in
+   its monad -- [bind : m A -> (A -> m B) -> m B], given an [m T] -- finds
+   that [A] is [T], the element type of the continuation's binder, which the
+   dictionary, not naming [m], cannot say.  A head solved since stands for
+   what it is solved to; only a head still unsolved, or solved to that same
+   variable, is read so.  Each argument is unified on its own, so one that
+   does not unify leaves the others found. *)
+and discharge_pending_applications () =
+  let rec resolved = function Core.Type.Meta {contents = Some t; _} -> resolved t | t -> t in
+  let reads_as j (h : Core.Extracted.Meta.t) =
+    match Option.map resolved h.contents with
+    | None -> true
+    | Some (Core.Type.Variable {variable = j'; _}) -> Int.equal j j'
+    | Some _ -> false
+  in
+  List.iter
+    (fun (h, args, u) ->
+      match resolved u with
+      | Core.Type.Variable_app {head = j; arguments = l} when List.length l = List.length args && reads_as j h ->
+        List.iter2 (fun a c -> try mgu (a, c) with Impossible -> ()) args l
+      | _ -> () )
+    !pending_applications
 
 (* Try to unify two types using mgu. Silently fails if unification is
    impossible. This mutably sets the contents of metavariables when

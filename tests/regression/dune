@@ -14331,3 +14331,14 @@
   (alias runtest)
   (deps custom_match_lambda_scrutinee.t.exe)
   (action (run ./custom_match_lambda_scrutinee.t.exe))))
+
+(subdir bind_continuation_monad_element
+ (rule
+  (targets bind_continuation_monad_element.t.exe)
+  (deps BindContinuationMonadElement.vo bind_continuation_monad_element.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bind_continuation_monad_element.t.exe bind_continuation_monad_element.t.cpp bind_continuation_monad_element.cpp)))
+ (rule
+  (alias runtest)
+  (deps bind_continuation_monad_element.t.exe)
+  (action (run ./bind_continuation_monad_element.t.exe))))
