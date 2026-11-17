@@ -457,6 +457,32 @@ let value_levels ~heads ~depth e =
   go 0 e;
   List.sort_uniq Int.compare !found
 
+(* The levels of [heads] [e], standing under [depth] binders, calls: the
+   members of local fixpoints it enters again. *)
+let called_heads ~heads ~depth e =
+  let found = ref [] in
+  let rec go d e =
+    ( match e with
+    | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = i; _}; _}
+      when i > d && List.mem (depth + d - i) heads ->
+      found := (depth + d - i) :: !found
+    | _ -> () );
+    match e with
+    | Core.Expr.Lambda {body = b; _} -> go (d + 1) b
+    | Core.Expr.Let {value = a; body = b; _} ->
+      go d a;
+      go (d + 1) b
+    | Core.Expr.Match {scrutinee = s; branches; _} ->
+      go d s;
+      Array.iter (fun {Core.Match.Branch.binders = ids; body = b; _} -> go (d + List.length ids) b) branches
+    | Core.Expr.Fixpoint rec_group | Core.Expr.Cofixpoint rec_group ->
+      let ids = Core.Recursion.Group.functions rec_group and funs = Core.Recursion.Group.bodies rec_group in
+      Array.iter (go (d + Array.length ids)) funs
+    | e -> Base.Core_util.ast_iter (go d) e
+  in
+  go 0 e;
+  List.sort_uniq Int.compare !found
+
 let rec strip =
   function Core.Expr.Coerce {value = e; _} | Core.Expr.Boxed_value {value = e; _}
     | Core.Expr.Lambda_group_barrier {value = e; _} -> strip e | e -> e
@@ -579,13 +605,36 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     go ~enters:true 0 rest;
     List.rev !found
   in
+  (* The levels [e], standing under [depth] binders, reads as values: those
+     {!value_levels} finds, and what a local fixpoint whose member [e] calls
+     captures -- calling it enters the machine again with them: [go rest
+     (e :: x)] reads [r] through [go]. *)
+  let reads ~heads ~fixpoints ~captures depth e =
+    let captured_by_called =
+      List.concat_map
+        (fun h ->
+          match List.find_opt (fun (_, (first, n)) -> first <= h && h < first + n) fixpoints with
+          | Some (occ, _) ->
+            Option.default []
+              (List.find_map (fun (o, l) -> if Core.Occurrence.equal o occ then Some l else None) captures)
+          | None -> [] )
+        (called_heads ~heads ~depth e)
+    in
+    value_levels ~heads ~depth e @ captured_by_called
+  in
   (* A local the frames of consecutive points keep is kept alike in all of
      them, each handler passing it to the next frame as it holds it: what
      follows a point passes it on as what follows the outermost of them,
-     [enclosing], does too. *)
-  let resume ~heads ~fixpoints ~targets ~enclosing ~site ~after ~arguments_read ~recipes depth rest =
+     [enclosing], does too.  What the term the point stands in is the
+     right-hand side of reads once it is done ([awaited]) the frame keeps as
+     well: the handler runs that too, and pushes the frame of a point there,
+     which holds it as that point's continuation does -- passed on by
+     pointer only if that passes it so ([inherited]). *)
+  let resume ~heads ~fixpoints ~captures ~targets ~enclosing ~awaited ~site ~after ~arguments_read ~recipes depth rest =
     let live =
-      List.filter (fun l -> l <> depth && not (dictionary l)) (value_levels ~heads ~depth:(depth + 1) rest)
+      List.filter
+        (fun l -> l <> depth && not (dictionary l))
+        (List.sort_uniq Int.compare (reads ~heads ~fixpoints ~captures (depth + 1) rest @ awaited))
     in
     let live_binders = List.map binder live in
     let inherited =
@@ -597,7 +646,10 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       { binder = Core.Binder.make ~origin ~level:depth ~site:(Binding site) ();
         live = live_binders;
         after;
-        passes = dedup_passings (inherited @ passings ~fixpoints ~targets ~live (depth + 1) rest);
+        passes =
+          dedup_passings
+            (inherited
+             @ passings ~fixpoints ~targets ~live:(List.filter (fun l -> not (List.mem l awaited)) live) (depth + 1) rest);
         read_by_call = List.map binder (List.filter (fun l -> List.mem l arguments_read) live);
         recomputable =
           List.filter_map
@@ -610,7 +662,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     found := r :: !found;
     r
   in
-  let rec walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures depth e =
+  let rec walk ~targets ~heads ~fixpoints ~enclosing ~awaited ~closures ~fields ~captures depth e =
     (* A local fixpoint applied where it is written, reaching a recursive
        call, is bound as one ({!Normalize}). *)
     let rec reaches depth e =
@@ -710,7 +762,14 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
           arguments_read depth b
         | _ -> [] )
     in
-    let go = walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures in
+    let go = walk ~targets ~heads ~fixpoints ~enclosing ~awaited ~closures ~fields ~captures in
+    (* [e] at [depth] with what [k], standing under [n] binders more, reads
+       of the binders outside it awaited too: a point in [e] resumes into
+       [k]. *)
+    let go_then depth e n k =
+      let outside = List.filter (fun l -> l < depth) (reads ~heads ~fixpoints ~captures (depth + n) k) in
+      walk ~targets ~heads ~fixpoints ~enclosing ~awaited:(outside @ awaited) ~closures ~fields ~captures depth e
+    in
     (* The binders in scope whose value makes no call, outermost first,
        with the levels it reads: a closure a let binds, which reads what it
        captures, and a pattern variable of a record's one branch matching a
@@ -725,12 +784,12 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       match after with
       | [] -> enclosing
       | after ->
-        resume ~heads ~fixpoints ~targets ~enclosing ~site ~after ~arguments_read ~recipes depth rest :: enclosing
+        resume ~heads ~fixpoints ~captures ~targets ~enclosing ~awaited ~site ~after ~arguments_read ~recipes depth rest :: enclosing
     in
     match e with
     | Core.Expr.Let {value = a; body = b; occurrence = site; _} ->
       let enclosing = resuming ~site ~after:(ending depth a) ~arguments_read:(arguments_read depth a) depth b in
-      go depth a;
+      go_then depth a 1 b;
       let rec closure = function
         | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> true
         | Core.Expr.Coerce {value = e; _}
@@ -758,15 +817,16 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
           (entering, level :: heads, (occ, (depth, 1)) :: fixpoints, (occ, value_levels ~heads ~depth a) :: captures)
         | _ -> (targets, heads, fixpoints, captures)
       in
-      walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + 1) b
+      walk ~targets ~heads ~fixpoints ~enclosing ~awaited ~closures ~fields ~captures (depth + 1) b
     | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} when effect_ use = Some Effects.Bind -> (
       match List.rev args with
       | Core.Expr.Lambda {body = k; _} :: action :: rest ->
         let after = targets ~depth action in
         let arguments_read = if after = [] then [] else calls_read depth after (arguments action) in
         let enclosing = resuming ~site:(Core.Global_use.occurrence use) ~after ~arguments_read depth k in
-        List.iter (go depth) (action :: rest);
-        walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + 1) k
+        go_then depth action 1 k;
+        List.iter (go depth) rest;
+        walk ~targets ~heads ~fixpoints ~enclosing ~awaited ~closures ~fields ~captures (depth + 1) k
       | _ -> List.iter (go depth) args )
     | Core.Expr.Match {scrutinee_type = ty;
                        scrutinee = s;
@@ -777,7 +837,7 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       | Core.Expr.Bound_variable {index = i; _} ->
         let n = List.length ids in
         let fields = List.init n (fun k -> (depth + k, depth - i)) @ fields in
-        walk ~targets ~heads ~fixpoints ~enclosing ~closures ~fields ~captures (depth + n) b
+        walk ~targets ~heads ~fixpoints ~enclosing ~awaited ~closures ~fields ~captures (depth + n) b
       | _ -> go (depth + List.length ids) b )
     | Core.Expr.Match {scrutinee = s; branches; _} ->
       go depth s;
@@ -805,13 +865,13 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
       Array.iter
         (fun f ->
           let arity, b = split_params 0 f in
-          walk ~targets ~heads ~fixpoints ~enclosing:[] ~closures ~fields ~captures (depth + n + arity) b )
+          walk ~targets ~heads ~fixpoints ~enclosing:[] ~awaited:[] ~closures ~fields ~captures (depth + n + arity) b )
         funs
     | Core.Expr.Lambda {body = b; _} ->
-      walk ~targets:(fun ~depth:_ _ -> []) ~heads:[] ~fixpoints ~enclosing:[] ~closures ~fields ~captures (depth + 1) b
+      walk ~targets:(fun ~depth:_ _ -> []) ~heads:[] ~fixpoints ~enclosing:[] ~awaited:[] ~closures ~fields ~captures (depth + 1) b
     | e -> Base.Core_util.ast_iter (go depth) e
   in
-  walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] ~fixpoints:[] ~enclosing:[] ~closures:[] ~fields:[] ~captures:[]
+  walk ~targets:(fun ~depth:_ e -> targets e) ~heads:[] ~fixpoints:[] ~enclosing:[] ~awaited:[] ~closures:[] ~fields:[] ~captures:[]
     (Core.Lexenv.depth lex) body;
   List.rev !found
 

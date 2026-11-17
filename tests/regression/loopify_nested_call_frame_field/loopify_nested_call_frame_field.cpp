@@ -19,7 +19,8 @@ LoopifyNestedCallFrameField::g(const List<std::pair<uint64_t, bool>> &l,
   };
 
   struct _after_g_in_pair {
-    const List<std::pair<uint64_t, bool>> *a1;
+    List<uint64_t> a;
+    std::shared_ptr<List<std::pair<uint64_t, bool>>> a1;
   };
 
   struct _after_g_in_pair_2 {
@@ -47,17 +48,18 @@ LoopifyNestedCallFrameField::g(const List<std::pair<uint64_t, bool>> &l,
         const List<std::pair<uint64_t, bool>> &a1_value = *a1;
         List<uint64_t> _tmp4;
         const auto &[_x, _x0] = a0;
-        _stack.emplace_back(_after_g_in_pair{crane_raw(a1)});
+        _stack.emplace_back(_after_g_in_pair{a, a1});
         _stack.emplace_back(_call{a, crane_raw(a1)});
       }
     } else if (std::holds_alternative<_after_g_in_pair>(_popped)) {
       auto _f = std::move(std::get<_after_g_in_pair>(_popped));
       _stack.pop_back();
-      const List<std::pair<uint64_t, bool>> &a1 = *_f.a1;
-      const List<std::pair<uint64_t, bool>> &a1_value = a1;
+      const List<uint64_t> &a = _f.a;
+      std::shared_ptr<List<std::pair<uint64_t, bool>>> a1 = std::move(_f.a1);
+      const List<std::pair<uint64_t, bool>> &a1_value = *a1;
       List<uint64_t> _tmp3 = std::move(_result);
       _stack.emplace_back(_after_g_in_pair_2{a, a1});
-      _stack.emplace_back(_call{std::move(_tmp3), &a1_value});
+      _stack.emplace_back(_call{std::move(_tmp3), crane_raw(a1)});
     } else {
       auto _f = std::move(std::get<_after_g_in_pair_2>(_popped));
       _stack.pop_back();

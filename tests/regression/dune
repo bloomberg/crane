@@ -14408,3 +14408,25 @@
   (alias runtest)
   (deps reuse_nonatomic_const_v_mut.t.exe)
   (action (run ./reuse_nonatomic_const_v_mut.t.exe))))
+
+(subdir loopify_local_fix_outer_call
+ (rule
+  (targets loopify_local_fix_outer_call.t.exe)
+  (deps LoopifyLocalFixOuterCall.vo loopify_local_fix_outer_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_local_fix_outer_call.t.exe loopify_local_fix_outer_call.t.cpp loopify_local_fix_outer_call.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_local_fix_outer_call.t.exe)
+  (action (run ./loopify_local_fix_outer_call.t.exe))))
+
+(subdir loopify_nested_call_frame_field
+ (rule
+  (targets loopify_nested_call_frame_field.t.exe)
+  (deps LoopifyNestedCallFrameField.vo loopify_nested_call_frame_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_nested_call_frame_field.t.exe loopify_nested_call_frame_field.t.cpp loopify_nested_call_frame_field.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_nested_call_frame_field.t.exe)
+  (action (run ./loopify_nested_call_frame_field.t.exe))))
