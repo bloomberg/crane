@@ -469,7 +469,186 @@ let eta_body ty b =
       Base.Core_util.named_lams (missing @ params)
         (Base.Core_util.apply_eta_args (Base.Core_util.ast_lift (List.length missing) body) args)
 
-let eta_expand =
+(* A definition that computes before taking every parameter its type gives
+   it: [mk fs := fold_right compose id fs] at [list (nat -> nat) -> nat ->
+   nat] folds once and returns the closure.  Generated, it takes all of
+   them ({!eta_body}), so [mk fs] passed or bound as a value would fold
+   again at every application, where Rocq folds once.  The partial
+   application is instead the body at the arguments written: the fold is
+   then a call whose result is the closure, made where it stands.
+
+   A candidate is a top-level definition outside any functor, not
+   recursive, whose body, past the parameters it writes, is a call filling
+   its callee (or a let or match reaching one), and small enough to copy. *)
+type prefix_work = {params : int; ty : Core.Type.t; body : Core.Expr.t}
+
+let max_inlined_prefix = 60
+
+let prefix_work_candidates struc =
+  let defs = ref [] in
+  let rec elems l =
+    List.iter
+      (fun (_, se) ->
+        match se with
+        | Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = b; type_ = ty})
+          when not (Base.Table.is_custom r) ->
+          let params, inner = Base.Type_util.collect_typed_lams (Base.Core_util.type_simpl ty) b in
+          let n = List.length params in
+          if n > 0 && Base.Type_util.eta_parameters (Base.Core_util.type_simpl ty) params <> []
+             && Base.Core_util.ast_size inner <= max_inlined_prefix
+          then defs := (r, ({params = n; ty; body = b}, inner)) :: !defs
+        | Core.Module.Structure_item.Module {Core.Module.expr = Core.Module.Expr.Structure {items = l; _}; _} ->
+          elems l
+        | _ -> () )
+      l
+  in
+  List.iter (fun (_, l) -> elems l) struc;
+  let value_arity g =
+    match Base.Table.find_type g with
+    | ty -> List.length (Base.Type_util.core_value_domains (Base.Core_util.type_simpl ty))
+    | exception Not_found -> max_int
+  in
+  let written_args args = List.length (List.filter (function Core.Expr.Erased_value _ -> false | _ -> true) args) in
+  (* [known] are the candidates found so far: a call that stops where one
+     of them stops computing does its work too. *)
+  let rec does_work known = function
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = args} ->
+      (not (Base.Table.is_custom g))
+      && ( written_args args >= value_arity g
+         || match Core.Ref.User.Map.find_opt g known with
+            | Some {params; _} -> List.length args = params
+            | None -> false )
+    | Core.Expr.Let {value; body; _} -> does_work known value || does_work known body
+    | Core.Expr.Match {branches; _} ->
+      Array.exists (fun {Core.Match.Branch.body = b; _} -> does_work known b) branches
+    | Core.Expr.Coerce {value = a; _} | Core.Expr.Boxed_value {value = a; _}
+    | Core.Expr.Lambda_group_barrier {value = a; _} ->
+      does_work known a
+    | _ -> false
+  in
+  let rec settle known =
+    let known' =
+      List.fold_left
+        (fun m (r, (d, inner)) -> if does_work known inner then Core.Ref.User.Map.add r d m else m)
+        known !defs
+    in
+    if Core.Ref.User.Map.cardinal known' = Core.Ref.User.Map.cardinal known then known else settle known'
+  in
+  settle Core.Ref.User.Map.empty
+
+(* [b] applied to exactly its [n] leading lambdas' arguments [args]: a
+   variable or a literal substituted, any other bound by a let, so it is
+   still evaluated once, where the application stood, even when the body
+   reads it under a lambda. *)
+let beta b args =
+  let params, body = Base.Core_util.collect_lams b in
+  let n = List.length args in
+  let outer = List.rev params in
+  let now = List.filteri (fun i _ -> i < n) outer in
+  let rest = List.rev (List.filteri (fun i _ -> i >= n) outer) in
+  let body = Base.Core_util.named_lams rest body in
+  let rec trivial = function
+    | Core.Expr.Bound_variable _ | Core.Expr.Global _ | Core.Expr.Erased_value _ | Core.Expr.Numeral _
+    | Core.Expr.UInt63 _ | Core.Expr.Float64 _ | Core.Expr.String _ ->
+      true
+    | Core.Expr.Coerce {value = a; _} | Core.Expr.Boxed_value {value = a; _} -> trivial a
+    | _ -> false
+  in
+  (* Innermost first, each step substituting [Bound_variable 1]; the
+     argument for the [i]th parameter (outermost first) lives outside the
+     [n - i - 1] parameters still bound around it. *)
+  let rec go body i = function
+    | [] -> body
+    | (a, (id, ty)) :: more ->
+      let a = Base.Core_util.ast_lift (n - i - 1) a in
+      let body =
+        if trivial a then Base.Core_util.ast_subst a body
+        else Core.Expr.Let {binder = id; binder_type = ty; value = a; body; occurrence = Core.Occurrence.fresh ()}
+      in
+      go body (i + 1) more
+  in
+  go body 0 (List.rev (List.combine args now))
+
+(* The use's copy of a candidate's body, at the type arguments it wrote:
+   [None] where it did not write one for every variable the type mentions. *)
+let body_at (use : Core.Global_use.t) {ty; body; _} =
+  let n = Base.Core_util.type_maxvar ty in
+  if n = 0 then Some body
+  else if Base.Core_util.written_covers use n then
+    Some (Base.Core_util.instantiate_body ~reader:"normalize.prefix_work" use body)
+  else None
+
+(* [body] under one more binder, outside the one it reads as
+   [Bound_variable 1]. *)
+let lift_under_one body =
+  match Base.Core_util.ast_lift 1 (Core.Expr.Lambda {parameter = Core.Binder_name.Anonymous;
+                                                     parameter_type = Core.Type.Unknown; body}) with
+  | Core.Expr.Lambda {body; _} -> body
+  | _ -> assert false
+
+(* [let x := value in body] with the lets [value] starts with taken out
+   first: a let whose value is a let is a shape lowering does not keep its
+   scopes straight in. *)
+let rec float_let binder binder_type occurrence value body =
+  match value with
+  | Core.Expr.Let {binder = y; binder_type = yt; value = v; body = b; occurrence = yo} ->
+    Core.Expr.Let {binder = y; binder_type = yt; value = v; occurrence = yo;
+                   body = float_let binder binder_type occurrence b (lift_under_one body)}
+  | _ -> Core.Expr.Let {binder; binder_type; value; body; occurrence}
+
+let rec inline_prefix_work cands e =
+  match e with
+  | Core.Expr.Let {binder; binder_type; value; body; occurrence} ->
+    let value = inline_value cands value in
+    float_let binder binder_type occurrence value (inline_prefix_work cands body)
+  | _ -> (
+    match inline_value cands e with
+    | Core.Expr.Let _ -> declined cands e
+    | e' -> e' )
+
+(* [e], a partial application of a candidate copied in where it stands, the
+   copy starting with a let where its arguments need one. *)
+and inline_value cands e =
+  match e with
+  | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} -> (
+    let args = List.map (inline_prefix_work cands) args in
+    match Core.Ref.User.Map.find_opt use.callee cands with
+    | Some ({params; _} as d) when List.length args = params -> (
+      match body_at use d with
+      | Some b -> inline_value cands (Core_passes.Fresh_occurrences.term (beta b args))
+      | None -> Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} )
+    | _ -> Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} )
+  | Core.Expr.Let {binder; binder_type; value; body; occurrence} ->
+    let value = inline_value cands value in
+    float_let binder binder_type occurrence value (inline_prefix_work cands body)
+  | _ -> Base.Core_util.ast_map (inline_prefix_work cands) e
+
+(* [e] where its own copy would start with a let: only its subterms are
+   rewritten. *)
+and declined cands e =
+  match e with
+  | Core.Expr.Apply {callee = Core.Expr.Global use; arguments = args} ->
+    Core.Expr.Apply {callee = Core.Expr.Global use; arguments = List.map (inline_prefix_work cands) args}
+  | _ -> Base.Core_util.ast_map (inline_prefix_work cands) e
+
+let eta_expand struc =
+  let cands = prefix_work_candidates struc in
+  let struc =
+    if Core.Ref.User.Map.is_empty cands then struc
+    else
+      Core_passes.Modutil.map_struct_decls
+        (function
+          | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
+            Core.Decl.Value {entity = r; body = inline_prefix_work cands b; type_ = ty}
+          | Core.Decl.Recursive_group fds ->
+            Core.Decl.Recursive_group
+              (Core.Nonempty.map
+                 (fun (fd : Core.Recursion.Definition.t) ->
+                   {fd with Core.Recursion.Definition.body = inline_prefix_work cands fd.body} )
+                 fds )
+          | d -> d )
+        struc
+  in
   Core_passes.Modutil.map_struct_decls (function
     | Core.Decl.Value {entity = r; body = b; type_ = ty} ->
       Core.Decl.Value {entity = r; body = eta_body ty b; type_ = ty}
@@ -480,6 +659,7 @@ let eta_expand =
              {fd with Core.Recursion.Definition.body = eta_body fd.type_ fd.body})
            fds )
     | d -> d )
+    struc
 
 let let_lambdas =
   Core_passes.Modutil.map_struct_decls (function

@@ -31,7 +31,14 @@ type lowering = {
     of its type, applying the body it writes to the ones it leaves out: the
     body translation generates, here once for every consumer instead of
     re-derived by each.  It runs first in {!Core_passes.Phase.normalize}, so the calls
-    {!structure} names are those of that body. *)
+    {!structure} names are those of that body.
+
+    Before that, a partial application of a definition that computes ahead
+    of the parameters it leaves out -- [mk fs] of [mk fs := fold_right
+    compose id fs] -- is replaced by the definition's body at the arguments
+    written, so the computation is made once where the application stands,
+    as in Rocq, and not again at every application of the closure the
+    eta-expanded definition would have been wrapped in. *)
 val eta_expand : Core.Program.t -> Core.Program.t
 
 (** [let_lambdas s] puts every let-bound lambda in [s]'s definitions as it is

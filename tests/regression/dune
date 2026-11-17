@@ -14353,3 +14353,14 @@
   (alias runtest)
   (deps subclass_type_projection_alias.t.exe)
   (action (run ./subclass_type_projection_alias.t.exe))))
+
+(subdir partial_app_prefix_work
+ (rule
+  (targets partial_app_prefix_work.t.exe)
+  (deps PartialAppPrefixWork.vo partial_app_prefix_work.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} partial_app_prefix_work.t.exe partial_app_prefix_work.t.cpp partial_app_prefix_work.cpp)))
+ (rule
+  (alias runtest)
+  (deps partial_app_prefix_work.t.exe)
+  (action (run ./partial_app_prefix_work.t.exe))))
