@@ -20,6 +20,17 @@ open Core_plan.Query
 open Knot
 open Match
 
+(** [in_rhs_scope f] runs [f], which lowers a let's right-hand side, and puts
+    the binder types back as they were.  The right-hand side is lowered as
+    statements of the let's own block, so a let that is itself one
+    ([let p := (let q := .. in ..) in ..]) pushes [q]'s type and would leave
+    it there; [q] is not in scope in the body, whose names {!push_vars'}
+    pushes on [env] without it, and every variable beneath [p] would read the
+    binder one further in. *)
+let in_rhs_scope cx f =
+  let saved = cx.ctx.lexical.env_types in
+  Fun.protect ~finally:(fun () -> restore_env_types cx saved) f
+
 (** [gen_stmts ?slot env k e] -- [e] lowered as statements, the value it
     computes handed to [k] (a [return], an assignment).  [slot] is
     {!Expr.gen_expr}'s, carried into the tail positions. *)
@@ -64,7 +75,7 @@ let rec gen_stmts cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
          so we can't assign its result to a variable.  Execute the RHS for
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
-      let rhs = gen_stmts cx env_rhs (fun e -> Expression e) a in
+      let rhs = in_rhs_scope cx (fun () -> gen_stmts cx env_rhs (fun e -> Expression e) a) in
       Binders.push_binders cx env [(x_renamed, t)];
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun (s : Cpp_ir.Lowered.Stmt.t) ->
@@ -266,7 +277,7 @@ let rec gen_stmts cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
             | Some _ as t -> t
             | None -> current_cpp_return_type cx ()
         in
-        with_cpp_return_type cx rhs_result (fun () ->
+        with_cpp_return_type cx rhs_result (fun () -> in_rhs_scope cx @@ fun () ->
           gen_stmts cx
             ~slot:
               { slot with

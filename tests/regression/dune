@@ -14386,3 +14386,14 @@
   (alias runtest)
   (deps shared_child_cells.t.exe)
   (action (run ./shared_child_cells.t.exe))))
+
+(subdir nested_binder_scope_check
+ (rule
+  (targets nested_binder_scope_check.t.exe)
+  (deps NestedBinderScopeCheck.vo nested_binder_scope_check.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_binder_scope_check.t.exe nested_binder_scope_check.t.cpp nested_binder_scope_check.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_binder_scope_check.t.exe)
+  (action (run ./nested_binder_scope_check.t.exe))))
