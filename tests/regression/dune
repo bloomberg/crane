@@ -14309,3 +14309,14 @@
   (alias runtest)
   (deps sep_ext_nested_struct_name.t.exe)
   (action (run ./sep_ext_nested_struct_name.t.exe))))
+
+(subdir tmc_ambiguous_calls
+ (rule
+  (targets tmc_ambiguous_calls.t.exe)
+  (deps TmcAmbiguousCalls.vo tmc_ambiguous_calls.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tmc_ambiguous_calls.t.exe tmc_ambiguous_calls.t.cpp tmc_ambiguous_calls.cpp)))
+ (rule
+  (alias runtest)
+  (deps tmc_ambiguous_calls.t.exe)
+  (action (run ./tmc_ambiguous_calls.t.exe))))
