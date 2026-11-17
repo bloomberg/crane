@@ -1370,6 +1370,39 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
               eta_arg_is_cheap e
             | _ -> false
           in
+          (* The number of arguments the callee itself takes.  An
+             inline-custom template stops at its last [%aN] placeholder:
+             arguments past it are dropped when it is rendered, and a
+             placeholder with no argument cannot be rendered at all.  A
+             function whose codomain is a type variable stops at its Core
+             arrows, because its declaration had no way to flatten a
+             codomain it could not see -- the extra arrows only appear at
+             this call site, where the variable is instantiated at a
+             function type. *)
+          let callee_arity =
+            match Calls.inline_custom_arg_arity id with
+            | Some _ as a -> a
+            | None -> (
+              match find_type_opt id with
+              | Some core_ty when Calls.codomain_site core_ty = Cpp_ir.Types.Through_tvar ->
+                Some (count_core_value_arrows core_ty)
+              | _ -> None )
+          in
+          (* A call that already fills its callee -- [fold_right compose id
+             fs] at [A := nat -> nat] -- is missing only its result's own
+             parameter.  Rocq evaluates it once, where it is written, and its
+             result is the closure; eta-expanded, the lambda would make the
+             whole call again every time it is applied. *)
+          let saturated =
+            (not (is_inline_custom id))
+            && List.length missing_args = 1
+            && match callee_arity with Some arity -> List.length args >= arity | None -> false
+          in
+          if saturated then
+            match Cpp_ir.Build.call cglob (passed args) with
+            | Call (cs, f, a) -> Call ({cs with occurrence = Some (Core.Global_use.occurrence use)}, f, a)
+            | e -> e
+          else
           let eta_hoisted = ref [] in
           let args =
             List.mapi
@@ -1412,24 +1445,6 @@ let eta_fun cx ?(slot = Slot.empty_slot) ?(expected_ty : Cpp_ir.Lowered.Type.t o
               match e with
               | Call (cs, f, a) -> Call ({cs with occurrence = Some occurrence}, f, a)
               | e -> e
-            in
-            (* The number of arguments the callee itself takes.  An
-               inline-custom template stops at its last [%aN] placeholder:
-               arguments past it are dropped when it is rendered, and a
-               placeholder with no argument cannot be rendered at all.  A
-               function whose codomain is a type variable stops at its Core
-               arrows, because its declaration had no way to flatten a
-               codomain it could not see -- the extra arrows only appear at
-               this call site, where the variable is instantiated at a
-               function type. *)
-            let callee_arity =
-              match Calls.inline_custom_arg_arity id with
-              | Some _ as a -> a
-              | None -> (
-                match find_type_opt id with
-                | Some core_ty when Calls.codomain_site core_ty = Cpp_ir.Types.Through_tvar ->
-                  Some (count_core_value_arrows core_ty)
-                | _ -> None )
             in
             match callee_arity with
             | Some arity ->
