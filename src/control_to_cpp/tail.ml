@@ -656,7 +656,7 @@ let rec generic_rewrite_stmt ?(aliases = []) ?(derefs = []) trc = function
     rewriter can handle them as ordinary tail calls.  Translation
     ({!Core_to_cpp.Stmts.gen_stmts}) produces this pattern for void- and
     unit-returning recursive functions. *)
-and generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
+and[@tail_mod_cons] generic_rewrite_stmts ?(aliases = []) ?(derefs = []) trc = function
   | Expression e :: Return _ :: rest
     when trc.detect_void_tail && trc.inner.check e <> None ->
     generic_rewrite_stmt ~aliases ~derefs trc (Return (Some e))
@@ -745,7 +745,7 @@ let would_conflict block_stmts rest =
 
     Recurses into [If], [Switch], [Custom_match], [Match], and [While] so
     that blocks nested inside branches are also simplified. *)
-let rec strip_unnecessary_blocks = function
+let[@tail_mod_cons] rec strip_unnecessary_blocks = function
   | Block stmts :: rest ->
     let inner' = strip_unnecessary_blocks stmts in
     let rest' = strip_unnecessary_blocks rest in

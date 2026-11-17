@@ -71,7 +71,7 @@ let function_def d =
   | _ -> None
 
 let structure struc =
-  let rec elems seen = function
+  let[@tail_mod_cons] rec elems seen = function
     | [] -> []
     | (l, Core.Module.Structure_item.Declaration d) :: rest when function_def d <> None -> (
       let r, body, ty = Option.get (function_def d) in

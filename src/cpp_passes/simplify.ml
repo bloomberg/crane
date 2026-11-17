@@ -26,7 +26,7 @@ let rec is_function_type : ty -> bool = function
   | _ -> false
 
 (* Drop each binding of a pure value nothing after it reads or assigns. *)
-let rec drop_unused : stmt list -> stmt list = function
+let[@tail_mod_cons] rec drop_unused : stmt list -> stmt list = function
   | [] -> []
   | Bind_variable (x, Declare _, e) :: rest
     when V.pure e && (not (V.mem x (V.free_in_body rest))) && not (Id.Set.mem x (V.assigned rest)) ->

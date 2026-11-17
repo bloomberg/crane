@@ -450,7 +450,7 @@ let decl_of_term r a t =
     of code. The inlined functions are kept for the moment in order to preserve
     the global interface, later [depcheck_se] will get rid of them if possible
 *)
-let rec optim_se top to_appear s = function
+let[@tail_mod_cons] rec optim_se top to_appear s = function
   | [] -> []
   | (l, Core.Module.Structure_item.Declaration (Core.Decl.Value {entity = r; body = a; type_ = t})) :: lse ->
     let a = normalize (ast_glob_subst !s a) in

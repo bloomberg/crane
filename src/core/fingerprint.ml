@@ -8,24 +8,34 @@ type t = Digest.t
 (** A serialization of one structure.  Every constructor writes a distinct
     tag and every list its length, so two different trees cannot write the
     same text. *)
+module Kernames = Hashtbl.Make (KerName)
+
 type writer = {
   buf : Buffer.t;
   holes : (int, int) Hashtbl.t;
   metas : (int, int) Hashtbl.t;
+  kernames : string Kernames.t;  (** each kernel name's spelling, once worked out *)
 }
 
 let writer () =
-  { buf = Buffer.create 4096; holes = Hashtbl.create 8; metas = Hashtbl.create 8 }
+  { buf = Buffer.create 4096; holes = Hashtbl.create 8; metas = Hashtbl.create 8; kernames = Kernames.create 64 }
+
+(** [decimal b i] writes [i] in decimal to [b], as [string_of_int] spells
+    it, without formatting a string first. *)
+let decimal b i =
+  let rec digits n = if n <> 0 then (digits (n / 10); Buffer.add_char b (Char.chr (48 + abs (n mod 10)))) in
+  if i = 0 then Buffer.add_char b '0'
+  else (if i < 0 then Buffer.add_char b '-'; digits i)
 
 let tag w s = Buffer.add_string w.buf s; Buffer.add_char w.buf ' '
 
 let str w s =
-  Buffer.add_string w.buf (string_of_int (String.length s));
+  decimal w.buf (String.length s);
   Buffer.add_char w.buf ':';
   Buffer.add_string w.buf s;
   Buffer.add_char w.buf ' '
 
-let int w i = tag w (string_of_int i)
+let int w i = decimal w.buf i; Buffer.add_char w.buf ' '
 let bool w b = tag w (if b then "t" else "f")
 
 let list w f l = int w (List.length l); List.iter f l
@@ -43,7 +53,14 @@ let first_occurrence tbl k =
 
 let id w x = str w (Id.to_string x)
 let label w l = str w (Label.to_string l)
-let kername w kn = str w (KerName.to_string kn)
+let kername w kn =
+  str w
+    ( match Kernames.find_opt w.kernames kn with
+    | Some s -> s
+    | None ->
+      let s = KerName.to_string kn in
+      Kernames.add w.kernames kn s;
+      s )
 let mutind w m = kername w (MutInd.user m)
 let modpath w mp = str w (ModPath.to_string mp)
 let mbid w b = str w (MBId.to_string b)
