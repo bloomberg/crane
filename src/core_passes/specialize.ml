@@ -131,33 +131,43 @@ let rec subst_value_lets e =
     what is profitable, which the size test decides. *)
 let fuel = 16
 
+(** Unfolds tried in one declaration, kept or not.  [fuel] bounds how deep
+    unfolding nests, but each level settles its result in up to [fuel] rounds,
+    each of which may unfold every call again, so the work [fuel] allows grows
+    like its factorial: an accumulating argument, [eval (v :: env) b] inside
+    [eval], is a known constructor at every level.  Every unfold, wherever it
+    nests, draws on this one supply, so a declaration costs at most this many
+    settles however its calls unfold. *)
+let budget = 256
+
 (* [e] with its calls unfolded where an argument is a known constructor, and
    pushed into a match argument where that lets a branch unfold.  [shrunk]
    is set when anything is rewritten. *)
-let rec reduce defs shrunk fuel e =
-  let e = Base.Core_util.ast_map (reduce defs shrunk fuel) e in
+let rec reduce defs left shrunk fuel e =
+  let e = Base.Core_util.ast_map (reduce defs left shrunk fuel) e in
   match e with
-  | Core.Expr.Apply {callee = Core.Expr.Global ({callee = g; _} as use); arguments = args} when fuel > 0 -> (
-    match unfold defs shrunk fuel use args with
+  | Core.Expr.Apply {callee = Core.Expr.Global ({callee = g; _} as use); arguments = args} when fuel > 0 && !left > 0 -> (
+    match unfold defs left shrunk fuel use args with
     | Some e' -> e'
-    | None -> Option.default e (push defs shrunk fuel use args) )
+    | None -> Option.default e (push defs left shrunk fuel use args) )
   | _ -> e
 
 (* The call [use args] with the global's body instantiated, its arguments
    that are known constructors in place, then settled: kept only if
    smaller than the call. *)
-and unfold defs shrunk fuel use args =
+and unfold defs left shrunk fuel use args =
   let known = List.map (known_ctor defs) args in
-  if List.for_all Option.is_empty known then None
+  if List.for_all Option.is_empty known || !left <= 0 then None
   else
     match body_of defs use with
     | None -> None
     | Some b -> (
+      decr left;
       let args' = List.map2 (fun a k -> Option.default a k) args known in
       match instantiate b args' with
       | None -> None
       | Some e ->
-        let e' = settle defs (fuel - 1) e in
+        let e' = settle defs left (fuel - 1) e in
         if Base.Core_util.ast_size e' < Base.Core_util.ast_size (Core.Expr.Apply {callee = Core.Expr.Global use;
                                                                   arguments = args}) then (
           shrunk := true;
@@ -167,18 +177,18 @@ and unfold defs shrunk fuel use args =
 (* [e] normalized and reduced until neither changes it: an unfolding below
    exposes a match on a constructor, or a lambda applied, for the next
    normalization; within [fuel] rounds. *)
-and settle defs fuel e =
+and settle defs left fuel e =
   let rec go n e =
     let changed = ref false in
     let simplify e = Base.Core_util.normalize (subst_value_lets e) in
-    let e' = simplify (reduce defs changed fuel (simplify e)) in
+    let e' = simplify (reduce defs left changed fuel (simplify e)) in
     if !changed && n > 0 then go (n - 1) e' else e'
   in
   go fuel e
 
 (* The call [use args], one argument a match and the others values, pushed
    into the match's branches: kept only if some branch unfolds. *)
-and push defs shrunk fuel use args =
+and push defs left shrunk fuel use args =
   let rec split before = function
     | Core.Expr.Match {scrutinee_type = ty; scrutinee = s; branches = brs; occurrence = occ} :: after
       when List.for_all is_value before && List.for_all is_value after ->
@@ -196,7 +206,7 @@ and push defs shrunk fuel use args =
           let k = List.length ids in
           let lift = List.map (Base.Core_util.ast_lift k) in
           let call = Core.Expr.Apply {callee = Core.Expr.Global use; arguments = lift before @ [b] @ lift after} in
-          let call' = settle defs fuel call in
+          let call' = settle defs left fuel call in
           if Base.Core_util.ast_size call' < Base.Core_util.ast_size call then (
             any := true;
             {br with Core.Match.Branch.body = call'} )
@@ -326,8 +336,8 @@ let decl defs r body ty =
       match specialize f fd use args with
       | None -> None
       | Some spec ->
-        let shrunk = ref false in
-        let spec = reduce defs shrunk fuel (Base.Core_util.normalize spec) in
+        let shrunk = ref false and left = ref budget in
+        let spec = reduce defs left shrunk fuel (Base.Core_util.normalize spec) in
         (* Only as the definition's own fixpoint: a fixpoint left local is
            translated without the whole-body suspension a corecursive one
            calling itself outside its constructors needs. *)
