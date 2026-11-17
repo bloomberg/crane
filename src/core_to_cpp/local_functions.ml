@@ -820,7 +820,17 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
           Cpp_ir.Lowered.Stmt.t)] @ cont
     end else
       let afun v : Cpp_ir.Lowered.Stmt.t = Bind_variable (x_renamed, Existing, v) in
-      let asgn = gen_stmts cx env afun a in
+      (* The lambda's slot is its binder's, not the position the let stands
+         in: [cf] in [w := let cf := fun _ : tree => 1 in fun c => cf Leaf]
+         takes a [tree], whatever [w] takes.  Only a signature the position
+         states is replaced: the result any other position falls back to is
+         what a let in the lambda's body falls back to as well
+         ({!Types.let_value_result}). *)
+      let asgn =
+        match current_cpp_return_type cx () with
+        | Some (Function _) -> with_cpp_return_type cx (Types.let_value_result cx env t) (fun () -> gen_stmts cx env afun a)
+        | _ -> gen_stmts cx env afun a
+      in
       (* When the RHS was a pair accessor on an erased argument (e.g.
          snd vs where vs : std::any), the result is std::any at runtime
          even though the Core type says prod(...).  Override to Core.Type.Erased so

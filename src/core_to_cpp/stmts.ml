@@ -278,24 +278,9 @@ let rec gen_stmts cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
             match inferred with Some ty -> ty | None -> t
           end
         in
-        (* The bound value is not the enclosing function's result, so the
-           result a position falls back to when it states nothing is the
-           binder's own type, where it says one: [let t := x <- arg ;; ...]
-           is a tree over [arg]'s family, whatever family the function
-           returns into. *)
-        let rhs_result =
-          let c = Types.cpp_of_core cx env t_effective in
-          (* A binder erasure took the whole type from -- [nt_semty x], a
-             type computed from a value -- holds a box, and its value is
-             one; read at the function's result instead, it is cast to a
-             type it does not have. *)
-          if Cpp_ir.Types.prints_as_any c then Some c
-          else if core_type_contains_erased t_effective then current_cpp_return_type cx ()
-          else
-            match Types.spell_in_scope cx c with
-            | Some _ as t -> t
-            | None -> current_cpp_return_type cx ()
-        in
+        (* [let t := x <- arg ;; ...] is a tree over [arg]'s family,
+           whatever family the function returns into. *)
+        let rhs_result = Types.let_value_result cx env t_effective in
         with_cpp_return_type cx rhs_result (fun () -> in_rhs_scope cx @@ fun () ->
           gen_stmts cx
             ~slot:

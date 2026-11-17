@@ -14551,3 +14551,14 @@
   (alias runtest)
   (deps poly_local_fix_normal_form.t.exe)
   (action (run ./poly_local_fix_normal_form.t.exe))))
+
+(subdir let_lambda_slot_binder
+ (rule
+  (targets let_lambda_slot_binder.t.exe)
+  (deps LetLambdaSlotBinder.vo let_lambda_slot_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_lambda_slot_binder.t.exe let_lambda_slot_binder.t.cpp let_lambda_slot_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_lambda_slot_binder.t.exe)
+  (action (run ./let_lambda_slot_binder.t.exe))))
