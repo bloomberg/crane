@@ -16,6 +16,7 @@ type program = {
   parameter_ownership : (Names.GlobRef.t * bool list) list;
   recursive_groups : Core_plan.Recursive_groups.t;
   partner_closure_params : (Names.GlobRef.t * int list) list;
+  reusing_matches : Core.Ref.User.Set.t;
   recursion : Core_plan.Recursion.t;
   control : Core_to_control.Lower_control.t;
 }
@@ -31,6 +32,7 @@ let analyze_program cx normalized =
     parameter_ownership = Core_plan.Ownership.summarize ~receiver struc;
     recursive_groups;
     partner_closure_params = Core_to_cpp.Callable_params.partner_closure_params recursive_groups struc;
+    reusing_matches = Core_plan.Ownership.reusing_matches struc;
     recursion;
     control =
       Core_to_control.Lower_control.lower
@@ -42,7 +44,8 @@ let lowering (program : program) : Core_to_cpp.Lowering_state.program_facts =
     parameter_ownership =
       List.fold_left (fun m (r, f) -> Core.Ref.User.Map.add r f m) Core.Ref.User.Map.empty program.parameter_ownership;
     partner_closure_params =
-      List.fold_left (fun m (g, is) -> Core.Ref.User.Map.add g is m) Core.Ref.User.Map.empty program.partner_closure_params }
+      List.fold_left (fun m (g, is) -> Core.Ref.User.Map.add g is m) Core.Ref.User.Map.empty program.partner_closure_params;
+    reusing_matches = program.reusing_matches }
 
 (* The custom-extracted references [struc] names, a used constructor
    adding its inductive. *)

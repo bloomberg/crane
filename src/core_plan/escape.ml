@@ -371,9 +371,9 @@ let find_reuse_candidates (pv : Core.Match.Branch.t array) =
     because it starts a thread ({!Base.Table.non_atomic_rc_for}) owns such a
     parameter and recycles nothing through it: the rewrite itself is gated
     on the granted answer. *)
-let is_reuse_scrutinee k body =
+let is_reuse_scrutinee ?(shared_blocks = true) k body =
   let recyclable = function
-    | Core.Type.Global_app {head = r; _} when Base.Table.is_shared_variant r -> true
+    | Core.Type.Global_app {head = r; _} when Base.Table.is_shared_variant r -> shared_blocks
     | _ -> non_atomic_rc_requested ()
   in
   let found = ref false in
@@ -436,7 +436,7 @@ let returned_or_matched ~callee_flags k body =
   matched k body
   && not (escapes ~query:Of_param ~callee_flags ~return_escapes:false k body)
 
-let infer_owned_params ~callee_flags n_params body =
+let infer_owned_params ?(matches_reuse = true) ~callee_flags n_params body =
   (* Reuse and loopify both rewrite tail-recursive-modulo-cons matches (the
      [Cons x (rec xs)] shape).  Only one of them may rewrite a given match --
      loopify owns the shape wherever it applies -- but BOTH need the scrutinee
@@ -445,12 +445,25 @@ let infer_owned_params ~callee_flags n_params body =
      inference does not defer to loopify; it asks only whether reuse can be
      performed at all.  The consumer that actually emits a reuse rewrite,
      translation's dual-path match, defers to loopify via
-     [Base.Table.reuse_loopify_ok]. *)
+     [Base.Table.reuse_loopify_ok].  Except a shared variant's block, which
+     only that match recycles ([matches_reuse] says whether this body's
+     matches may): the cursor recycles [crane::rc] cells alone. *)
   List.init n_params (fun i ->
     let k = i + 1 in
     ( escapes ~query:Of_param ~callee_flags k body
       && not (returned_or_matched ~callee_flags k body) )
-    || (reuse_here () && is_reuse_scrutinee k body))
+    || (reuse_here () && is_reuse_scrutinee ~shared_blocks:matches_reuse k body))
+
+(** Whether a function's body [body] holds no recursion of its own -- no
+    local fixpoint -- so Loopify leaves its matches as they are, and the
+    reuse of a match may rewrite them ({!Core_to_cpp.Match}).  Asked of a
+    constant's body; a member of a recursive group always recurses. *)
+let rec loop_free = function
+  | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> false
+  | e ->
+    let ok = ref true in
+    Base.Core_util.ast_iter (fun c -> if !ok && not (loop_free c) then ok := false) e;
+    !ok
 
 (** Like [infer_owned_params] but returns only the [sub_bindings_escape]
     contribution.  Callers can OR this into the base owned flags selectively

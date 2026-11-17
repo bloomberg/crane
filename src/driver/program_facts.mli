@@ -36,6 +36,9 @@ type program = {
   partner_closure_params : (Names.GlobRef.t * int list) list;
       (** Which parameters of each function a call from its recursive group
           passes a closure for ({!Core_to_cpp.Callable_params.partner_closure_params}). *)
+  reusing_matches : Core.Ref.User.Set.t;
+      (** The functions whose matches may reuse the cell they take apart
+          ({!Core_plan.Ownership.reusing_matches}). *)
   recursion : Core_plan.Recursion.t;
       (** How each function recurses through itself. *)
   control : Core_to_control.Lower_control.t;

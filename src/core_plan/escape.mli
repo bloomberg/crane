@@ -105,7 +105,10 @@ val single_use_nargs : int -> Core.Expr.t -> int
     reuses ({!Base.Table.reuse_here}).  A parameter passed directly to an owned
     parameter of a callee escapes, since the callee keeps it:
     [callee_flags g] is the ownership of the global [g]'s parameters,
-    innermost first, settled across calls ({!Ownership}).
+    innermost first, settled across calls ({!Ownership}).  [matches_reuse]
+    (default [true]) says whether the body's own matches may reuse their
+    scrutinee's cell ({!loop_free}); where they may not, a shared variant's
+    block has no other consumer, and a parameter is not owned for it.
 
     De Bruijn indexing: 1 = innermost/last parameter. Output order: element 0 →
     de Bruijn 1, element 1 → de Bruijn 2, etc.
@@ -116,7 +119,7 @@ val single_use_nargs : int -> Core.Expr.t -> int
     @return list of length [n] where element [i] is [true] iff parameter
             [i+1] (de Bruijn) must be passed by value *)
 val infer_owned_params :
-  callee_flags:(Names.GlobRef.t -> bool list option) -> int -> Core.Expr.t -> bool list
+  ?matches_reuse:bool -> callee_flags:(Names.GlobRef.t -> bool list option) -> int -> Core.Expr.t -> bool list
 
 (** [infer_sub_bindings_escape_params n body] returns a bool list of length [n]
     where element [i] is [true] when the parameter at de Bruijn index [i+1] is
@@ -174,5 +177,11 @@ val find_reuse_candidates :
 
 (** [is_reuse_scrutinee k body]: whether [body] matches on parameter [k]
     (de Bruijn, 1 = innermost) with at least one reuse candidate arm, on a
-    type whose cells can be recycled. *)
-val is_reuse_scrutinee : int -> Core.Expr.t -> bool
+    type whose cells can be recycled: a shared variant's block where
+    [shared_blocks] (default [true]), another type's child cell under
+    non-atomic counts. *)
+val is_reuse_scrutinee : ?shared_blocks:bool -> int -> Core.Expr.t -> bool
+
+(** [loop_free body]: [body], a constant's, holds no local fixpoint, so
+    Loopify rewrites none of its matches and a match's reuse may. *)
+val loop_free : Core.Expr.t -> bool

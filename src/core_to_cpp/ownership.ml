@@ -38,7 +38,8 @@ let owned_parameters ?(declared : int -> Cpp_ir.Lowered.Type.t option = fun _ ->
     the global [owner] where they cover [params], and otherwise -- a global
     nothing settled, a lambda -- what its own body reads. *)
 let infer_owned_flags cx ?owner body params =
-  let read_off_body () = Core_plan.Ownership.read_off ~settled:(settled_ownership cx) params body in
+  let matches_reuse = Option.map (fun r -> Core.Ref.User.Set.mem r cx.ctx.input.program.reusing_matches) owner in
+  let read_off_body () = Core_plan.Ownership.read_off ?matches_reuse ~settled:(settled_ownership cx) params body in
   match Option.bind owner (settled_ownership cx) with
   | Some settled when List.length settled = List.length params ->
     if Base.Probe.checking () && settled <> read_off_body () then

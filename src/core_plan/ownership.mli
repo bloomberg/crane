@@ -17,9 +17,11 @@
 (** [read_off ~settled params body]: of each parameter of [params],
     innermost first, whether [body], standing under them, owns it, as
     [settled] says of its callees' parameters: it lets the parameter escape
-    ({!Escape.infer_owned_params}), or the parameter is a pair whose
-    components it lets escape, which a pair taken by value moves out. *)
+    ({!Escape.infer_owned_params}, told [matches_reuse]), or the parameter
+    is a pair whose components it lets escape, which a pair taken by value
+    moves out. *)
 val read_off :
+  ?matches_reuse:bool ->
   settled:(Names.GlobRef.t -> bool list option) -> ('name * Core.Type.t) list -> Core.Expr.t -> bool list
 
 (** The flags of [struc]'s functions, settled across calls: each
@@ -31,3 +33,11 @@ val read_off :
     which is borrowed. *)
 val summarize :
   ?receiver:(Names.GlobRef.t -> int option) -> Core.Program.t -> (Names.GlobRef.t * bool list) list
+
+(** The functions of [struc] whose matches may reuse the cell they take
+    apart ({!Core_to_cpp.Match}): those Loopify leaves alone, not being
+    loopified, and constants with no local fixpoint
+    ({!Escape.loop_free}), which have no recursion for it to rewrite.  The
+    others' scrutinees are owned for reuse only where a loop's cursor may
+    recycle them. *)
+val reusing_matches : Core.Program.t -> Core.Ref.User.Set.t

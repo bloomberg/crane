@@ -102,11 +102,14 @@ and generation_site =
     parameters of each function it owns, innermost first, settled across
     calls ({!Core_plan.Ownership.summarize}), and the parameters of a member of a
     recursive group a partner's call passes a closure for
-    ({!Callable_params.partner_closure_params}). *)
+    ({!Callable_params.partner_closure_params}), and the functions whose
+    matches may reuse the cell they take apart
+    ({!Core_plan.Ownership.reusing_matches}). *)
 type program_facts = {
   throwing_values : Core.Ref.Can.Set.t;
   parameter_ownership : bool list Core.Ref.User.Map.t;
   partner_closure_params : int list Core.Ref.User.Map.t;
+  reusing_matches : Core.Ref.User.Set.t;
 }
 
 (** The facts of a program nothing was analysed for: lowering outside an
@@ -114,7 +117,8 @@ type program_facts = {
 let no_program_facts =
   { throwing_values = Core.Ref.Can.Set.empty;
     parameter_ownership = Core.Ref.User.Map.empty;
-    partner_closure_params = Core.Ref.User.Map.empty }
+    partner_closure_params = Core.Ref.User.Map.empty;
+    reusing_matches = Core.Ref.User.Set.empty }
 
 (** What analysing and planning the unit being extracted decided that
     lowering reads, set for the extent of the unit
@@ -581,6 +585,16 @@ let callee_core_type_exn cx r = match callee_core_type cx r with Some t -> t | N
 (** Whether the analysis of the program found that the body of the
     definition [r] only throws ({!program_facts}). *)
 let is_throwing_value cx r = Core.Ref.Can.Set.mem r cx.ctx.input.program.throwing_values
+
+(** Whether a match in the body being generated may reuse the cell it takes
+    apart: Loopify leaves the body's matches alone, the declaration not
+    being loopified ({!Base.Table.reuse_loopify_ok}) or holding no recursion
+    to loopify ({!program_facts}). *)
+let matches_reuse cx =
+  Base.Table.reuse_loopify_ok ()
+  || match cx.ctx.input.body_owner with
+     | Some r -> Core.Ref.User.Set.mem r cx.ctx.input.program.reusing_matches
+     | None -> false
 
 (** The ownership of the global [r]'s parameters, innermost first, settled
     across calls ({!program_facts}): [None] for one the analysis did not

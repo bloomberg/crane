@@ -752,7 +752,11 @@ A per-function setting overrides the global flag.
 
 The match rewrite does not apply in a function that is
 [loopified](#set-crane-loopify--crane-loopify): loopification owns that shape,
-since stack safety is the stronger guarantee. Under `Set Crane Reuse` with
+since stack safety is the stronger guarantee. A loopified function with no
+recursion to rewrite (a definition that is not a fixpoint and holds no local
+fixpoint, such as a balancing helper) keeps the match rewrite. A loopified
+recursive function does not take a shared variant owned for reuse, since
+nothing in it would recycle the block. Under `Set Crane Reuse` with
 `Set Crane NonAtomicRc`, a tail-modulo-cons loop that owns its input recycles
 cells itself instead: each turn rebuilds its output cell in the input cell it
 frees. If you want the match rewrite for a particular function, exclude it from

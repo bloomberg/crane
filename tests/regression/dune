@@ -14364,3 +14364,14 @@
   (alias runtest)
   (deps partial_app_prefix_work.t.exe)
   (action (run ./partial_app_prefix_work.t.exe))))
+
+(subdir reuse_loopified_helper
+ (rule
+  (targets reuse_loopified_helper.t.exe)
+  (deps ReuseLoopifiedHelper.vo reuse_loopified_helper.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_loopified_helper.t.exe reuse_loopified_helper.t.cpp reuse_loopified_helper.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_loopified_helper.t.exe)
+  (action (run ./reuse_loopified_helper.t.exe))))
