@@ -62,7 +62,8 @@ let declared_here (stmts : stmt list) =
    lambda's parameters and the names its local fixpoint goes by.  Applied to
    all of them alike it renames consistently, so a body comes out
    alpha-equivalent as long as [f]'s fresh names are fresh.  A type is left
-   as it is, and so is what a lambda captures by move. *)
+   as it is.  What a lambda captures by move is a variable of the enclosing
+   body, renamed with it. *)
 let rename_ids f stmts =
   let keys = List.map (fun (x, b) -> (f x, b)) in
   let rec expr (e : expr) : expr =
@@ -81,6 +82,7 @@ let rename_ids f stmts =
         (Lambda
            { l with
              params = List.map (fun (t, x) -> (t, Option.map f x)) l.params;
+             moved = List.map f l.moved;
              binders = keys l.binders;
              fixpoint = Option.map fixpoint l.fixpoint })
     | _ -> Cpp_ir.Map.expr (m ()) e
