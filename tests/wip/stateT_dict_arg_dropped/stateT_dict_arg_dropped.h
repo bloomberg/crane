@@ -100,7 +100,7 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
   static stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>
   ret(CraneA0 x) {
     return stateT<T1, typename _tcI0::template m<CraneA0>, CraneA0>{[
-        =, x = std::move(x)](const auto &s) {
+        =, x = std::move(x)](const T1 &s) {
       return _tcI0::template ret<std::pair<CraneA0, T1>>(std::make_pair(x, s));
     }};
   }
@@ -111,7 +111,7 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
       crane::fn<
           stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>(CraneA0)> c2) {
     return stateT<T1, typename _tcI0::template m<CraneA1>, CraneA1>{
-        [=, c1 = std::move(c1), c2 = std::move(c2)](const auto &s) {
+        [=, c1 = std::move(c1), c2 = std::move(c2)](const T1 &s) {
           return _tcI0::template bind<std::pair<CraneA0, T1>,
                                       std::pair<CraneA1, T1>>(
               crane_container_cast<
