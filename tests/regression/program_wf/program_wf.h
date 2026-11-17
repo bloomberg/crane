@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROGRAM_WF
-#define INCLUDED_PROGRAM_WF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -173,5 +172,3 @@ struct ProgramWf {
                                   List<instruction>::nil())));
   static inline const uint64_t sample_code_size = sample_layout.code_size;
 };
-
-#endif // INCLUDED_PROGRAM_WF

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_RECORD_OPTION_FIELD
-#define INCLUDED_TFUNCTOR_RECORD_OPTION_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -327,5 +326,3 @@ struct TfunctorRecordOptionField {
     }
   }();
 };
-
-#endif // INCLUDED_TFUNCTOR_RECORD_OPTION_FIELD

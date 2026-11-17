@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VOID1_LAMBDA_RESULT_ERASED
-#define INCLUDED_VOID1_LAMBDA_RESULT_ERASED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -341,5 +340,3 @@ struct Void1LambdaResultErased {
                            Nat::o()))
           .eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
-
-#endif // INCLUDED_VOID1_LAMBDA_RESULT_ERASED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TRIPLE_LIST_DRAIN
-#define INCLUDED_TRIPLE_LIST_DRAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -301,5 +300,3 @@ struct TripleListDrain {
   static inline const t empty =
       t::node(UINT64_C(0), List<List<List<t>>>::nil());
 };
-
-#endif // INCLUDED_TRIPLE_LIST_DRAIN

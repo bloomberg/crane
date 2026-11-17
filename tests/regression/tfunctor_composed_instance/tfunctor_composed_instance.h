@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_COMPOSED_INSTANCE
-#define INCLUDED_TFUNCTOR_COMPOSED_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -337,5 +336,3 @@ struct TfunctorComposedInstance {
   static inline const bool is_five =
       total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
-
-#endif // INCLUDED_TFUNCTOR_COMPOSED_INSTANCE

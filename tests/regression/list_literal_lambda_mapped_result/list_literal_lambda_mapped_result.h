@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_LITERAL_LAMBDA_MAPPED_RESULT
-#define INCLUDED_LIST_LITERAL_LAMBDA_MAPPED_RESULT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -130,5 +129,3 @@ struct ListLiteralLambdaMappedResult {
   static inline const uint64_t from_pair =
       gs.hd([](uint64_t x) { return std::make_pair(x, x); })(UINT64_C(3)).first;
 };
-
-#endif // INCLUDED_LIST_LITERAL_LAMBDA_MAPPED_RESULT

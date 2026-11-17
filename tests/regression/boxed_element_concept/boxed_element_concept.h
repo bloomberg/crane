@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOXED_ELEMENT_CONCEPT
-#define INCLUDED_BOXED_ELEMENT_CONCEPT
+#pragma once
 
 #include <concepts>
 #include <conslist.h>
@@ -152,5 +151,3 @@ T1 List::fold_left(F0 &&f, const crane::list<T2> &l, T1 a0) {
     return List::template fold_left<T1, T2>(f, l0, f(std::move(a0), b));
   }
 }
-
-#endif // INCLUDED_BOXED_ELEMENT_CONCEPT

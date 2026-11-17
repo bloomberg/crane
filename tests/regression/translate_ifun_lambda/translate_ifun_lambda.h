@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TRANSLATE_IFUN_LAMBDA
-#define INCLUDED_TRANSLATE_IFUN_LAMBDA
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -432,5 +431,3 @@ Interp::translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
         t0.observe());
   });
 }
-
-#endif // INCLUDED_TRANSLATE_IFUN_LAMBDA

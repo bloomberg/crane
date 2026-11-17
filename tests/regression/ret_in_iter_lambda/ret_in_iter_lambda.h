@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RET_IN_ITER_LAMBDA
-#define INCLUDED_RET_IN_ITER_LAMBDA
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -540,5 +539,3 @@ template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
-
-#endif // INCLUDED_RET_IN_ITER_LAMBDA

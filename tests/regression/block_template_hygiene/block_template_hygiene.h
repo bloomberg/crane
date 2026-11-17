@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BLOCK_TEMPLATE_HYGIENE
-#define INCLUDED_BLOCK_TEMPLATE_HYGIENE
+#pragma once
 
 #include <fstream>
 #include <iostream>
@@ -55,5 +54,3 @@ struct BlockTemplateHygiene {
   /// placing get_line directly in expression position.
   static std::string expr_position_iife();
 };
-
-#endif // INCLUDED_BLOCK_TEMPLATE_HYGIENE

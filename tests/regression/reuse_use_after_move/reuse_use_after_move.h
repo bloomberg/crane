@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_USE_AFTER_MOVE
-#define INCLUDED_REUSE_USE_AFTER_MOVE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -140,5 +139,3 @@ struct ReuseUseAfterMove {
     }
   }();
 };
-
-#endif // INCLUDED_REUSE_USE_AFTER_MOVE

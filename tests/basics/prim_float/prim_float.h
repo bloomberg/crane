@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PRIM_FLOAT
-#define INCLUDED_PRIM_FLOAT
+#pragma once
 
 #include <cmath>
 #include <cstdint>
@@ -20,5 +19,3 @@ struct PrimFloat {
   static bool test_leb(double x0_, double x1_);
   static double test_of_uint63(int64_t x0_);
 };
-
-#endif // INCLUDED_PRIM_FLOAT

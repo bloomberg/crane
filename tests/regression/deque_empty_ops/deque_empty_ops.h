@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEQUE_EMPTY_OPS
-#define INCLUDED_DEQUE_EMPTY_OPS
+#pragma once
 
 #include <cstdint>
 #include <deque>
@@ -14,5 +13,3 @@ struct DequeEmptyOps {
   static std::deque<uint64_t>
   run_concat(const std::deque<std::deque<uint64_t>> &x0_);
 };
-
-#endif // INCLUDED_DEQUE_EMPTY_OPS

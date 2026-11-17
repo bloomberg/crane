@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POINT_FREE_FIX_BINDER_UNTYPED
-#define INCLUDED_POINT_FREE_FIX_BINDER_UNTYPED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -394,5 +393,3 @@ Denote::freeze(const Tree<typename _tcI4::base> &t) {
         });
   }
 }
-
-#endif // INCLUDED_POINT_FREE_FIX_BINDER_UNTYPED

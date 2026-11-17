@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_METHOD_LIFTED_HELPER
-#define INCLUDED_RECORD_METHOD_LIFTED_HELPER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -118,5 +117,3 @@ struct RecordMethodLiftedHelper {
           List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
           List<bool>::cons(true, List<bool>::nil())}.total();
 };
-
-#endif // INCLUDED_RECORD_METHOD_LIFTED_HELPER

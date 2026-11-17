@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CARRIER_HOLDER_BEFORE_ALIAS
-#define INCLUDED_CARRIER_HOLDER_BEFORE_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -440,5 +439,3 @@ struct CarrierHolderBeforeAlias {
     }
   }();
 };
-
-#endif // INCLUDED_CARRIER_HOLDER_BEFORE_ALIAS

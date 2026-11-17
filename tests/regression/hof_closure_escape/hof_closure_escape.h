@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HOF_CLOSURE_ESCAPE
-#define INCLUDED_HOF_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -132,5 +131,3 @@ struct HofClosureEscape {
     return apply_option(std::move(o1), UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_HOF_CLOSURE_ESCAPE

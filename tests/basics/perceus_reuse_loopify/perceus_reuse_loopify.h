@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PERCEUS_REUSE_LOOPIFY
-#define INCLUDED_PERCEUS_REUSE_LOOPIFY
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -155,5 +154,3 @@ struct R {
   static lst rev1(const lst &l);
   static uint64_t sum1(const lst &l);
 };
-
-#endif // INCLUDED_PERCEUS_REUSE_LOOPIFY

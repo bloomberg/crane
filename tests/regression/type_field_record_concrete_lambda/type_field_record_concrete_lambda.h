@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_FIELD_RECORD_CONCRETE_LAMBDA
-#define INCLUDED_TYPE_FIELD_RECORD_CONCRETE_LAMBDA
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -137,5 +136,3 @@ struct TypeFieldRecordConcreteLambda {
   static inline const uint64_t result = algs.template fold_left<uint64_t>(
       [](uint64_t acc, const alg &a) { return (acc + run(a)); }, UINT64_C(0));
 };
-
-#endif // INCLUDED_TYPE_FIELD_RECORD_CONCRETE_LAMBDA

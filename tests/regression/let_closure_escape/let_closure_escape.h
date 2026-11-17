@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_CLOSURE_ESCAPE
-#define INCLUDED_LET_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -221,5 +220,3 @@ struct LetClosureEscape {
     return b1.apply_box(UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_LET_CLOSURE_ESCAPE

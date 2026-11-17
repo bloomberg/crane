@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEP_EXT_SIGT_DEPENDENT
-#define INCLUDED_SEP_EXT_SIGT_DEPENDENT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -58,5 +57,3 @@ struct Packer {
   static SigT<Tag, tag_type> pack_c(bool b);
   static Tag get_tag(const SigT<Tag, tag_type> &x0_);
 };
-
-#endif // INCLUDED_SEP_EXT_SIGT_DEPENDENT

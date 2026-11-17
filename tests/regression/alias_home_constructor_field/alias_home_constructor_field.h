@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_HOME_CONSTRUCTOR_FIELD
-#define INCLUDED_ALIAS_HOME_CONSTRUCTOR_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -308,5 +307,3 @@ struct AliasHomeConstructorField {
   static inline const Nat five =
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_ALIAS_HOME_CONSTRUCTOR_FIELD

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_FUNCTION_FIELD_STDLIB_PROBE
-#define INCLUDED_RECORD_FUNCTION_FIELD_STDLIB_PROBE
+#pragma once
 
 #include "fn.h"
 #include <utility>
@@ -20,5 +19,3 @@ struct RecordFunctionFieldStdlibProbe {
   static inline const endo e = endo{Datatypes::negb};
   static inline const Bool0 sample = e.run(Bool0::TRUE_);
 };
-
-#endif // INCLUDED_RECORD_FUNCTION_FIELD_STDLIB_PROBE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_INTERP_STATE
-#define INCLUDED_ITREE_INTERP_STATE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -840,5 +839,3 @@ Monads::template stateT<T3, _tcI0::template M, T4> State::interp_state(
                                 T4>(h0, x)(x0));
   };
 }
-
-#endif // INCLUDED_ITREE_INTERP_STATE

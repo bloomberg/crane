@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_FN_IN_RECURSIVE_CONTAINER
-#define INCLUDED_ERASED_FN_IN_RECURSIVE_CONTAINER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -244,5 +243,3 @@ struct ErasedFnInRecursiveContainer {
               List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::nil()),
           List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::nil())));
 };
-
-#endif // INCLUDED_ERASED_FN_IN_RECURSIVE_CONTAINER

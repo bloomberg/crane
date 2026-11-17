@@ -1,5 +1,4 @@
-#ifndef INCLUDED_JMS_BBL_ROUNDTRIP
-#define INCLUDED_JMS_BBL_ROUNDTRIP
+#pragma once
 
 #include <cstdint>
 
@@ -17,5 +16,3 @@ struct JmsBblRoundtrip {
   static inline const bool t =
       execute_bbl(execute_jms(sample, UINT64_C(200))).pc == UINT64_C(102);
 };
-
-#endif // INCLUDED_JMS_BBL_ROUNDTRIP

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_LAMBDA_TWO_USERS
-#define INCLUDED_LIFTED_LAMBDA_TWO_USERS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -100,5 +99,3 @@ struct LiftedLambdaTwoUsers {
   }();
   static inline const uint64_t go = (one + two);
 };
-
-#endif // INCLUDED_LIFTED_LAMBDA_TWO_USERS

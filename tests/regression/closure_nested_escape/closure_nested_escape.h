@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_NESTED_ESCAPE
-#define INCLUDED_CLOSURE_NESTED_ESCAPE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -41,5 +40,3 @@ struct ClosureNestedEscape {
     return g(UINT64_C(10));
   }();
 };
-
-#endif // INCLUDED_CLOSURE_NESTED_ESCAPE

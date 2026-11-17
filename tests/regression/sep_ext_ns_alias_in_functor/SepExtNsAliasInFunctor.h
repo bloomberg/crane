@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNSALIASINFUNCTOR
-#define INCLUDED_SEPEXTNSALIASINFUNCTOR
+#pragma once
 
 #include "Datatypes.h"
 
@@ -25,5 +24,3 @@ template <S X> struct MyFunctor {
   }
 };
 } // namespace SepExtNsAliasInFunctor
-
-#endif // INCLUDED_SEPEXTNSALIASINFUNCTOR

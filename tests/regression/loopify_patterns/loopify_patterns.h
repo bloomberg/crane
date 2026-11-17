@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_PATTERNS
-#define INCLUDED_LOOPIFY_PATTERNS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -591,5 +590,3 @@ struct LoopifyPatterns {
   /// four_elem l four-element destructuring pattern with fallback cases.
   static uint64_t four_elem(const list<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_PATTERNS

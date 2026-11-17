@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FMAP_ERASED_LAMBDA_PARAM
-#define INCLUDED_FMAP_ERASED_LAMBDA_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -248,5 +247,3 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
 }
-
-#endif // INCLUDED_FMAP_ERASED_LAMBDA_PARAM

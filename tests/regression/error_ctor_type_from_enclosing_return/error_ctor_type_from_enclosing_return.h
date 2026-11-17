@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERROR_CTOR_TYPE_FROM_ENCLOSING_RETURN
-#define INCLUDED_ERROR_CTOR_TYPE_FROM_ENCLOSING_RETURN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -205,5 +204,3 @@ struct ErrorCtorTypeFromEnclosingReturn {
     }
   }();
 };
-
-#endif // INCLUDED_ERROR_CTOR_TYPE_FROM_ENCLOSING_RETURN

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BANK_LOOKUP_DEFAULT
-#define INCLUDED_BANK_LOOKUP_DEFAULT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -180,5 +179,3 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     }
   }
 }
-
-#endif // INCLUDED_BANK_LOOKUP_DEFAULT

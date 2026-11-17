@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HIGHER_KINDED_CONSTANT_TYPE_FUNCTION
-#define INCLUDED_HIGHER_KINDED_CONSTANT_TYPE_FUNCTION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -146,5 +145,3 @@ struct HigherKindedConstantTypeFunction {
       }());
   static inline const uint64_t result = z.length();
 };
-
-#endif // INCLUDED_HIGHER_KINDED_CONSTANT_TYPE_FUNCTION

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_OPTION_INSTANCE
-#define INCLUDED_TFUNCTOR_OPTION_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -170,5 +169,3 @@ struct TfunctorOptionInstance {
     }
   }();
 };
-
-#endif // INCLUDED_TFUNCTOR_OPTION_INSTANCE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SWITCH_BREAK
-#define INCLUDED_LOOPIFY_SWITCH_BREAK
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -139,5 +138,3 @@ struct LoopifySwitchBreak {
   /// fall through to the next case and produce an incorrect count.
   static uint64_t count_tag(Tag t, const List<std::pair<Tag, uint64_t>> &ops);
 };
-
-#endif // INCLUDED_LOOPIFY_SWITCH_BREAK

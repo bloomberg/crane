@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_PROD_FN_ANY_LIT
-#define INCLUDED_SIGT_PROD_FN_ANY_LIT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -214,5 +213,3 @@ Inst::sem my_arg(std::monostate _x);
 /// In Rocq this is true (predicate 0 =? 0), and the extracted C++ now
 /// agrees.
 bool check();
-
-#endif // INCLUDED_SIGT_PROD_FN_ANY_LIT

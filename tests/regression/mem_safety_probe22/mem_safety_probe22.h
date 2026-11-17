@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE22
-#define INCLUDED_MEM_SAFETY_PROBE22
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -365,5 +364,3 @@ struct MemSafetyProbe22 {
           tree::node(tree::leaf(), UINT64_C(0), tree::leaf())),
                            UINT64_C(1)));
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE22

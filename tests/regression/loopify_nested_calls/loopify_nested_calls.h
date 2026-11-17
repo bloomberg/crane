@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_NESTED_CALLS
-#define INCLUDED_LOOPIFY_NESTED_CALLS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -114,5 +113,3 @@ List<uint64_t> down_let(uint64_t n);
 /// returns .  Plain cons n' (down_inline n') with the recursive call
 /// directly in argument position is handled correctly.
 List<uint64_t> down_inline(uint64_t n);
-
-#endif // INCLUDED_LOOPIFY_NESTED_CALLS

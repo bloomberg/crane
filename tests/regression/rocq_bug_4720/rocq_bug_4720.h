@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_4720
-#define INCLUDED_ROCQ_BUG_4720
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -93,5 +92,3 @@ struct RocqBug4720 {
 
   template <A a_, B b_, typename c_> struct WithModPriv {};
 };
-
-#endif // INCLUDED_ROCQ_BUG_4720

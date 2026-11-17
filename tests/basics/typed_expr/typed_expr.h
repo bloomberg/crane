@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPED_EXPR
-#define INCLUDED_TYPED_EXPR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -267,5 +266,3 @@ inline crane::obj Expr::eval(Ty _x) const {
   }
   return _result;
 }
-
-#endif // INCLUDED_TYPED_EXPR

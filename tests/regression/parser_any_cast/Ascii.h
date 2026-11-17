@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASCII
-#define INCLUDED_ASCII
+#pragma once
 
 namespace Ascii {
 struct Ascii;
@@ -25,5 +24,3 @@ struct Ascii {
   }
 };
 } // namespace Ascii
-
-#endif // INCLUDED_ASCII

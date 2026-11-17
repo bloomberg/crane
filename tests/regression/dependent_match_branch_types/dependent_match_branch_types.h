@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_MATCH_BRANCH_TYPES
-#define INCLUDED_DEPENDENT_MATCH_BRANCH_TYPES
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -156,5 +155,3 @@ struct DependentMatchBranchTypes {
                                          Nat::s(Nat::s(Nat::s(Nat::o()))))))),
                            vec::vnil()));
 };
-
-#endif // INCLUDED_DEPENDENT_MATCH_BRANCH_TYPES

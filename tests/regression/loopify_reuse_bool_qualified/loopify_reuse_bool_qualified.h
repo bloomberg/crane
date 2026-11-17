@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_REUSE_BOOL_QUALIFIED
-#define INCLUDED_LOOPIFY_REUSE_BOOL_QUALIFIED
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -144,5 +143,3 @@ struct LoopifyReuseBoolQualified {
   static lst incr(lst l);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_REUSE_BOOL_QUALIFIED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
-#define INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -181,5 +180,3 @@ struct PolymorphicValueEtaArity {
          const crane::fn<uint64_t(bool)> &g) { return (a + g(true)); },
       UINT64_C(0));
 };
-
-#endif // INCLUDED_POLYMORPHIC_VALUE_ETA_ARITY

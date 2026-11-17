@@ -1,5 +1,4 @@
-#ifndef INCLUDED_Z_ARITH_OVERFLOW
-#define INCLUDED_Z_ARITH_OVERFLOW
+#pragma once
 
 #include <cstdint>
 
@@ -29,5 +28,3 @@ struct ZArithOverflow {
   static inline const int64_t neg_sq = static_cast<int64_t>(
       static_cast<uint64_t>(neg_big) * static_cast<uint64_t>(neg_big));
 };
-
-#endif // INCLUDED_Z_ARITH_OVERFLOW

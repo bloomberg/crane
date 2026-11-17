@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_MULTI_INDEX
-#define INCLUDED_ERASED_MULTI_INDEX
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -214,5 +213,3 @@ struct ErasedMultiIndex {
     return l.hlist_length();
   }();
 };
-
-#endif // INCLUDED_ERASED_MULTI_INDEX

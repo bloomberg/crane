@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TAIL_REC_ZIP
-#define INCLUDED_TAIL_REC_ZIP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -226,5 +225,3 @@ List<Prod<T1, T2>> better_zip(const List<T1> &la, const List<T2> &lb) {
     }
   }
 }
-
-#endif // INCLUDED_TAIL_REC_ZIP

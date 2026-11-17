@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MOVE_SAFETY
-#define INCLUDED_MOVE_SAFETY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -271,5 +270,3 @@ struct MoveSafety {
     }();
   }();
 };
-
-#endif // INCLUDED_MOVE_SAFETY

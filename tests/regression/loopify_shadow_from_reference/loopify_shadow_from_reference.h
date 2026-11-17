@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SHADOW_FROM_REFERENCE
-#define INCLUDED_LOOPIFY_SHADOW_FROM_REFERENCE
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -135,5 +134,3 @@ struct LoopifyShadowFromReference {
   static lst g(lst l);
   static lst upto(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_SHADOW_FROM_REFERENCE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_CHILD_CELLS
-#define INCLUDED_SHARED_CHILD_CELLS
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -110,5 +109,3 @@ struct SharedChildCells {
   /// Swaps the children: both are fields read out of the matched value.
   static tree mirror_root(const tree &t);
 };
-
-#endif // INCLUDED_SHARED_CHILD_CELLS

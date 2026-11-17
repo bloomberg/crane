@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_UNIT_COLLAPSES_TO_VOID
-#define INCLUDED_ITREE_UNIT_COLLAPSES_TO_VOID
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -132,5 +131,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_ITREE_UNIT_COLLAPSES_TO_VOID

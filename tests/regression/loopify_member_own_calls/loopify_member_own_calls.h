@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MEMBER_OWN_CALLS
-#define INCLUDED_LOOPIFY_MEMBER_OWN_CALLS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -162,5 +161,3 @@ public:
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_LOOPIFY_MEMBER_OWN_CALLS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_COIND_STREAM
-#define INCLUDED_LOOPIFY_COIND_STREAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -257,5 +256,3 @@ struct LoopifyCoindStream {
   static inline const List<uint64_t> test_fibs_8 =
       take<uint64_t>(UINT64_C(8), fibs);
 };
-
-#endif // INCLUDED_LOOPIFY_COIND_STREAM

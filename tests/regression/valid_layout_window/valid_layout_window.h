@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALID_LAYOUT_WINDOW
-#define INCLUDED_VALID_LAYOUT_WINDOW
+#pragma once
 
 #include <cstdint>
 
@@ -16,5 +15,3 @@ struct ValidLayoutWindow {
        (valid_layoutb(layout{UINT64_C(4090), UINT64_C(20)}) ? UINT64_C(1)
                                                             : UINT64_C(0)));
 };
-
-#endif // INCLUDED_VALID_LAYOUT_WINDOW

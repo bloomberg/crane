@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PATTERN_LAMBDA_THROUGH_INSTANCE
-#define INCLUDED_PATTERN_LAMBDA_THROUGH_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -319,5 +318,3 @@ struct PatternLambdaThroughInstance {
                 UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_PATTERN_LAMBDA_THROUGH_INSTANCE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IMPORTED_ALIAS_QUALIFICATION
-#define INCLUDED_IMPORTED_ALIAS_QUALIFICATION
+#pragma once
 
 #include <memory>
 #include <optional>
@@ -14,5 +13,3 @@ struct AliasSource {
 };
 
 const cell entry = AliasSource::id_cell(AliasSource::empty_cell);
-
-#endif // INCLUDED_IMPORTED_ALIAS_QUALIFICATION

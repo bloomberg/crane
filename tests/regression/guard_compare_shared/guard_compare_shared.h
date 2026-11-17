@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GUARD_COMPARE_SHARED
-#define INCLUDED_GUARD_COMPARE_SHARED
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -125,5 +124,3 @@ struct GuardCompareShared {
   static Comparison tcompare(const tree &a, const tree &b);
   static tree build(uint64_t n);
 };
-
-#endif // INCLUDED_GUARD_COMPARE_SHARED

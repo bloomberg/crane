@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SINGLETON_RECORD
-#define INCLUDED_SINGLETON_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -60,5 +59,3 @@ struct SingletonRecord {
   static inline const uint64_t test_fn =
       apply_wrapped(my_fn_wrapper, UINT64_C(7));
 };
-
-#endif // INCLUDED_SINGLETON_RECORD

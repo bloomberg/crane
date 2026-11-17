@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_BLOCK_TEMPLATE_FRAME
-#define INCLUDED_LOOPIFY_BLOCK_TEMPLATE_FRAME
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -97,5 +96,3 @@ public:
 struct LoopifyBlockTemplateFrame {
   static List<uint64_t> doubles(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_BLOCK_TEMPLATE_FRAME

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_TAIL_RECURSION_OVERFLOW
-#define INCLUDED_DEEP_TAIL_RECURSION_OVERFLOW
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -129,5 +128,3 @@ struct DeepTailRecursionOverflow {
   static inline const uint64_t deep =
       total_of(build(UINT64_C(3000000), chain::end_(UINT64_C(0))));
 };
-
-#endif // INCLUDED_DEEP_TAIL_RECURSION_OVERFLOW

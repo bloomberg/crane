@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHOD_BODY_NAMES_LATER_STRUCT
-#define INCLUDED_METHOD_BODY_NAMES_LATER_STRUCT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -149,5 +148,3 @@ inline Comparison Zed::raw_cmp(const Zed &y) const {
     }
   }
 }
-
-#endif // INCLUDED_METHOD_BODY_NAMES_LATER_STRUCT

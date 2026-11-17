@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_14843
-#define INCLUDED_ROCQ_BUG_14843
+#pragma once
 
 #include "fn.h"
 
@@ -28,5 +27,3 @@ struct RocqBug14843 {
         r_{[](const auto &) { f1_(); }, [](const auto &) { f2_(); }};
   };
 };
-
-#endif // INCLUDED_ROCQ_BUG_14843

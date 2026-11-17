@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INTRINSIC_TABLE_CURRY
-#define INCLUDED_INTRINSIC_TABLE_CURRY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -751,5 +750,3 @@ Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h,
   return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
       crane::obj(), crane::obj(), std::move(h))(std::move(x)));
 }
-
-#endif // INCLUDED_INTRINSIC_TABLE_CURRY

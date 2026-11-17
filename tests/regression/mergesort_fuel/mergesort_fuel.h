@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MERGESORT_FUEL
-#define INCLUDED_MERGESORT_FUEL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -147,5 +146,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_MERGESORT_FUEL

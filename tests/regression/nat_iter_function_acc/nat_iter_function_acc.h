@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAT_ITER_FUNCTION_ACC
-#define INCLUDED_NAT_ITER_FUNCTION_ACC
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -30,5 +29,3 @@ struct NatIterFunctionAcc {
         [](uint64_t x) { return x; })(UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_NAT_ITER_FUNCTION_ACC

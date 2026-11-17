@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SORTING
-#define INCLUDED_LOOPIFY_SORTING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -312,5 +311,3 @@ struct LoopifySorting {
                                         const List<uint64_t> &l);
   static List<uint64_t> uniq_sorted(const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_SORTING

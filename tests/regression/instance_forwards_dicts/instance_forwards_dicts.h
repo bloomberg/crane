@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_FORWARDS_DICTS
-#define INCLUDED_INSTANCE_FORWARDS_DICTS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -502,5 +501,3 @@ struct InstanceForwardsDicts {
   static uint64_t sum_exp(const exp<uint64_t> &e);
   static inline const uint64_t result = sum_exp(e1);
 };
-
-#endif // INCLUDED_INSTANCE_FORWARDS_DICTS

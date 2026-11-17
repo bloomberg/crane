@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_POLY
-#define INCLUDED_EFFECT_POLY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -142,5 +141,3 @@ struct EffectPoly {
   /// 8. Chaining monadic functions with different return types
   static int64_t chain_types();
 };
-
-#endif // INCLUDED_EFFECT_POLY

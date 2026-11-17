@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTION_RETURN_BRANCH_PROBE
-#define INCLUDED_FUNCTION_RETURN_BRANCH_PROBE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -76,5 +75,3 @@ struct FunctionReturnBranchProbe {
       Nat::s(Nat::s(Nat::o())),
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))));
 };
-
-#endif // INCLUDED_FUNCTION_RETURN_BRANCH_PROBE

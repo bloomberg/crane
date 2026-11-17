@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_REUSE_CURSOR_TURNS
-#define INCLUDED_LOOPIFY_REUSE_CURSOR_TURNS
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -134,5 +133,3 @@ struct LoopifyReuseCursorTurns {
   static lst scale(uint64_t acc, lst l);
   static lst suffix_sums(lst l);
 };
-
-#endif // INCLUDED_LOOPIFY_REUSE_CURSOR_TURNS

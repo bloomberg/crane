@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MATCH_REF_AFTER_MOVE
-#define INCLUDED_MATCH_REF_AFTER_MOVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -411,5 +410,3 @@ struct MatchRefAfterMove {
                   UINT64_C(50), mylist<uint64_t>::mycons(
                                     UINT64_C(60), mylist<uint64_t>::mynil()))));
 };
-
-#endif // INCLUDED_MATCH_REF_AFTER_MOVE

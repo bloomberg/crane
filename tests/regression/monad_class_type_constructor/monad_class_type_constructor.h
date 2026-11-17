@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR
-#define INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -77,5 +76,3 @@ struct MonadClassTypeConstructor {
     }
   }();
 };
-
-#endif // INCLUDED_MONAD_CLASS_TYPE_CONSTRUCTOR

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_PROD_FN_ANY_LIT_PAIR
-#define INCLUDED_SIGT_PROD_FN_ANY_LIT_PAIR
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -200,5 +199,3 @@ using M = Make<Inst>;
 [[gnu::used]] inline const M::entry my_entry = M::mk_entry(std::monostate{});
 Inst::sem my_arg(std::monostate _x);
 bool check();
-
-#endif // INCLUDED_SIGT_PROD_FN_ANY_LIT_PAIR

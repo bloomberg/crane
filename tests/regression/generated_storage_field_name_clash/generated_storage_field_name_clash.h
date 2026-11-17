@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
-#define INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH
+#pragma once
 
 #include <type_traits>
 #include <utility>
@@ -63,5 +62,3 @@ struct GeneratedStorageFieldNameClash {
   static bool is_flag(const d_v_ &x);
   static inline const bool sample = is_flag(d_v_::flag(true));
 };
-
-#endif // INCLUDED_GENERATED_STORAGE_FIELD_NAME_CLASH

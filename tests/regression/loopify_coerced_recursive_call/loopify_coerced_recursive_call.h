@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_COERCED_RECURSIVE_CALL
-#define INCLUDED_LOOPIFY_COERCED_RECURSIVE_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -581,5 +580,3 @@ struct LoopifyCoercedRecursiveCall {
   static inline const uint64_t run =
       crane::any_cast<uint64_t>(eval<uint64_t>(sample));
 };
-
-#endif // INCLUDED_LOOPIFY_COERCED_RECURSIVE_CALL

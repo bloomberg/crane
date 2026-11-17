@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTTHISINFREEFN
-#define INCLUDED_SEPEXTTHISINFREEFN
+#pragma once
 
 #include "Datatypes.h"
 #include "ListDef.h"
@@ -21,5 +20,3 @@ template <S X> struct FreeFn {
   }
 };
 } // namespace SepExtThisInFreeFn
-
-#endif // INCLUDED_SEPEXTTHISINFREEFN

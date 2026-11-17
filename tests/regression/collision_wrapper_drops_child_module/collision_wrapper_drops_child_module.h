@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COLLISION_WRAPPER_DROPS_CHILD_MODULE
-#define INCLUDED_COLLISION_WRAPPER_DROPS_CHILD_MODULE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -190,5 +189,3 @@ struct AstLike {
 ::Ident to_ident(const AstLike::Raw_id &k);
 std::pair<::Ident, std::pair<std::pair<bool, bool>, bool>>
 both(const AstLike::Raw_id &k);
-
-#endif // INCLUDED_COLLISION_WRAPPER_DROPS_CHILD_MODULE

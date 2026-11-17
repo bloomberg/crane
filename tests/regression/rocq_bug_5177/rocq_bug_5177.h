@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_5177
-#define INCLUDED_ROCQ_BUG_5177
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -87,5 +86,3 @@ struct RocqBug5177 {
     static t1 bar(typename MT::t, Nat x) { return x; }
   };
 };
-
-#endif // INCLUDED_ROCQ_BUG_5177

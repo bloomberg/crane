@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GUARD_COMPARE_LABEL_COLLISION
-#define INCLUDED_GUARD_COMPARE_LABEL_COLLISION
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -168,5 +167,3 @@ struct Ordered {
   /// for pure/immutable values.
   static Compare<T> compare(T x, T y);
 };
-
-#endif // INCLUDED_GUARD_COMPARE_LABEL_COLLISION

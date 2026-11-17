@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_RETURN_UNIT_PROBE
-#define INCLUDED_DEPENDENT_RETURN_UNIT_PROBE
+#pragma once
 
 #include "obj.h"
 #include <utility>
@@ -18,5 +17,3 @@ struct DependentReturnUnitProbe {
   static inline const Bool0 sample_bool =
       crane::any_cast<Bool0>(dep(Bool0::FALSE_));
 };
-
-#endif // INCLUDED_DEPENDENT_RETURN_UNIT_PROBE

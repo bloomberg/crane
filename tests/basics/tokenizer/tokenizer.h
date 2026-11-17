@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TOKENIZER
-#define INCLUDED_TOKENIZER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -255,5 +254,3 @@ struct Tokenizer {
     return list_to_vec_map_h<T1, T2>(f, l.rev());
   }
 };
-
-#endif // INCLUDED_TOKENIZER

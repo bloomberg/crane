@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_IN_COLLISION_WRAPPER_NAMED_BARE
-#define INCLUDED_INSTANCE_IN_COLLISION_WRAPPER_NAMED_BARE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -335,5 +334,3 @@ std::optional<T2> Lookup::assoc(const T1 &k, const List<std::pair<T1, T2>> &l) {
     }
   }
 }
-
-#endif // INCLUDED_INSTANCE_IN_COLLISION_WRAPPER_NAMED_BARE

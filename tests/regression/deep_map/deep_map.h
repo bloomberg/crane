@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_MAP
-#define INCLUDED_DEEP_MAP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -245,5 +244,3 @@ struct DeepMap {
   /// Get root value.
   static uint64_t root_or_zero(const tree<uint64_t> &t);
 };
-
-#endif // INCLUDED_DEEP_MAP

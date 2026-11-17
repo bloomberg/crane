@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_SINGLETON_UNIT_TUPLE
-#define INCLUDED_ERASED_SINGLETON_UNIT_TUPLE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -102,5 +101,3 @@ syms_semty cons_sem(Sym _x, const List<Sym> &_x0, sym_semty v, syms_semty rest);
 syms_semty head1(const List<Sym> &_x, syms_semty vs);
 uint64_t firstOf(const List<Sym> &_x, syms_semty t);
 uint64_t check(uint64_t n);
-
-#endif // INCLUDED_ERASED_SINGLETON_UNIT_TUPLE

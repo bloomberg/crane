@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GB_CLO
-#define INCLUDED_GB_CLO
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -179,5 +178,3 @@ struct GbClo {
   static List<crane::fn<uint64_t(uint64_t)>> build(uint64_t n);
   static uint64_t closures(uint64_t n, uint64_t rounds);
 };
-
-#endif // INCLUDED_GB_CLO

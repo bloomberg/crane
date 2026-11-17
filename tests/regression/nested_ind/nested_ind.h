@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_IND
-#define INCLUDED_NESTED_IND
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -821,5 +820,3 @@ struct NestedInd {
                      test_literals),
       test_doubled);
 };
-
-#endif // INCLUDED_NESTED_IND

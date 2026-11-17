@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MORE_TREES
-#define INCLUDED_LOOPIFY_MORE_TREES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -286,5 +285,3 @@ struct LoopifyMoreTrees {
                                                const List<tree> &level);
   static List<List<uint64_t>> tree_levels(const tree &t);
 };
-
-#endif // INCLUDED_LOOPIFY_MORE_TREES

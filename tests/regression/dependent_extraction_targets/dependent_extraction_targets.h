@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_EXTRACTION_TARGETS
-#define INCLUDED_DEPENDENT_EXTRACTION_TARGETS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -234,5 +233,3 @@ struct DependentExtractionTargets {
       ((Inner::Deep::g + B::use) +
        rep<uint64_t>(UINT64_C(7), UINT64_C(3)).length());
 };
-
-#endif // INCLUDED_DEPENDENT_EXTRACTION_TARGETS

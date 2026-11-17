@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RAM_WRITE
-#define INCLUDED_RAM_WRITE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -258,5 +257,3 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     }
   }
 }
-
-#endif // INCLUDED_RAM_WRITE

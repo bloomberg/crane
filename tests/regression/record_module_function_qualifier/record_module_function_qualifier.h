@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_MODULE_FUNCTION_QUALIFIER
-#define INCLUDED_RECORD_MODULE_FUNCTION_QUALIFIER
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -107,5 +106,3 @@ struct RecordModuleFunctionQualifier {
                 Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
   static inline const Nat large = Bag::classify(Bag::Kind::LARGE);
 };
-
-#endif // INCLUDED_RECORD_MODULE_FUNCTION_QUALIFIER

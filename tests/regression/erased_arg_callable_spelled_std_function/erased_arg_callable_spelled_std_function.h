@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_ARG_CALLABLE_SPELLED_STD_FUNCTION
-#define INCLUDED_ERASED_ARG_CALLABLE_SPELLED_STD_FUNCTION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -187,5 +186,3 @@ bool forall_dec(const List<T1> &l,
 bool small_dec(const Nat &n);
 /// The call site that fails: a lambda passed where deduction runs.
 bool allsmall(const List<Nat> &l);
-
-#endif // INCLUDED_ERASED_ARG_CALLABLE_SPELLED_STD_FUNCTION

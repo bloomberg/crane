@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_FIX_EXTRA_TARG_AT_CALL
-#define INCLUDED_LIFTED_FIX_EXTRA_TARG_AT_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -539,5 +538,3 @@ Monad0::liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
     return _tcI0::template ret<T3>(f(x0));
   });
 }
-
-#endif // INCLUDED_LIFTED_FIX_EXTRA_TARG_AT_CALL

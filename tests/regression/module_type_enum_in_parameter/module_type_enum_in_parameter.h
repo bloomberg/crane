@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_ENUM_IN_PARAMETER
-#define INCLUDED_MODULE_TYPE_ENUM_IN_PARAMETER
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -65,5 +64,3 @@ struct ModuleTypeEnumInParameter {
   using U = Use<Impl>;
   static inline const uint64_t result = U::go();
 };
-
-#endif // INCLUDED_MODULE_TYPE_ENUM_IN_PARAMETER

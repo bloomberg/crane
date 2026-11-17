@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POLY_NIL_TYPE_ERASED
-#define INCLUDED_POLY_NIL_TYPE_ERASED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -129,5 +128,3 @@ struct PolyNilTypeErased {
 
   static inline const uint64_t t = f<uint64_t>(UINT64_C(4));
 };
-
-#endif // INCLUDED_POLY_NIL_TYPE_ERASED

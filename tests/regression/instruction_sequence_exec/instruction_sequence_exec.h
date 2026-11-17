@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTRUCTION_SEQUENCE_EXEC
-#define INCLUDED_INSTRUCTION_SEQUENCE_EXEC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -171,5 +170,3 @@ struct InstructionSequenceExec {
     return (s_.pc_ + s_.acc_);
   }();
 };
-
-#endif // INCLUDED_INSTRUCTION_SEQUENCE_EXEC

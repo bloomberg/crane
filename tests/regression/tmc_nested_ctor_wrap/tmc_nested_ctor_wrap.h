@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TMC_NESTED_CTOR_WRAP
-#define INCLUDED_TMC_NESTED_CTOR_WRAP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -281,5 +280,3 @@ struct TmcNestedCtorWrap {
   static Nat rsize(const rose &r);
   static rose spine(const Nat &n);
 };
-
-#endif // INCLUDED_TMC_NESTED_CTOR_WRAP

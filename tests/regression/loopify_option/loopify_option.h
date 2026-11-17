@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_OPTION
-#define INCLUDED_LOOPIFY_OPTION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -274,5 +273,3 @@ struct LoopifyOption {
     return find_index_aux<T1>(p, l, UINT64_C(0));
   }
 };
-
-#endif // INCLUDED_LOOPIFY_OPTION

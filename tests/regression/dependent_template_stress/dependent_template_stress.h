@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_TEMPLATE_STRESS
-#define INCLUDED_DEPENDENT_TEMPLATE_STRESS
+#pragma once
 
 #include <cstdint>
 
@@ -92,5 +91,3 @@ struct DependentTemplateStress {
     }
   };
 };
-
-#endif // INCLUDED_DEPENDENT_TEMPLATE_STRESS

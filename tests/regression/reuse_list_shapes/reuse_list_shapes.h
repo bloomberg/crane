@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_LIST_SHAPES
-#define INCLUDED_REUSE_LIST_SHAPES
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -604,5 +603,3 @@ struct ReuseListShapes {
                                              },
                                              UINT64_C(0)));
 };
-
-#endif // INCLUDED_REUSE_LIST_SHAPES

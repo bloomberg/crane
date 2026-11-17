@@ -1,5 +1,4 @@
-#ifndef INCLUDED_JUMP_TARGETS
-#define INCLUDED_JUMP_TARGETS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -479,5 +478,3 @@ struct JumpTargets {
       std::make_pair(test_collection, test_region_check), test_jms),
                                                              test_jun);
 };
-
-#endif // INCLUDED_JUMP_TARGETS

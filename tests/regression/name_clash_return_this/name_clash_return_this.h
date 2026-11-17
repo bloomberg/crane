@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_RETURN_THIS
-#define INCLUDED_NAME_CLASH_RETURN_THIS
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -77,5 +76,3 @@ struct NameClashReturnThis {
   /// Nested: match on result of a function that may return this
   static uint64_t nested_this(const shape &s);
 };
-
-#endif // INCLUDED_NAME_CLASH_RETURN_THIS

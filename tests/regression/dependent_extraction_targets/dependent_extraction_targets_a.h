@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_EXTRACTION_TARGETS_A
-#define INCLUDED_DEPENDENT_EXTRACTION_TARGETS_A
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -32,5 +31,3 @@ struct DependentExtractionTargets {
     static uint64_t get(const t &x);
   };
 };
-
-#endif // INCLUDED_DEPENDENT_EXTRACTION_TARGETS_A

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TAIL_CALL_SAME_NAME_OTHER_MODULE
-#define INCLUDED_TAIL_CALL_SAME_NAME_OTHER_MODULE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -250,5 +249,3 @@ struct TailCallSameNameOtherModule {
       T2::t2::c2(Nat::s(Nat::o())).cmp(T2::t2::c2(Nat::s(Nat::s(Nat::o()))));
   static inline const bool ok = go.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
-
-#endif // INCLUDED_TAIL_CALL_SAME_NAME_OTHER_MODULE

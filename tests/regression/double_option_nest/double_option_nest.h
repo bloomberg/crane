@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DOUBLE_OPTION_NEST
-#define INCLUDED_DOUBLE_OPTION_NEST
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -90,5 +89,3 @@ struct DoubleOptionNest {
       t::node(UINT64_C(0), std::optional<std::optional<t>>());
   static uint64_t peek(const t &x);
 };
-
-#endif // INCLUDED_DOUBLE_OPTION_NEST

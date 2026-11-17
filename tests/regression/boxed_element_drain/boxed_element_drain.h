@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOXED_ELEMENT_DRAIN
-#define INCLUDED_BOXED_ELEMENT_DRAIN
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -97,5 +96,3 @@ struct BoxedElementDrain {
                               crane::list<rose>{})));
   static inline const uint64_t sample_total = total(sample);
 };
-
-#endif // INCLUDED_BOXED_ELEMENT_DRAIN

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DROPPED_BINDER_IN_INSTANCE_METHOD
-#define INCLUDED_DROPPED_BINDER_IN_INSTANCE_METHOD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -204,5 +203,3 @@ struct Prov_nat {
 static_assert(Prov<Prov_nat, Nat>);
 std::optional<List<Nat>> plain(const std::optional<Nat> &o);
 std::optional<List<Nat>> run(const std::optional<Nat> &o);
-
-#endif // INCLUDED_DROPPED_BINDER_IN_INSTANCE_METHOD

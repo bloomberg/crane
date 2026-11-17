@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIBST_COFIX_REPRO
-#define INCLUDED_FIBST_COFIX_REPRO
+#pragma once
 
 #include "small_vector.h"
 #include <algorithm>
@@ -343,5 +342,3 @@ struct FibstCofixReproTests {
 
   static_assert(STRefClass<nat_stref, uint64_t>);
 };
-
-#endif // INCLUDED_FIBST_COFIX_REPRO

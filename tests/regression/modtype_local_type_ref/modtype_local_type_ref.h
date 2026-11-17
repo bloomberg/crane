@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODTYPE_LOCAL_TYPE_REF
-#define INCLUDED_MODTYPE_LOCAL_TYPE_REF
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -44,5 +43,3 @@ concept SHIFT = requires {
 
 static_assert(STORE<ModtypeLocalTypeRef::S>);
 static_assert(SHIFT<ModtypeLocalTypeRef::T>);
-
-#endif // INCLUDED_MODTYPE_LOCAL_TYPE_REF

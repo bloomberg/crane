@@ -4,8 +4,7 @@
 // Skip List Node implementation for STM-based skip list
 // This file provides the C++ runtime support for the extracted Rocq skip list.
 
-#ifndef SKIPNODE_H
-#define SKIPNODE_H
+#pragma once
 
 #include <memory>
 #include <optional>
@@ -89,5 +88,3 @@ struct SkipPath {
         return nullptr;
     }
 };
-
-#endif // SKIPNODE_H

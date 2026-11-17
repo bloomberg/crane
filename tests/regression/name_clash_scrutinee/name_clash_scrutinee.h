@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_SCRUTINEE
-#define INCLUDED_NAME_CLASH_SCRUTINEE
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -242,5 +241,3 @@ struct NameClashScrutinee {
     return wrapper_rect<T1>(f, std::move(f0), w);
   }
 };
-
-#endif // INCLUDED_NAME_CLASH_SCRUTINEE

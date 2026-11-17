@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_NULLARY_METHOD_TYARG
-#define INCLUDED_HKT_NULLARY_METHOD_TYARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -227,5 +226,3 @@ struct HktNullaryMethodTyarg {
   static inline const Nat run =
       two<LC, Nat>(Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())));
 };
-
-#endif // INCLUDED_HKT_NULLARY_METHOD_TYARG

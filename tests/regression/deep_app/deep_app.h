@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_APP
-#define INCLUDED_DEEP_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -250,5 +249,3 @@ struct DeepApp {
     return _result;
   }
 };
-
-#endif // INCLUDED_DEEP_APP

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE
-#define INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE
+#pragma once
 
 #include <stdexcept>
 #include <utility>
@@ -35,5 +34,3 @@ struct DependentElimStdexceptProbe {
     return Unit::TT;
   }();
 };
-
-#endif // INCLUDED_DEPENDENT_ELIM_STDEXCEPT_PROBE

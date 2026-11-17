@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARSER_FRAME_MODTYPE_NIL
-#define INCLUDED_PARSER_FRAME_MODTYPE_NIL
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -114,5 +113,3 @@ struct D {
 };
 
 using TheParser = ParserFn<D>;
-
-#endif // INCLUDED_PARSER_FRAME_MODTYPE_NIL

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER
-#define INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER
+#pragma once
 
 #include <cstdint>
 
@@ -14,5 +13,3 @@ struct TodoPolymorphicErasedHelper {
     return (kept_nat + (kept_bool ? UINT64_C(1) : UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_TODO_POLYMORPHIC_ERASED_HELPER

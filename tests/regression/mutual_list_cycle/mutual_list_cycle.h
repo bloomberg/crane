@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_LIST_CYCLE
-#define INCLUDED_MUTUAL_LIST_CYCLE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -342,5 +341,3 @@ inline Nat Branch::branch_size() const {
   const auto &[_, a1] = std::get<typename Branch::Branch0>(this->v());
   return Nat::s(a1->tree_size());
 }
-
-#endif // INCLUDED_MUTUAL_LIST_CYCLE

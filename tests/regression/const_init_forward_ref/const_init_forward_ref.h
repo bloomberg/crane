@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONST_INIT_FORWARD_REF
-#define INCLUDED_CONST_INIT_FORWARD_REF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -143,5 +142,3 @@ struct Coord {
 };
 
 const uint64_t answer = Coord::table_a.length();
-
-#endif // INCLUDED_CONST_INIT_FORWARD_REF

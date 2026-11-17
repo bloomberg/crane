@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STM_TVAR_OF_FUNCTION
-#define INCLUDED_STM_TVAR_OF_FUNCTION
+#pragma once
 
 #include "fn.h"
 #include "shared_block.h"
@@ -17,5 +16,3 @@ struct StmTvarOfFunction {
   static uint64_t fnw();
   static uint64_t written();
 };
-
-#endif // INCLUDED_STM_TVAR_OF_FUNCTION

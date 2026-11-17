@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PATHOLOGICAL_RECORD
-#define INCLUDED_PATHOLOGICAL_RECORD
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -39,5 +38,3 @@ struct PathologicalRecord {
       double_match(Rec{UINT64_C(1), UINT64_C(2), UINT64_C(3)},
                    Rec{UINT64_C(4), UINT64_C(5), UINT64_C(6)});
 };
-
-#endif // INCLUDED_PATHOLOGICAL_RECORD

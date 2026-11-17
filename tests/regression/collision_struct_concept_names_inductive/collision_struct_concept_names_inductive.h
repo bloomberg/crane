@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COLLISION_STRUCT_CONCEPT_NAMES_INDUCTIVE
-#define INCLUDED_COLLISION_STRUCT_CONCEPT_NAMES_INDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -200,5 +199,3 @@ struct CollisionStructConceptNamesInductive {
     }
   }();
 };
-
-#endif // INCLUDED_COLLISION_STRUCT_CONCEPT_NAMES_INDUCTIVE

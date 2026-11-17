@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
-#define INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH
+#pragma once
 
 #include <type_traits>
 #include <utility>
@@ -63,5 +62,3 @@ struct GeneratedVariantFactoryNameClash {
   static bool is_variant(const token &t);
   static inline const bool sample = is_variant(token::Variant_t_());
 };
-
-#endif // INCLUDED_GENERATED_VARIANT_FACTORY_NAME_CLASH

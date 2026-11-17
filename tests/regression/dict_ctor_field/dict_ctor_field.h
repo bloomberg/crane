@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DICT_CTOR_FIELD
-#define INCLUDED_DICT_CTOR_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -54,5 +53,3 @@ struct DictCtorField {
   static uint64_t run(const box &b);
   static inline const uint64_t test = run(box::box0(SzNat, UINT64_C(7)));
 };
-
-#endif // INCLUDED_DICT_CTOR_FIELD

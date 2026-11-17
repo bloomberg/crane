@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BINARY_NUMS
-#define INCLUDED_BINARY_NUMS
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -354,5 +353,3 @@ struct BinaryNums {
       z_sign(Z::zneg(Positive::xi(Positive::xh())));
   static inline const Z test_z_sign_zero = z_sign(Z::z0());
 };
-
-#endif // INCLUDED_BINARY_NUMS

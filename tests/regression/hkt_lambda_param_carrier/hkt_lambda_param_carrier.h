@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_LAMBDA_PARAM_CARRIER
-#define INCLUDED_HKT_LAMBDA_PARAM_CARRIER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -139,5 +138,3 @@ struct HktLambdaParamCarrier {
 
   static std::optional<Nat> run(const std::optional<Nat> &o);
 };
-
-#endif // INCLUDED_HKT_LAMBDA_PARAM_CARRIER

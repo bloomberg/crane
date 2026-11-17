@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_DEFAULTS
-#define INCLUDED_RECORD_DEFAULTS
+#pragma once
 
 #include <cstdint>
 
@@ -37,5 +36,3 @@ struct RecordDefaults {
   static inline const uint64_t test_rect_area =
       rect_area(make_rect(UINT64_C(0), UINT64_C(0), UINT64_C(10), UINT64_C(5)));
 };
-
-#endif // INCLUDED_RECORD_DEFAULTS

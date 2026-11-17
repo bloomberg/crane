@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NUMERAL_CONV_UNMAPPED_NAT
-#define INCLUDED_NUMERAL_CONV_UNMAPPED_NAT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -143,5 +142,3 @@ struct NumeralConvUnmappedNat {
                            static_cast<uint64_t>(
                                static_cast<int64_t>(UINT64_C(2))));
 };
-
-#endif // INCLUDED_NUMERAL_CONV_UNMAPPED_NAT

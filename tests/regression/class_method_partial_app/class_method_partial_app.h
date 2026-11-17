@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_METHOD_PARTIAL_APP
-#define INCLUDED_CLASS_METHOD_PARTIAL_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -169,5 +168,3 @@ struct ClassMethodPartialApp {
              uint64_t n) { return (f(UINT64_C(1)) + n); },
           UINT64_C(0));
 };
-
-#endif // INCLUDED_CLASS_METHOD_PARTIAL_APP

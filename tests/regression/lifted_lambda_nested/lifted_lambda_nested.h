@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_LAMBDA_NESTED
-#define INCLUDED_LIFTED_LAMBDA_NESTED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -94,5 +93,3 @@ struct LiftedLambdaNested {
     }();
   }();
 };
-
-#endif // INCLUDED_LIFTED_LAMBDA_NESTED

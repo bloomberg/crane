@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAT_MODULE_FAMILY_RETURNS
-#define INCLUDED_NAT_MODULE_FAMILY_RETURNS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -1502,5 +1501,3 @@ template <typename T1>
 CompSpecT<T1> Datatypes::CompSpec2Type(const T1 &, const T1 &, Comparison x0_) {
   return Datatypes::CompareSpec2Type(x0_);
 }
-
-#endif // INCLUDED_NAT_MODULE_FAMILY_RETURNS

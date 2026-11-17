@@ -1,5 +1,4 @@
-#ifndef INCLUDED_JCN_OPS
-#define INCLUDED_JCN_OPS
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -52,5 +51,3 @@ struct JcnOps {
       std::make_pair(std::make_pair(test_branch_target, test_condition),
                      test_constants);
 };
-
-#endif // INCLUDED_JCN_OPS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MACRO_NAMED_CONSTRUCTOR
-#define INCLUDED_MACRO_NAMED_CONSTRUCTOR
+#pragma once
 
 #include <cmath>
 #include <cstdint>
@@ -56,5 +55,3 @@ struct MacroNamedConstructor {
   static bool is_normal(double f);
   static inline const bool two_is_normal = is_normal(0x1.4p+1);
 };
-
-#endif // INCLUDED_MACRO_NAMED_CONSTRUCTOR

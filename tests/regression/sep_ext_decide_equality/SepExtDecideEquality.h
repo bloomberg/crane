@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTDECIDEEQUALITY
-#define INCLUDED_SEPEXTDECIDEEQUALITY
+#pragma once
 
 #include <concepts>
 #include <variant>
@@ -58,5 +57,3 @@ template <Sigma Ty> struct DefsFn {
   };
 };
 } // namespace SepExtDecideEquality
-
-#endif // INCLUDED_SEPEXTDECIDEEQUALITY

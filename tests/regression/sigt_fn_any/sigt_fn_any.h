@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_FN_ANY
-#define INCLUDED_SIGT_FN_ANY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -187,5 +186,3 @@ Inst::sem my_arg(std::monostate _x);
 /// test driver can invoke it under try/catch (before the fix it threw
 /// std::bad_any_cast).
 bool check();
-
-#endif // INCLUDED_SIGT_FN_ANY

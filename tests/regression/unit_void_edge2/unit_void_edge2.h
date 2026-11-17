@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_VOID_EDGE2
-#define INCLUDED_UNIT_VOID_EDGE2
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -132,5 +131,3 @@ struct UnitVoidEdge2 {
   static inline const uint64_t test_compose = compose_option_unit(true, false);
   static inline const uint64_t test_use_pair = use_pair;
 };
-
-#endif // INCLUDED_UNIT_VOID_EDGE2

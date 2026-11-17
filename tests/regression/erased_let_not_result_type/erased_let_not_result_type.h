@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_LET_NOT_RESULT_TYPE
-#define INCLUDED_ERASED_LET_NOT_RESULT_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -139,5 +138,3 @@ struct ErasedLetNotResultType {
        P::measure(UINT64_C(3),
                   P::finish(UINT64_C(3), UINT64_C(4), true, UINT64_C(7))));
 };
-
-#endif // INCLUDED_ERASED_LET_NOT_RESULT_TYPE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_METHOD_VARYING_FN_ARG
-#define INCLUDED_LOOPIFY_METHOD_VARYING_FN_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -256,5 +255,3 @@ struct LoopifyMethodVaryingFnArg {
                  UINT64_C(2), tree::leaf())
           .go([](uint64_t x) { return (x + 1); });
 };
-
-#endif // INCLUDED_LOOPIFY_METHOD_VARYING_FN_ARG

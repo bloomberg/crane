@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_FOLD_CALLBACK
-#define INCLUDED_ETA_FOLD_CALLBACK
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -216,5 +215,3 @@ struct EtaFoldCallback {
     }();
   }();
 };
-
-#endif // INCLUDED_ETA_FOLD_CALLBACK

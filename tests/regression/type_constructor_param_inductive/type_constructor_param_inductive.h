@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_CONSTRUCTOR_PARAM_INDUCTIVE
-#define INCLUDED_TYPE_CONSTRUCTOR_PARAM_INDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -274,5 +273,3 @@ struct TypeConstructorParamInductive {
                                                     UINT64_C(1)),
                                                 std::optional<uint64_t>())));
 };
-
-#endif // INCLUDED_TYPE_CONSTRUCTOR_PARAM_INDUCTIVE

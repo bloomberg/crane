@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_INDEX_FUN_TYPE
-#define INCLUDED_ERASED_INDEX_FUN_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -187,5 +186,3 @@ struct ErasedIndexFunType {
   static inline const Nat run =
       ex(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
-
-#endif // INCLUDED_ERASED_INDEX_FUN_TYPE

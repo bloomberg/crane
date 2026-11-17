@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_FIX_LOOPIFY
-#define INCLUDED_NESTED_FIX_LOOPIFY
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -120,5 +119,3 @@ struct NestedFixLoopify {
   static lst mk(uint64_t n);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_NESTED_FIX_LOOPIFY

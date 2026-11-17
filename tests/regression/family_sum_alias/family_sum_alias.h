@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FAMILY_SUM_ALIAS
-#define INCLUDED_FAMILY_SUM_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -391,5 +390,3 @@ struct FamilySumAlias {
     }
   }();
 };
-
-#endif // INCLUDED_FAMILY_SUM_ALIAS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_LOCAL_RETURN_TYPE
-#define INCLUDED_MODULE_LOCAL_RETURN_TYPE
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -42,5 +41,3 @@ struct ModuleLocalReturnType {
     return a0;
   }();
 };
-
-#endif // INCLUDED_MODULE_LOCAL_RETURN_TYPE

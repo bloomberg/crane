@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_OUTPUT_PROBE
-#define INCLUDED_FUNCTOR_OUTPUT_PROBE
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -39,5 +38,3 @@ using FN = F<N>;
 struct FunctorOutputProbe {
   static inline const uint64_t sample = FN::value();
 };
-
-#endif // INCLUDED_FUNCTOR_OUTPUT_PROBE

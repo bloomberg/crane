@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IO
-#define INCLUDED_IO
+#pragma once
 
 #include <fstream>
 #include <iostream>
@@ -15,5 +14,3 @@ struct iotest {
   static std::string test4();
   static void test5();
 };
-
-#endif // INCLUDED_IO

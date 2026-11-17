@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_20894
-#define INCLUDED_ROCQ_BUG_20894
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -121,5 +120,3 @@ struct RocqBug20894 {
   static_assert(S<M>);
   static M::t bug();
 };
-
-#endif // INCLUDED_ROCQ_BUG_20894

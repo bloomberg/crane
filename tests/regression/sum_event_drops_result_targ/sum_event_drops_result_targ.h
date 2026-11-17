@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUM_EVENT_DROPS_RESULT_TARG
-#define INCLUDED_SUM_EVENT_DROPS_RESULT_TARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -187,5 +186,3 @@ std::shared_ptr<ITree<T2>> FailE::cast_() const {
                       throw std::logic_error("absurd case");
                     });
 }
-
-#endif // INCLUDED_SUM_EVENT_DROPS_RESULT_TARG

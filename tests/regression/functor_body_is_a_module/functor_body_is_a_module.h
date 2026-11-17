@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_BODY_IS_A_MODULE
-#define INCLUDED_FUNCTOR_BODY_IS_A_MODULE
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -40,5 +39,3 @@ struct FunctorBodyIsAModule {
   static inline const uint64_t from_id = I::z;
   static inline const uint64_t from_const = C::z;
 };
-
-#endif // INCLUDED_FUNCTOR_BODY_IS_A_MODULE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INDEXED_FAMILY_DEEP_DESTRUCTOR
-#define INCLUDED_INDEXED_FAMILY_DEEP_DESTRUCTOR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -250,5 +249,3 @@ struct IndexedFamilyDeepDestructor {
 
   static inline const expr sample = expr::succe(expr::lit(UINT64_C(1)));
 };
-
-#endif // INCLUDED_INDEXED_FAMILY_DEEP_DESTRUCTOR

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IIFE_NAME_CLASH
-#define INCLUDED_IIFE_NAME_CLASH
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -58,5 +57,3 @@ struct IifeNameClash {
 
   static uint64_t double_get(const wrapper &w1, const wrapper &w2);
 };
-
-#endif // INCLUDED_IIFE_NAME_CLASH

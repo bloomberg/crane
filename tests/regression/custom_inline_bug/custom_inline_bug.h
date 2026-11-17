@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CUSTOM_INLINE_BUG
-#define INCLUDED_CUSTOM_INLINE_BUG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -125,5 +124,3 @@ struct CustomInlineBug {
   static List<std::pair<State, uint64_t>> count_pairs(uint64_t n,
                                                       const State &s);
 };
-
-#endif // INCLUDED_CUSTOM_INLINE_BUG

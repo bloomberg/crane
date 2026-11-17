@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OUTER_MEMBER_SHADOWED_BY_NESTED
-#define INCLUDED_OUTER_MEMBER_SHADOWED_BY_NESTED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -259,5 +258,3 @@ struct OuterMemberShadowedByNested {
         return a0(UINT64_C(0));
       }());
 };
-
-#endif // INCLUDED_OUTER_MEMBER_SHADOWED_BY_NESTED

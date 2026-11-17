@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_DESTRUCT
-#define INCLUDED_DEEP_DESTRUCT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -148,5 +147,3 @@ struct DeepDestruct {
   /// Simple accessor to observe the result.
   static uint64_t head_or_zero(const mylist<uint64_t> &l);
 };
-
-#endif // INCLUDED_DEEP_DESTRUCT

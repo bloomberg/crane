@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TY
-#define INCLUDED_TY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -209,5 +208,3 @@ template <typename A> Forest<A>::~Forest() {
   }
 }
 } // namespace Ty
-
-#endif // INCLUDED_TY

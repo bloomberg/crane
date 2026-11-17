@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INTERP_PARAMS_FAMILY
-#define INCLUDED_INTERP_PARAMS_FAMILY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -1018,5 +1017,3 @@ Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
   return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
       crane::obj(), crane::obj(), std::move(h0))(std::move(x)));
 }
-
-#endif // INCLUDED_INTERP_PARAMS_FAMILY

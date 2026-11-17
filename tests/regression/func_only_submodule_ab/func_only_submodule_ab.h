@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNC_ONLY_SUBMODULE_AB
-#define INCLUDED_FUNC_ONLY_SUBMODULE_AB
+#pragma once
 
 #include <cstdint>
 
@@ -16,5 +15,3 @@ struct FuncOnlySubmoduleAb {
 
   static inline const uint64_t t = Root::A::inc(Root::B::dec(UINT64_C(3)));
 };
-
-#endif // INCLUDED_FUNC_ONLY_SUBMODULE_AB

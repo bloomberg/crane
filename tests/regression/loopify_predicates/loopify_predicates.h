@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_PREDICATES
-#define INCLUDED_LOOPIFY_PREDICATES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -512,5 +511,3 @@ struct LoopifyPredicates {
 
   static List<uint64_t> remove_all(uint64_t x, const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_PREDICATES

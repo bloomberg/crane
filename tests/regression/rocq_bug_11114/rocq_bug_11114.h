@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_11114
-#define INCLUDED_ROCQ_BUG_11114
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -139,5 +138,3 @@ struct RocqBug11114 {
   static inline const pkg test_map =
       map([](uint64_t x) { return (x + UINT64_C(1)); }, test_pkg);
 };
-
-#endif // INCLUDED_ROCQ_BUG_11114

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_PAIR_FN_PAYLOAD
-#define INCLUDED_SIGT_PAIR_FN_PAYLOAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -178,5 +177,3 @@ struct SigtPairFnPayload {
       [](uint64_t acc, const auto &it) { return (acc + score(it)); },
       UINT64_C(0));
 };
-
-#endif // INCLUDED_SIGT_PAIR_FN_PAYLOAD

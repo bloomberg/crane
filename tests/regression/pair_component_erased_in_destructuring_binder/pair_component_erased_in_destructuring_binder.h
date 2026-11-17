@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAIR_COMPONENT_ERASED_IN_DESTRUCTURING_BINDER
-#define INCLUDED_PAIR_COMPONENT_ERASED_IN_DESTRUCTURING_BINDER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -266,5 +265,3 @@ struct PairComponentErasedInDestructuringBinder {
           Nat::s(Nat::o()), Nat::s(Nat::s(Nat::o())),
           List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil()));
 };
-
-#endif // INCLUDED_PAIR_COMPONENT_ERASED_IN_DESTRUCTURING_BINDER

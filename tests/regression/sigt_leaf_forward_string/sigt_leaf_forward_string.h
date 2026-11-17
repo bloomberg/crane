@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_LEAF_FORWARD_STRING
-#define INCLUDED_SIGT_LEAF_FORWARD_STRING
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -211,5 +210,3 @@ using M = Make<Inst>;
         [](std::string _x0, std::string _x1) -> bool { return (_x0 == _x1); }));
 Inst::sem my_arg(std::monostate _x);
 bool check();
-
-#endif // INCLUDED_SIGT_LEAF_FORWARD_STRING

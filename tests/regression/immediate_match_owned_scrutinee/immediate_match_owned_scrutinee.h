@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IMMEDIATE_MATCH_OWNED_SCRUTINEE
-#define INCLUDED_IMMEDIATE_MATCH_OWNED_SCRUTINEE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -165,5 +164,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_IMMEDIATE_MATCH_OWNED_SCRUTINEE

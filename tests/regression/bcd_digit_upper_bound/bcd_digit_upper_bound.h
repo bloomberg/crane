@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BCD_DIGIT_UPPER_BOUND
-#define INCLUDED_BCD_DIGIT_UPPER_BOUND
+#pragma once
 
 #include <cstdint>
 
@@ -9,5 +8,3 @@ struct BcdDigitUpperBound {
       ((is_bcd_digitb(UINT64_C(7)) ? UINT64_C(1) : UINT64_C(0)) +
        (is_bcd_digitb(UINT64_C(12)) ? UINT64_C(1) : UINT64_C(0)));
 };
-
-#endif // INCLUDED_BCD_DIGIT_UPPER_BOUND

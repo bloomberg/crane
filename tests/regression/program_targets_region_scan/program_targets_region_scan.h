@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROGRAM_TARGETS_REGION_SCAN
-#define INCLUDED_PROGRAM_TARGETS_REGION_SCAN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -226,5 +225,3 @@ struct ProgramTargetsRegionScan {
     }
   }();
 };
-
-#endif // INCLUDED_PROGRAM_TARGETS_REGION_SCAN

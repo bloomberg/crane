@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TMC_VALUE_ROOT
-#define INCLUDED_TMC_VALUE_ROOT
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -124,5 +123,3 @@ struct TmcValueRoot {
   /// Two cells per step: the second is allocated and linked into the first.
   static lst stutter(const lst &xs);
 };
-
-#endif // INCLUDED_TMC_VALUE_ROOT

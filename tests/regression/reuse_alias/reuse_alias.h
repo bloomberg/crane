@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_ALIAS
-#define INCLUDED_REUSE_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -139,5 +138,3 @@ struct ReuseAlias {
   /// Chain inc_head: each call might try to reuse.
   static mylist<uint64_t> triple_inc(const mylist<uint64_t> &l);
 };
-
-#endif // INCLUDED_REUSE_ALIAS

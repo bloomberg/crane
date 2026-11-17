@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TRANSLATE_ALIAS_SOURCE
-#define INCLUDED_TRANSLATE_ALIAS_SOURCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -348,5 +347,3 @@ Interp::translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
         t.observe());
   });
 }
-
-#endif // INCLUDED_TRANSLATE_ALIAS_SOURCE

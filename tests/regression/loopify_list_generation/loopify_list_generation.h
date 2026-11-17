@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LIST_GENERATION
-#define INCLUDED_LOOPIFY_LIST_GENERATION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -132,5 +131,3 @@ public:
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_LOOPIFY_LIST_GENERATION

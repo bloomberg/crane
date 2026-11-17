@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FACTORY_NAME_COLLISION
-#define INCLUDED_FACTORY_NAME_COLLISION
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -203,5 +202,3 @@ struct FactoryNameCollision {
   static inline const uint64_t cased_sum =
       (cased::mk(UINT64_C(1)).uncase() + cased::mk0(UINT64_C(1)).uncase());
 };
-
-#endif // INCLUDED_FACTORY_NAME_COLLISION

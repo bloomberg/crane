@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MUTUAL_TMC_TEMPORARY
-#define INCLUDED_LOOPIFY_MUTUAL_TMC_TEMPORARY
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -154,5 +153,3 @@ struct LoopifyMutualTmcTemporary {
   static uint64_t run_da(Color c, uint64_t n);
   static uint64_t run_db(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_MUTUAL_TMC_TEMPORARY

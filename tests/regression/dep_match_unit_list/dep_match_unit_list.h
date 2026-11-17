@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_MATCH_UNIT_LIST
-#define INCLUDED_DEP_MATCH_UNIT_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -189,5 +188,3 @@ struct DepMatchUnitList {
                                       List<uint64_t>::nil())))
           .length();
 };
-
-#endif // INCLUDED_DEP_MATCH_UNIT_LIST

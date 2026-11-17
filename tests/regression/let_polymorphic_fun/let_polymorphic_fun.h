@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_POLYMORPHIC_FUN
-#define INCLUDED_LET_POLYMORPHIC_FUN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -155,5 +154,3 @@ struct LetPolymorphicFun {
                     List<crane::fn<uint64_t(uint64_t)>>::nil()));
   }();
 };
-
-#endif // INCLUDED_LET_POLYMORPHIC_FUN

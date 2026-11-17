@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_10757
-#define INCLUDED_ROCQ_BUG_10757
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -70,5 +69,3 @@ struct RocqBug10757 {
     return iterate_func<T1>(beq, f, Sig<T1>::exist(x));
   }
 };
-
-#endif // INCLUDED_ROCQ_BUG_10757

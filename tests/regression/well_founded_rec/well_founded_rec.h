@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WELL_FOUNDED_REC
-#define INCLUDED_WELL_FOUNDED_REC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -109,5 +108,3 @@ struct WellFoundedRec {
   static inline const uint64_t test_gcd_2 = gcd_wf(UINT64_C(35), UINT64_C(14));
   static inline const uint64_t test_gcd_3 = gcd_wf(UINT64_C(0), UINT64_C(5));
 };
-
-#endif // INCLUDED_WELL_FOUNDED_REC

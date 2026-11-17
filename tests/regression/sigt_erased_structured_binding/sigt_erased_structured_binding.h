@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_ERASED_STRUCTURED_BINDING
-#define INCLUDED_SIGT_ERASED_STRUCTURED_BINDING
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -265,5 +264,3 @@ struct SigtErasedStructuredBinding {
       List<item>::nil());
   static inline const Nat run = total(ex);
 };
-
-#endif // INCLUDED_SIGT_ERASED_STRUCTURED_BINDING

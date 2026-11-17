@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_ENUM_CONCEPT
-#define INCLUDED_MODULE_TYPE_ENUM_CONCEPT
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -49,5 +48,3 @@ struct ModuleTypeEnumConcept {
   using U = Use<Impl>;
   static inline const uint64_t result = U::f(Impl::Color::GREEN);
 };
-
-#endif // INCLUDED_MODULE_TYPE_ENUM_CONCEPT

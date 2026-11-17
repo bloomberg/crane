@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_CHAIN_CONSTRAINT
-#define INCLUDED_INSTANCE_CHAIN_CONSTRAINT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -231,5 +230,3 @@ struct InstanceChainConstraint {
                        Nat::s(Nat::s(Nat::o())),
                        Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
 };
-
-#endif // INCLUDED_INSTANCE_CHAIN_CONSTRAINT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CPS_ESCAPE
-#define INCLUDED_CPS_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -304,5 +303,3 @@ struct CpsEscape {
     }();
   }();
 };
-
-#endif // INCLUDED_CPS_ESCAPE

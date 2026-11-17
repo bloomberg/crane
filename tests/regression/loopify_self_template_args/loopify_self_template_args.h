@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SELF_TEMPLATE_ARGS
-#define INCLUDED_LOOPIFY_SELF_TEMPLATE_ARGS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -172,5 +171,3 @@ List::list<T1> List::remove(F0 &&eq_dec0, const T1 &x,
     }
   }
 }
-
-#endif // INCLUDED_LOOPIFY_SELF_TEMPLATE_ARGS

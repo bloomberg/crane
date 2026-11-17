@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TEMPLATE_PARAM_REDEF
-#define INCLUDED_TEMPLATE_PARAM_REDEF
+#pragma once
 
 #include "obj.h"
 #include <variant>
@@ -23,5 +22,3 @@ struct M {
 template <typename T1> void Lib::f(const std::monostate<crane::obj> &) {
   return;
 }
-
-#endif // INCLUDED_TEMPLATE_PARAM_REDEF

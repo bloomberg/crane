@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BARE_SELF_METHOD_VALUE
-#define INCLUDED_BARE_SELF_METHOD_VALUE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -470,5 +469,3 @@ struct BareSelfMethodValue {
               Nat::s(Nat::s(Nat::s(Nat::o()))), bareSelfMethodValue::leaf()),
                                           List<bareSelfMethodValue>::nil()))));
 };
-
-#endif // INCLUDED_BARE_SELF_METHOD_VALUE

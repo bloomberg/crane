@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_CLOSURE_ESCAPE
-#define INCLUDED_LIST_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -308,5 +307,3 @@ struct ListClosureEscape {
     return fns.apply_first(UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_LIST_CLOSURE_ESCAPE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIBLING_MODULE_SAME_INDUCTIVE
-#define INCLUDED_SIBLING_MODULE_SAME_INDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -128,5 +127,3 @@ struct SiblingModuleSameInductive {
   static Nat run(const Nat &n);
   static bool run2(bool b);
 };
-
-#endif // INCLUDED_SIBLING_MODULE_SAME_INDUCTIVE

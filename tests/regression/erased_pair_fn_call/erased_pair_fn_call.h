@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_PAIR_FN_CALL
-#define INCLUDED_ERASED_PAIR_FN_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -216,5 +215,3 @@ struct ErasedPairFnCall {
   static inline const uint64_t total = items.template fold_left<uint64_t>(
       [](uint64_t acc, const auto &b) { return (acc + size(b)); }, UINT64_C(0));
 };
-
-#endif // INCLUDED_ERASED_PAIR_FN_CALL

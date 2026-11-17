@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_MENTIONS_ALIAS_AND_MODULE_TYPE
-#define INCLUDED_CONCEPT_MENTIONS_ALIAS_AND_MODULE_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -180,5 +179,3 @@ struct ConceptMentionsAliasAndModuleType {
   static inline const Name run =
       showNat::show(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
-
-#endif // INCLUDED_CONCEPT_MENTIONS_ALIAS_AND_MODULE_TYPE

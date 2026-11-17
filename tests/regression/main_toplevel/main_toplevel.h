@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MAIN_TOPLEVEL
-#define INCLUDED_MAIN_TOPLEVEL
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -10,5 +9,3 @@ struct Greeter {
 };
 
 int main();
-
-#endif // INCLUDED_MAIN_TOPLEVEL

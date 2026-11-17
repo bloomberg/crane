@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TREES
-#define INCLUDED_LOOPIFY_TREES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -2119,5 +2118,3 @@ struct LoopifyTrees {
   /// tree_contains x t checks if value exists in tree.
   static bool tree_contains(uint64_t x, const tree<uint64_t> &t);
 };
-
-#endif // INCLUDED_LOOPIFY_TREES

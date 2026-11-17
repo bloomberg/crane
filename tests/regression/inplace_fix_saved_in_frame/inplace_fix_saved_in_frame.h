@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INPLACE_FIX_SAVED_IN_FRAME
-#define INCLUDED_INPLACE_FIX_SAVED_IN_FRAME
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -127,5 +126,3 @@ struct InplaceFixSavedInFrame {
                   UINT64_C(20),
                   List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil())))));
 };
-
-#endif // INCLUDED_INPLACE_FIX_SAVED_IN_FRAME

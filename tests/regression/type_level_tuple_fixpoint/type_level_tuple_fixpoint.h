@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_LEVEL_TUPLE_FIXPOINT
-#define INCLUDED_TYPE_LEVEL_TUPLE_FIXPOINT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -87,5 +86,3 @@ struct TypeLevelTupleFixpoint {
   static Nat fst3(tup t);
   static inline const Nat run = fst3(mk3);
 };
-
-#endif // INCLUDED_TYPE_LEVEL_TUPLE_FIXPOINT

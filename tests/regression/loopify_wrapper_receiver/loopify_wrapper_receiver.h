@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_WRAPPER_RECEIVER
-#define INCLUDED_LOOPIFY_WRAPPER_RECEIVER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -146,5 +145,3 @@ struct LoopifyWrapperReceiver {
 
   static t mk(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_WRAPPER_RECEIVER

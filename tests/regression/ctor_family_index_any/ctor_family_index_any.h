@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CTOR_FAMILY_INDEX_ANY
-#define INCLUDED_CTOR_FAMILY_INDEX_ANY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -285,5 +284,3 @@ struct CtorFamilyIndexAny {
     }
   }();
 };
-
-#endif // INCLUDED_CTOR_FAMILY_INDEX_ANY

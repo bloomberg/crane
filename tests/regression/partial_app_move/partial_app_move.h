@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARTIAL_APP_MOVE
-#define INCLUDED_PARTIAL_APP_MOVE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -203,5 +202,3 @@ struct PartialAppMove {
     }();
   }();
 };
-
-#endif // INCLUDED_PARTIAL_APP_MOVE

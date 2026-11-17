@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_VECTOR_NTH
-#define INCLUDED_DEPENDENT_VECTOR_NTH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -188,5 +187,3 @@ T2 Vector::fold_left(F0 &&f, T2 b, uint64_t, const T0<T1> &v0) {
     return Vector::template fold_left<T1, T2>(f, f(std::move(b), h), n, *a2);
   }
 }
-
-#endif // INCLUDED_DEPENDENT_VECTOR_NTH

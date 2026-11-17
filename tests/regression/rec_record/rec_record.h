@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REC_RECORD
-#define INCLUDED_REC_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -304,5 +303,3 @@ struct RecRecord {
   static inline const uint64_t test_dept_head_name =
       test_dept.dept_head.emp_name;
 };
-
-#endif // INCLUDED_REC_RECORD

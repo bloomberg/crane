@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EPONYMOUS_ENUM_MODULE
-#define INCLUDED_EPONYMOUS_ENUM_MODULE
+#pragma once
 
 #include <utility>
 
@@ -38,5 +37,3 @@ struct EponymousEnumModule {
   static eponymousEnumModule next(eponymousEnumModule c);
   static bool is_red(eponymousEnumModule c);
 };
-
-#endif // INCLUDED_EPONYMOUS_ENUM_MODULE

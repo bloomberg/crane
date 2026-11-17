@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BRANCH_PAIRS_OF_LAMBDAS
-#define INCLUDED_BRANCH_PAIRS_OF_LAMBDAS
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -14,5 +13,3 @@
 struct BranchPairsOfLambdas {
   static uint64_t f(bool b);
 };
-
-#endif // INCLUDED_BRANCH_PAIRS_OF_LAMBDAS

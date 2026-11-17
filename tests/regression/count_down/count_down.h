@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COUNT_DOWN
-#define INCLUDED_COUNT_DOWN
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -30,5 +29,3 @@ struct CountDown {
   static void co_announce(uint64_t round);
   static void co_repeat(std::string msg);
 };
-
-#endif // INCLUDED_COUNT_DOWN

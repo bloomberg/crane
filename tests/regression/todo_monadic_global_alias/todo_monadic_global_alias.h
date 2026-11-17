@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_MONADIC_GLOBAL_ALIAS
-#define INCLUDED_TODO_MONADIC_GLOBAL_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -70,5 +69,3 @@ struct TodoMonadicGlobalAlias {
   static Nat alias();
   static Nat rebound();
 };
-
-#endif // INCLUDED_TODO_MONADIC_GLOBAL_ALIAS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARAMSDEF
-#define INCLUDED_PARAMSDEF
+#pragma once
 
 #include "obj.h"
 #include <concepts>
@@ -18,5 +17,3 @@ concept Params = requires {
   typename I::PTR;
 };
 } // namespace ParamsDef
-
-#endif // INCLUDED_PARAMSDEF

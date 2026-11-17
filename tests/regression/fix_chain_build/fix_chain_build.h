@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_CHAIN_BUILD
-#define INCLUDED_FIX_CHAIN_BUILD
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -40,5 +39,3 @@ struct FixChainBuild {
     return (base + f(UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_FIX_CHAIN_BUILD

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONAD_ITREE_TARG_UNBOUND
-#define INCLUDED_MONAD_ITREE_TARG_UNBOUND
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -246,5 +245,3 @@ struct Qf {
     return twice_1(n);
   }
 };
-
-#endif // INCLUDED_MONAD_ITREE_TARG_UNBOUND

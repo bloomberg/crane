@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROGRAM_WF_PROP
-#define INCLUDED_PROGRAM_WF_PROP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -172,5 +171,3 @@ struct ProgramWfProp {
           List<instruction>::cons(instruction::jms(UINT64_C(218)),
                                   List<instruction>::nil())));
 };
-
-#endif // INCLUDED_PROGRAM_WF_PROP

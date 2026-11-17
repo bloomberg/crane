@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TOPOLOGICAL_SORT
-#define INCLUDED_TOPOLOGICAL_SORT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -698,5 +697,3 @@ struct TopologicalSort {
                .template concat<std::pair<T1, uint64_t>>();
   }
 };
-
-#endif // INCLUDED_TOPOLOGICAL_SORT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_PARTIAL_APP
-#define INCLUDED_NESTED_PARTIAL_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -174,5 +173,3 @@ struct NestedPartialApp {
     }();
   }();
 };
-
-#endif // INCLUDED_NESTED_PARTIAL_APP

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_METHOD_PARAM_AT_CLASS_CARRIER
-#define INCLUDED_INSTANCE_METHOD_PARAM_AT_CLASS_CARRIER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -102,5 +101,3 @@ struct InstanceMethodParamAtClassCarrier {
   static inline const Nat run = describe<natCarrier>(
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
-
-#endif // INCLUDED_INSTANCE_METHOD_PARAM_AT_CLASS_CARRIER

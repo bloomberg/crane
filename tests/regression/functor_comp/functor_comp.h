@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_COMP
-#define INCLUDED_FUNCTOR_COMP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -335,5 +334,3 @@ struct FunctorComp {
               List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
                                       Queue::empty));
 };
-
-#endif // INCLUDED_FUNCTOR_COMP

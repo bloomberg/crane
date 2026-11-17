@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTTUPLEANY
-#define INCLUDED_SEPEXTTUPLEANY
+#pragma once
 
 #include "obj.h"
 #include <utility>
@@ -25,5 +24,3 @@ template <SymTypes Ty> struct Defs {
   }
 };
 } // namespace SepExtTupleAny
-
-#endif // INCLUDED_SEPEXTTUPLEANY

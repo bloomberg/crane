@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH
-#define INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH
+#pragma once
 
 struct std_ {
   /// Standard extraction includes C++ standard library headers and emits
@@ -9,5 +8,3 @@ struct std_ {
   /// struct cannot share the same name in the global namespace.
   static constexpr bool sample = true;
 };
-
-#endif // INCLUDED_GENERATED_STD_NAMESPACE_NAME_CLASH

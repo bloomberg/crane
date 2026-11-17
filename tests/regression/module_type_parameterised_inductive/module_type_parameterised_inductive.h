@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_PARAMETERISED_INDUCTIVE
-#define INCLUDED_MODULE_TYPE_PARAMETERISED_INDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -178,5 +177,3 @@ struct ModuleTypeParameterisedInductive {
            Impl::template tr<uint64_t>::l())) +
        U::get(Impl::box<uint64_t>{UINT64_C(4)}));
 };
-
-#endif // INCLUDED_MODULE_TYPE_PARAMETERISED_INDUCTIVE

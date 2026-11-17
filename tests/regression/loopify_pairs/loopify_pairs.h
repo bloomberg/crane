@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_PAIRS
-#define INCLUDED_LOOPIFY_PAIRS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -515,5 +514,3 @@ struct LoopifyPairs {
   static list<std::pair<uint64_t, uint64_t>>
   swap_pairs(const list<std::pair<uint64_t, uint64_t>> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_PAIRS

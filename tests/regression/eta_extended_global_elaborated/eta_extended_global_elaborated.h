@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_EXTENDED_GLOBAL_ELABORATED
-#define INCLUDED_ETA_EXTENDED_GLOBAL_ELABORATED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -190,5 +189,3 @@ struct EtaExtendedGlobalElaborated {
   static uint64_t count_odds(const List<uint64_t> &l);
   static uint64_t count_evens(const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_ETA_EXTENDED_GLOBAL_ELABORATED

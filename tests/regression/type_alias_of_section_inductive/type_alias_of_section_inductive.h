@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_ALIAS_OF_SECTION_INDUCTIVE
-#define INCLUDED_TYPE_ALIAS_OF_SECTION_INDUCTIVE
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -231,5 +230,3 @@ return n0;
 }
 }();
 };
-
-#endif // INCLUDED_TYPE_ALIAS_OF_SECTION_INDUCTIVE

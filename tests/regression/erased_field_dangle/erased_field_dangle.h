@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_FIELD_DANGLE
-#define INCLUDED_ERASED_FIELD_DANGLE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -121,5 +120,3 @@ struct ErasedFieldDangle {
     return e.run_exists();
   }();
 };
-
-#endif // INCLUDED_ERASED_FIELD_DANGLE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_MATCH_TYPE
-#define INCLUDED_LET_MATCH_TYPE
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -55,5 +54,3 @@ struct LetMatchType {
 
   static std::pair<uint64_t, uint64_t> direction_offset(Direction d);
 };
-
-#endif // INCLUDED_LET_MATCH_TYPE

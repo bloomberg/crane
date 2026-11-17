@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BORROWED_FIELD_MOVED_INTO_METHOD
-#define INCLUDED_BORROWED_FIELD_MOVED_INTO_METHOD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -573,5 +572,3 @@ struct BorrowedFieldMovedIntoMethod {
   /// Each walk is 3 * 8 = 24.
   static bool check();
 };
-
-#endif // INCLUDED_BORROWED_FIELD_MOVED_INTO_METHOD

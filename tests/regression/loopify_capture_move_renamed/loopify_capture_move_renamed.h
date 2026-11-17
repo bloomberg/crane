@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_CAPTURE_MOVE_RENAMED
-#define INCLUDED_LOOPIFY_CAPTURE_MOVE_RENAMED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -179,5 +178,3 @@ struct LoopifyCaptureMoveRenamed {
   static uint64_t count_evens(const List<uint64_t> &l);
   static uint64_t count_odds(const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_CAPTURE_MOVE_RENAMED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNULLARYNESTEDACCESS
-#define INCLUDED_SEPEXTNULLARYNESTEDACCESS
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -64,5 +63,3 @@ template <Outer O> struct Worker {
   }
 };
 } // namespace SepExtNullaryNestedAccess
-
-#endif // INCLUDED_SEPEXTNULLARYNESTEDACCESS

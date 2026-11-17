@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_PARTNER_SELF_IN_CLOSURE
-#define INCLUDED_LOOPIFY_PARTNER_SELF_IN_CLOSURE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -340,5 +339,3 @@ struct LoopifyPartnerSelfInClosure {
   /// 1 + (2 + (1 + 3))
   static bool check();
 };
-
-#endif // INCLUDED_LOOPIFY_PARTNER_SELF_IN_CLOSURE

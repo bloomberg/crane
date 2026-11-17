@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ALGORITHMS
-#define INCLUDED_LOOPIFY_ALGORITHMS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -168,5 +167,3 @@ public:
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_LOOPIFY_ALGORITHMS

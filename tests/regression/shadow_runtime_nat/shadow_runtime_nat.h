@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHADOW_RUNTIME_NAT
-#define INCLUDED_SHADOW_RUNTIME_NAT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -145,5 +144,3 @@ struct ShadowRuntimeNat {
   static ::Nat toNat(const Nat &n);
   static inline const ::Nat test = toNat(two);
 };
-
-#endif // INCLUDED_SHADOW_RUNTIME_NAT

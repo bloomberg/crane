@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_TMC_LOOPIFY
-#define INCLUDED_MUTUAL_TMC_LOOPIFY
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -137,5 +136,3 @@ struct MutualTmcLoopify {
   static mylist odds(const Nat &n);
   static Nat len(const mylist &l);
 };
-
-#endif // INCLUDED_MUTUAL_TMC_LOOPIFY

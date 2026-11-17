@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BLOCK_TEMPLATE_STRESS
-#define INCLUDED_BLOCK_TEMPLATE_STRESS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -114,5 +113,3 @@ struct BlockTemplateStress {
   /// 10. Block template interleaved with void calls
   static std::string interleaved_void();
 };
-
-#endif // INCLUDED_BLOCK_TEMPLATE_STRESS

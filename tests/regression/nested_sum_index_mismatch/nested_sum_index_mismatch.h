@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_SUM_INDEX_MISMATCH
-#define INCLUDED_NESTED_SUM_INDEX_MISMATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -218,5 +217,3 @@ struct NestedSumIndexMismatch {
     }
   }();
 };
-
-#endif // INCLUDED_NESTED_SUM_INDEX_MISMATCH

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MATCH_ARG
-#define INCLUDED_LOOPIFY_MATCH_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -124,5 +123,3 @@ struct LoopifyMatchArg {
   /// when loopify converts it to an explicit-stack loop.
   static uint64_t my_length(const List<Cell> &xs);
 };
-
-#endif // INCLUDED_LOOPIFY_MATCH_ARG

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAIR_FIELD_CONV_CTOR
-#define INCLUDED_PAIR_FIELD_CONV_CTOR
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -380,5 +379,3 @@ struct TFunctor_ann {
 
 static_assert(TFunctor<TFunctor_ann>);
 Ann<Dt> run(const Ann<Nat> &a);
-
-#endif // INCLUDED_PAIR_FIELD_CONV_CTOR

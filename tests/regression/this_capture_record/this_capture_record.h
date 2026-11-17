@@ -1,5 +1,4 @@
-#ifndef INCLUDED_THIS_CAPTURE_RECORD
-#define INCLUDED_THIS_CAPTURE_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -279,5 +278,3 @@ struct ThisCaptureRecord {
   /// Dummy use of tag to keep it around for extraction.
   static tag mk_tag(uint64_t n);
 };
-
-#endif // INCLUDED_THIS_CAPTURE_RECORD

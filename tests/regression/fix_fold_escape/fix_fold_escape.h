@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_FOLD_ESCAPE
-#define INCLUDED_FIX_FOLD_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -155,5 +154,3 @@ struct FixFoldEscape {
     return (apply_head(std::move(fns), UINT64_C(0)) + noise);
   }();
 };
-
-#endif // INCLUDED_FIX_FOLD_ESCAPE

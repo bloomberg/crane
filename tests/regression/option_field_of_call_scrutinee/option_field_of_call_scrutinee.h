@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPTION_FIELD_OF_CALL_SCRUTINEE
-#define INCLUDED_OPTION_FIELD_OF_CALL_SCRUTINEE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -146,5 +145,3 @@ struct OptionFieldOfCallScrutinee {
   static uint64_t count(uint64_t n);
   static inline const uint64_t result = count(UINT64_C(5));
 };
-
-#endif // INCLUDED_OPTION_FIELD_OF_CALL_SCRUTINEE

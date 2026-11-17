@@ -11,8 +11,7 @@
 // [Array.sub] do.  Meant for a sequence built once and then only read, such
 // as a lexer's transition table.
 
-#ifndef INCLUDED_CRANE_SHARED_ARRAY
-#define INCLUDED_CRANE_SHARED_ARRAY
+#pragma once
 
 #include <cstddef>
 #include <new>
@@ -111,5 +110,3 @@ public:
 CRANE_RC_POLICY_END
 
 } // namespace crane
-
-#endif // INCLUDED_CRANE_SHARED_ARRAY

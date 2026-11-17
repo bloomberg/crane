@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_NESTED_TYPE_ARGS
-#define INCLUDED_ERASED_NESTED_TYPE_ARGS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -220,5 +219,3 @@ template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
-
-#endif // INCLUDED_ERASED_NESTED_TYPE_ARGS

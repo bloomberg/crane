@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TC_CARRIER_OPTION_CAST
-#define INCLUDED_TC_CARRIER_OPTION_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -43,5 +42,3 @@ struct TcCarrierOptionCast {
   static_assert(Box<OptBox>);
   static uint64_t test(uint64_t n);
 };
-
-#endif // INCLUDED_TC_CARRIER_OPTION_CAST

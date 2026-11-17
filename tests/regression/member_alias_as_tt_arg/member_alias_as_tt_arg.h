@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEMBER_ALIAS_AS_TT_ARG
-#define INCLUDED_MEMBER_ALIAS_AS_TT_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -116,5 +115,3 @@ run(std::type_identity_t<stateT<T2, _tcI0::template m, Nat>> step,
   return crane_container_cast<typename _tcI0::template m<std::pair<Nat, T2>>>(
       step(x0_));
 }
-
-#endif // INCLUDED_MEMBER_ALIAS_AS_TT_ARG

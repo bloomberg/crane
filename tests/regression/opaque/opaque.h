@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPAQUE
-#define INCLUDED_OPAQUE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -42,5 +41,3 @@ struct Opaque {
   static inline const bool test_eq_true = are_equal(UINT64_C(5), UINT64_C(5));
   static inline const bool test_eq_false = are_equal(UINT64_C(3), UINT64_C(7));
 };
-
-#endif // INCLUDED_OPAQUE

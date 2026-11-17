@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_MATCHES_MODULE
-#define INCLUDED_NAME_MATCHES_MODULE
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -47,5 +46,3 @@ struct NameMatchesModule {
   static inline const uint64_t run =
       (NameMatchesModule0 + Inner_Mod::Inner::i(UINT64_C(6)).get());
 };
-
-#endif // INCLUDED_NAME_MATCHES_MODULE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_LAMBDA_CAPTURE
-#define INCLUDED_REUSE_LAMBDA_CAPTURE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -134,5 +133,3 @@ struct ReuseLambdaCapture {
     }
   }();
 };
-
-#endif // INCLUDED_REUSE_LAMBDA_CAPTURE

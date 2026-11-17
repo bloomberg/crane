@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALUE_POSITION_CLASS_PROMOTED
-#define INCLUDED_VALUE_POSITION_CLASS_PROMOTED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -243,5 +242,3 @@ struct ValuePositionClassPromoted {
     }
   }();
 };
-
-#endif // INCLUDED_VALUE_POSITION_CLASS_PROMOTED

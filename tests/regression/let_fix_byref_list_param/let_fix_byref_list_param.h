@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FIX_BYREF_LIST_PARAM
-#define INCLUDED_LET_FIX_BYREF_LIST_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -111,5 +110,3 @@ struct LetFixByrefListParam {
                                           UINT64_C(30),
                                           List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_LET_FIX_BYREF_LIST_PARAM

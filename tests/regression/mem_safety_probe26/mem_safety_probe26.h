@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE26
-#define INCLUDED_MEM_SAFETY_PROBE26
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -569,5 +568,3 @@ struct MemSafetyProbe26 {
             p2.second);
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE26

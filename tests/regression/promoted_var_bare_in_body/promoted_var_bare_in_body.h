@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROMOTED_VAR_BARE_IN_BODY
-#define INCLUDED_PROMOTED_VAR_BARE_IN_BODY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -210,5 +209,3 @@ struct PromotedVarBareInBody {
       to_iptr<natParams>(Nat::o()).tdb(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
-
-#endif // INCLUDED_PROMOTED_VAR_BARE_IN_BODY

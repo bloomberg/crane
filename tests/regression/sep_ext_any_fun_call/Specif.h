@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SPECIF
-#define INCLUDED_SPECIF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -47,5 +46,3 @@ template <typename A, typename P> struct SigT {
   }
 };
 } // namespace Specif
-
-#endif // INCLUDED_SPECIF

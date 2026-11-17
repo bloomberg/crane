@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAT
-#define INCLUDED_NAT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -96,5 +95,3 @@ public:
     }
   }
 };
-
-#endif // INCLUDED_NAT

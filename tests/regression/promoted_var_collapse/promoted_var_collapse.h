@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROMOTED_VAR_COLLAPSE
-#define INCLUDED_PROMOTED_VAR_COLLAPSE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -206,5 +205,3 @@ struct PromotedVarCollapse {
     return n.add(_tcI0::width());
   }
 };
-
-#endif // INCLUDED_PROMOTED_VAR_COLLAPSE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NO_MAPPING_EVENT_PROBE
-#define INCLUDED_NO_MAPPING_EVENT_PROBE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -160,5 +159,3 @@ struct NoMappingEventProbe {
   static void draw_revealed_tile(uint64_t x, uint64_t y);
   static void loop(uint64_t x, uint64_t y, const List<bool> &cells);
 };
-
-#endif // INCLUDED_NO_MAPPING_EVENT_PROBE

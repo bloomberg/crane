@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_NESTED_MODULE_TYPE
-#define INCLUDED_TODO_NESTED_MODULE_TYPE
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -48,5 +47,3 @@ struct TodoNestedModuleType {
   using UseNat = Make<NatOuter>;
   static inline const uint64_t test_twice = UseNat::twice();
 };
-
-#endif // INCLUDED_TODO_NESTED_MODULE_TYPE

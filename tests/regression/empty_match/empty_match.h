@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EMPTY_MATCH
-#define INCLUDED_EMPTY_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -131,5 +130,3 @@ struct EmptyMatch {
     throw std::logic_error("absurd case");
   }
 };
-
-#endif // INCLUDED_EMPTY_MATCH

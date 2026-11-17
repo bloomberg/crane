@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROMOTED_METHOD_LEAKS_PARAM
-#define INCLUDED_PROMOTED_METHOD_LEAKS_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -185,5 +184,3 @@ std::shared_ptr<ITree<T2>> FailE::cast_() const {
                       throw std::logic_error("absurd case");
                     });
 }
-
-#endif // INCLUDED_PROMOTED_METHOD_LEAKS_PARAM

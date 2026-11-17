@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_CONSTRAINT_ONLY_BINDER
-#define INCLUDED_INSTANCE_CONSTRAINT_ONLY_BINDER
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -46,5 +45,3 @@ struct InstanceConstraintOnlyBinder {
       via<natBool, boolNat, uint64_t, bool, uint64_t>::sz(
           std::make_pair(UINT64_C(0), UINT64_C(0)));
 };
-
-#endif // INCLUDED_INSTANCE_CONSTRAINT_ONLY_BINDER

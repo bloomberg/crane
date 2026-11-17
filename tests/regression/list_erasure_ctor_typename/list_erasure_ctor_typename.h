@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_ERASURE_CTOR_TYPENAME
-#define INCLUDED_LIST_ERASURE_CTOR_TYPENAME
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -143,5 +142,3 @@ std::optional<T1> List::nth_error(const List::list<T1> &l, uint64_t n) {
     }
   }
 }
-
-#endif // INCLUDED_LIST_ERASURE_CTOR_TYPENAME

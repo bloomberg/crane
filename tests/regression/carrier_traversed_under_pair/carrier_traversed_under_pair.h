@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CARRIER_TRAVERSED_UNDER_PAIR
-#define INCLUDED_CARRIER_TRAVERSED_UNDER_PAIR
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -428,5 +427,3 @@ static_assert(TFunctor<TFunctor_blk>);
 template <typename F0> blk<bool> use_blk(F0 &&f, const blk<Nat> &b) {
   return TFunctor_blk::template tfmap<Nat, bool>(f, b);
 }
-
-#endif // INCLUDED_CARRIER_TRAVERSED_UNDER_PAIR

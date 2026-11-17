@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HIGHER_ORDER
-#define INCLUDED_HIGHER_ORDER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -222,5 +221,3 @@ struct HigherOrder {
       UINT64_C(5),
       [](uint64_t _x0) -> uint64_t { return adder(UINT64_C(3), _x0); });
 };
-
-#endif // INCLUDED_HIGHER_ORDER

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAR_FUTURE_READ_TWICE
-#define INCLUDED_PAR_FUTURE_READ_TWICE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -113,5 +112,3 @@ struct ParFutureReadTwice {
     return join_all(std::move(_bind_result));
   }();
 };
-
-#endif // INCLUDED_PAR_FUTURE_READ_TWICE

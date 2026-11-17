@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SWITCH_DEFAULT_READS_BINDING
-#define INCLUDED_SWITCH_DEFAULT_READS_BINDING
+#pragma once
 
 #include <type_traits>
 #include <utility>
@@ -62,5 +61,3 @@ struct SwitchDefaultReadsBinding {
 
   static shade pick(Color c);
 };
-
-#endif // INCLUDED_SWITCH_DEFAULT_READS_BINDING

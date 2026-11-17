@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
-#define INCLUDED_PENDANT_SUMTREE_ROUNDTRIP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -904,5 +903,3 @@ inline Sig<uint64_t> T::to_nat(uint64_t _x) const {
   }
   return _result;
 }
-
-#endif // INCLUDED_PENDANT_SUMTREE_ROUNDTRIP

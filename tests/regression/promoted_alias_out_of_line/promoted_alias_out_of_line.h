@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROMOTED_ALIAS_OUT_OF_LINE
-#define INCLUDED_PROMOTED_ALIAS_OUT_OF_LINE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -258,5 +257,3 @@ template <typename T1> Nat F::lst(const T1 &, const List<Dval<iptr>> &l) {
     return Nat::s(Nat::o());
   }
 }
-
-#endif // INCLUDED_PROMOTED_ALIAS_OUT_OF_LINE

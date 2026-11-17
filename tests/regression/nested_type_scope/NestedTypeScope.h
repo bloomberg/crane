@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTEDTYPESCOPE
-#define INCLUDED_NESTEDTYPESCOPE
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -73,5 +72,3 @@ const RM::Rule my_rule2 = Datatypes::template Prod<Tags::Tag_,
 Tags::Tag get_tag(const RM::Rule &x0_);
 const Tags::Tag test_tag = get_tag(my_rule);
 } // namespace NestedTypeScope
-
-#endif // INCLUDED_NESTEDTYPESCOPE

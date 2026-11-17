@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SLLPAIRCASTDEQUE
-#define INCLUDED_SLLPAIRCASTDEQUE
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -57,5 +56,3 @@ struct SllPairCastDeque {
   }
 };
 } // namespace SllPairCastDeque
-
-#endif // INCLUDED_SLLPAIRCASTDEQUE

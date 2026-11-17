@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_GAP_ACKERMANN
-#define INCLUDED_LOOPIFY_GAP_ACKERMANN
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -10,5 +9,3 @@
 struct LoopifyGapAckermann {
   static uint64_t ack(uint64_t m, uint64_t x0_);
 };
-
-#endif // INCLUDED_LOOPIFY_GAP_ACKERMANN

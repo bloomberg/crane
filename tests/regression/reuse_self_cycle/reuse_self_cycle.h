@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_SELF_CYCLE
-#define INCLUDED_REUSE_SELF_CYCLE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -113,5 +112,3 @@ struct ReuseSelfCycle {
   static inline const uint64_t test2 =
       length(prepend_self(mylist::mycons(UINT64_C(42), mylist::mynil()), true));
 };
-
-#endif // INCLUDED_REUSE_SELF_CYCLE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INDUCTIVE_LETIN_PARAMS
-#define INCLUDED_INDUCTIVE_LETIN_PARAMS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -413,5 +412,3 @@ struct InductiveLetinParams {
   static inline const uint64_t unwrapped =
       crane::any_cast<const uint64_t>(sample_wrap.template unwrap<uint64_t>());
 };
-
-#endif // INCLUDED_INDUCTIVE_LETIN_PARAMS

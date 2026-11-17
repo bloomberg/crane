@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SPECIAL_RECURSION
-#define INCLUDED_LOOPIFY_SPECIAL_RECURSION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -357,5 +356,3 @@ struct LoopifySpecialRecursion {
                                 const List<uint64_t> &l);
   static List<uint64_t> merge_levels(const List<List<uint64_t>> &ll);
 };
-
-#endif // INCLUDED_LOOPIFY_SPECIAL_RECURSION

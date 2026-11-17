@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_AT_FUNCTION_TYPE
-#define INCLUDED_INSTANCE_AT_FUNCTION_TYPE
+#pragma once
 
 #include "fn.h"
 #include <concepts>
@@ -41,5 +40,3 @@ struct InstanceAtFunctionType {
       both<SzF, SzN, uint64_t, crane::fn<uint64_t(uint64_t)>>(
           UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(4)); });
 };
-
-#endif // INCLUDED_INSTANCE_AT_FUNCTION_TYPE

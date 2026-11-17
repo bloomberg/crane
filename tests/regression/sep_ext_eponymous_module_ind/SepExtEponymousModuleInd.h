@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTEPONYMOUSMODULEIND
-#define INCLUDED_SEPEXTEPONYMOUSMODULEIND
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -111,5 +110,3 @@ struct UseTrie {
   using memo = Trie<std::optional<Datatypes::Nat>>;
 };
 } // namespace SepExtEponymousModuleInd
-
-#endif // INCLUDED_SEPEXTEPONYMOUSMODULEIND

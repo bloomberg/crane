@@ -1,5 +1,4 @@
-#ifndef INCLUDED_KNOWN_LIST_SCRUTINEE_ERASED
-#define INCLUDED_KNOWN_LIST_SCRUTINEE_ERASED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -149,5 +148,3 @@ std::optional<T1> List::nth_error(const List::list<T1> &l, uint64_t n) {
     }
   }
 }
-
-#endif // INCLUDED_KNOWN_LIST_SCRUTINEE_ERASED

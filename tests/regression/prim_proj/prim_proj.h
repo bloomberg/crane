@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PRIM_PROJ
-#define INCLUDED_PRIM_PROJ
+#pragma once
 
 #include <cstdint>
 
@@ -13,5 +12,3 @@ struct PrimProj {
   static inline const point origin = point{UINT64_C(0), UINT64_C(0)};
   static point translate(uint64_t dx, uint64_t dy, const point &p);
 };
-
-#endif // INCLUDED_PRIM_PROJ

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE28
-#define INCLUDED_MEM_SAFETY_PROBE28
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -322,5 +321,3 @@ struct MemSafetyProbe28 {
     return (zip_trees(t1, t2) + zip_depth(t1, t2));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE28

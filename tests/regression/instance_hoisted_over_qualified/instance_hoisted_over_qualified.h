@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_HOISTED_OVER_QUALIFIED
-#define INCLUDED_INSTANCE_HOISTED_OVER_QUALIFIED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -337,5 +336,3 @@ MemoryBytes::map_monad(const std::type_identity_t<
     });
   }
 }
-
-#endif // INCLUDED_INSTANCE_HOISTED_OVER_QUALIFIED

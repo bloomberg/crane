@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VISIT_MATCH_BUG
-#define INCLUDED_VISIT_MATCH_BUG
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -125,5 +124,3 @@ struct VisitMatchBug {
   static uint64_t match_in_tail(const State &s);
   static uint64_t match_in_expr(const State &s);
 };
-
-#endif // INCLUDED_VISIT_MATCH_BUG

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EVENT_MATCH_UNTYPED
-#define INCLUDED_EVENT_MATCH_UNTYPED
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -104,5 +103,3 @@ struct EventMatchUntyped {
   /// downstream says what type it has.
   static Nat weight(const std::shared_ptr<ITree<Nat>> &t);
 };
-
-#endif // INCLUDED_EVENT_MATCH_UNTYPED

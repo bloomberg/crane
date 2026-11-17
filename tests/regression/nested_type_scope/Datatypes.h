@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DATATYPES
-#define INCLUDED_DATATYPES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -106,5 +105,3 @@ template <typename A, typename B> struct Prod {
   }
 };
 } // namespace Datatypes
-
-#endif // INCLUDED_DATATYPES

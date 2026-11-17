@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_LIFTED_MUTUAL_CLOSURE_BACK
-#define INCLUDED_LOCAL_LIFTED_MUTUAL_CLOSURE_BACK
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -169,5 +168,3 @@ struct LocalLiftedMutualClosureBack {
 
   static uint64_t run(uint64_t k, uint64_t n);
 };
-
-#endif // INCLUDED_LOCAL_LIFTED_MUTUAL_CLOSURE_BACK

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONADIC
-#define INCLUDED_MONADIC
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -221,5 +220,3 @@ struct Monadic {
           UINT64_C(0));
   static inline const uint64_t test_state_fib = fib(UINT64_C(5));
 };
-
-#endif // INCLUDED_MONADIC

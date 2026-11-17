@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_VALUED_IF_ELIMINATOR
-#define INCLUDED_TYPE_VALUED_IF_ELIMINATOR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -190,5 +189,3 @@ struct TypeValuedIfEliminator {
   static Nat size(bool b, sel x);
   static inline const Nat run = size(true, zero(true));
 };
-
-#endif // INCLUDED_TYPE_VALUED_IF_ELIMINATOR

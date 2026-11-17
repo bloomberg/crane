@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_SCRUTINEE
-#define INCLUDED_REUSE_SCRUTINEE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -146,5 +145,3 @@ struct ReuseScrutinee {
       tree::node(tree::leaf(), UINT64_C(10), tree::leaf()), UINT64_C(20),
       tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
 };
-
-#endif // INCLUDED_REUSE_SCRUTINEE

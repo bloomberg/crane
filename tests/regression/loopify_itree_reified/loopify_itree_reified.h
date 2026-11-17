@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ITREE_REIFIED
-#define INCLUDED_LOOPIFY_ITREE_REIFIED
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -59,5 +58,3 @@ struct LoopifyItreeReified {
   static inline const uint64_t test_count =
       count_taus(UINT64_C(100), ITree<uint64_t>::ret(UINT64_C(42)));
 };
-
-#endif // INCLUDED_LOOPIFY_ITREE_REIFIED

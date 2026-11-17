@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_NESTED_CONSTRUCTS
-#define INCLUDED_LOOPIFY_NESTED_CONSTRUCTS
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -23,5 +22,3 @@ struct LoopifyNestedConstructs {
   static uint64_t compute_with_lets(uint64_t n);
   static uint64_t nested_match(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_NESTED_CONSTRUCTS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_BIND_BINDER_AT_NAMED_DECL
-#define INCLUDED_ITREE_BIND_BINDER_AT_NAMED_DECL
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -244,5 +243,3 @@ return Nat::o();}
 static std::shared_ptr<ITree<Sum<Nat, Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>>>> runM();static Nat to_natM(const Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>& d);
 static std::shared_ptr<ITree<Nat>> check();
 };
-
-#endif // INCLUDED_ITREE_BIND_BINDER_AT_NAMED_DECL

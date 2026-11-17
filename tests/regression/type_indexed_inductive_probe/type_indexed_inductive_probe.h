@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_INDEXED_INDUCTIVE_PROBE
-#define INCLUDED_TYPE_INDEXED_INDUCTIVE_PROBE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -48,5 +47,3 @@ struct TypeIndexedInductiveProbe {
     return crane::any_cast<Bool0>(a);
   }();
 };
-
-#endif // INCLUDED_TYPE_INDEXED_INDUCTIVE_PROBE

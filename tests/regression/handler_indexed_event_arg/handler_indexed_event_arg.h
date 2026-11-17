@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HANDLER_INDEXED_EVENT_ARG
-#define INCLUDED_HANDLER_INDEXED_EVENT_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -167,5 +166,3 @@ struct HandlerIndexedEventArg {
     return fused<_tcI0, Nat>(MemM<Nat>::memret(n))(n);
   }
 };
-
-#endif // INCLUDED_HANDLER_INDEXED_EVENT_ARG

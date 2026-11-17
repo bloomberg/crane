@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ABSURD_PROOF_ONLY_DEFINITION
-#define INCLUDED_ABSURD_PROOF_ONLY_DEFINITION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -145,5 +144,3 @@ struct AbsurdProofOnlyDefinition {
       (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? absurd_list().length()
                                              : UINT64_C(9));
 };
-
-#endif // INCLUDED_ABSURD_PROOF_ONLY_DEFINITION

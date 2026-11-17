@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITER_CAPTURE
-#define INCLUDED_ITER_CAPTURE
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -19,5 +18,3 @@ struct IterCapture {
     }();
   }();
 };
-
-#endif // INCLUDED_ITER_CAPTURE

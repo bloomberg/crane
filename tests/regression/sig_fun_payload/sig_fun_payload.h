@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIG_FUN_PAYLOAD
-#define INCLUDED_SIG_FUN_PAYLOAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -43,5 +42,3 @@ struct SigFunPayload {
     return x(UINT64_C(4));
   }();
 };
-
-#endif // INCLUDED_SIG_FUN_PAYLOAD

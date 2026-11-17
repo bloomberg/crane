@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROM_OPS
-#define INCLUDED_PROM_OPS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -538,5 +537,3 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     }
   }
 }
-
-#endif // INCLUDED_PROM_OPS

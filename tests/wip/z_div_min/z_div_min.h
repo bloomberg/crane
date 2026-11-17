@@ -1,5 +1,4 @@
-#ifndef INCLUDED_Z_DIV_MIN
-#define INCLUDED_Z_DIV_MIN
+#pragma once
 
 #include <cstdint>
 
@@ -41,5 +40,3 @@ struct ZDivMin {
       static_cast<int64_t>(-static_cast<uint64_t>(int64_min));
   static inline const bool opp_is_positive = INT64_C(0) < opp_min;
 };
-
-#endif // INCLUDED_Z_DIV_MIN

@@ -26,8 +26,7 @@
 // needs to stop a divergent computation controls that at its own effect
 // boundary.
 
-#ifndef INCLUDED_CRANE_ITREE
-#define INCLUDED_CRANE_ITREE
+#pragma once
 
 #include <any>
 #include "obj.h"
@@ -732,5 +731,3 @@ std::shared_ptr<ITree<R>> itree_translate(H h, std::shared_ptr<ITree<R>> t) {
                 return itree_translate(h, cont(std::move(x)));
             }));
 }
-
-#endif // INCLUDED_CRANE_ITREE

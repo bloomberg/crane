@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_VIA_SIMPLE_LAMBDA
-#define INCLUDED_FIX_VIA_SIMPLE_LAMBDA
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -66,5 +65,3 @@ struct FixViaSimpleLambda {
     }
   }();
 };
-
-#endif // INCLUDED_FIX_VIA_SIMPLE_LAMBDA

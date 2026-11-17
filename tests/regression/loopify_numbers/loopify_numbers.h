@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_NUMBERS
-#define INCLUDED_LOOPIFY_NUMBERS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -263,5 +262,3 @@ struct LoopifyNumbers {
   /// sum_divisible_by k n sums all numbers from 1 to n divisible by k.
   static uint64_t sum_divisible_by(uint64_t k, uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_NUMBERS

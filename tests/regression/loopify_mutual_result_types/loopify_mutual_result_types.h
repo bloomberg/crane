@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MUTUAL_RESULT_TYPES
-#define INCLUDED_LOOPIFY_MUTUAL_RESULT_TYPES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -372,5 +371,3 @@ struct LoopifyMutualResultTypes {
   /// 2 * (1 + 2 + 3 + 4)
   static bool check();
 };
-
-#endif // INCLUDED_LOOPIFY_MUTUAL_RESULT_TYPES

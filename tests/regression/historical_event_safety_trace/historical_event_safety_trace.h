@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE
-#define INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -411,5 +410,3 @@ struct HistoricalEventSafetyTraceCase {
               List<TestResult>::cons(historical_bundle.hsb_hoover_test,
                                      List<TestResult>::nil()))));
 };
-
-#endif // INCLUDED_HISTORICAL_EVENT_SAFETY_TRACE

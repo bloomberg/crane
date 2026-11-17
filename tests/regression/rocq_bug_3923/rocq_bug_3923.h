@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_3923
-#define INCLUDED_ROCQ_BUG_3923
+#pragma once
 
 #include <concepts>
 #include <stdexcept>
@@ -46,5 +45,3 @@ struct RocqBug3923 {
     }
   };
 };
-
-#endif // INCLUDED_ROCQ_BUG_3923

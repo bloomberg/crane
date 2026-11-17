@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UPDATE_NTH_BOUNDS
-#define INCLUDED_UPDATE_NTH_BOUNDS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -252,5 +251,3 @@ struct UpdateNthBounds {
                                        List<uint64_t>::nil()))))
           .length();
 };
-
-#endif // INCLUDED_UPDATE_NTH_BOUNDS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CAPTURING_INITIALISER_MEYERS
-#define INCLUDED_CAPTURING_INITIALISER_MEYERS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -191,5 +190,3 @@ struct CapturingInitialiserMeyers {
   using SumsFour = Sums<Four>;
   static inline const uint64_t shifted_sum_four = SumsFour::shifted_sum();
 };
-
-#endif // INCLUDED_CAPTURING_INITIALISER_MEYERS

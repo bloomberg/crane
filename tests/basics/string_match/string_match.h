@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STRING_MATCH
-#define INCLUDED_STRING_MATCH
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -21,5 +20,3 @@ struct StringMatch {
   static inline const std::string test_cat =
       std::string("foo") + std::string("bar");
 };
-
-#endif // INCLUDED_STRING_MATCH

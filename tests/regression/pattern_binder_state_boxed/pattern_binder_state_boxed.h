@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PATTERN_BINDER_STATE_BOXED
-#define INCLUDED_PATTERN_BINDER_STATE_BOXED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -492,5 +491,3 @@ struct PatternBinderStateBoxed {
                             std::pair<FusedS<typename natParams::ptr>, Nat>> t =
       go<natParams>();
 };
-
-#endif // INCLUDED_PATTERN_BINDER_STATE_BOXED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_HOME_ENCLOSING_MODULE
-#define INCLUDED_ALIAS_HOME_ENCLOSING_MODULE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -258,5 +257,3 @@ struct AliasHomeEnclosingModule {
   static inline const Nat five =
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_ALIAS_HOME_ENCLOSING_MODULE

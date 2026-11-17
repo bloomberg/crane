@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEMBER_CALLS_LATER
-#define INCLUDED_MEMBER_CALLS_LATER
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -203,5 +202,3 @@ inline Nat Tree::deeper() const {
   }
   return _result;
 }
-
-#endif // INCLUDED_MEMBER_CALLS_LATER

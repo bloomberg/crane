@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IMPORTED_MODULE_TYPE_PRIME
-#define INCLUDED_IMPORTED_MODULE_TYPE_PRIME
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -37,5 +36,3 @@ struct ImportedModuleTypePrime {
   using FN = F<NatOrd>;
   static inline const uint64_t test = FN::pick(UINT64_C(3), UINT64_C(1));
 };
-
-#endif // INCLUDED_IMPORTED_MODULE_TYPE_PRIME

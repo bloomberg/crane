@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ANY_CAST_NESTED
-#define INCLUDED_ANY_CAST_NESTED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -62,5 +61,3 @@ struct AnyCastNested {
 
   static uint64_t test_extract(uint64_t x);
 };
-
-#endif // INCLUDED_ANY_CAST_NESTED

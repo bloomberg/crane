@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LIST_TRANSFORMS
-#define INCLUDED_LOOPIFY_LIST_TRANSFORMS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -185,5 +184,3 @@ public:
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_LOOPIFY_LIST_TRANSFORMS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ACK
-#define INCLUDED_ACK
+#pragma once
 
 #include <cstdint>
 
@@ -10,5 +9,3 @@ struct Ack {
 struct Nat {
   static constexpr uint64_t one = UINT64_C(1);
 };
-
-#endif // INCLUDED_ACK

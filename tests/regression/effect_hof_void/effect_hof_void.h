@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_HOF_VOID
-#define INCLUDED_EFFECT_HOF_VOID
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -72,5 +71,3 @@ struct EffectHofVoid {
   static void set_wrapper(std::string v, std::string k);
   static void concrete_set();
 };
-
-#endif // INCLUDED_EFFECT_HOF_VOID

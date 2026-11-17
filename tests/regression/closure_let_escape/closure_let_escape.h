@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_LET_ESCAPE
-#define INCLUDED_CLOSURE_LET_ESCAPE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -60,5 +59,3 @@ struct ClosureLetEscape {
     }
   }();
 };
-
-#endif // INCLUDED_CLOSURE_LET_ESCAPE

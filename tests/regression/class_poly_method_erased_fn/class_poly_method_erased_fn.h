@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_POLY_METHOD_ERASED_FN
-#define INCLUDED_CLASS_POLY_METHOD_ERASED_FN
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -38,5 +37,3 @@ struct ClassPolyMethodErasedFn {
   static inline const uint64_t go = Twice::template mapf<uint64_t>(
       [](uint64_t n) { return (n + UINT64_C(3)); }, UINT64_C(1));
 };
-
-#endif // INCLUDED_CLASS_POLY_METHOD_ERASED_FN

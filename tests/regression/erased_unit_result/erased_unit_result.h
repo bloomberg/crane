@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_UNIT_RESULT
-#define INCLUDED_ERASED_UNIT_RESULT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -67,5 +66,3 @@ struct ErasedUnitResult {
           crane::obj(), std::make_pair(crane::obj(crane_erase_global<touch>()),
                                        crane::obj(UINT64_C(3)))));
 };
-
-#endif // INCLUDED_ERASED_UNIT_RESULT

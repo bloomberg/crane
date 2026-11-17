@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_DESTRUCTURE_ONCE
-#define INCLUDED_RECORD_DESTRUCTURE_ONCE
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -16,5 +15,3 @@ struct RecordDestructureOnce {
   static inline const uint64_t r_twice = count(UINT64_C(40)).t_twice;
   static inline const uint64_t r_zero = count(UINT64_C(40)).t_zero;
 };
-
-#endif // INCLUDED_RECORD_DESTRUCTURE_ONCE

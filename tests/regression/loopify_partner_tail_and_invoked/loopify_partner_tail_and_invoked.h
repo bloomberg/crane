@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_PARTNER_TAIL_AND_INVOKED
-#define INCLUDED_LOOPIFY_PARTNER_TAIL_AND_INVOKED
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -16,5 +15,3 @@ struct LoopifyPartnerTailAndInvoked {
   static uint64_t walk(uint64_t n);
   static uint64_t step(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_PARTNER_TAIL_AND_INVOKED

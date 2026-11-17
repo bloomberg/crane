@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BINOMIAL_HEAP
-#define INCLUDED_BINOMIAL_HEAP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -237,5 +236,3 @@ struct BinomialHeap {
                  insert_list(make_list(UINT64_C(11), List<uint64_t>::nil()),
                              List<tree>::nil())));
 };
-
-#endif // INCLUDED_BINOMIAL_HEAP

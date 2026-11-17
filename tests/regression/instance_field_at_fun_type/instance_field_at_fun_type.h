@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_FIELD_AT_FUN_TYPE
-#define INCLUDED_INSTANCE_FIELD_AT_FUN_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -93,5 +92,3 @@ struct InstanceFieldAtFunType {
   static Nat ex(const Nat &x0_);
   static inline const Nat run = ex(Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_INSTANCE_FIELD_AT_FUN_TYPE

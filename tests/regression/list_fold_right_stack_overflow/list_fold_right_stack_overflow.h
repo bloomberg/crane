@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_FOLD_RIGHT_STACK_OVERFLOW
-#define INCLUDED_LIST_FOLD_RIGHT_STACK_OVERFLOW
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -145,5 +144,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_LIST_FOLD_RIGHT_STACK_OVERFLOW

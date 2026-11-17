@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROD_FST_PROJECTION
-#define INCLUDED_PROD_FST_PROJECTION
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -95,5 +94,3 @@ struct ProdFstProjection {
   static uint64_t depth(const t &x);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_PROD_FST_PROJECTION

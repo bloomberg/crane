@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECURSOR_SELF_CALL_NO_MOTIVE
-#define INCLUDED_RECURSOR_SELF_CALL_NO_MOTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -251,5 +250,3 @@ struct RecursorSelfCallNoMotive {
   static inline const expr sample = expr::fste(
       expr::paire(expr::succe(expr::lit(UINT64_C(3))), expr::bl(true)));
 };
-
-#endif // INCLUDED_RECURSOR_SELF_CALL_NO_MOTIVE

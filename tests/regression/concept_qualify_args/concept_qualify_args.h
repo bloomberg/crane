@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_QUALIFY_ARGS
-#define INCLUDED_CONCEPT_QUALIFY_ARGS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -133,5 +132,3 @@ struct ConceptQualifyArgs {
   static inline const uint64_t test =
       UseNatElems::first_or_default(UINT64_C(0));
 };
-
-#endif // INCLUDED_CONCEPT_QUALIFY_ARGS

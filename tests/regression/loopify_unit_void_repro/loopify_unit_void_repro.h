@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_UNIT_VOID_REPRO
-#define INCLUDED_LOOPIFY_UNIT_VOID_REPRO
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -98,5 +97,3 @@ struct LoopifyUnitVoidRepro {
   static void loop(uint64_t x, uint64_t y, const List<bool> &cells);
   static int run();
 };
-
-#endif // INCLUDED_LOOPIFY_UNIT_VOID_REPRO

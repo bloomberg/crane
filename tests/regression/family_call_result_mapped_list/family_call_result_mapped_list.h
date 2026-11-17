@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FAMILY_CALL_RESULT_MAPPED_LIST
-#define INCLUDED_FAMILY_CALL_RESULT_MAPPED_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -94,5 +93,3 @@ struct FamilyCallResultMappedList {
   static inline const uint64_t result =
       size(ty::tlist(ty::tnat()), mk(UINT64_C(4)));
 };
-
-#endif // INCLUDED_FAMILY_CALL_RESULT_MAPPED_LIST

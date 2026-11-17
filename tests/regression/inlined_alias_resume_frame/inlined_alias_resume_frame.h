@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INLINED_ALIAS_RESUME_FRAME
-#define INCLUDED_INLINED_ALIAS_RESUME_FRAME
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -136,5 +135,3 @@ struct InlinedAliasResumeFrame {
   static uint64_t h(uint64_t n);
   static inline const uint64_t h3 = h(UINT64_C(3));
 };
-
-#endif // INCLUDED_INLINED_ALIAS_RESUME_FRAME

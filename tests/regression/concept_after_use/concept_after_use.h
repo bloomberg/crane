@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_AFTER_USE
-#define INCLUDED_CONCEPT_AFTER_USE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -307,5 +306,3 @@ concept Size = requires {
 };
 
 static_assert(Size<ConceptAfterUse::SizeI>);
-
-#endif // INCLUDED_CONCEPT_AFTER_USE

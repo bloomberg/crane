@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_LITERAL_CODOMAIN_ALIAS
-#define INCLUDED_RECORD_LITERAL_CODOMAIN_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -152,5 +151,3 @@ struct RecordLiteralCodomainAlias {
   static inline const bool through_field =
       h.staged(Nat::s(Nat::o()))(Nat::s(Nat::s(Nat::o())));
 };
-
-#endif // INCLUDED_RECORD_LITERAL_CODOMAIN_ALIAS

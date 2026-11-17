@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SRC
-#define INCLUDED_SRC
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -45,5 +44,3 @@ const uint64_t r =
              UINT64_C(2), Datatypes::template List<uint64_t>::nil()))
          .length());
 } // namespace Src
-
-#endif // INCLUDED_SRC

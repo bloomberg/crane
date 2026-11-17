@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUBEVENT_FORWARD_LOSES_KIND
-#define INCLUDED_SUBEVENT_FORWARD_LOSES_KIND
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -232,5 +231,3 @@ struct SubeventForwardLosesKind {
   static_assert(Sub<sub_refl>);
   static inline const Nat run = raiseUB<sub_refl, Nat>().length();
 };
-
-#endif // INCLUDED_SUBEVENT_FORWARD_LOSES_KIND

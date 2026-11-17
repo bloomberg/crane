@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_RECORD_FIELD
-#define INCLUDED_SIGT_RECORD_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -148,5 +147,3 @@ struct SigtRecordField {
   static uint64_t peek(const boxed &b);
   static inline const uint64_t run = (peek(b1) + peek(b2));
 };
-
-#endif // INCLUDED_SIGT_RECORD_FIELD

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_RECORD_LIST_FIELD
-#define INCLUDED_TFUNCTOR_RECORD_LIST_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -378,5 +377,3 @@ struct TfunctorRecordListField {
   static inline const bool is_five =
       total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
-
-#endif // INCLUDED_TFUNCTOR_RECORD_LIST_FIELD

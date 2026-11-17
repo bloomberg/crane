@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOP_TRANSFORM_REASSIGNS_CLOSURE_TYPED_VAR
-#define INCLUDED_LOOP_TRANSFORM_REASSIGNS_CLOSURE_TYPED_VAR
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -219,5 +218,3 @@ public:
 /// Takes a unit so that Crane leaves it a free function and something
 /// concrete instantiates map_In.
 Lst<Nat> run();
-
-#endif // INCLUDED_LOOP_TRANSFORM_REASSIGNS_CLOSURE_TYPED_VAR

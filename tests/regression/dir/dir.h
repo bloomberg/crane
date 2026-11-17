@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DIR
-#define INCLUDED_DIR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -102,5 +101,3 @@ struct Dir {
   static std::string get_cwd();
   static List<std::string> list_dir(std::string path);
 };
-
-#endif // INCLUDED_DIR

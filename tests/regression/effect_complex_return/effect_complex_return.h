@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_COMPLEX_RETURN
-#define INCLUDED_EFFECT_COMPLEX_RETURN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -114,5 +113,3 @@ struct EffectComplexReturn {
   /// 7. Env effect result used in conditional
   static std::string env_or_prompt(std::string name);
 };
-
-#endif // INCLUDED_EFFECT_COMPLEX_RETURN

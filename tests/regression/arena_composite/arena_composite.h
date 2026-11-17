@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ARENA_COMPOSITE
-#define INCLUDED_ARENA_COMPOSITE
+#pragma once
 
 #include <atomic>
 #include <memory>
@@ -749,5 +748,3 @@ struct Comp {
     }
   };
 };
-
-#endif // INCLUDED_ARENA_COMPOSITE

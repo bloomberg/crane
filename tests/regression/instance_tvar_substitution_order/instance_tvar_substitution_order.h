@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_TVAR_SUBSTITUTION_ORDER
-#define INCLUDED_INSTANCE_TVAR_SUBSTITUTION_ORDER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -60,5 +59,3 @@ struct InstanceTvarSubstitutionOrder {
   static inline const uint64_t result =
       unw<uint64_t>::conv(wrap<uint64_t>::w(UINT64_C(3)));
 };
-
-#endif // INCLUDED_INSTANCE_TVAR_SUBSTITUTION_ORDER

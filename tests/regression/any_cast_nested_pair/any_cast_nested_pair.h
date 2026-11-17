@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ANY_CAST_NESTED_PAIR
-#define INCLUDED_ANY_CAST_NESTED_PAIR
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -12,5 +11,3 @@ struct AnyCastNestedPair {
   static uint64_t apply_pred(symbols_semty input);
   static uint64_t test_pred(uint64_t a, uint64_t b);
 };
-
-#endif // INCLUDED_ANY_CAST_NESTED_PAIR

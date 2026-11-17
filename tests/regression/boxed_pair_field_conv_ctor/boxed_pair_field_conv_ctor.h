@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOXED_PAIR_FIELD_CONV_CTOR
-#define INCLUDED_BOXED_PAIR_FIELD_CONV_CTOR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -234,5 +233,3 @@ public:
 
   Nat run() const { return this->depth(); }
 };
-
-#endif // INCLUDED_BOXED_PAIR_FIELD_CONV_CTOR

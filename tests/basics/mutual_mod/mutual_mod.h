@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_MOD
-#define INCLUDED_MUTUAL_MOD
+#pragma once
 
 #include "obj.h"
 #include "small_vector.h"
@@ -171,5 +170,3 @@ struct EvenOdd {
 
 const uint64_t test_even_len = EvenOdd::even_length(EvenOdd::two);
 const uint64_t test_odd_len = EvenOdd::odd_length(EvenOdd::three);
-
-#endif // INCLUDED_MUTUAL_MOD

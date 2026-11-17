@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_CONS_ERASURE_BLEED
-#define INCLUDED_LIST_CONS_ERASURE_BLEED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -56,5 +55,3 @@ syms_semty rev_tuple_cons_case(const std::deque<Sym> &, Sym x,
 
 syms_semty rev_tuple(const std::deque<Sym> &xs, syms_semty vs);
 uint64_t check(uint64_t n);
-
-#endif // INCLUDED_LIST_CONS_ERASURE_BLEED

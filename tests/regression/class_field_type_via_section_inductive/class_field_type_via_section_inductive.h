@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_FIELD_TYPE_VIA_SECTION_INDUCTIVE
-#define INCLUDED_CLASS_FIELD_TYPE_VIA_SECTION_INDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -213,5 +212,3 @@ struct ClassFieldTypeViaSectionInductive {
       to_base<natToBase, natParams, natParams, Nat>(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
-
-#endif // INCLUDED_CLASS_FIELD_TYPE_VIA_SECTION_INDUCTIVE

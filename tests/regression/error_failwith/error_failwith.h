@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERROR_FAILWITH
-#define INCLUDED_ERROR_FAILWITH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -51,5 +50,3 @@ struct ErrorFailwith {
   static uint64_t safe_div(uint64_t a, uint64_t b);
   static uint64_t result();
 };
-
-#endif // INCLUDED_ERROR_FAILWITH

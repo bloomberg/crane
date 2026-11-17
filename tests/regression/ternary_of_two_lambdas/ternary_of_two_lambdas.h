@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TERNARY_OF_TWO_LAMBDAS
-#define INCLUDED_TERNARY_OF_TWO_LAMBDAS
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -142,5 +141,3 @@ Nat f_odd(const Nat &x0_, const Nat &x1_);
 /// argument is written.
 Nat pick(const Nat &n, Nat x0_);
 Nat go(const Nat &x0_, Nat x1_);
-
-#endif // INCLUDED_TERNARY_OF_TWO_LAMBDAS

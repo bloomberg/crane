@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_INDUCTIVE_SAME_NAME
-#define INCLUDED_MODULE_INDUCTIVE_SAME_NAME
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -36,5 +35,3 @@ struct ModuleInductiveSameName {
 
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_MODULE_INDUCTIVE_SAME_NAME

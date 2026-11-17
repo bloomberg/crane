@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MAPPING_LAMBDA_CAPTURE_DEFAULT
-#define INCLUDED_MAPPING_LAMBDA_CAPTURE_DEFAULT
+#pragma once
 
 #include <cstdint>
 
@@ -31,5 +30,3 @@ struct MappingLambdaCaptureDefault {
           static_cast<uint64_t>(d) * static_cast<uint64_t>(INT64_C(10)))) +
                            static_cast<uint64_t>(m));
 };
-
-#endif // INCLUDED_MAPPING_LAMBDA_CAPTURE_DEFAULT

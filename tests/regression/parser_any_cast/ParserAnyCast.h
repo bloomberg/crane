@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARSERANYCAST
-#define INCLUDED_PARSERANYCAST
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -102,5 +101,3 @@ struct ParserAnyCast {
   }
 };
 } // namespace ParserAnyCast
-
-#endif // INCLUDED_PARSERANYCAST

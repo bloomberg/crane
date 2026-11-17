@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STATET_ITREE_RETURN
-#define INCLUDED_STATET_ITREE_RETURN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -325,5 +324,3 @@ struct StatetItreeReturn {
     }
   }();
 };
-
-#endif // INCLUDED_STATET_ITREE_RETURN

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SORT
-#define INCLUDED_SORT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -266,5 +265,3 @@ struct Sort {
   static Sig<List<uint64_t>> psort(const List<uint64_t> &x0_);
   static Sig<List<uint64_t>> qsort(const List<uint64_t> &x0_);
 };
-
-#endif // INCLUDED_SORT

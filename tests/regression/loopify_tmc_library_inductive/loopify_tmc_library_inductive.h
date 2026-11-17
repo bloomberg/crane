@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TMC_LIBRARY_INDUCTIVE
-#define INCLUDED_LOOPIFY_TMC_LIBRARY_INDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -150,5 +149,3 @@ struct LoopifyTmcLibraryInductive {
   static uint64_t digit_to_nat(const T &d);
   static inline const uint64_t seven = digit_to_nat(digit_of_nat(UINT64_C(7)));
 };
-
-#endif // INCLUDED_LOOPIFY_TMC_LIBRARY_INDUCTIVE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_VARIANT_BASIC
-#define INCLUDED_SHARED_VARIANT_BASIC
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -283,5 +282,3 @@ struct SharedVariantBasic {
           UINT64_C(0));
   static uint64_t long_result(uint64_t n);
 };
-
-#endif // INCLUDED_SHARED_VARIANT_BASIC

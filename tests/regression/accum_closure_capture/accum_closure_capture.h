@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ACCUM_CLOSURE_CAPTURE
-#define INCLUDED_ACCUM_CLOSURE_CAPTURE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -384,5 +383,3 @@ struct AccumClosureCapture {
     return fs.apply_all(noise);
   }();
 };
-
-#endif // INCLUDED_ACCUM_CLOSURE_CAPTURE

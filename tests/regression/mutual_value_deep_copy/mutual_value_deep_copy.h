@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_VALUE_DEEP_COPY
-#define INCLUDED_MUTUAL_VALUE_DEEP_COPY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -193,5 +192,3 @@ struct MutualValueDeepCopy {
   static std::pair<a, a> dup_a(const a &x);
   static bool copied_reaches_end(const a &x);
 };
-
-#endif // INCLUDED_MUTUAL_VALUE_DEEP_COPY

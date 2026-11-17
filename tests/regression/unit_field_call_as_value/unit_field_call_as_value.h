@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_FIELD_CALL_AS_VALUE
-#define INCLUDED_UNIT_FIELD_CALL_AS_VALUE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -106,5 +105,3 @@ struct UnitFieldCallAsValue {
       update(Nat::s(Nat::s(Nat::s(Nat::o())))).first.eqb(
           Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
-
-#endif // INCLUDED_UNIT_FIELD_CALL_AS_VALUE

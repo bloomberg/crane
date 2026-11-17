@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NUM
-#define INCLUDED_NUM
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -68,5 +67,3 @@ public:
   const variant_t &v() const { return v_; }
 };
 } // namespace Num
-
-#endif // INCLUDED_NUM

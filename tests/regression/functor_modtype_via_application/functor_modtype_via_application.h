@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_MODTYPE_VIA_APPLICATION
-#define INCLUDED_FUNCTOR_MODTYPE_VIA_APPLICATION
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -161,5 +160,3 @@ struct FunctorModtypeViaApplication {
   static inline const bool res =
       H::g(true).add(KK::h(false)).eqb(Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_FUNCTOR_MODTYPE_VIA_APPLICATION

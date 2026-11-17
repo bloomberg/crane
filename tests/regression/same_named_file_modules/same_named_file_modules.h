@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SAME_NAMED_FILE_MODULES
-#define INCLUDED_SAME_NAMED_FILE_MODULES
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -2365,5 +2364,3 @@ template <typename T1>
 CompSpecT<T1> Datatypes::CompSpec2Type(const T1 &, const T1 &, Comparison x0_) {
   return Datatypes::CompareSpec2Type(x0_);
 }
-
-#endif // INCLUDED_SAME_NAMED_FILE_MODULES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CUSTOM_TYPECLASS_TYPE
-#define INCLUDED_CUSTOM_TYPECLASS_TYPE
+#pragma once
 
 #include "obj.h"
 #include <concepts>
@@ -34,5 +33,3 @@ struct nat_ref {
 
 static_assert(RefClass<nat_ref, uint64_t>);
 uint64_t test_new();
-
-#endif // INCLUDED_CUSTOM_TYPECLASS_TYPE

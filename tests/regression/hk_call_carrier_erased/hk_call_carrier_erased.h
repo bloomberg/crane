@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_CALL_CARRIER_ERASED
-#define INCLUDED_HK_CALL_CARRIER_ERASED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -292,5 +291,3 @@ template <TFunctor _tcI0> struct TFunctor_outer {
         _tcI0::template tfmap<CraneA0, CraneA1>(f, m.o_body)};
   }
 };
-
-#endif // INCLUDED_HK_CALL_CARRIER_ERASED

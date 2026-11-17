@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUM
-#define INCLUDED_SUM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -260,5 +259,3 @@ struct Sum {
   static inline const uint64_t test_either =
       either_to_nat(either<uint64_t, uint64_t>::left(UINT64_C(3)));
 };
-
-#endif // INCLUDED_SUM

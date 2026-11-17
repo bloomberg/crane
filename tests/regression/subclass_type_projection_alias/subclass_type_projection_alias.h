@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUBCLASS_TYPE_PROJECTION_ALIAS
-#define INCLUDED_SUBCLASS_TYPE_PROJECTION_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -620,5 +619,3 @@ struct SubclassTypeProjectionAlias {
   static_assert(Params<natParams>);
   static Itree<crane::obj, Sum<Err, dv<typename natParams::ptr>>> run();
 };
-
-#endif // INCLUDED_SUBCLASS_TYPE_PROJECTION_ALIAS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_ESCAPE_MATCH
-#define INCLUDED_CLOSURE_ESCAPE_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -147,5 +146,3 @@ struct ClosureEscapeMatch {
   static std::pair<uint64_t, crane::fn<mylist<uint64_t>(mylist<uint64_t>)>>
   closure_in_pair(const mylist<mylist<uint64_t>> &l);
 };
-
-#endif // INCLUDED_CLOSURE_ESCAPE_MATCH

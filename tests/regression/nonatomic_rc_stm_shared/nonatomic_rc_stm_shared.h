@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NONATOMIC_RC_STM_SHARED
-#define INCLUDED_NONATOMIC_RC_STM_SHARED
+#pragma once
 
 #include "crane_fn.h"
 #include "shared_block.h"
@@ -93,5 +92,3 @@ struct NonatomicRcStmShared {
   static void push(stm::TVar<lst> t, uint64_t n);
   static uint64_t size(stm::TVar<lst> t);
 };
-
-#endif // INCLUDED_NONATOMIC_RC_STM_SHARED

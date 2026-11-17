@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_RECORD
-#define INCLUDED_DEP_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -223,5 +222,3 @@ struct DepRecord {
   static inline const Tagged tagged_nat = Tagged{Tag::TNAT, UINT64_C(42)};
   static inline const Tagged tagged_bool = Tagged{Tag::TBOOL, true};
 };
-
-#endif // INCLUDED_DEP_RECORD

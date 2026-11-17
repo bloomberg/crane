@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_PERSISTENT_ARRAY_NAME_CLASH
-#define INCLUDED_GENERATED_PERSISTENT_ARRAY_NAME_CLASH
+#pragma once
 
 #include <cstdint>
 #include <persistent_array.h>
@@ -15,5 +14,3 @@ struct persistent_array_ {
       persistent_array<bool>(INT64_C(1), true);
   static inline const bool sample = arr.get(INT64_C(0));
 };
-
-#endif // INCLUDED_GENERATED_PERSISTENT_ARRAY_NAME_CLASH

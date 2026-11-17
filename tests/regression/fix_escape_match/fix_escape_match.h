@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_ESCAPE_MATCH
-#define INCLUDED_FIX_ESCAPE_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -128,5 +127,3 @@ struct FixEscapeMatch {
     }
   }();
 };
-
-#endif // INCLUDED_FIX_ESCAPE_MATCH

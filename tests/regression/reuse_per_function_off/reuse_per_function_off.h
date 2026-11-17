@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_PER_FUNCTION_OFF
-#define INCLUDED_REUSE_PER_FUNCTION_OFF
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -93,5 +92,3 @@ struct ReusePerFunctionOff {
   static lst upto(uint64_t n);
   static uint64_t sum(const lst &l);
 };
-
-#endif // INCLUDED_REUSE_PER_FUNCTION_OFF

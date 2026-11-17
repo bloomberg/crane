@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTENUMQUALIFIED
-#define INCLUDED_SEPEXTENUMQUALIFIED
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -39,5 +38,3 @@ template <OrderedType X> struct Make {
   }
 };
 } // namespace SepExtEnumQualified
-
-#endif // INCLUDED_SEPEXTENUMQUALIFIED

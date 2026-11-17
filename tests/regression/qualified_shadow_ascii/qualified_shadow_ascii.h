@@ -1,5 +1,4 @@
-#ifndef INCLUDED_QUALIFIED_SHADOW_ASCII
-#define INCLUDED_QUALIFIED_SHADOW_ASCII
+#pragma once
 
 #include <utility>
 
@@ -17,5 +16,3 @@ struct QualifiedShadowAscii {
   static Shadow::shadow id_shadow(Shadow::shadow x);
   static inline const Shadow::shadow t = id_shadow(Shadow::shadow::MK);
 };
-
-#endif // INCLUDED_QUALIFIED_SHADOW_ASCII

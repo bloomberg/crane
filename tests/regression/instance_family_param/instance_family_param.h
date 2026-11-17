@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_FAMILY_PARAM
-#define INCLUDED_INSTANCE_FAMILY_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -173,5 +172,3 @@ struct InstanceFamilyParam {
     return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
   }();
 };
-
-#endif // INCLUDED_INSTANCE_FAMILY_PARAM

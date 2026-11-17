@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_PAIR_LIST
-#define INCLUDED_ASSOC_PAIR_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -209,5 +208,3 @@ struct AssocPairList {
   static inline const t empty = t::node(List<std::pair<uint64_t, t>>::nil());
   static uint64_t count(const t &x);
 };
-
-#endif // INCLUDED_ASSOC_PAIR_LIST

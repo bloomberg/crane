@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAT
-#define INCLUDED_NAT
+#pragma once
 
 #include <memory>
 #include <type_traits>
@@ -149,5 +148,3 @@ public:
     }
   }
 };
-
-#endif // INCLUDED_NAT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_METHOD_NAME_CLASH
-#define INCLUDED_GENERATED_METHOD_NAME_CLASH
+#pragma once
 
 #include <type_traits>
 #include <utility>
@@ -72,5 +71,3 @@ struct GeneratedMethodNameClash {
   static bool is_clone(const token &t);
   static inline const bool sample = is_clone(token::Clone_());
 };
-
-#endif // INCLUDED_GENERATED_METHOD_NAME_CLASH

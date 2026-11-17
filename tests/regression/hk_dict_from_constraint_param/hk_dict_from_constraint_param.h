@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_DICT_FROM_CONSTRAINT_PARAM
-#define INCLUDED_HK_DICT_FROM_CONSTRAINT_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -289,5 +288,3 @@ template <TFunctor _tcI0, TFunctor _tcI1> struct TFunctor_holder {
         _tcI0::template tfmap<CraneA0, CraneA1>(f, m.h_body)};
   }
 };
-
-#endif // INCLUDED_HK_DICT_FROM_CONSTRAINT_PARAM

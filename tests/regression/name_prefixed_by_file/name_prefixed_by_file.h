@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_PREFIXED_BY_FILE
-#define INCLUDED_NAME_PREFIXED_BY_FILE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -199,5 +198,3 @@ EOU<T1> EOU0::option_ub(const Nat &s, const std::optional<T1> &x) {
     return EOU<T1>::raise_error(s);
   }
 }
-
-#endif // INCLUDED_NAME_PREFIXED_BY_FILE

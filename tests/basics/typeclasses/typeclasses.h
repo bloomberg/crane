@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPECLASSES
-#define INCLUDED_TYPECLASSES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -258,5 +257,3 @@ struct Typeclasses {
   static inline const uint64_t test_describe_ne =
       describe<eqNat, numNat, uint64_t>(UINT64_C(3), UINT64_C(7));
 };
-
-#endif // INCLUDED_TYPECLASSES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MUTUAL_INLINE_TEMP
-#define INCLUDED_LOOPIFY_MUTUAL_INLINE_TEMP
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -148,5 +147,3 @@ struct LoopifyMutualInlineTemp {
                            uint64_t s);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_MUTUAL_INLINE_TEMP

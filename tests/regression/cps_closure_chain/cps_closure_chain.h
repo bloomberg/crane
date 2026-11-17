@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CPS_CLOSURE_CHAIN
-#define INCLUDED_CPS_CLOSURE_CHAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -193,5 +192,3 @@ struct CpsClosureChain {
     return std::make_pair(s, f);
   }();
 };
-
-#endif // INCLUDED_CPS_CLOSURE_CHAIN

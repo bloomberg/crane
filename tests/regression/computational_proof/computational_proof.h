@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COMPUTATIONAL_PROOF
-#define INCLUDED_COMPUTATIONAL_PROOF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -121,5 +120,3 @@ struct ComputationalProof {
                   UINT64_C(2),
                   List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))))));
 };
-
-#endif // INCLUDED_COMPUTATIONAL_PROOF

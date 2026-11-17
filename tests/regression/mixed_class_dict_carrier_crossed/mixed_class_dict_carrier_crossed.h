@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MIXED_CLASS_DICT_CARRIER_CROSSED
-#define INCLUDED_MIXED_CLASS_DICT_CARRIER_CROSSED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -487,5 +486,3 @@ template <typename F0> modu<bool> use_modu(F0 &&f, const modu<Nat> &m) {
   return TFunctor_modu<TFunctor_exp, Endo_nat, TFunctor_decl>::template tfmap<
       Nat, bool>(f, m);
 }
-
-#endif // INCLUDED_MIXED_CLASS_DICT_CARRIER_CROSSED

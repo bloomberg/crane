@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_COFIX_WITHOUT_PARAMETERS
-#define INCLUDED_LOCAL_COFIX_WITHOUT_PARAMETERS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -218,5 +217,3 @@ struct LocalCofixWithoutParameters {
            [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
            UINT64_C(0)));
 };
-
-#endif // INCLUDED_LOCAL_COFIX_WITHOUT_PARAMETERS

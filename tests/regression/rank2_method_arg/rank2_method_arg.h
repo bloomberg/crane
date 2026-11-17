@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RANK2_METHOD_ARG
-#define INCLUDED_RANK2_METHOD_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -30,5 +29,3 @@ struct Rank2MethodArg {
   static_assert(Applyer<AI>);
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_RANK2_METHOD_ARG

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNSOUND_AXIOMS
-#define INCLUDED_UNSOUND_AXIOMS
+#pragma once
 
 #include <cstdint>
 #include <stdexcept>
@@ -39,5 +38,3 @@ struct UnsoundAxioms {
   static uint64_t prop_as_type();
   static uint64_t use_prop_as_type(const Rec &r);
 };
-
-#endif // INCLUDED_UNSOUND_AXIOMS

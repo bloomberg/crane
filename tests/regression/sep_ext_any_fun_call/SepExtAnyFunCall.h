@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTANYFUNCALL
-#define INCLUDED_SEPEXTANYFUNCALL
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -37,5 +36,3 @@ template <SymTypes Ty> struct Actions {
   }
 };
 } // namespace SepExtAnyFunCall
-
-#endif // INCLUDED_SEPEXTANYFUNCALL

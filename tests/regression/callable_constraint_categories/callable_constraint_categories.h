@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CALLABLE_CONSTRAINT_CATEGORIES
-#define INCLUDED_CALLABLE_CONSTRAINT_CATEGORIES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -148,5 +147,3 @@ struct CallableOps {
     }
   }
 };
-
-#endif // INCLUDED_CALLABLE_CONSTRAINT_CATEGORIES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_REUSE_CURSOR_READS_FIELD
-#define INCLUDED_LOOPIFY_REUSE_CURSOR_READS_FIELD
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -126,5 +125,3 @@ struct LoopifyReuseCursorReadsField {
   static lst pairs(lst l);
   static lst weigh(uint64_t acc, lst l);
 };
-
-#endif // INCLUDED_LOOPIFY_REUSE_CURSOR_READS_FIELD

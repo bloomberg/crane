@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_APP
-#define INCLUDED_TYPE_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -199,5 +198,3 @@ struct TypeApp {
   using NatMonoidUser = UseMonoid<NatMonoid>;
   static inline const NatMonoid::T monoid_test = NatMonoidUser::combine_empty();
 };
-
-#endif // INCLUDED_TYPE_APP

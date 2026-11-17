@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NON_UNIFORM_PAIR_NEST
-#define INCLUDED_NON_UNIFORM_PAIR_NEST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -107,5 +106,3 @@ struct NonUniformPairNest {
   static inline const uint64_t go = size<uint64_t>(
       nest::ns(nest::nz(std::make_pair(UINT64_C(1), UINT64_C(2)))));
 };
-
-#endif // INCLUDED_NON_UNIFORM_PAIR_NEST

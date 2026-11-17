@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NUMBER
-#define INCLUDED_NUMBER
+#pragma once
 
 #include <utility>
 #include <variant>
@@ -239,5 +238,3 @@ public:
   }
 };
 } // namespace Number
-
-#endif // INCLUDED_NUMBER

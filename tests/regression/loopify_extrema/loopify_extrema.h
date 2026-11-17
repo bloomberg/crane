@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_EXTREMA
-#define INCLUDED_LOOPIFY_EXTREMA
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -341,5 +340,3 @@ struct LoopifyExtrema {
     }
   }
 };
-
-#endif // INCLUDED_LOOPIFY_EXTREMA

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_MONOSTATE_ERASE
-#define INCLUDED_UNIT_MONOSTATE_ERASE
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -50,5 +49,3 @@ struct UnitMonostateErase {
   /// --- Example 6: nested match-in-match ---
   static void nested_matches(Color c1, Color c2);
 };
-
-#endif // INCLUDED_UNIT_MONOSTATE_ERASE

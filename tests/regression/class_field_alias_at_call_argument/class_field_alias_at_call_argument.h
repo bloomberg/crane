@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_FIELD_ALIAS_AT_CALL_ARGUMENT
-#define INCLUDED_CLASS_FIELD_ALIAS_AT_CALL_ARGUMENT
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -184,5 +183,3 @@ static_assert(IPtr<natIPtr>);struct ClassFieldAliasAtCallArgument {
 static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat, bool>>(PointerV<natIPtr>::null());static Nat use(const std::pair<Nat, bool>& p);
 static inline const Nat run = use(the_null);
 };
-
-#endif // INCLUDED_CLASS_FIELD_ALIAS_AT_CALL_ARGUMENT

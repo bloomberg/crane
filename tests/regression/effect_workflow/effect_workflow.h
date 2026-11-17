@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_WORKFLOW
-#define INCLUDED_EFFECT_WORKFLOW
+#pragma once
 
 #include <cerrno>
 #include <chrono>
@@ -37,5 +36,3 @@ struct EffectWorkflow {
   /// 8. Return int literal in monadic context
   static int64_t return_literal();
 };
-
-#endif // INCLUDED_EFFECT_WORKFLOW

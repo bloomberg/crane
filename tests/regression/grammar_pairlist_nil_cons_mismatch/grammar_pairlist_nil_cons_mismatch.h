@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH
-#define INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -347,5 +346,3 @@ using grammar_entry = SigT<production, production_semty>;
                                      std::pair<crane::obj,
                                                crane::obj>>>{}))))));
 uint64_t num_entries();
-
-#endif // INCLUDED_GRAMMAR_PAIRLIST_NIL_CONS_MISMATCH

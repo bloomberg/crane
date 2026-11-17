@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_TREE_PAIR_LITERAL
-#define INCLUDED_NESTED_TREE_PAIR_LITERAL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -113,5 +112,3 @@ struct NestedTreePairLiteral {
                               std::make_pair(UINT64_C(3), UINT64_C(4))))));
   static inline const uint64_t go = size<uint64_t>(sample);
 };
-
-#endif // INCLUDED_NESTED_TREE_PAIR_LITERAL

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ATOMIC_INCLUDE
-#define INCLUDED_ATOMIC_INCLUDE
+#pragma once
 
 #include <utility>
 #include <cstdint>
@@ -51,5 +50,3 @@ return f0(*l0, tree_rect<T1>(f, f0, *l0), *r0, tree_rect<T1>(f, f0, *r0));
 return tree_rect<T1>(std::move(f), f0, t);}static uint64_t size(const tree& t);
 static inline const uint64_t sample = size(tree::node(tree::node(tree::leaf(), tree::leaf()), tree::leaf()));
 };
-
-#endif // INCLUDED_ATOMIC_INCLUDE

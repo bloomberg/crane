@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_ENUM_SWITCH
-#define INCLUDED_ERASED_ENUM_SWITCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -142,5 +141,3 @@ struct ErasedEnumSwitch {
                        }
                      }))));
 };
-
-#endif // INCLUDED_ERASED_ENUM_SWITCH

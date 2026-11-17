@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_VALUE_FIELD_CALL
-#define INCLUDED_FUNCTOR_VALUE_FIELD_CALL
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -53,5 +52,3 @@ struct FunctorValueFieldCall {
   using Q = Pairify<PN>;
   static inline const uint64_t go = (Q::zero().first).first;
 };
-
-#endif // INCLUDED_FUNCTOR_VALUE_FIELD_CALL

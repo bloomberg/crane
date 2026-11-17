@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CANON_STRUCT
-#define INCLUDED_CANON_STRUCT
+#pragma once
 
 #include "obj.h"
 #include <concepts>
@@ -48,5 +47,3 @@ struct CanonStruct {
       same<nat_eqType>(UINT64_C(3), UINT64_C(5));
   static inline const bool test_bool = same<bool_eqType>(true, false);
 };
-
-#endif // INCLUDED_CANON_STRUCT

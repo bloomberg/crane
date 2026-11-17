@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FIX_NO_STDFUN
-#define INCLUDED_LET_FIX_NO_STDFUN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -135,5 +134,3 @@ struct LetFixNoStdfun {
                                            List<uint64_t>::nil())),
                                              List<List<uint64_t>>::nil()))));
 };
-
-#endif // INCLUDED_LET_FIX_NO_STDFUN

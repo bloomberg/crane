@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MULTI_RECURSION
-#define INCLUDED_LOOPIFY_MULTI_RECURSION
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -232,5 +231,3 @@ struct LoopifyMultiRecursion {
   static uint64_t hofstadter_q_fuel(uint64_t fuel, uint64_t n);
   static uint64_t hofstadter_q(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_MULTI_RECURSION

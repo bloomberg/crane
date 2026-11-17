@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REGION_MEMBERSHIP_BOUNDS
-#define INCLUDED_REGION_MEMBERSHIP_BOUNDS
+#pragma once
 
 #include <cstdint>
 
@@ -16,5 +15,3 @@ struct RegionMembershipBounds {
             (addr_in_regionb(UINT64_C(121), l) ? UINT64_C(1) : UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_REGION_MEMBERSHIP_BOUNDS

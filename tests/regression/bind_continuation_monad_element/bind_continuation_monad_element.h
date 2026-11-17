@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BIND_CONTINUATION_MONAD_ELEMENT
-#define INCLUDED_BIND_CONTINUATION_MONAD_ELEMENT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -336,5 +335,3 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
 }
-
-#endif // INCLUDED_BIND_CONTINUATION_MONAD_ELEMENT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BORROW_CONSTRUCTION_ARGUMENT
-#define INCLUDED_BORROW_CONSTRUCTION_ARGUMENT
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -73,5 +72,3 @@ template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
-
-#endif // INCLUDED_BORROW_CONSTRUCTION_ARGUMENT

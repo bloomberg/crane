@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_PARTIAL_APP
-#define INCLUDED_FIX_PARTIAL_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -191,5 +190,3 @@ struct FixPartialApp {
     return (tree_sum(g(std::move(t1))) + tree_sum(g(std::move(t2))));
   }();
 };
-
-#endif // INCLUDED_FIX_PARTIAL_APP

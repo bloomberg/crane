@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPTION_RECURSIVE_MATCH
-#define INCLUDED_OPTION_RECURSIVE_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -201,5 +200,3 @@ struct OptionRecursiveMatch {
       Nat::s(Nat::o()), Option<chain>::some(chain::c(Nat::s(Nat::s(Nat::o())),
                                                      Option<chain>::none()))));
 };
-
-#endif // INCLUDED_OPTION_RECURSIVE_MATCH

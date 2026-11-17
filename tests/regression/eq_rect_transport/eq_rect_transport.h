@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EQ_RECT_TRANSPORT
-#define INCLUDED_EQ_RECT_TRANSPORT
+#pragma once
 
 #include <cstdint>
 
@@ -10,5 +9,3 @@ struct EqRectTransport {
   using idty = uint64_t;
   static inline const uint64_t run2 = cast<idty, uint64_t>(UINT64_C(7));
 };
-
-#endif // INCLUDED_EQ_RECT_TRANSPORT

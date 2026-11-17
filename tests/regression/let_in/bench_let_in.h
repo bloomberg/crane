@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BENCH_LET_IN
-#define INCLUDED_BENCH_LET_IN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -130,5 +129,3 @@ struct BenchLetIn {
   static inline const uint64_t test_chain =
       chain_pairs(UINT64_C(1), UINT64_C(2), UINT64_C(3));
 };
-
-#endif // INCLUDED_BENCH_LET_IN

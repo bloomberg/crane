@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_APPLY
-#define INCLUDED_RECORD_APPLY
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -15,5 +14,3 @@ struct RecordApply {
       R{[](uint64_t x, uint64_t) { return x; }, UINT64_C(3)};
   static inline const uint64_t three = r.f(UINT64_C(3), UINT64_C(0));
 };
-
-#endif // INCLUDED_RECORD_APPLY

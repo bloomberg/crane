@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CTOR_ARG_MOVE_ALIAS_REC
-#define INCLUDED_CTOR_ARG_MOVE_ALIAS_REC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -322,5 +321,3 @@ struct CtorArgMoveAliasRec {
   /// annotate yields [I 1; I 3; I 2; I 2] and run 1 = 1+3+2+2 = 8.
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_CTOR_ARG_MOVE_ALIAS_REC

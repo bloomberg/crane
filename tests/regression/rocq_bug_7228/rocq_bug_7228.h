@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_7228
-#define INCLUDED_ROCQ_BUG_7228
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -96,5 +95,3 @@ struct RocqBug7228 {
   static inline const data test_data =
       data::data0(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))))));
 };
-
-#endif // INCLUDED_ROCQ_BUG_7228

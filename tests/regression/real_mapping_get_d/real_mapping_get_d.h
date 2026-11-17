@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REAL_MAPPING_GET_D
-#define INCLUDED_REAL_MAPPING_GET_D
+#pragma once
 
 #include <crane_real.h>
 #include <cstdint>
@@ -15,5 +14,3 @@ struct RealMappingGetD {
   static inline const Real y = (x / Real::from_z(INT64_C(2)));
   static inline const Real run = (y - Real::from_z(INT64_C(1)));
 };
-
-#endif // INCLUDED_REAL_MAPPING_GET_D

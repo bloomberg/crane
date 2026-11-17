@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_NESTED_DEEP
-#define INCLUDED_NAME_CLASH_NESTED_DEEP
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -95,5 +94,3 @@ struct NameClashNestedDeep {
   /// Nested match where inner match scrutinee is a field from outer match.
   static uint64_t nested_field_match(const mylist &xs);
 };
-
-#endif // INCLUDED_NAME_CLASH_NESTED_DEEP

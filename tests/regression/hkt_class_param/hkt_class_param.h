@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_CLASS_PARAM
-#define INCLUDED_HKT_CLASS_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -246,5 +245,3 @@ struct HktClassParam {
 
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_HKT_CLASS_PARAM

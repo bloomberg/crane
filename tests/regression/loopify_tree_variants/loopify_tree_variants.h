@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TREE_VARIANTS
-#define INCLUDED_LOOPIFY_TREE_VARIANTS
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -913,5 +912,3 @@ struct LoopifyTreeVariants {
     }
   };
 };
-
-#endif // INCLUDED_LOOPIFY_TREE_VARIANTS

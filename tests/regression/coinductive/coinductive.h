@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COINDUCTIVE
-#define INCLUDED_COINDUCTIVE
+#pragma once
 
 #include "fn.h"
 #include "lazy.h"
@@ -122,5 +121,3 @@ struct Coinductive {
 
   static tree infinite_tree(uint64_t n);
 };
-
-#endif // INCLUDED_COINDUCTIVE

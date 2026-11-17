@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ABSTRACT_PROJECTION_OVERAPPLIED
-#define INCLUDED_ABSTRACT_PROJECTION_OVERAPPLIED
+#pragma once
 
 #include "fn.h"
 #include <concepts>
@@ -42,5 +41,3 @@ struct AbstractProjectionOverapplied {
   using U = Use<Impl>;
   static inline const uint64_t result = U::go();
 };
-
-#endif // INCLUDED_ABSTRACT_PROJECTION_OVERAPPLIED

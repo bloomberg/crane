@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYARG_PARTIAL_TYPE_APPLICATION
-#define INCLUDED_TYARG_PARTIAL_TYPE_APPLICATION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -234,5 +233,3 @@ struct TyargPartialTypeApplication {
     }
   }();
 };
-
-#endif // INCLUDED_TYARG_PARTIAL_TYPE_APPLICATION

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STM_HASH_MAP_BDE
-#define INCLUDED_STM_HASH_MAP_BDE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -313,5 +312,3 @@ template <typename K, typename V> struct CHT {
     }
   }
 };
-
-#endif // INCLUDED_STM_HASH_MAP_BDE

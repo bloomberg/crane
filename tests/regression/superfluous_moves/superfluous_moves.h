@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUPERFLUOUS_MOVES
-#define INCLUDED_SUPERFLUOUS_MOVES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -153,5 +152,3 @@ struct SuperfluousMoves {
   /// Reduced branch reproducer without the outer option * nat wrapper.
   static std::pair<bool, loop_state> bad_branch(const loop_state &ls);
 };
-
-#endif // INCLUDED_SUPERFLUOUS_MOVES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_ALIAS_TARGET_HANDLING
-#define INCLUDED_MODULE_ALIAS_TARGET_HANDLING
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -1656,5 +1655,3 @@ template <typename T1>
 CompSpecT<T1> Datatypes::CompSpec2Type(const T1 &, const T1 &, Comparison x0_) {
   return Datatypes::CompareSpec2Type(x0_);
 }
-
-#endif // INCLUDED_MODULE_ALIAS_TARGET_HANDLING

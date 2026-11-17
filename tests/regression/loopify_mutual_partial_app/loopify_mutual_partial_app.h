@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MUTUAL_PARTIAL_APP
-#define INCLUDED_LOOPIFY_MUTUAL_PARTIAL_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -836,5 +835,3 @@ struct LoopifyMutualPartialApp {
   /// = 313
   static bool check();
 };
-
-#endif // INCLUDED_LOOPIFY_MUTUAL_PARTIAL_APP

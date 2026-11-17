@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MATCH_CLOSURE_ESCAPE
-#define INCLUDED_MATCH_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -223,5 +222,3 @@ struct MatchClosureEscape {
   static inline const uint64_t bug_match_box =
       match_arm_box(test_tree).apply_box(UINT64_C(99));
 };
-
-#endif // INCLUDED_MATCH_CLOSURE_ESCAPE

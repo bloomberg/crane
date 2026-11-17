@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MOVE_CAPTURE_REUSE
-#define INCLUDED_MOVE_CAPTURE_REUSE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -218,5 +217,3 @@ struct MoveCaptureReuse {
     }
   }();
 };
-
-#endif // INCLUDED_MOVE_CAPTURE_REUSE

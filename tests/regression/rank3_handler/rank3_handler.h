@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RANK3_HANDLER
-#define INCLUDED_RANK3_HANDLER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -200,5 +199,3 @@ template <typename F0> Option<Bool0> runWith2(F0 &&k) {
 }
 
 const Option<Nat> top = runWith([](auto &&_ec0) { return useTwice(_ec0); });
-
-#endif // INCLUDED_RANK3_HANDLER

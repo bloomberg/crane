@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RC_ASSIGN_FROM_OWN_CHILD
-#define INCLUDED_RC_ASSIGN_FROM_OWN_CHILD
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -89,5 +88,3 @@ struct RcAssignFromOwnChild {
 
   static uint64_t total(const chain &c);
 };
-
-#endif // INCLUDED_RC_ASSIGN_FROM_OWN_CHILD

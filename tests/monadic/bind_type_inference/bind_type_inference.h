@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BIND_TYPE_INFERENCE
-#define INCLUDED_BIND_TYPE_INFERENCE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -124,5 +123,3 @@ struct BindTypeInference {
   static List<int64_t> test5();
   static int64_t test6();
 };
-
-#endif // INCLUDED_BIND_TYPE_INFERENCE

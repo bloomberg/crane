@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COMPREHENSIVE_PATTERNS
-#define INCLUDED_COMPREHENSIVE_PATTERNS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -828,5 +827,3 @@ struct ComprehensivePatterns {
   static std::pair<std::pair<StateOP, StateOP>, uint64_t>
   pair_then_match(const StateOP &s);
 };
-
-#endif // INCLUDED_COMPREHENSIVE_PATTERNS

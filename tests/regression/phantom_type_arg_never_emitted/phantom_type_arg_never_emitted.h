@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PHANTOM_TYPE_ARG_NEVER_EMITTED
-#define INCLUDED_PHANTOM_TYPE_ARG_NEVER_EMITTED
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -108,5 +107,3 @@ struct PhantomTypeArgNeverEmitted {
   static inline const Nat run =
       get<Bool0>(phantom<Bool0>::ph(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_PHANTOM_TYPE_ARG_NEVER_EMITTED

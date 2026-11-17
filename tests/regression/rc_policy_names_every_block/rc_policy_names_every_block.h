@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RC_POLICY_NAMES_EVERY_BLOCK
-#define INCLUDED_RC_POLICY_NAMES_EVERY_BLOCK
+#pragma once
 
 #include <cstdint>
 #include <stdexcept>
@@ -102,5 +101,3 @@ struct RcPolicyNamesEveryBlock {
   static inline const SigT<crane::obj, crane::obj> boxed =
       SigT<crane::obj, crane::obj>::existt(crane::obj(), UINT64_C(3));
 };
-
-#endif // INCLUDED_RC_POLICY_NAMES_EVERY_BLOCK

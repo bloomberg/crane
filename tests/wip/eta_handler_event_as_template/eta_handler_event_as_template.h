@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_HANDLER_EVENT_AS_TEMPLATE
-#define INCLUDED_ETA_HANDLER_EVENT_AS_TEMPLATE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -120,5 +119,3 @@ struct M {
 
   static std::shared_ptr<ITree<std::pair<Nat, Nat>>> use(const Nat &n);
 };
-
-#endif // INCLUDED_ETA_HANDLER_EVENT_AS_TEMPLATE

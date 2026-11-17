@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_PARTIAL_APP_ESCAPE
-#define INCLUDED_FIX_PARTIAL_APP_ESCAPE
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -11,5 +10,3 @@ struct FixPartialAppEscape {
   static inline const uint64_t test_7 = count_bits(UINT64_C(7));
   static inline const uint64_t test_255 = count_bits(UINT64_C(255));
 };
-
-#endif // INCLUDED_FIX_PARTIAL_APP_ESCAPE

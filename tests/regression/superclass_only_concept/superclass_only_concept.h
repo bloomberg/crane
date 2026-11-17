@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUPERCLASS_ONLY_CONCEPT
-#define INCLUDED_SUPERCLASS_ONLY_CONCEPT
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -70,5 +69,3 @@ struct SuperclassOnlyConcept {
 
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_SUPERCLASS_ONLY_CONCEPT

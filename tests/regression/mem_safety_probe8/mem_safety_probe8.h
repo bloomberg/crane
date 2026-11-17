@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE8
-#define INCLUDED_MEM_SAFETY_PROBE8
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -212,5 +211,3 @@ struct MemSafetyProbe8 {
       tree::node(tree::node(tree::leaf(), UINT64_C(3), tree::leaf()),
                  UINT64_C(4), tree::leaf())));
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE8

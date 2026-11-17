@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_CARRIER_UNDER_MAP_LAMBDA
-#define INCLUDED_ALIAS_CARRIER_UNDER_MAP_LAMBDA
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -496,5 +495,3 @@ static_assert(TFunctor<TFunctor_instr>);
 template <typename F0> Instr<bool> use_instr(F0 &&f, const Instr<Nat> &i) {
   return TFunctor_instr::template tfmap<Nat, bool>(f, i);
 }
-
-#endif // INCLUDED_ALIAS_CARRIER_UNDER_MAP_LAMBDA

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STATET_DICT_ARG_DROPPED
-#define INCLUDED_STATET_DICT_ARG_DROPPED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -165,5 +164,3 @@ stateT<env, std::shared_ptr<ITree<crane::obj>>, Nat> twice(Nat n) {
 struct StateTDictArgDropped {
   static std::shared_ptr<ITree<std::pair<Nat, env>>> use(Nat n);
 };
-
-#endif // INCLUDED_STATET_DICT_ARG_DROPPED

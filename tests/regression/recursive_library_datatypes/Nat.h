@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAT
-#define INCLUDED_NAT
+#pragma once
 
 #include <algorithm>
 #include <cstdint>
@@ -72,5 +71,3 @@ uint64_t lor(uint64_t a, uint64_t b);
 uint64_t ldiff(uint64_t a, uint64_t b);
 uint64_t lxor(uint64_t a, uint64_t b);
 } // namespace Nat
-
-#endif // INCLUDED_NAT

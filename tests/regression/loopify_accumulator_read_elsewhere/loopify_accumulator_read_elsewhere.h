@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ACCUMULATOR_READ_ELSEWHERE
-#define INCLUDED_LOOPIFY_ACCUMULATOR_READ_ELSEWHERE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -180,5 +179,3 @@ struct LoopifyAccumulatorReadElsewhere {
   static inline const uint64_t test_graft_size = size(test_graft);
   static inline const uint64_t test_graft_keys = keys(test_graft);
 };
-
-#endif // INCLUDED_LOOPIFY_ACCUMULATOR_READ_ELSEWHERE

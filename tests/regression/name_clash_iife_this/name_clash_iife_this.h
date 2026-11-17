@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_IIFE_THIS
-#define INCLUDED_NAME_CLASH_IIFE_THIS
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -241,5 +240,3 @@ struct NameClashIifeThis {
     return wrapper_rect<T1>(f, std::move(f0), w);
   }
 };
-
-#endif // INCLUDED_NAME_CLASH_IIFE_THIS

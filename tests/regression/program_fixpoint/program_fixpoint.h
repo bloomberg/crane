@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROGRAM_FIXPOINT
-#define INCLUDED_PROGRAM_FIXPOINT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -177,5 +176,3 @@ struct ProgFix {
               UINT64_C(4),
               List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_PROGRAM_FIXPOINT

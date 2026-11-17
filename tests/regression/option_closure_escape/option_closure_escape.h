@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPTION_CLOSURE_ESCAPE
-#define INCLUDED_OPTION_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -131,5 +130,3 @@ struct OptionClosureEscape {
     return std::move(p1).first(UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_OPTION_CLOSURE_ESCAPE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_NESTED_CALL_FRAME_FIELD
-#define INCLUDED_LOOPIFY_NESTED_CALL_FRAME_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -177,5 +176,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_LOOPIFY_NESTED_CALL_FRAME_FIELD

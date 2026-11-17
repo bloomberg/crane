@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_DIR_PATH
-#define INCLUDED_EFFECT_DIR_PATH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -157,5 +156,3 @@ struct EffectDirPath {
   /// 8. remove_directory (returns bool but treated as unit in bind)
   static void cleanup(std::string path);
 };
-
-#endif // INCLUDED_EFFECT_DIR_PATH

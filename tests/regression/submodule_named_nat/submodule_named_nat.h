@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUBMODULE_NAMED_NAT
-#define INCLUDED_SUBMODULE_NAMED_NAT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -82,5 +81,3 @@ struct SubmoduleNamedNat {
 
   static ::Nat run(const ::Nat &x0_);
 };
-
-#endif // INCLUDED_SUBMODULE_NAMED_NAT

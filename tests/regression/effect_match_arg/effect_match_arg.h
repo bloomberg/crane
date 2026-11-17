@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_MATCH_ARG
-#define INCLUDED_EFFECT_MATCH_ARG
+#pragma once
 
 #include <cstdlib>
 #include <iostream>
@@ -24,5 +23,3 @@ struct EffectMatchArg {
   /// 6. Chained: match result passed to set_env then get_env
   static std::optional<std::string> round_trip_match(bool flag);
 };
-
-#endif // INCLUDED_EFFECT_MATCH_ARG

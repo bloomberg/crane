@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FORALL_LIST
-#define INCLUDED_FORALL_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -163,5 +162,3 @@ struct ForallList {
   static inline const uint64_t updated_length =
       update_nth<uint64_t>(UINT64_C(1), UINT64_C(9), sample).length();
 };
-
-#endif // INCLUDED_FORALL_LIST

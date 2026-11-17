@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BLOCK_TEMPLATE_TYPES
-#define INCLUDED_BLOCK_TEMPLATE_TYPES
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -20,5 +19,3 @@ struct BlockTemplateTypes {
   /// Two unsigned int block templates with arithmetic on results.
   static uint64_t test_nat_arith();
 };
-
-#endif // INCLUDED_BLOCK_TEMPLATE_TYPES

@@ -26,8 +26,7 @@
 // the slot reserves a shared value's one word and checks the fit where T is
 // complete.  The word 0, which no shared value uses, is the empty slot.
 
-#ifndef INCLUDED_CRANE_SHARED_VARIANT
-#define INCLUDED_CRANE_SHARED_VARIANT
+#pragma once
 
 #include <atomic>
 #include <cstddef>
@@ -392,5 +391,3 @@ CRANE_RC_POLICY_END
 
 // [crane_raw] for a shared slot: the value it holds, or null.
 template <typename T> T *crane_raw(const crane::shared_box<T> &p) noexcept { return p.get(); }
-
-#endif // INCLUDED_CRANE_SHARED_VARIANT

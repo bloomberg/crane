@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW
-#define INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -102,5 +101,3 @@ struct DequeDeepTreeStackoverflow {
   static rose deep_tree(uint64_t depth);
   static uint64_t test_deep(uint64_t n);
 };
-
-#endif // INCLUDED_DEQUE_DEEP_TREE_STACKOVERFLOW

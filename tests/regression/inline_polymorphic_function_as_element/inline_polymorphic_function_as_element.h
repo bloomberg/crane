@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INLINE_POLYMORPHIC_FUNCTION_AS_ELEMENT
-#define INCLUDED_INLINE_POLYMORPHIC_FUNCTION_AS_ELEMENT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -134,5 +133,3 @@ struct InlinePolymorphicFunctionAsElement {
       [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
       UINT64_C(1));
 };
-
-#endif // INCLUDED_INLINE_POLYMORPHIC_FUNCTION_AS_ELEMENT

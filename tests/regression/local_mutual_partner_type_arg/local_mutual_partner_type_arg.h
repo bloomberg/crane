@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_MUTUAL_PARTNER_TYPE_ARG
-#define INCLUDED_LOCAL_MUTUAL_PARTNER_TYPE_ARG
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -14,5 +13,3 @@
 struct LocalMutualPartnerTypeArg {
   static uint64_t run(uint64_t _x, uint64_t n);
 };
-
-#endif // INCLUDED_LOCAL_MUTUAL_PARTNER_TYPE_ARG

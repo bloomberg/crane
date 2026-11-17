@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_PROJ
-#define INCLUDED_RECORD_PROJ
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -33,5 +32,3 @@ struct RecordProj {
   static inline const uint64_t test2 =
       complex_access(ComplexRecord{UINT64_C(5), UINT64_C(10), UINT64_C(15)});
 };
-
-#endif // INCLUDED_RECORD_PROJ

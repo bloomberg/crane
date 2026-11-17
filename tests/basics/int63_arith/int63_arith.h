@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INT63_ARITH
-#define INCLUDED_INT63_ARITH
+#pragma once
 
 #include <cstdint>
 
@@ -29,5 +28,3 @@ struct Int63Arith {
                                   static_cast<uint64_t>(INT64_C(42))) &
                                  0x7FFFFFFFFFFFFFFFULL));
 };
-
-#endif // INCLUDED_INT63_ARITH

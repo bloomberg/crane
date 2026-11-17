@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_LET_LAMBDA_POLYMORPHIC
-#define INCLUDED_LIFTED_LET_LAMBDA_POLYMORPHIC
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -150,5 +149,3 @@ struct LiftedLetLambdaPolymorphic {
       [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
       UINT64_C(1));
 };
-
-#endif // INCLUDED_LIFTED_LET_LAMBDA_POLYMORPHIC

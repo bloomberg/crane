@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FILE_EPONYMOUS_WITH_ALIAS
-#define INCLUDED_FILE_EPONYMOUS_WITH_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -176,5 +175,3 @@ DList<T1> DList0::DList_append(std::type_identity_t<DList<T1>> d1,
     return d1(d2(xs));
   };
 }
-
-#endif // INCLUDED_FILE_EPONYMOUS_WITH_ALIAS

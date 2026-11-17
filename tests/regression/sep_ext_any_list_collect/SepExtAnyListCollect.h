@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTANYLISTCOLLECT
-#define INCLUDED_SEPEXTANYLISTCOLLECT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -73,5 +72,3 @@ template <SymTypes Ty> struct ListCollect {
   }
 };
 } // namespace SepExtAnyListCollect
-
-#endif // INCLUDED_SEPEXTANYLISTCOLLECT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECURSIVE_MONADIC
-#define INCLUDED_RECURSIVE_MONADIC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -146,5 +145,3 @@ struct RecursiveMonadic {
     }
   }
 };
-
-#endif // INCLUDED_RECURSIVE_MONADIC

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_TYPE_ERASED_IN_LAMBDA_BODY
-#define INCLUDED_ASSOC_TYPE_ERASED_IN_LAMBDA_BODY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -249,5 +248,3 @@ template <IPtr _tcI0> struct PointerV {
     return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
   }
 };
-
-#endif // INCLUDED_ASSOC_TYPE_ERASED_IN_LAMBDA_BODY

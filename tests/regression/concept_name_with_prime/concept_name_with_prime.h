@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_NAME_WITH_PRIME
-#define INCLUDED_CONCEPT_NAME_WITH_PRIME
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -117,5 +116,3 @@ struct ConceptNameWithPrime {
   using U = Use<NatOrd_>;
   static inline const Bool0 test = U::same(Nat::s(Nat::o()), Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_CONCEPT_NAME_WITH_PRIME

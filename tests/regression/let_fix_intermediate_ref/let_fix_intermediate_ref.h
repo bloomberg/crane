@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FIX_INTERMEDIATE_REF
-#define INCLUDED_LET_FIX_INTERMEDIATE_REF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -120,5 +119,3 @@ struct LetFixIntermediateRef {
               UINT64_C(20),
               List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_LET_FIX_INTERMEDIATE_REF

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_PARAM_CONST_V_MUT
-#define INCLUDED_LIFTED_PARAM_CONST_V_MUT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -504,5 +503,3 @@ template <Params _tcI0> Nat Dvalue<ptr>::show_dvalue() const {
     return Nat::s(Nat::o());
   }
 }
-
-#endif // INCLUDED_LIFTED_PARAM_CONST_V_MUT

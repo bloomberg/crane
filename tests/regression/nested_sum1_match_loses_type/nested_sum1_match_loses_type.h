@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_SUM1_MATCH_LOSES_TYPE
-#define INCLUDED_NESTED_SUM1_MATCH_LOSES_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -213,5 +212,3 @@ struct NestedSum1MatchLosesType {
       exc_of_event<natParams, std::monostate>(
           sum1_inr(sum1_inr(sum1_inr(FailE<Nat>::fail(Dvalue<Nat>::du())))));
 };
-
-#endif // INCLUDED_NESTED_SUM1_MATCH_LOSES_TYPE

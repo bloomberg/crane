@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_CRANE_NAMESPACE_NAME_CLASH
-#define INCLUDED_GENERATED_CRANE_NAMESPACE_NAME_CLASH
+#pragma once
 
 #include "fn.h"
 #include "lazy.h"
@@ -57,5 +56,3 @@ struct crane_ {
   static bool head(const stream &s);
   static inline const bool sample = head(ones());
 };
-
-#endif // INCLUDED_GENERATED_CRANE_NAMESPACE_NAME_CLASH

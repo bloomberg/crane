@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GB_MAPS
-#define INCLUDED_GB_MAPS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -2975,5 +2974,3 @@ struct GbMaps {
   using M = Make<Nat_as_OT>;
   static uint64_t maps(uint64_t n, uint64_t rounds);
 };
-
-#endif // INCLUDED_GB_MAPS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_CONDITIONAL_RECURSION
-#define INCLUDED_LOOPIFY_CONDITIONAL_RECURSION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -108,5 +107,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_LOOPIFY_CONDITIONAL_RECURSION

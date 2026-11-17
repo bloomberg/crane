@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EQUATIONS
-#define INCLUDED_EQUATIONS
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -944,5 +943,3 @@ struct Equations {
       gcd(std::make_pair(UINT64_C(12), UINT64_C(8)));
   static inline const uint64_t test_collatz = collatz_steps(UINT64_C(6));
 };
-
-#endif // INCLUDED_EQUATIONS

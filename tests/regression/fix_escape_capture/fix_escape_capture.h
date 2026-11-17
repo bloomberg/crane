@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_ESCAPE_CAPTURE
-#define INCLUDED_FIX_ESCAPE_CAPTURE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -25,5 +24,3 @@ struct FixEscapeCapture {
     return (n + f(UINT64_C(3)));
   }();
 };
-
-#endif // INCLUDED_FIX_ESCAPE_CAPTURE

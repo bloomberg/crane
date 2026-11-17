@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SELF_PARTIAL_APP_IN_LET
-#define INCLUDED_SELF_PARTIAL_APP_IN_LET
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -174,5 +173,3 @@ struct SelfPartialAppInLet {
       Nat::o(), [](Positive, const Nat &n) { return Nat::s(n); },
       Positive::xi(Positive::xo(Positive::xh())));
 };
-
-#endif // INCLUDED_SELF_PARTIAL_APP_IN_LET

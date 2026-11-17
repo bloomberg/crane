@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_LIST_CONS
-#define INCLUDED_ERASED_LIST_CONS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -384,5 +383,3 @@ const MyDefs::grammar entries =
                 })))),
         List<SigT<std::pair<MySym::Nt, List<MyDefs::symbol>>,
                   std::pair<crane::obj, crane::obj>>>::nil());
-
-#endif // INCLUDED_ERASED_LIST_CONS

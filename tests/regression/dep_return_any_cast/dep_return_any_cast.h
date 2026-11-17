@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_RETURN_ANY_CAST
-#define INCLUDED_DEP_RETURN_ANY_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -140,5 +139,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_DEP_RETURN_ANY_CAST

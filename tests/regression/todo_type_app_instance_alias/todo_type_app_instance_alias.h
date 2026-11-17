@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
-#define INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -25,5 +24,3 @@ struct TodoTypeAppInstanceAlias {
   static inline const uint64_t test_value =
       (pick<natBoxed, uint64_t>() + pick<natBoxed, uint64_t>());
 };
-
-#endif // INCLUDED_TODO_TYPE_APP_INSTANCE_ALIAS

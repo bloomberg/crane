@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WRAPPER_INSTANCE_LIFTED_HELPER
-#define INCLUDED_WRAPPER_INSTANCE_LIFTED_HELPER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -132,5 +131,3 @@ struct WrapperInstanceLiftedHelper {
                           List<bool>::cons(true, List<bool>::nil()))) +
        Sizes::twice(UINT64_C(1)));
 };
-
-#endif // INCLUDED_WRAPPER_INSTANCE_LIFTED_HELPER

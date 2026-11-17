@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_TREE
-#define INCLUDED_NESTED_TREE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -300,5 +299,3 @@ struct NestedTree {
         [](const T1 &x) { return List<T1>::cons(x, List<T1>::nil()); }, t);
   }
 };
-
-#endif // INCLUDED_NESTED_TREE

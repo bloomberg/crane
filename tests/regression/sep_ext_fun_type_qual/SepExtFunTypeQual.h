@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTFUNTYPEQUAL
-#define INCLUDED_SEPEXTFUNTYPEQUAL
+#pragma once
 
 #include "fn.h"
 #include <concepts>
@@ -27,5 +26,3 @@ template <S M> struct MyModule {
   static typename M::t test(typename M::t x) { return x; }
 };
 } // namespace SepExtFunTypeQual
-
-#endif // INCLUDED_SEPEXTFUNTYPEQUAL

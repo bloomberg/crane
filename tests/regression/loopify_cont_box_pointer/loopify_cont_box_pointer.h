@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_CONT_BOX_POINTER
-#define INCLUDED_LOOPIFY_CONT_BOX_POINTER
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -362,5 +361,3 @@ struct LoopifyContBoxPointer {
   static inline const uint64_t total =
       read_with(build(UINT64_C(20))).read(UINT64_C(0));
 };
-
-#endif // INCLUDED_LOOPIFY_CONT_BOX_POINTER

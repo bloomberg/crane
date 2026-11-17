@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXTRACTION_IMPLICIT_CALL_SITES
-#define INCLUDED_EXTRACTION_IMPLICIT_CALL_SITES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -118,5 +117,3 @@ struct ExtractionImplicitCallSites {
                List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))) +
        walk<bool>(List<bool>::cons(false, List<bool>::nil())));
 };
-
-#endif // INCLUDED_EXTRACTION_IMPLICIT_CALL_SITES

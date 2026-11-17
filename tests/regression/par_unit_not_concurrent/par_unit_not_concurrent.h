@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAR_UNIT_NOT_CONCURRENT
-#define INCLUDED_PAR_UNIT_NOT_CONCURRENT
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -127,5 +126,3 @@ struct ParUnitNotConcurrent {
   static uint64_t work(uint64_t k);
   static uint64_t race(uint64_t k);
 };
-
-#endif // INCLUDED_PAR_UNIT_NOT_CONCURRENT

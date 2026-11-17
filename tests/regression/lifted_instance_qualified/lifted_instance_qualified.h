@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_INSTANCE_QUALIFIED
-#define INCLUDED_LIFTED_INSTANCE_QUALIFIED
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -217,5 +216,3 @@ struct showN {
 };
 
 static_assert(Show<showN, Nat>);
-
-#endif // INCLUDED_LIFTED_INSTANCE_QUALIFIED

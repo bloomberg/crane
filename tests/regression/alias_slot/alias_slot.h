@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_SLOT
-#define INCLUDED_ALIAS_SLOT
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -328,5 +327,3 @@ struct AliasSlot {
                              List<String>::nil()))
           .length();
 };
-
-#endif // INCLUDED_ALIAS_SLOT

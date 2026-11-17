@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CURRIED_TVAR_INSTANTIATION
-#define INCLUDED_CURRIED_TVAR_INSTANTIATION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -186,5 +185,3 @@ struct CurriedTvarInstantiation {
   static Nat ex(const Nat &x0_);
   static inline const Nat run = ex(Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_CURRIED_TVAR_INSTANTIATION

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TMC
-#define INCLUDED_LOOPIFY_TMC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -366,5 +365,3 @@ struct LoopifyTmc {
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_LOOPIFY_TMC

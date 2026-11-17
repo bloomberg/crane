@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASCII_AS_CHAR
-#define INCLUDED_ASCII_AS_CHAR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -316,5 +315,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_ASCII_AS_CHAR

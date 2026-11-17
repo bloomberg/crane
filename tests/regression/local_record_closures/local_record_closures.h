@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_RECORD_CLOSURES
-#define INCLUDED_LOCAL_RECORD_CLOSURES
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -17,5 +16,3 @@ struct LocalRecordClosures {
   static ops make(uint64_t n);
   static uint64_t two_records(uint64_t a, uint64_t b);
 };
-
-#endif // INCLUDED_LOCAL_RECORD_CLOSURES

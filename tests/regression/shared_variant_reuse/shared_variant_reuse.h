@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_VARIANT_REUSE
-#define INCLUDED_SHARED_VARIANT_REUSE
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -296,5 +295,3 @@ struct SharedVariantReuse {
 
   static lst bump(lst l);
 };
-
-#endif // INCLUDED_SHARED_VARIANT_REUSE

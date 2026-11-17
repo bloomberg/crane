@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_GETLINE_STRESS
-#define INCLUDED_EFFECT_GETLINE_STRESS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -113,5 +112,3 @@ struct EffectGetlineStress {
   /// 8. Conditional get_line with print
   static std::string interactive_prompt(bool ask);
 };
-
-#endif // INCLUDED_EFFECT_GETLINE_STRESS

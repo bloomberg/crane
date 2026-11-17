@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INLINED_LOCAL_FIX_PARAM_TYPE
-#define INCLUDED_INLINED_LOCAL_FIX_PARAM_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -340,5 +339,3 @@ struct InlinedLocalFixParamType {
 
   static inline const uint64_t t = f<uint64_t>(UINT64_C(0)).length();
 };
-
-#endif // INCLUDED_INLINED_LOCAL_FIX_PARAM_TYPE

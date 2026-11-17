@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTANYNESTEDMATCH
-#define INCLUDED_SEPEXTANYNESTEDMATCH
+#pragma once
 
 #include "obj.h"
 #include <utility>
@@ -27,5 +26,3 @@ template <SymTypes Ty> struct Destruct {
   }
 };
 } // namespace SepExtAnyNestedMatch
-
-#endif // INCLUDED_SEPEXTANYNESTEDMATCH

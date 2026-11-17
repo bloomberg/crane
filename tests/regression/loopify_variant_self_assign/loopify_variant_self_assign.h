@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_VARIANT_SELF_ASSIGN
-#define INCLUDED_LOOPIFY_VARIANT_SELF_ASSIGN
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -157,5 +156,3 @@ struct LoopifyVariantSelfAssign {
   static uint64_t drain(uint64_t n, const lst &l, uint64_t s);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_VARIANT_SELF_ASSIGN

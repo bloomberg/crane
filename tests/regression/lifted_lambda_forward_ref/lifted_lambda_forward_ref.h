@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_LAMBDA_FORWARD_REF
-#define INCLUDED_LIFTED_LAMBDA_FORWARD_REF
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -91,5 +90,3 @@ struct LiftedLambdaForwardRef {
     }();
   }();
 };
-
-#endif // INCLUDED_LIFTED_LAMBDA_FORWARD_REF

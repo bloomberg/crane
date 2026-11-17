@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SEQUENCES
-#define INCLUDED_LOOPIFY_SEQUENCES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -631,5 +630,3 @@ struct LoopifySequences {
   static List<uint64_t> between(uint64_t lo, uint64_t hi,
                                 const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_SEQUENCES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_EXPR_CONST_RETURN
-#define INCLUDED_DEEP_EXPR_CONST_RETURN
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -23,5 +22,3 @@ struct DeepExprConstReturn {
     return f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(f(std::move(_lit3))))))))))))))))))))))))))))));
   }();
 };
-
-#endif // INCLUDED_DEEP_EXPR_CONST_RETURN

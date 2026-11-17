@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL_LIB
-#define INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL_LIB
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -85,5 +84,3 @@ struct Lib {
 
   static uint64_t len(const lst &l);
 };
-
-#endif // INCLUDED_CROSS_UNIT_DUPLICATE_SYMBOL_LIB

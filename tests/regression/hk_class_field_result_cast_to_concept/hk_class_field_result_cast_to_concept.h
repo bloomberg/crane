@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_CLASS_FIELD_RESULT_CAST_TO_CONCEPT
-#define INCLUDED_HK_CLASS_FIELD_RESULT_CAST_TO_CONCEPT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -219,5 +218,3 @@ static_assert(MMP<natMMP, ptr, provenance, state>);
 struct HkClassFieldResultCastToConcept {
   static inline const Nat run = crane::any_cast<Nat>(allocate<natMMP>());
 };
-
-#endif // INCLUDED_HK_CLASS_FIELD_RESULT_CAST_TO_CONCEPT

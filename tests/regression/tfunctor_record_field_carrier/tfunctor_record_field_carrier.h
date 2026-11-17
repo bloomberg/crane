@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_RECORD_FIELD_CARRIER
-#define INCLUDED_TFUNCTOR_RECORD_FIELD_CARRIER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -484,5 +483,3 @@ std::optional<Exp<Nat>> use_option(F0 &&f, const std::optional<Exp<Nat>> &o) {
 template <typename F0> glob<Nat> use_glob(F0 &&f, const glob<Nat> &g) {
   return TFunctor_glob::template tfmap<Nat, Nat>(f, g);
 }
-
-#endif // INCLUDED_TFUNCTOR_RECORD_FIELD_CARRIER

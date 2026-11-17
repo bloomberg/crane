@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CRANE_MOVE_HUNT
-#define INCLUDED_CRANE_MOVE_HUNT
+#pragma once
 
 #include <cstdint>
 #include <toy_helpers.h>
@@ -77,5 +76,3 @@ const CraneMoveHunt::state exported_axiom_pair_frame =
 CraneMoveHunt::state axiom_nat_pair_frame(const CraneMoveHunt::state &s0);
 const CraneMoveHunt::state exported_axiom_nat_pair_frame =
     axiom_nat_pair_frame(CraneMoveHunt::initial_state);
-
-#endif // INCLUDED_CRANE_MOVE_HUNT

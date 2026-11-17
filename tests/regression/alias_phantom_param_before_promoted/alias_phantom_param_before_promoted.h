@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_PHANTOM_PARAM_BEFORE_PROMOTED
-#define INCLUDED_ALIAS_PHANTOM_PARAM_BEFORE_PROMOTED
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -230,5 +229,3 @@ static inline const std::pair<Nat, bool> the_null = crane_any_cast<std::pair<Nat
                                                                                                                     };static inline const Dval<typename natIPtr::iptr> arg = Dval<typename natIPtr::iptr>::dptr(the_null);
 static inline const Nat run = handler(arg);
 };
-
-#endif // INCLUDED_ALIAS_PHANTOM_PARAM_BEFORE_PROMOTED

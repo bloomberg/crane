@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RANK2_ALIAS_DEFINITION_AS_VALUE
-#define INCLUDED_RANK2_ALIAS_DEFINITION_AS_VALUE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -47,5 +46,3 @@ struct Rank2AliasDefinitionAsValue {
            crane::fn<crane::obj(crane::fn<crane::obj(uint64_t)>)>>(
            [](crane::fn<crane::obj(uint64_t)> _ec0) { return bnat(_ec0); })));
 };
-
-#endif // INCLUDED_RANK2_ALIAS_DEFINITION_AS_VALUE

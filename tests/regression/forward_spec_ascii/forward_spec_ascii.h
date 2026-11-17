@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FORWARD_SPEC_ASCII
-#define INCLUDED_FORWARD_SPEC_ASCII
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -64,5 +63,3 @@ struct ForwardSpecAscii {
   static uint64_t bump_node(const node &x);
   static inline const uint64_t t = bump_node(node::anode(UINT64_C(2)));
 };
-
-#endif // INCLUDED_FORWARD_SPEC_ASCII

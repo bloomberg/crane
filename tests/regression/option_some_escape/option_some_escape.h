@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPTION_SOME_ESCAPE
-#define INCLUDED_OPTION_SOME_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -124,5 +123,3 @@ struct OptionSomeEscape {
     return apply_option(std::move(o1), UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_OPTION_SOME_ESCAPE

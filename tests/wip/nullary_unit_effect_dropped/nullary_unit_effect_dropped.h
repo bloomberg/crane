@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NULLARY_UNIT_EFFECT_DROPPED
-#define INCLUDED_NULLARY_UNIT_EFFECT_DROPPED
+#pragma once
 
 enum class Unit;
 enum class GiveupE;
@@ -10,5 +9,3 @@ struct NullaryUnitEffectDropped {
 
 enum class Unit { TT };
 enum class GiveupE { GIVEUP };
-
-#endif // INCLUDED_NULLARY_UNIT_EFFECT_DROPPED

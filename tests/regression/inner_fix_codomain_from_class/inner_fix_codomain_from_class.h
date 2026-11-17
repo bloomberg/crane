@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INNER_FIX_CODOMAIN_FROM_CLASS
-#define INCLUDED_INNER_FIX_CODOMAIN_FROM_CLASS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -425,5 +424,3 @@ struct InnerFixCodomainFromClass {
                                         typename _tcI0::IPTR::iptr>>::nil()));
   }
 };
-
-#endif // INCLUDED_INNER_FIX_CODOMAIN_FROM_CLASS

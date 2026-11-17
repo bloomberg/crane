@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPECLASS_FUNCTION_FIELD_PROBE
-#define INCLUDED_TYPECLASS_FUNCTION_FIELD_PROBE
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -31,5 +30,3 @@ struct TypeclassFunctionFieldProbe {
 
   static inline const Bool0 sample = use<boolEndo, Bool0>(Bool0::TRUE_);
 };
-
-#endif // INCLUDED_TYPECLASS_FUNCTION_FIELD_PROBE

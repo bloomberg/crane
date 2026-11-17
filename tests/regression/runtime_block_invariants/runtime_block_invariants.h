@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RUNTIME_BLOCK_INVARIANTS
-#define INCLUDED_RUNTIME_BLOCK_INVARIANTS
+#pragma once
 
 #include "fn.h"
 #include "lazy.h"
@@ -52,5 +51,3 @@ struct RuntimeBlockInvariants {
   static stream from(uint64_t n);
   static uint64_t hd(const stream &s);
 };
-
-#endif // INCLUDED_RUNTIME_BLOCK_INVARIANTS

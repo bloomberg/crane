@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BLOCK_TEMPLATE_SEMICOLON
-#define INCLUDED_BLOCK_TEMPLATE_SEMICOLON
+#pragma once
 
 #include <fstream>
 #include <string>
@@ -17,5 +16,3 @@ struct BlockTemplateSemicolon {
   /// String argument with no semicolons (control case)
   static std::string read_normal();
 };
-
-#endif // INCLUDED_BLOCK_TEMPLATE_SEMICOLON

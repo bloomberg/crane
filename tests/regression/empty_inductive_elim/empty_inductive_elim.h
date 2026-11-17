@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EMPTY_INDUCTIVE_ELIM
-#define INCLUDED_EMPTY_INDUCTIVE_ELIM
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -25,5 +24,3 @@ struct EmptyInductiveElim {
   static uint64_t g(const std::optional<crane::obj> &o);
   static inline const uint64_t test = g(std::optional<crane::obj>());
 };
-
-#endif // INCLUDED_EMPTY_INDUCTIVE_ELIM

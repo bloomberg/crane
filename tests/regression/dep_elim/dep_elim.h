@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_ELIM
-#define INCLUDED_DEP_ELIM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -548,5 +547,3 @@ struct DepElim {
   static inline const uint64_t test_present =
       avail::present(UINT64_C(42)).get_present();
 };
-
-#endif // INCLUDED_DEP_ELIM

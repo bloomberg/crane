@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE21
-#define INCLUDED_MEM_SAFETY_PROBE21
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -229,5 +228,3 @@ struct MemSafetyProbe21 {
   static inline const uint64_t test_sum_and_grow = sum_and_grow(
       tree::node(tree::leaf(), UINT64_C(1), tree::leaf()), UINT64_C(3));
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE21

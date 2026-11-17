@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_RETURNING_CALLBACK_MAP
-#define INCLUDED_UNIT_RETURNING_CALLBACK_MAP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -209,5 +208,3 @@ struct UnitReturningCallbackMap {
     }
   }());
 };
-
-#endif // INCLUDED_UNIT_RETURNING_CALLBACK_MAP

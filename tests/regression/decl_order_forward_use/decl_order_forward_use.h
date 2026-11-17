@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DECL_ORDER_FORWARD_USE
-#define INCLUDED_DECL_ORDER_FORWARD_USE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -127,5 +126,3 @@ struct DeclOrderForwardUse {
           Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))),
         Nat::nat::s(Nat::nat::s(Nat::nat::o())));
 };
-
-#endif // INCLUDED_DECL_ORDER_FORWARD_USE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOWERCASE_EPONYMOUS_RECORD
-#define INCLUDED_LOWERCASE_EPONYMOUS_RECORD
+#pragma once
 
 #include <cstdint>
 
@@ -14,5 +13,3 @@ struct LowercaseEponymousRecord {
   static inline const state example =
       state{UINT64_C(0), UINT64_C(0)}.set_x(UINT64_C(42));
 };
-
-#endif // INCLUDED_LOWERCASE_EPONYMOUS_RECORD

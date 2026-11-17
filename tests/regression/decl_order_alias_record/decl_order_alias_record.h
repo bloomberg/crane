@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DECL_ORDER_ALIAS_RECORD
-#define INCLUDED_DECL_ORDER_ALIAS_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -221,5 +220,3 @@ const prog sample = prog{List<Instr<uint64_t>>::cons(
                          UINT64_C(2)};
 const uint64_t sample_size = sample.code.length();
 const uint64_t sample_regs = sample.nregs;
-
-#endif // INCLUDED_DECL_ORDER_ALIAS_RECORD

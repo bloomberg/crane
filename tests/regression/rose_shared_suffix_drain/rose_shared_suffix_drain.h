@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROSE_SHARED_SUFFIX_DRAIN
-#define INCLUDED_ROSE_SHARED_SUFFIX_DRAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -186,5 +185,3 @@ struct RoseSharedSuffixDrain {
   /// destructor runs before b is computed.
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_ROSE_SHARED_SUFFIX_DRAIN

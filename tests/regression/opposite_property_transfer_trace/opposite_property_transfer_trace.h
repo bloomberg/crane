@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
-#define INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -125,5 +124,3 @@ struct OppositePropertyTransferTraceCase {
         sample_result_value) +
        sample_result_tag);
 };
-
-#endif // INCLUDED_OPPOSITE_PROPERTY_TRANSFER_TRACE

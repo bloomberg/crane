@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ITREE_SEQ
-#define INCLUDED_LOOPIFY_ITREE_SEQ
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -111,5 +110,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_LOOPIFY_ITREE_SEQ

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_HOME_SIBLING_MODULES
-#define INCLUDED_ALIAS_HOME_SIBLING_MODULES
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -253,5 +252,3 @@ struct AliasHomeSiblingModules {
   static inline const Nat five =
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_ALIAS_HOME_SIBLING_MODULES

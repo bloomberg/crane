@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXTRACT_DIRECTIVES
-#define INCLUDED_EXTRACT_DIRECTIVES
+#pragma once
 
 #include <cstdint>
 #include <stdexcept>
@@ -20,5 +19,3 @@ struct ExtractDirectives {
   static inline const uint64_t test_inner = inner_add(UINT64_C(3), UINT64_C(7));
   static inline const uint64_t test_outer = outer_use(UINT64_C(4), UINT64_C(5));
 };
-
-#endif // INCLUDED_EXTRACT_DIRECTIVES

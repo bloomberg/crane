@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHADOWED_PRIM_INT
-#define INCLUDED_SHADOWED_PRIM_INT
+#pragma once
 
 #include <cstdint>
 
@@ -9,5 +8,3 @@ struct ShadowedPrimInt {
       (static_cast<uint64_t>(big) + static_cast<uint64_t>(INT64_C(1))) &
       0x7FFFFFFFFFFFFFFFULL);
 };
-
-#endif // INCLUDED_SHADOWED_PRIM_INT

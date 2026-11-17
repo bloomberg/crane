@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_TYPE_ERASED_AT_CALL_SITE
-#define INCLUDED_ASSOC_TYPE_ERASED_AT_CALL_SITE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -209,5 +208,3 @@ struct AssocTypeErasedAtCallSite {
                     const std::pair<Nat, prov> &x0_);
   static Nat go(const Nat &_x);
 };
-
-#endif // INCLUDED_ASSOC_TYPE_ERASED_AT_CALL_SITE

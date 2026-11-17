@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FACTORY_HIDES_FIELD_TYPE
-#define INCLUDED_FACTORY_HIDES_FIELD_TYPE
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -70,5 +69,3 @@ struct FactoryHidesFieldType {
       (area(shape::tag(pt{UINT64_C(2), UINT64_C(3)})) +
        area(shape::Pt_(pt{UINT64_C(2), UINT64_C(3)})));
 };
-
-#endif // INCLUDED_FACTORY_HIDES_FIELD_TYPE

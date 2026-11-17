@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STRING_GET_BOUNDS
-#define INCLUDED_STRING_GET_BOUNDS
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -30,5 +29,3 @@ struct StringGetBounds {
            ? sv[INT64_C(100)]
            : static_cast<char>(0));
 };
-
-#endif // INCLUDED_STRING_GET_BOUNDS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_16288
-#define INCLUDED_ROCQ_BUG_16288
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -137,5 +136,3 @@ struct RocqBug16288 {
 
   using M_ = M<Empty>;
 };
-
-#endif // INCLUDED_ROCQ_BUG_16288

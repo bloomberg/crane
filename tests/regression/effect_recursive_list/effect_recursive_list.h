@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_RECURSIVE_LIST
-#define INCLUDED_EFFECT_RECURSIVE_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -126,5 +125,3 @@ struct EffectRecursiveList {
   /// 6. Read a line and prepend to existing list
   static List<std::string> read_and_prepend(const List<std::string> &xs);
 };
-
-#endif // INCLUDED_EFFECT_RECURSIVE_LIST

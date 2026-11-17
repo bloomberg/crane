@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LIST_GENERATORS
-#define INCLUDED_LOOPIFY_LIST_GENERATORS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -382,5 +381,3 @@ struct LoopifyListGenerators {
   enumerate_aux(uint64_t idx, const List<uint64_t> &l);
   static List<std::pair<uint64_t, uint64_t>> enumerate(const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_LIST_GENERATORS

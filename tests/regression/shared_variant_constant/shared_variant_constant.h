@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_VARIANT_CONSTANT
-#define INCLUDED_SHARED_VARIANT_CONSTANT
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -138,5 +137,3 @@ struct SharedVariantConstant {
   static std::pair<List<Positive>, List<Positive>>
   with_k(const List<Positive> &k);
 };
-
-#endif // INCLUDED_SHARED_VARIANT_CONSTANT

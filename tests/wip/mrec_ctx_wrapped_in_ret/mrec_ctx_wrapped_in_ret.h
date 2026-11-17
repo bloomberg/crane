@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MREC_CTX_WRAPPED_IN_RET
-#define INCLUDED_MREC_CTX_WRAPPED_IN_RET
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -268,5 +267,3 @@ CountE<ptr>::ctx(bool) const {
     return itree_trigger(sum1_inl(CountE<ptr>::count(*a00, a1)));
   }
 }
-
-#endif // INCLUDED_MREC_CTX_WRAPPED_IN_RET

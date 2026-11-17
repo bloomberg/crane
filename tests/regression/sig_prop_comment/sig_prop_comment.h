@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIG_PROP_COMMENT
-#define INCLUDED_SIG_PROP_COMMENT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -113,5 +112,3 @@ struct SigSubset {
   static inline const uint64_t go =
       head(Sig<lst>::exist(lst::cons(UINT64_C(7), lst::nil())));
 };
-
-#endif // INCLUDED_SIG_PROP_COMMENT

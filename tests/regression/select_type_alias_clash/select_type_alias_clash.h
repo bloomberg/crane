@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SELECT_TYPE_ALIAS_CLASH
-#define INCLUDED_SELECT_TYPE_ALIAS_CLASH
+#pragma once
 
 #include <cstdint>
 
@@ -15,5 +14,3 @@
 /// (Cpp_state.keywords); POSIX functions such as select are not covered.
 using select0 = uint64_t;
 const select0 answer = UINT64_C(42);
-
-#endif // INCLUDED_SELECT_TYPE_ALIAS_CLASH

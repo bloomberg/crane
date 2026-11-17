@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_MATCH_RETURNS_FUN
-#define INCLUDED_ETA_MATCH_RETURNS_FUN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -109,5 +108,3 @@ struct EtaMatchReturnsFun {
          uint64_t k, uint64_t x0_);
   static inline const uint64_t test = lookup(tbl, UINT64_C(1), UINT64_C(5));
 };
-
-#endif // INCLUDED_ETA_MATCH_RETURNS_FUN

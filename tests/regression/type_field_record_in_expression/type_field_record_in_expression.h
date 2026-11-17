@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_FIELD_RECORD_IN_EXPRESSION
-#define INCLUDED_TYPE_FIELD_RECORD_IN_EXPRESSION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -149,5 +148,3 @@ struct TypeFieldRecordInExpression {
            .length() +
        get(natalg));
 };
-
-#endif // INCLUDED_TYPE_FIELD_RECORD_IN_EXPRESSION

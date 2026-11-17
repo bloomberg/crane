@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_PAIR_OPTION_CHILD
-#define INCLUDED_LOOPIFY_PAIR_OPTION_CHILD
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -145,5 +144,3 @@ struct LoopifyPairOptionChild {
                   tree::leaf(),
                   std::make_pair(UINT64_C(2), std::optional<tree>()))))));
 };
-
-#endif // INCLUDED_LOOPIFY_PAIR_OPTION_CHILD

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_RECORD_CONCEPT
-#define INCLUDED_MODULE_TYPE_RECORD_CONCEPT
+#pragma once
 
 #include <cstdint>
 
@@ -22,5 +21,3 @@ struct ModuleTypeRecordConcept {
   using U = Use<Impl>;
   static inline const uint64_t result = U::f(Impl::pt{UINT64_C(4)});
 };
-
-#endif // INCLUDED_MODULE_TYPE_RECORD_CONCEPT

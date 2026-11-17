@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_LAMBDA_OTHER_INSTANCE
-#define INCLUDED_MUTUAL_LAMBDA_OTHER_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -176,5 +175,3 @@ struct MutualLambdaOtherInstance {
 
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_MUTUAL_LAMBDA_OTHER_INSTANCE

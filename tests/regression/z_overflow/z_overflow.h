@@ -1,5 +1,4 @@
-#ifndef INCLUDED_Z_OVERFLOW
-#define INCLUDED_Z_OVERFLOW
+#pragma once
 
 #include <cstdint>
 
@@ -15,5 +14,3 @@ struct ZOverflow {
   /// Nat > 2^32 also overflows unsigned int
   static constexpr uint64_t big_nat = UINT64_C(4294967296);
 };
-
-#endif // INCLUDED_Z_OVERFLOW

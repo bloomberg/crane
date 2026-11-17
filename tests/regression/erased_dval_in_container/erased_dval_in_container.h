@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_DVAL_IN_CONTAINER
-#define INCLUDED_ERASED_DVAL_IN_CONTAINER
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -280,5 +279,3 @@ auto _cs = w0(Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr>:
 if (_cs.has_value()) { const List<Dval<typename ParamsV<natIPtr>::PTR::ptr, typename natIPtr::iptr>>& l = *_cs; return s0(l); } else { return Nat::o(); }
 }());
 };
-
-#endif // INCLUDED_ERASED_DVAL_IN_CONTAINER

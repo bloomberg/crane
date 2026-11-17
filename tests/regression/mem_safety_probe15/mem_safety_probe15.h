@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE15
-#define INCLUDED_MEM_SAFETY_PROBE15
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -688,5 +687,3 @@ struct MemSafetyProbe15 {
   static inline const uint64_t test_large_tree =
       make_tree(UINT64_C(6)).tree_sum();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE15

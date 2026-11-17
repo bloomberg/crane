@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FOLD_SEQUENCE_STATE_TRACE
-#define INCLUDED_FOLD_SEQUENCE_STATE_TRACE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -323,5 +322,3 @@ struct FoldSequenceStateTraceCase {
   static inline const bool sample_has_expected_lines =
       sample_line_count == UINT64_C(5);
 };
-
-#endif // INCLUDED_FOLD_SEQUENCE_STATE_TRACE

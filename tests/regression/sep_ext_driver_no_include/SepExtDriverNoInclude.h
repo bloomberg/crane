@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTDRIVERNOINCLUDE
-#define INCLUDED_SEPEXTDRIVERNOINCLUDE
+#pragma once
 
 #include "Datatypes.h"
 
@@ -12,5 +11,3 @@ struct Content {
   }
 };
 } // namespace SepExtDriverNoInclude
-
-#endif // INCLUDED_SEPEXTDRIVERNOINCLUDE

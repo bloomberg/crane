@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PATH
-#define INCLUDED_PATH
+#pragma once
 
 #include <filesystem>
 #include <string>
@@ -13,5 +12,3 @@ struct Path {
   static bool check_is_dir(std::string p);
   static bool check_is_file(std::string p);
 };
-
-#endif // INCLUDED_PATH

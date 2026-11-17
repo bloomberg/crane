@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEQUEACTIONMISMATCH
-#define INCLUDED_DEQUEACTIONMISMATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -49,5 +48,3 @@ uint64_t get_first(const Specif::SigT<Tag, sem_ty> &v);
 const uint64_t test_length = get_length(chain);
 const uint64_t test_first = get_first(chain);
 } // namespace DequeActionMismatch
-
-#endif // INCLUDED_DEQUEACTIONMISMATCH

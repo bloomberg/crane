@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHODIFIED_TMC_NO_LOOPIFY
-#define INCLUDED_METHODIFIED_TMC_NO_LOOPIFY
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -295,5 +294,3 @@ struct MethodifiedTmcNoLoopify {
   static inline const uint64_t deep =
       wrap::w(lst::nil()).wraps(UINT64_C(100000)).wdepth();
 };
-
-#endif // INCLUDED_METHODIFIED_TMC_NO_LOOPIFY

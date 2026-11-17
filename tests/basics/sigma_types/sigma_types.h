@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGMA_TYPES
-#define INCLUDED_SIGMA_TYPES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -171,5 +170,3 @@ struct SigmaTypes {
   static inline const List<uint64_t> test_positives =
       positives_up_to(UINT64_C(5));
 };
-
-#endif // INCLUDED_SIGMA_TYPES

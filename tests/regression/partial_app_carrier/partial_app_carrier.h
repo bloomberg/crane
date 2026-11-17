@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARTIAL_APP_CARRIER
-#define INCLUDED_PARTIAL_APP_CARRIER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -161,5 +160,3 @@ struct PartialAppCarrier {
     return a1.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
   }();
 };
-
-#endif // INCLUDED_PARTIAL_APP_CARRIER

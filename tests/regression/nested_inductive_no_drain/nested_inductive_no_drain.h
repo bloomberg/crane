@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_INDUCTIVE_NO_DRAIN
-#define INCLUDED_NESTED_INDUCTIVE_NO_DRAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -257,5 +256,3 @@ struct NestedInductiveNoDrain {
 
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_NESTED_INDUCTIVE_NO_DRAIN

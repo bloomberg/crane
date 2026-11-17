@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_ALIAS_FACTORY_NAME
-#define INCLUDED_MODULE_ALIAS_FACTORY_NAME
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -40,5 +39,3 @@ using A = Lib;
 struct ModuleAliasFactoryName {
   static inline const uint64_t run = A::get(A::t::c(UINT64_C(3)));
 };
-
-#endif // INCLUDED_MODULE_ALIAS_FACTORY_NAME

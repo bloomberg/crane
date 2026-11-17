@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COIND_PROJECTION_BORROW
-#define INCLUDED_COIND_PROJECTION_BORROW
+#pragma once
 
 #include "fn.h"
 #include "lazy.h"
@@ -79,5 +78,3 @@ struct CoindProjectionBorrow {
   /// Projections whose receiver is a parameter, an lvalue.
   static uint64_t sum_two(const Stream::stream &s);
 };
-
-#endif // INCLUDED_COIND_PROJECTION_BORROW

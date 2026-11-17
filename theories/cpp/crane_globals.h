@@ -5,8 +5,7 @@
 // require a global map that can store values of any type.
 // This is used for the translation of global state events to CPP.
 
-#ifndef CRANE_GLOBALS_H_
-#define CRANE_GLOBALS_H_
+#pragma once
 
 #include <any>
 #include "obj.h"
@@ -14,5 +13,3 @@
 #include <map>
 
 inline std::map<uint64_t, crane::obj> _crane_globals;
-
-#endif // CRANE_GLOBALS_H_

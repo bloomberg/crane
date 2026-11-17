@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE13
-#define INCLUDED_MEM_SAFETY_PROBE13
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -741,5 +740,3 @@ struct MemSafetyProbe13 {
         [](const crane::fn<uint64_t(uint64_t)> &f) { return f(UINT64_C(1)); }));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE13

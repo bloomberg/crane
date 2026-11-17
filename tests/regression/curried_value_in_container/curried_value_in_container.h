@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CURRIED_VALUE_IN_CONTAINER
-#define INCLUDED_CURRIED_VALUE_IN_CONTAINER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -146,5 +145,3 @@ struct CurriedValueInContainer {
                  },
                  UINT64_C(0)));
 };
-
-#endif // INCLUDED_CURRIED_VALUE_IN_CONTAINER

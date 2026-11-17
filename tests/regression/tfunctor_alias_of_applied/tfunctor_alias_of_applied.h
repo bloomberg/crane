@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_ALIAS_OF_APPLIED
-#define INCLUDED_TFUNCTOR_ALIAS_OF_APPLIED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -417,5 +416,3 @@ struct TfunctorAliasOfApplied {
   static inline const bool is_five =
       total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
-
-#endif // INCLUDED_TFUNCTOR_ALIAS_OF_APPLIED

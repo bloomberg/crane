@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PATTERN_IMPOSSIBLE
-#define INCLUDED_PATTERN_IMPOSSIBLE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -138,5 +137,3 @@ struct PatternImpossible {
       nested::node(nested::leaf(UINT64_C(5)), nested::leaf(UINT64_C(10))));
   static inline const uint64_t test3 = double_match(Three::ONE, Three::TWO);
 };
-
-#endif // INCLUDED_PATTERN_IMPOSSIBLE

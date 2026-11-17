@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_TYPE_FIELD_LAMBDA
-#define INCLUDED_ERASED_TYPE_FIELD_LAMBDA
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -193,5 +192,3 @@ struct ErasedTypeFieldLambda {
   static inline const uint64_t run = slots.template fold_left<uint64_t>(
       [](uint64_t a, const slot &s) { return (a + weigh(s)); }, UINT64_C(0));
 };
-
-#endif // INCLUDED_ERASED_TYPE_FIELD_LAMBDA

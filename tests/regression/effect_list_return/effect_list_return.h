@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_LIST_RETURN
-#define INCLUDED_EFFECT_LIST_RETURN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -111,5 +110,3 @@ struct EffectListReturn {
   /// 5. Chain effects with different return types
   static std::pair<bool, List<std::string>> create_and_list(std::string dir);
 };
-
-#endif // INCLUDED_EFFECT_LIST_RETURN

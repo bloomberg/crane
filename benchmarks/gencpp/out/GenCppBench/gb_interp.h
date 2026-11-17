@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GB_INTERP
-#define INCLUDED_GB_INTERP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -932,5 +931,3 @@ struct GbInterp {
   static uint64_t round(uint64_t depth, uint64_t i);
   static uint64_t interp(uint64_t depth, uint64_t rounds);
 };
-
-#endif // INCLUDED_GB_INTERP

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_TAIL_LOOP_DEFAULT
-#define INCLUDED_LOCAL_TAIL_LOOP_DEFAULT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -125,5 +124,3 @@ struct LocalTailLoopDefault {
     }
   }
 };
-
-#endif // INCLUDED_LOCAL_TAIL_LOOP_DEFAULT

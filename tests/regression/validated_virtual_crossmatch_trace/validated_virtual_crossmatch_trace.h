@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALIDATED_VIRTUAL_CROSSMATCH_TRACE
-#define INCLUDED_VALIDATED_VIRTUAL_CROSSMATCH_TRACE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -690,5 +689,3 @@ struct ValidatedVirtualCrossmatchTraceCase {
         }
       }();
 };
-
-#endif // INCLUDED_VALIDATED_VIRTUAL_CROSSMATCH_TRACE

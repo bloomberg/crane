@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ORD
-#define INCLUDED_ORD
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -21,5 +20,3 @@ template <Ordered O> struct Full {
   }
 };
 } // namespace Ord
-
-#endif // INCLUDED_ORD

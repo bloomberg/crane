@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TAIL_REC_MAP
-#define INCLUDED_TAIL_REC_MAP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -185,5 +184,3 @@ List<T2> better_map(F0 &&f, const List<T1> &l) {
     }
   }
 }
-
-#endif // INCLUDED_TAIL_REC_MAP

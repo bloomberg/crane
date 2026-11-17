@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SECTION_DEFINITION_INSTANTIATED_OUTSIDE
-#define INCLUDED_SECTION_DEFINITION_INSTANTIATED_OUTSIDE
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -183,5 +182,3 @@ return Nat::o();}
 static Nat eqb0(const Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr>& x0_);static inline const Dval<typename ParamsV<natIPtr>::PTR::ptr, typename ParamsV<natIPtr>::IPTR::iptr> zero0 = inner_zero<ParamsV<natIPtr>>();
 static inline const Nat run = eqb0(zero0);
 };
-
-#endif // INCLUDED_SECTION_DEFINITION_INSTANTIATED_OUTSIDE

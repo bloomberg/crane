@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FOO
-#define INCLUDED_FOO
+#pragma once
 
 #include <concepts>
 
@@ -11,5 +10,3 @@ concept Foo = requires {
   { I::foo_val() } -> std::convertible_to<Datatypes::Nat>;
 };
 } // namespace Foo_
-
-#endif // INCLUDED_FOO

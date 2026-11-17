@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EVENT_FAMILY_ONLY_IN_RETURN_TYPE
-#define INCLUDED_EVENT_FAMILY_ONLY_IN_RETURN_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -138,5 +137,3 @@ struct EventFamilyOnlyInReturnType {
   static std::shared_ptr<ITree<Nat>> run();
   static std::shared_ptr<ITree<Nat>> run_sum();
 };
-
-#endif // INCLUDED_EVENT_FAMILY_ONLY_IN_RETURN_TYPE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_COIND_COLIST
-#define INCLUDED_LOOPIFY_COIND_COLIST
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -273,5 +272,3 @@ struct LoopifyCoindColist {
                   List<uint64_t>::cons(UINT64_C(30),
                                        List<uint64_t>::nil()))))));
 };
-
-#endif // INCLUDED_LOOPIFY_COIND_COLIST

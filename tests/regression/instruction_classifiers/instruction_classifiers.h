@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTRUCTION_CLASSIFIERS
-#define INCLUDED_INSTRUCTION_CLASSIFIERS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -848,5 +847,3 @@ struct InstructionClassifiers {
           std::make_pair(test_writes_acc, test_writes_ram), test_writes_regs),
                      test_jump_classifier);
 };
-
-#endif // INCLUDED_INSTRUCTION_CLASSIFIERS

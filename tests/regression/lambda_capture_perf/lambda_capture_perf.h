@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LAMBDA_CAPTURE_PERF
-#define INCLUDED_LAMBDA_CAPTURE_PERF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -199,5 +198,3 @@ struct LambdaCapturePerf {
     return W::process_with_context(std::move(ctx), std::move(input)).length();
   }();
 };
-
-#endif // INCLUDED_LAMBDA_CAPTURE_PERF

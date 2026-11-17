@@ -1,5 +1,4 @@
-#ifndef INCLUDED_QUALIFIED_RECORD_SHADOW
-#define INCLUDED_QUALIFIED_RECORD_SHADOW
+#pragma once
 
 #include <cstdint>
 
@@ -11,5 +10,3 @@ struct QualifiedRecordShadow {
   static Shadow bump(const Shadow &x);
   static inline const Shadow t = bump(Shadow{UINT64_C(1)});
 };
-
-#endif // INCLUDED_QUALIFIED_RECORD_SHADOW

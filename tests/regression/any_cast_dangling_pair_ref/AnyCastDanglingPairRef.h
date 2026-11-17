@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ANYCASTDANGLINGPAIRREF
-#define INCLUDED_ANYCASTDANGLINGPAIRREF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -42,5 +41,3 @@ template <SymTypes Ty> struct Destruct {
   }
 };
 } // namespace AnyCastDanglingPairRef
-
-#endif // INCLUDED_ANYCASTDANGLINGPAIRREF

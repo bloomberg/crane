@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HANDLER_LOOP_CALL_DROPS_RESULT_TARG
-#define INCLUDED_HANDLER_LOOP_CALL_DROPS_RESULT_TARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -304,5 +303,3 @@ struct HandlerLoopCallDropsResultTarg {
   static std::shared_ptr<
       ITree<Sum<Denot::template exc<typename natParams::ptr>, Nat>>> run();
 };
-
-#endif // INCLUDED_HANDLER_LOOP_CALL_DROPS_RESULT_TARG

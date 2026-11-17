@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUM_DRAIN
-#define INCLUDED_SUM_DRAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -152,5 +151,3 @@ struct SumDrain {
   static uint64_t depth(const t &x);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_SUM_DRAIN

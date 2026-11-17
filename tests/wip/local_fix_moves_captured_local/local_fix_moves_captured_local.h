@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_FIX_MOVES_CAPTURED_LOCAL
-#define INCLUDED_LOCAL_FIX_MOVES_CAPTURED_LOCAL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -271,5 +270,3 @@ struct LocalFixMovesCapturedLocal {
     }().length();
   }();
 };
-
-#endif // INCLUDED_LOCAL_FIX_MOVES_CAPTURED_LOCAL

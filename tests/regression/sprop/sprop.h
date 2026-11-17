@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SPROP
-#define INCLUDED_SPROP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -38,5 +37,3 @@ struct SPropTest {
   static constexpr uint64_t test_box = UINT64_C(42);
   static inline const uint64_t test_div = safe_div(UINT64_C(10), UINT64_C(3));
 };
-
-#endif // INCLUDED_SPROP

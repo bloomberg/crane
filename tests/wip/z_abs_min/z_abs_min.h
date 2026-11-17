@@ -1,5 +1,4 @@
-#ifndef INCLUDED_Z_ABS_MIN
-#define INCLUDED_Z_ABS_MIN
+#pragma once
 
 #include <cstdint>
 
@@ -24,5 +23,3 @@ struct ZAbsMin {
   /// Should always be true for Z.abs, but fails in C++.
   static bool is_nonneg(int64_t x);
 };
-
-#endif // INCLUDED_Z_ABS_MIN

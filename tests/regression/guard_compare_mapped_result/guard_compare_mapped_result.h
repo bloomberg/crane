@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GUARD_COMPARE_MAPPED_RESULT
-#define INCLUDED_GUARD_COMPARE_MAPPED_RESULT
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -116,5 +115,3 @@ struct GuardCompareMappedResult {
   static inline const bool self = eqt(t1, t1);
   static inline const bool differ = eqt(t1, tree::leaf());
 };
-
-#endif // INCLUDED_GUARD_COMPARE_MAPPED_RESULT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_POLYMORPHIC
-#define INCLUDED_LOOPIFY_POLYMORPHIC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -602,5 +601,3 @@ struct LoopifyPolymorphic {
   static bool nat_member(uint64_t x0_, const List<uint64_t> &x1_);
   static List<uint64_t> nat_replicate(uint64_t x0_, uint64_t x1_);
 };
-
-#endif // INCLUDED_LOOPIFY_POLYMORPHIC

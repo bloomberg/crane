@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAGE_ADDRESS
-#define INCLUDED_PAGE_ADDRESS
+#pragma once
 
 #include <cstdint>
 
@@ -16,5 +15,3 @@ struct PageAddress {
   static inline const uint64_t branch_example =
       branch_target(UINT64_C(100), UINT64_C(42));
 };
-
-#endif // INCLUDED_PAGE_ADDRESS

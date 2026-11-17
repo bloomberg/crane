@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTMODULEABBREV
-#define INCLUDED_SEPEXTMODULEABBREV
+#pragma once
 
 namespace SepExtModuleAbbrev {
 template <typename M>
@@ -24,5 +23,3 @@ template <WS M> struct KeyFacts {
 
 template <WS P> struct WFacts : OrdFacts<typename P::E, P> {};
 } // namespace SepExtModuleAbbrev
-
-#endif // INCLUDED_SEPEXTMODULEABBREV

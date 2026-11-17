@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_ETA_EXPANSION_TAXIOM
-#define INCLUDED_TODO_ETA_EXPANSION_TAXIOM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -74,5 +73,3 @@ struct TodoEtaExpansionTaxiom {
   static inline const uint64_t test_fst = fst_pair<uint64_t, bool>(
       Pair<uint64_t, bool>::mkpair(UINT64_C(42), true));
 };
-
-#endif // INCLUDED_TODO_ETA_EXPANSION_TAXIOM

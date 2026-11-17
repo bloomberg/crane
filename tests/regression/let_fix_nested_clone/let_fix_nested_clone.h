@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FIX_NESTED_CLONE
-#define INCLUDED_LET_FIX_NESTED_CLONE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -127,5 +126,3 @@ struct LetFixNestedClone {
                                            List<uint64_t>::nil()))),
                                              List<List<uint64_t>>::nil()))));
 };
-
-#endif // INCLUDED_LET_FIX_NESTED_CLONE

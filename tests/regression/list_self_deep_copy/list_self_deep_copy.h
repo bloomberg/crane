@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_SELF_DEEP_COPY
-#define INCLUDED_LIST_SELF_DEEP_COPY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -192,5 +191,3 @@ struct ListSelfDeepCopy {
 
   static std::pair<chain, chain> dup_chain(const chain &c);
 };
-
-#endif // INCLUDED_LIST_SELF_DEEP_COPY

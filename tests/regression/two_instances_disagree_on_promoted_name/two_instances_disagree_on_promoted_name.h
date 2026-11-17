@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TWO_INSTANCES_DISAGREE_ON_PROMOTED_NAME
-#define INCLUDED_TWO_INSTANCES_DISAGREE_ON_PROMOTED_NAME
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -168,5 +167,3 @@ auto y = inner<boolIPtr>();
 return x.template to_nat<natIPtr>().add(y.template to_nat<boolIPtr>()).add(a0.template to_nat<natIPtr>()).add(b0.template to_nat<boolIPtr>());
 }();
 };
-
-#endif // INCLUDED_TWO_INSTANCES_DISAGREE_ON_PROMOTED_NAME

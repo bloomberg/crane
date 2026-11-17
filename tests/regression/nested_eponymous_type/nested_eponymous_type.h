@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_EPONYMOUS_TYPE
-#define INCLUDED_NESTED_EPONYMOUS_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -154,5 +153,3 @@ template <typename X> bool Compare<X>::cmp_lt(const X &, const X &) const {
     return false;
   }
 }
-
-#endif // INCLUDED_NESTED_EPONYMOUS_TYPE

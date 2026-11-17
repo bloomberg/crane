@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_LOCAL_CLASS_TEMPLATE_KW
-#define INCLUDED_FUNCTOR_LOCAL_CLASS_TEMPLATE_KW
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -47,5 +46,3 @@ using FN = F<N>;
 struct FunctorLocalClassTemplateKw {
   static inline const uint64_t run = FN::use(FN::inst());
 };
-
-#endif // INCLUDED_FUNCTOR_LOCAL_CLASS_TEMPLATE_KW

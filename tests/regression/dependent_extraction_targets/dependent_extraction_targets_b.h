@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_EXTRACTION_TARGETS_B
-#define INCLUDED_DEPENDENT_EXTRACTION_TARGETS_B
+#pragma once
 
 #include <cstdint>
 #include <variant>
@@ -24,5 +23,3 @@ struct DependentExtractionTargets {
     static inline const uint64_t use = A::get(A::t::t0(UINT64_C(9)));
   };
 };
-
-#endif // INCLUDED_DEPENDENT_EXTRACTION_TARGETS_B

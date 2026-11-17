@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TOPOLOGICAL_SORT_BDE
-#define INCLUDED_TOPOLOGICAL_SORT_BDE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -712,5 +711,3 @@ struct TopologicalSort {
                .template concat<bsl::pair<T1, unsigned int>>();
   }
 };
-
-#endif // INCLUDED_TOPOLOGICAL_SORT_BDE

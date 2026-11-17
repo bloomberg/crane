@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROJECTION_RESULT_OVERAPPLIED
-#define INCLUDED_PROJECTION_RESULT_OVERAPPLIED
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -24,5 +23,3 @@ struct ProjectionResultOverapplied {
       UINT64_C(4),
       [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 * _x1); }));
 };
-
-#endif // INCLUDED_PROJECTION_RESULT_OVERAPPLIED

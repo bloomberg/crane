@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPCODE_OPERAND_DECODE
-#define INCLUDED_OPCODE_OPERAND_DECODE
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -48,5 +47,3 @@ struct OpcodeOperandDecode {
     }
   }();
 };
-
-#endif // INCLUDED_OPCODE_OPERAND_DECODE

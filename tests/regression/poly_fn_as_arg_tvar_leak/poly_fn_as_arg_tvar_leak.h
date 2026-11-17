@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POLY_FN_AS_ARG_TVAR_LEAK
-#define INCLUDED_POLY_FN_AS_ARG_TVAR_LEAK
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -88,5 +87,3 @@ struct PolyFnAsArgTvarLeak {
         [](const Nat &x) { return Nat::s(x); })(Nat::o());
   }();
 };
-
-#endif // INCLUDED_POLY_FN_AS_ARG_TVAR_LEAK

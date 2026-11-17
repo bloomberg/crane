@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_STATE_THREADING
-#define INCLUDED_FIX_STATE_THREADING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -132,5 +131,3 @@ struct FixStateThreading {
               List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))),
                    UINT64_C(0));
 };
-
-#endif // INCLUDED_FIX_STATE_THREADING

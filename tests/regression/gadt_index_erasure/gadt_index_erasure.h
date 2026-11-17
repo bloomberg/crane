@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GADT_INDEX_ERASURE
-#define INCLUDED_GADT_INDEX_ERASURE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -331,5 +330,3 @@ struct GadtIndexErasure {
            [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
            UINT64_C(0)));
 };
-
-#endif // INCLUDED_GADT_INDEX_ERASURE

@@ -665,12 +665,6 @@ let mk_include_quoted s = str ("#include \"" ^ s ^ "\"")
 (** True when BDE (Bloomberg Development Environment) mode is active. *)
 let is_bde () = String.equal (Base.Table.std_lib ()) "BDE"
 
-(** Compute the include guard macro name for a given filename. *)
-let include_guard_name s =
-  let base = Filename.basename s in
-  let name = Filename.remove_extension base in
-  String.uppercase_ascii ("INCLUDED_" ^ name)
-
 (** Generates the [#include] block for a C++ implementation file.
     Standard and custom headers are omitted for non-BDE mode because they
     are already included transitively via the component's own header (both
@@ -714,7 +708,7 @@ let header fn () =
   else
     self_include ++ fnl2 ()
 
-(** Generates the header file preamble: include guard, includes, and BDE
+(** Generates the header file preamble: [#pragma once], includes, and BDE
     concept boilerplate (if applicable). *)
 let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
   (* Headers of the units that already emitted libraries this one depends on
@@ -734,22 +728,20 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
      is included once, where it first comes. *)
   let included = CList.uniquize (himports @ imps) in
   (* The producing binary, named by the artifact itself under [CRANE_STAMP]:
-     see {!Base.Table.stamp_build}.  Ahead of the include guard so it survives a
-     second inclusion being skipped, and a comment so nothing downstream reads
-     it. *)
+     see {!Base.Table.stamp_build}.  Ahead of [#pragma once], and a comment so
+     nothing downstream reads it. *)
   let build_stamp =
     if Base.Table.stamp_build () then
       str ("// crane-plugin " ^ Base.Table.plugin_build_stamp ()) ++ fnl ()
     else mt ()
   in
-  (* Include guard (BDE Rule 4.2.3): #ifndef INCLUDED_NAME *)
-  let guard_name = Option.map include_guard_name si in
-  let guard_open =
+  (* A header file is included once: the preamble printed to the response
+     window, with no file, has nothing to protect. *)
+  let pragma_once =
     build_stamp
     ++
-    match guard_name with
-    | Some g ->
-      str ("#ifndef " ^ g) ++ fnl () ++ str ("#define " ^ g) ++ fnl2 ()
+    match si with
+    | Some _ -> str "#pragma once" ++ fnl2 ()
     | None -> mt ()
   in
   let h =
@@ -945,7 +937,7 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
       ""
   in
   if is_bde () then
-    guard_open
+    pragma_once
     ++ h
     ++ fnl2 ()
     ++ str "using namespace BloombergLP;"
@@ -953,19 +945,11 @@ let spec_header ?(unit_includes = []) ~(config : Base.Table.unit_config) si () =
     ++ str fun_concept
     ++ fnl2 ()
   else
-    guard_open
+    pragma_once
     ++ h
     ++ fnl2 ()
     ++ str fun_concept
     ++ fnl2 ()
-
-(** Generate include guard closing for header files. *)
-let spec_footer si () =
-  match si with
-  | Some s ->
-    let guard = include_guard_name s in
-    fnl () ++ str ("#endif // " ^ guard) ++ fnl ()
-  | None -> mt ()
 
 (** Computes the (impl_file, header_file, module_id) triple for monolithic
     extraction from an optional filename. *)
@@ -1851,7 +1835,6 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
           pp_with ft ns_open;
           pp_with ft body_hstruct;
           pp_with ft ns_close;
-          pp_with ft (spec_footer (Some si) ());
           Format.pp_print_flush ft ()
         with reraise ->
           Format.pp_print_flush ft ();

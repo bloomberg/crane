@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RANK1_POLYMORPHIC_DEFINITION
-#define INCLUDED_RANK1_POLYMORPHIC_DEFINITION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -21,5 +20,3 @@ struct Rank1PolymorphicDefinition {
        (to_bool(crane_erase_global<three, crane::obj>()) ? UINT64_C(10)
                                                          : UINT64_C(20)));
 };
-
-#endif // INCLUDED_RANK1_POLYMORPHIC_DEFINITION

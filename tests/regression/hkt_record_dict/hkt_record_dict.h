@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_RECORD_DICT
-#define INCLUDED_HKT_RECORD_DICT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -107,5 +106,3 @@ struct HktRecordDict {
       fmd<std::optional>(optd, [](const Nat &x) { return Nat::s(x); },
                          std::make_optional<Nat>(Nat::s(Nat::o())));
 };
-
-#endif // INCLUDED_HKT_RECORD_DICT

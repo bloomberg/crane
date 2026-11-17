@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_ARG_IN_METHOD
-#define INCLUDED_CLASS_ARG_IN_METHOD
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -149,5 +148,3 @@ struct ClassArgInMethod {
     return x0_.template show_memory_bit<_tcI0>();
   }
 };
-
-#endif // INCLUDED_CLASS_ARG_IN_METHOD

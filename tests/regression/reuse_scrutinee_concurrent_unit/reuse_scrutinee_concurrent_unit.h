@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_SCRUTINEE_CONCURRENT_UNIT
-#define INCLUDED_REUSE_SCRUTINEE_CONCURRENT_UNIT
+#pragma once
 
 #include "crane_fn.h"
 #include "shared_block.h"
@@ -100,5 +99,3 @@ struct ReuseScrutineeConcurrentUnit {
   static void run();
   static uint64_t total();
 };
-
-#endif // INCLUDED_REUSE_SCRUTINEE_CONCURRENT_UNIT

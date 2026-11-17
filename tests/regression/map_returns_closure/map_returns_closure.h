@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MAP_RETURNS_CLOSURE
-#define INCLUDED_MAP_RETURNS_CLOSURE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -161,5 +160,3 @@ struct MapReturnsClosure {
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil())))),
                 UINT64_C(10));
 };
-
-#endif // INCLUDED_MAP_RETURNS_CLOSURE

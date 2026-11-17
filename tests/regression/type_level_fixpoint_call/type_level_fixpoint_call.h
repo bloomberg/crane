@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_LEVEL_FIXPOINT_CALL
-#define INCLUDED_TYPE_LEVEL_FIXPOINT_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -18,5 +17,3 @@ struct TypeLevelFixpointCall {
       crane::any_cast<crane::fn<crane::obj(crane::obj)>>(v1)(
           crane::obj(UINT64_C(4))));
 };
-
-#endif // INCLUDED_TYPE_LEVEL_FIXPOINT_CALL

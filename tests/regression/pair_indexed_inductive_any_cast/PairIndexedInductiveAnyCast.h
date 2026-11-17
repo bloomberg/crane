@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
-#define INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -40,5 +39,3 @@ struct Ops {
   }
 };
 } // namespace PairIndexedInductiveAnyCast
-
-#endif // INCLUDED_PAIRINDEXEDINDUCTIVEANYCAST

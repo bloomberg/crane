@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEN_FN_CTOR_ARG_NOT_WRAPPED
-#define INCLUDED_DEN_FN_CTOR_ARG_NOT_WRAPPED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -186,5 +185,3 @@ struct DenFnCtorArgNotWrapped {
               unbox(ty::tfun(ty::tnat(), ty::tnat()), fb))(
               crane::obj(UINT64_C(4))));
 };
-
-#endif // INCLUDED_DEN_FN_CTOR_ARG_NOT_WRAPPED

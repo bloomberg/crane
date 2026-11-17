@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_PARAM_CTOR_FIELD
-#define INCLUDED_FUNCTOR_PARAM_CTOR_FIELD
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -67,5 +66,3 @@ struct FunctorParamCtorField {
   using NamesImpl = Impl<Names>;
   static uint64_t made_depth(bool b);
 };
-
-#endif // INCLUDED_FUNCTOR_PARAM_CTOR_FIELD

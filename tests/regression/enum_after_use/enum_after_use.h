@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ENUM_AFTER_USE
-#define INCLUDED_ENUM_AFTER_USE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -115,5 +114,3 @@ struct EnumAfterUse {
           .add(tonat(c(Nat::nat::s(Nat::nat::o()),
                        Nat::nat::s(Nat::nat::o()))));
 };
-
-#endif // INCLUDED_ENUM_AFTER_USE

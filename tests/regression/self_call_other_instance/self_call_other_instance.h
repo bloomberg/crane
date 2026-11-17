@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SELF_CALL_OTHER_INSTANCE
-#define INCLUDED_SELF_CALL_OTHER_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -165,5 +164,3 @@ struct SelfCallOtherInstance {
 
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_SELF_CALL_OTHER_INSTANCE

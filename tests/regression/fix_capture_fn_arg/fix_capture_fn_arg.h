@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_CAPTURE_FN_ARG
-#define INCLUDED_FIX_CAPTURE_FN_ARG
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -47,5 +46,3 @@ struct FixCaptureFnArg {
     return (n + g(UINT64_C(5)));
   }();
 };
-
-#endif // INCLUDED_FIX_CAPTURE_FN_ARG

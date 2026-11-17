@@ -1,5 +1,4 @@
-#ifndef INCLUDED_Z_GMP
-#define INCLUDED_Z_GMP
+#pragma once
 
 #include <gmpxx.h>
 
@@ -20,5 +19,3 @@ struct ZGMPTest {
   static inline const mpz_class big_val = mpz_class(1000);
   static mpz_class z_sign(const mpz_class &z);
 };
-
-#endif // INCLUDED_Z_GMP

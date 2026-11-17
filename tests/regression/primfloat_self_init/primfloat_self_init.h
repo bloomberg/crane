@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PRIMFLOAT_SELF_INIT
-#define INCLUDED_PRIMFLOAT_SELF_INIT
+#pragma once
 
 struct PrimFloat {
   static inline const double infinity = __builtin_inf();
@@ -11,5 +10,3 @@ struct PrimFloatSelfInit {
   static inline const double not_a_number = PrimFloat::nan;
   static inline const double ordinary = 0x1p-1;
 };
-
-#endif // INCLUDED_PRIMFLOAT_SELF_INIT

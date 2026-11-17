@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FN_VALUE_PROJECTIONS
-#define INCLUDED_FN_VALUE_PROJECTIONS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -243,5 +242,3 @@ struct FnValueProjections {
            [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
            UINT64_C(0)));
 };
-
-#endif // INCLUDED_FN_VALUE_PROJECTIONS

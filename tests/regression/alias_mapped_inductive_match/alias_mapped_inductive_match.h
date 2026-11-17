@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_MAPPED_INDUCTIVE_MATCH
-#define INCLUDED_ALIAS_MAPPED_INDUCTIVE_MATCH
+#pragma once
 
 #include <cstdint>
 #include <optional>
@@ -29,5 +28,3 @@ struct AliasMappedInductiveMatch {
       (get(std::make_optional<uint64_t>(UINT64_C(4))) +
        get(std::optional<uint64_t>()));
 };
-
-#endif // INCLUDED_ALIAS_MAPPED_INDUCTIVE_MATCH

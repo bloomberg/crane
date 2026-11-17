@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROVDEF
-#define INCLUDED_PROVDEF
+#pragma once
 
 #include "obj.h"
 #include <concepts>
@@ -21,5 +20,3 @@ concept Provenance = requires {
   -> std::convertible_to<typename I::prov>;
 });
 } // namespace ProvDef
-
-#endif // INCLUDED_PROVDEF

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_CAPTURE_MATCH
-#define INCLUDED_CLOSURE_CAPTURE_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -251,5 +250,3 @@ struct ClosureCaptureMatch {
     }();
   }();
 };
-
-#endif // INCLUDED_CLOSURE_CAPTURE_MATCH

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECURSIVE_RECORD_INCOMPLETE_TYPE
-#define INCLUDED_RECURSIVE_RECORD_INCOMPLETE_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -195,5 +194,3 @@ struct RecursiveRecordIncompleteType {
   static uint64_t csum(const cell &c);
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_RECURSIVE_RECORD_INCOMPLETE_TYPE

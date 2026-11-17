@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURES_IN_DATA
-#define INCLUDED_CLOSURES_IN_DATA
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -204,5 +203,3 @@ struct ClosuresInData {
   static inline const uint64_t test_maybe_none =
       maybe_apply(std::optional<crane::fn<uint64_t(uint64_t)>>(), UINT64_C(42));
 };
-
-#endif // INCLUDED_CLOSURES_IN_DATA

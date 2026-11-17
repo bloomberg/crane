@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BIND_ETA_REDUCED
-#define INCLUDED_BIND_ETA_REDUCED
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -38,5 +37,3 @@ struct BindEtaReduced {
     return f(std::move(_bind_result));
   }
 };
-
-#endif // INCLUDED_BIND_ETA_REDUCED

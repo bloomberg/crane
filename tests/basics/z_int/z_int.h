@@ -1,5 +1,4 @@
-#ifndef INCLUDED_Z_INT
-#define INCLUDED_Z_INT
+#pragma once
 
 #include <cstdint>
 
@@ -20,5 +19,3 @@ struct ZIntTest {
   static constexpr int64_t big_val = INT64_C(1000);
   static int64_t z_sign(int64_t z);
 };
-
-#endif // INCLUDED_Z_INT

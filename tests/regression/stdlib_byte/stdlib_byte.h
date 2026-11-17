@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STDLIB_BYTE
-#define INCLUDED_STDLIB_BYTE
+#pragma once
 
 #include <utility>
 
@@ -292,5 +291,3 @@ struct StdlibByte {
   static constexpr Byte b = Byte::X41;
   static inline const bool isA = Byte1::eqb0(b, Byte::X41);
 };
-
-#endif // INCLUDED_STDLIB_BYTE

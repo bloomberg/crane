@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHOW_EXTRACTION_PLANNED
-#define INCLUDED_SHOW_EXTRACTION_PLANNED
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -102,5 +101,3 @@ struct ShowExtractionPlanned {
   static Nat twice(Nat n);
   static inline const Nat four = twice(Nat::s(Nat::s(Nat::o())));
 };
-
-#endif // INCLUDED_SHOW_EXTRACTION_PLANNED

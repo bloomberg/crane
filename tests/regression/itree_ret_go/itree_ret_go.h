@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_RET_GO
-#define INCLUDED_ITREE_RET_GO
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -69,5 +68,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_ITREE_RET_GO

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_ARG
-#define INCLUDED_ETA_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -158,5 +157,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_ETA_ARG

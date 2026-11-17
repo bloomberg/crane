@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TRANSLATE_CALLEE_HAS_NO_NAME
-#define INCLUDED_TRANSLATE_CALLEE_HAS_NO_NAME
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -79,5 +78,3 @@ template <typename T1>
 std::shared_ptr<ITree<T1>> w(const std::shared_ptr<ITree<T1>> &x) {
   return itree_translate([](AE x0) { return sum1_inl(x0); }, x);
 }
-
-#endif // INCLUDED_TRANSLATE_CALLEE_HAS_NO_NAME

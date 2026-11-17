@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_EXTRACTION_TARGETS_INNER
-#define INCLUDED_DEPENDENT_EXTRACTION_TARGETS_INNER
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -64,5 +63,3 @@ struct DependentExtractionTargets {
     };
   };
 };
-
-#endif // INCLUDED_DEPENDENT_EXTRACTION_TARGETS_INNER

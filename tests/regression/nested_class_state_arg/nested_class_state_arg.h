@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_CLASS_STATE_ARG
-#define INCLUDED_NESTED_CLASS_STATE_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -274,5 +273,3 @@ struct NestedClassStateArg {
   static inline const bool is_three =
       start<natParams>().eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
-
-#endif // INCLUDED_NESTED_CLASS_STATE_ARG

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_PATTERN
-#define INCLUDED_DEEP_PATTERN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -578,5 +577,3 @@ struct DeepPattern {
   static inline const uint64_t test2 =
       tree::leaf(UINT64_C(5)).multi_constructor(tree::leaf(UINT64_C(10)));
 };
-
-#endif // INCLUDED_DEEP_PATTERN

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TRANSLATE_APPLIES_HANDLER
-#define INCLUDED_TRANSLATE_APPLIES_HANDLER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -47,5 +46,3 @@ struct TranslateAppliesHandler {
   static inline const uint64_t relabelled_event = b_of(relabelled());
   static inline const uint64_t injected_side = side_of(injected());
 };
-
-#endif // INCLUDED_TRANSLATE_APPLIES_HANDLER

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTQUALIFIEDRAW
-#define INCLUDED_SEPEXTQUALIFIEDRAW
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -125,5 +124,3 @@ template <OrderedType X> struct Make {
   }
 };
 } // namespace SepExtQualifiedRaw
-
-#endif // INCLUDED_SEPEXTQUALIFIEDRAW

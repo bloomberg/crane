@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_STRINGS
-#define INCLUDED_LOOPIFY_STRINGS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -119,5 +118,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_LOOPIFY_STRINGS

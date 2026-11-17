@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_IN_RECORD
-#define INCLUDED_INSTANCE_IN_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -39,5 +38,3 @@ struct InstanceInRecord {
   static inline const uint64_t run =
       b.carrierDict.op(b.seed, b.carrierDict.unit_);
 };
-
-#endif // INCLUDED_INSTANCE_IN_RECORD

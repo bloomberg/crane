@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POLY_INDUCTIVE
-#define INCLUDED_POLY_INDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -436,5 +435,3 @@ struct PolyInductive {
                                  ptree<uint64_t>::pleaf(UINT64_C(3))))
           .ptree_size();
 };
-
-#endif // INCLUDED_POLY_INDUCTIVE

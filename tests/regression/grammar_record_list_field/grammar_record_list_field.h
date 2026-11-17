@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GRAMMAR_RECORD_LIST_FIELD
-#define INCLUDED_GRAMMAR_RECORD_LIST_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -165,5 +164,3 @@ using grammar_entry = SigT<production, production_semty>;
               std::deque<SigT<std::pair<Nonterminal, std::deque<Symbol>>,
                               std::pair<crane::obj, crane::obj>>>{})));
 uint64_t num_entries();
-
-#endif // INCLUDED_GRAMMAR_RECORD_LIST_FIELD

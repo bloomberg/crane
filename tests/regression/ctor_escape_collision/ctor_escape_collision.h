@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CTOR_ESCAPE_COLLISION
-#define INCLUDED_CTOR_ESCAPE_COLLISION
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -45,5 +44,3 @@ struct CtorEscapeCollision {
        tag(Item::D_P1)) +
       tag(Item::D_P2));
 };
-
-#endif // INCLUDED_CTOR_ESCAPE_COLLISION

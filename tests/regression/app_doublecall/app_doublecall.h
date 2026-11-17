@@ -1,5 +1,4 @@
-#ifndef INCLUDED_APP_DOUBLECALL
-#define INCLUDED_APP_DOUBLECALL
+#pragma once
 
 #include <cstdint>
 #include <deque>
@@ -18,5 +17,3 @@ struct AppDoublecall {
   /// _r.insert(_r.end(), gen_list(b).begin(), gen_list(b).end());  (* BUG *)
   static std::deque<uint64_t> concat_two(uint64_t a, uint64_t b);
 };
-
-#endif // INCLUDED_APP_DOUBLECALL

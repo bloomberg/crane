@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE29
-#define INCLUDED_MEM_SAFETY_PROBE29
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -1348,5 +1347,3 @@ struct MemSafetyProbe29 {
     return (o.outer_sum() + i.inner_sum());
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE29

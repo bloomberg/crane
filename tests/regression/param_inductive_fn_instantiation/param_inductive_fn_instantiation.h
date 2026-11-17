@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARAM_INDUCTIVE_FN_INSTANTIATION
-#define INCLUDED_PARAM_INDUCTIVE_FN_INSTANTIATION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -54,5 +53,3 @@ struct ParamInductiveFnInstantiation {
   static inline const uint64_t go = run<crane::fn<uint64_t(uint64_t)>>(
       d, [](uint64_t n) { return (n + UINT64_C(1)); })(UINT64_C(0));
 };
-
-#endif // INCLUDED_PARAM_INDUCTIVE_FN_INSTANTIATION

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HIGHER_RANK_POLY
-#define INCLUDED_HIGHER_RANK_POLY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -76,5 +75,3 @@ struct HigherRankPoly {
   static inline const std::pair<Nat, bool> ex =
       apply_id(crane_erase_fn<crane::obj>([](const auto &x) { return x; }));
 };
-
-#endif // INCLUDED_HIGHER_RANK_POLY

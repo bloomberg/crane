@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_CLOSURE_FIXPOINT
-#define INCLUDED_ETA_CLOSURE_FIXPOINT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -151,5 +150,3 @@ public:
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_ETA_CLOSURE_FIXPOINT

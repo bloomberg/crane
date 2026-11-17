@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RANK2_FAMILY_ARGUMENT_ADAPTER
-#define INCLUDED_RANK2_FAMILY_ARGUMENT_ADAPTER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -116,5 +115,3 @@ struct Rank2FamilyArgumentAdapter {
           UINT64_C(2),
           List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_RANK2_FAMILY_ARGUMENT_ADAPTER

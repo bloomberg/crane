@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARTIAL_APP_PREFIX_WORK
-#define INCLUDED_PARTIAL_APP_PREFIX_WORK
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -232,5 +231,3 @@ struct PartialAppPrefixWork {
               List<crane::fn<uint64_t(uint64_t)>>::nil())));
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_PARTIAL_APP_PREFIX_WORK

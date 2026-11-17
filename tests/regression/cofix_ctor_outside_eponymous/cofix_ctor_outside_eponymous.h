@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COFIX_CTOR_OUTSIDE_EPONYMOUS
-#define INCLUDED_COFIX_CTOR_OUTSIDE_EPONYMOUS
+#pragma once
 
 #include "fn.h"
 #include "lazy.h"
@@ -75,5 +74,3 @@ struct CofixCtorOutsideEponymous {
   static Stream::stream from(uint64_t n);
   static uint64_t third_of(uint64_t n);
 };
-
-#endif // INCLUDED_COFIX_CTOR_OUTSIDE_EPONYMOUS

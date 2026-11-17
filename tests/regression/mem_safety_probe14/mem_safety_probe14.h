@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE14
-#define INCLUDED_MEM_SAFETY_PROBE14
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -502,5 +501,3 @@ struct MemSafetyProbe14 {
     return sum_fns(collect_closures(std::move(t)));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE14

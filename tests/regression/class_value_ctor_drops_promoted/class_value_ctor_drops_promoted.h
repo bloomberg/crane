@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_VALUE_CTOR_DROPS_PROMOTED
-#define INCLUDED_CLASS_VALUE_CTOR_DROPS_PROMOTED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -213,5 +212,3 @@ struct ClassValueCtorDropsPromoted {
                                     Nat::s(Nat::s(Nat::s(Nat::s(
                                         Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
-
-#endif // INCLUDED_CLASS_VALUE_CTOR_DROPS_PROMOTED

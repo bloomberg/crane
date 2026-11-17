@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_METHOD_LOCAL_FIX
-#define INCLUDED_LOOPIFY_METHOD_LOCAL_FIX
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -150,5 +149,3 @@ struct LoopifyMethodLocalFix {
     };
   };
 };
-
-#endif // INCLUDED_LOOPIFY_METHOD_LOCAL_FIX

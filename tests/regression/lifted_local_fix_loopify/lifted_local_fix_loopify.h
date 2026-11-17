@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_LOCAL_FIX_LOOPIFY
-#define INCLUDED_LIFTED_LOCAL_FIX_LOOPIFY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -229,5 +228,3 @@ struct LiftedLocalFixLoopify {
 
   static uint64_t weighted(const List<List<uint64_t>> &l);
 };
-
-#endif // INCLUDED_LIFTED_LOCAL_FIX_LOOPIFY

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOXED_FIELDS
-#define INCLUDED_BOXED_FIELDS
+#pragma once
 
 #include "crane_fn.h"
 #include "field.h"
@@ -527,5 +526,3 @@ struct BoxedFields {
       (heavy.tag_of() + heavy.untag().total());
   static inline const uint64_t light_total = (light.tag_of() + light.untag());
 };
-
-#endif // INCLUDED_BOXED_FIELDS

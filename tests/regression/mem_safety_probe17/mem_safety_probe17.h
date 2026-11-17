@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE17
-#define INCLUDED_MEM_SAFETY_PROBE17
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -1124,5 +1123,3 @@ struct MemSafetyProbe17 {
     return (sum_list(qtree_flatten(t)) + t.qtree_sum());
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE17

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FOLD_CURRIED_ACCUMULATOR
-#define INCLUDED_FOLD_CURRIED_ACCUMULATOR
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -126,5 +125,3 @@ public:
     }
   }
 };
-
-#endif // INCLUDED_FOLD_CURRIED_ACCUMULATOR

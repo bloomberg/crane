@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTEDLIB
-#define INCLUDED_NESTEDLIB
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -91,5 +90,3 @@ struct Sub {
   static uint64_t size(const Tree &t);
 };
 } // namespace NestedLib
-
-#endif // INCLUDED_NESTEDLIB

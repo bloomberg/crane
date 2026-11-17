@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_LEVEL_FIXPOINT_ARITY
-#define INCLUDED_TYPE_LEVEL_FIXPOINT_ARITY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -20,5 +19,3 @@ struct TypeLevelFixpointArity {
         apply1(constN(UINT64_C(1), UINT64_C(8)), UINT64_C(0))) +
        apply2(constN(UINT64_C(2), UINT64_C(9)), UINT64_C(0), UINT64_C(0)));
 };
-
-#endif // INCLUDED_TYPE_LEVEL_FIXPOINT_ARITY

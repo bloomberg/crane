@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POLYMORPHIC_HELPER
-#define INCLUDED_POLYMORPHIC_HELPER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -223,5 +222,3 @@ template <typename T1> List<T1> ListDef::repeat(const T1 &x, const Nat &n) {
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, *a0));
   }
 }
-
-#endif // INCLUDED_POLYMORPHIC_HELPER

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_VARIANT_ALIAS_NAME_CLASH
-#define INCLUDED_GENERATED_VARIANT_ALIAS_NAME_CLASH
+#pragma once
 
 #include <type_traits>
 #include <utility>
@@ -63,5 +62,3 @@ struct GeneratedVariantAliasNameClash {
   static bool is_flag(const variant_t0 &x);
   static inline const bool sample = is_flag(variant_t0::flag(true));
 };
-
-#endif // INCLUDED_GENERATED_VARIANT_ALIAS_NAME_CLASH

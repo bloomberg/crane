@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_SINGLE_CTOR_INSTANCE_BODY
-#define INCLUDED_HKT_SINGLE_CTOR_INSTANCE_BODY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -148,5 +147,3 @@ struct HktSingleCtorInstanceBody {
 
   static box<Nat> run(const Nat &n);
 };
-
-#endif // INCLUDED_HKT_SINGLE_CTOR_INSTANCE_BODY

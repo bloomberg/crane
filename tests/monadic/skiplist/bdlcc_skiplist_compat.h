@@ -11,8 +11,7 @@
 // search
 // - KEY type must have both operator< and operator== defined
 //
-#ifndef INCLUDED_BDLCC_SKIPLIST_COMPAT
-#define INCLUDED_BDLCC_SKIPLIST_COMPAT
+#pragma once
 
 #include "skiplist.h"
 #include <functional>
@@ -443,5 +442,3 @@ private:
 };
 
 } // namespace bdlcc_compat
-
-#endif // INCLUDED_BDLCC_SKIPLIST_COMPAT

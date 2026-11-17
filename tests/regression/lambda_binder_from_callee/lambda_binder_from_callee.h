@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LAMBDA_BINDER_FROM_CALLEE
-#define INCLUDED_LAMBDA_BINDER_FROM_CALLEE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -105,5 +104,3 @@ struct LambdaBinderFromCallee {
         });
   }
 };
-
-#endif // INCLUDED_LAMBDA_BINDER_FROM_CALLEE

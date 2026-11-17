@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_EXTRACTION_TARGETS_REP
-#define INCLUDED_DEPENDENT_EXTRACTION_TARGETS_REP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -103,5 +102,3 @@ struct DependentExtractionTargets {
     }
   }
 };
-
-#endif // INCLUDED_DEPENDENT_EXTRACTION_TARGETS_REP

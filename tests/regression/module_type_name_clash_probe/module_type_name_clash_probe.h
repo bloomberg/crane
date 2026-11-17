@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE
-#define INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE
+#pragma once
 
 #include <type_traits>
 #include <variant>
@@ -56,5 +55,3 @@ struct ModuleTypeNameClashProbe {
 
   static constexpr Bool0 sample = Bool0::TRUE_;
 };
-
-#endif // INCLUDED_MODULE_TYPE_NAME_CLASH_PROBE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_REIFIED
-#define INCLUDED_ITREE_REIFIED
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -72,5 +71,3 @@ struct ITreeReified {
   /// ---- Main (auto-wrapper) ----
   static std::shared_ptr<ITree<std::monostate>> main();
 };
-
-#endif // INCLUDED_ITREE_REIFIED

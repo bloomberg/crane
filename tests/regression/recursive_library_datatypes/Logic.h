@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOGIC
-#define INCLUDED_LOGIC
+#pragma once
 
 #include "obj.h"
 #include <stdexcept>
@@ -102,5 +101,3 @@ template <typename T1> T1 eq_ex2_rec_uncurried(T1 x0_) {
   return eq_ex2_rect_uncurried<T1>(std::move(x0_));
 }
 } // namespace Logic
-
-#endif // INCLUDED_LOGIC

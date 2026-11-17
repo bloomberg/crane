@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_FORCED_VIEWS
-#define INCLUDED_REUSE_FORCED_VIEWS
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -286,5 +285,3 @@ struct ReuseForcedViews {
   combine(List<std::pair<uint64_t, uint64_t>> m,
           const List<std::pair<uint64_t, uint64_t>> &x0_);
 };
-
-#endif // INCLUDED_REUSE_FORCED_VIEWS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_SHADOWS_MATCH_BINDER
-#define INCLUDED_LET_SHADOWS_MATCH_BINDER
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -70,5 +69,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_LET_SHADOWS_MATCH_BINDER

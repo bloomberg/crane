@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_COERCED_SELF_CALL
-#define INCLUDED_LOOPIFY_COERCED_SELF_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -54,5 +53,3 @@ struct Nat {
   static EvenT EvenT_2(uint64_t _x, const Sig<uint64_t> &h0);
   static EvenT even_EvenT(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_COERCED_SELF_CALL

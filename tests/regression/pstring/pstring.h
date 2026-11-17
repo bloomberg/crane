@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PSTRING
-#define INCLUDED_PSTRING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -166,5 +165,3 @@ struct PString {
     }
   }
 };
-
-#endif // INCLUDED_PSTRING

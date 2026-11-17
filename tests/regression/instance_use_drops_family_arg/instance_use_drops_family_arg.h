@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_USE_DROPS_FAMILY_ARG
-#define INCLUDED_INSTANCE_USE_DROPS_FAMILY_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -279,5 +278,3 @@ struct InstanceUseDropsFamilyArg {
     return a.eqb(Nat::s(Nat::s(Nat::s(Nat::o()))));
   }();
 };
-
-#endif // INCLUDED_INSTANCE_USE_DROPS_FAMILY_ARG

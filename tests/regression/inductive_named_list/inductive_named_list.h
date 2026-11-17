@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INDUCTIVE_NAMED_LIST
-#define INCLUDED_INDUCTIVE_NAMED_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -212,5 +211,3 @@ struct InductiveNamedList {
       len(List_::lcons(UINT64_C(1), List_::lcons(UINT64_C(2), List_::lnil()))) +
       List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()).length());
 };
-
-#endif // INCLUDED_INDUCTIVE_NAMED_LIST

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HANDLER_LAMBDA_TARG_UNDECLARED
-#define INCLUDED_HANDLER_LAMBDA_TARG_UNDECLARED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -171,5 +170,3 @@ struct HandlerLambdaTargUndeclared {
     return use<_tcI0>(x1_);
   }
 };
-
-#endif // INCLUDED_HANDLER_LAMBDA_TARG_UNDECLARED

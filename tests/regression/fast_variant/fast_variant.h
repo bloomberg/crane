@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FAST_VARIANT
-#define INCLUDED_FAST_VARIANT
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -591,5 +590,3 @@ struct FastVariant {
   static inline const List<uint64_t> first_three =
       take(UINT64_C(3), from(UINT64_C(10)));
 };
-
-#endif // INCLUDED_FAST_VARIANT

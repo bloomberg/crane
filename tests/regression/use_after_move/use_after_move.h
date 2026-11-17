@@ -1,5 +1,4 @@
-#ifndef INCLUDED_USE_AFTER_MOVE
-#define INCLUDED_USE_AFTER_MOVE
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -22,5 +21,3 @@ struct UseAfterMove {
   static std::pair<std::pair<std::pair<State, uint64_t>, uint64_t>, uint64_t>
   pattern7(const State &s);
 };
-
-#endif // INCLUDED_USE_AFTER_MOVE

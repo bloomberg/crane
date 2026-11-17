@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_RECORD_PROJ_AS_STATIC
-#define INCLUDED_FUNCTOR_RECORD_PROJ_AS_STATIC
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -1897,5 +1896,3 @@ template <typename T1> Nat im_size(const IM::template bst<T1> &m) {
 struct Qp {
   static Nat use(const IM::template t<Nat> &x0_);
 };
-
-#endif // INCLUDED_FUNCTOR_RECORD_PROJ_AS_STATIC

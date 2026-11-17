@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MATCH_OBSERVE_ALIAS_FAMILY
-#define INCLUDED_MATCH_OBSERVE_ALIAS_FAMILY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -387,5 +386,3 @@ struct MatchObserveAliasFamily {
     }
   }();
 };
-
-#endif // INCLUDED_MATCH_OBSERVE_ALIAS_FAMILY

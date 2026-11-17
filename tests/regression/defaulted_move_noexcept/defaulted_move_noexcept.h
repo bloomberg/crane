@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEFAULTED_MOVE_NOEXCEPT
-#define INCLUDED_DEFAULTED_MOVE_NOEXCEPT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -177,5 +176,3 @@ struct DefaultedMoveNoexcept {
     }
   }
 };
-
-#endif // INCLUDED_DEFAULTED_MOVE_NOEXCEPT

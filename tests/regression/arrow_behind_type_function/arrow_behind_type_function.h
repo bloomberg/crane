@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ARROW_BEHIND_TYPE_FUNCTION
-#define INCLUDED_ARROW_BEHIND_TYPE_FUNCTION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -141,5 +140,3 @@ struct ArrowBehindTypeFunction {
           UINT64_C(3),
           List<uint64_t>::cons(UINT64_C(4), List<uint64_t>::nil())));
 };
-
-#endif // INCLUDED_ARROW_BEHIND_TYPE_FUNCTION

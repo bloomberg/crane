@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_ERASED_FN_PARAM
-#define INCLUDED_SIGT_ERASED_FN_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -225,5 +224,3 @@ struct SigtErasedFnParam {
       [](uint64_t acc, const auto &p) { return (acc + unpack(p)); },
       UINT64_C(0));
 };
-
-#endif // INCLUDED_SIGT_ERASED_FN_PARAM

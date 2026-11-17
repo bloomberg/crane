@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNULLARYDEEPPATH
-#define INCLUDED_SEPEXTNULLARYDEEPPATH
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -68,5 +67,3 @@ template <Root R> struct Worker {
   }
 };
 } // namespace SepExtNullaryDeepPath
-
-#endif // INCLUDED_SEPEXTNULLARYDEEPPATH

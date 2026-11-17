@@ -1,5 +1,4 @@
-#ifndef INCLUDED_USER_OPTION_WRAPPER
-#define INCLUDED_USER_OPTION_WRAPPER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -154,5 +153,3 @@ struct UserOptionWrapper {
 
   static inline const t empty = t::node(UINT64_C(0), opt<t>::non());
 };
-
-#endif // INCLUDED_USER_OPTION_WRAPPER

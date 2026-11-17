@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DENSITY_POTENTIAL_TRACE
-#define INCLUDED_DENSITY_POTENTIAL_TRACE
+#pragma once
 
 #include <crane_real.h>
 #include <cstdint>
@@ -61,5 +60,3 @@ struct DensityPotentialTraceCase {
   static inline const bool sample_massive_nonneg =
       massive_potential_nonnegative_at(UINT64_C(2));
 };
-
-#endif // INCLUDED_DENSITY_POTENTIAL_TRACE

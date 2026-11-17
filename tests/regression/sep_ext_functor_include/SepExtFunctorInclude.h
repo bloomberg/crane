@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTFUNCTORINCLUDE
-#define INCLUDED_SEPEXTFUNCTORINCLUDE
+#pragma once
 
 #include <utility>
 
@@ -26,5 +25,3 @@ const bool gt_two_one =
     T::gtb(Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())),
            Datatypes::Nat::s(Datatypes::Nat::o()));
 } // namespace SepExtFunctorInclude
-
-#endif // INCLUDED_SEPEXTFUNCTORINCLUDE

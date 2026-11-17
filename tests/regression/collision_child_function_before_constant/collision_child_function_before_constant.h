@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COLLISION_CHILD_FUNCTION_BEFORE_CONSTANT
-#define INCLUDED_COLLISION_CHILD_FUNCTION_BEFORE_CONSTANT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -155,5 +154,3 @@ struct CollisionChildFunctionBeforeConstant {
       CollisionChildFunctionBeforeConstant::first(List<Nat>::cons(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))), List<Nat>::nil()));
 };
-
-#endif // INCLUDED_COLLISION_CHILD_FUNCTION_BEFORE_CONSTANT

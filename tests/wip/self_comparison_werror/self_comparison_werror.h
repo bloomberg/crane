@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SELF_COMPARISON_WERROR
-#define INCLUDED_SELF_COMPARISON_WERROR
+#pragma once
 
 #include <cstdint>
 
@@ -14,5 +13,3 @@ struct SelfComparisonWerror {
   static bool eq_self(uint64_t n);
   static bool lt_self(uint64_t n);
 };
-
-#endif // INCLUDED_SELF_COMPARISON_WERROR

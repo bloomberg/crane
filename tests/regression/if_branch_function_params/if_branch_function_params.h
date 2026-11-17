@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IF_BRANCH_FUNCTION_PARAMS
-#define INCLUDED_IF_BRANCH_FUNCTION_PARAMS
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -124,5 +123,3 @@ struct IfBranchFunctionParams {
         [](const Nat &x) { return x.add(Nat::s(Nat::s(Nat::o()))); },
         Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_IF_BRANCH_FUNCTION_PARAMS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_RECURSION
-#define INCLUDED_MUTUAL_RECURSION
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -150,5 +149,3 @@ struct MutualRecursion {
       eval_expr(expr::binop(UINT64_C(0), expr::val(UINT64_C(5)),
                             expr::val(UINT64_C(10))));
 };
-
-#endif // INCLUDED_MUTUAL_RECURSION

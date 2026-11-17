@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CASE_INSENSITIVE_EPONYMY
-#define INCLUDED_CASE_INSENSITIVE_EPONYMY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -203,5 +202,3 @@ struct CFG0 {
 template <typename T1> Nat CFG0::size(const cfg<T1> &g) {
   return g.blks.length();
 }
-
-#endif // INCLUDED_CASE_INSENSITIVE_EPONYMY

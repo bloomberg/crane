@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_FRAME_RECEIVER_PTR
-#define INCLUDED_LOOPIFY_FRAME_RECEIVER_PTR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -251,5 +250,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_LOOPIFY_FRAME_RECEIVER_PTR

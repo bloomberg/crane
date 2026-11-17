@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TT_AT_COMPUTED_TYPE
-#define INCLUDED_TT_AT_COMPUTED_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -112,5 +111,3 @@ struct TtAtComputedType {
                                                               .second)
           .first;
 };
-
-#endif // INCLUDED_TT_AT_COMPUTED_TYPE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIVERSE_POLY
-#define INCLUDED_UNIVERSE_POLY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -251,5 +250,3 @@ struct UniversePoly {
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_UNIVERSE_POLY

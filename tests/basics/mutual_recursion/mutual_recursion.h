@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_RECURSION
-#define INCLUDED_MUTUAL_RECURSION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -293,5 +292,3 @@ struct MutualRecursion {
   static inline const uint64_t test_sum_simple = tree_sum(simple_tree);
   static inline const uint64_t test_sum_nested = tree_sum(nested_tree);
 };
-
-#endif // INCLUDED_MUTUAL_RECURSION

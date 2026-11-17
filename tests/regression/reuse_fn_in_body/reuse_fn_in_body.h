@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_FN_IN_BODY
-#define INCLUDED_REUSE_FN_IN_BODY
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -115,5 +114,3 @@ struct ReuseFnInBody {
   static inline const uint64_t test2 =
       sum(prefix_sum(mylist::mycons(UINT64_C(10), mylist::mynil()), true));
 };
-
-#endif // INCLUDED_REUSE_FN_IN_BODY

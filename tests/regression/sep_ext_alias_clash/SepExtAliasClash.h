@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTALIASCLASH
-#define INCLUDED_SEPEXTALIASCLASH
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -29,5 +28,3 @@ struct MySig {
 using Impl = ImplFn<MySig>;
 using Lemmas = LemmasFn<MySig>;
 } // namespace SepExtAliasClash
-
-#endif // INCLUDED_SEPEXTALIASCLASH

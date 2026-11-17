@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MISSING_INDUCTIVE_POS_MASK
-#define INCLUDED_MISSING_INDUCTIVE_POS_MASK
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -176,5 +175,3 @@ struct Coq_Pos {
 struct MissingInductivePosMask {
   static Coq_Pos::mask f(const Positive &x0_, const Positive &x1_);
 };
-
-#endif // INCLUDED_MISSING_INDUCTIVE_POS_MASK

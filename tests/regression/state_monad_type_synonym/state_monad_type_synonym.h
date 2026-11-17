@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STATE_MONAD_TYPE_SYNONYM
-#define INCLUDED_STATE_MONAD_TYPE_SYNONYM
+#pragma once
 
 #include "fn.h"
 #include "shared_block.h"
@@ -41,5 +40,3 @@ struct StateMonadTypeSynonym {
   }();
   static inline const uint64_t go = prog(UINT64_C(1)).first;
 };
-
-#endif // INCLUDED_STATE_MONAD_TYPE_SYNONYM

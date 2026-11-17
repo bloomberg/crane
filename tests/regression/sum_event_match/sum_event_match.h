@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUM_EVENT_MATCH
-#define INCLUDED_SUM_EVENT_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -85,5 +84,3 @@ std::shared_ptr<ITree<T1>> handle(const Sum1<AE, BE, T1> &e) {
     return itree_trigger(sum1_inr(a0));
   }
 }
-
-#endif // INCLUDED_SUM_EVENT_MATCH

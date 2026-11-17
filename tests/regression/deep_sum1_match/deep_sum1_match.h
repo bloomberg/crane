@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_SUM1_MATCH
-#define INCLUDED_DEEP_SUM1_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -275,5 +274,3 @@ struct DeepSum1Match {
     }
   }();
 };
-
-#endif // INCLUDED_DEEP_SUM1_MATCH

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_RECORD
-#define INCLUDED_ERASED_RECORD
+#pragma once
 
 #include <cstdint>
 
@@ -31,5 +30,3 @@ struct ErasedRecord {
   static inline const uint64_t test3 =
       access_mostly_props(MostlyProps{UINT64_C(5), UINT64_C(10), UINT64_C(15)});
 };
-
-#endif // INCLUDED_ERASED_RECORD

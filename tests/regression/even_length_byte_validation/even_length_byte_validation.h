@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
-#define INCLUDED_EVEN_LENGTH_BYTE_VALIDATION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -191,5 +190,3 @@ struct EvenLengthByteValidation {
               ? UINT64_C(1)
               : UINT64_C(0));
 };
-
-#endif // INCLUDED_EVEN_LENGTH_BYTE_VALIDATION

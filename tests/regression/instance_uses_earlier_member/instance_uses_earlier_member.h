@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_USES_EARLIER_MEMBER
-#define INCLUDED_INSTANCE_USES_EARLIER_MEMBER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -300,5 +299,3 @@ template <Params _tcI0>
 memM<typename StateV<_tcI0>::state, Nat> IuMemImpl::get_size2() {
   return IuMemImpl::template get_size<_tcI0>();
 }
-
-#endif // INCLUDED_INSTANCE_USES_EARLIER_MEMBER

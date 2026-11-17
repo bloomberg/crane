@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_20989
-#define INCLUDED_ROCQ_BUG_20989
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -35,5 +34,3 @@ struct RocqBug20989 {
 
   using N = M<A>;
 };
-
-#endif // INCLUDED_ROCQ_BUG_20989

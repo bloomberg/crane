@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SECTIONS
-#define INCLUDED_SECTIONS
+#pragma once
 
 #include <cstdint>
 
@@ -24,5 +23,3 @@ struct Sections {
   static inline const uint64_t test_const =
       const_<uint64_t>(UINT64_C(3), UINT64_C(9));
 };
-
-#endif // INCLUDED_SECTIONS

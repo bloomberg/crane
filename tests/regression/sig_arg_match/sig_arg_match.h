@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIG_ARG_MATCH
-#define INCLUDED_SIG_ARG_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -263,5 +262,3 @@ struct SigArgMatch {
                .add(addp(one, one));
   }();
 };
-
-#endif // INCLUDED_SIG_ARG_MATCH

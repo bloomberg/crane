@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DOUBLE_TYPENAME
-#define INCLUDED_DOUBLE_TYPENAME
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -161,5 +160,3 @@ struct DoubleTypename {
           NatMap::template entry<uint64_t>::entry0(UINT64_C(1), UINT64_C(2)),
           List<NatMap::entry<uint64_t>>::nil()));
 };
-
-#endif // INCLUDED_DOUBLE_TYPENAME

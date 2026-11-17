@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_LETIN_APPLIED_POLY
-#define INCLUDED_TODO_LETIN_APPLIED_POLY
+#pragma once
 
 #include <cstdint>
 
@@ -9,5 +8,3 @@ struct TodoLetinAppliedPoly {
   static inline const uint64_t test_value =
       (demo_bool ? demo_nat : UINT64_C(0));
 };
-
-#endif // INCLUDED_TODO_LETIN_APPLIED_POLY

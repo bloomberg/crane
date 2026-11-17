@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONOID_CLASS_ARG
-#define INCLUDED_MONOID_CLASS_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -275,5 +274,3 @@ struct MonoidClassArg {
                    List<std::pair<uint64_t, List<uint64_t>>>::nil())))
            .first);
 };
-
-#endif // INCLUDED_MONOID_CLASS_ARG

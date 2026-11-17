@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEQUE_ANY_CAST
-#define INCLUDED_DEQUE_ANY_CAST
+#pragma once
 
 #include "obj.h"
 #include "small_vector.h"
@@ -100,5 +99,3 @@ struct DequeAnyCast {
         return _a1;
       }(UINT64_C(3), std::deque<uint64_t>{})))));
 };
-
-#endif // INCLUDED_DEQUE_ANY_CAST

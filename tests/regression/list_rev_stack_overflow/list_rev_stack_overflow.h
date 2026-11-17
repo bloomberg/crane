@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_REV_STACK_OVERFLOW
-#define INCLUDED_LIST_REV_STACK_OVERFLOW
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -137,5 +136,3 @@ public:
     }
   }
 };
-
-#endif // INCLUDED_LIST_REV_STACK_OVERFLOW

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BLOCK_TEMPLATE_FOR_HEADER
-#define INCLUDED_BLOCK_TEMPLATE_FOR_HEADER
+#pragma once
 
 #include <cstdint>
 
@@ -16,5 +15,3 @@ struct BlockTemplateForHeader {
     return _r;
   }();
 };
-
-#endif // INCLUDED_BLOCK_TEMPLATE_FOR_HEADER

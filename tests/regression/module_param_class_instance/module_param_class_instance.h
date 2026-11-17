@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_PARAM_CLASS_INSTANCE
-#define INCLUDED_MODULE_PARAM_CLASS_INSTANCE
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -56,5 +55,3 @@ struct ModuleParamClassInstance {
   using D = Doubler<NatC>;
   static inline const uint64_t total = (D::on_sample() + D::twice(UINT64_C(7)));
 };
-
-#endif // INCLUDED_MODULE_PARAM_CLASS_INSTANCE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_C_MACRO_NAME
-#define INCLUDED_C_MACRO_NAME
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -110,5 +109,3 @@ struct CMacroName {
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))),
       Nat::s(Nat::o()), true);
 };
-
-#endif // INCLUDED_C_MACRO_NAME

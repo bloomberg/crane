@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHOD_TYPE_NAMES_MODULE_ALIAS
-#define INCLUDED_METHOD_TYPE_NAMES_MODULE_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -276,5 +275,3 @@ struct MethodTypeNamesModuleAlias {
   static inline const Nat leaves =
       Tree::count(Tree::tree::node(Tree::tree::leaf(), Tree::tree::leaf()));
 };
-
-#endif // INCLUDED_METHOD_TYPE_NAMES_MODULE_ALIAS

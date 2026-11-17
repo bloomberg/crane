@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_OF_LIST_DRAIN
-#define INCLUDED_LIST_OF_LIST_DRAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -273,5 +272,3 @@ struct ListOfListDrain {
 
   static inline const t empty = t::node(UINT64_C(0), lst<lst<t>>::nil());
 };
-
-#endif // INCLUDED_LIST_OF_LIST_DRAIN

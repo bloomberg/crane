@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FAMILY_CALL_RESULT_DEEP_SHAPE
-#define INCLUDED_FAMILY_CALL_RESULT_DEEP_SHAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -270,5 +269,3 @@ struct FamilyCallResultDeepShape {
   static inline const uint64_t result =
       sz(ty::tlist(ty::tpair(ty::tnat(), ty::tnat())), mk(UINT64_C(3)));
 };
-
-#endif // INCLUDED_FAMILY_CALL_RESULT_DEEP_SHAPE

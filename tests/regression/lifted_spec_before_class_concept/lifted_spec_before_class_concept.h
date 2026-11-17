@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_SPEC_BEFORE_CLASS_CONCEPT
-#define INCLUDED_LIFTED_SPEC_BEFORE_CLASS_CONCEPT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -147,5 +146,3 @@ struct LiftedSpecBeforeClassConcept {
   static inline const Tagged<Box<typename natParams::addr>> run =
       walk<natParams>(Nat::s(Nat::o()), Nat::o());
 };
-
-#endif // INCLUDED_LIFTED_SPEC_BEFORE_CLASS_CONCEPT

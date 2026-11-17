@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COTREE
-#define INCLUDED_COTREE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -515,5 +514,3 @@ struct Cotree {
   static inline const uint64_t test_approx_size =
       tree_size<uint64_t>(test_approx);
 };
-
-#endif // INCLUDED_COTREE

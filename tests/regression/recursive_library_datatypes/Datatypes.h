@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DATATYPES
-#define INCLUDED_DATATYPES
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -566,5 +565,3 @@ CompSpecT<T1> CompSpec2Type(const T1 &, const T1 &, Comparison x0_) {
 using ID = crane::fn<crane::obj(crane::obj)>;
 crane::obj id(crane::obj x);
 } // namespace Datatypes
-
-#endif // INCLUDED_DATATYPES

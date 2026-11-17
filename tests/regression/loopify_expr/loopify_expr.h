@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_EXPR
-#define INCLUDED_LOOPIFY_EXPR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -2429,5 +2428,3 @@ struct LoopifyExpr {
     }
   };
 };
-
-#endif // INCLUDED_LOOPIFY_EXPR

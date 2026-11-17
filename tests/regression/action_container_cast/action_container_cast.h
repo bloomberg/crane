@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ACTION_CONTAINER_CAST
-#define INCLUDED_ACTION_CONTAINER_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -290,5 +289,3 @@ const std::deque<grammar_entry> entries = [](auto _a0, auto _a1) {
               }))),
       std::deque<SigT<Prod<Nonterminal, std::deque<Symbol>>,
                       Prod<crane::obj, crane::obj>>>{}));
-
-#endif // INCLUDED_ACTION_CONTAINER_CAST

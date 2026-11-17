@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_CONCAT_MAP
-#define INCLUDED_NESTED_CONCAT_MAP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -285,5 +284,3 @@ struct NestedConcatMap {
            [](uint64_t a, const List<uint64_t> &l) { return (a + l.length()); },
            UINT64_C(0)));
 };
-
-#endif // INCLUDED_NESTED_CONCAT_MAP

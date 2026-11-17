@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOCK
-#define INCLUDED_CLOCK
+#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -10,5 +9,3 @@ struct Clock {
   static int64_t get_time();
   static int64_t elapsed();
 };
-
-#endif // INCLUDED_CLOCK

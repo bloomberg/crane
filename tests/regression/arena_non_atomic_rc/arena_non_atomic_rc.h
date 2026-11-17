@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ARENA_NON_ATOMIC_RC
-#define INCLUDED_ARENA_NON_ATOMIC_RC
+#pragma once
 
 #include <memory>
 #include <optional>
@@ -194,5 +193,3 @@ struct ArenaNonAtomicRc {
   static Nat size(const tree &t);
   static tree mirror(const tree &t);
 };
-
-#endif // INCLUDED_ARENA_NON_ATOMIC_RC

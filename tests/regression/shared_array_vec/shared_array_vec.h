@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_ARRAY_VEC
-#define INCLUDED_SHARED_ARRAY_VEC
+#pragma once
 
 #include <conslist.h>
 #include <cstdint>
@@ -124,5 +123,3 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     return crane::cons(f(a), ListDef::template map<T1, T2>(f, l0));
   }
 }
-
-#endif // INCLUDED_SHARED_ARRAY_VEC

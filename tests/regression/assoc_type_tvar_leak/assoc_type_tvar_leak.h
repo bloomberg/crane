@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_TYPE_TVAR_LEAK
-#define INCLUDED_ASSOC_TYPE_TVAR_LEAK
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -169,5 +168,3 @@ struct AssocTypeTvarLeak {
 
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_ASSOC_TYPE_TVAR_LEAK

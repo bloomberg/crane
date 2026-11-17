@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_FIELD_OF_SECTION_ALIAS
-#define INCLUDED_RECORD_FIELD_OF_SECTION_ALIAS
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -257,5 +256,3 @@ return n0;
 }
 }());
 };
-
-#endif // INCLUDED_RECORD_FIELD_OF_SECTION_ALIAS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAIR_SELF_DEEP_COPY
-#define INCLUDED_PAIR_SELF_DEEP_COPY
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -99,5 +98,3 @@ struct PairSelfDeepCopy {
 
   static std::pair<chain, chain> dup_chain(const chain &c);
 };
-
-#endif // INCLUDED_PAIR_SELF_DEEP_COPY

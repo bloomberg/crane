@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_14174
-#define INCLUDED_ROCQ_BUG_14174
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -910,5 +909,3 @@ struct RocqBug14174 {
     }
   };
 };
-
-#endif // INCLUDED_ROCQ_BUG_14174

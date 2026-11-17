@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LISTS
-#define INCLUDED_LOOPIFY_LISTS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -1633,5 +1632,3 @@ struct LoopifyLists {
   /// elem_at n l returns element at index n (like nth but with different name).
   static std::optional<uint64_t> elem_at(uint64_t n, const list<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_LISTS

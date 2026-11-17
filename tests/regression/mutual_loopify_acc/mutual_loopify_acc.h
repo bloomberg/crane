@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_LOOPIFY_ACC
-#define INCLUDED_MUTUAL_LOOPIFY_ACC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -242,5 +241,3 @@ struct MutualLoopifyAcc {
   static tree chain(uint64_t n, tree acc);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_MUTUAL_LOOPIFY_ACC

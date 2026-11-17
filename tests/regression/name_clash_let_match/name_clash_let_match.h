@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_LET_MATCH
-#define INCLUDED_NAME_CLASH_LET_MATCH
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -174,5 +173,3 @@ struct NameClashLetMatch {
   /// Match where the same variable name is used in multiple branches
   static uint64_t same_name_branches(const either &e, const triple &t);
 };
-
-#endif // INCLUDED_NAME_CLASH_LET_MATCH

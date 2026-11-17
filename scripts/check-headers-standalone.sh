@@ -38,15 +38,17 @@ if [ $# -eq 0 ]; then
            "$PROJECT_ROOT/tests/regression"
 fi
 
-# A generated header is one Crane wrote: it opens with Crane's include guard.
-# Hand-written support headers in a test directory are not its business, and
+# A generated header is one Crane wrote: it opens with [#pragma once] and has
+# the implementation file Crane writes beside it.  Hand-written support
+# headers in a test directory are not its business, and
 # neither are the tests that need BDE or GMP installed (*_bde, *_gmp), which
 # CI skips for the same reason.
 headers=()
 for suite in "$@"; do
     while IFS= read -r h; do
         case "$(basename "$(dirname "$h")")" in *_bde | *_gmp) continue ;; esac
-        head -5 "$h" | grep -q '^#ifndef INCLUDED_' && headers+=("$h")
+        [ -f "${h%.h}.cpp" ] && head -2 "$h" | grep -qx '#pragma once' &&
+            headers+=("$h")
     done < <(find "$suite" -mindepth 2 -maxdepth 2 -name '*.h' | sort)
 done
 

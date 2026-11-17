@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIBLING_MODULE_QUALIFIED
-#define INCLUDED_SIBLING_MODULE_QUALIFIED
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -101,5 +100,3 @@ struct SiblingModuleQualified {
   static inline const bool is_one =
       count(Ev::Color::RED, Nat::o()).eqb(Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_SIBLING_MODULE_QUALIFIED

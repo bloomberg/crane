@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_HIGHER_ORDER
-#define INCLUDED_EFFECT_HIGHER_ORDER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -149,5 +148,3 @@ struct EffectHigherOrder {
   /// 8. Effect in let-bound function
   static std::string process_input();
 };
-
-#endif // INCLUDED_EFFECT_HIGHER_ORDER

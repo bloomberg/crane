@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_RECEIVER_FROM_TEMPORARY
-#define INCLUDED_LOOPIFY_RECEIVER_FROM_TEMPORARY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -169,5 +168,3 @@ struct LoopifyReceiverFromTemporary {
 
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_RECEIVER_FROM_TEMPORARY

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITER_CALLEE_HAS_NO_NAME
-#define INCLUDED_ITER_CALLEE_HAS_NO_NAME
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -148,5 +147,3 @@ struct FailE {
   // CREATORS
   static FailE Throw_(std::monostate a0) { return {a0}; }
 };
-
-#endif // INCLUDED_ITER_CALLEE_HAS_NO_NAME

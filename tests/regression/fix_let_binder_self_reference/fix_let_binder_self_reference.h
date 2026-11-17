@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_LET_BINDER_SELF_REFERENCE
-#define INCLUDED_FIX_LET_BINDER_SELF_REFERENCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -136,5 +135,3 @@ struct FixLetBinderSelfReference {
                List<uint64_t>::cons(UINT64_C(6), List<uint64_t>::nil())))) +
        both.second(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil())));
 };
-
-#endif // INCLUDED_FIX_LET_BINDER_SELF_REFERENCE

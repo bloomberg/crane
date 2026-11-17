@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VIS_CONT_TYPE
-#define INCLUDED_VIS_CONT_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -307,5 +306,3 @@ struct VisContType {
     }
   }();
 };
-
-#endif // INCLUDED_VIS_CONT_TYPE

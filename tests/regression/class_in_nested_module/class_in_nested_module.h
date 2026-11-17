@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_IN_NESTED_MODULE
-#define INCLUDED_CLASS_IN_NESTED_MODULE
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -33,5 +32,3 @@ struct ClassInNestedModule {
 
   static inline const uint64_t run = use<Cls::SN, uint64_t>(UINT64_C(5));
 };
-
-#endif // INCLUDED_CLASS_IN_NESTED_MODULE

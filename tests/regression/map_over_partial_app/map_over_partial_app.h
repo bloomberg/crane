@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MAP_OVER_PARTIAL_APP
-#define INCLUDED_MAP_OVER_PARTIAL_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -215,5 +214,3 @@ struct MapOverPartialApp {
     }
   }();
 };
-
-#endif // INCLUDED_MAP_OVER_PARTIAL_APP

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TC_METHOD_ARITY_MISMATCH
-#define INCLUDED_TC_METHOD_ARITY_MISMATCH
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -36,5 +35,3 @@ struct TcMethodArityMismatch {
 
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_TC_METHOD_ARITY_MISMATCH

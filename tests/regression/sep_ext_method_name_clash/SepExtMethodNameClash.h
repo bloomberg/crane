@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTMETHODNAMECLASH
-#define INCLUDED_SEPEXTMETHODNAMECLASH
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -158,5 +157,3 @@ public:
 const uint64_t total =
     ((sample.clone0() + sample.leaf0()) + Tree::leaf().leaf0());
 } // namespace SepExtMethodNameClash
-
-#endif // INCLUDED_SEPEXTMETHODNAMECLASH

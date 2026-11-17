@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_MOVED_CAPTURE_RENAMED
-#define INCLUDED_REUSE_MOVED_CAPTURE_RENAMED
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -315,5 +314,3 @@ struct ReuseMovedCaptureRenamed {
   static uint64_t apply_all(const mylist<crane::fn<uint64_t(uint64_t)>> &fs,
                             uint64_t x);
 };
-
-#endif // INCLUDED_REUSE_MOVED_CAPTURE_RENAMED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_INNER_FIX_SELF_CALL
-#define INCLUDED_LOOPIFY_INNER_FIX_SELF_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -161,5 +160,3 @@ struct LoopifyInnerFixSelfCall {
   /// arguments, and the Node branch is the inner fixpoint itself.
   static tree join(tree l, uint64_t x0_, const tree &x1_);
 };
-
-#endif // INCLUDED_LOOPIFY_INNER_FIX_SELF_CALL

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COLLISION_STRUCT_CLASS_CONCEPT
-#define INCLUDED_COLLISION_STRUCT_CLASS_CONCEPT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -129,5 +128,3 @@ struct AstLike {
 Ident to_ident(const Nat &n);
 const bool check = AstLike::template same<AstLike::keyed_nat, Nat>(
     Nat::s(Nat::s(Nat::s(Nat::o()))), Nat::s(Nat::s(Nat::s(Nat::o()))));
-
-#endif // INCLUDED_COLLISION_STRUCT_CLASS_CONCEPT

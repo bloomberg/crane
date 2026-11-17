@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_MUTUAL_CALLABLE_PARAM_CAPTURE
-#define INCLUDED_LOCAL_MUTUAL_CALLABLE_PARAM_CAPTURE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -13,5 +12,3 @@
 struct LocalMutualCallableParamCapture {
   static uint64_t run(uint64_t k, uint64_t n);
 };
-
-#endif // INCLUDED_LOCAL_MUTUAL_CALLABLE_PARAM_CAPTURE

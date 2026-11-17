@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARTIAL_APP_ALIAS_VALUE_SLOT
-#define INCLUDED_PARTIAL_APP_ALIAS_VALUE_SLOT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -131,5 +130,3 @@ struct PartialAppAliasValueSlot {
   static inline const Top<typename natIPtr::iptr,
                           Dval<typename natIPtr::iptr>> go = seed<natIPtr>();
 };
-
-#endif // INCLUDED_PARTIAL_APP_ALIAS_VALUE_SLOT

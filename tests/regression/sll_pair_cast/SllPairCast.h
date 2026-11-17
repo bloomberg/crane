@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SLLPAIRCAST
-#define INCLUDED_SLLPAIRCAST
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -54,5 +53,3 @@ struct SllPairCast {
   }
 };
 } // namespace SllPairCast
-
-#endif // INCLUDED_SLLPAIRCAST

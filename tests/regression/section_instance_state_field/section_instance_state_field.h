@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SECTION_INSTANCE_STATE_FIELD
-#define INCLUDED_SECTION_INSTANCE_STATE_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -283,5 +282,3 @@ struct SectionInstanceStateField {
           St<typename natParams::ptr>{List<typename natParams::ptr>::nil()}))
           .second.eqb(Nat::o());
 };
-
-#endif // INCLUDED_SECTION_INSTANCE_STATE_FIELD

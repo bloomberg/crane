@@ -1,5 +1,4 @@
-#ifndef INCLUDED_N_TO_NAT_REPRESENTATION
-#define INCLUDED_N_TO_NAT_REPRESENTATION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -165,5 +164,3 @@ struct NToNatRepresentation {
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));
 };
-
-#endif // INCLUDED_N_TO_NAT_REPRESENTATION

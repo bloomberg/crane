@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_LIST_OF_TRIPLES
-#define INCLUDED_TFUNCTOR_LIST_OF_TRIPLES
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -434,5 +433,3 @@ struct TfunctorListOfTriples {
   static inline const bool is_four =
       total.eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_TFUNCTOR_LIST_OF_TRIPLES

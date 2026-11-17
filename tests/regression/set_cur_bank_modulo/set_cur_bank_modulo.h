@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SET_CUR_BANK_MODULO
-#define INCLUDED_SET_CUR_BANK_MODULO
+#pragma once
 
 #include <cstdint>
 
@@ -15,5 +14,3 @@ struct SetCurBankModulo {
   static inline const uint64_t t =
       set_cur_bank(state{UINT64_C(0), UINT64_C(9)}, UINT64_C(7)).cur_bank;
 };
-
-#endif // INCLUDED_SET_CUR_BANK_MODULO

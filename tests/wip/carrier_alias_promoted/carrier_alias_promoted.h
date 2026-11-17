@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CARRIER_ALIAS_PROMOTED
-#define INCLUDED_CARRIER_ALIAS_PROMOTED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -364,5 +363,3 @@ struct CarrierAliasPromoted {
     }
   }();
 };
-
-#endif // INCLUDED_CARRIER_ALIAS_PROMOTED

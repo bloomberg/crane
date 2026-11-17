@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OBJ_NIL_ERASURE_MISMATCH
-#define INCLUDED_OBJ_NIL_ERASURE_MISMATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -245,5 +244,3 @@ const std::deque<SigT<Sym, crane::fn<semty(Unit)>>> entries =
 /// observe the mismatched erased shapes.
 std::deque<Prod<Nat, Nat>> top_cons_action();
 std::deque<Prod<Nat, Nat>> top_nil_action();
-
-#endif // INCLUDED_OBJ_NIL_ERASURE_MISMATCH

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_BARE_VOID
-#define INCLUDED_EFFECT_BARE_VOID
+#pragma once
 
 #include <cstdlib>
 #include <iostream>
@@ -25,5 +24,3 @@ struct EffectBareVoid {
   /// 7. Bare get_env (value-returning, returns option)
   static std::optional<std::string> just_get_env(std::string name);
 };
-
-#endif // INCLUDED_EFFECT_BARE_VOID

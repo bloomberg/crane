@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TUPLE
-#define INCLUDED_TUPLE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -128,5 +127,3 @@ struct Tuple {
   static inline const Nat test_fst = fst<Nat, Nat>(test_pair);
   static inline const Prod<Nat, Nat> test_swap = swap<Nat, Nat>(test_pair);
 };
-
-#endif // INCLUDED_TUPLE

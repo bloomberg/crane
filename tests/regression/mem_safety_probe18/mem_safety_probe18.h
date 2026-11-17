@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE18
-#define INCLUDED_MEM_SAFETY_PROBE18
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -578,5 +577,3 @@ struct MemSafetyProbe18 {
   static inline const uint64_t test_triple_use =
       tree::node(tree::leaf(), UINT64_C(7), tree::leaf()).triple_use();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE18

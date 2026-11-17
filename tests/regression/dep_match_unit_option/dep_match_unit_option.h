@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_MATCH_UNIT_OPTION
-#define INCLUDED_DEP_MATCH_UNIT_OPTION
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -70,5 +69,3 @@ struct DepMatchUnitOption {
     }
   }();
 };
-
-#endif // INCLUDED_DEP_MATCH_UNIT_OPTION

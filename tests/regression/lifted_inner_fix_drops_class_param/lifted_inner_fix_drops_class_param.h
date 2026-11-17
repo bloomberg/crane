@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_INNER_FIX_DROPS_CLASS_PARAM
-#define INCLUDED_LIFTED_INNER_FIX_DROPS_CLASS_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -307,5 +306,3 @@ struct LiftedInnerFixDropsClassParam {
                                         typename _tcI0::IPTR::iptr>>::nil()));
   }
 };
-
-#endif // INCLUDED_LIFTED_INNER_FIX_DROPS_CLASS_PARAM

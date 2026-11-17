@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DECL_ORDER_METHOD_CALL
-#define INCLUDED_DECL_ORDER_METHOD_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -197,5 +196,3 @@ std::optional<List<T1>> Regs::replace_nth(const List<T1> &l, uint64_t i,
     }
   }
 }
-
-#endif // INCLUDED_DECL_ORDER_METHOD_CALL

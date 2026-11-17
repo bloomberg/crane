@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_COIND
-#define INCLUDED_MUTUAL_COIND
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -279,5 +278,3 @@ struct MutualCoind {
   static inline const List<uint64_t> test_take5 =
       takeA<uint64_t>(UINT64_C(5), countA(UINT64_C(0)));
 };
-
-#endif // INCLUDED_MUTUAL_COIND

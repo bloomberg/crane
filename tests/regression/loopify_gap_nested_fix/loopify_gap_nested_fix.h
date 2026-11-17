@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_GAP_NESTED_FIX
-#define INCLUDED_LOOPIFY_GAP_NESTED_FIX
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -177,5 +176,3 @@ struct LoopifyGapNestedFix {
                                                      List<rose>::nil())));
   static uint64_t rose_sum_sample();
 };
-
-#endif // INCLUDED_LOOPIFY_GAP_NESTED_FIX

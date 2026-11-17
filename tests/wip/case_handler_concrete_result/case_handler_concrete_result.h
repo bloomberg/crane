@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CASE_HANDLER_CONCRETE_RESULT
-#define INCLUDED_CASE_HANDLER_CONCRETE_RESULT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -219,5 +218,3 @@ Interp::interp(const std::type_identity_t<
       },
       x0_);
 }
-
-#endif // INCLUDED_CASE_HANDLER_CONCRETE_RESULT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PTR_WORD
-#define INCLUDED_PTR_WORD
+#pragma once
 
 #include "crane_variant.h"
 #include "shared_variant.h"
@@ -63,5 +62,3 @@ struct PtrWord {
   static inline const uint64_t sample =
       size(tree::node(tree::node(tree::leaf(), tree::leaf()), tree::leaf()));
 };
-
-#endif // INCLUDED_PTR_WORD

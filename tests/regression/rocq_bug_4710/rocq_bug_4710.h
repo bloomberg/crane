@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_4710
-#define INCLUDED_ROCQ_BUG_4710
+#pragma once
 
 #include <cstdint>
 
@@ -20,5 +19,3 @@ struct RocqBug4710 {
   static inline const uint64_t test_bla = bla(test_foo2);
   static inline const bool test_bla_ = bla_(UINT64_C(0), test_foo2);
 };
-
-#endif // INCLUDED_ROCQ_BUG_4710

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_INSTANCE_CARRIER_SLOT
-#define INCLUDED_HKT_INSTANCE_CARRIER_SLOT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -194,5 +193,3 @@ struct HktInstanceCarrierSlot {
   static_assert(Sizeable<SL>);
   static Nat run(const List<Nat> &l);
 };
-
-#endif // INCLUDED_HKT_INSTANCE_CARRIER_SLOT

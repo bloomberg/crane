@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_STRUCTURES
-#define INCLUDED_LOOPIFY_STRUCTURES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -1107,5 +1106,3 @@ struct LoopifyStructures {
     }
   };
 };
-
-#endif // INCLUDED_LOOPIFY_STRUCTURES

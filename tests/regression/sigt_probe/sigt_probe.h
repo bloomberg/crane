@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_PROBE
-#define INCLUDED_SIGT_PROBE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -112,5 +111,3 @@ struct SigTProbe {
       SigT<crane::obj, crane::obj>::existt(crane::obj(), Bool0::TRUE_);
   static inline const Nat sample = Nat::o();
 };
-
-#endif // INCLUDED_SIGT_PROBE

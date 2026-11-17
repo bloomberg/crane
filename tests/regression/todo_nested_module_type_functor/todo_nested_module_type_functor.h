@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_NESTED_MODULE_TYPE_FUNCTOR
-#define INCLUDED_TODO_NESTED_MODULE_TYPE_FUNCTOR
+#pragma once
 
 #include <concepts>
 
@@ -34,5 +33,3 @@ struct TodoNestedModuleTypeFunctor {
     }
   };
 };
-
-#endif // INCLUDED_TODO_NESTED_MODULE_TYPE_FUNCTOR

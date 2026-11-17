@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_PAIR_THIS
-#define INCLUDED_CLOSURE_PAIR_THIS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -290,5 +289,3 @@ struct ClosurePairThis {
     return (a + b);
   }();
 };
-
-#endif // INCLUDED_CLOSURE_PAIR_THIS

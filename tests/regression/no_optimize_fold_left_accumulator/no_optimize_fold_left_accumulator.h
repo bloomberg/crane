@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NO_OPTIMIZE_FOLD_LEFT_ACCUMULATOR
-#define INCLUDED_NO_OPTIMIZE_FOLD_LEFT_ACCUMULATOR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -143,5 +142,3 @@ struct NoOptimizeFoldLeftAccumulator {
                                    List<uint64_t>::nil()))))
           .length();
 };
-
-#endif // INCLUDED_NO_OPTIMIZE_FOLD_LEFT_ACCUMULATOR

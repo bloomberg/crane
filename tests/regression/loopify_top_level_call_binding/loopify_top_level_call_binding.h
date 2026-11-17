@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TOP_LEVEL_CALL_BINDING
-#define INCLUDED_LOOPIFY_TOP_LEVEL_CALL_BINDING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -199,5 +198,3 @@ struct LoopifyTopLevelCallBinding {
                                List<cell>::nil())),
                            List<cell>::nil())));
 };
-
-#endif // INCLUDED_LOOPIFY_TOP_LEVEL_CALL_BINDING

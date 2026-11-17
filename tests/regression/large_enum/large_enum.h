@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LARGE_ENUM
-#define INCLUDED_LARGE_ENUM
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -237,5 +236,3 @@ struct LargeEnum {
   static inline const bool test_is_op_plus = is_operator(tok::tplus());
   static inline const bool test_is_op_num = is_operator(tok::tnum(UINT64_C(0)));
 };
-
-#endif // INCLUDED_LARGE_ENUM

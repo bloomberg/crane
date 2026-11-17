@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTPAIRNESTEDANY
-#define INCLUDED_SEPEXTPAIRNESTEDANY
+#pragma once
 
 #include "obj.h"
 #include <memory>
@@ -21,5 +20,3 @@ const bool use_it = []() -> bool {
   return b;
 }();
 } // namespace SepExtPairNestedAny
-
-#endif // INCLUDED_SEPEXTPAIRNESTEDANY

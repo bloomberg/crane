@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_SUPERCLASS_FIELD
-#define INCLUDED_CLASS_SUPERCLASS_FIELD
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -47,5 +46,3 @@ struct ClassSuperclassField {
   static inline const uint64_t go =
       cmp<ordnat, uint64_t>(UINT64_C(1), UINT64_C(2));
 };
-
-#endif // INCLUDED_CLASS_SUPERCLASS_FIELD

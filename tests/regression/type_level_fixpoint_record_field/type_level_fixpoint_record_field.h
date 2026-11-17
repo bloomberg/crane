@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_LEVEL_FIXPOINT_RECORD_FIELD
-#define INCLUDED_TYPE_LEVEL_FIXPOINT_RECORD_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -27,5 +26,3 @@ struct TypeLevelFixpointRecordField {
                                                         .first)
           .first;
 };
-
-#endif // INCLUDED_TYPE_LEVEL_FIXPOINT_RECORD_FIELD

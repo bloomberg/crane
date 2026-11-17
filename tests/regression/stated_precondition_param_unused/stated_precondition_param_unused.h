@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STATED_PRECONDITION_PARAM_UNUSED
-#define INCLUDED_STATED_PRECONDITION_PARAM_UNUSED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -100,5 +99,3 @@ struct StatedPreconditionParamUnused {
       get(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
           Sig<Nat>::exist(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_STATED_PRECONDITION_PARAM_UNUSED

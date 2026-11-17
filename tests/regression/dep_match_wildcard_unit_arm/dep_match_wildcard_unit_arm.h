@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_MATCH_WILDCARD_UNIT_ARM
-#define INCLUDED_DEP_MATCH_WILDCARD_UNIT_ARM
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -278,5 +277,3 @@ struct DepMatchWildcardUnitArm {
   static inline const uint64_t result =
       exp::eif(ty::tnat(), exp::elit(UINT64_C(4))).evn();
 };
-
-#endif // INCLUDED_DEP_MATCH_WILDCARD_UNIT_ARM

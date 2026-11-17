@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_MODUTIL_POLY_FIX
-#define INCLUDED_TODO_MODUTIL_POLY_FIX
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -107,5 +106,3 @@ struct TodoModutilPolyFix {
       build_nil_list<uint64_t>(UINT64_C(3));
   static inline const List<bool> test_bool = build_nil_list<bool>(UINT64_C(2));
 };
-
-#endif // INCLUDED_TODO_MODUTIL_POLY_FIX

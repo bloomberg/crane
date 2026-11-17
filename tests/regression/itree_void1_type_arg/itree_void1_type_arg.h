@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_VOID1_TYPE_ARG
-#define INCLUDED_ITREE_VOID1_TYPE_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -274,5 +273,3 @@ struct ItreeVoid1TypeArg {
     }
   }();
 };
-
-#endif // INCLUDED_ITREE_VOID1_TYPE_ARG

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGMA_ASSERTION_AFTER_IMPLICIT
-#define INCLUDED_SIGMA_ASSERTION_AFTER_IMPLICIT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -38,5 +37,3 @@ struct SigmaAssertionAfterImplicit {
   static inline const uint64_t test =
       f(Sig<uint64_t>::exist(UINT64_C(7)), Sig<uint64_t>::exist(UINT64_C(1)));
 };
-
-#endif // INCLUDED_SIGMA_ASSERTION_AFTER_IMPLICIT

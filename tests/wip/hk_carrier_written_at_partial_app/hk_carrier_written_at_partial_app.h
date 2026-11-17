@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_CARRIER_WRITTEN_AT_PARTIAL_APP
-#define INCLUDED_HK_CARRIER_WRITTEN_AT_PARTIAL_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -304,5 +303,3 @@ template <TFunctor _tcI0> struct TFunctor_phi {
         }));
   }
 };
-
-#endif // INCLUDED_HK_CARRIER_WRITTEN_AT_PARTIAL_APP

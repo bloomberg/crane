@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_DICT_PARAM_KEPT_AT_USE_SITE
-#define INCLUDED_ERASED_DICT_PARAM_KEPT_AT_USE_SITE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -136,5 +135,3 @@ template <IPtr _tcI0> struct ParamsV {
     return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
   }
 };
-
-#endif // INCLUDED_ERASED_DICT_PARAM_KEPT_AT_USE_SITE

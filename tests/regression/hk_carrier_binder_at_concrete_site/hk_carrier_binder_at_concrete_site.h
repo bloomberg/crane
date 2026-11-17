@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_CARRIER_BINDER_AT_CONCRETE_SITE
-#define INCLUDED_HK_CARRIER_BINDER_AT_CONCRETE_SITE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -206,5 +205,3 @@ struct Convert_holder {
 
 static_assert(Convert<Convert_holder>);
 holder<bool, box<bool>> run(const holder<Nat, box<Nat>> &m);
-
-#endif // INCLUDED_HK_CARRIER_BINDER_AT_CONCRETE_SITE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NON_UNIFORM_LIST_NEST
-#define INCLUDED_NON_UNIFORM_LIST_NEST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -189,5 +188,3 @@ struct NonUniformListNest {
   static inline const uint64_t go = depth<uint64_t>(
       n2::s2(n2::z2(List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_NON_UNIFORM_LIST_NEST

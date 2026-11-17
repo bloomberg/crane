@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HALIST_DEPENDENT_VALUE
-#define INCLUDED_HALIST_DEPENDENT_VALUE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -388,5 +387,3 @@ std::optional<T2> HAList0::halist_lookup(std::type_identity_t<EqDec<T1>> eq,
     }
   }
 }
-
-#endif // INCLUDED_HALIST_DEPENDENT_VALUE

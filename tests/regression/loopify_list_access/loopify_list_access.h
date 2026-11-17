@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LIST_ACCESS
-#define INCLUDED_LOOPIFY_LIST_ACCESS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -172,5 +171,3 @@ struct LoopifyListAccess {
   static uint64_t nth_default(uint64_t n, uint64_t default0,
                               const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_LIST_ACCESS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARAMSDEF
-#define INCLUDED_PARAMSDEF
+#pragma once
 
 #include "obj.h"
 #include <concepts>
@@ -13,5 +12,3 @@ concept Params = requires {
 };
 enum class Provenance { BUILD_PROVENANCE };
 } // namespace ParamsDef
-
-#endif // INCLUDED_PARAMSDEF

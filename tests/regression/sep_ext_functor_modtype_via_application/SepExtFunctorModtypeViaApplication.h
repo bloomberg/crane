@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTFUNCTORMODTYPEVIAAPPLICATION
-#define INCLUDED_SEPEXTFUNCTORMODTYPEVIAAPPLICATION
+#pragma once
 
 #include <utility>
 
@@ -42,5 +41,3 @@ const bool res =
     Nat::eqb(Nat::add(Nat::add(H::g(true), KK::h(false)), KK2::h2(true)),
              Datatypes::Nat::s(Datatypes::Nat::s(Datatypes::Nat::o())));
 } // namespace SepExtFunctorModtypeViaApplication
-
-#endif // INCLUDED_SEPEXTFUNCTORMODTYPEVIAAPPLICATION

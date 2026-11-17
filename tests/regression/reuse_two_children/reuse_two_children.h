@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_TWO_CHILDREN
-#define INCLUDED_REUSE_TWO_CHILDREN
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -273,5 +272,3 @@ struct ReuseTwoChildren {
     }
   }();
 };
-
-#endif // INCLUDED_REUSE_TWO_CHILDREN

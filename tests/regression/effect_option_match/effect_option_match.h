@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_OPTION_MATCH
-#define INCLUDED_EFFECT_OPTION_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -109,5 +108,3 @@ struct EffectOptionMatch {
   static std::optional<std::string>
   find_env_value(const List<std::string> &names);
 };
-
-#endif // INCLUDED_EFFECT_OPTION_MATCH

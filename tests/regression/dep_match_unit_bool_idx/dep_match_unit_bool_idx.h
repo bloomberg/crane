@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_MATCH_UNIT_BOOL_IDX
-#define INCLUDED_DEP_MATCH_UNIT_BOOL_IDX
+#pragma once
 
 #include <cstdint>
 #include <stdexcept>
@@ -64,5 +63,3 @@ struct DepMatchUnitBoolIdx {
   static uint64_t get(const tagged &t);
   static inline const uint64_t go = get(tagged::ta(UINT64_C(5)));
 };
-
-#endif // INCLUDED_DEP_MATCH_UNIT_BOOL_IDX

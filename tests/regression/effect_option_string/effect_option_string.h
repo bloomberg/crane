@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_OPTION_STRING
-#define INCLUDED_EFFECT_OPTION_STRING
+#pragma once
 
 #include <cstdint>
 #include <cstdlib>
@@ -27,5 +26,3 @@ struct EffectOptionString {
   /// 6. Option match with int result
   static int64_t option_int(std::string name);
 };
-
-#endif // INCLUDED_EFFECT_OPTION_STRING

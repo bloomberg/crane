@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE10
-#define INCLUDED_MEM_SAFETY_PROBE10
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -499,5 +498,3 @@ struct MemSafetyProbe10 {
     return t.make_tree_summer(UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE10

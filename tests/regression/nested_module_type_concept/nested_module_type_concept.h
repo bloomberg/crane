@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_MODULE_TYPE_CONCEPT
-#define INCLUDED_NESTED_MODULE_TYPE_CONCEPT
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -40,5 +39,3 @@ struct NestedModuleTypeConcept {
   using FA = F<A>;
   static inline const uint64_t test = FA::get();
 };
-
-#endif // INCLUDED_NESTED_MODULE_TYPE_CONCEPT

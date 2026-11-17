@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE
-#define INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -145,5 +144,3 @@ struct LoopifyFramePtrEscape {
   static uint64_t walk(uint64_t n, const lst &l, const lst &acc);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_FRAME_PTR_ESCAPE

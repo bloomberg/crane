@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_RECURSIVE_BUILD
-#define INCLUDED_CLOSURE_RECURSIVE_BUILD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -112,5 +111,3 @@ struct ClosureRecursiveBuild {
     return (apply_first(std::move(fns), UINT64_C(0)) + noise);
   }();
 };
-
-#endif // INCLUDED_CLOSURE_RECURSIVE_BUILD

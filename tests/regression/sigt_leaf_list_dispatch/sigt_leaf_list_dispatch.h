@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_LEAF_LIST_DISPATCH
-#define INCLUDED_SIGT_LEAF_LIST_DISPATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -196,5 +195,3 @@ const entry entry_tree =
       return List<crane::obj>::cons(run(entry_tree), List<crane::obj>::nil());
     });
 bool check();
-
-#endif // INCLUDED_SIGT_LEAF_LIST_DISPATCH

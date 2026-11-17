@@ -1,5 +1,4 @@
-#ifndef INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB
-#define INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -48,5 +47,3 @@ struct UserInductiveShadowsStdlib {
   static inline const uint64_t run =
       (mine(Comparison::EQ_) + theirs(UINT64_C(1), UINT64_C(2)));
 };
-
-#endif // INCLUDED_USER_INDUCTIVE_SHADOWS_STDLIB

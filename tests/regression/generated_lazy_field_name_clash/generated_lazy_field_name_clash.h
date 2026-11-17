@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_LAZY_FIELD_NAME_CLASH
-#define INCLUDED_GENERATED_LAZY_FIELD_NAME_CLASH
+#pragma once
 
 #include "fn.h"
 #include "lazy.h"
@@ -59,5 +58,3 @@ struct GeneratedLazyFieldNameClash {
   static bool head(const d_lazyV_ &s);
   static inline const bool sample = head(true_stream());
 };
-
-#endif // INCLUDED_GENERATED_LAZY_FIELD_NAME_CLASH

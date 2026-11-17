@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_VARIANT_NESTED
-#define INCLUDED_SHARED_VARIANT_NESTED
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -502,5 +501,3 @@ struct SharedVariantNested {
            [](uint64_t n, const shape &s) { return (n + s.volume()); },
            UINT64_C(0)));
 };
-
-#endif // INCLUDED_SHARED_VARIANT_NESTED

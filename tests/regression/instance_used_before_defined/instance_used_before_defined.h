@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_USED_BEFORE_DEFINED
-#define INCLUDED_INSTANCE_USED_BEFORE_DEFINED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -228,5 +227,3 @@ template <Monad _tcI0, typename T2>
 typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
-
-#endif // INCLUDED_INSTANCE_USED_BEFORE_DEFINED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SKIPLIST
-#define INCLUDED_SKIPLIST
+#pragma once
 
 #include "shared_block.h"
 #include <cstdint>
@@ -1093,5 +1092,3 @@ struct skiplist_test {
   static bool test_bde_api();
   static uint64_t run_tests();
 };
-
-#endif // INCLUDED_SKIPLIST

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYARG_FAMILY_BINDER_SHIFT
-#define INCLUDED_TYARG_FAMILY_BINDER_SHIFT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -165,5 +164,3 @@ struct TyargFamilyBinderShift {
   static uint64_t count_down(uint64_t x);
   static inline const uint64_t counted = count_down(UINT64_C(5));
 };
-
-#endif // INCLUDED_TYARG_FAMILY_BINDER_SHIFT

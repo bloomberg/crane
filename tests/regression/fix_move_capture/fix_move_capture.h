@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_MOVE_CAPTURE
-#define INCLUDED_FIX_MOVE_CAPTURE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -121,5 +120,3 @@ struct FixMoveCapture {
   static inline const uint64_t test2 = f2(mylist::mycons(
       UINT64_C(5), mylist::mycons(UINT64_C(15), mylist::mynil())));
 };
-
-#endif // INCLUDED_FIX_MOVE_CAPTURE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_CLASSICS
-#define INCLUDED_LOOPIFY_CLASSICS
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -22,5 +21,3 @@ struct LoopifyClassics {
   static uint64_t sum_to(uint64_t n);
   static uint64_t sum_squares(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_CLASSICS

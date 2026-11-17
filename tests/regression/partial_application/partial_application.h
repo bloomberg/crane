@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARTIAL_APPLICATION
-#define INCLUDED_PARTIAL_APPLICATION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -189,5 +188,3 @@ template <TFunctor _tcI0> struct TFunctor_pair {
     return ft_pair<_tcI0, CraneA0, CraneA1>(std::move(a0), std::move(a1));
   }
 };
-
-#endif // INCLUDED_PARTIAL_APPLICATION

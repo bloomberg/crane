@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_TYPE_ERASED_IN_BODY
-#define INCLUDED_ASSOC_TYPE_ERASED_IN_BODY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -206,5 +205,3 @@ template <IPtr _tcI0> struct PointerV {
     return Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
   }
 };
-
-#endif // INCLUDED_ASSOC_TYPE_ERASED_IN_BODY

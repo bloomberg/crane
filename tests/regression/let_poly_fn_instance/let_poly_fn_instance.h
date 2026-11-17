@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_POLY_FN_INSTANCE
-#define INCLUDED_LET_POLY_FN_INSTANCE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -17,5 +16,3 @@ struct LetPolyFnInstance {
     }))(UINT64_C(4)));
   }();
 };
-
-#endif // INCLUDED_LET_POLY_FN_INSTANCE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MULTI_IND_FUNCTOR
-#define INCLUDED_MULTI_IND_FUNCTOR
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -270,5 +269,3 @@ const uint64_t test_list_len =
     NatContainer::mlist_length(NatContainer::sample_list());
 const uint64_t test_tree_size =
     NatContainer::tree_size(NatContainer::sample_tree());
-
-#endif // INCLUDED_MULTI_IND_FUNCTOR

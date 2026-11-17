@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_CUSTOM_CTOR_FIELD_TYPE
-#define INCLUDED_NESTED_CUSTOM_CTOR_FIELD_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -265,5 +264,3 @@ static_assert(Params<natParams>);
 struct NestedCustomCtorFieldType {
   static std::shared_ptr<ITree<Sum<exc<typename natParams::ptr>, Nat>>> run();
 };
-
-#endif // INCLUDED_NESTED_CUSTOM_CTOR_FIELD_TYPE

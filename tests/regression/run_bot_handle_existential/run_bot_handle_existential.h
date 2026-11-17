@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RUN_BOT_HANDLE_EXISTENTIAL
-#define INCLUDED_RUN_BOT_HANDLE_EXISTENTIAL
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -557,5 +556,3 @@ struct RunBotHandleExistential {
     }
   }();
 };
-
-#endif // INCLUDED_RUN_BOT_HANDLE_EXISTENTIAL

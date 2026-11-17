@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TEMPLATE_MERGE_OUTLINED_MEMBER
-#define INCLUDED_TEMPLATE_MERGE_OUTLINED_MEMBER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -148,5 +147,3 @@ Box<Nat> round(Box<Nat> x0_);
 template <typename A> Nat Box<A>::size() const {
   return Tally::bump(this->raw_size());
 }
-
-#endif // INCLUDED_TEMPLATE_MERGE_OUTLINED_MEMBER

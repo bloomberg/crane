@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SINGLE_THREADED_HEAP
-#define INCLUDED_SINGLE_THREADED_HEAP
+#pragma once
 
 #include <cstdint>
 #include <optional>
@@ -244,5 +243,3 @@ struct SingleThreadedHeap {
                                    .length()));
   }();
 };
-
-#endif // INCLUDED_SINGLE_THREADED_HEAP

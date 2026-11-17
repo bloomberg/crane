@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TAILREC_REORDER_PROBE
-#define INCLUDED_TAILREC_REORDER_PROBE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -257,5 +256,3 @@ struct TailrecReorderProbe {
                                      UINT64_C(4), mylist<uint64_t>::mynil())),
                 mylist<uint64_t>::mynil()));
 };
-
-#endif // INCLUDED_TAILREC_REORDER_PROBE

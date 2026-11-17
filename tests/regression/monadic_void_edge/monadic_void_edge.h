@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONADIC_VOID_EDGE
-#define INCLUDED_MONADIC_VOID_EDGE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -135,5 +134,3 @@ struct MonadicVoidEdge {
                                const std::monostate &e2);
   static void test_sequence();
 };
-
-#endif // INCLUDED_MONADIC_VOID_EDGE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTCLONECTORQUAL
-#define INCLUDED_SEPEXTCLONECTORQUAL
+#pragma once
 
 #include <utility>
 #include <variant>
@@ -26,5 +25,3 @@ template <OrderedType X> struct FMapList {
   }
 };
 } // namespace SepExtCloneCtorQual
-
-#endif // INCLUDED_SEPEXTCLONECTORQUAL

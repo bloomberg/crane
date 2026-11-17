@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_FIX_TWO_INST
-#define INCLUDED_LOCAL_FIX_TWO_INST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -197,5 +196,3 @@ struct LocalFixTwoInst {
         List<bool>::cons(true, List<bool>::cons(false, List<bool>::nil()))));
   }();
 };
-
-#endif // INCLUDED_LOCAL_FIX_TWO_INST

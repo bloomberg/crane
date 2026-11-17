@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_FIELD_NAMED_LIST
-#define INCLUDED_RECORD_FIELD_NAMED_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -152,5 +151,3 @@ struct RecordFieldNamedList {
                     List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))),
             UINT64_C(5)});
 };
-
-#endif // INCLUDED_RECORD_FIELD_NAMED_LIST

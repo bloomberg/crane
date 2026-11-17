@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TR
-#define INCLUDED_TR
+#pragma once
 
 #include <type_traits>
 #include <variant>
@@ -31,5 +30,3 @@ Ty::Forest<T2> fmap(F0 &&f, const Ty::Forest<T1> &fs) {
   }
 }
 } // namespace Tr
-
-#endif // INCLUDED_TR

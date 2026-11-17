@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INDUCTIVE_PAYLOAD_FROM_SAME_SECTION
-#define INCLUDED_INDUCTIVE_PAYLOAD_FROM_SAME_SECTION
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -273,5 +272,3 @@ return Nat::o();
 }
 }();
 };
-
-#endif // INCLUDED_INDUCTIVE_PAYLOAD_FROM_SAME_SECTION

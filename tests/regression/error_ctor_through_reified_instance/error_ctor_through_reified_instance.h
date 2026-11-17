@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERROR_CTOR_THROUGH_REIFIED_INSTANCE
-#define INCLUDED_ERROR_CTOR_THROUGH_REIFIED_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -219,5 +218,3 @@ struct ErrorCtorThroughReifiedInstance {
     }
   }();
 };
-
-#endif // INCLUDED_ERROR_CTOR_THROUGH_REIFIED_INSTANCE

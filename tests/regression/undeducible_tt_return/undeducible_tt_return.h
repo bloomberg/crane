@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNDEDUCIBLE_TT_RETURN
-#define INCLUDED_UNDEDUCIBLE_TT_RETURN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -208,5 +207,3 @@ Handler::case_(F0 &&f, F1 &&g, const Sum1<T1, T2, T4> &ab) {
     return g(f0);
   }
 }
-
-#endif // INCLUDED_UNDEDUCIBLE_TT_RETURN

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_NAMED_CRANE
-#define INCLUDED_MODULE_NAMED_CRANE
+#pragma once
 
 #include <cstdint>
 
@@ -10,5 +9,3 @@ struct ModuleNamedCrane {
 
   static inline const uint64_t go = crane_::x;
 };
-
-#endif // INCLUDED_MODULE_NAMED_CRANE

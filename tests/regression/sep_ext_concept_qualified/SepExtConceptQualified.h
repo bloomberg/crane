@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTCONCEPTQUALIFIED
-#define INCLUDED_SEPEXTCONCEPTQUALIFIED
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -28,5 +27,3 @@ template <OrderedType X> struct Make {
   }
 };
 } // namespace SepExtConceptQualified
-
-#endif // INCLUDED_SEPEXTCONCEPTQUALIFIED

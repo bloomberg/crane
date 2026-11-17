@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FOLD_CLOSURE_ACCUM
-#define INCLUDED_FOLD_CLOSURE_ACCUM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -291,5 +290,3 @@ struct FoldClosureAccum {
     }();
   }();
 };
-
-#endif // INCLUDED_FOLD_CLOSURE_ACCUM

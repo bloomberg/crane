@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_MATCH_CLOSURE
-#define INCLUDED_NESTED_MATCH_CLOSURE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -192,5 +191,3 @@ struct NestedMatchClosure {
     }
   }();
 };
-
-#endif // INCLUDED_NESTED_MATCH_CLOSURE

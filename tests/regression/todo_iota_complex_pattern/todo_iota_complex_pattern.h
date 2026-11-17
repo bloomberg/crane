@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_IOTA_COMPLEX_PATTERN
-#define INCLUDED_TODO_IOTA_COMPLEX_PATTERN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -81,5 +80,3 @@ struct TodoIotaComplexPattern {
           Triple<uint64_t, bool, uint64_t>::mktriple(UINT64_C(10), true,
                                                      UINT64_C(20)));
 };
-
-#endif // INCLUDED_TODO_IOTA_COMPLEX_PATTERN

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_4616
-#define INCLUDED_ROCQ_BUG_4616
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -9,5 +8,3 @@ struct RocqBug4616 {
   using foo = crane::obj;
   using f = crane::fn<crane::obj(Foo_)>;
 };
-
-#endif // INCLUDED_ROCQ_BUG_4616

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIG_CURRIED_PAYLOAD
-#define INCLUDED_SIG_CURRIED_PAYLOAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -43,5 +42,3 @@ struct SigCurriedPayload {
     return x(UINT64_C(1), UINT64_C(2));
   }();
 };
-
-#endif // INCLUDED_SIG_CURRIED_PAYLOAD

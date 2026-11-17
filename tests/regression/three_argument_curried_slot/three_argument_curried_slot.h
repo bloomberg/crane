@@ -1,5 +1,4 @@
-#ifndef INCLUDED_THREE_ARGUMENT_CURRIED_SLOT
-#define INCLUDED_THREE_ARGUMENT_CURRIED_SLOT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -133,5 +132,3 @@ struct ThreeArgumentCurriedSlot {
         }
       }());
 };
-
-#endif // INCLUDED_THREE_ARGUMENT_CURRIED_SLOT

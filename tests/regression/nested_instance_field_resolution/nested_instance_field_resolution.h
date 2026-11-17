@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_INSTANCE_FIELD_RESOLUTION
-#define INCLUDED_NESTED_INSTANCE_FIELD_RESOLUTION
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -271,5 +270,3 @@ return a0;
 }
 }();
 };
-
-#endif // INCLUDED_NESTED_INSTANCE_FIELD_RESOLUTION

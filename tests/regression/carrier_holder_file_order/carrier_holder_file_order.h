@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CARRIER_HOLDER_FILE_ORDER
-#define INCLUDED_CARRIER_HOLDER_FILE_ORDER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -395,5 +394,3 @@ HoStack::get_st(Nat n) {
               std::pair<Nat, Nat>>>::retf(std::make_pair(s.add(n), s)));
   };
 }
-
-#endif // INCLUDED_CARRIER_HOLDER_FILE_ORDER

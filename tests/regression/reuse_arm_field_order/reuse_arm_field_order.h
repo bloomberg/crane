@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_ARM_FIELD_ORDER
-#define INCLUDED_REUSE_ARM_FIELD_ORDER
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -99,5 +98,3 @@ struct ReuseArmFieldOrder {
   static inline const uint64_t kept_sum = sum(keep_head(l3));
   static inline const uint64_t kept_len = len(keep_head(l3));
 };
-
-#endif // INCLUDED_REUSE_ARM_FIELD_ORDER

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_DEFAULT
-#define INCLUDED_LOOPIFY_DEFAULT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -132,5 +131,3 @@ struct LoopifyDefault {
   static inline const uint64_t merged_sum = sum(merged);
   static inline const uint64_t merged_head = merged.hd(UINT64_C(99));
 };
-
-#endif // INCLUDED_LOOPIFY_DEFAULT

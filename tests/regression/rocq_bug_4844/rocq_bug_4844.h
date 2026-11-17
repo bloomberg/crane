@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_4844
-#define INCLUDED_ROCQ_BUG_4844
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -109,5 +108,3 @@ struct RocqBug4844 {
 
   static inline const box boxed_semilogic = box::box0(semilogic);
 };
-
-#endif // INCLUDED_ROCQ_BUG_4844

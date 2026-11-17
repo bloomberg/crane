@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FIX_HOISTED_TEMPLATE
-#define INCLUDED_LET_FIX_HOISTED_TEMPLATE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -102,5 +101,3 @@ struct LetFixHoistedTemplate {
               UINT64_C(2),
               List<uint64_t>::cons(UINT64_C(3), List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_LET_FIX_HOISTED_TEMPLATE

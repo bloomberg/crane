@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_INSTANCE_BODY_TARG_UNDECLARED
-#define INCLUDED_HK_INSTANCE_BODY_TARG_UNDECLARED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -247,5 +246,3 @@ template <TFunctor _tcI0> struct TFunctor_option {
     }
   }
 };
-
-#endif // INCLUDED_HK_INSTANCE_BODY_TARG_UNDECLARED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONSTRUCTOR_BUGS
-#define INCLUDED_CONSTRUCTOR_BUGS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -344,5 +343,3 @@ struct ConstructorBugs {
   inline_option(const State0 &s);
   static std::pair<List<State0>, List<uint64_t>> inline_list(const State0 &s);
 };
-
-#endif // INCLUDED_CONSTRUCTOR_BUGS

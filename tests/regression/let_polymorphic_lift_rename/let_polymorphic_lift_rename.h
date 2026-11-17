@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_POLYMORPHIC_LIFT_RENAME
-#define INCLUDED_LET_POLYMORPHIC_LIFT_RENAME
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -106,5 +105,3 @@ struct LetPolymorphicLiftRename {
   static Nat body(const Nat &n);
   static inline const Nat run = body(Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_LET_POLYMORPHIC_LIFT_RENAME

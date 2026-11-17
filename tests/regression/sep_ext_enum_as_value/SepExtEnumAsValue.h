@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTENUMASVALUE
-#define INCLUDED_SEPEXTENUMASVALUE
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -56,5 +55,3 @@ template <ColorParam P> struct UseColor {
   }
 };
 } // namespace SepExtEnumAsValue
-
-#endif // INCLUDED_SEPEXTENUMASVALUE

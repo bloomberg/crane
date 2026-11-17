@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FAMILY_WITH_TYPE_BINDER_AT_FUNCTION
-#define INCLUDED_FAMILY_WITH_TYPE_BINDER_AT_FUNCTION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -168,5 +167,3 @@ struct FamilyWithTypeBinderAtFunction {
            List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
             UINT64_C(1)));
 };
-
-#endif // INCLUDED_FAMILY_WITH_TYPE_BINDER_AT_FUNCTION

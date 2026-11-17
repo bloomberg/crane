@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IDENT_NAMED_UINT64
-#define INCLUDED_IDENT_NAMED_UINT64
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -31,5 +30,3 @@ struct IdentNamedUint64 {
   static uint64_t uint64_t_(uint64_t n);
   static inline const uint64_t go = (uint64_t_(UINT64_C(1)) + UINT64_C(2));
 };
-
-#endif // INCLUDED_IDENT_NAMED_UINT64

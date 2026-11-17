@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LEVENSHTEIN
-#define INCLUDED_LEVENSHTEIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -716,5 +715,3 @@ inline String String::append(String s2) const {
   }
   return std::move(*_root);
 }
-
-#endif // INCLUDED_LEVENSHTEIN

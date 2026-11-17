@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE20
-#define INCLUDED_MEM_SAFETY_PROBE20
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -462,5 +461,3 @@ struct MemSafetyProbe20 {
     return sum_wrapped(std::move(l), UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE20

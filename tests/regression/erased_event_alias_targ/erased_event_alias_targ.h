@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_EVENT_ALIAS_TARG
-#define INCLUDED_ERASED_EVENT_ALIAS_TARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -200,5 +199,3 @@ using semantic_function = crane::fn<std::shared_ptr<ITree<Nat>>(List<Nat>)>;
 template <typename T1>
 [[gnu::used]] inline const semantic_function<T1> k =
     [](const List<Nat> &args) { return itree_ret(args.length()); };
-
-#endif // INCLUDED_ERASED_EVENT_ALIAS_TARG

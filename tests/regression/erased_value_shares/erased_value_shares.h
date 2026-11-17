@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_VALUE_SHARES
-#define INCLUDED_ERASED_VALUE_SHARES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -143,5 +142,3 @@ struct ErasedValueShares {
           packed, List<SigT<crane::obj, crane::obj>>::cons(
                       packed, List<SigT<crane::obj, crane::obj>>::nil()));
 };
-
-#endif // INCLUDED_ERASED_VALUE_SHARES

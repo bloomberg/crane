@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SHADOW_IN_SCRUTINEE_CALL
-#define INCLUDED_LOOPIFY_SHADOW_IN_SCRUTINEE_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -233,5 +232,3 @@ struct LoopifyShadowInScrutineeCall {
                               List<Nat>::nil()))),
       Nat::o());
 };
-
-#endif // INCLUDED_LOOPIFY_SHADOW_IN_SCRUTINEE_CALL

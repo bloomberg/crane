@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_FUNCTION_VALUE_NOT_CURRIED
-#define INCLUDED_LOCAL_FUNCTION_VALUE_NOT_CURRIED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -177,5 +176,3 @@ struct LocalFunctionValueNotCurried {
            uint64_t a, const crane::fn<uint64_t(uint64_t)> &h) { return h(a); },
                                          UINT64_C(0)));
 };
-
-#endif // INCLUDED_LOCAL_FUNCTION_VALUE_NOT_CURRIED

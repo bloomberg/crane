@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_UPTR_ESCAPE
-#define INCLUDED_SHARED_UPTR_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -282,5 +281,3 @@ struct SharedUptrEscape {
     return (a0.tree_sum() + a0.tree_sum());
   }();
 };
-
-#endif // INCLUDED_SHARED_UPTR_ESCAPE

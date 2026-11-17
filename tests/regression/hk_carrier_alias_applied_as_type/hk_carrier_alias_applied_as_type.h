@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_CARRIER_ALIAS_APPLIED_AS_TYPE
-#define INCLUDED_HK_CARRIER_ALIAS_APPLIED_AS_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -292,5 +291,3 @@ template <TFunctor _tcI0, TFunctor _tcI1> struct TFunctor_modul {
             std::move(f), std::move(m).m_items)};
   }
 };
-
-#endif // INCLUDED_HK_CARRIER_ALIAS_APPLIED_AS_TYPE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_CTOR_FIELD
-#define INCLUDED_NAME_CLASH_CTOR_FIELD
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -191,5 +190,3 @@ struct NameClashCtorField {
     return box_rect<T1>(f, std::move(f0), b);
   }
 };
-
-#endif // INCLUDED_NAME_CLASH_CTOR_FIELD

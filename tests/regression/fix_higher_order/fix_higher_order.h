@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_HIGHER_ORDER
-#define INCLUDED_FIX_HIGHER_ORDER
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -74,5 +73,3 @@ struct FixHigherOrder {
     }
   }();
 };
-
-#endif // INCLUDED_FIX_HIGHER_ORDER

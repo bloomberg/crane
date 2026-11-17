@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_PAIR_PATTERN_PROBED_AT_ANY
-#define INCLUDED_ERASED_PAIR_PATTERN_PROBED_AT_ANY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -310,5 +309,3 @@ template <TFunctor _tcI0> struct TFunctor_pairs {
 };
 
 pairs<bool, box<bool>> run(const pairs<Nat, box<Nat>> &m);
-
-#endif // INCLUDED_ERASED_PAIR_PATTERN_PROBED_AT_ANY

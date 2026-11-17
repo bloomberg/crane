@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_TYPE_WITNESS_CONTAINER
-#define INCLUDED_SIGT_TYPE_WITNESS_CONTAINER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -233,5 +232,3 @@ struct SigtTypeWitnessContainer {
       Nat::s(Nat::o()),
       List<Nat>::cons(Nat::s(Nat::s(Nat::o())), List<Nat>::nil()))));
 };
-
-#endif // INCLUDED_SIGT_TYPE_WITNESS_CONTAINER

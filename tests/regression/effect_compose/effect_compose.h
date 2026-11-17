@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_COMPOSE
-#define INCLUDED_EFFECT_COMPOSE
+#pragma once
 
 #include "fn.h"
 #include "shared_block.h"
@@ -21,5 +20,3 @@ struct EffectCompose {
   /// Parallel computation with IO: compute then print.
   static uint64_t par_compute_and_greet(uint64_t n);
 };
-
-#endif // INCLUDED_EFFECT_COMPOSE

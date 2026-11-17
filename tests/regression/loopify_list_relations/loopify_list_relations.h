@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LIST_RELATIONS
-#define INCLUDED_LOOPIFY_LIST_RELATIONS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -162,5 +161,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_LOOPIFY_LIST_RELATIONS

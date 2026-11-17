@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_LEAF_FORWARD_DISPATCHER
-#define INCLUDED_SIGT_LEAF_FORWARD_DISPATCHER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -179,5 +178,3 @@ domty garg(uint64_t n);
 bool run(const SigT<std::pair<uint64_t, List<uint64_t>>,
                     std::pair<crane::obj, crane::obj>> &e);
 bool check();
-
-#endif // INCLUDED_SIGT_LEAF_FORWARD_DISPATCHER

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ANON_FIXPOINT
-#define INCLUDED_ANON_FIXPOINT
+#pragma once
 
 #include <cstdint>
 
@@ -17,5 +16,3 @@ struct AnonFixpoint {
   static inline const uint64_t test_gcd =
       gcd((UINT64_C(4) * UINT64_C(3)), (UINT64_C(2) * UINT64_C(3)));
 };
-
-#endif // INCLUDED_ANON_FIXPOINT

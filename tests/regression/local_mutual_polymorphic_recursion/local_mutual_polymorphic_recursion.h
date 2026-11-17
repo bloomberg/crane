@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_MUTUAL_POLYMORPHIC_RECURSION
-#define INCLUDED_LOCAL_MUTUAL_POLYMORPHIC_RECURSION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -146,5 +145,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_LOCAL_MUTUAL_POLYMORPHIC_RECURSION

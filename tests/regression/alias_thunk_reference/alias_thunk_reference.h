@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_THUNK_REFERENCE
-#define INCLUDED_ALIAS_THUNK_REFERENCE
+#pragma once
 
 #include "fn.h"
 #include "lazy.h"
@@ -66,5 +65,3 @@ struct AliasThunkReference {
   static inline const uint64_t from_throwing =
       (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? B::absurd_nat() : UINT64_C(9));
 };
-
-#endif // INCLUDED_ALIAS_THUNK_REFERENCE

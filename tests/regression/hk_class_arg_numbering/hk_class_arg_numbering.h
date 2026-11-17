@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_CLASS_ARG_NUMBERING
-#define INCLUDED_HK_CLASS_ARG_NUMBERING
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -191,5 +190,3 @@ Monad0::liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
     return _tcI0::template ret<T3>(f(x0));
   });
 }
-
-#endif // INCLUDED_HK_CLASS_ARG_NUMBERING

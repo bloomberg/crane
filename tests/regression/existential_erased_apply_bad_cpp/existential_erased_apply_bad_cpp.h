@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXISTENTIAL_ERASED_APPLY_BAD_CPP
-#define INCLUDED_EXISTENTIAL_ERASED_APPLY_BAD_CPP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -178,5 +177,3 @@ struct ExistentialErasedApplyBadCpp {
   static uint64_t total(const List<dyn> &l);
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_EXISTENTIAL_ERASED_APPLY_BAD_CPP

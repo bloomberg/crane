@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COIND_GUARD
-#define INCLUDED_COIND_GUARD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -238,5 +237,3 @@ struct CoindGuard {
       take<uint64_t>(UINT64_C(5), sum_stream);
   static inline const uint64_t test_iterate_hd = hd<uint64_t>(nats);
 };
-
-#endif // INCLUDED_COIND_GUARD

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SKIPPED_DICT_FAMILY_UNCONSTRAINED
-#define INCLUDED_SKIPPED_DICT_FAMILY_UNCONSTRAINED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -125,5 +124,3 @@ struct SkippedDictFamilyUnconstrained {
 
   static std::shared_ptr<ITree<Nat>> run();
 };
-
-#endif // INCLUDED_SKIPPED_DICT_FAMILY_UNCONSTRAINED

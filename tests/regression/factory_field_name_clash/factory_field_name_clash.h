@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FACTORY_FIELD_NAME_CLASH
-#define INCLUDED_FACTORY_FIELD_NAME_CLASH
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -35,5 +34,3 @@ struct FactoryFieldNameClash {
   static uint64_t get(const a &x);
   static inline const uint64_t test = get(a::a0(UINT64_C(1)));
 };
-
-#endif // INCLUDED_FACTORY_FIELD_NAME_CLASH

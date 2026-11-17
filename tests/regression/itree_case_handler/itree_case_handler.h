@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_CASE_HANDLER
-#define INCLUDED_ITREE_CASE_HANDLER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -777,5 +776,3 @@ typename _tcI0::template M<T3> Interp::interp(const std::type_identity_t<
       },
       x0_);
 }
-
-#endif // INCLUDED_ITREE_CASE_HANDLER

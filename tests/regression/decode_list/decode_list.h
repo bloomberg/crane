@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DECODE_LIST
-#define INCLUDED_DECODE_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -226,5 +225,3 @@ struct DecodeList {
           List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil())))
           .length();
 };
-
-#endif // INCLUDED_DECODE_LIST

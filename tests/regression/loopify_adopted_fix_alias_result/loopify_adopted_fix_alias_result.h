@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ADOPTED_FIX_ALIAS_RESULT
-#define INCLUDED_LOOPIFY_ADOPTED_FIX_ALIAS_RESULT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -361,5 +360,3 @@ struct LoopifyAdoptedFixAliasResult {
   static t<uint64_t> keys(uint64_t n, uint64_t i, uint64_t step);
   static t<uint64_t> merged(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_ADOPTED_FIX_ALIAS_RESULT

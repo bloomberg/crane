@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TIMING_PRESERVES_WF_SIMPLE
-#define INCLUDED_TIMING_PRESERVES_WF_SIMPLE
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -53,5 +52,3 @@ struct TimingPreservesWfSimple {
        (cycles(Instr::JMS) == UINT64_C(24) &&
         (wf(execute(sample, Instr::NOP)) && wf(execute(sample, Instr::FIM)))));
 };
-
-#endif // INCLUDED_TIMING_PRESERVES_WF_SIMPLE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_RECURSOR_INSTANTIATED
-#define INCLUDED_LOOPIFY_RECURSOR_INSTANTIATED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -587,5 +586,3 @@ struct LoopifyRecursorInstantiated {
       expr::paire(expr::succe(expr::lit(UINT64_C(3))), expr::bl(true)));
   static inline const uint64_t run = size<uint64_t>(sample);
 };
-
-#endif // INCLUDED_LOOPIFY_RECURSOR_INSTANTIATED

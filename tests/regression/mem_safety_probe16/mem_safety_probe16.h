@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE16
-#define INCLUDED_MEM_SAFETY_PROBE16
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -679,5 +678,3 @@ struct MemSafetyProbe16 {
     return sum_list(flatten_cps(std::move(t)));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE16

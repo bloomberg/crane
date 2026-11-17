@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONAD_CLASS_NESTED_BIND
-#define INCLUDED_MONAD_CLASS_NESTED_BIND
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -294,5 +293,3 @@ struct MonadClassNestedBind {
     }
   }() + chain<MList>(UINT64_C(2)).length());
 };
-
-#endif // INCLUDED_MONAD_CLASS_NESTED_BIND

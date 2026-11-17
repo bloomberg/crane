@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WRR_RDR_ROUNDTRIP
-#define INCLUDED_WRR_RDR_ROUNDTRIP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -160,5 +159,3 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     }
   }
 }
-
-#endif // INCLUDED_WRR_RDR_ROUNDTRIP

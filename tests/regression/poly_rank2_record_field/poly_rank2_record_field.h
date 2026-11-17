@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POLY_RANK2_RECORD_FIELD
-#define INCLUDED_POLY_RANK2_RECORD_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -231,5 +230,3 @@ struct PolyRank2RecordField {
   static List<Bool0> test1(const List<Nat> &l);
   static List<Nat> test2(const List<Bool0> &l);
 };
-
-#endif // INCLUDED_POLY_RANK2_RECORD_FIELD

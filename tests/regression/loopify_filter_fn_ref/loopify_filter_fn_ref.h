@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_FILTER_FN_REF
-#define INCLUDED_LOOPIFY_FILTER_FN_REF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -257,5 +256,3 @@ struct LoopifyFilterFnRef {
           UINT64_C(1), tree<uint64_t>::node(tree<uint64_t>::leaf(), UINT64_C(2),
                                             tree<uint64_t>::leaf())));
 };
-
-#endif // INCLUDED_LOOPIFY_FILTER_FN_REF

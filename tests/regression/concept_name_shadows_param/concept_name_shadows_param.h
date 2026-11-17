@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_NAME_SHADOWS_PARAM
-#define INCLUDED_CONCEPT_NAME_SHADOWS_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -83,5 +82,3 @@ struct ConceptNameShadowsParam {
   using U = Use<Id>;
   static inline const Nat test = U::g(Nat::s(Nat::o()));
 };
-
-#endif // INCLUDED_CONCEPT_NAME_SHADOWS_PARAM

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_PARTIAL_APP_DROPS_TARGS
-#define INCLUDED_ETA_PARTIAL_APP_DROPS_TARGS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -248,5 +247,3 @@ template <Mon _tcI0> struct Fun_Mon {
 };
 
 std::optional<List<Nat>> run(const std::optional<Nat> &o);
-
-#endif // INCLUDED_ETA_PARTIAL_APP_DROPS_TARGS

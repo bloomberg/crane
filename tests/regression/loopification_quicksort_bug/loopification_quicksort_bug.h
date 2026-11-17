@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFICATION_QUICKSORT_BUG
-#define INCLUDED_LOOPIFICATION_QUICKSORT_BUG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -205,5 +204,3 @@ struct QuicksortFun {
                                               List<uint64_t>::nil()))))))))));
   static std::string test_quicksort_fun();
 };
-
-#endif // INCLUDED_LOOPIFICATION_QUICKSORT_BUG

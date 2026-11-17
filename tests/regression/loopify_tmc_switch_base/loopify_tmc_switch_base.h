@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TMC_SWITCH_BASE
-#define INCLUDED_LOOPIFY_TMC_SWITCH_BASE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -146,5 +145,3 @@ struct LoopifyTmcSwitchBase {
   static uint64_t to_nat(const num &n);
   static uint64_t run_f(Color c, uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_TMC_SWITCH_BASE

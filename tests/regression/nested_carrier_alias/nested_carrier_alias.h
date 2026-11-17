@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_CARRIER_ALIAS
-#define INCLUDED_NESTED_CARRIER_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -241,5 +240,3 @@ struct NestedCarrierAlias {
   static inline const Nat five =
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_NESTED_CARRIER_ALIAS

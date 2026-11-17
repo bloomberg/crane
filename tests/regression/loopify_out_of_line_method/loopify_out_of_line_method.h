@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_OUT_OF_LINE_METHOD
-#define INCLUDED_LOOPIFY_OUT_OF_LINE_METHOD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -232,5 +231,3 @@ inline Forest::~Forest() {
     }
   }
 }
-
-#endif // INCLUDED_LOOPIFY_OUT_OF_LINE_METHOD

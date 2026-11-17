@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTION_TYPE_ARGUMENT_CURRIED
-#define INCLUDED_FUNCTION_TYPE_ARGUMENT_CURRIED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -241,5 +240,3 @@ struct FunctionTypeArgumentCurried {
   static inline const uint64_t result =
       (((f2(UINT64_C(1), UINT64_C(2)) + from_wrap) + from_ctor) + from_pair);
 };
-
-#endif // INCLUDED_FUNCTION_TYPE_ARGUMENT_CURRIED

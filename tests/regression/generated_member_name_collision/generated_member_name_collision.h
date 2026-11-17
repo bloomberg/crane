@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_MEMBER_NAME_COLLISION
-#define INCLUDED_GENERATED_MEMBER_NAME_COLLISION
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -68,5 +67,3 @@ struct GeneratedMemberNameCollision {
       boxed::box(UINT64_C(1), UINT64_C(2)).unbox();
   static inline const uint64_t clone_val = clone0::dup(UINT64_C(4)).undup();
 };
-
-#endif // INCLUDED_GENERATED_MEMBER_NAME_COLLISION

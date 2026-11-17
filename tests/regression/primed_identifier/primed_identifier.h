@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PRIMED_IDENTIFIER
-#define INCLUDED_PRIMED_IDENTIFIER
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -116,5 +115,3 @@ struct Sized_nat_ {
 
 static_assert(Sized<Sized_nat_, Nat>);
 Nat twice_(Nat n);
-
-#endif // INCLUDED_PRIMED_IDENTIFIER

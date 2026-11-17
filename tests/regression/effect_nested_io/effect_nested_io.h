@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_NESTED_IO
-#define INCLUDED_EFFECT_NESTED_IO
+#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -29,5 +28,3 @@ struct EffectNestedIo {
   /// 8. Block template result length checked
   static int64_t read_length();
 };
-
-#endif // INCLUDED_EFFECT_NESTED_IO

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_TAIL_LOOP_CALLS_BACK
-#define INCLUDED_LOCAL_TAIL_LOOP_CALLS_BACK
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -195,5 +194,3 @@ struct LocalTailLoopCallsBack {
 
   static std::optional<uint64_t> find(const tree &t, uint64_t k);
 };
-
-#endif // INCLUDED_LOCAL_TAIL_LOOP_CALLS_BACK

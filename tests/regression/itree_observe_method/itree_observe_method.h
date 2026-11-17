@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_OBSERVE_METHOD
-#define INCLUDED_ITREE_OBSERVE_METHOD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -278,5 +277,3 @@ struct ItreeObserveMethod {
     }
   }();
 };
-
-#endif // INCLUDED_ITREE_OBSERVE_METHOD

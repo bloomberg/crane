@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTLISTCLONEQUAL
-#define INCLUDED_SEPEXTLISTCLONEQUAL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -127,5 +126,3 @@ public:
   const variant_t &v() const { return v_; }
 };
 } // namespace SepExtListCloneQual
-
-#endif // INCLUDED_SEPEXTLISTCLONEQUAL

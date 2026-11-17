@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARALLEL
-#define INCLUDED_PARALLEL
+#pragma once
 
 #include "shared_block.h"
 #include <cstdint>
@@ -18,5 +17,3 @@ struct ParallelTest {
 struct Nat {
   static constexpr uint64_t one = UINT64_C(1);
 };
-
-#endif // INCLUDED_PARALLEL

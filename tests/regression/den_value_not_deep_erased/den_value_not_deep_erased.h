@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEN_VALUE_NOT_DEEP_ERASED
-#define INCLUDED_DEN_VALUE_NOT_DEEP_ERASED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -206,5 +205,3 @@ struct DenValueNotDeepErased {
   static inline const uint64_t from_nested =
       size(ty::tlist(ty::tlist(ty::tnat())), nested);
 };
-
-#endif // INCLUDED_DEN_VALUE_NOT_DEEP_ERASED

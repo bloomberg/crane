@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SPECIF
-#define INCLUDED_SPECIF
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -556,5 +555,3 @@ template <typename T1> T1 except() { throw std::logic_error("absurd case"); }
 template <typename T1>
 const T1 absurd_set = [](crane::obj) { return except<T1>(); };
 } // namespace Specif
-
-#endif // INCLUDED_SPECIF

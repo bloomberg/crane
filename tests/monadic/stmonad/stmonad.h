@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STMONAD
-#define INCLUDED_STMONAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -477,5 +476,3 @@ inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;
   return s;
 }
-
-#endif // INCLUDED_STMONAD

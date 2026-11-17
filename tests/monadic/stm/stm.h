@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STM
-#define INCLUDED_STM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -166,5 +165,3 @@ void STMDefs::modifyTVar(stm::TVar<T1> a, F1 &&f) {
   stm::writeTVar(std::move(a), f(std::move(val)));
   return;
 }
-
-#endif // INCLUDED_STM

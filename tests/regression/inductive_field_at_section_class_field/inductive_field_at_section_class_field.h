@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INDUCTIVE_FIELD_AT_SECTION_CLASS_FIELD
-#define INCLUDED_INDUCTIVE_FIELD_AT_SECTION_CLASS_FIELD
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -231,5 +230,3 @@ return n0;
 }
 }();
 };
-
-#endif // INCLUDED_INDUCTIVE_FIELD_AT_SECTION_CLASS_FIELD

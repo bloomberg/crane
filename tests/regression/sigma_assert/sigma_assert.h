@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGMA_ASSERT
-#define INCLUDED_SIGMA_ASSERT
+#pragma once
 
 #include <cassert>
 #include <cstdint>
@@ -14,5 +13,3 @@ struct SigmaAssert {
   static inline const uint64_t test_pred = safe_pred(UINT64_C(5));
   static inline const uint64_t test_div2 = safe_div2(UINT64_C(4));
 };
-
-#endif // INCLUDED_SIGMA_ASSERT

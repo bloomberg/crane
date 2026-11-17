@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_METHODIFIED_BINOP
-#define INCLUDED_ETA_METHODIFIED_BINOP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -203,5 +202,3 @@ struct EtaMethodifiedBinop {
       [](const Nat &_x0, const Nat &_x1) { return _x0.eqb(_x1); },
       Nat::s(Nat::o()), List<Nat>::cons(Nat::s(Nat::o()), List<Nat>::nil()));
 };
-
-#endif // INCLUDED_ETA_METHODIFIED_BINOP

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONADIC_CLOSURE
-#define INCLUDED_MONADIC_CLOSURE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -148,5 +147,3 @@ struct MonadicClosure {
   /// 8. Two closures with different captured variables
   static std::pair<int64_t, int64_t> two_closures();
 };
-
-#endif // INCLUDED_MONADIC_CLOSURE

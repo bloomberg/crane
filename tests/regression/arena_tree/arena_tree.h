@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ARENA_TREE
-#define INCLUDED_ARENA_TREE
+#pragma once
 
 #include <atomic>
 #include <memory>
@@ -243,5 +242,3 @@ public:
     }
   }
 };
-
-#endif // INCLUDED_ARENA_TREE

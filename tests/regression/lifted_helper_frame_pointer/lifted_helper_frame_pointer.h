@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_HELPER_FRAME_POINTER
-#define INCLUDED_LIFTED_HELPER_FRAME_POINTER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -314,5 +313,3 @@ struct LiftedHelperFramePointer {
   static tree<uint64_t> spine(uint64_t n);
   static tree<uint64_t> full(uint64_t n);
 };
-
-#endif // INCLUDED_LIFTED_HELPER_FRAME_POINTER

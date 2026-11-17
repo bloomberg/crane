@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_IN_CTOR
-#define INCLUDED_CLOSURE_IN_CTOR
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -113,5 +112,3 @@ struct ClosureInCtor {
     }
   }();
 };
-
-#endif // INCLUDED_CLOSURE_IN_CTOR

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CASE_OF_CASE_RESULT_TYPE
-#define INCLUDED_CASE_OF_CASE_RESULT_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -177,5 +176,3 @@ struct CaseOfCaseResultType {
     return UINT64_C(3);
   }();
 };
-
-#endif // INCLUDED_CASE_OF_CASE_RESULT_TYPE

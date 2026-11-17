@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_HOFS
-#define INCLUDED_LOOPIFY_HOFS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -1493,5 +1492,3 @@ struct LoopifyHofs {
     return _result;
   }
 };
-
-#endif // INCLUDED_LOOPIFY_HOFS

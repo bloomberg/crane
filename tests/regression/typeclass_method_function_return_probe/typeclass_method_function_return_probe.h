@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPECLASS_METHOD_FUNCTION_RETURN_PROBE
-#define INCLUDED_TYPECLASS_METHOD_FUNCTION_RETURN_PROBE
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -31,5 +30,3 @@ struct TypeclassMethodFunctionReturnProbe {
   static Bool0 partial(Bool0 x0_);
   static inline const Bool0 sample = partial(Bool0::FALSE_);
 };
-
-#endif // INCLUDED_TYPECLASS_METHOD_FUNCTION_RETURN_PROBE

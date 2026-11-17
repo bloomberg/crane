@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EPOCH_CELL_GLYPH_TRACE
-#define INCLUDED_EPOCH_CELL_GLYPH_TRACE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -691,5 +690,3 @@ struct EpochCellGlyphTraceCase {
             eclipse_jun_178_bc),
                     Z::z0()));
 };
-
-#endif // INCLUDED_EPOCH_CELL_GLYPH_TRACE

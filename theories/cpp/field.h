@@ -14,8 +14,7 @@
 //
 // crane::unbox reads either the same way, as a const T&.
 
-#ifndef INCLUDED_CRANE_FIELD
-#define INCLUDED_CRANE_FIELD
+#pragma once
 
 #include <cstddef>
 #include <memory>
@@ -91,5 +90,3 @@ template <class T> const T &unbox(const T &v) noexcept { return v; }
 template <class T> const T &unbox(const field_box<T> &b) noexcept { return *b; }
 
 } // namespace crane
-
-#endif // INCLUDED_CRANE_FIELD

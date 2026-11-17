@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STACK_OPS
-#define INCLUDED_STACK_OPS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -207,5 +206,3 @@ struct StackOps {
       std::make_pair(std::make_pair(empty_len, overflow_head), overflow_len)),
                                    push_cap_test);
 };
-
-#endif // INCLUDED_STACK_OPS

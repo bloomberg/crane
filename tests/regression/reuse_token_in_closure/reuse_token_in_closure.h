@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_TOKEN_IN_CLOSURE
-#define INCLUDED_REUSE_TOKEN_IN_CLOSURE
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -102,5 +101,3 @@ struct ReuseTokenInClosure {
   static lst h(lst l);
   static lst upto(uint64_t n);
 };
-
-#endif // INCLUDED_REUSE_TOKEN_IN_CLOSURE

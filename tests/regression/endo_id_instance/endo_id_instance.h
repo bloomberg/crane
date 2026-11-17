@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ENDO_ID_INSTANCE
-#define INCLUDED_ENDO_ID_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -163,5 +162,3 @@ struct EndoIdInstance {
       l1.sz.add(l1.x).eqb(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))))));
 };
-
-#endif // INCLUDED_ENDO_ID_INSTANCE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_LITERAL_NESTING
-#define INCLUDED_DEEP_LITERAL_NESTING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -5537,5 +5536,3 @@ struct DeepLiteralNesting {
   }();
   static inline const Nat run = big.length().add(n);
 };
-
-#endif // INCLUDED_DEEP_LITERAL_NESTING

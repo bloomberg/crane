@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_COMPLEX_ARGS
-#define INCLUDED_EFFECT_COMPLEX_ARGS
+#pragma once
 
 #include <cstdlib>
 #include <iostream>
@@ -31,5 +30,3 @@ struct EffectComplexArgs {
   /// 8. unset_env with concatenated key
   static void unset_prefixed(std::string prefix, std::string suffix);
 };
-
-#endif // INCLUDED_EFFECT_COMPLEX_ARGS

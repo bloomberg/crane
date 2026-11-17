@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_EQUATIONS_WITH_CLAUSE
-#define INCLUDED_LOOPIFY_EQUATIONS_WITH_CLAUSE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -711,5 +710,3 @@ struct LoopifyEquationsWithClause {
   static_assert(FunctionalInduction<FunctionalInduction_plain,
                                     crane::fn<uint64_t(List<uint64_t>)>>);
 };
-
-#endif // INCLUDED_LOOPIFY_EQUATIONS_WITH_CLAUSE

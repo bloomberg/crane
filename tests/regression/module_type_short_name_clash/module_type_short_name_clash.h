@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_SHORT_NAME_CLASH
-#define INCLUDED_MODULE_TYPE_SHORT_NAME_CLASH
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -64,5 +63,3 @@ struct ModuleTypeShortNameClash {
   using FB = B::F<IB>;
   static inline const uint64_t result = (FA::get() + FB::get());
 };
-
-#endif // INCLUDED_MODULE_TYPE_SHORT_NAME_CLASH

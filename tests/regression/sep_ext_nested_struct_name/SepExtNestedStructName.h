@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNESTEDSTRUCTNAME
-#define INCLUDED_SEPEXTNESTEDSTRUCTNAME
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -118,5 +117,3 @@ const uint64_t total =
                           NestedLib::Sub::Tree::leaf(), UINT64_C(0),
                           NestedLib::Sub::Tree::leaf())));
 } // namespace SepExtNestedStructName
-
-#endif // INCLUDED_SEPEXTNESTEDSTRUCTNAME

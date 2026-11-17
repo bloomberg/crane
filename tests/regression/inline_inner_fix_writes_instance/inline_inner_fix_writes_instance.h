@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INLINE_INNER_FIX_WRITES_INSTANCE
-#define INCLUDED_INLINE_INNER_FIX_WRITES_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -312,5 +311,3 @@ struct InlineInnerFixWritesInstance {
                                         typename _tcI0::IPTR::iptr>>::nil()));
   }
 };
-
-#endif // INCLUDED_INLINE_INNER_FIX_WRITES_INSTANCE

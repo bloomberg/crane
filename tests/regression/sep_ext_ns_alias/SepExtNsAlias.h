@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNSALIAS
-#define INCLUDED_SEPEXTNSALIAS
+#pragma once
 
 #include "Datatypes.h"
 
@@ -13,5 +12,3 @@ struct Foo {
 
 using FooAlias = Foo;
 } // namespace SepExtNsAlias
-
-#endif // INCLUDED_SEPEXTNSALIAS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MUTUAL_VOID
-#define INCLUDED_LOOPIFY_MUTUAL_VOID
+#pragma once
 
 #include <cstdint>
 #include <variant>
@@ -16,5 +15,3 @@ struct LoopifyMutualVoid {
   static void even_void(uint64_t n);
   static void odd_void(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_MUTUAL_VOID

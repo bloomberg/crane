@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEQUE_ANY_CAST_ELEMENT
-#define INCLUDED_DEQUE_ANY_CAST_ELEMENT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -67,5 +66,3 @@ SigT<Tag, output_ty>
 apply_entry(const SigT<Tag, crane::fn<crane::obj(crane::obj)>> &e);
 uint64_t get_length(const SigT<Tag, output_ty> &r);
 const uint64_t test_result = get_length(apply_entry(my_action));
-
-#endif // INCLUDED_DEQUE_ANY_CAST_ELEMENT

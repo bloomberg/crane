@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COFIX_THIS_THUNK
-#define INCLUDED_COFIX_THIS_THUNK
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -250,5 +249,3 @@ public:
     return v;
   }
 };
-
-#endif // INCLUDED_COFIX_THIS_THUNK

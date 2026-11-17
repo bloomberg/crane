@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNULLARYMODULEALIAS
-#define INCLUDED_SEPEXTNULLARYMODULEALIAS
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -53,5 +52,3 @@ template <Config C> struct Worker {
   }
 };
 } // namespace SepExtNullaryModuleAlias
-
-#endif // INCLUDED_SEPEXTNULLARYMODULEALIAS

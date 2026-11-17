@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS
-#define INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS
+#pragma once
 
 #include <cstdint>
 
@@ -12,5 +11,3 @@ struct TodoExplicitTypeAppAlias {
     return (kept_nat + (kept_bool ? UINT64_C(1) : UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_TODO_EXPLICIT_TYPE_APP_ALIAS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_LEVEL_FUN_APPLY
-#define INCLUDED_TYPE_LEVEL_FUN_APPLY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -167,5 +166,3 @@ struct TypeLevelFunApply {
       ty::tnat(), ty::tnat(), crane_erase_fn([](const auto &n) { return n; }),
       Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_TYPE_LEVEL_FUN_APPLY

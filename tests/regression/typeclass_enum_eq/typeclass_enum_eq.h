@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPECLASS_ENUM_EQ
-#define INCLUDED_TYPECLASS_ENUM_EQ
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -56,5 +55,3 @@ struct TypeclassEnumEq {
   static inline const bool test_diff =
       is_equal<ColorEq, Color>(Color::RED, Color::BLUE);
 };
-
-#endif // INCLUDED_TYPECLASS_ENUM_EQ

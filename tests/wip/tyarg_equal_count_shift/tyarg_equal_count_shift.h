@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYARG_EQUAL_COUNT_SHIFT
-#define INCLUDED_TYARG_EQUAL_COUNT_SHIFT
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -19,5 +18,3 @@ struct TyargEqualCountShift {
   static inline const bool full_pick =
       pick_second<uint64_t, bool>(UINT64_C(3), false);
 };
-
-#endif // INCLUDED_TYARG_EQUAL_COUNT_SHIFT

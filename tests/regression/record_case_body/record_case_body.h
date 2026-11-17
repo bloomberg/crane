@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_CASE_BODY
-#define INCLUDED_RECORD_CASE_BODY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -143,5 +142,3 @@ struct RecordCaseBody {
   static inline const uint64_t test3 =
       let_in_body(Rec{UINT64_C(0), UINT64_C(1), UINT64_C(2)});
 };
-
-#endif // INCLUDED_RECORD_CASE_BODY

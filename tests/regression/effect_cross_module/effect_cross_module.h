@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_CROSS_MODULE
-#define INCLUDED_EFFECT_CROSS_MODULE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -119,5 +118,3 @@ struct EffectCrossModule {
   /// Use two effects from different modules
   static std::string combined_io_op();
 };
-
-#endif // INCLUDED_EFFECT_CROSS_MODULE

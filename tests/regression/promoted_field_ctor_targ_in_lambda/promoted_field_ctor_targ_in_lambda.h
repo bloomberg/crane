@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROMOTED_FIELD_CTOR_TARG_IN_LAMBDA
-#define INCLUDED_PROMOTED_FIELD_CTOR_TARG_IN_LAMBDA
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -491,5 +490,3 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
 }
-
-#endif // INCLUDED_PROMOTED_FIELD_CTOR_TARG_IN_LAMBDA

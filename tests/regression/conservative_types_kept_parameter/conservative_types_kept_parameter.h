@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONSERVATIVE_TYPES_KEPT_PARAMETER
-#define INCLUDED_CONSERVATIVE_TYPES_KEPT_PARAMETER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -153,5 +152,3 @@ struct ConservativeTypesKeptParameter {
                                    List<uint64_t>::nil())))
           .length();
 };
-
-#endif // INCLUDED_CONSERVATIVE_TYPES_KEPT_PARAMETER

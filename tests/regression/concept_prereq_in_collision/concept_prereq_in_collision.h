@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_PREREQ_IN_COLLISION
-#define INCLUDED_CONCEPT_PREREQ_IN_COLLISION
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -187,5 +186,3 @@ AstLike::key key_twice(Nat k);
 const bool twice_first =
     key_twice(first_key).eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))));
-
-#endif // INCLUDED_CONCEPT_PREREQ_IN_COLLISION

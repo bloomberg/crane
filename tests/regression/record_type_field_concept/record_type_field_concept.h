@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_TYPE_FIELD_CONCEPT
-#define INCLUDED_RECORD_TYPE_FIELD_CONCEPT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -190,5 +189,3 @@ struct RecordTypeFieldConcept {
   static inline const uint64_t total = ds.template fold_left<uint64_t>(
       [](uint64_t acc, const dyn &d) { return (acc + read(d)); }, UINT64_C(0));
 };
-
-#endif // INCLUDED_RECORD_TYPE_FIELD_CONCEPT

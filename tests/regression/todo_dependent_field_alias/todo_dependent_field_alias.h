@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_DEPENDENT_FIELD_ALIAS
-#define INCLUDED_TODO_DEPENDENT_FIELD_ALIAS
+#pragma once
 
 #include "obj.h"
 #include <concepts>
@@ -35,5 +34,3 @@ struct TodoDependentFieldAlias {
   static inline const uint64_t test_value =
       crane::any_cast<uint64_t>(pick_op<nat_magma>(UINT64_C(2), UINT64_C(3)));
 };
-
-#endif // INCLUDED_TODO_DEPENDENT_FIELD_ALIAS

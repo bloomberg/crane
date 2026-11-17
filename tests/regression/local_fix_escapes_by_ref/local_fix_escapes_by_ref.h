@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_FIX_ESCAPES_BY_REF
-#define INCLUDED_LOCAL_FIX_ESCAPES_BY_REF
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -280,5 +279,3 @@ typename _tcI0::template m<T3> Monad0::bind(typename _tcI0::template m<T2> x,
                                             F1 &&x0) {
   return _tcI0::template bind<T2, T3>(std::move(x), x0);
 }
-
-#endif // INCLUDED_LOCAL_FIX_ESCAPES_BY_REF

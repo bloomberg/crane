@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_CLOSURE_FIRST_CLASS
-#define INCLUDED_ETA_CLOSURE_FIRST_CLASS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -165,5 +164,3 @@ template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }
-
-#endif // INCLUDED_ETA_CLOSURE_FIRST_CLASS

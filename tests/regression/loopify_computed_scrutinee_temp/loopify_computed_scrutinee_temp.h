@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP
-#define INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -141,5 +140,3 @@ struct LoopifyComputedScrutineeTemp {
   static uint64_t walk(uint64_t n, const lst &l);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_COMPUTED_SCRUTINEE_TEMP

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHOD_LIFTED_HELPER_SAME_NAME
-#define INCLUDED_METHOD_LIFTED_HELPER_SAME_NAME
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -132,5 +131,3 @@ struct MethodLiftedHelperSameName {
   static inline const uint64_t t1 = sample.total();
   static inline const uint64_t t2 = sample.doubled();
 };
-
-#endif // INCLUDED_METHOD_LIFTED_HELPER_SAME_NAME

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_CURRIED_ESCAPE
-#define INCLUDED_FIX_CURRIED_ESCAPE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -57,5 +56,3 @@ struct FixCurriedEscape {
     }
   }();
 };
-
-#endif // INCLUDED_FIX_CURRIED_ESCAPE

@@ -1,10 +1,7 @@
-#ifndef INCLUDED_ROCQ_BUG_10796
-#define INCLUDED_ROCQ_BUG_10796
+#pragma once
 
 #include <cstdint>
 
 struct RocqBug10796 {
   static constexpr uint64_t a = UINT64_C(0);
 };
-
-#endif // INCLUDED_ROCQ_BUG_10796

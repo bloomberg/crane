@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOXED_ELEMENT_BLOCK_TEMPLATE
-#define INCLUDED_BOXED_ELEMENT_BLOCK_TEMPLATE
+#pragma once
 
 #include <conslist.h>
 #include <cstdint>
@@ -135,5 +134,3 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     }();
   }
 }
-
-#endif // INCLUDED_BOXED_ELEMENT_BLOCK_TEMPLATE

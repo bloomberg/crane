@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_MATCH
-#define INCLUDED_RECORD_MATCH
+#pragma once
 
 #include <cstdint>
 
@@ -12,5 +11,3 @@ struct RecordMatch {
 
   static uint64_t sum(const MyRec &r);
 };
-
-#endif // INCLUDED_RECORD_MATCH

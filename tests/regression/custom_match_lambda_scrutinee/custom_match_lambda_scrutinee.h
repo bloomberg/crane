@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CUSTOM_MATCH_LAMBDA_SCRUTINEE
-#define INCLUDED_CUSTOM_MATCH_LAMBDA_SCRUTINEE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -161,5 +160,3 @@ struct CustomMatchLambdaScrutinee {
   static inline const bool diff_fp = dtyp_base_eqb(
       dtyp_base::dtype_fp(Fpv::FP_FLOAT), dtyp_base::dtype_fp(Fpv::FP_DOUBLE));
 };
-
-#endif // INCLUDED_CUSTOM_MATCH_LAMBDA_SCRUTINEE

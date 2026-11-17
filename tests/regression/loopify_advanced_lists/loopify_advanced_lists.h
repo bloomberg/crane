@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ADVANCED_LISTS
-#define INCLUDED_LOOPIFY_ADVANCED_LISTS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -273,5 +272,3 @@ struct LoopifyAdvancedLists {
     }
   }
 };
-
-#endif // INCLUDED_LOOPIFY_ADVANCED_LISTS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTTEMPLATEALIAS
-#define INCLUDED_SEPEXTTEMPLATEALIAS
+#pragma once
 
 namespace SepExtTemplateAlias {
 template <typename M>
@@ -13,5 +12,3 @@ template <OT X> struct WFacts_fun {
 
 template <OT X> using WFacts = WFacts_fun<X>;
 } // namespace SepExtTemplateAlias
-
-#endif // INCLUDED_SEPEXTTEMPLATEALIAS

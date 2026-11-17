@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HOF_TREE_LOOPIFY
-#define INCLUDED_HOF_TREE_LOOPIFY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -457,5 +456,3 @@ struct HofTreeLoopify {
           UINT64_C(0), small_tree);
   static inline const tree<uint64_t> deep = depth_tree(UINT64_C(50000));
 };
-
-#endif // INCLUDED_HOF_TREE_LOOPIFY

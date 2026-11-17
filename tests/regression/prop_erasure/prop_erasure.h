@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROP_ERASURE
-#define INCLUDED_PROP_ERASURE
+#pragma once
 
 #include <cstdint>
 
@@ -13,5 +12,3 @@ struct PropErasure {
   static inline const uint64_t test_use_proof = use_proof;
   static inline const uint64_t test_simple = simple_value;
 };
-
-#endif // INCLUDED_PROP_ERASURE

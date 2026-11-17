@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_MATCH_UNIT_PAIR
-#define INCLUDED_DEP_MATCH_UNIT_PAIR
+#pragma once
 
 #include <cstdint>
 #include <stdexcept>
@@ -63,5 +62,3 @@ struct DepMatchUnitPair {
       (get(tg::tp(UINT64_C(1), UINT64_C(2))).first +
        get(tg::tp(UINT64_C(1), UINT64_C(2))).second);
 };
-
-#endif // INCLUDED_DEP_MATCH_UNIT_PAIR

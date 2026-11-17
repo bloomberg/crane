@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LENT_ALIAS_BY_REFERENCE
-#define INCLUDED_LENT_ALIAS_BY_REFERENCE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -200,5 +199,3 @@ struct LentAliasByReference {
   static inline const uint64_t test_dot =
       dot(sample, push(UINT64_C(5), sample));
 };
-
-#endif // INCLUDED_LENT_ALIAS_BY_REFERENCE

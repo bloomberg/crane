@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ACCUM_CLOSURE_ESCAPE
-#define INCLUDED_ACCUM_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -536,5 +535,3 @@ struct AccumClosureEscape {
     return apply_first(std::move(fns), UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_ACCUM_CLOSURE_ESCAPE

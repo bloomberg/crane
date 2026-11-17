@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TAIL_REC_REV
-#define INCLUDED_TAIL_REC_REV
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -112,5 +111,3 @@ template <typename T1> List<T1> better_rev(const List<T1> &l) {
     }
   }
 }
-
-#endif // INCLUDED_TAIL_REC_REV

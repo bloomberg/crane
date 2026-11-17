@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_BIND_ACTION
-#define INCLUDED_EFFECT_BIND_ACTION
+#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -30,5 +29,3 @@ struct EffectBindAction {
   /// 8. Discard result of conditional effect
   static uint64_t discard_conditional(bool flag);
 };
-
-#endif // INCLUDED_EFFECT_BIND_ACTION

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE4
-#define INCLUDED_MEM_SAFETY_PROBE4
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -459,5 +458,3 @@ struct MemSafetyProbe4 {
                       mylist<tree>::mynil()))),
           UINT64_C(0));
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE4

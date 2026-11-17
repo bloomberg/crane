@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_FIELD_PATTERNS
-#define INCLUDED_RECORD_FIELD_PATTERNS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -266,5 +265,3 @@ struct RecordFieldPatterns {
                                           List<Point>::nil()))));
   static inline const Point test_swap = swap(Point{UINT64_C(3), UINT64_C(7)});
 };
-
-#endif // INCLUDED_RECORD_FIELD_PATTERNS

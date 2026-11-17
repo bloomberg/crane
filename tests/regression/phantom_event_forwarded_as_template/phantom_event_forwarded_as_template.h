@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PHANTOM_EVENT_FORWARDED_AS_TEMPLATE
-#define INCLUDED_PHANTOM_EVENT_FORWARDED_AS_TEMPLATE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -213,5 +212,3 @@ struct PhantomEventForwardedAsTemplate {
     return defined_intrinsics<_tcI0, FailE>();
   }
 };
-
-#endif // INCLUDED_PHANTOM_EVENT_FORWARDED_AS_TEMPLATE

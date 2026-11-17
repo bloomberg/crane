@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_CLOSURE_ESCAPE
-#define INCLUDED_RECORD_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -128,5 +127,3 @@ struct RecordClosureEscape {
     return use_record(std::move(r1));
   }();
 };
-
-#endif // INCLUDED_RECORD_CLOSURE_ESCAPE

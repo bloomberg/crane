@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_MOVES_CAPTURED_CLOSURE
-#define INCLUDED_LOOPIFY_MOVES_CAPTURED_CLOSURE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -259,5 +258,3 @@ struct LoopifyMovesCapturedClosure {
                    UINT64_C(1),
                    List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())));
 };
-
-#endif // INCLUDED_LOOPIFY_MOVES_CAPTURED_CLOSURE

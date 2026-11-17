@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ENCODE_OPS
-#define INCLUDED_ENCODE_OPS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -466,5 +465,3 @@ struct EncodeOps {
                                     test_encode_list_byte_count),
                      test_instruction_byte_stream_encode);
 };
-
-#endif // INCLUDED_ENCODE_OPS

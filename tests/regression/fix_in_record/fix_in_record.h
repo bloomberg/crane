@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_IN_RECORD
-#define INCLUDED_FIX_IN_RECORD
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -43,5 +42,3 @@ struct FixInRecord {
     return (bx.label + bx.fn(UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_FIX_IN_RECORD

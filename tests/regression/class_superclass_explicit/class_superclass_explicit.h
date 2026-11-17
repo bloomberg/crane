@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_SUPERCLASS_EXPLICIT
-#define INCLUDED_CLASS_SUPERCLASS_EXPLICIT
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -38,5 +37,3 @@ struct ClassSuperclassExplicit {
 
   static inline const uint64_t go = use<en, uint64_t>(UINT64_C(3));
 };
-
-#endif // INCLUDED_CLASS_SUPERCLASS_EXPLICIT

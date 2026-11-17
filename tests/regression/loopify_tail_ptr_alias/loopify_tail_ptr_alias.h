@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TAIL_PTR_ALIAS
-#define INCLUDED_LOOPIFY_TAIL_PTR_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -146,5 +145,3 @@ struct LoopifyTailPtrAlias {
   static uint64_t rot(uint64_t n, const lst &l, const lst &acc, uint64_t s);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_TAIL_PTR_ALIAS

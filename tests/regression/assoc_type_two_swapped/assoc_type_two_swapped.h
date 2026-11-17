@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_TYPE_TWO_SWAPPED
-#define INCLUDED_ASSOC_TYPE_TWO_SWAPPED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -161,5 +160,3 @@ struct AssocTypeTwoSwapped {
 
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_ASSOC_TYPE_TWO_SWAPPED

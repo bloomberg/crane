@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LARGE_MUTUAL
-#define INCLUDED_LARGE_MUTUAL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -763,5 +762,3 @@ struct LargeMutual {
   static inline const uint64_t test_bexpr_size = bexpr_size(test_bexpr);
   static inline const uint64_t test_stmt_size = stmt_size(test_stmt);
 };
-
-#endif // INCLUDED_LARGE_MUTUAL

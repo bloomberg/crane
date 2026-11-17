@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DIM10_TOWER_PROOF_CHAIN
-#define INCLUDED_DIM10_TOWER_PROOF_CHAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -163,5 +162,3 @@ struct Dim10TowerProofChainCase {
         dim10_layers_cutoff) +
        dim10_P_cutoff);
 };
-
-#endif // INCLUDED_DIM10_TOWER_PROOF_CHAIN

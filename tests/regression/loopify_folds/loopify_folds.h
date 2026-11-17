@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_FOLDS
-#define INCLUDED_LOOPIFY_FOLDS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -469,5 +468,3 @@ struct LoopifyFolds {
     return unfold_fuel(x0_, x1_, x2_);
   }
 };
-
-#endif // INCLUDED_LOOPIFY_FOLDS

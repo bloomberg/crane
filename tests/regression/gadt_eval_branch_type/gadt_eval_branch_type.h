@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GADT_EVAL_BRANCH_TYPE
-#define INCLUDED_GADT_EVAL_BRANCH_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -218,5 +217,3 @@ struct GadtEvalBranchType {
           eval<std::pair<Nat, bool>>(expr::paire(
               expr::lit(Nat::s(Nat::s(Nat::s(Nat::o())))), expr::bl(true))));
 };
-
-#endif // INCLUDED_GADT_EVAL_BRANCH_TYPE

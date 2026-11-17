@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HANDLER_CASE_HAS_NO_NAME
-#define INCLUDED_HANDLER_CASE_HAS_NO_NAME
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -243,5 +242,3 @@ Interp::interp(const std::type_identity_t<
       },
       x0_);
 }
-
-#endif // INCLUDED_HANDLER_CASE_HAS_NO_NAME

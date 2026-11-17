@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HIGHER_KINDED
-#define INCLUDED_HIGHER_KINDED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -217,5 +216,3 @@ struct HigherKinded {
       },
       [](uint64_t n) { return (n + UINT64_C(10)); }, test_tree);
 };
-
-#endif // INCLUDED_HIGHER_KINDED

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_MAP_TYPE_CHANGE
-#define INCLUDED_REUSE_MAP_TYPE_CHANGE
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -152,5 +151,3 @@ struct ReuseMapTypeChange {
   static uint64_t go1(uint64_t n);
   static uint64_t go2(uint64_t n);
 };
-
-#endif // INCLUDED_REUSE_MAP_TYPE_CHANGE

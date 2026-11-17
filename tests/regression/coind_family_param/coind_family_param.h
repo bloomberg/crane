@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COIND_FAMILY_PARAM
-#define INCLUDED_COIND_FAMILY_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -284,5 +283,3 @@ struct CoindFamilyParam {
     }
   }();
 };
-
-#endif // INCLUDED_COIND_FAMILY_PARAM

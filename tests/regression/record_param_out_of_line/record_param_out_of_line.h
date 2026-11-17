@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_PARAM_OUT_OF_LINE
-#define INCLUDED_RECORD_PARAM_OUT_OF_LINE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -94,5 +93,3 @@ struct RecordParamOutOfLine {
   static inline const Bag::Kind large =
       Bag::classify(Bag{Nat::s(Nat::s(Nat::o())), true});
 };
-
-#endif // INCLUDED_RECORD_PARAM_OUT_OF_LINE

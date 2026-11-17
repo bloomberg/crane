@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAIRDEREFVALUE
-#define INCLUDED_PAIRDEREFVALUE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -103,5 +102,3 @@ using C = Collector<NatKey>;
 const Datatypes::List<Datatypes::List<Datatypes::Nat>> test_result =
     C::rhss_for(test_prods, Datatypes::Nat::s(Datatypes::Nat::o()));
 } // namespace PairDerefValue
-
-#endif // INCLUDED_PAIRDEREFVALUE

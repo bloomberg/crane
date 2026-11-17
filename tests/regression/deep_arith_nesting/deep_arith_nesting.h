@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_ARITH_NESTING
-#define INCLUDED_DEEP_ARITH_NESTING
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -9,5 +8,3 @@ struct DeepArithNesting {
   static uint64_t bump(uint64_t x);
   static inline const uint64_t answer = bump(UINT64_C(0));
 };
-
-#endif // INCLUDED_DEEP_ARITH_NESTING

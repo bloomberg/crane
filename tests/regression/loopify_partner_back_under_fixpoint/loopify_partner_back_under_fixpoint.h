@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_PARTNER_BACK_UNDER_FIXPOINT
-#define INCLUDED_LOOPIFY_PARTNER_BACK_UNDER_FIXPOINT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -245,5 +244,3 @@ struct LoopifyPartnerBackUnderFixpoint {
   static uint64_t forest_size(const forest &f);
   static tree chain(uint64_t k, tree t);
 };
-
-#endif // INCLUDED_LOOPIFY_PARTNER_BACK_UNDER_FIXPOINT

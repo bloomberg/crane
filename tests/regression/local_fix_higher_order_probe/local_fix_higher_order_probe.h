@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_FIX_HIGHER_ORDER_PROBE
-#define INCLUDED_LOCAL_FIX_HIGHER_ORDER_PROBE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -70,5 +69,3 @@ struct LocalFixHigherOrderProbe {
   static Nat sample(const Nat &n);
   static inline const Nat run = sample(Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
-
-#endif // INCLUDED_LOCAL_FIX_HIGHER_ORDER_PROBE

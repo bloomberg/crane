@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAIR_BOTH_RECURSIVE
-#define INCLUDED_PAIR_BOTH_RECURSIVE
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -101,5 +100,3 @@ struct PairBothRecursive {
   static inline const t empty = t::leaf(UINT64_C(1));
   static uint64_t size(const t &x);
 };
-
-#endif // INCLUDED_PAIR_BOTH_RECURSIVE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DOUBLE_INVOKE_MOVE
-#define INCLUDED_DOUBLE_INVOKE_MOVE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -142,5 +141,3 @@ struct DoubleInvokeMove {
     }();
   }();
 };
-
-#endif // INCLUDED_DOUBLE_INVOKE_MOVE

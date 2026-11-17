@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STREAM
-#define INCLUDED_STREAM
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -265,5 +264,3 @@ public:
     return v;
   }
 };
-
-#endif // INCLUDED_STREAM

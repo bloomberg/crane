@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ANON_LIFT_NAME_COLLISION
-#define INCLUDED_ANON_LIFT_NAME_COLLISION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -135,5 +134,3 @@ struct AnonLiftNameCollision {
     }());
   }();
 };
-
-#endif // INCLUDED_ANON_LIFT_NAME_COLLISION

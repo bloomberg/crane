@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CTOR_CASE_COLLISION
-#define INCLUDED_CTOR_CASE_COLLISION
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -109,5 +108,3 @@ struct CtorCaseCollision {
 
   static Nat get(const c &x);
 };
-
-#endif // INCLUDED_CTOR_CASE_COLLISION

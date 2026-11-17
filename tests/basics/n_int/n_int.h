@@ -1,5 +1,4 @@
-#ifndef INCLUDED_N_INT
-#define INCLUDED_N_INT
+#pragma once
 
 struct Pos {
   static unsigned int add_carry(unsigned int x, unsigned int y);
@@ -25,5 +24,3 @@ struct NIntTest {
   static unsigned int pos_add(unsigned int x0_, unsigned int x1_);
   static unsigned int pos_succ(unsigned int x0_);
 };
-
-#endif // INCLUDED_N_INT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_DEP_TYPE_ERASURE
-#define INCLUDED_LIST_DEP_TYPE_ERASURE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -145,5 +144,3 @@ struct ListDepTypeErasure {
                                         List<crane::obj>::nil())))};
   static uint64_t dlen(const dyn &x);
 };
-
-#endif // INCLUDED_LIST_DEP_TYPE_ERASURE

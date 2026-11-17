@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEQUENTIAL_MONAD_ALIAS
-#define INCLUDED_SEQUENTIAL_MONAD_ALIAS
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -11,5 +10,3 @@ struct SequentialMonadAlias {
   static void both();
   static void twice(const std::monostate &m);
 };
-
-#endif // INCLUDED_SEQUENTIAL_MONAD_ALIAS

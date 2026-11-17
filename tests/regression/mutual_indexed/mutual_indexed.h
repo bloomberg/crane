@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_INDEXED
-#define INCLUDED_MUTUAL_INDEXED
+#pragma once
 
 #include "obj.h"
 #include "small_vector.h"
@@ -199,5 +198,3 @@ struct MutualIndexed {
   static inline const uint64_t test_tree1_val = odd_val(UINT64_C(1), tree1);
   static inline const uint64_t test_tree2_val = even_val(UINT64_C(2), tree2);
 };
-
-#endif // INCLUDED_MUTUAL_INDEXED

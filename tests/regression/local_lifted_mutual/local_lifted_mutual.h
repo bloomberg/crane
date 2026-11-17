@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_LIFTED_MUTUAL
-#define INCLUDED_LOCAL_LIFTED_MUTUAL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -164,5 +163,3 @@ struct LocalLiftedMutual {
 
   static uint64_t run(uint64_t k, uint64_t n);
 };
-
-#endif // INCLUDED_LOCAL_LIFTED_MUTUAL

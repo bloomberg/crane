@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ESCAPE_COLLISION
-#define INCLUDED_ESCAPE_COLLISION
+#pragma once
 
 #include <cstdint>
 
@@ -9,5 +8,3 @@ struct EscapeCollision {
   static inline const uint64_t t =
       (double_(UINT64_C(1)) + double_0(UINT64_C(2)));
 };
-
-#endif // INCLUDED_ESCAPE_COLLISION

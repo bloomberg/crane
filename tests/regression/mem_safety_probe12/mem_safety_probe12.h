@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE12
-#define INCLUDED_MEM_SAFETY_PROBE12
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -92,5 +91,3 @@ struct MemSafetyProbe12 {
     return (p2.first + p2.second);
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE12

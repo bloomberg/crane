@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECURSOR_METHOD_HEAD_SIBLING
-#define INCLUDED_RECURSOR_METHOD_HEAD_SIBLING
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -298,5 +297,3 @@ struct RecursorMethodHeadSibling {
   static inline const chain sample_chain =
       chain::next(chain::base(UINT64_C(1)));
 };
-
-#endif // INCLUDED_RECURSOR_METHOD_HEAD_SIBLING

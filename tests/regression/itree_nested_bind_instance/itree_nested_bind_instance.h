@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_NESTED_BIND_INSTANCE
-#define INCLUDED_ITREE_NESTED_BIND_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -107,5 +106,3 @@ std::shared_ptr<ITree<Nat>> g(const std::shared_ptr<ITree<Nat>> &x) {
     });
   });
 }
-
-#endif // INCLUDED_ITREE_NESTED_BIND_INSTANCE

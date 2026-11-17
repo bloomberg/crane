@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAT_BDE
-#define INCLUDED_NAT_BDE
+#pragma once
 
 #include <atomic>
 #include <bsl_concepts.h>
@@ -106,5 +105,3 @@ public:
     }
   }
 };
-
-#endif // INCLUDED_NAT_BDE

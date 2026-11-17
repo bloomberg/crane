@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTTEMPLATEKEYWORD
-#define INCLUDED_SEPEXTTEMPLATEKEYWORD
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -45,5 +44,3 @@ template <RawSig Raw> struct MakeOps {
   }
 };
 } // namespace SepExtTemplateKeyword
-
-#endif // INCLUDED_SEPEXTTEMPLATEKEYWORD

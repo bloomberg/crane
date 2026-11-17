@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INDUCTIVE_IN_MODULE
-#define INCLUDED_INDUCTIVE_IN_MODULE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -131,5 +130,3 @@ struct InductiveInModule {
 
   static inline const uint64_t final_test = Outer::test_option;
 };
-
-#endif // INCLUDED_INDUCTIVE_IN_MODULE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_CHOICE_CONTINUATION
-#define INCLUDED_DEPENDENT_CHOICE_CONTINUATION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -121,5 +120,3 @@ struct DependentChoiceContinuation {
   static bool run(const MemS<bool> &m);
   static inline const bool is_true = run(fresh_prov);
 };
-
-#endif // INCLUDED_DEPENDENT_CHOICE_CONTINUATION

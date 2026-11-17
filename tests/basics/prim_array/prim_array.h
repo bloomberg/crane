@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PRIM_ARRAY
-#define INCLUDED_PRIM_ARRAY
+#pragma once
 
 #include <cstdint>
 #include <persistent_array.h>
@@ -25,5 +24,3 @@ struct PrimArray {
   static inline const uint64_t copy_val = arr_copy.get(INT64_C(2));
   static inline const uint64_t oob_get = arr5.get(INT64_C(99));
 };
-
-#endif // INCLUDED_PRIM_ARRAY

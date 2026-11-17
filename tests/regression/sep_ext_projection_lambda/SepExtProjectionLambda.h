@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTPROJECTIONLAMBDA
-#define INCLUDED_SEPEXTPROJECTIONLAMBDA
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -47,5 +46,3 @@ template <Sig S> struct Worker {
   }
 };
 } // namespace SepExtProjectionLambda
-
-#endif // INCLUDED_SEPEXTPROJECTIONLAMBDA

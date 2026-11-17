@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_TYPE
-#define INCLUDED_UNIT_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -79,5 +78,3 @@ struct UnitType {
   static inline const uint64_t test_match = match_unit();
   static inline const uint64_t test_seq = sequenced;
 };
-
-#endif // INCLUDED_UNIT_TYPE

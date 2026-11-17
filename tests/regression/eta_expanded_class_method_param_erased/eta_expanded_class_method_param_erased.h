@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ETA_EXPANDED_CLASS_METHOD_PARAM_ERASED
-#define INCLUDED_ETA_EXPANDED_CLASS_METHOD_PARAM_ERASED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -229,5 +228,3 @@ List<std::pair<Nat, Nat>> apply_it(F0 &&f,
 
 List<std::pair<Nat, Nat>> partial(const Nat &k, const Nat &v,
                                   const List<std::pair<Nat, Nat>> &l);
-
-#endif // INCLUDED_ETA_EXPANDED_CLASS_METHOD_PARAM_ERASED

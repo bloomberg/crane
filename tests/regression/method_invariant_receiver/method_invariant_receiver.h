@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHOD_INVARIANT_RECEIVER
-#define INCLUDED_METHOD_INVARIANT_RECEIVER
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -311,5 +310,3 @@ struct MethodInvariantReceiver {
   static inline const uint64_t deep =
       wrap::w(lst::nil()).wraps(UINT64_C(3)).wlast(UINT64_C(100000)).wdepth();
 };
-
-#endif // INCLUDED_METHOD_INVARIANT_RECEIVER

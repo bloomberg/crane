@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IND_PARAM
-#define INCLUDED_IND_PARAM
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -181,5 +180,3 @@ struct IndParam {
   static inline const uint64_t test_error =
       NatWrapper::get_size(NatWrapper::error_result());
 };
-
-#endif // INCLUDED_IND_PARAM

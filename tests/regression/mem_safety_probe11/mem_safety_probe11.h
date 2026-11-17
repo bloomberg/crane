@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE11
-#define INCLUDED_MEM_SAFETY_PROBE11
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -562,5 +561,3 @@ struct MemSafetyProbe11 {
     }();
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE11

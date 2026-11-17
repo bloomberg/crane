@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_FIX_CAPTURES_CLASS_PARAM
-#define INCLUDED_LOOPIFY_FIX_CAPTURES_CLASS_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -396,5 +395,3 @@ struct LoopifyFixCapturesClassParam {
                            List<tree>::nil()))),
                  Nat::s(Nat::s(Nat::s(Nat::o()))));
 };
-
-#endif // INCLUDED_LOOPIFY_FIX_CAPTURES_CLASS_PARAM

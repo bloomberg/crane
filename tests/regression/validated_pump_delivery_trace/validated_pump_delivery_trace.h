@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE
-#define INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -818,5 +817,3 @@ struct ValidatedPumpDeliveryTraceCase {
   static inline const bool unknown_fault_blocks =
       FaultStatus::fault_unknown().fault_blocks_bolus();
 };
-
-#endif // INCLUDED_VALIDATED_PUMP_DELIVERY_TRACE

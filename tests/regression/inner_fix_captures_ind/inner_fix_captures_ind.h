@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INNER_FIX_CAPTURES_IND
-#define INCLUDED_INNER_FIX_CAPTURES_IND
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -121,5 +120,3 @@ struct InnerFixCapturesInd {
   static lst mk(uint64_t n);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_INNER_FIX_CAPTURES_IND

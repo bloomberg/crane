@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXISTENTIAL_RECORD_DICT_FIELD
-#define INCLUDED_EXISTENTIAL_RECORD_DICT_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -28,5 +27,3 @@ struct ExistentialRecordDictField {
   static uint64_t shp(const packed &p);
   static inline const uint64_t result = shp(packed{shN, UINT64_C(4)});
 };
-
-#endif // INCLUDED_EXISTENTIAL_RECORD_DICT_FIELD

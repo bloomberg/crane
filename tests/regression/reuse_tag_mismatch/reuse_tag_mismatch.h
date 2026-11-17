@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_TAG_MISMATCH
-#define INCLUDED_REUSE_TAG_MISMATCH
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -111,5 +110,3 @@ struct ReuseTagMismatch {
     }
   }();
 };
-
-#endif // INCLUDED_REUSE_TAG_MISMATCH

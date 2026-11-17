@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MATCH_CTOR_CLOSURE
-#define INCLUDED_MATCH_CTOR_CLOSURE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -221,5 +220,3 @@ struct MatchCtorClosure {
     return b.apply_box(UINT64_C(5));
   }();
 };
-
-#endif // INCLUDED_MATCH_CTOR_CLOSURE

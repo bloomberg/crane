@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PHANTOM_ALIAS_TARG_UNBOUND
-#define INCLUDED_PHANTOM_ALIAS_TARG_UNBOUND
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -192,5 +191,3 @@ struct Qs {
     return defined_intrinsics<_tcI0, FailE>();
   }
 };
-
-#endif // INCLUDED_PHANTOM_ALIAS_TARG_UNBOUND

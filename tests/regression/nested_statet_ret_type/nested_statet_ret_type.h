@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_STATET_RET_TYPE
-#define INCLUDED_NESTED_STATET_RET_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -302,5 +301,3 @@ struct NestedStatetRetType {
     }
   }();
 };
-
-#endif // INCLUDED_NESTED_STATET_RET_TYPE

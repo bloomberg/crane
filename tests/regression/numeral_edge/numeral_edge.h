@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NUMERAL_EDGE
-#define INCLUDED_NUMERAL_EDGE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -153,5 +152,3 @@ struct NumeralEdge {
   /// 14. N conversion
   static inline const uint64_t n_to_nat_test = static_cast<uint64_t>(255u);
 };
-
-#endif // INCLUDED_NUMERAL_EDGE

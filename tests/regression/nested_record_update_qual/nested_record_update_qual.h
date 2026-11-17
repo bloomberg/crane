@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_RECORD_UPDATE_QUAL
-#define INCLUDED_NESTED_RECORD_UPDATE_QUAL
+#pragma once
 
 #include <cstdint>
 
@@ -11,5 +10,3 @@ struct NestedRecordUpdateQual {
   static Shadow bump(const Shadow &x);
   static inline const Shadow t = bump(Shadow{UINT64_C(1)});
 };
-
-#endif // INCLUDED_NESTED_RECORD_UPDATE_QUAL

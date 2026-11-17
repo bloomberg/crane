@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EMPTY_INDUCTIVE_DECIMAL_UINT
-#define INCLUDED_EMPTY_INDUCTIVE_DECIMAL_UINT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -459,5 +458,3 @@ struct EmptyInductiveDecimalUint {
   static inline const Nat::nat test =
       s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::s(Nat::nat::o()))))))))))))))))))))))))))))))))))))))))))).length();
 };
-
-#endif // INCLUDED_EMPTY_INDUCTIVE_DECIMAL_UINT

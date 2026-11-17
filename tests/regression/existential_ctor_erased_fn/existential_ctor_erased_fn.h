@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXISTENTIAL_CTOR_ERASED_FN
-#define INCLUDED_EXISTENTIAL_CTOR_ERASED_FN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -209,5 +208,3 @@ struct ExistentialCtorErasedFn {
       [](uint64_t acc, const dynamic &d) { return (acc + read(d)); },
       UINT64_C(0));
 };
-
-#endif // INCLUDED_EXISTENTIAL_CTOR_ERASED_FN

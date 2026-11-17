@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_MIXED_FIELDS
-#define INCLUDED_REUSE_MIXED_FIELDS
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -104,5 +103,3 @@ struct ReuseMixedFields {
     }
   }();
 };
-
-#endif // INCLUDED_REUSE_MIXED_FIELDS

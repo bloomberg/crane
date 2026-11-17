@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_SCOPE_LEAK
-#define INCLUDED_NAME_CLASH_SCOPE_LEAK
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -138,5 +137,3 @@ public:
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_NAME_CLASH_SCOPE_LEAK

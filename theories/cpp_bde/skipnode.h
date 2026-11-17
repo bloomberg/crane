@@ -4,8 +4,7 @@
 // Skip List Node implementation for STM-based skip list (BDE version)
 // This file provides the C++ runtime support for the extracted Rocq skip list.
 
-#ifndef SKIPNODE_H
-#define SKIPNODE_H
+#pragma once
 
 #include <bsl_memory.h>
 #include <bsl_optional.h>
@@ -90,5 +89,3 @@ struct SkipPath {
         return nullptr;
     }
 };
-
-#endif // SKIPNODE_H

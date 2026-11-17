@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PING_PONG
-#define INCLUDED_PING_PONG
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -17,5 +16,3 @@ struct PingPong {
   /// Entry point.
   static void play();
 };
-
-#endif // INCLUDED_PING_PONG

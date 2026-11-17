@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_INSTANCE_AT_FUNCTION_TYPE
-#define INCLUDED_CLASS_INSTANCE_AT_FUNCTION_TYPE
+#pragma once
 
 #include "fn.h"
 #include <concepts>
@@ -45,5 +44,3 @@ struct ClassInstanceAtFunctionType {
                  crane::fn<uint64_t(uint64_t)>>::weigh(std::make_pair(
            UINT64_C(3), [](uint64_t n) { return (n + UINT64_C(1)); })));
 };
-
-#endif // INCLUDED_CLASS_INSTANCE_AT_FUNCTION_TYPE

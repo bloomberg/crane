@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_MATCH_TYPE2
-#define INCLUDED_LET_MATCH_TYPE2
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -112,5 +111,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_LET_MATCH_TYPE2

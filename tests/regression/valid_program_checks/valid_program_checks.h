@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALID_PROGRAM_CHECKS
-#define INCLUDED_VALID_PROGRAM_CHECKS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -197,5 +196,3 @@ struct ValidProgramChecks {
                                      List<uint64_t>::nil())))) ? UINT64_C(1)
                                                                : UINT64_C(0)));
 };
-
-#endif // INCLUDED_VALID_PROGRAM_CHECKS

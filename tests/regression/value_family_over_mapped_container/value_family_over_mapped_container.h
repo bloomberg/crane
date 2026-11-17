@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALUE_FAMILY_OVER_MAPPED_CONTAINER
-#define INCLUDED_VALUE_FAMILY_OVER_MAPPED_CONTAINER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -94,5 +93,3 @@ struct ValueFamilyOverMappedContainer {
   static inline const uint64_t from_call =
       sz(ty::topt(ty::tnat()), mk(UINT64_C(4)));
 };
-
-#endif // INCLUDED_VALUE_FAMILY_OVER_MAPPED_CONTAINER

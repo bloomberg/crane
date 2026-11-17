@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONSTRAINED_POLY
-#define INCLUDED_CONSTRAINED_POLY
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -141,5 +140,3 @@ struct ConstrainedPoly {
           [](uint64_t n) { return (n + UINT64_C(1)); },
           UOption<uint64_t>::usome(UINT64_C(9)));
 };
-
-#endif // INCLUDED_CONSTRAINED_POLY

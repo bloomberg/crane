@@ -1,5 +1,4 @@
-#ifndef INCLUDED_APPLIED_TYPENAME_NOT_HK
-#define INCLUDED_APPLIED_TYPENAME_NOT_HK
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -105,5 +104,3 @@ h(Sum1<crane::obj, Sum1<AE, crane::obj, crane::obj>, crane::obj> x) {
                     itree_case([](const auto &_x) { return _x.handle(); },
                                F_trigger<crane::obj, crane::obj>))(std::move(x));
 }
-
-#endif // INCLUDED_APPLIED_TYPENAME_NOT_HK

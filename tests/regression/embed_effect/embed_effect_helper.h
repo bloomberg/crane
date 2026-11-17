@@ -1,8 +1,7 @@
 // Helper for embed_effect regression test.
 // Provides stub implementations for the custom-extracted bugE events.
 
-#ifndef INCLUDED_EMBED_EFFECT_HELPER
-#define INCLUDED_EMBED_EFFECT_HELPER
+#pragma once
 
 #include <cstdint>
 #include <string>
@@ -22,5 +21,3 @@ inline int64_t bug_read_impl() {
   ++get_read_count();
   return 42;
 }
-
-#endif // INCLUDED_EMBED_EFFECT_HELPER

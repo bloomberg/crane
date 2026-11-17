@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE6
-#define INCLUDED_MEM_SAFETY_PROBE6
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -550,5 +549,3 @@ struct MemSafetyProbe6 {
                   UINT64_C(1), mylist<uint64_t>::mycons(
                                    UINT64_C(2), mylist<uint64_t>::mynil()))));
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE6

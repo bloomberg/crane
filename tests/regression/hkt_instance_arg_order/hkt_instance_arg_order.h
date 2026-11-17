@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_INSTANCE_ARG_ORDER
-#define INCLUDED_HKT_INSTANCE_ARG_ORDER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -248,5 +247,3 @@ struct HktInstanceArgOrder {
           std::make_optional<List<Nat>>(
               List<Nat>::cons(Nat::s(Nat::o()), List<Nat>::nil())));
 };
-
-#endif // INCLUDED_HKT_INSTANCE_ARG_ORDER

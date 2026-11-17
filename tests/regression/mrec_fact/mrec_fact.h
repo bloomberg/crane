@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MREC_FACT
-#define INCLUDED_MREC_FACT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -613,5 +612,3 @@ Itree<T2, T3> Recursion::mrec(const std::type_identity_t<
                               crane::rebind_t<T1, T3> d) {
   return Recursion::template interp_mrec<T1, T2, T3>(ctx, ctx(std::move(d)));
 }
-
-#endif // INCLUDED_MREC_FACT

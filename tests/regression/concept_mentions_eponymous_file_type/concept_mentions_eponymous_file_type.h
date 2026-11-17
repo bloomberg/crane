@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_MENTIONS_EPONYMOUS_FILE_TYPE
-#define INCLUDED_CONCEPT_MENTIONS_EPONYMOUS_FILE_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -217,5 +216,3 @@ std::optional<T1> List::nth_error(const List::list<T1> &l, const Nat &n) {
     }
   }
 }
-
-#endif // INCLUDED_CONCEPT_MENTIONS_EPONYMOUS_FILE_TYPE

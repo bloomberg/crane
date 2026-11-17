@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PORT_WRITE_NIBBLE_MASK
-#define INCLUDED_PORT_WRITE_NIBBLE_MASK
+#pragma once
 
 #include <cstdint>
 
@@ -13,5 +12,3 @@ struct PortWriteNibbleMask {
   static inline const uint64_t t =
       upd_port_in_chip(ram_chip{UINT64_C(0)}, UINT64_C(31)).chip_port;
 };
-
-#endif // INCLUDED_PORT_WRITE_NIBBLE_MASK

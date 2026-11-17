@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VECTOR_CASES_DEDUCTION
-#define INCLUDED_VECTOR_CASES_DEDUCTION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -161,5 +160,3 @@ template <typename T1> T1 Vector::hd(const Nat &n, const T<T1> &x0_) {
   return Vector::template caseS<T1, T1>([](T1 h, Nat, T<T1>) { return h; }, n,
                                         x0_);
 }
-
-#endif // INCLUDED_VECTOR_CASES_DEDUCTION

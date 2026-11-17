@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BLOCK_TEMPLATE_EDGE
-#define INCLUDED_BLOCK_TEMPLATE_EDGE
+#pragma once
 
 #include <cstdint>
 #include <iostream>
@@ -18,5 +17,3 @@ struct BlockTemplateEdge {
   /// 5. Block template followed by non-block operation
   static int64_t block_then_pure();
 };
-
-#endif // INCLUDED_BLOCK_TEMPLATE_EDGE

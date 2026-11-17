@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_WITH_MODULE_CONSTRAINT
-#define INCLUDED_TODO_WITH_MODULE_CONSTRAINT
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -50,5 +49,3 @@ struct TodoWithModuleConstraint {
   using Applied = UseNat<NatOuter>;
   static inline const uint64_t test_twice = Applied::twice();
 };
-
-#endif // INCLUDED_TODO_WITH_MODULE_CONSTRAINT

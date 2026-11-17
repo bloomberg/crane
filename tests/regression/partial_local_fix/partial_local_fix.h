@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PARTIAL_LOCAL_FIX
-#define INCLUDED_PARTIAL_LOCAL_FIX
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -71,5 +70,3 @@ struct PartialLocalFix {
   static Nat run(Bool0 x0_);
   static inline const Nat test = run(Bool0::TRUE_);
 };
-
-#endif // INCLUDED_PARTIAL_LOCAL_FIX

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_NUMERIC_SEQUENCES
-#define INCLUDED_LOOPIFY_NUMERIC_SEQUENCES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -131,5 +130,3 @@ struct LoopifyNumericSequences {
   static uint64_t sum_divisors_aux(uint64_t n, uint64_t d);
   static uint64_t sum_divisors(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_NUMERIC_SEQUENCES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IMPLICIT_ARGS
-#define INCLUDED_IMPLICIT_ARGS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -228,5 +227,3 @@ struct ImplicitArgs {
   static inline const uint64_t test_choose_true = use_choose_true;
   static inline const uint64_t test_choose_false = use_choose_false;
 };
-
-#endif // INCLUDED_IMPLICIT_ARGS

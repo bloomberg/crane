@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_CARRIER_UNQUALIFIED_AT_KNOWN_INSTANCE
-#define INCLUDED_INSTANCE_CARRIER_UNQUALIFIED_AT_KNOWN_INSTANCE
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -153,5 +152,3 @@ static_assert(IPtr<natIPtr>);
 struct InstanceCarrierUnqualifiedAtKnownInstance {
 static inline const EOU<std::pair<Nat, bool>> run = crane::any_cast<EOU<std::pair<Nat, bool>>>(PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true));
 };
-
-#endif // INCLUDED_INSTANCE_CARRIER_UNQUALIFIED_AT_KNOWN_INSTANCE

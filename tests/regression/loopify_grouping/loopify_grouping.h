@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_GROUPING
-#define INCLUDED_LOOPIFY_GROUPING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -148,5 +147,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_LOOPIFY_GROUPING

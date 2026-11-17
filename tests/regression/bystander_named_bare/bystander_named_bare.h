@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BYSTANDER_NAMED_BARE
-#define INCLUDED_BYSTANDER_NAMED_BARE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -286,5 +285,3 @@ inline bool Raw_id::raw_id_dec(const Raw_id &y) const {
     }
   }
 }
-
-#endif // INCLUDED_BYSTANDER_NAMED_BARE

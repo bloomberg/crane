@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INNER
-#define INCLUDED_INNER
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -21,5 +20,3 @@ template <Base X> struct F {
   };
 };
 } // namespace Inner
-
-#endif // INCLUDED_INNER

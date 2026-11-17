@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEEP_PATTERNS
-#define INCLUDED_DEEP_PATTERNS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -545,5 +544,3 @@ struct DeepPatterns {
         test_triple) +
        test_wildcard);
 };
-
-#endif // INCLUDED_DEEP_PATTERNS

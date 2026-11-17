@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HK_CONSTRAINT_CARRIER_TWO_PARAMS
-#define INCLUDED_HK_CONSTRAINT_CARRIER_TWO_PARAMS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -285,5 +284,3 @@ template <TFunctor _tcI0, TFunctor _tcI1> struct TFunctor_outer1 {
                                                 std::move(m).o_inner)};
   }
 };
-
-#endif // INCLUDED_HK_CONSTRAINT_CARRIER_TWO_PARAMS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_OPERAND_MATCH_CALL
-#define INCLUDED_LOOPIFY_OPERAND_MATCH_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -152,5 +151,3 @@ struct LoopifyOperandMatchCall {
   static uint64_t size(const tree &t);
   static tree comb(uint64_t n);
 };
-
-#endif // INCLUDED_LOOPIFY_OPERAND_MATCH_CALL

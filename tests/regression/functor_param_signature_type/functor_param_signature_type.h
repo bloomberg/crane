@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_PARAM_SIGNATURE_TYPE
-#define INCLUDED_FUNCTOR_PARAM_SIGNATURE_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -91,5 +90,3 @@ struct FunctorParamSignatureType {
     }
   };
 };
-
-#endif // INCLUDED_FUNCTOR_PARAM_SIGNATURE_TYPE

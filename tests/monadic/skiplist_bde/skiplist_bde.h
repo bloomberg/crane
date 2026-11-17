@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SKIPLIST_BDE
-#define INCLUDED_SKIPLIST_BDE
+#pragma once
 
 #include "shared_block.h"
 #include <bsl_concepts.h>
@@ -1077,5 +1076,3 @@ template <typename K, typename V> struct SkipList {
     });
   }
 };
-
-#endif // INCLUDED_SKIPLIST_BDE

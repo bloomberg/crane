@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_METHOD_FUNCTION_PAYLOAD
-#define INCLUDED_CLASS_METHOD_FUNCTION_PAYLOAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -286,5 +285,3 @@ struct ClassMethodFunctionPayload {
            },
            UINT64_C(0)));
 };
-
-#endif // INCLUDED_CLASS_METHOD_FUNCTION_PAYLOAD

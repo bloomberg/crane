@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_ARM_FIELD_USED_TWICE
-#define INCLUDED_REUSE_ARM_FIELD_USED_TWICE
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -98,5 +97,3 @@ struct ReuseArmFieldUsedTwice {
   static inline const uint64_t dbl_len = len(dbl(l3));
   static inline const uint64_t pairs_sum = sum(pairs(l3));
 };
-
-#endif // INCLUDED_REUSE_ARM_FIELD_USED_TWICE

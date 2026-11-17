@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_USE_AFTER_MOVE
-#define INCLUDED_RECORD_USE_AFTER_MOVE
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -44,5 +43,3 @@ struct RecordUseAfterMove {
     return (p + q);
   }();
 };
-
-#endif // INCLUDED_RECORD_USE_AFTER_MOVE

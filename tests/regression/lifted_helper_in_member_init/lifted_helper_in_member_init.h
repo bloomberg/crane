@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_HELPER_IN_MEMBER_INIT
-#define INCLUDED_LIFTED_HELPER_IN_MEMBER_INIT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -122,5 +121,3 @@ struct LiftedHelperInMemberInit {
     }());
   }();
 };
-
-#endif // INCLUDED_LIFTED_HELPER_IN_MEMBER_INIT

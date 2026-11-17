@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_MATCH_UNIT_FUN
-#define INCLUDED_DEP_MATCH_UNIT_FUN
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -65,5 +64,3 @@ struct DepMatchUnitFun {
   static inline const uint64_t go =
       get(tg::tf([](uint64_t x) { return (x + UINT64_C(1)); }), UINT64_C(4));
 };
-
-#endif // INCLUDED_DEP_MATCH_UNIT_FUN

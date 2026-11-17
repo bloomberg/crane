@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_POLY_EVENT_ARG
-#define INCLUDED_ITREE_POLY_EVENT_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -74,5 +73,3 @@ template <typename T1 = void>
 std::shared_ptr<ITree<Nat>> f(const std::shared_ptr<ITree<Nat>> &x) {
   return itree_bind(x, [](const Nat &a) { return itree_ret(Nat::s(a)); });
 }
-
-#endif // INCLUDED_ITREE_POLY_EVENT_ARG

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LISTDEF
-#define INCLUDED_LISTDEF
+#pragma once
 
 #include "crane_fn.h"
 #include <memory>
@@ -42,5 +41,3 @@ Datatypes::List<T2> map(F0 &&f, const Datatypes::List<T1> &l) {
   return std::move(*_root);
 }
 } // namespace ListDef
-
-#endif // INCLUDED_LISTDEF

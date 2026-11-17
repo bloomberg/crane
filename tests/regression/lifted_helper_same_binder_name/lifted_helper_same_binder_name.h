@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_HELPER_SAME_BINDER_NAME
-#define INCLUDED_LIFTED_HELPER_SAME_BINDER_NAME
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -145,5 +144,3 @@ struct LiftedHelperSameBinderName {
   static inline const uint64_t t1 = two(true, UINT64_C(3));
   static inline const uint64_t t2 = two(false, UINT64_C(3));
 };
-
-#endif // INCLUDED_LIFTED_HELPER_SAME_BINDER_NAME

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_LAMBDA_GROUND_INSTANCE
-#define INCLUDED_MUTUAL_LAMBDA_GROUND_INSTANCE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -174,5 +173,3 @@ struct MutualLambdaGroundInstance {
 
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_MUTUAL_LAMBDA_GROUND_INSTANCE

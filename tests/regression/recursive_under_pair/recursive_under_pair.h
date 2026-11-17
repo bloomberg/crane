@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECURSIVE_UNDER_PAIR
-#define INCLUDED_RECURSIVE_UNDER_PAIR
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -98,5 +97,3 @@ struct RecursiveUnderPair {
   static uint64_t depth(const c &x);
   static inline const uint64_t go = depth(build(UINT64_C(1000)));
 };
-
-#endif // INCLUDED_RECURSIVE_UNDER_PAIR

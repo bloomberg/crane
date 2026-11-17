@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COINDUCTIVE_NODE_SHARING
-#define INCLUDED_COINDUCTIVE_NODE_SHARING
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -315,5 +314,3 @@ struct CoinductiveNodeSharing {
 
   static Itree<voidE, uint64_t> count_to(uint64_t k);
 };
-
-#endif // INCLUDED_COINDUCTIVE_NODE_SHARING

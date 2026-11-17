@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_AS_VALUE
-#define INCLUDED_INSTANCE_AS_VALUE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -181,5 +180,3 @@ struct InstanceAsValue {
             List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil()))) +
        method(UINT64_C(3), UINT64_C(4)));
 };
-
-#endif // INCLUDED_INSTANCE_AS_VALUE

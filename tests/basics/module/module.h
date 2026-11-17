@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE
-#define INCLUDED_MODULE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -215,5 +214,3 @@ const NatMap::t mymap = NatMap::add(
     UINT64_C(1), UINT64_C(10),
     NatMap::add(UINT64_C(2), UINT64_C(20),
                 NatMap::add(UINT64_C(3), UINT64_C(30), NatMap::empty())));
-
-#endif // INCLUDED_MODULE

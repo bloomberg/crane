@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERIC_MONAD_RESULT_REWRAPPED
-#define INCLUDED_GENERIC_MONAD_RESULT_REWRAPPED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -233,5 +232,3 @@ struct GenericMonadResultRewrapped {
 
   static std::shared_ptr<ITree<List<Nat>>> go(const List<Nat> &x0_);
 };
-
-#endif // INCLUDED_GENERIC_MONAD_RESULT_REWRAPPED

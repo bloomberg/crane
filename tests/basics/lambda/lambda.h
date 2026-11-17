@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LAMBDA
-#define INCLUDED_LAMBDA
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -31,5 +30,3 @@ struct Lambda {
   static inline const uint64_t test_let = with_let;
   static inline const uint64_t test_apply = use_apply;
 };
-
-#endif // INCLUDED_LAMBDA

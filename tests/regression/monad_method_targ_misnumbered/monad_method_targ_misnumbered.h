@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MONAD_METHOD_TARG_MISNUMBERED
-#define INCLUDED_MONAD_METHOD_TARG_MISNUMBERED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -233,5 +232,3 @@ typename _tcI0::template m<T3> monad_fold_right(const std::type_identity_t<
         [=](const T3 &r) { return f(r, a0); });
   }
 }
-
-#endif // INCLUDED_MONAD_METHOD_TARG_MISNUMBERED

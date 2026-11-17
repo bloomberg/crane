@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTUNMERGEDSTRUCTCAP
-#define INCLUDED_SEPEXTUNMERGEDSTRUCTCAP
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -76,5 +75,3 @@ struct UseExprs {
   static Exprs::Expr make_neg(const Exprs::Expr &e);
 };
 } // namespace SepExtUnmergedStructCap
-
-#endif // INCLUDED_SEPEXTUNMERGEDSTRUCTCAP

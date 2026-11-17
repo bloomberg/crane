@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_FUNCTOR
-#define INCLUDED_MUTUAL_FUNCTOR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -293,5 +292,3 @@ using NatTree = MutualTree<NatElem>;
 const uint64_t test_tree_size = NatTree::tree_size(NatTree::sample_tree());
 const uint64_t test_forest_size = NatTree::forest_size(NatTree::small_forest());
 const uint64_t test_tree_sum = NatTree::tree_sum(NatTree::sample_tree());
-
-#endif // INCLUDED_MUTUAL_FUNCTOR

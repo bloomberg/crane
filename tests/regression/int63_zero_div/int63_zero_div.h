@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INT63_ZERO_DIV
-#define INCLUDED_INT63_ZERO_DIV
+#pragma once
 
 #include <cstdint>
 
@@ -22,5 +21,3 @@ struct Int63ZeroDiv {
        static_cast<uint64_t>(s)) &
       0x7FFFFFFFFFFFFFFFULL);
 };
-
-#endif // INCLUDED_INT63_ZERO_DIV

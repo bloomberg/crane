@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CASE_INSENSITIVE_COLLISION
-#define INCLUDED_CASE_INSENSITIVE_COLLISION
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -33,5 +32,3 @@ struct CaseInsensitiveCollision {
   static uint64_t Bar0(Bar b);
   static inline const uint64_t run = ((foo + Foo) + Bar0(Bar::B2));
 };
-
-#endif // INCLUDED_CASE_INSENSITIVE_COLLISION

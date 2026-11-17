@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CONCEPT_BEFORE_STRUCT
-#define INCLUDED_CONCEPT_BEFORE_STRUCT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -94,5 +93,3 @@ concept HasM = requires {
 };
 
 static_assert(HasM<ConceptBeforeStruct::hn, Nat>);
-
-#endif // INCLUDED_CONCEPT_BEFORE_STRUCT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_FIELD_FUNCTION_ALIAS
-#define INCLUDED_RECORD_FIELD_FUNCTION_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -120,5 +119,3 @@ struct RecordFieldFunctionAlias {
       [](const Nat &n) { return n.eqb(Nat::s(Nat::o())); }, Nat::s(Nat::o())},
                                            Nat::o());
 };
-
-#endif // INCLUDED_RECORD_FIELD_FUNCTION_ALIAS

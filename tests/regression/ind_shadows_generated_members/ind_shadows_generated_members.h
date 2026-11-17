@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IND_SHADOWS_GENERATED_MEMBERS
-#define INCLUDED_IND_SHADOWS_GENERATED_MEMBERS
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -95,5 +94,3 @@ struct IndShadowsGeneratedMembers {
   static inline const uint64_t run =
       depth(variant_t0::V_p(variant_t0::V_p(variant_t0::V_mut_(UINT64_C(2)))));
 };
-
-#endif // INCLUDED_IND_SHADOWS_GENERATED_MEMBERS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STRING_
-#define INCLUDED_STRING_
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -99,5 +98,3 @@ public:
   }
 };
 } // namespace String
-
-#endif // INCLUDED_STRING_

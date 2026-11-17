@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_INSIDE_FUNCTOR
-#define INCLUDED_MODULE_TYPE_INSIDE_FUNCTOR
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -48,5 +47,3 @@ struct ModuleTypeInsideFunctor {
   using A1 = M1::Apply<F1>;
   static inline const uint64_t result = A1::go();
 };
-
-#endif // INCLUDED_MODULE_TYPE_INSIDE_FUNCTOR

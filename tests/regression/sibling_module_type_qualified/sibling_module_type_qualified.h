@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIBLING_MODULE_TYPE_QUALIFIED
-#define INCLUDED_SIBLING_MODULE_TYPE_QUALIFIED
+#pragma once
 
 #include <cstdint>
 #include <variant>
@@ -43,5 +42,3 @@ struct SiblingModuleTypeQualified {
   static inline const uint64_t run =
       (f(Lib::t::c(UINT64_C(1))) + g(Lib::Inner::u::d(UINT64_C(2))));
 };
-
-#endif // INCLUDED_SIBLING_MODULE_TYPE_QUALIFIED

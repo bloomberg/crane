@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_INSTANCE_ARGUMENT_IN_MENTION
-#define INCLUDED_ERASED_INSTANCE_ARGUMENT_IN_MENTION
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -271,5 +270,3 @@ return a0;
 }
 }();
 };
-
-#endif // INCLUDED_ERASED_INSTANCE_ARGUMENT_IN_MENTION

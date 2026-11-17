@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WRAPPER_DECL_MERGE
-#define INCLUDED_WRAPPER_DECL_MERGE
+#pragma once
 
 #include <cstdint>
 
@@ -19,5 +18,3 @@ struct WrapperDeclMerge {
   static inline const uint64_t x = A::Nat::fa(UINT64_C(4));
   static inline const uint64_t y = B::Nat::fb(UINT64_C(4));
 };
-
-#endif // INCLUDED_WRAPPER_DECL_MERGE

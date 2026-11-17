@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_TYPECLASS_REQUIRES
-#define INCLUDED_TODO_TYPECLASS_REQUIRES
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -26,5 +25,3 @@ struct TodoTypeclassRequires {
   static inline const uint64_t test_result =
       double_val<NatNumeric, uint64_t>(UINT64_C(7));
 };
-
-#endif // INCLUDED_TODO_TYPECLASS_REQUIRES

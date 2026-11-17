@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_MAP_ESCAPE
-#define INCLUDED_CLOSURE_MAP_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -162,5 +161,3 @@ struct ClosureMapEscape {
     return sum_apply(std::move(fns), UINT64_C(1));
   }();
 };
-
-#endif // INCLUDED_CLOSURE_MAP_ESCAPE

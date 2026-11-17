@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NUMERAL_CONVERTER_KIND
-#define INCLUDED_NUMERAL_CONVERTER_KIND
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -875,5 +874,3 @@ struct NumeralConverterKind {
   static inline const std::optional<uint64_t> nat_of_neg = Nat::of_num_int(
       Signed_int1::intdecimal(Signed_int::neg(Uint::d7(Uint::nil()))));
 };
-
-#endif // INCLUDED_NUMERAL_CONVERTER_KIND

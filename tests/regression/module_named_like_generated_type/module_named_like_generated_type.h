@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_NAMED_LIKE_GENERATED_TYPE
-#define INCLUDED_MODULE_NAMED_LIKE_GENERATED_TYPE
+#pragma once
 
 #include <cstdint>
 
@@ -15,5 +14,3 @@ struct Nat {
 struct ModuleNamedLikeGeneratedType {
   static inline const uint64_t run = Nat::k;
 };
-
-#endif // INCLUDED_MODULE_NAMED_LIKE_GENERATED_TYPE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REGEXP
-#define INCLUDED_REGEXP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -321,5 +320,3 @@ struct Matcher {
   static inline const List<int64_t> s4 =
       List<int64_t>::cons(INT64_C(0), List<int64_t>::nil());
 };
-
-#endif // INCLUDED_REGEXP

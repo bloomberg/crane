@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VOID_CALLBACK
-#define INCLUDED_VOID_CALLBACK
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -191,5 +190,3 @@ struct VoidCallback {
   /// 8. Option of void function result
   static std::optional<std::monostate> void_option(bool b);
 };
-
-#endif // INCLUDED_VOID_CALLBACK

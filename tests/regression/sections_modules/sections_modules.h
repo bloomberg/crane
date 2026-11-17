@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SECTIONS_MODULES
-#define INCLUDED_SECTIONS_MODULES
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -95,5 +94,3 @@ struct SectionsModules {
   static inline const uint64_t test_extended =
       Extended::extended_fun(Extended::base_val);
 };
-
-#endif // INCLUDED_SECTIONS_MODULES

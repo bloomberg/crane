@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNULLARYCALL
-#define INCLUDED_SEPEXTNULLARYCALL
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -70,5 +69,3 @@ template <Cfg C> struct Worker {
   }
 };
 } // namespace SepExtNullaryCall
-
-#endif // INCLUDED_SEPEXTNULLARYCALL

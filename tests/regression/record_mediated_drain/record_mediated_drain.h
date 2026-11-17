@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_MEDIATED_DRAIN
-#define INCLUDED_RECORD_MEDIATED_DRAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -114,5 +113,3 @@ struct RecordMediatedDrain {
   static t wrap(uint64_t k, const t &acc);
   static inline const t empty = t::stop();
 };
-
-#endif // INCLUDED_RECORD_MEDIATED_DRAIN

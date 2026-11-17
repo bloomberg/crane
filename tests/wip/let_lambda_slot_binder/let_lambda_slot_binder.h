@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_LAMBDA_SLOT_BINDER
-#define INCLUDED_LET_LAMBDA_SLOT_BINDER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -102,5 +101,3 @@ struct LetLambdaSlotBinder {
     }();
   }();
 };
-
-#endif // INCLUDED_LET_LAMBDA_SLOT_BINDER

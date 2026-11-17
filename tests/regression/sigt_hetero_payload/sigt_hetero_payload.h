@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_HETERO_PAYLOAD
-#define INCLUDED_SIGT_HETERO_PAYLOAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -289,5 +288,3 @@ struct SigtHeteroPayload {
           },
           Nat::o());
 };
-
-#endif // INCLUDED_SIGT_HETERO_PAYLOAD

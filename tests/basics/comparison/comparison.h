@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COMPARISON
-#define INCLUDED_COMPARISON
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -52,5 +51,3 @@ struct Comparison {
       clamp(UINT64_C(9), UINT64_C(3), UINT64_C(7));
   static inline const Cmp test_flip = flip_cmp(Cmp::CMPLT);
 };
-
-#endif // INCLUDED_COMPARISON

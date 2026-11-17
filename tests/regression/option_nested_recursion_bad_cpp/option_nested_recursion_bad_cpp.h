@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPTION_NESTED_RECURSION_BAD_CPP
-#define INCLUDED_OPTION_NESTED_RECURSION_BAD_CPP
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -103,5 +102,3 @@ struct OptionNestedRecursionBadCpp {
   static uint64_t depth(const chain &c);
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_OPTION_NESTED_RECURSION_BAD_CPP

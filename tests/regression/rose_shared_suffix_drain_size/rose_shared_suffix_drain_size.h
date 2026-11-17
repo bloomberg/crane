@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROSE_SHARED_SUFFIX_DRAIN_SIZE
-#define INCLUDED_ROSE_SHARED_SUFFIX_DRAIN_SIZE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -183,5 +182,3 @@ struct RoseSharedSuffixDrainSize {
   static uint64_t rsize(const rose &t);
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_ROSE_SHARED_SUFFIX_DRAIN_SIZE

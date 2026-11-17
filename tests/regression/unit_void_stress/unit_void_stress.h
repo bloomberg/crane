@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_VOID_STRESS
-#define INCLUDED_UNIT_VOID_STRESS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -219,5 +218,3 @@ struct UnitVoidStress {
   static inline const uint64_t test_branch =
       void_in_one_branch(true, UINT64_C(5));
 };
-
-#endif // INCLUDED_UNIT_VOID_STRESS

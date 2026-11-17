@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_AT_SORT_TYPE_FIELD
-#define INCLUDED_RECORD_AT_SORT_TYPE_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -109,5 +108,3 @@ struct RecordAtSortTypeField {
     return a1;
   }();
 };
-
-#endif // INCLUDED_RECORD_AT_SORT_TYPE_FIELD

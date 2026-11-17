@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EVENT_PARAM_DROPPED
-#define INCLUDED_EVENT_PARAM_DROPPED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -165,5 +164,3 @@ struct EventParamDropped {
     return Denotation::template run_exc<_tcI0, prov>(x1_);
   }
 };
-
-#endif // INCLUDED_EVENT_PARAM_DROPPED

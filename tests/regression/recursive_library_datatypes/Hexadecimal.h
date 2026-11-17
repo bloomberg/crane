@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HEXADECIMAL
-#define INCLUDED_HEXADECIMAL
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -1487,5 +1486,3 @@ public:
   }
 };
 } // namespace Hexadecimal
-
-#endif // INCLUDED_HEXADECIMAL

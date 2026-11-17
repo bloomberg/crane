@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COLIST
-#define INCLUDED_COLIST
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -263,5 +262,3 @@ public:
     return v;
   }
 };
-
-#endif // INCLUDED_COLIST

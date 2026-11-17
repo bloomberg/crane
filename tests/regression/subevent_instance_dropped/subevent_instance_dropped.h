@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUBEVENT_INSTANCE_DROPPED
-#define INCLUDED_SUBEVENT_INSTANCE_DROPPED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -101,5 +100,3 @@ std::shared_ptr<ITree<T2>> boom(const Nat &n) {
                       throw std::logic_error("absurd case");
                     });
 }
-
-#endif // INCLUDED_SUBEVENT_INSTANCE_DROPPED

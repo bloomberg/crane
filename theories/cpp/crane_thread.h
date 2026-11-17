@@ -8,8 +8,7 @@
 // copy joins the same thread, the first join waits for it and the rest return
 // at once, and the last copy to go joins a thread no one did.
 
-#ifndef INCLUDED_CRANE_THREAD
-#define INCLUDED_CRANE_THREAD
+#pragma once
 
 #include <memory>
 #include <mutex>
@@ -41,5 +40,3 @@ public:
 };
 
 } // namespace crane
-
-#endif // INCLUDED_CRANE_THREAD

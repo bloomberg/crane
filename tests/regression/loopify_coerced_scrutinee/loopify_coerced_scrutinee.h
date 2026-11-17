@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_COERCED_SCRUTINEE
-#define INCLUDED_LOOPIFY_COERCED_SCRUTINEE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -408,5 +407,3 @@ struct LoopifyCoercedScrutinee {
                               expr::iszero(expr::lit(UINT64_C(0)))),
                     expr::lit(UINT64_C(3)), expr::lit(UINT64_C(4)))));
 };
-
-#endif // INCLUDED_LOOPIFY_COERCED_SCRUTINEE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_PARAM_INSTANCE_CONSTRAINT
-#define INCLUDED_INSTANCE_PARAM_INSTANCE_CONSTRAINT
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -46,5 +45,3 @@ struct InstanceParamInstanceConstraint {
     }
   }();
 };
-
-#endif // INCLUDED_INSTANCE_PARAM_INSTANCE_CONSTRAINT

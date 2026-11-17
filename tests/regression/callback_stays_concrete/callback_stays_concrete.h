@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CALLBACK_STAYS_CONCRETE
-#define INCLUDED_CALLBACK_STAYS_CONCRETE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -141,5 +140,3 @@ struct CallbackStaysConcrete {
     return f(x);
   }
 };
-
-#endif // INCLUDED_CALLBACK_STAYS_CONCRETE

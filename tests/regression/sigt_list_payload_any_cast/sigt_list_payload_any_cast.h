@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_LIST_PAYLOAD_ANY_CAST
-#define INCLUDED_SIGT_LIST_PAYLOAD_ANY_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -187,5 +186,3 @@ struct SigtListPayloadAnyCast {
     }
   }();
 };
-
-#endif // INCLUDED_SIGT_LIST_PAYLOAD_ANY_CAST

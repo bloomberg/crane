@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE2
-#define INCLUDED_MEM_SAFETY_PROBE2
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -686,5 +685,3 @@ struct MemSafetyProbe2 {
     return t2.sum_values(UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE2

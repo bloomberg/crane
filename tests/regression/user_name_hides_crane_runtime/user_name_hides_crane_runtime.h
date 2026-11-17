@@ -1,5 +1,4 @@
-#ifndef INCLUDED_USER_NAME_HIDES_CRANE_RUNTIME
-#define INCLUDED_USER_NAME_HIDES_CRANE_RUNTIME
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -240,5 +239,3 @@ struct UserNameHidesCraneRuntime {
            .sum() +
        UINT64_C(1));
 };
-
-#endif // INCLUDED_USER_NAME_HIDES_CRANE_RUNTIME

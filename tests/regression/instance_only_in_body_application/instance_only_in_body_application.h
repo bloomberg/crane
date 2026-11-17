@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_ONLY_IN_BODY_APPLICATION
-#define INCLUDED_INSTANCE_ONLY_IN_BODY_APPLICATION
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -233,5 +232,3 @@ return Nat::o();}
 static Nat check();
 static inline const Nat run = check();
 };
-
-#endif // INCLUDED_INSTANCE_ONLY_IN_BODY_APPLICATION

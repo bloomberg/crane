@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_13453
-#define INCLUDED_ROCQ_BUG_13453
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -71,5 +70,3 @@ struct RocqBug13453 {
   using array = crane::obj /* AXIOM TO BE REALIZED */;
   static inline const array<Nat> a = {Nat::o()};
 };
-
-#endif // INCLUDED_ROCQ_BUG_13453

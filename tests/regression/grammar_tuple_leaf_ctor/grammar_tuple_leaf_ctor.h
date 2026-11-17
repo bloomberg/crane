@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GRAMMAR_TUPLE_LEAF_CTOR
-#define INCLUDED_GRAMMAR_TUPLE_LEAF_CTOR
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -273,5 +272,3 @@ using grammar_entry = SigT<production, production_semty>;
                     })))),
             List<grammar_entry>::nil()));
 uint64_t num_entries();
-
-#endif // INCLUDED_GRAMMAR_TUPLE_LEAF_CTOR

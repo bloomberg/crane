@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NUMERAL_STRESS
-#define INCLUDED_NUMERAL_STRESS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -142,5 +141,3 @@ struct NumeralStress {
   static int64_t mixed_arith(uint64_t n);
   static inline const int64_t test_mixed = mixed_arith(UINT64_C(42));
 };
-
-#endif // INCLUDED_NUMERAL_STRESS

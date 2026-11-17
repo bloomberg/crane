@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ARENA_SCOPING
-#define INCLUDED_ARENA_SCOPING
+#pragma once
 
 #include <atomic>
 #include <memory>
@@ -224,5 +223,3 @@ public:
     }
   }
 };
-
-#endif // INCLUDED_ARENA_SCOPING

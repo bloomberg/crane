@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ADOPTED_FIX_NAME_SHARED
-#define INCLUDED_LOOPIFY_ADOPTED_FIX_NAME_SHARED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -381,5 +380,3 @@ struct LoopifyAdoptedFixNameShared {
                            List<tree>::nil()))),
         Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_LOOPIFY_ADOPTED_FIX_NAME_SHARED

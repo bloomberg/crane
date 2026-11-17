@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LOCAL_FIX_INNER_CALLBACK
-#define INCLUDED_LOOPIFY_LOCAL_FIX_INNER_CALLBACK
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -21,5 +20,3 @@ struct LoopifyLocalFixInnerCallback {
   static inline const uint64_t small =
       ack(std::make_pair(UINT64_C(2), UINT64_C(3)));
 };
-
-#endif // INCLUDED_LOOPIFY_LOCAL_FIX_INNER_CALLBACK

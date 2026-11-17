@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_DECLTYPE
-#define INCLUDED_LOOPIFY_DECLTYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -107,5 +106,3 @@ struct LoopifyDecltype {
 
   static uint64_t sum_flagged(const List<item> &xs);
 };
-
-#endif // INCLUDED_LOOPIFY_DECLTYPE

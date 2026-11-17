@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_INTERP
-#define INCLUDED_ITREE_INTERP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -698,5 +697,3 @@ typename _tcI0::template M<T3> Interp::interp(const std::type_identity_t<
       },
       x0_);
 }
-
-#endif // INCLUDED_ITREE_INTERP

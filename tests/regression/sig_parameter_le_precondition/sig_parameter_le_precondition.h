@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIG_PARAMETER_LE_PRECONDITION
-#define INCLUDED_SIG_PARAMETER_LE_PRECONDITION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -40,5 +39,3 @@ struct SigParameterLePrecondition {
       (get(UINT64_C(5), Sig<uint64_t>::exist(UINT64_C(3))) +
        get2(UINT64_C(0), Sig<uint64_t>::exist(UINT64_C(2))));
 };
-
-#endif // INCLUDED_SIG_PARAMETER_LE_PRECONDITION

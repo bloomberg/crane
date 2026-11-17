@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ERASED_METHOD_RECEIVER
-#define INCLUDED_ERASED_METHOD_RECEIVER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -225,5 +224,3 @@ struct ErasedMethodReceiver {
                                         String::emptystring()));
   static inline const Nat run = crane::any_cast<String>(s.projT2()).length();
 };
-
-#endif // INCLUDED_ERASED_METHOD_RECEIVER

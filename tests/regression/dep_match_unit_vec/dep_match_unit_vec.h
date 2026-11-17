@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_MATCH_UNIT_VEC
-#define INCLUDED_DEP_MATCH_UNIT_VEC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -115,5 +114,3 @@ struct DepMatchUnitVec {
       head(UINT64_C(0), vec<uint64_t>::vcons(UINT64_C(0), UINT64_C(5),
                                              vec<uint64_t>::vnil()));
 };
-
-#endif // INCLUDED_DEP_MATCH_UNIT_VEC

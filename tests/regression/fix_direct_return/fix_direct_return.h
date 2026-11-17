@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_DIRECT_RETURN
-#define INCLUDED_FIX_DIRECT_RETURN
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -54,5 +53,3 @@ struct FixDirectReturn {
     }();
   }();
 };
-
-#endif // INCLUDED_FIX_DIRECT_RETURN

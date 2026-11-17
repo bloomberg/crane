@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NOLOOPIFY_METHOD
-#define INCLUDED_NOLOOPIFY_METHOD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -196,5 +195,3 @@ struct NoloopifyMethod {
                      tree::leaf()))
           .read(UINT64_C(0));
 };
-
-#endif // INCLUDED_NOLOOPIFY_METHOD

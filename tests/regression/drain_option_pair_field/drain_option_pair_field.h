@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DRAIN_OPTION_PAIR_FIELD
-#define INCLUDED_DRAIN_OPTION_PAIR_FIELD
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -91,5 +90,3 @@ struct DrainOptionPairField {
       depth(t::c(std::make_optional<std::pair<t, uint64_t>>(std::make_pair(
           t::c(std::optional<std::pair<t, uint64_t>>()), UINT64_C(1)))));
 };
-
-#endif // INCLUDED_DRAIN_OPTION_PAIR_FIELD

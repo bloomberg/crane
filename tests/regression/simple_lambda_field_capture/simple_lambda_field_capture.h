@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE
-#define INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -245,5 +244,3 @@ struct SimpleLambdaFieldCapture {
   /// Dummy use of tag.
   static tag mk_tag(uint64_t n);
 };
-
-#endif // INCLUDED_SIMPLE_LAMBDA_FIELD_CAPTURE

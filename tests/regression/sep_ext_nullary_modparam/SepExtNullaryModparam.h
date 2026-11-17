@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTNULLARYMODPARAM
-#define INCLUDED_SEPEXTNULLARYMODPARAM
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -82,5 +81,3 @@ template <IntLike I> struct Counter {
 
 using NatCounter = Counter<NatAsIntLike>;
 } // namespace SepExtNullaryModparam
-
-#endif // INCLUDED_SEPEXTNULLARYMODPARAM

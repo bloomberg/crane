@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT
-#define INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT
+#pragma once
 
 #include "obj.h"
 #include "small_vector.h"
@@ -188,5 +187,3 @@ struct MutualValueDeepDestruct {
 
   static a keep_a(a x);
 };
-
-#endif // INCLUDED_MUTUAL_VALUE_DEEP_DESTRUCT

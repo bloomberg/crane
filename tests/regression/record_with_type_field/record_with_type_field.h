@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_WITH_TYPE_FIELD
-#define INCLUDED_RECORD_WITH_TYPE_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -197,5 +196,3 @@ struct RecordWithTypeField {
   static inline const List<alg> algs =
       List<alg>::cons(natalg, List<alg>::nil());
 };
-
-#endif // INCLUDED_RECORD_WITH_TYPE_FIELD

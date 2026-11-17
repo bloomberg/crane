@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM
-#define INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -103,5 +102,3 @@ struct TypeAliasAppliedCtorParam {
           std::make_optional<Nat>(Nat::s(Nat::o())));
   static std::optional<Nat> get(const holder<std::optional<crane::obj>> &h);
 };
-
-#endif // INCLUDED_TYPE_ALIAS_APPLIED_CTOR_PARAM

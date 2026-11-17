@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CURRYING
-#define INCLUDED_CURRYING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -97,5 +96,3 @@ struct Currying {
       flipped_sub(UINT64_C(3), UINT64_C(7));
   static inline const uint64_t test_add_ten = add_ten(UINT64_C(5));
 };
-
-#endif // INCLUDED_CURRYING

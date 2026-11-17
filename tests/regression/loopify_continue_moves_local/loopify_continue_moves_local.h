@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_CONTINUE_MOVES_LOCAL
-#define INCLUDED_LOOPIFY_CONTINUE_MOVES_LOCAL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -169,5 +168,3 @@ struct LoopifyContinueMovesLocal {
   static inline const std::pair<List<uint64_t>, List<uint64_t>> test_peel =
       peel(UINT64_C(3), List<uint64_t>::nil(), List<uint64_t>::nil());
 };
-
-#endif // INCLUDED_LOOPIFY_CONTINUE_MOVES_LOCAL

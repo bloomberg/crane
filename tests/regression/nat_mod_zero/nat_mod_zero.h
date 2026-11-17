@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAT_MOD_ZERO
-#define INCLUDED_NAT_MOD_ZERO
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -16,5 +15,3 @@ struct NatModZero {
   /// In C++, the second component triggers UB.
   static std::pair<uint64_t, uint64_t> divmod(uint64_t a, uint64_t b);
 };
-
-#endif // INCLUDED_NAT_MOD_ZERO

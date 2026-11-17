@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_MATCH_MATCH
-#define INCLUDED_NAME_CLASH_MATCH_MATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -137,5 +136,3 @@ struct NameClashMatchMatch {
   /// and the result is used in another match.
   static uint64_t chained(const tree &t);
 };
-
-#endif // INCLUDED_NAME_CLASH_MATCH_MATCH

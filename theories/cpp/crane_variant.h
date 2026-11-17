@@ -22,8 +22,7 @@
 // valueless_by_exception) rather than a tag naming a destroyed alternative.
 // Moves are noexcept exactly when every alternative's move is.
 
-#ifndef INCLUDED_CRANE_VARIANT
-#define INCLUDED_CRANE_VARIANT
+#pragma once
 
 #include <algorithm>
 #include <cstddef>
@@ -232,5 +231,3 @@ template <class T, class... Ts> const T *get_if(const std::variant<Ts...> *v) {
 }
 
 } // namespace crane
-
-#endif // INCLUDED_CRANE_VARIANT

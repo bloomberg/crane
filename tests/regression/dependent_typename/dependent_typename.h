@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_TYPENAME
-#define INCLUDED_DEPENDENT_TYPENAME
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -60,5 +59,3 @@ struct DependentTypename {
     }
   };
 };
-
-#endif // INCLUDED_DEPENDENT_TYPENAME

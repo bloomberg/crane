@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GRAPH
-#define INCLUDED_GRAPH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -390,5 +389,3 @@ bool test_eq(const T1 &x, const T1 &y) {
 const bool test_int_eq =
     test_eq<NatEq, Nat>(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))),
                         Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
-
-#endif // INCLUDED_GRAPH

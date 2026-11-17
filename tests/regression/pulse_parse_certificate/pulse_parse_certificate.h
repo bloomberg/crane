@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PULSE_PARSE_CERTIFICATE
-#define INCLUDED_PULSE_PARSE_CERTIFICATE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -241,5 +240,3 @@ struct PulseParseCertificateCase {
   static inline const uint64_t sample_certificate_class_count =
       sample_certificate.certificate_classes.length();
 };
-
-#endif // INCLUDED_PULSE_PARSE_CERTIFICATE

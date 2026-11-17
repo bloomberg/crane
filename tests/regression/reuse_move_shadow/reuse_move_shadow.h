@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_MOVE_SHADOW
-#define INCLUDED_REUSE_MOVE_SHADOW
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -161,5 +160,3 @@ struct ReuseMoveShadow {
     return (tree_sum(dup_left(t, true)) + tree_sum(t));
   }();
 };
-
-#endif // INCLUDED_REUSE_MOVE_SHADOW

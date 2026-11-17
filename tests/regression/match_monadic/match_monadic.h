@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MATCH_MONADIC
-#define INCLUDED_MATCH_MONADIC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -138,5 +137,3 @@ struct MatchMonadic {
   /// 8. Multiple matches in sequence
   static std::string multi_match(bool a, bool b);
 };
-
-#endif // INCLUDED_MATCH_MONADIC

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXISTENTIAL_FN_PROJECTION
-#define INCLUDED_EXISTENTIAL_FN_PROJECTION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -69,5 +68,3 @@ struct ExistentialFnProjection {
       crane::any_cast<uint64_t>(crane_any_cast<
           std::pair<crane::obj, crane::obj>>(tagged.projT2()).second);
 };
-
-#endif // INCLUDED_EXISTENTIAL_FN_PROJECTION

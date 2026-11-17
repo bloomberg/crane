@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHOD_RETURNS_FUNCTION_ALIAS
-#define INCLUDED_METHOD_RETURNS_FUNCTION_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -269,5 +268,3 @@ struct MethodReturnsFunctionAlias {
       Tree::tree::node(Tree::tree::leaf(), Tree::tree::leaf()).is_leaf()(
           Nat::o());
 };
-
-#endif // INCLUDED_METHOD_RETURNS_FUNCTION_ALIAS

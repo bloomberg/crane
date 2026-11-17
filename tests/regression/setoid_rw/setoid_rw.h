@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SETOID_RW
-#define INCLUDED_SETOID_RW
+#pragma once
 
 #include <cstdint>
 
@@ -15,5 +14,3 @@ struct SetoidRw {
   static inline const uint64_t test_add_mod3 =
       add_mod3(UINT64_C(5), UINT64_C(7));
 };
-
-#endif // INCLUDED_SETOID_RW

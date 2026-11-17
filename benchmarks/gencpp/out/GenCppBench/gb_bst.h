@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GB_BST
-#define INCLUDED_GB_BST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -365,5 +364,3 @@ struct GbBst {
   static List<uint64_t> to_list(const tree &t, List<uint64_t> acc);
   static uint64_t bst(uint64_t n, uint64_t rounds);
 };
-
-#endif // INCLUDED_GB_BST

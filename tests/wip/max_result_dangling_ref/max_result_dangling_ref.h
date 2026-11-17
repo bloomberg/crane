@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MAX_RESULT_DANGLING_REF
-#define INCLUDED_MAX_RESULT_DANGLING_REF
+#pragma once
 
 #include <algorithm>
 #include <cstdint>
@@ -14,5 +13,3 @@
 struct MaxResultDanglingRef {
   static uint64_t f(uint64_t a, uint64_t b);
 };
-
-#endif // INCLUDED_MAX_RESULT_DANGLING_REF

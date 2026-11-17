@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GLOBAL_STATE
-#define INCLUDED_GLOBAL_STATE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -311,5 +310,3 @@ inline uint64_t GlobRefNat::GlobRefToIxNat() const {
   const auto &[a] = *this;
   return a;
 }
-
-#endif // INCLUDED_GLOBAL_STATE

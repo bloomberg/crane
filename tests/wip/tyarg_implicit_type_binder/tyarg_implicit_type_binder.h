@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYARG_IMPLICIT_TYPE_BINDER
-#define INCLUDED_TYARG_IMPLICIT_TYPE_BINDER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -155,5 +154,3 @@ struct TyargImplicitTypeBinder {
   static inline const uint64_t both_fst =
       both<uint64_t, bool>(UINT64_C(2), true).first;
 };
-
-#endif // INCLUDED_TYARG_IMPLICIT_TYPE_BINDER

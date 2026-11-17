@@ -1,5 +1,4 @@
-#ifndef INCLUDED_THIS_CAPTURE_DANGLING
-#define INCLUDED_THIS_CAPTURE_DANGLING
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -313,5 +312,3 @@ struct ThisCaptureDangling {
     }
   }();
 };
-
-#endif // INCLUDED_THIS_CAPTURE_DANGLING

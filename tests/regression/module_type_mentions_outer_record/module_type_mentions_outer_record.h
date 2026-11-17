@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_TYPE_MENTIONS_OUTER_RECORD
-#define INCLUDED_MODULE_TYPE_MENTIONS_OUTER_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -172,5 +171,3 @@ concept T = requires {
     -> std::convertible_to<ModuleTypeMentionsOuterRecord::ops<typename M::t>>;
   });
 };
-
-#endif // INCLUDED_MODULE_TYPE_MENTIONS_OUTER_RECORD

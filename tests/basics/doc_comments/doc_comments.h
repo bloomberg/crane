@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DOC_COMMENTS
-#define INCLUDED_DOC_COMMENTS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -184,5 +183,3 @@ struct DocComments {
     return color_rect<T1>(std::move(f), std::move(f0), std::move(f1), c);
   }
 };
-
-#endif // INCLUDED_DOC_COMMENTS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST
-#define INCLUDED_LIST
+#pragma once
 
 #include <type_traits>
 #include <utility>
@@ -19,5 +18,3 @@ T1 fold_left(F0 &&f, const Datatypes::List<T2> &l, T1 a0) {
   }
 }
 } // namespace List
-
-#endif // INCLUDED_LIST

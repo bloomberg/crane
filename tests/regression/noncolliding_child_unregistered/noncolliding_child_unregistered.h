@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NONCOLLIDING_CHILD_UNREGISTERED
-#define INCLUDED_NONCOLLIDING_CHILD_UNREGISTERED
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -185,5 +184,3 @@ inline bool Raw_id::raw_id_dec(const Raw_id &y) const {
     }
   }
 }
-
-#endif // INCLUDED_NONCOLLIDING_CHILD_UNREGISTERED

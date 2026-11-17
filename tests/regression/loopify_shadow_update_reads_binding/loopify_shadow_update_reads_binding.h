@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SHADOW_UPDATE_READS_BINDING
-#define INCLUDED_LOOPIFY_SHADOW_UPDATE_READS_BINDING
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -122,5 +121,3 @@ struct LoopifyShadowUpdateReadsBinding {
                                                 List<crane::fn<
                                                     uint64_t(uint64_t)>>::nil()))));
 };
-
-#endif // INCLUDED_LOOPIFY_SHADOW_UPDATE_READS_BINDING

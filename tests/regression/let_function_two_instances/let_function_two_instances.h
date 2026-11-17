@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FUNCTION_TWO_INSTANCES
-#define INCLUDED_LET_FUNCTION_TWO_INSTANCES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -146,5 +145,3 @@ struct LetFunctionTwoInstances {
       (both<uint64_t>(UINT64_C(7)).first.length() +
        both<uint64_t>(UINT64_C(7)).second.length());
 };
-
-#endif // INCLUDED_LET_FUNCTION_TWO_INSTANCES

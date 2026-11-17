@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_METHOD_PARAM_AT_FOREIGN_CLASS_FIELD
-#define INCLUDED_INSTANCE_METHOD_PARAM_AT_FOREIGN_CLASS_FIELD
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -165,5 +164,3 @@ static_assert(IPtr<natIPtr>);
 struct InstanceMethodParamAtForeignClassField {
 static inline const bool run = (std::holds_alternative<typename EOU<Nat>::Ok>(PIV<natIPtr>::int_to_ptr(Nat::s(Nat::o()), true).v()) ? true : false);
 };
-
-#endif // INCLUDED_INSTANCE_METHOD_PARAM_AT_FOREIGN_CLASS_FIELD

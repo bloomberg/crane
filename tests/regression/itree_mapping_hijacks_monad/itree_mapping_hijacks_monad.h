@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_MAPPING_HIJACKS_MONAD
-#define INCLUDED_ITREE_MAPPING_HIJACKS_MONAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -186,5 +185,3 @@ struct Monad_Err {
 
 static_assert(Monad<Monad_Err>);
 Err<Nat> twice(const Err<Nat> &x);
-
-#endif // INCLUDED_ITREE_MAPPING_HIJACKS_MONAD

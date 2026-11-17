@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FREE_MONAD
-#define INCLUDED_FREE_MONAD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -146,5 +145,3 @@ struct FreeMonad {
 
   static inline const IO test = IO::pure(Unit::TT);
 };
-
-#endif // INCLUDED_FREE_MONAD

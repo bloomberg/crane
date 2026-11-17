@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STATE_T_ALIAS_REIFIED
-#define INCLUDED_STATE_T_ALIAS_REIFIED
+#pragma once
 
 #include "fn.h"
 #include "shared_block.h"
@@ -32,5 +31,3 @@ struct StateTAliasReified {
       itree_bind(seed, [](uint64_t x) { return plus_one(itree_ret(x)); });
   static M<uint64_t> seeded(uint64_t n);
 };
-
-#endif // INCLUDED_STATE_T_ALIAS_REIFIED

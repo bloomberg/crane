@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ENUM_SWITCH_QUALIFIED
-#define INCLUDED_ENUM_SWITCH_QUALIFIED
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -31,5 +30,3 @@ struct EnumSwitchQualified {
 
   static inline const uint64_t t = Outer::code(Outer::flip(Outer::Color::RED));
 };
-
-#endif // INCLUDED_ENUM_SWITCH_QUALIFIED

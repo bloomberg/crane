@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MOVED_STRUCT_METHOD_AFTER_COLLISION
-#define INCLUDED_MOVED_STRUCT_METHOD_AFTER_COLLISION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -308,5 +307,3 @@ inline Nat Shape::size() const {
   }
   return _result;
 }
-
-#endif // INCLUDED_MOVED_STRUCT_METHOD_AFTER_COLLISION

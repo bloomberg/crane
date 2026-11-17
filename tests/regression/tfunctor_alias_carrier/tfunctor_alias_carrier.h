@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TFUNCTOR_ALIAS_CARRIER
-#define INCLUDED_TFUNCTOR_ALIAS_CARRIER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -307,5 +306,3 @@ struct TfunctorAliasCarrier {
       c1.c_ptr.first.add(c1.c_new.first).eqb(
           Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o()))))));
 };
-
-#endif // INCLUDED_TFUNCTOR_ALIAS_CARRIER

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_IMPOSSIBLE_BRANCH_THUNK_CALL
-#define INCLUDED_IMPOSSIBLE_BRANCH_THUNK_CALL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -195,5 +194,3 @@ struct ImpossibleBranchThunkCall {
   static uint64_t len(const tagged &t);
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_IMPOSSIBLE_BRANCH_THUNK_CALL

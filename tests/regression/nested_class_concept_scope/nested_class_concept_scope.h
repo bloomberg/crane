@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_CLASS_CONCEPT_SCOPE
-#define INCLUDED_NESTED_CLASS_CONCEPT_SCOPE
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -25,5 +24,3 @@ struct NestedClassConceptScope {
   static_assert(C<IN, uint64_t>);
   static inline const uint64_t test = IN::m(UINT64_C(5));
 };
-
-#endif // INCLUDED_NESTED_CLASS_CONCEPT_SCOPE

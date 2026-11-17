@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COLLISION_STRUCT_CONCEPT_NAMES_STRUCT
-#define INCLUDED_COLLISION_STRUCT_CONCEPT_NAMES_STRUCT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -302,5 +301,3 @@ struct CollisionStructConceptNamesStruct {
           .size();
   static Nat head_or_zero(const List<Nat> &x0_);
 };
-
-#endif // INCLUDED_COLLISION_STRUCT_CONCEPT_NAMES_STRUCT

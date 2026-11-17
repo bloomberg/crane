@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_RET_FAMILY_FROM_RESULT
-#define INCLUDED_ITREE_RET_FAMILY_FROM_RESULT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -435,5 +434,3 @@ struct ItreeRetFamilyFromResult {
   static inline const uint64_t raises_result =
       result(UINT64_C(10), run_exc<uint64_t>(raises));
 };
-
-#endif // INCLUDED_ITREE_RET_FAMILY_FROM_RESULT

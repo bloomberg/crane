@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_SHARED_PTR_FIELD
-#define INCLUDED_FIX_SHARED_PTR_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -329,5 +328,3 @@ struct FixSharedPtrField {
   /// Dummy use of wrapper to keep it alive for extraction.
   static wrapper wrap_list(const mylist &l);
 };
-
-#endif // INCLUDED_FIX_SHARED_PTR_FIELD

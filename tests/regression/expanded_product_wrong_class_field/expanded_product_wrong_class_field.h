@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXPANDED_PRODUCT_WRONG_CLASS_FIELD
-#define INCLUDED_EXPANDED_PRODUCT_WRONG_CLASS_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -204,5 +203,3 @@ struct ExpandedProductWrongClassField {
     return top<_tcI0>(step<_tcI0>(initial<_tcI0>()));
   }
 };
-
-#endif // INCLUDED_EXPANDED_PRODUCT_WRONG_CLASS_FIELD

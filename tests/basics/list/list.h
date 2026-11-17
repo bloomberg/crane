@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST
-#define INCLUDED_LIST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -169,5 +168,3 @@ public:
     return v;
   }
 };
-
-#endif // INCLUDED_LIST

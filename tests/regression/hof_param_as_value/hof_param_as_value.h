@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HOF_PARAM_AS_VALUE
-#define INCLUDED_HOF_PARAM_AS_VALUE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -157,5 +156,3 @@ struct HofParamAsValue {
          uint64_t _ec1) { return ap(_ec0, _ec1); },
       UINT64_C(1));
 };
-
-#endif // INCLUDED_HOF_PARAM_AS_VALUE

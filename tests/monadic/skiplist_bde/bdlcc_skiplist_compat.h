@@ -10,8 +10,7 @@
 // implemented; they delegate to forward search - KEY type must have both
 // operator< and operator== defined
 //
-#ifndef INCLUDED_BDLCC_SKIPLIST_COMPAT
-#define INCLUDED_BDLCC_SKIPLIST_COMPAT
+#pragma once
 
 #include "skiplist_bde.h"
 #include <bsl_functional.h>
@@ -520,5 +519,3 @@ class SkipList {
 };
 
 }  // namespace bdlcc_compat
-
-#endif  // INCLUDED_BDLCC_SKIPLIST_COMPAT

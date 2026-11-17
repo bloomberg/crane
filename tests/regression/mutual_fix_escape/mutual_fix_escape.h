@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_FIX_ESCAPE
-#define INCLUDED_MUTUAL_FIX_ESCAPE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -40,5 +39,3 @@ struct MutualFixEscape {
     return std::move(p).second(UINT64_C(1));
   }();
 };
-
-#endif // INCLUDED_MUTUAL_FIX_ESCAPE

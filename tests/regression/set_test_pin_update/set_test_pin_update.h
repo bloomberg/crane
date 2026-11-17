@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SET_TEST_PIN_UPDATE
-#define INCLUDED_SET_TEST_PIN_UPDATE
+#pragma once
 
 #include <cstdint>
 
@@ -15,5 +14,3 @@ struct SetTestPinUpdate {
     return (s_.acc + (s_.test_pin ? UINT64_C(1) : UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_SET_TEST_PIN_UPDATE

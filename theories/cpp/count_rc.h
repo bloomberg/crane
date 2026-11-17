@@ -35,8 +35,7 @@
 // answers "which generated function is doing the copying", which is the
 // question that decides where borrow inference pays.
 
-#ifndef CRANE_COUNT_RC_H
-#define CRANE_COUNT_RC_H
+#pragma once
 
 #include <atomic>
 #include <cstdint>
@@ -340,5 +339,3 @@ counting_ptr<T> make_counting(Args&&... args)
 }
 
 }  // namespace crane
-
-#endif  // CRANE_COUNT_RC_H

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TREE
-#define INCLUDED_TREE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -453,5 +452,3 @@ public:
     return v;
   }
 };
-
-#endif // INCLUDED_TREE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GB_LISTS
-#define INCLUDED_GB_LISTS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -303,5 +302,3 @@ public:
     return std::move(*_root);
   }
 };
-
-#endif // INCLUDED_GB_LISTS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS
-#define INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -53,5 +52,3 @@ struct TodoTypeSubstPackAlias {
   static inline const uint64_t test_value =
       crane::any_cast<uint64_t>(run_twice<nat_pack>());
 };
-
-#endif // INCLUDED_TODO_TYPE_SUBST_PACK_ALIAS

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LAST_USE_PLACES
-#define INCLUDED_LAST_USE_PLACES
+#pragma once
 
 #include <big_support.h>
 #include <cstdint>
@@ -16,5 +15,3 @@ struct LastUsePlaces {
   /// A template that splices its argument twice.
   static uint64_t dup(uint64_t n);
 };
-
-#endif // INCLUDED_LAST_USE_PLACES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LISTDEF
-#define INCLUDED_LISTDEF
+#pragma once
 
 #include <type_traits>
 #include <variant>
@@ -18,5 +17,3 @@ Datatypes::List<T2> map(F0 &&f, const Datatypes::List<T1> &l) {
   }
 }
 } // namespace ListDef
-
-#endif // INCLUDED_LISTDEF

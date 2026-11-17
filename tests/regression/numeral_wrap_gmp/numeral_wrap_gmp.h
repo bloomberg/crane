@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NUMERAL_WRAP_GMP
-#define INCLUDED_NUMERAL_WRAP_GMP
+#pragma once
 
 #include <gmpxx.h>
 
@@ -12,5 +11,3 @@ struct NumeralWrapGmp {
       (340282366920938463463374607431768211456_mpz);
   static inline const mpz_class neg64 = (-18446744073709551616_mpz);
 };
-
-#endif // INCLUDED_NUMERAL_WRAP_GMP

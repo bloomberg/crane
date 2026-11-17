@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_EPONYMOUS_MODULE
-#define INCLUDED_NESTED_EPONYMOUS_MODULE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -76,5 +75,3 @@ struct NestedEponymousModule {
 
   static inline const Nat test = Inner::w;
 };
-
-#endif // INCLUDED_NESTED_EPONYMOUS_MODULE

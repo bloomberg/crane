@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FOLD_CLOSURE_BUILD
-#define INCLUDED_FOLD_CLOSURE_BUILD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -222,5 +221,3 @@ struct FoldClosureBuild {
           mylist<uint64_t>::mycons(UINT64_C(20), mylist<uint64_t>::mynil())),
                        UINT64_C(7));
 };
-
-#endif // INCLUDED_FOLD_CLOSURE_BUILD

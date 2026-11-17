@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FRAME_KEPT_CONSUMED_BEFORE_CALL
-#define INCLUDED_FRAME_KEPT_CONSUMED_BEFORE_CALL
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -104,5 +103,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_FRAME_KEPT_CONSUMED_BEFORE_CALL

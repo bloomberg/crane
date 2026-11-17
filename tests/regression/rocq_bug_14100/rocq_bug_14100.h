@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_14100
-#define INCLUDED_ROCQ_BUG_14100
+#pragma once
 
 template <typename M>
 concept MinSIG = requires {
@@ -15,5 +14,3 @@ struct RocqBug14100 {
 
   static_assert(MinSIG<Min>);
 };
-
-#endif // INCLUDED_ROCQ_BUG_14100

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MAIN_ENTRYPOINT
-#define INCLUDED_MAIN_ENTRYPOINT
+#pragma once
 
 #include <iostream>
 #include <string>
@@ -8,5 +7,3 @@
 struct MainEntrypoint {
   static void main();
 };
-
-#endif // INCLUDED_MAIN_ENTRYPOINT

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CPS_CONTINUATION_COPY
-#define INCLUDED_CPS_CONTINUATION_COPY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -121,5 +120,3 @@ struct CpsContinuationCopy {
       sumk(ListDef::seq(UINT64_C(0), UINT64_C(100000)),
            [](uint64_t x) { return x; });
 };
-
-#endif // INCLUDED_CPS_CONTINUATION_COPY

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_AXIOM_TYPES
-#define INCLUDED_AXIOM_TYPES
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -221,5 +220,3 @@ struct AxiomTypes {
 
   static MysteryType use_poly_axiom();
 };
-
-#endif // INCLUDED_AXIOM_TYPES

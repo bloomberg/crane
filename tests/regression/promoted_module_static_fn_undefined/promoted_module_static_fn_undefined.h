@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROMOTED_MODULE_STATIC_FN_UNDEFINED
-#define INCLUDED_PROMOTED_MODULE_STATIC_FN_UNDEFINED
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -346,5 +345,3 @@ public:
   static Nat total(const List<PromotedModuleStaticFnUndefined> &ts);
   static Nat example(const Nat &n);
 };
-
-#endif // INCLUDED_PROMOTED_MODULE_STATIC_FN_UNDEFINED

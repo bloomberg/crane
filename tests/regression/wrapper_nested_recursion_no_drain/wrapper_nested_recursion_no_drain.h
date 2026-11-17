@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WRAPPER_NESTED_RECURSION_NO_DRAIN
-#define INCLUDED_WRAPPER_NESTED_RECURSION_NO_DRAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -148,5 +147,3 @@ struct WrapperNestedRecursionNoDrain {
   static rose deep(uint64_t n);
   static uint64_t test_deep(uint64_t n);
 };
-
-#endif // INCLUDED_WRAPPER_NESTED_RECURSION_NO_DRAIN

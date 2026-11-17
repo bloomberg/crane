@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_GENERATORS
-#define INCLUDED_LOOPIFY_GENERATORS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -327,5 +326,3 @@ struct LoopifyGenerators {
   /// -> 1,1,2,2.
   static List<uint64_t> replicate_each(uint64_t n, const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_GENERATORS

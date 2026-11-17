@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TAIL
-#define INCLUDED_LOOPIFY_TAIL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -208,5 +207,3 @@ struct LoopifyTail {
   static uint64_t lookup(uint64_t key,
                          const list<std::pair<uint64_t, uint64_t>> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_TAIL

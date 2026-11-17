@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_ITER_LONG_PURE_LOOP
-#define INCLUDED_ITREE_ITER_LONG_PURE_LOOP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -80,5 +79,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_ITREE_ITER_LONG_PURE_LOOP

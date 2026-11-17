@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_UNIT_STRESS
-#define INCLUDED_EFFECT_UNIT_STRESS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -120,5 +119,3 @@ struct EffectUnitStress {
   /// 10. Monadic function returning option
   static std::optional<uint64_t> safe_head(const List<uint64_t> &xs);
 };
-
-#endif // INCLUDED_EFFECT_UNIT_STRESS

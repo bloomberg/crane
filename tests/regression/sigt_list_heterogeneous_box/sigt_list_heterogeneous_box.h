@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_LIST_HETEROGENEOUS_BOX
-#define INCLUDED_SIGT_LIST_HETEROGENEOUS_BOX
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -228,5 +227,3 @@ struct SigtListHeterogeneousBox {
   static Nat count(const List<anyv> &x0_);
   static inline const Nat run = count(items);
 };
-
-#endif // INCLUDED_SIGT_LIST_HETEROGENEOUS_BOX

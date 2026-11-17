@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LOCAL_COFIX
-#define INCLUDED_LOOPIFY_LOCAL_COFIX
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -211,5 +210,3 @@ struct LoopifyLocalCofix {
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));
 };
-
-#endif // INCLUDED_LOOPIFY_LOCAL_COFIX

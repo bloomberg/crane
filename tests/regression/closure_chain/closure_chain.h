@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_CHAIN
-#define INCLUDED_CLOSURE_CHAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -145,5 +144,3 @@ struct ClosureChain {
     }();
   }();
 };
-
-#endif // INCLUDED_CLOSURE_CHAIN

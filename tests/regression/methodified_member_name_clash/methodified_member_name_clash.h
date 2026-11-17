@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHODIFIED_MEMBER_NAME_CLASH
-#define INCLUDED_METHODIFIED_MEMBER_NAME_CLASH
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -227,5 +226,3 @@ struct MethodifiedMemberNameClash {
     }
   };
 };
-
-#endif // INCLUDED_METHODIFIED_MEMBER_NAME_CLASH

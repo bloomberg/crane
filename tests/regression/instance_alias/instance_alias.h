@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INSTANCE_ALIAS
-#define INCLUDED_INSTANCE_ALIAS
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -29,5 +28,3 @@ struct InstanceAlias {
   static_assert(Monoid<dict, uint64_t>);
   static inline const uint64_t test = dict::op(UINT64_C(3), UINT64_C(4));
 };
-
-#endif // INCLUDED_INSTANCE_ALIAS

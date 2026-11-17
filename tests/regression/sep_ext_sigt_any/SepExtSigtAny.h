@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTSIGTANY
-#define INCLUDED_SEPEXTSIGTANY
+#pragma once
 
 #include "obj.h"
 #include <variant>
@@ -21,5 +20,3 @@ template <S X> struct MyMod {
   }
 };
 } // namespace SepExtSigtAny
-
-#endif // INCLUDED_SEPEXTSIGTANY

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COUNT_LOOP_TEST_TARGET
-#define INCLUDED_COUNT_LOOP_TEST_TARGET
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -63,5 +62,3 @@ struct CountLoopTestTarget {
   static uint64_t target_of(const instruction &i);
   static inline const uint64_t t = target_of(count_loop_test(UINT64_C(37)));
 };
-
-#endif // INCLUDED_COUNT_LOOP_TEST_TARGET

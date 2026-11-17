@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EFFECT_DEEP_COMPOSE
-#define INCLUDED_EFFECT_DEEP_COMPOSE
+#pragma once
 
 #include <chrono>
 #include <cstdint>
@@ -25,5 +24,3 @@ struct EffectDeepCompose {
   /// 6. Recursive function over all three effects
   static void repeat_n(uint64_t n);
 };
-
-#endif // INCLUDED_EFFECT_DEEP_COMPOSE

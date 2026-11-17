@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSERTION_HELD_THROUGH_STRUCTS
-#define INCLUDED_ASSERTION_HELD_THROUGH_STRUCTS
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -45,5 +44,3 @@ concept STORE = requires {
 static_assert(STORE<AssertionHeldThroughStructs::Mid::S>);
 static_assert(STORE<AssertionHeldThroughStructs::Mid::Inner::S2>);
 static_assert(HasK<AssertionHeldThroughStructs::Mid::Inner::hk, uint64_t>);
-
-#endif // INCLUDED_ASSERTION_HELD_THROUGH_STRUCTS

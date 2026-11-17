@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_METHOD_UNAPPLIED_ARG
-#define INCLUDED_CLASS_METHOD_UNAPPLIED_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -170,5 +169,3 @@ struct ClassMethodUnappliedArg {
       [](uint64_t a, const crane::fn<uint64_t(uint64_t)> &f) { return f(a); },
       UINT64_C(0));
 };
-
-#endif // INCLUDED_CLASS_METHOD_UNAPPLIED_ARG

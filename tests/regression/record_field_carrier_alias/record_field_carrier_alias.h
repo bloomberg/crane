@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_FIELD_CARRIER_ALIAS
-#define INCLUDED_RECORD_FIELD_CARRIER_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -248,5 +247,3 @@ struct RecordFieldCarrierAlias {
   static inline const Nat five =
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_RECORD_FIELD_CARRIER_ALIAS

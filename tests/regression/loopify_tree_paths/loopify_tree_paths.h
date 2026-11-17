@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_TREE_PATHS
-#define INCLUDED_LOOPIFY_TREE_PATHS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -851,5 +850,3 @@ struct LoopifyTreePaths {
     }
   };
 };
-
-#endif // INCLUDED_LOOPIFY_TREE_PATHS

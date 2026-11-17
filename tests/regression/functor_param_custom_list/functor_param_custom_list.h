@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_PARAM_CUSTOM_LIST
-#define INCLUDED_FUNCTOR_PARAM_CUSTOM_LIST
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -40,5 +39,3 @@ struct FunctorParamCustomList {
   using DigitsImpl = Impl<Digits>;
   static bool all_digits(const std::deque<uint64_t> &x0_);
 };
-
-#endif // INCLUDED_FUNCTOR_PARAM_CUSTOM_LIST

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_NAME_HYGIENE
-#define INCLUDED_LOOPIFY_NAME_HYGIENE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -135,5 +134,3 @@ struct LoopifyNameHygiene {
   static inline const uint64_t run =
       (depth(mk(UINT64_C(5))) + locals(UINT64_C(10)));
 };
-
-#endif // INCLUDED_LOOPIFY_NAME_HYGIENE

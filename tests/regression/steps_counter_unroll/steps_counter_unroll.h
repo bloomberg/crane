@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STEPS_COUNTER_UNROLL
-#define INCLUDED_STEPS_COUNTER_UNROLL
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -13,5 +12,3 @@ struct StepsCounterUnroll {
   static state steps(uint64_t n, state s);
   static inline const uint64_t t = steps(UINT64_C(5), state{UINT64_C(4094)}).pc;
 };
-
-#endif // INCLUDED_STEPS_COUNTER_UNROLL

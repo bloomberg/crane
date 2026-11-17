@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOXED_ELEMENT_CONTAINER_CAST
-#define INCLUDED_BOXED_ELEMENT_CONTAINER_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -325,5 +324,3 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     return crane::cons(f(a), ListDef::template map<T1, T2>(f, l0));
   }
 }
-
-#endif // INCLUDED_BOXED_ELEMENT_CONTAINER_CAST

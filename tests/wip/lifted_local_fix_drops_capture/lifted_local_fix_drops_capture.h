@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIFTED_LOCAL_FIX_DROPS_CAPTURE
-#define INCLUDED_LIFTED_LOCAL_FIX_DROPS_CAPTURE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -119,5 +118,3 @@ struct LiftedLocalFixDropsCapture {
 
   static inline const uint64_t t = f<bool>(true, UINT64_C(7));
 };
-
-#endif // INCLUDED_LIFTED_LOCAL_FIX_DROPS_CAPTURE

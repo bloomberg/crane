@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ADD_ONE
-#define INCLUDED_ADD_ONE
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -67,5 +66,3 @@ public:
 };
 
 const Nat one = Nat::s(Nat::o());
-
-#endif // INCLUDED_ADD_ONE

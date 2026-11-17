@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_LIST_PAIRING
-#define INCLUDED_LOOPIFY_LIST_PAIRING
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -151,5 +150,3 @@ public:
     return _result;
   }
 };
-
-#endif // INCLUDED_LOOPIFY_LIST_PAIRING

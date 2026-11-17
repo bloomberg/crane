@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAIR_CLOSURE_ESCAPE
-#define INCLUDED_PAIR_CLOSURE_ESCAPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -120,5 +119,3 @@ struct PairClosureEscape {
     return use_pair(std::move(p1));
   }();
 };
-
-#endif // INCLUDED_PAIR_CLOSURE_ESCAPE

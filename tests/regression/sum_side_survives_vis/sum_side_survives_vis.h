@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SUM_SIDE_SURVIVES_VIS
-#define INCLUDED_SUM_SIDE_SURVIVES_VIS
+#pragma once
 
 #include "obj.h"
 #include <crane_itree.h>
@@ -28,5 +27,3 @@ struct SumSideSurvivesVis {
   static inline const uint64_t right_side = first_side(tr());
   static inline const uint64_t right_vis = first_side(vr());
 };
-
-#endif // INCLUDED_SUM_SIDE_SURVIVES_VIS

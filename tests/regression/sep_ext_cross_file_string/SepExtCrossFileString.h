@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTCROSSFILESTRING
-#define INCLUDED_SEPEXTCROSSFILESTRING
+#pragma once
 
 #include <variant>
 
@@ -13,5 +12,3 @@ struct ShowNat {
   static String::String show(const Datatypes::Nat &n);
 };
 } // namespace SepExtCrossFileString
-
-#endif // INCLUDED_SEPEXTCROSSFILESTRING

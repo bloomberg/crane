@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOCAL_FIXPOINT
-#define INCLUDED_LOCAL_FIXPOINT
+#pragma once
 
 #include "fn.h"
 #include <utility>
@@ -35,5 +34,3 @@ struct Monadic {
     return a;
   }();
 };
-
-#endif // INCLUDED_LOCAL_FIXPOINT

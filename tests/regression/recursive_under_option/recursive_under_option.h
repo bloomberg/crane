@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECURSIVE_UNDER_OPTION
-#define INCLUDED_RECURSIVE_UNDER_OPTION
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -86,5 +85,3 @@ struct RecursiveUnderOption {
   static uint64_t depth(const c &x);
   static inline const uint64_t go = depth(build(UINT64_C(1000)));
 };
-
-#endif // INCLUDED_RECURSIVE_UNDER_OPTION

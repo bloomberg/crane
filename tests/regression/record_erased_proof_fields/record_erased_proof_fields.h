@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RECORD_ERASED_PROOF_FIELDS
-#define INCLUDED_RECORD_ERASED_PROOF_FIELDS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -272,5 +271,3 @@ struct RecordErasedProofFieldsCase {
   static inline const uint64_t sample_trace_checksum =
       trace_checksum_of(sample_primary_record, sample_erased_proof_record);
 };
-
-#endif // INCLUDED_RECORD_ERASED_PROOF_FIELDS

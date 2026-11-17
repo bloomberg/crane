@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CPS
-#define INCLUDED_CPS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -339,5 +338,3 @@ struct CPS {
                       List<uint64_t>::cons(UINT64_C(6),
                                            List<uint64_t>::nil())))))));
 };
-
-#endif // INCLUDED_CPS

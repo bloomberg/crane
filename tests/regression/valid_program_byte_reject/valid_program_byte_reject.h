@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALID_PROGRAM_BYTE_REJECT
-#define INCLUDED_VALID_PROGRAM_BYTE_REJECT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -181,5 +180,3 @@ struct ValidProgramByteReject {
   static inline const bool t = valid_program(List<uint64_t>::cons(
       UINT64_C(0), List<uint64_t>::cons(UINT64_C(256), List<uint64_t>::nil())));
 };
-
-#endif // INCLUDED_VALID_PROGRAM_BYTE_REJECT

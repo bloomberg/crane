@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIG_FUN_PARAM_RESULT_CAST
-#define INCLUDED_SIG_FUN_PARAM_RESULT_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -43,5 +42,3 @@ struct SigFunParamResultCast {
       Sig<crane::fn<uint64_t(uint64_t)>>::exist([](uint64_t n) { return n; });
   static inline const uint64_t go = apply_sig(idf, UINT64_C(2));
 };
-
-#endif // INCLUDED_SIG_FUN_PARAM_RESULT_CAST

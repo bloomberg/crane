@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FIX_YCOMB_BYREF
-#define INCLUDED_LET_FIX_YCOMB_BYREF
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -120,5 +119,3 @@ struct LetFixYcombByref {
               List<uint64_t>::cons(UINT64_C(30), List<uint64_t>::nil()))));
   static inline const List<uint64_t> test_countdown = countdown(UINT64_C(3));
 };
-
-#endif // INCLUDED_LET_FIX_YCOMB_BYREF

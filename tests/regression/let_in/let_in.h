@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_IN
-#define INCLUDED_LET_IN
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -91,5 +90,3 @@ struct LetIn {
   static inline const uint64_t test_destruct = let_destruct;
   static inline const uint64_t test_multi = multi_let;
 };
-
-#endif // INCLUDED_LET_IN

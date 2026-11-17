@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPTION_DEEP_DRAIN
-#define INCLUDED_OPTION_DEEP_DRAIN
+#pragma once
 
 #include "small_vector.h"
 #include <atomic>
@@ -86,5 +85,3 @@ struct OptionDeepDrain {
   static chain build(uint64_t n, chain acc);
   static uint64_t go(uint64_t n);
 };
-
-#endif // INCLUDED_OPTION_DEEP_DRAIN

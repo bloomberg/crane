@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OPTION
-#define INCLUDED_OPTION
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -42,5 +41,3 @@ struct Option {
   static inline const std::optional<uint64_t> test_pred_five =
       safe_pred(UINT64_C(5));
 };
-
-#endif // INCLUDED_OPTION

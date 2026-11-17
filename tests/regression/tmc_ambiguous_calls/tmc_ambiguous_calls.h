@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TMC_AMBIGUOUS_CALLS
-#define INCLUDED_TMC_AMBIGUOUS_CALLS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -933,5 +932,3 @@ struct TmcAmbiguousCalls {
     }
   };
 };
-
-#endif // INCLUDED_TMC_AMBIGUOUS_CALLS

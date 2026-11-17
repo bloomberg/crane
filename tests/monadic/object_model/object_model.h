@@ -1,5 +1,4 @@
-#ifndef INCLUDED_OBJECT_MODEL
-#define INCLUDED_OBJECT_MODEL
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -283,5 +282,3 @@ inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;
   return s;
 }
-
-#endif // INCLUDED_OBJECT_MODEL

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_INTERP_STATE_CASE_HANDLER
-#define INCLUDED_INTERP_STATE_CASE_HANDLER
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -1199,5 +1198,3 @@ Monads::template stateT<T3, _tcI0::template M, T4> State::interp_state(
                                 T4>(h0, x)(x0));
   };
 }
-
-#endif // INCLUDED_INTERP_STATE_CASE_HANDLER

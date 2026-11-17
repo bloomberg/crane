@@ -1,5 +1,4 @@
-#ifndef INCLUDED_THREAD_HANDLE_SEMANTICS
-#define INCLUDED_THREAD_HANDLE_SEMANTICS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -116,5 +115,3 @@ struct ThreadHandleSemantics {
     return UINT64_C(7);
   }();
 };
-
-#endif // INCLUDED_THREAD_HANDLE_SEMANTICS

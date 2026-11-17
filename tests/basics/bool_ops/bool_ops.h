@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOOL_OPS
-#define INCLUDED_BOOL_OPS
+#pragma once
 
 #include <cstdint>
 
@@ -32,5 +31,3 @@ struct BoolOps {
   static inline const bool test_eq_tf = nat_eq(UINT64_C(5), UINT64_C(3));
   static inline const bool test_lt = nat_lt(UINT64_C(3), UINT64_C(5));
 };
-
-#endif // INCLUDED_BOOL_OPS

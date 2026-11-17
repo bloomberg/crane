@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST
-#define INCLUDED_LIST
+#pragma once
 
 #include <variant>
 
@@ -15,5 +14,3 @@ template <typename T1> T1 hd(T1 default0, const Datatypes::List<T1> &l) {
   }
 }
 } // namespace List
-
-#endif // INCLUDED_LIST

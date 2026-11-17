@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EQ_ORD_SHOW
-#define INCLUDED_EQ_ORD_SHOW
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -143,5 +142,3 @@ const Ordering test_compare_eq =
 const Ordering test_compare_gt =
     compare<NatOrd, NatEq, uint64_t>(UINT64_C(20), UINT64_C(10));
 const std::string test_show = to_string<NatShow, uint64_t>(UINT64_C(42));
-
-#endif // INCLUDED_EQ_ORD_SHOW

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEPENDENT_IF_TYPE_BRANCHES
-#define INCLUDED_DEPENDENT_IF_TYPE_BRANCHES
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -20,5 +19,3 @@ struct DependentIfTypeBranches {
                choose(UINT64_C(1)))(crane::obj(UINT64_C(41)))) +
        crane::any_cast<uint64_t>(choose(UINT64_C(0))));
 };
-
-#endif // INCLUDED_DEPENDENT_IF_TYPE_BRANCHES

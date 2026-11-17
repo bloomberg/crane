@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FRAME_PUSH_MOVES_SCRUTINEE_FIELD
-#define INCLUDED_FRAME_PUSH_MOVES_SCRUTINEE_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -158,5 +157,3 @@ struct FramePushMovesScrutineeField {
               UINT64_C(8),
               List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()))));
 };
-
-#endif // INCLUDED_FRAME_PUSH_MOVES_SCRUTINEE_FIELD

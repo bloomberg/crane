@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_TYPE_ANY_CAST
-#define INCLUDED_ASSOC_TYPE_ANY_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -41,5 +40,3 @@ struct AssocTypeAnyCast {
 
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_ASSOC_TYPE_ANY_CAST

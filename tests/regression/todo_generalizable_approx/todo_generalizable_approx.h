@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TODO_GENERALIZABLE_APPROX
-#define INCLUDED_TODO_GENERALIZABLE_APPROX
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -17,5 +16,3 @@ struct TodoGeneralizableApprox {
       apply_twice([](uint64_t n) { return (n + UINT64_C(1)); }, UINT64_C(5));
   static inline const uint64_t test2 = double_then_add(UINT64_C(3));
 };
-
-#endif // INCLUDED_TODO_GENERALIZABLE_APPROX

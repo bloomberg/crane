@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE5
-#define INCLUDED_MEM_SAFETY_PROBE5
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -443,5 +442,3 @@ struct MemSafetyProbe5 {
     return sum_getters(std::move(getters), UINT64_C(0));
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE5

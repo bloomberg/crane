@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTCONCEPTINCLUDE
-#define INCLUDED_SEPEXTCONCEPTINCLUDE
+#pragma once
 
 #include <concepts>
 
@@ -32,5 +31,3 @@ template <DerivedType X> struct Use {
   }
 };
 } // namespace SepExtConceptInclude
-
-#endif // INCLUDED_SEPEXTCONCEPTINCLUDE

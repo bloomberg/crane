@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTDOUBLETYPENAME
-#define INCLUDED_SEPEXTDOUBLETYPENAME
+#pragma once
 
 #include <memory>
 #include <optional>
@@ -44,5 +43,3 @@ template <OrderedType X> struct FMapList {
   }
 };
 } // namespace SepExtDoubleTypename
-
-#endif // INCLUDED_SEPEXTDOUBLETYPENAME

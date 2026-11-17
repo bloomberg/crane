@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTSELFREFINDUCTIVE
-#define INCLUDED_SEPEXTSELFREFINDUCTIVE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -156,5 +155,3 @@ template <S X> struct HashTrie {
   }
 };
 } // namespace SepExtSelfRefInductive
-
-#endif // INCLUDED_SEPEXTSELFREFINDUCTIVE

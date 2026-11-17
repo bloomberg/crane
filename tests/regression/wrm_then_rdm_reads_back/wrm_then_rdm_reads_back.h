@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WRM_THEN_RDM_READS_BACK
-#define INCLUDED_WRM_THEN_RDM_READS_BACK
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -180,5 +179,3 @@ T1 ListDef::nth(uint64_t n, const List<T1> &l, T1 default0) {
     }
   }
 }
-
-#endif // INCLUDED_WRM_THEN_RDM_READS_BACK

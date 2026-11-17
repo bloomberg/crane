@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_PAIR_SHADOW
-#define INCLUDED_LET_PAIR_SHADOW
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -183,5 +182,3 @@ struct LetPairShadow {
       triple_call_destruct(UINT64_C(1), UINT64_C(2), UINT64_C(3), UINT64_C(4),
                            UINT64_C(5), UINT64_C(6));
 };
-
-#endif // INCLUDED_LET_PAIR_SHADOW

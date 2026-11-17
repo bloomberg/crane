@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_COMPOSE_ESCAPE
-#define INCLUDED_FIX_COMPOSE_ESCAPE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -49,5 +48,3 @@ struct FixComposeEscape {
     return compose_add(UINT64_C(100), std::move(inner), UINT64_C(7));
   }();
 };
-
-#endif // INCLUDED_FIX_COMPOSE_ESCAPE

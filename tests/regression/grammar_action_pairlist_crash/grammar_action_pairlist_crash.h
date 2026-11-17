@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GRAMMAR_ACTION_PAIRLIST_CRASH
-#define INCLUDED_GRAMMAR_ACTION_PAIRLIST_CRASH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -278,5 +277,3 @@ inline Val Val::vassoc(std::deque<std::pair<std::string, Val>> a0) {
 inline Val Val::vlist(std::deque<Val> a0) {
   return Val(VList{std::make_shared<std::deque<Val>>(std::move(a0))});
 }
-
-#endif // INCLUDED_GRAMMAR_ACTION_PAIRLIST_CRASH

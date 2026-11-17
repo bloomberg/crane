@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_CURRIED_PURE_ARITY
-#define INCLUDED_HKT_CURRIED_PURE_ARITY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -133,5 +132,3 @@ struct HktCurriedPureArity {
   static std::optional<Nat> run(const std::optional<Nat> &a,
                                 const std::optional<Nat> &b);
 };
-
-#endif // INCLUDED_HKT_CURRIED_PURE_ARITY

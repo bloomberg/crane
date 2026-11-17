@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HOLDER_INSIDE_HOLDER_BODY
-#define INCLUDED_HOLDER_INSIDE_HOLDER_BODY
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -251,5 +250,3 @@ struct HolderInsideHolderBody {
   static inline const Nat five =
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
-
-#endif // INCLUDED_HOLDER_INSIDE_HOLDER_BODY

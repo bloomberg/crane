@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DOUBLE_OPPOSITE_WITNESSES
-#define INCLUDED_DOUBLE_OPPOSITE_WITNESSES
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -303,5 +302,3 @@ struct DoubleOppositeWitnessesCase {
   static inline const uint64_t suspended_zero = crane::any_cast<uint64_t>(
       toy_prestable::suspension(toy_prestable::zero_object()));
 };
-
-#endif // INCLUDED_DOUBLE_OPPOSITE_WITNESSES

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ROCQ_BUG_13581
-#define INCLUDED_ROCQ_BUG_13581
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -327,5 +326,3 @@ struct RocqBug13581 {
 
   static inline const I<Nat> c = I<Nat>::d(J<Nat>::e(I<Nat>::c()));
 };
-
-#endif // INCLUDED_ROCQ_BUG_13581

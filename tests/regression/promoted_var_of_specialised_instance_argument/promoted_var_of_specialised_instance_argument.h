@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PROMOTED_VAR_OF_SPECIALISED_INSTANCE_ARGUMENT
-#define INCLUDED_PROMOTED_VAR_OF_SPECIALISED_INSTANCE_ARGUMENT
+#pragma once
 
 #include <atomic>
 #include <concepts>
@@ -192,5 +191,3 @@ return Nat::o();
 }
 }();
 };
-
-#endif // INCLUDED_PROMOTED_VAR_OF_SPECIALISED_INSTANCE_ARGUMENT

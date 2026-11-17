@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COERCIONS
-#define INCLUDED_COERCIONS
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -35,5 +34,3 @@ struct Coercions {
   static inline const uint64_t test_fun_coercion =
       double_transform.apply_transform(UINT64_C(5));
 };
-
-#endif // INCLUDED_COERCIONS

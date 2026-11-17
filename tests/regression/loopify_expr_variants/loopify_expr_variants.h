@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_EXPR_VARIANTS
-#define INCLUDED_LOOPIFY_EXPR_VARIANTS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -2138,5 +2137,3 @@ template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
   }
   return std::move(*_root);
 }
-
-#endif // INCLUDED_LOOPIFY_EXPR_VARIANTS

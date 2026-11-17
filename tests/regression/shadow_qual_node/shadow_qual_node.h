@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHADOW_QUAL_NODE
-#define INCLUDED_SHADOW_QUAL_NODE
+#pragma once
 
 #include <utility>
 
@@ -17,5 +16,3 @@ struct ShadowQualNode {
   static Node::Shadow id(Node::Shadow x);
   static inline const Node::Shadow t = id(Node::Shadow::TAG);
 };
-
-#endif // INCLUDED_SHADOW_QUAL_NODE

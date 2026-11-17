@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RANK2_CALLBACK_KEPT_AS_FN
-#define INCLUDED_RANK2_CALLBACK_KEPT_AS_FN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -129,5 +128,3 @@ struct Rank2CallbackKeptAsFn {
       true,
       List<bool>::cons(false, List<bool>::cons(true, List<bool>::nil()))));
 };
-
-#endif // INCLUDED_RANK2_CALLBACK_KEPT_AS_FN

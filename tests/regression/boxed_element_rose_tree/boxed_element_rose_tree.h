@@ -1,5 +1,4 @@
-#ifndef INCLUDED_BOXED_ELEMENT_ROSE_TREE
-#define INCLUDED_BOXED_ELEMENT_ROSE_TREE
+#pragma once
 
 #include <conslist.h>
 #include <cstdint>
@@ -93,5 +92,3 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
     return crane::cons(f(a), ListDef::template map<T1, T2>(f, l0));
   }
 }
-
-#endif // INCLUDED_BOXED_ELEMENT_ROSE_TREE

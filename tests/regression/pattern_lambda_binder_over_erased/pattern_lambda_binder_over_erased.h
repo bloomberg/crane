@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PATTERN_LAMBDA_BINDER_OVER_ERASED
-#define INCLUDED_PATTERN_LAMBDA_BINDER_OVER_ERASED
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -323,5 +322,3 @@ template <TFunctor _tcI0> struct TFunctor_phi {
         std::move(es0)));
   }
 };
-
-#endif // INCLUDED_PATTERN_LAMBDA_BINDER_OVER_ERASED

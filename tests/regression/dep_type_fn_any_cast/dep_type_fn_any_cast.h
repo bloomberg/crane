@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEP_TYPE_FN_ANY_CAST
-#define INCLUDED_DEP_TYPE_FN_ANY_CAST
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -141,5 +140,3 @@ struct DepTypeFnAnyCast {
   static dt mk(uint64_t n);
   static uint64_t run(uint64_t k);
 };
-
-#endif // INCLUDED_DEP_TYPE_FN_ANY_CAST

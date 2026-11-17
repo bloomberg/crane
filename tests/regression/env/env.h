@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ENV
-#define INCLUDED_ENV
+#pragma once
 
 #include <cstdlib>
 #include <memory>
@@ -15,5 +14,3 @@ struct Env {
                                                   std::string value);
   static std::optional<std::string> get_missing(std::string name);
 };
-
-#endif // INCLUDED_ENV

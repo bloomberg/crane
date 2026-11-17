@@ -1,5 +1,4 @@
-#ifndef INCLUDED_METHOD_PARTIAL_APP
-#define INCLUDED_METHOD_PARTIAL_APP
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -281,5 +280,3 @@ struct MethodPartialApp {
     }();
   }();
 };
-
-#endif // INCLUDED_METHOD_PARTIAL_APP

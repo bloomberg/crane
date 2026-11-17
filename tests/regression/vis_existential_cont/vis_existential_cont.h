@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VIS_EXISTENTIAL_CONT
-#define INCLUDED_VIS_EXISTENTIAL_CONT
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -287,5 +286,3 @@ struct VisExistentialCont {
     }
   }();
 };
-
-#endif // INCLUDED_VIS_EXISTENTIAL_CONT

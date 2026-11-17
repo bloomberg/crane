@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NONATOMIC_RC_THREAD_RACE
-#define INCLUDED_NONATOMIC_RC_THREAD_RACE
+#pragma once
 
 #include "crane_fn.h"
 #include "shared_block.h"
@@ -100,5 +99,3 @@ struct NonatomicRcThreadRace {
   static void test();
   static void run();
 };
-
-#endif // INCLUDED_NONATOMIC_RC_THREAD_RACE

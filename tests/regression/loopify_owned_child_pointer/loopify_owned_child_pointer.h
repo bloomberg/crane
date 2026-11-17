@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_OWNED_CHILD_POINTER
-#define INCLUDED_LOOPIFY_OWNED_CHILD_POINTER
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -504,5 +503,3 @@ struct LoopifyOwnedChildPointer {
           },
           UINT64_C(0));
 };
-
-#endif // INCLUDED_LOOPIFY_OWNED_CHILD_POINTER

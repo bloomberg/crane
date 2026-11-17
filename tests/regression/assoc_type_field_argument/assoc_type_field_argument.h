@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ASSOC_TYPE_FIELD_ARGUMENT
-#define INCLUDED_ASSOC_TYPE_FIELD_ARGUMENT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -198,5 +197,3 @@ struct AssocTypeFieldArgument {
           std::make_pair(UINT64_C(2), UINT64_C(2)),
           std::make_pair(UINT64_C(3), UINT64_C(3)))));
 };
-
-#endif // INCLUDED_ASSOC_TYPE_FIELD_ARGUMENT

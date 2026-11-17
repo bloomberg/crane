@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MULTI_ARG_FUNCTION_VALUE
-#define INCLUDED_MULTI_ARG_FUNCTION_VALUE
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -37,5 +36,3 @@ struct MultiArgFunctionValue {
     }
   }();
 };
-
-#endif // INCLUDED_MULTI_ARG_FUNCTION_VALUE

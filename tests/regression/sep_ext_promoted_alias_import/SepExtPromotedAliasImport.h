@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTPROMOTEDALIASIMPORT
-#define INCLUDED_SEPEXTPROMOTEDALIASIMPORT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -85,5 +84,3 @@ public:
   }
 };
 } // namespace SepExtPromotedAliasImport
-
-#endif // INCLUDED_SEPEXTPROMOTEDALIASIMPORT

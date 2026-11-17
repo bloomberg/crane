@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CROSS_FILE_MODULE_REF
-#define INCLUDED_CROSS_FILE_MODULE_REF
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -131,5 +130,3 @@ using M = F<Ord>;
 struct CrossFileModuleRef {
   static inline const Nat use = M::twice(bump).add(Lib2::bump0(Nat::o()));
 };
-
-#endif // INCLUDED_CROSS_FILE_MODULE_REF

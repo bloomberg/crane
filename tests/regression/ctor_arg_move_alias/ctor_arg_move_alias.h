@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CTOR_ARG_MOVE_ALIAS
-#define INCLUDED_CTOR_ARG_MOVE_ALIAS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -390,5 +389,3 @@ struct CtorArgMoveAlias {
   /// isum h = 2n+1; the result is 4n+2, i.e. 6 for n = 1.
   static uint64_t run(uint64_t n);
 };
-
-#endif // INCLUDED_CTOR_ARG_MOVE_ALIAS

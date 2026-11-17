@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WF_FIX_SIGMA_DOMAIN
-#define INCLUDED_WF_FIX_SIGMA_DOMAIN
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -200,5 +199,3 @@ struct WfFixSigmaDomain {
                                     crane::fn<uint64_t(uint64_t, uint64_t)>>);
   static inline const uint64_t result = sw(UINT64_C(3), UINT64_C(4));
 };
-
-#endif // INCLUDED_WF_FIX_SIGMA_DOMAIN

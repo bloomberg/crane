@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTION_VERNAC
-#define INCLUDED_FUNCTION_VERNAC
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -492,5 +491,3 @@ struct FunctionVernac {
                   UINT64_C(4),
                   List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil()))))));
 };
-
-#endif // INCLUDED_FUNCTION_VERNAC

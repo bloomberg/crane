@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RAM_BAD_STATE
-#define INCLUDED_RAM_BAD_STATE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -199,5 +198,3 @@ template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
     return List<T1>::cons(x, ListDef::template repeat<T1>(x, k));
   }
 }
-
-#endif // INCLUDED_RAM_BAD_STATE

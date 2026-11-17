@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NAME_CLASH_BINDING_REUSE
-#define INCLUDED_NAME_CLASH_BINDING_REUSE
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -110,5 +109,3 @@ struct NameClashBindingReuse {
     }
   };
 };
-
-#endif // INCLUDED_NAME_CLASH_BINDING_REUSE

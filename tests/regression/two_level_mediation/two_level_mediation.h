@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TWO_LEVEL_MEDIATION
-#define INCLUDED_TWO_LEVEL_MEDIATION
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -216,5 +215,3 @@ struct TwoLevelMediation {
 
   static inline const t empty = t::node(w<t>::mkw(UINT64_C(0), List<t>::nil()));
 };
-
-#endif // INCLUDED_TWO_LEVEL_MEDIATION

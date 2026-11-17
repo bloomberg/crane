@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MUTUAL_RECORD
-#define INCLUDED_MUTUAL_RECORD
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -205,5 +204,3 @@ struct MutualRecord {
   static inline const uint64_t test_dept_count = dept_count(test_dept);
   static inline const uint64_t test_dept_id = dept_id(test_dept);
 };
-
-#endif // INCLUDED_MUTUAL_RECORD

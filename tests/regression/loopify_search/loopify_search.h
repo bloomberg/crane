@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_SEARCH
-#define INCLUDED_LOOPIFY_SEARCH
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -622,5 +621,3 @@ struct LoopifySearch {
     return find_indices_aux(p, l, UINT64_C(0));
   }
 };
-
-#endif // INCLUDED_LOOPIFY_SEARCH

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SIGT_BRANCH_TYPE_MISMATCH
-#define INCLUDED_SIGT_BRANCH_TYPE_MISMATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -66,5 +65,3 @@ struct SigtBranchTypeMismatch {
     }
   }();
 };
-
-#endif // INCLUDED_SIGT_BRANCH_TYPE_MISMATCH

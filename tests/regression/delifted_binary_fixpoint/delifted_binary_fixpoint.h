@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DELIFTED_BINARY_FIXPOINT
-#define INCLUDED_DELIFTED_BINARY_FIXPOINT
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -94,5 +93,3 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 };
-
-#endif // INCLUDED_DELIFTED_BINARY_FIXPOINT

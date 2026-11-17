@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNDECLTVARTEMPLATE
-#define INCLUDED_UNDECLTVARTEMPLATE
+#pragma once
 
 #include <variant>
 
@@ -27,5 +26,3 @@ template <Ty X> struct Make {
   }
 };
 } // namespace UndeclTvarTemplate
-
-#endif // INCLUDED_UNDECLTVARTEMPLATE

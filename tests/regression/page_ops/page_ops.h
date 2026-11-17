@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PAGE_OPS
-#define INCLUDED_PAGE_OPS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -256,5 +255,3 @@ struct PageOps {
                      test_pc_inc2_wrap),
       test_disassemble_edge);
 };
-
-#endif // INCLUDED_PAGE_OPS

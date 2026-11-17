@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_LOOPIFIED_HELPER
-#define INCLUDED_REUSE_LOOPIFIED_HELPER
+#pragma once
 
 #include <cstdint>
 #include <utility>
@@ -130,5 +129,3 @@ struct ReuseLoopifiedHelper {
   static tree insert(uint64_t x, const tree &t);
   static uint64_t sum(const tree &t);
 };
-
-#endif // INCLUDED_REUSE_LOOPIFIED_HELPER

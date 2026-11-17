@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MATCH_FALLBACK_NAT
-#define INCLUDED_MATCH_FALLBACK_NAT
+#pragma once
 
 #include <cstdint>
 #include <type_traits>
@@ -60,5 +59,3 @@ struct MatchFallbackNat {
   static inline const uint64_t t = (fallback(maybe_nat::nonenat()) +
                                     fallback(maybe_nat::somenat(UINT64_C(7))));
 };
-
-#endif // INCLUDED_MATCH_FALLBACK_NAT

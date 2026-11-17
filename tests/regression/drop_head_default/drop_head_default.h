@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DROP_HEAD_DEFAULT
-#define INCLUDED_DROP_HEAD_DEFAULT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -116,5 +115,3 @@ struct DropHeadDefault {
           List<uint64_t>::cons(UINT64_C(9), List<uint64_t>::nil()))),
                                                    UINT64_C(1));
 };
-
-#endif // INCLUDED_DROP_HEAD_DEFAULT

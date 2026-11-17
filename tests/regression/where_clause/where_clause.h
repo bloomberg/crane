@@ -1,5 +1,4 @@
-#ifndef INCLUDED_WHERE_CLAUSE
-#define INCLUDED_WHERE_CLAUSE
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -972,5 +971,3 @@ struct WhereClause {
                  AExpr::anum(UINT64_C(10)), AExpr::anum(UINT64_C(20)))
           .aeval();
 };
-
-#endif // INCLUDED_WHERE_CLAUSE

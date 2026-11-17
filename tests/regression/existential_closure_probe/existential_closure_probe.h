@@ -1,5 +1,4 @@
-#ifndef INCLUDED_EXISTENTIAL_CLOSURE_PROBE
-#define INCLUDED_EXISTENTIAL_CLOSURE_PROBE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -59,5 +58,3 @@ struct ExistentialClosureProbe {
   static inline const uint64_t test3 =
       apply_packed(pack_composed(UINT64_C(3), UINT64_C(2)), UINT64_C(5));
 };
-
-#endif // INCLUDED_EXISTENTIAL_CLOSURE_PROBE

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LOOPIFY_ADVANCED_PATTERNS
-#define INCLUDED_LOOPIFY_ADVANCED_PATTERNS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -178,5 +177,3 @@ struct LoopifyAdvancedPatterns {
   static List<uint64_t> replace_at(uint64_t idx, uint64_t value,
                                    const List<uint64_t> &l);
 };
-
-#endif // INCLUDED_LOOPIFY_ADVANCED_PATTERNS

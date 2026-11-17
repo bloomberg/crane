@@ -1,7 +1,6 @@
 // Copyright 2026 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
-#ifndef CRANE_REAL_H
-#define CRANE_REAL_H
+#pragma once
 #include <cmath>
 #include <algorithm>
 #include <cstdint>
@@ -100,4 +99,3 @@ public:
   template <class T> static Real from_z(const T &z) { return Real(to_long_double(z)); }
   template <class T> static Real from_pos(const T &p) { return Real(to_long_double(p)); }
 };
-#endif

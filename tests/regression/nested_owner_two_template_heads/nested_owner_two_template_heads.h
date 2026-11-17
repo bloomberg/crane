@@ -1,5 +1,4 @@
-#ifndef INCLUDED_NESTED_OWNER_TWO_TEMPLATE_HEADS
-#define INCLUDED_NESTED_OWNER_TWO_TEMPLATE_HEADS
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -224,5 +223,3 @@ template <typename F0> Nat Bag::bag<A>::countIf(F0 &&p) const {
   }
   return _result;
 }
-
-#endif // INCLUDED_NESTED_OWNER_TWO_TEMPLATE_HEADS

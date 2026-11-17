@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LIST_OF_PROD_DEEP
-#define INCLUDED_LIST_OF_PROD_DEEP
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -238,5 +237,3 @@ struct ListOfProdDeep {
 
   static inline const t empty = t::node(lst<std::pair<t, uint64_t>>::lnil());
 };
-
-#endif // INCLUDED_LIST_OF_PROD_DEEP

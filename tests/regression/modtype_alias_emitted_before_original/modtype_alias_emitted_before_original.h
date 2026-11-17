@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODTYPE_ALIAS_EMITTED_BEFORE_ORIGINAL
-#define INCLUDED_MODTYPE_ALIAS_EMITTED_BEFORE_ORIGINAL
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -100,5 +99,3 @@ struct NatDec {
 using MN = Make<NatDec>;
 bool go(const Nat &x0_, const Nat &x1_);
 const Nat tag2 = tag;
-
-#endif // INCLUDED_MODTYPE_ALIAS_EMITTED_BEFORE_ORIGINAL

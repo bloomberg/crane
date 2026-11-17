@@ -1,5 +1,4 @@
-#ifndef INCLUDED_UNIT_VOID_EDGE
-#define INCLUDED_UNIT_VOID_EDGE
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -207,5 +206,3 @@ struct UnitVoidEdge {
   static inline const uint64_t test_double_match = double_match_unit();
   static inline const uint64_t test_take_tt = take_tt;
 };
-
-#endif // INCLUDED_UNIT_VOID_EDGE

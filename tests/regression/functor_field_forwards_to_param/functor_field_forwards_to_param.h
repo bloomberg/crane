@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FUNCTOR_FIELD_FORWARDS_TO_PARAM
-#define INCLUDED_FUNCTOR_FIELD_FORWARDS_TO_PARAM
+#pragma once
 
 #include <concepts>
 #include <utility>
@@ -34,5 +33,3 @@ struct FunctorFieldForwardsToParam {
   static bool go(bool x, bool y);
   static bool go2(bool x, bool y);
 };
-
-#endif // INCLUDED_FUNCTOR_FIELD_FORWARDS_TO_PARAM

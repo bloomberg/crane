@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITER_STEP_FUSION
-#define INCLUDED_ITER_STEP_FUSION
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -368,5 +367,3 @@ struct IterStepFusion {
         x0_);
   }
 };
-
-#endif // INCLUDED_ITER_STEP_FUSION

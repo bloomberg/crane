@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DEQUEELEMENTCAST
-#define INCLUDED_DEQUEELEMENTCAST
+#pragma once
 
 #include "obj.h"
 #include <cstdint>
@@ -87,5 +86,3 @@ struct DequeElementCast {
   }
 };
 } // namespace DequeElementCast
-
-#endif // INCLUDED_DEQUEELEMENTCAST

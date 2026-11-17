@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SHARED_VARIANT_PARAM_FIELD
-#define INCLUDED_SHARED_VARIANT_PARAM_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "crane_variant.h"
@@ -333,5 +332,3 @@ struct SharedVariantParamField {
           [](uint64_t _x0, uint64_t _x1) -> uint64_t { return (_x0 + _x1); },
           UINT64_C(0));
 };
-
-#endif // INCLUDED_SHARED_VARIANT_PARAM_FIELD

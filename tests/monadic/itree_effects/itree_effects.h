@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ITREE_EFFECTS
-#define INCLUDED_ITREE_EFFECTS
+#pragma once
 
 #include <cstdint>
 #include <cstdlib>
@@ -17,5 +16,3 @@ struct ITreeEffects {
   static void timed_greeting();
   static void echo_loop(uint64_t n);
 };
-
-#endif // INCLUDED_ITREE_EFFECTS

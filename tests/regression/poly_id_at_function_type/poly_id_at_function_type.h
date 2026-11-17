@@ -1,5 +1,4 @@
-#ifndef INCLUDED_POLY_ID_AT_FUNCTION_TYPE
-#define INCLUDED_POLY_ID_AT_FUNCTION_TYPE
+#pragma once
 
 #include "fn.h"
 #include "shared_block.h"
@@ -17,5 +16,3 @@ struct PolyIdAtFunctionType {
   static inline const uint64_t total =
       (apply_id(UINT64_C(4)) + apply_id2(UINT64_C(2)));
 };
-
-#endif // INCLUDED_POLY_ID_AT_FUNCTION_TYPE

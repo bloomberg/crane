@@ -1,5 +1,4 @@
-#ifndef INCLUDED_HKT_INSTANCE_ANY_MISMATCH
-#define INCLUDED_HKT_INSTANCE_ANY_MISMATCH
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -171,5 +170,3 @@ struct HktInstanceAnyMismatch {
       optMon::template ret<Nat>(Nat::s(Nat::o())),
       [](const Nat &n) { return optMon::template ret<Nat>(Nat::s(n)); });
 };
-
-#endif // INCLUDED_HKT_INSTANCE_ANY_MISMATCH

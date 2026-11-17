@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ALIAS_MINTED_BEFORE_ITS_BODY_TYPE
-#define INCLUDED_ALIAS_MINTED_BEFORE_ITS_BODY_TYPE
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -423,5 +422,3 @@ List<boxed<bool>> use_boxedlist(F0 &&f,
                                 const List<std::pair<Nat, Exp<Nat>>> &l) {
   return TFunctor_boxedlist::template tfmap<Nat, bool>(f, l);
 }
-
-#endif // INCLUDED_ALIAS_MINTED_BEFORE_ITS_BODY_TYPE

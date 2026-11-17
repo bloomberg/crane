@@ -1,5 +1,4 @@
-#ifndef INCLUDED_TYPE_ONLY_GLOBAL_AS_RANK2_ARGUMENT
-#define INCLUDED_TYPE_ONLY_GLOBAL_AS_RANK2_ARGUMENT
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -126,5 +125,3 @@ struct TypeOnlyGlobalAsRank2Argument {
   static inline const uint64_t result = len<bool>(
       List<bool>::cons(true, List<bool>::cons(true, List<bool>::nil())));
 };
-
-#endif // INCLUDED_TYPE_ONLY_GLOBAL_AS_RANK2_ARGUMENT

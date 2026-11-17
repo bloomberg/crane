@@ -1,5 +1,4 @@
-#ifndef INCLUDED_READ_VARIABLE_CAPTURE
-#define INCLUDED_READ_VARIABLE_CAPTURE
+#pragma once
 
 #include <filesystem>
 #include <fstream>
@@ -19,5 +18,3 @@ struct ReadVariableCapture {
   /// This test is for read specifically.
   static std::string read_and_check(std::string path);
 };
-
-#endif // INCLUDED_READ_VARIABLE_CAPTURE

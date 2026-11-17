@@ -1,5 +1,4 @@
-#ifndef INCLUDED_REUSE_NONATOMIC_CONST_V_MUT
-#define INCLUDED_REUSE_NONATOMIC_CONST_V_MUT
+#pragma once
 
 #include <cstdint>
 #include <memory>
@@ -265,5 +264,3 @@ struct ReuseNonatomicConstVMut {
     }();
   }();
 };
-
-#endif // INCLUDED_REUSE_NONATOMIC_CONST_V_MUT

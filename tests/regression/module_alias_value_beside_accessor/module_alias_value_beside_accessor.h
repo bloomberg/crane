@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MODULE_ALIAS_VALUE_BESIDE_ACCESSOR
-#define INCLUDED_MODULE_ALIAS_VALUE_BESIDE_ACCESSOR
+#pragma once
 
 #include <concepts>
 #include <cstdint>
@@ -54,5 +53,3 @@ struct ModuleAliasValueBesideAccessor {
   static inline const uint64_t from_alias = FN::get();
   static inline const uint64_t from_accessor = PN::z();
 };
-
-#endif // INCLUDED_MODULE_ALIAS_VALUE_BESIDE_ACCESSOR

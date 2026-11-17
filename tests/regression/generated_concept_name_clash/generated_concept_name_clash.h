@@ -1,5 +1,4 @@
-#ifndef INCLUDED_GENERATED_CONCEPT_NAME_CLASH
-#define INCLUDED_GENERATED_CONCEPT_NAME_CLASH
+#pragma once
 
 struct MapsTo {
   /// Every generated header currently declares a global C++ concept named
@@ -10,5 +9,3 @@ struct MapsTo {
   /// same namespace.
   static constexpr bool sample = true;
 };
-
-#endif // INCLUDED_GENERATED_CONCEPT_NAME_CLASH

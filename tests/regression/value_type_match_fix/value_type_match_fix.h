@@ -1,5 +1,4 @@
-#ifndef INCLUDED_VALUE_TYPE_MATCH_FIX
-#define INCLUDED_VALUE_TYPE_MATCH_FIX
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -89,5 +88,3 @@ struct ValueTypeMatchFix {
     }
   }();
 };
-
-#endif // INCLUDED_VALUE_TYPE_MATCH_FIX

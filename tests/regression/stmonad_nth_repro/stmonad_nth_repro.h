@@ -1,5 +1,4 @@
-#ifndef INCLUDED_STMONAD_NTH_REPRO
-#define INCLUDED_STMONAD_NTH_REPRO
+#pragma once
 
 #include "obj.h"
 #include <concepts>
@@ -54,5 +53,3 @@ template <typename I> struct MyEvent {
 };
 
 uint64_t newOnly();
-
-#endif // INCLUDED_STMONAD_NTH_REPRO

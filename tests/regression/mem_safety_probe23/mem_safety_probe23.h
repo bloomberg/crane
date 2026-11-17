@@ -1,5 +1,4 @@
-#ifndef INCLUDED_MEM_SAFETY_PROBE23
-#define INCLUDED_MEM_SAFETY_PROBE23
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -249,5 +248,3 @@ struct MemSafetyProbe23 {
     return (tree_sum(std::move(r).first) + std::move(r).second);
   }();
 };
-
-#endif // INCLUDED_MEM_SAFETY_PROBE23

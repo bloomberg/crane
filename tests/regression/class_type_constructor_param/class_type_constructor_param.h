@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM
-#define INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM
+#pragma once
 
 #include "fn.h"
 #include "obj.h"
@@ -66,5 +65,3 @@ struct ClassTypeConstructorParam {
           [](uint64_t n) { return (n + UINT64_C(1)); },
           IdC::template cwrap<uint64_t>(UINT64_C(4))));
 };
-
-#endif // INCLUDED_CLASS_TYPE_CONSTRUCTOR_PARAM

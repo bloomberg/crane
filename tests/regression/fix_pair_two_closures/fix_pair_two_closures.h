@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FIX_PAIR_TWO_CLOSURES
-#define INCLUDED_FIX_PAIR_TWO_CLOSURES
+#pragma once
 
 #include "fn.h"
 #include <cstdint>
@@ -32,5 +31,3 @@ struct FixPairTwoClosures {
     return (f(UINT64_C(0)) + g(UINT64_C(0)));
   }();
 };
-
-#endif // INCLUDED_FIX_PAIR_TWO_CLOSURES

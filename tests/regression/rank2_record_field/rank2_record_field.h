@@ -1,5 +1,4 @@
-#ifndef INCLUDED_RANK2_RECORD_FIELD
-#define INCLUDED_RANK2_RECORD_FIELD
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -155,5 +154,3 @@ struct Rank2RecordField {
                    List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))) +
        sizer<bool>(pl, List<bool>::cons(true, List<bool>::nil())));
 };
-
-#endif // INCLUDED_RANK2_RECORD_FIELD

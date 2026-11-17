@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLASS_AS_VALUE_ARG
-#define INCLUDED_CLASS_AS_VALUE_ARG
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -124,5 +123,3 @@ struct ClassAsValueArg {
     return Shw_memory_bit::template shw<_tcI0>(b);
   }
 };
-
-#endif // INCLUDED_CLASS_AS_VALUE_ARG

@@ -1,5 +1,4 @@
-#ifndef INCLUDED_DECIMAL
-#define INCLUDED_DECIMAL
+#pragma once
 
 #include "crane_fn.h"
 #include "small_vector.h"
@@ -1099,5 +1098,3 @@ public:
   }
 };
 } // namespace Decimal
-
-#endif // INCLUDED_DECIMAL

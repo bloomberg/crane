@@ -1,5 +1,4 @@
-#ifndef INCLUDED_LET_FIX_MOVE_ACC
-#define INCLUDED_LET_FIX_MOVE_ACC
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -147,5 +146,3 @@ struct LetFixMoveAcc {
           List<uint64_t>::cons(UINT64_C(20), List<uint64_t>::nil())),
                      UINT64_C(30));
 };
-
-#endif // INCLUDED_LET_FIX_MOVE_ACC

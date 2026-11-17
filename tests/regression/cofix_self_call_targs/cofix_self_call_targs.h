@@ -1,5 +1,4 @@
-#ifndef INCLUDED_COFIX_SELF_CALL_TARGS
-#define INCLUDED_COFIX_SELF_CALL_TARGS
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -311,5 +310,3 @@ struct CofixSelfCallTargs {
     }
   }();
 };
-
-#endif // INCLUDED_COFIX_SELF_CALL_TARGS

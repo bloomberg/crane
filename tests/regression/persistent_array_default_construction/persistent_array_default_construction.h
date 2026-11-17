@@ -1,5 +1,4 @@
-#ifndef INCLUDED_PERSISTENT_ARRAY_DEFAULT_CONSTRUCTION
-#define INCLUDED_PERSISTENT_ARRAY_DEFAULT_CONSTRUCTION
+#pragma once
 
 #include <cstdint>
 #include <persistent_array.h>
@@ -69,5 +68,3 @@ struct PersistentArrayDefaultConstruction {
       (get0(t::t0(persistent_array<uint64_t>(INT64_C(2), UINT64_C(7)))) +
        get0(t::e()));
 };
-
-#endif // INCLUDED_PERSISTENT_ARRAY_DEFAULT_CONSTRUCTION

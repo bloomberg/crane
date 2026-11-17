@@ -1,5 +1,4 @@
-#ifndef INCLUDED_ABSURD_UNDER_PROOF_BINDER
-#define INCLUDED_ABSURD_UNDER_PROOF_BINDER
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -102,5 +101,3 @@ struct AbsurdUnderProofBinder {
   static inline const uint64_t result = hd(List<uint64_t>::cons(
       UINT64_C(4), List<uint64_t>::cons(UINT64_C(5), List<uint64_t>::nil())));
 };
-
-#endif // INCLUDED_ABSURD_UNDER_PROOF_BINDER

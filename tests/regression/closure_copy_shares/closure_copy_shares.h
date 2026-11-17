@@ -1,5 +1,4 @@
-#ifndef INCLUDED_CLOSURE_COPY_SHARES
-#define INCLUDED_CLOSURE_COPY_SHARES
+#pragma once
 
 #include "crane_fn.h"
 #include "fn.h"
@@ -150,5 +149,3 @@ struct ClosureCopyShares {
     }();
   }();
 };
-
-#endif // INCLUDED_CLOSURE_COPY_SHARES

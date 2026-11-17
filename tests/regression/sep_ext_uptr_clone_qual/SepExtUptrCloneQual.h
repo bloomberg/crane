@@ -1,5 +1,4 @@
-#ifndef INCLUDED_SEPEXTUPTRCLONEQUAL
-#define INCLUDED_SEPEXTUPTRCLONEQUAL
+#pragma once
 
 #include "crane_fn.h"
 #include "obj.h"
@@ -112,5 +111,3 @@ template <OrderedType X> struct FMap {
   }
 };
 } // namespace SepExtUptrCloneQual
-
-#endif // INCLUDED_SEPEXTUPTRCLONEQUAL

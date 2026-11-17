@@ -1,5 +1,4 @@
-#ifndef INCLUDED_FOLDED_INDUCTIVE_NOT_CAPITALIZED
-#define INCLUDED_FOLDED_INDUCTIVE_NOT_CAPITALIZED
+#pragma once
 
 #include "crane_fn.h"
 #include <atomic>
@@ -195,5 +194,3 @@ struct FoldedInductiveNotCapitalized {
   static Helper::Dval go(const Nat &x0_);
   static inline const N m = Helper::two;
 };
-
-#endif // INCLUDED_FOLDED_INDUCTIVE_NOT_CAPITALIZED
