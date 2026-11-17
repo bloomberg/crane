@@ -454,16 +454,26 @@ let apply_at_site (site : Cpp_ir.Types.arrow_site) (f : Cpp_ir.Lowered.Expr.t) a
 (** [stored_adapter params e]: the lambda taking [params], in source order,
     that returns [e] and holds its captures by copy, its return type
     deduced. *)
-let stored_adapter params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+let stored_adapter ?(moved = []) params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
   Lambda
     { params;
       type_params = [];
       return_type = None;
       body = [Return (Some e)];
       capture = Stored;
-      moved = [];
+      moved;
       binders = [];
       fixpoint = None }
+
+(** Whether a parameter of type [ty] an adapter takes is worth moving into
+    a closure capture rather than copying: one it owns, by value, whose copy
+    costs something ({!Ownership_ir.Region.worth_moving_cpp}).  A reference
+    ([auto &&] may name the caller's lvalue) and a [const] value are
+    copied. *)
+let adapter_param_moves (ty : Cpp_ir.Lowered.Type.t) =
+  match ty with
+  | Reference _ | Const _ -> false
+  | _ -> Ownership_ir.Region.worth_moving_cpp ty
 
 (** Make a global named in value position into an expression a caller can
     invoke, by eta-expanding it into a lambda that calls it.
@@ -541,18 +551,21 @@ let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option)
     let params = adapter_params ~prefix:"_ec" decl_dom in
     let call = apply_at_site callee_site cglob (List.map adapter_arg params) in
     (* One lambda per group of arguments the slot takes at a time, as deep as
-       it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C]. *)
-    let rec nest params (expected : Cpp_ir.Lowered.Type.t option) =
+       it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C].  A
+       group's lambda does nothing but return the next one, so the next one
+       takes the parameters it owns by move ({!adapter_param_moves}); deeper
+       lambdas copy them, out of a capture they cannot move from. *)
+    let rec nest ~moved params (expected : Cpp_ir.Lowered.Type.t option) =
       match expected with
-      | Some (Const t | Reference (_, t)) -> nest params (Some t)
+      | Some (Const t | Reference (_, t)) -> nest ~moved params (Some t)
       | Some (Function (dom, cod)) when dom <> [] && List.length params > List.length dom ->
         let k = List.length dom in
-        stored_adapter
-          (List.filteri (fun i _ -> i < k) params)
-          (nest (List.filteri (fun i _ -> i >= k) params) (Some cod))
-      | _ -> stored_adapter params call
+        let outer = List.filteri (fun i _ -> i < k) params in
+        let owned = List.filter_map (fun (ty, id) -> if adapter_param_moves ty then id else None) outer in
+        stored_adapter ~moved outer (nest ~moved:owned (List.filteri (fun i _ -> i >= k) params) (Some cod))
+      | _ -> stored_adapter ~moved params call
     in
-    nest params (if n_outer < List.length params then expected_ty else None)
+    nest ~moved:[] params (if n_outer < List.length params then expected_ty else None)
 
 (** The mirror of {!recover_carrier_result}: a value reaching a parameter the
     callee declared as a carrier applied to a type variable -- [M A], a
