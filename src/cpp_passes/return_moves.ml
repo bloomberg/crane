@@ -34,7 +34,7 @@ let drop_return_moves d =
      fragment declares, is taken to be moved on return: its move is dropped. *)
   let held env x = try IdMap.find x env with Not_found -> Moved_on_return in
   let by_type ty = if is_borrowed ty then Copied_on_return else Moved_on_return in
-  let rec stmts env = function
+  let[@tail_mod_cons] rec stmts env = function
     | [] -> []
     | s :: rest -> stmt env s :: stmts (declare env s) rest
   and declare env : stmt -> _ = function

@@ -1650,7 +1650,7 @@ let adjust_frame_push_args ?(frame_sptr = []) frame_pointer_safe stmts =
         | _ -> arg )
       | _ -> arg
     in
-    let rec on_stmts env = function
+    let[@tail_mod_cons] rec on_stmts env = function
       | [] -> []
       | s :: rest ->
         let s' = on_stmt env s in
