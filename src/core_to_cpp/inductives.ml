@@ -1684,6 +1684,15 @@ let gen_ind_header_v2 cx
          types.  Returns [[]] for non-recursive or coinductive types, and for
          a shared variant, whose blocks the runtime already frees iteratively
          (shared_block.h's [free_block]). *)
+      (* A destructor walking its children with [use_count] tests says what
+         it is for in one line. *)
+      let iterative_teardown body =
+        F.Destructor
+          (S.Comment
+             "Release the children this node alone owns in a loop, not recursively, so a deep value cannot overflow \
+              the stack."
+          :: body)
+      in
       let iterative_destructor =
         (* Recursive fields are ordinary smart pointers even for arena-backed
            values (the region only owns the payload memory; per-node
@@ -2481,7 +2490,7 @@ let gen_ind_header_v2 cx
                       B.call (E.Local next_id)
                         [E.Access_call (Arrow, E.Local _cur_id, Id.of_string "v_mut", [])]) ]) ]
             in
-            [(F.Destructor body, V.Public, Sec.Manipulators)]
+            [(iterative_teardown body, V.Public, Sec.Manipulators)]
           | _ when not has_mutual ->
             (* Self-recursive only: stack holds shared_ptr<Self> directly *)
             let stack_elem_ty = T.Shared_pointer self_ty in
@@ -2587,7 +2596,7 @@ let gen_ind_header_v2 cx
                   ])
               ]
             in
-            [(F.Destructor body, V.Public, Sec.Manipulators)]
+            [(iterative_teardown body, V.Public, Sec.Manipulators)]
           | _, _ ->
             (* Mutual recursion: stack holds std::any to accommodate
                shared_ptrs of different types in the mutual group *)
@@ -2677,7 +2686,7 @@ let gen_ind_header_v2 cx
                   :: loop_body_stmts)
               ]
             in
-            [(F.Destructor body, V.Public, Sec.Manipulators)]
+            [(iterative_teardown body, V.Public, Sec.Manipulators)]
       in
 
       (* For coinductive types, add public constructor accepting

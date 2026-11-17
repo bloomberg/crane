@@ -957,7 +957,8 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
       in
       let normal : Cpp_ir.Lowered.Stmt.t list = [Match (scrut, branches, wildcard)] in
       Cpp_ir.Build.iife iife_ret_opt
-        [ If
+        [ Comment "Reuse the matched cell in place when this is its only owner; otherwise rebuild.";
+          If
             { condition = index_cond;
               then_ = [If {condition = use_count_cond; then_ = reuse_body; else_ = normal}];
               else_ = normal } ]

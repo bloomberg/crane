@@ -1104,7 +1104,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~v
      Both use [while (true)] for the loop condition. *)
   let shadow_decls, body'' = drop_unread_shadows shadow_decls body'' in
   let body'' = strip_unnecessary_blocks body'' in
-  shadow_decls
+  (Comment "Loop replaces the tail recursion: each recursive call updates the loop variables." :: shadow_decls)
   @ [While (Literal (Bool true), body'')]
   @ (if is_void then [Return None] else [])
 

@@ -670,6 +670,8 @@ and Stmt : sig
         -> 'p t  (** [if (T x = init) ... else ...] *)
     | Foreign_text : string -> 'p t
     | Comment : string -> 'p t
+        (** [// text] on a line of its own: what the statements after it do
+            that their C++ does not say, decided where that is known *)
     | Local_struct : Id.t * (Id.t * 'p Type.t) list -> 'p t
         (** a struct of data members declared in a body *)
     | Local_type_alias : Id.t * 'p Type.t -> 'p t

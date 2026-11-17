@@ -88,7 +88,8 @@ let rec hoist_body (body : stmt list) : stmt list =
   let body' = List.map fs body in
   if !hoisted = [] then body
   else
-    List.rev_map
+    (Comment "Built on the first call and immortal: every thread reads it without touching its counts." : stmt)
+    :: List.rev_map
       (fun (init, id) : stmt ->
         Bind_variable
           ( id,

@@ -1018,7 +1018,14 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
   in
   let body'' = unmove_invariant_on_continue invariant_params body'' in
   let body'' = return_from_switches ret_expr body'' in
-  root_decls
+  (* A loop that builds its result front to back through a pointer into the
+     last cell is what a reader of the C++ cannot tell from its types. *)
+  let comment =
+    Comment
+      ( "Builds the result front to back: _write points at the empty tail the next cell fills."
+      ^ if cursor_used then " The input's cells are reused in place while uniquely owned." else "" )
+  in
+  (comment :: root_decls)
   @ cursor_decls
   @ shadow_decls
   @ [

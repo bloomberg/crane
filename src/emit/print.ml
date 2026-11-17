@@ -1444,7 +1444,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
       writes_standard "vector";
     str code
   | Comment text ->
-    str ("/// " ^ text)
+    str ("// " ^ text)
   | Local_struct (name, fields) ->
     str "struct "
     ++ Id.print name
@@ -2655,7 +2655,9 @@ and pp_leaf_decl ctx env (d : decl) =
           then str "constexpr "
           else mt ()
         in
-        (params_s, qualifier, str "{" ++ body_s ++ str "}")
+        (* The body starts a line: a comment opening it is the body's, not
+           a trailing comment on the line of the brace ({!Layout}). *)
+        (params_s, qualifier, str "{" ++ fnl () ++ body_s ++ str "}")
       | Declaration params ->
         let params_s =
           pp_list

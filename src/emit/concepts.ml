@@ -312,8 +312,14 @@ let pp_refinements ctx refinements =
 let pp_modtype_concept cx ctx ~names ~params path (c : Cpp_ast.Modtype_concept.t) =
   let here key = Base.Cpp_name.pp (name_in ctx names [] key) in
   let name = here (Modtype_concept_declared path) in
+  (* The module type's Rocq doc comment, which the concept stands for. *)
+  let doc =
+    match path with
+    | Names.MPdot (_, l) -> Base.Doc_comments.pp (Names.Label.to_string l)
+    | Names.MPfile _ | Names.MPbound _ -> mt ()
+  in
   let head =
-    str ("template<typename " ^ Core_plan.Structure.concept_self_param)
+    doc ++ str ("template<typename " ^ Core_plan.Structure.concept_self_param)
     ++ prlist (fun p -> str ", typename " ++ here (Module p)) params
     ++ str ">" ++ fnl ()
   in
