@@ -16,6 +16,9 @@ Import ListNotations.
     - [u]: same at a top-level constant: Rocq [12], C++ [1].
     - [v]: a projection of a match on a [fold_left] pair: [-> pt] on a lambda
       returning [px]; does not compile.
+    - [w]: a match whose branches are all lambdas, applied to [k]: the
+      lambdas move out of the match and the branches kept their arrow type,
+      [-> crane::fn<uint64_t(uint64_t)>]; does not compile.
 
     The wrong values have no diagnostic (with a literal left operand clang
     flags [g] via -Wtautological-constant-out-of-range-compare). *)
@@ -41,6 +44,11 @@ Definition v : nat :=
   px (match fold_left (fun (acc : option nat * pt) (e : list bool) => (@None nat, mkpt 0 true))
               (@nil (list bool)) (@None nat, mkpt 0 true)
       with (p, q) => mkpt 3 true end).
+
+(** A match applied to an argument: the argument is pushed into the
+    branches, which then return what their functions did. *)
+Definition w (k n : nat) : bool :=
+  Nat.leb 3 ((match n with 0 => fun x : nat => x | S _ => fun x => x + 9 end) k).
 
 End CaseOfCaseResultType.
 

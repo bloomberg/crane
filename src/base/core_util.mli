@@ -635,6 +635,11 @@ val ast_glob_subst : Core.Expr.extracted Core.Ref.User.Map.t -> Core.Expr.extrac
 (** Remove unused variable bindings from a term. *)
 val dump_unused_vars : 'p Core.Expr.at -> 'p Core.Expr.at
 
+(** [branch_type_applied n ty] is the result type of a match branch whose
+    value, of type [ty], has been applied to [n] arguments: [ty] with [n]
+    arrows taken off, or [ty] itself when it has fewer. *)
+val branch_type_applied : int -> 'p Core.Type.at -> 'p Core.Type.at
+
 (** Normalize a Core term by beta-reduction and simplification. *)
 val normalize : 'p Core.Expr.at -> 'p Core.Expr.at
 

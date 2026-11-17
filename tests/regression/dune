@@ -14441,3 +14441,14 @@
   (alias runtest)
   (deps loopify_class_method_frame_save.t.exe)
   (action (run ./loopify_class_method_frame_save.t.exe))))
+
+(subdir case_of_case_result_type
+ (rule
+  (targets case_of_case_result_type.t.exe)
+  (deps CaseOfCaseResultType.vo case_of_case_result_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_of_case_result_type.t.exe case_of_case_result_type.t.cpp case_of_case_result_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_of_case_result_type.t.exe)
+  (action (run ./case_of_case_result_type.t.exe))))

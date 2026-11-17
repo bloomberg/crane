@@ -52,6 +52,31 @@ let body_of defs (use : Core.Global_use.extracted) =
     | Some (Fix fd) -> at fd.body fd.type_
     | None -> None
 
+(* The type of the call [use] applied to [nargs] arguments, read at the type
+   arguments the use wrote; [None] where {!body_of} would decline, or the
+   global's type has fewer arrows. *)
+let call_type defs (use : Core.Global_use.extracted) nargs =
+  let ty =
+    match Core.Ref.User.Map.find_opt use.callee defs with
+    | Some (Term (_, ty)) -> Some ty
+    | Some (Fix fd) -> Some fd.type_
+    | None -> None
+  in
+  Option.bind ty (fun ty ->
+      let n = Base.Core_util.type_maxvar ty in
+      if n <> 0 && not (Base.Core_util.written_covers use n) then None
+      else
+        let ty =
+          if n = 0 then ty else Base.Core_util.instantiate_written ~reader:"core_specialize.call_type" use ty
+        in
+        let rec drop k t =
+          if k = 0 then Some t
+          else match Base.Core_util.core_resolve t with
+            | Core.Type.Arrow {result = r; _} -> drop (k - 1) r
+            | _ -> None
+        in
+        drop nargs ty)
+
 (** {1 Terms} *)
 
 (* A term whose evaluation computes nothing, and so may be duplicated or
@@ -200,6 +225,11 @@ and push defs left shrunk fuel use args =
   | None -> None
   | Some (before, ty, s, brs, occ, after) ->
     let any = ref false in
+    (* Each branch now ends in the call, so it has the call's type, not the
+       argument's; where that type is not known the push is declined. *)
+    match call_type defs use (List.length before + 1 + List.length after) with
+    | None -> None
+    | Some rty ->
     let brs' =
       Array.map
         (fun ({Core.Match.Branch.binders = ids; result_type = bty; body = b; _} as br) ->
@@ -209,7 +239,7 @@ and push defs left shrunk fuel use args =
           let call' = settle defs left fuel call in
           if Base.Core_util.ast_size call' < Base.Core_util.ast_size call then (
             any := true;
-            {br with Core.Match.Branch.body = call'} )
+            {br with Core.Match.Branch.body = call'; result_type = rty} )
           else
             (* Unreduced, the branch's value is still what it was -- the
                result of a match, typed by the branch -- and is passed by
@@ -226,7 +256,8 @@ and push defs left shrunk fuel use args =
                       Core.Expr.Apply
                         { callee = Core.Expr.Global use;
                           arguments = lift1 before @ [Core.Expr.fresh_rel 1] @ lift1 after };
-                    occurrence = Core.Occurrence.fresh () } } )
+                    occurrence = Core.Occurrence.fresh () };
+              result_type = rty } )
         brs
     in
     if !any then (

@@ -126,12 +126,15 @@ public:
 /// - u: same at a top-level constant: Rocq 12, C++ 1.
 /// - v: a projection of a match on a fold_left pair: -> pt on a lambda
 /// returning px; does not compile.
+/// - w: a match whose branches are all lambdas, applied to k: the
+/// lambdas move out of the match and the branches kept their arrow type,
+/// -> crane::fn<uint64_t(uint64_t)>; does not compile.
 ///
 /// The wrong values have no diagnostic (with a literal left operand clang
 /// flags g via -Wtautological-constant-out-of-range-compare).
 struct CaseOfCaseResultType {
   static uint64_t h(uint64_t n);
-  static inline const uint64_t t = []() -> List<uint64_t> {
+  static inline const uint64_t t = []() -> uint64_t {
     auto _cs = []() {
       List<bool> m = List<bool>::nil();
       uint64_t acc = UINT64_C(0);
@@ -149,7 +152,7 @@ struct CaseOfCaseResultType {
     }
   }();
   static bool g(uint64_t k, uint64_t n);
-  static inline const uint64_t u = []() -> bool {
+  static inline const uint64_t u = []() -> uint64_t {
     auto _cs = h(UINT64_C(0));
     if (_cs <= 0) {
       return h(UINT64_C(5));
@@ -164,7 +167,7 @@ struct CaseOfCaseResultType {
     bool py;
   };
 
-  static inline const uint64_t v = []() -> pt {
+  static inline const uint64_t v = []() -> uint64_t {
     auto [_x, _x0] = List<List<bool>>::nil().template fold_left<
         std::pair<std::optional<uint64_t>, pt>>(
         [](std::pair<std::optional<uint64_t>, pt>,
@@ -175,4 +178,7 @@ struct CaseOfCaseResultType {
         std::make_pair(std::optional<uint64_t>(), pt{UINT64_C(0), true}));
     return UINT64_C(3);
   }();
+  /// A match applied to an argument: the argument is pushed into the
+  /// branches, which then return what their functions did.
+  static bool w(uint64_t k, uint64_t n);
 };

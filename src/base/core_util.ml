@@ -2367,8 +2367,22 @@ let rec only_throws = function
     only_throws a
   | _ -> false
 
+(** [branch_type_applied n ty] is the result type of a match branch whose
+    value, of type [ty], has been applied to [n] arguments or stripped of [n]
+    lambdas: [ty] with [n] arrows taken off.  [ty] itself when it has fewer,
+    which leaves it no less accurate than it was. *)
+let branch_type_applied n ty =
+  let rec go n ty =
+    if n = 0 then Some ty
+    else match core_resolve ty with
+      | Core.Type.Arrow {result = r; _} -> go (n - 1) r
+      | _ -> None
+  in
+  match go n ty with Some r -> r | None -> ty
+
 (** Permutes a case expression with surrounding function applications when all
-    branches are functions. *)
+    branches are functions.  The lambdas leave the branches, so each branch's
+    result type loses their arrows. *)
 let permut_case_fun br acc =
   let nb = ref max_int in
   Array.iter
@@ -2383,7 +2397,8 @@ let permut_case_fun br acc =
     let br = Array.copy br in
     let ids = ref [] in
     for i = 0 to Array.length br - 1 do
-      let {Core.Match.Branch.binders = l; body = t; _} as b = br.(i) in
+      let {Core.Match.Branch.binders = l; body = t; result_type = rty; _} as b = br.(i) in
+      let b = {b with Core.Match.Branch.result_type = branch_type_applied !nb rty} in
       let local_nb = nb_lams t in
       if local_nb < !nb then (* t = Core.Expr.Runtime_error ... *)
         br.(i) <- {b with Core.Match.Branch.body = remove_n_lams local_nb t}
@@ -2426,8 +2441,12 @@ let rec iota_red i lift br ((typ, r, a, occ) as cons) =
   | _ -> raise Impossible (* TODO: handle some more cases *)
 
 (** Performs generalized iota-reduction by traversing matches in the scrutinee.
-*)
+    Each inner match's branches now end in an outer branch, so they take the
+    outer match's result type: the inner one described the scrutinee they
+    used to compute. *)
 let iota_gen br hd =
+  if Array.length br = 0 then raise Impossible;
+  let rty = br.(0).Core.Match.Branch.result_type in
   let rec iota k = function
     | Core.Expr.Construct {result_type = typ; constructor = r; arguments = a; occurrence = occ} ->
       iota_red 0 k br (typ, r, a, occ)
@@ -2435,7 +2454,8 @@ let iota_gen br hd =
       let new_br =
         Array.map
           (fun (b : _ Core.Match.Branch.at) ->
-            {b with Core.Match.Branch.body = iota (k + List.length b.binders) b.body} )
+            {b with Core.Match.Branch.body = iota (k + List.length b.binders) b.body;
+                    result_type = rty} )
           br'
       in
       Core.Expr.Match {scrutinee_type = typ; scrutinee = e; branches = new_br; occurrence = occ}
@@ -2585,10 +2605,11 @@ and simpl_app o a = function
     (* Application of a case: we push arguments inside *)
     let br' =
       Array.map
-        (fun ({Core.Match.Branch.binders = l; body = t; _} as b) ->
+        (fun ({Core.Match.Branch.binders = l; body = t; result_type = rty; _} as b) ->
           let k = List.length l in
           let a' = List.map (ast_lift k) a in
-          {b with Core.Match.Branch.body = simpl o (Core.Expr.Apply {callee = t; arguments = a'})} )
+          {b with Core.Match.Branch.body = simpl o (Core.Expr.Apply {callee = t; arguments = a'});
+                  result_type = branch_type_applied (List.length a) rty} )
         br
     in
     simpl o (Core.Expr.Match {scrutinee_type = typ; scrutinee = e; branches = br'; occurrence = occ})
