@@ -14507,3 +14507,14 @@
   (alias runtest)
   (deps self_comparison_werror.t.exe)
   (action (run ./self_comparison_werror.t.exe))))
+
+(subdir local_fix_moves_captured_local
+ (rule
+  (targets local_fix_moves_captured_local.t.exe)
+  (deps LocalFixMovesCapturedLocal.vo local_fix_moves_captured_local.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_moves_captured_local.t.exe local_fix_moves_captured_local.t.cpp local_fix_moves_captured_local.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_moves_captured_local.t.exe)
+  (action (run ./local_fix_moves_captured_local.t.exe))))

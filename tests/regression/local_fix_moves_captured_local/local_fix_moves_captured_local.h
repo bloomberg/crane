@@ -257,7 +257,7 @@ struct LocalFixMovesCapturedLocal {
           while (true) {
             if (std::holds_alternative<typename List<uint64_t>::Nil>(
                     _loop_m->v())) {
-              return std::move(acc);
+              return acc;
             } else {
               const auto &[_, a1] =
                   std::get<typename List<uint64_t>::Cons>(_loop_m->v());

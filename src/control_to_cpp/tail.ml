@@ -292,9 +292,14 @@ let assign_result expr =
 
 (** Return [expr] directly from the tail-recursion [while (true)] loop, which
     leaves both the loop and the function.  Used only in tail-recursion
-    rewriting. *)
+    rewriting.  The value is returned as translation wrote it: a move there
+    is the ownership plan's ({!Ownership_ir.Region.use}), and a local the
+    plan leaves unmoved may be one the body does not own -- a capture of a
+    local fixpoint, which reads it by reference while the scope that binds
+    it reads it again.  A local or by-value parameter of the function is
+    moved by the [return] on its own. *)
 let return_result expr =
-  [ Return (Some (move_if_lvalue expr)) ]
+  [ Return (Some expr) ]
 
 (** Generate temp-based parameter updates to avoid read-after-write hazards. For
     a recursive call like [f b (a mod b)], we must evaluate all argument
