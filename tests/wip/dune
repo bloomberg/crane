@@ -305,17 +305,6 @@
   (deps branch_pairs_of_lambdas.t.exe)
   (action (run ./branch_pairs_of_lambdas.t.exe))))
 
-(subdir known_list_scrutinee_erased
- (rule
-  (targets known_list_scrutinee_erased.t.exe)
-  (deps KnownListScrutineeErased.vo known_list_scrutinee_erased.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} known_list_scrutinee_erased.t.exe known_list_scrutinee_erased.t.cpp known_list_scrutinee_erased.cpp)))
- (rule
-  (alias runtest)
-  (deps known_list_scrutinee_erased.t.exe)
-  (action (run ./known_list_scrutinee_erased.t.exe))))
-
 (subdir self_comparison_werror
  (rule
   (targets self_comparison_werror.t.exe)

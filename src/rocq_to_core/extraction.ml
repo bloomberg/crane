@@ -2498,11 +2498,18 @@ and extract_case env sg type_env (((kn, i) as ip), c, br) extracted_ty =
                                             type_arguments = Array.to_list metas;
                                             index_arguments = []} in
       let a = extract_term env sg type_env type_head c [] in
-      let has_unresolved_meta =
-        Array.exists (fun m -> match m with
-          | Core.Type.Meta {contents = None} -> true
-          | _ -> false) metas
+      (* A type argument the head left open, at any depth: [[@None nat]]
+         gives [list (option ?)], since nothing in [None] says what it holds;
+         an open hole would freeze to an erased type. *)
+      let rec open_meta = function
+        | Core.Type.Meta {contents = None} -> true
+        | Core.Type.Meta {contents = Some t} -> open_meta t
+        | Core.Type.Global_app {type_arguments = l; _} | Core.Type.Variable_app {arguments = l; _} ->
+          List.exists open_meta l
+        | Core.Type.Arrow {parameter = a; result = b} -> open_meta a || open_meta b
+        | _ -> false
       in
+      let has_unresolved_meta = Array.exists open_meta metas in
       ( if has_unresolved_meta then try
           let coq_ty = whd_all env sg (Retyping.get_type_of env sg c) in
           match EConstr.kind sg coq_ty with
@@ -2517,25 +2524,31 @@ and extract_case env sg type_env (((kn, i) as ip), c, br) extracted_ty =
               filter_keep oi.signature (Array.to_list args)
             in
             List.iter2 (fun meta coq_arg ->
+              let core_ty () =
+                (* Leaving the meta unresolved is the fallback, so a
+                   failure to extract this argument is recoverable; a
+                   critical exception is not. *)
+                try extract_type env sg [] 0 coq_arg []
+                with e when type_extraction_declined e -> Core.Type.Unknown
+              in
+              let rec has_unknown = function
+                | Core.Type.Unknown -> true
+                | Core.Type.Meta {contents = None} -> true
+                | Core.Type.Meta {contents = Some t} -> has_unknown t
+                | Core.Type.Global_app {type_arguments = args; _} -> List.exists has_unknown args
+                | Core.Type.Arrow {parameter = a; result = b} -> has_unknown a || has_unknown b
+                | _ -> false
+              in
               match meta with
               | Core.Type.Meta ({contents = None} as r) ->
-                let core_ty =
-                  (* Leaving the meta unresolved is the fallback, so a
-                     failure to extract this argument is recoverable; a
-                     critical exception is not. *)
-                  try extract_type env sg [] 0 coq_arg []
-                  with e when type_extraction_declined e -> Core.Type.Unknown
-                in
-                let rec has_unknown = function
-                  | Core.Type.Unknown -> true
-                  | Core.Type.Meta {contents = None} -> true
-                  | Core.Type.Meta {contents = Some t} -> has_unknown t
-                  | Core.Type.Global_app {type_arguments = args; _} -> List.exists has_unknown args
-                  | Core.Type.Arrow {parameter = a; result = b} -> has_unknown a || has_unknown b
-                  | _ -> false
-                in
+                let core_ty = core_ty () in
                 if not (has_unknown core_ty) then
                   Core.Extracted.Meta.solve r core_ty
+              | meta when open_meta meta ->
+                (* Partly known: Rocq's type fills the holes, by unification,
+                   so what the head did say is kept. *)
+                let core_ty = core_ty () in
+                if not (has_unknown core_ty) then try_mgu meta core_ty
               | _ -> ()
             ) (Array.to_list metas) kept_args
           | _ -> ()

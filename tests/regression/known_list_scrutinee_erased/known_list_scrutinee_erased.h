@@ -115,9 +115,10 @@ struct KnownListScrutineeErased {
   static inline const std::optional<uint64_t> t =
       List::template nth_error<uint64_t>(
           []() {
-            auto l = List::template list<uint64_t>::nil();
+            List::list<std::optional<uint64_t>> l =
+                List::template list<std::optional<uint64_t>>::nil();
             if (std::holds_alternative<
-                    typename List::list<std::optional<crane::obj>>::Nil>(
+                    typename List::list<std::optional<uint64_t>>::Nil>(
                     l.v_mut())) {
               return List::template list<uint64_t>::cons(
                   UINT64_C(5), List::template list<uint64_t>::nil());

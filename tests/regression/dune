@@ -14463,3 +14463,14 @@
   (alias runtest)
   (deps max_result_dangling_ref.t.exe)
   (action (run ./max_result_dangling_ref.t.exe))))
+
+(subdir known_list_scrutinee_erased
+ (rule
+  (targets known_list_scrutinee_erased.t.exe)
+  (deps KnownListScrutineeErased.vo known_list_scrutinee_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} known_list_scrutinee_erased.t.exe known_list_scrutinee_erased.t.cpp known_list_scrutinee_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps known_list_scrutinee_erased.t.exe)
+  (action (run ./known_list_scrutinee_erased.t.exe))))
