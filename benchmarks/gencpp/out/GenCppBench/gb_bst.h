@@ -68,8 +68,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -189,9 +189,9 @@ struct GbBst {
 
     static tree leaf() { return tree(Leaf{}); }
 
-    static tree node(tree l, uint64_t k, tree r) {
-      return tree(Node{std::make_shared<tree>(std::move(l)), k,
-                       std::make_shared<tree>(std::move(r))});
+    static tree node(crane::shared_child_slot<tree> l, uint64_t k,
+                     crane::shared_child_slot<tree> r) {
+      return tree(Node{l.take(), k, r.take()});
     }
 
     // MANIPULATORS

@@ -84,13 +84,13 @@ GbBst::tree GbBst::insert(uint64_t x, const GbBst::tree &t) {
       _stack.pop_back();
       uint64_t k0 = _f.k0;
       std::shared_ptr<GbBst::tree> r0 = std::move(_f.r0);
-      _result = tree::node(std::move(_result), k0, *r0);
+      _result = tree::node(std::move(_result), k0, crane::shared_child(r0));
     } else {
       auto _f = std::move(std::get<_after_insert_in_true_2>(_popped));
       _stack.pop_back();
       std::shared_ptr<GbBst::tree> l0 = std::move(_f.l0);
       uint64_t k0 = _f.k0;
-      _result = tree::node(*l0, k0, std::move(_result));
+      _result = tree::node(crane::shared_child(l0), k0, std::move(_result));
     }
   }
   return _result;

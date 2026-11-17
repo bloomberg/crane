@@ -68,8 +68,8 @@ public:
 
   static List<A> nil() { return List<A>(Nil{}); }
 
-  static List<A> cons(A a, List<A> l) {
-    return List<A>(Cons{std::move(a), std::make_shared<List<A>>(std::move(l))});
+  static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
+    return List<A>(Cons{std::move(a), l.take()});
   }
 
   // MANIPULATORS
@@ -200,25 +200,25 @@ struct GbInterp {
 
     static expr var(uint64_t i) { return expr(Var{i}); }
 
-    static expr add(expr a, expr b) {
-      return expr(Add{std::make_shared<expr>(std::move(a)),
-                      std::make_shared<expr>(std::move(b))});
+    static expr add(crane::shared_child_slot<expr> a,
+                    crane::shared_child_slot<expr> b) {
+      return expr(Add{a.take(), b.take()});
     }
 
-    static expr mul(expr a, expr b) {
-      return expr(Mul{std::make_shared<expr>(std::move(a)),
-                      std::make_shared<expr>(std::move(b))});
+    static expr mul(crane::shared_child_slot<expr> a,
+                    crane::shared_child_slot<expr> b) {
+      return expr(Mul{a.take(), b.take()});
     }
 
-    static expr let(expr e, expr body) {
-      return expr(Let{std::make_shared<expr>(std::move(e)),
-                      std::make_shared<expr>(std::move(body))});
+    static expr let(crane::shared_child_slot<expr> e,
+                    crane::shared_child_slot<expr> body) {
+      return expr(Let{e.take(), body.take()});
     }
 
-    static expr if0(expr c, expr t, expr e) {
-      return expr(If0{std::make_shared<expr>(std::move(c)),
-                      std::make_shared<expr>(std::move(t)),
-                      std::make_shared<expr>(std::move(e))});
+    static expr if0(crane::shared_child_slot<expr> c,
+                    crane::shared_child_slot<expr> t,
+                    crane::shared_child_slot<expr> e) {
+      return expr(If0{c.take(), t.take(), e.take()});
     }
 
     // MANIPULATORS
@@ -462,7 +462,7 @@ struct GbInterp {
         if (b.is_num(UINT64_C(1))) {
           return *this;
         } else {
-          return expr::mul(*this, std::move(b));
+          return expr::mul(crane::shared_child(this), std::move(b));
         }
       }
     }
@@ -482,10 +482,10 @@ struct GbInterp {
               auto &&_once2 = UINT64_C(4096);
               return expr::num((_once2 ? _once1 % _once2 : _once1));
             } else {
-              return expr::add(*this, b);
+              return expr::add(crane::shared_child(this), b);
             }
           } else {
-            return expr::add(*this, b);
+            return expr::add(crane::shared_child(this), b);
           }
         }
       }
@@ -921,7 +921,7 @@ struct GbInterp {
       } else {
         const auto &[a00, a10] =
             std::get<typename List<uint64_t>::Cons>(_sv0.v());
-        return List<uint64_t>::cons(op(a00, a0), *a10);
+        return List<uint64_t>::cons(op(a00, a0), crane::shared_child(a10));
       }
     }
   }

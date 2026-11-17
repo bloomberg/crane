@@ -77,15 +77,14 @@ List<crane::fn<uint64_t(uint64_t)>> GbClo::build(uint64_t n) {
 
 uint64_t GbClo::closures(uint64_t n, uint64_t rounds) {
   List<crane::fn<uint64_t(uint64_t)>> fs = build(n);
-  crane::fn<uint64_t(uint64_t)> big = [=](uint64_t _x0) -> uint64_t {
-    return fs.template fold_right<crane::fn<uint64_t(uint64_t)>>(
-        [](crane::fn<uint64_t(uint64_t)> _ec0,
-           crane::fn<uint64_t(uint64_t)> _ec1) {
-          return [=, _ec0 = std::move(_ec0), _ec1 = std::move(_ec1)](
-              uint64_t _ec2) { return compose(_ec0, _ec1, _ec2); };
-        },
-        [](uint64_t x) { return x; })(_x0);
-  };
+  crane::fn<uint64_t(uint64_t)> big =
+      fs.template fold_right<crane::fn<uint64_t(uint64_t)>>(
+          [](crane::fn<uint64_t(uint64_t)> _ec0,
+             crane::fn<uint64_t(uint64_t)> _ec1) {
+            return [=, _ec0 = std::move(_ec0), _ec1 = std::move(_ec1)](
+                uint64_t _ec2) { return compose(_ec0, _ec1, _ec2); };
+          },
+          [](uint64_t x) { return x; });
   return ListDef::seq(UINT64_C(0), rounds).template fold_left<uint64_t>(
       [=, big = std::move(big), fs = std::move(fs)](uint64_t acc, uint64_t i) {
         return ((acc + big(i)) +
