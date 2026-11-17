@@ -442,6 +442,34 @@ let db_from_rel_context env =
              (rank + 1, rank :: acc) )
        (1, []) outer_first )
 
+(* The number of type binders in the Rocq context a constant's body is
+   extracted under, those of the body's own lambdas ({!extract_std_constant}):
+   the definition's type variables, numbered in order as its scheme numbers
+   them.  [None] outside such a body. *)
+let signature_type_binders = ref (None : int option)
+
+(* The type binders of [env]'s context. *)
+let type_binders env =
+  List.length
+    (List.filter (fun d -> returns_type_sort (Context.Rel.Declaration.get_type d)) (Environ.rel_context env))
+
+(** Whether [ty], the Rocq type [t] extracted under [env] through
+    {!db_from_rel_context}, names only type variables of the definition whose
+    body is being extracted: [env] binds no type besides the definition's own
+    binders, so {!db_from_rel_context} numbers each as the definition's scheme
+    does, and [t] binds none of its own -- [forall B, list B -> nat], whose
+    [B] extraction numbers as it pleases. *)
+let names_signature_variables env sg t ty =
+  let rec binds_type env t =
+    match EConstr.kind sg (whd_all env sg t) with
+    | Prod (x, d, c) -> is_info_scheme env sg d || binds_type env d || binds_type (push_rel_assum (x, d) env) c
+    | App (h, args) -> binds_type env h || Array.exists (binds_type env) args
+    | _ -> false
+  in
+  match !signature_type_binders with
+  | Some k -> Int.equal (type_binders env) k && type_maxvar ty <= k && not (binds_type env t)
+  | None -> false
+
 (** {2 Create a type variable context from indications taken from an inductive
     type (see just below)} *)
 
@@ -1758,10 +1786,18 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
            body : top nat := ...] fixes the event family [top] spells, which a
            body built from erased carriers ([ret], [fmap]) leaves a free
            meta -- and a free meta generalises into a parameter no call
-           supplies when the binding is lifted.  Only a ground, fully
-           informative annotation is given: one naming a type variable names
-           it the way this context is numbered, which the term's own
-           variables need not be. *)
+           supplies when the binding is lifted.  So does a local fixpoint's,
+           [let fix go (l : list (nat * A)) ...]: the let generalises its
+           type, so the applications of [go] in the body never tell its
+           parameters what they are, and a parameter left open becomes a
+           variable of the fixpoint's own.  Only a fully informative
+           annotation is given, and one naming a type variable only for a
+           local fixpoint, and only where that variable is the definition's
+           own ({!names_signature_variables}): elsewhere the way this context
+           is numbered need not be the way the term's own variables are, and
+           a value's annotation may be a coercion's target ([Program]'s
+           subset types) rather than the type the value is built at. *)
+        let is_fix c = match EConstr.kind sg c with Fix _ -> true | _ -> false in
         let () =
           if lang () == Cpp then
             match
@@ -1770,6 +1806,8 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
             with
             | Some ty when Int.equal (type_maxvar ty) 0 && informative_type ty ->
               try_mgu a ty
+            | Some ty when is_fix c1 && informative_type ty && names_signature_variables env sg t1 ty ->
+              try_mgu a (rigidify ty)
             | _ -> ()
         in
         let c1' =
@@ -2967,9 +3005,14 @@ let extract_std_constant env sg kn body typ =
   let env = push_rels_assum rels env in
   (* The real extraction: *)
   let e =
-    let saved = !constant_binders in
+    let saved = !constant_binders and saved_types = !signature_type_binders in
     constant_binders := Environ.nb_rel env;
-    Fun.protect ~finally:(fun () -> constant_binders := saved) (fun () -> extract_term env sg type_env t' c [])
+    signature_type_binders := Some (type_binders env);
+    Fun.protect
+      ~finally:(fun () ->
+        constant_binders := saved;
+        signature_type_binders := saved_types )
+      (fun () -> extract_term env sg type_env t' c [])
   in
   (* For C++: fill any type-param metas that remained unresolved after full extraction.
      These represent genuinely erased type positions (e.g. the element type of nil

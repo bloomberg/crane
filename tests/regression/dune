@@ -14518,3 +14518,36 @@
   (alias runtest)
   (deps local_fix_moves_captured_local.t.exe)
   (action (run ./local_fix_moves_captured_local.t.exe))))
+
+(subdir inlined_local_fix_param_type
+ (rule
+  (targets inlined_local_fix_param_type.t.exe)
+  (deps InlinedLocalFixParamType.vo inlined_local_fix_param_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inlined_local_fix_param_type.t.exe inlined_local_fix_param_type.t.cpp inlined_local_fix_param_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps inlined_local_fix_param_type.t.exe)
+  (action (run ./inlined_local_fix_param_type.t.exe))))
+
+(subdir lifted_local_fix_drops_capture
+ (rule
+  (targets lifted_local_fix_drops_capture.t.exe)
+  (deps LiftedLocalFixDropsCapture.vo lifted_local_fix_drops_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_local_fix_drops_capture.t.exe lifted_local_fix_drops_capture.t.cpp lifted_local_fix_drops_capture.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_local_fix_drops_capture.t.exe)
+  (action (run ./lifted_local_fix_drops_capture.t.exe))))
+
+(subdir poly_local_fix_normal_form
+ (rule
+  (targets poly_local_fix_normal_form.t.exe)
+  (deps PolyLocalFixNormalForm.vo poly_local_fix_normal_form.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_local_fix_normal_form.t.exe poly_local_fix_normal_form.t.cpp poly_local_fix_normal_form.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_local_fix_normal_form.t.exe)
+  (action (run ./poly_local_fix_normal_form.t.exe))))

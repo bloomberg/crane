@@ -309,11 +309,12 @@ struct InlinedLocalFixParamType {
   template <typename T1> static List<std::optional<tree>> f(const T1 &a) {
     {
       const List<tree> &_lc1_l = [&]() {
-        List<T1> l = List<std::pair<uint64_t, T1>>::cons(
+        List<std::pair<uint64_t, T1>> l = List<std::pair<uint64_t, T1>>::cons(
             std::make_pair(UINT64_C(0), a),
             List<std::pair<uint64_t, T1>>::nil());
         List<tree> acc = List<tree>::nil();
-        if (std::holds_alternative<typename List<T1>::Nil>(l.v_mut())) {
+        if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
+                l.v_mut())) {
           return acc;
         } else {
           return List<bool>::cons(true, List<bool>::nil()).template flat_map<
@@ -338,4 +339,25 @@ struct InlinedLocalFixParamType {
   }
 
   static inline const uint64_t t = f<uint64_t>(UINT64_C(0)).length();
+
+  /// The same defect with the list literal's elements themselves lists: go's
+  /// parameter was declared List<T1> for a List<List<T1>>.
+  template <typename T1> static uint64_t g(const T1 &) {
+    auto go_impl = [](auto &_self_go, const List<List<T1>> &l) -> uint64_t {
+      if (std::holds_alternative<typename List<List<T1>>::Nil>(l.v())) {
+        return UINT64_C(0);
+      } else {
+        const auto &[_, a1] = std::get<typename List<List<T1>>::Cons>(l.v());
+        return (_self_go(_self_go, *a1) + 1);
+      }
+    };
+    {
+      const List<List<T1>> &_lc1_l = List<List<T1>>::cons(
+          List<T1>::nil(),
+          List<List<T1>>::cons(List<T1>::nil(), List<List<T1>>::nil()));
+      return go_impl(go_impl, _lc1_l);
+    }
+  }
+
+  static inline const uint64_t u = g<bool>(true);
 };

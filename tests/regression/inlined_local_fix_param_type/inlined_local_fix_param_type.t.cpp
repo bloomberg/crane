@@ -10,6 +10,7 @@
 int main() {
   int fails = 0;
   if (!(M::t == 0)) { std::cout << "FAIL: M::t" << std::endl; ++fails; }
+  if (!(M::u == 2)) { std::cout << "FAIL: M::u" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All inlined_local_fix_param_type tests passed!" << std::endl;
   return fails;

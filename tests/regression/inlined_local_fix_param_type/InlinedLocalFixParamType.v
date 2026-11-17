@@ -25,6 +25,15 @@ Definition f {A : Type} (a : A) : list (option tree) :=
 
 Definition t : nat := length (f 0).
 
+(** The same defect with the list literal's elements themselves lists: [go]'s
+    parameter was declared [List<T1>] for a [List<List<T1>>]. *)
+Definition g {A : Type} (a : A) : nat :=
+  let fix go (l : list (list A)) : nat :=
+    match l with [] => 0 | _ :: r => S (go r) end in
+  go [@nil A; @nil A].
+
+Definition u : nat := g true.
+
 End InlinedLocalFixParamType.
 
 Crane Extraction "inlined_local_fix_param_type" InlinedLocalFixParamType.
