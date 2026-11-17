@@ -8,7 +8,6 @@
 - [Project Layout](#project-layout)
 - [Installation](#installation)
   - [Building and Testing](#building-and-testing)
-  - [BDE Tests (Optional)](#bde-tests-optional)
 - [Usage](#usage)
 - [Maintainers](#maintainers)
 - [Contributions](#contributions)
@@ -17,7 +16,7 @@
 
 ## Rationale
 
-This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to (optionally [BDE](https://github.com/bloomberg/bde)-flavored) C++ code, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe, modern C++ code. The generated code does not need a separate runtime system, relying instead on `shared_ptr` for memory management.
+This project provides extraction of [Rocq](https://rocq-prover.org/) (formerly known as Coq) code to C++ code, implemented as a Rocq plugin. It extracts Rocq into valid, performant, and memory-safe, modern C++ code. The generated code does not need a separate runtime system, relying instead on `shared_ptr` for memory management.
 
 The project is a fork of the Rocq-to-OCaml extraction that comes built-in with Rocq.
 
@@ -28,17 +27,18 @@ The project is a fork of the Rocq-to-OCaml extraction that comes built-in with R
 
 ```
 crane/
-├── src/          # OCaml plugin sources (extraction, translation, C++ codegen)
-├── theories/     # Rocq theories (plugin loader, standard mappings, monads)
-├── tests/        # Curated example C++/Rocq pairs; see subfolders below
-│   ├── basics/     # Traditional functional programs
-│   ├── monadic/    # Effectful examples (IO, STM, threads)
-│   ├── regression/ # Regression tests for previously fixed bugs
-│   └── wip/        # Work-in-progress tests for known unsupported features
-├── scripts/      # Build/test helper scripts
-├── benchmark/    # Crane Benchmark support files
-├── libraries/    # Example libraries (see below)
-└── docs/         # Documentation (see docs/README.md)
+├── src/              OCaml plugin sources, one directory per IR and pipeline stage
+├── theories/         Rocq theories: plugin loader, type mappings, monads, C++ runtime headers
+├── tests/            Rocq/C++ test pairs
+│   ├── basics/       Traditional functional programs
+│   ├── monadic/      Effectful examples (IO, STM, threads)
+│   ├── regression/   Regression tests for previously fixed bugs
+│   └── wip/          Work-in-progress tests for known issues
+├── unit_tests/       OCaml unit tests, including the pass-order golden file
+├── scripts/          Build and test helper scripts
+├── benchmarks/       Benchmark programs
+├── libraries/        Example libraries (see below)
+└── docs/             Documentation (see docs/README.md)
 ```
 
 ### Example libraries
@@ -80,19 +80,16 @@ You will also need [Clang](https://clang.llvm.org/) 22 or higher (the generated 
 The Makefile provides convenient build commands:
 
 - `make build` - Build only the plugin and theories (recommended for development, fast)
+- `make install` - Install the plugin
 - `make extract` - Build the plugin and extract all of the tests (without compiling the generated code)
-- `make test` - Build and run all tests with clean summary output
-- `make test-verbose` - Run tests with detailed output
-- `make test-one TEST=name` - Run a single test (e.g., `make test-one TEST=list`)
-- `make test-folder FOLDER=name` - Run all tests in a folder (e.g., `make test-folder FOLDER=wip`)
-- `make test-list` - List all available tests
-- `make all` - Build everything including tests
+- `make test` - Build and run all tests with a summary of passed/failed tests
+- `make check-headers` - Compile every generated header on its own
 - `make clean` - Clean all build and test artifacts
-- `make help` - Show all available commands
+- `make help` - Show all available commands, including variants for running a single test or folder
 
-To preview the project, you can run `make test` to run the tests and see if the plugin is working properly on your machine. The test command will show a summary of passed/failed tests with a progress indicator. To run a single test during development, use `make test-one TEST=list` (or `tree`, `nat`, etc.). To run all tests in a specific folder, use `make test-folder FOLDER=wip` (or `basics`, `monadic`, `regression`). Use `make test-list` to see all available test names. Generated files (such as `list.cpp` for `List.v`) will be in the `tests` directory.
+Generated files (such as `list.h` and `list.cpp` for `List.v`) are written next to their tests in the `tests` directory.
 
-**Test expectations:** All tests in `basics/`, `monadic/`, and `regression/` are expected to pass. Failures in `wip/` tests are expected and can be ignored unless you are specifically working on fixing one of them. Note that `monadic/skiplist` and `monadic/par` are nondeterministic, so their occasional failures can be ignored if you haven't changed related files.
+**Test expectations:** All tests in `basics/`, `monadic/`, and `regression/` are expected to pass. Failures in `wip/` tests are expected and can be ignored unless you are specifically working on fixing one of them. Note that `monadic/skiplist` is nondeterministic, so its occasional failures can be ignored if you haven't changed related files.
 
 For typical development, use `make build` to quickly rebuild after changes to `src/` or `theories/`, then `make test` to verify your changes work correctly.
 
@@ -110,19 +107,7 @@ dune runtest
 ```
 Tests are **not** built by `make build` to keep development builds fast—use `make test` or `dune runtest` to build and run them.
 
-### BDE Tests (Optional)
-
-Some tests use [Bloomberg's BDE library](https://github.com/bloomberg/bde). These are optional.
-
-**If you have BDE installed:** The build will auto-detect BDE in common locations (`~/Library/bde_install`, `~/bde_install`, `/opt/bb`). If installed elsewhere, set `BDE_PREFIX`:
-```bash
-export BDE_PREFIX=/path/to/bde_install
-make test-one TEST=nat_bde
-```
-
-**If you don't have BDE:** BDE tests will fail with "file not found" errors—this is expected and can be ignored. All non-BDE tests will still run normally.
-
-To run the `Crane Benchmark` command, you will need to have [hyperfine](https://github.com/sharkdp/hyperfine) installed.
+A few tests (those ending in `_bde`) use [Bloomberg's BDE library](https://github.com/bloomberg/bde) through Crane's optional BDE mappings; without BDE installed they fail with "file not found", which can be ignored (set `BDE_PREFIX` if BDE is installed somewhere Crane does not find it). The `Crane Benchmark` command needs [hyperfine](https://github.com/sharkdp/hyperfine).
 
 ## Usage
 
@@ -149,10 +134,10 @@ Crane Extraction "Foo" Foo.
 Now run:
 
 ```bash
-rocq compile Foo.v && clang++ -c -std=c++2c Foo.cpp -o Foo.o
+rocq compile Foo.v && clang++ -c -std=c++2c -I<crane>/theories/cpp Foo.cpp -o Foo.o
 ```
 
-This command creates `Foo.h` and `Foo.cpp` files from the Rocq file, and then compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution.
+This command creates `Foo.h` and `Foo.cpp` files from the Rocq file, and then compiles the C++ to the object file `Foo.o` with Clang, ready to be linked to your own C++ file containing a `main` function for execution. The `-I` points at Crane's header-only runtime (`theories/cpp` in the checkout), which generated code includes; see [Getting Started](docs/Getting-Started.md).
 
 ## Maintainers
 
