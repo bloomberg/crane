@@ -138,7 +138,7 @@ let fuel = 16
     [eval], is a known constructor at every level.  Every unfold, wherever it
     nests, draws on this one supply, so a declaration costs at most this many
     settles however its calls unfold. *)
-let budget = 256
+let budget = 1024
 
 (* [e] with its calls unfolded where an argument is a known constructor, and
    pushed into a match argument where that lets a branch unfold.  [shrunk]
