@@ -8,6 +8,6 @@
 /// the end of the full-expression, so the reads of _once1 are use after
 /// free (clang's -Wdangling rejects it under -Werror).
 uint64_t MaxResultDanglingRef::f(uint64_t a, uint64_t b) {
-  auto &&_once1 = std::max((a + UINT64_C(1)), (b + UINT64_C(2)));
+  auto _once1 = std::max((a + UINT64_C(1)), (b + UINT64_C(2)));
   return (_once1 ? _once1 - 1 : _once1);
 }

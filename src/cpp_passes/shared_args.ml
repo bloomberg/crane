@@ -22,6 +22,14 @@ let repeating_text : expr -> string option = function
 
 let evaluates_operands = Cpp_ir.Variables.evaluates_operands
 
+(* Whether [e] may be a reference into a temporary of its own full
+   expression: a mapping's text is spliced, so nothing says what it returns,
+   and [std::max(a + 1, b)] returns a reference to one of its temporary
+   operands.  [auto &&] bound to that dangles once the statement ends. *)
+let may_refer_to_temporary : expr -> bool = function
+  | Call (_, Entity (_, _, Some {inline = Some _; _}), _) -> true
+  | _ -> false
+
 (* [e] with each argument it must evaluate once named, at every position [e]
    evaluates unconditionally; [bind x a] binds [x] to [a] ahead of [e], in
    evaluation order. *)
@@ -51,7 +59,12 @@ let rec name_args fresh bind (e : expr) : expr =
    where [s] evaluates its expression once, as its first act. *)
 let in_stmt fresh (s : stmt) : stmt list =
   let bound = ref [] in
-  let bind x a = bound := (Bind_variable (x, Declare (Reference (Forwarding, Auto), None), a) : stmt) :: !bound in
+  let bind x a =
+    (* By value where the reference could dangle: a prvalue initialises
+       the local in place, and anything else is copied out in time. *)
+    let ty : Cpp_ir.Lowered.Type.t = if may_refer_to_temporary a then Auto else Reference (Forwarding, Auto) in
+    bound := (Bind_variable (x, Declare (ty, None), a) : stmt) :: !bound
+  in
   let e' e = name_args fresh bind e in
   let s : stmt =
     match s with

@@ -272,17 +272,6 @@
   (deps let_lambda_slot_binder.t.exe)
   (action (run ./let_lambda_slot_binder.t.exe))))
 
-(subdir max_result_dangling_ref
- (rule
-  (targets max_result_dangling_ref.t.exe)
-  (deps MaxResultDanglingRef.vo max_result_dangling_ref.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} max_result_dangling_ref.t.exe max_result_dangling_ref.t.cpp max_result_dangling_ref.cpp)))
- (rule
-  (alias runtest)
-  (deps max_result_dangling_ref.t.exe)
-  (action (run ./max_result_dangling_ref.t.exe))))
-
 (subdir fold_curried_accumulator
  (rule
   (targets fold_curried_accumulator.t.exe)

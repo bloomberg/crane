@@ -10,7 +10,10 @@
     in the depth.  The source evaluates it once.  So such an argument, unless
     a second evaluation is free (a variable, a literal, a field of one), is
     bound to a local first -- [auto &&], which neither copies an lvalue nor
-    loses a temporary -- and the mapping splices the local.
+    loses a temporary -- and the mapping splices the local.  An argument that
+    is itself a mapping's text is bound by value instead: it may be a
+    reference into one of its own temporaries ([std::max(a + 1, b)]), which
+    [auto &&] would outlive.
 
     The binding goes in front of the statement, so only a call that statement
     evaluates unconditionally, once, is rewritten: one under a conditional, a
