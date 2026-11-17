@@ -1,0 +1,7 @@
+; Workloads for timing the generated C++.  Build with
+;   dune build benchmarks/gencpp
+(coq.theory
+ (name GenCppBench)
+ (modules :standard)
+ (theories Stdlib Crane)
+ (flags (:standard -output-directory %{project_root}/benchmarks/gencpp/out)))
