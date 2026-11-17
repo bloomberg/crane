@@ -55,13 +55,17 @@ crane/
 
 ## Installation
 
-Once you clone the repo, if you have [opam](https://opam.ocaml.org/) and [dune](https://dune.build/), you can run
+Crane needs OCaml 5.4 (5.4.1 or a later 5.4 release) and Rocq 9.1.0. With [opam](https://opam.ocaml.org/), create a switch for them (flambda is recommended, and CI uses it), point your shell at it, and install the dependencies:
 
 ```bash
+opam switch create crane-flambda --packages ocaml-variants.5.4.1+options,ocaml-option-flambda \
+  --repos rocq-released=https://rocq-prover.org/opam/released,coq-released=https://coq.inria.fr/opam/released,default
+eval $(opam env --switch=crane-flambda --set-switch)
+opam install rocq-runtime.9.1.0 rocq-core.9.1.0 coq.9.1.0
 opam install . --deps-only
 ```
 
-To install OCaml (5.4.1 or a later 5.4 release) and Rocq (9.1.0). A flambda compiler (`ocaml-variants.5.4.1+options,ocaml-option-flambda`) is recommended; see [Getting Started](docs/Getting-Started.md). You can then build and install the project by running
+`opam install . --deps-only` installs into whichever switch your shell is using; it does not change the OCaml or Rocq version. If the build reports errors such as `Unbound module Mod_declarations`, your shell is still on an older switch: run `eval $(opam env)` (or open a new terminal) after switching. See [Getting Started](docs/Getting-Started.md) for more. You can then build and install the project by running
 
 ```bash
 make build && make install

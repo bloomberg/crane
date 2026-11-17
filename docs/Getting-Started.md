@@ -20,6 +20,7 @@ A flambda compiler is recommended, and CI uses one. The plugin needs no extra fl
 ```bash
 opam switch create crane-flambda --packages ocaml-variants.5.4.1+options,ocaml-option-flambda \
   --repos rocq-released=https://rocq-prover.org/opam/released,coq-released=https://coq.inria.fr/opam/released,default
+eval $(opam env --switch=crane-flambda --set-switch)
 opam install rocq-runtime.9.1.0 rocq-core.9.1.0 coq.9.1.0
 opam install . --deps-only
 ```
