@@ -20,6 +20,14 @@ val child_slot : string
     holds the inductive itself: a value, boxed, or a {!helper.Share_child}
     reference to an existing cell, shared. *)
 
+(** {2 [crane_fn.h]} -- child slots over [std::shared_ptr]. *)
+
+val shared_child_slot : string
+(** [crane::shared_child_slot<T>] -- {!child_slot} over the default pointer,
+    [std::shared_ptr]: a value, boxed (a constructor without fields into one
+    shared cell), or a {!helper.Share_shared_child} reference to an existing
+    cell, shared. *)
+
 val enable_rc_from_this : string  (** [crane::enable_rc_from_this<T>] *)
 
 (** {2 [rc.h]} -- Perceus in-place reuse. *)
@@ -166,6 +174,9 @@ type helper =
           itself.  Printed as [crane::child(p)] when the argument is a field
           [*p] read out of a matched value, so the new node shares [p]'s cell
           (see {!child_slot}), and as the argument itself otherwise. *)
+  | Share_shared_child
+      (** {!Share_child} for a field behind a [std::shared_ptr], printed as
+          [crane::shared_child(p)] (see {!shared_child_slot}). *)
   | Apply2
       (** [crane::apply2(f, a, b)] -- [f(a)(b)], without boxing [f(a)] where
           [f] is an {!fn} written as one lambda returning another. *)

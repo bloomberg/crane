@@ -4,6 +4,7 @@
 let rc = "crane::rc"
 let make_rc = "crane::make_rc"
 let child_slot = "crane::child_slot"
+let shared_child_slot = "crane::shared_child_slot"
 let enable_rc_from_this = "crane::enable_rc_from_this"
 let make_rc_reusing = "crane::make_rc_reusing"
 let make_rc_reusing_unchecked = "crane::make_rc_reusing_unchecked"
@@ -54,6 +55,7 @@ type helper =
   | Unbox_field
   | Deep_box
   | Share_child
+  | Share_shared_child
   | Apply2
   | Constant of string
   | Immortal
@@ -67,4 +69,5 @@ let name = function
   | Unbox_field -> "crane::unbox"
   | Deep_box -> "crane_deep_box"
   | Share_child -> "crane::child"
+  | Share_shared_child -> "crane::shared_child"
   | Reuse_step -> reuse_step

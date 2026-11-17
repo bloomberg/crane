@@ -2886,16 +2886,18 @@ let gen_ind_header_v2 cx
                   (Convert.gen_type_conversion_expr ~src_ty:api_ty ~dst_ty:storage_ty var) )
             cpp_tys
         in
-        (* Under [Crane NonAtomicRc], a field holding the inductive itself
-           takes a [crane::child_slot]: a value, which it boxes, sharing one
+        (* A field holding the inductive itself takes a [crane::child_slot]
+           ([crane::shared_child_slot] over [std::shared_ptr],
+           {!Lowering_state.child_slots}): a value, which it boxes, sharing one
            cell between all values of a constructor without fields, or a
            [crane::child] reference to the cell of a field read out of a
            matched value, which the new node shares.  Rebuilding a path in a
            persistent tree then allocates only the nodes on the path.  Not
            for arena allocation, nor for coinductive or shared-variant types,
            whose cells are made differently. *)
+        let child_slots = Lowering_state.child_slots cx in
         let child_field (_, storage_ty, _) ty =
-          Lowering_state.non_atomic_rc cx && (not is_coinductive) && (not arena_runtime_ok)
+          Option.has_some child_slots && (not is_coinductive) && (not arena_runtime_ok)
           && (not (Base.Table.is_shared_variant name))
           && is_ref_to name vars ty
           && (match (storage_ty : Cpp_ir.Lowered.Type.t) with Shared_pointer _ -> true | _ -> false)
@@ -2906,7 +2908,12 @@ let gen_ind_header_v2 cx
             (fun ((_, storage_ty, _) as f, ty) (pname, pty) ->
               match (storage_ty : Cpp_ir.Lowered.Type.t) with
               | Shared_pointer inner when child_field f ty ->
-                (pname, T.External (Cpp_ir.Crane_rt.child_slot, [inner]))
+                let slot =
+                  match child_slots with
+                  | Some Lowering_state.Shared_child_slots -> Cpp_ir.Crane_rt.shared_child_slot
+                  | _ -> Cpp_ir.Crane_rt.child_slot
+                in
+                (pname, T.External (slot, [inner]))
               | _ -> (pname, pty) )
             fields params
         in

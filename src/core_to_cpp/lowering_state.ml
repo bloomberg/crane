@@ -544,6 +544,20 @@ let plans cx = cx.ctx.input.unit.plans
     ({!Unit_plan.Context.non_atomic_rc}). *)
 let non_atomic_rc cx = Unit_plan.Context.non_atomic_rc (unit_context cx)
 
+(** The slot a factory's field holding the inductive itself takes, under the
+    unit's pointer: [crane::child_slot] over [crane::rc], or
+    [crane::shared_child_slot] over the standard flavor's [std::shared_ptr]
+    -- a value boxed, or the cell of a field read out of a matched value
+    shared.  [None] under BDE's pointer and the counting one. *)
+type child_slots = Rc_child_slots | Shared_child_slots
+
+let child_slots cx =
+  let u = unit_context cx in
+  if Unit_plan.Context.non_atomic_rc u then Some Rc_child_slots
+  else if (not (Unit_plan.Context.count_rc u)) && String.equal (Base.Table.std_lib ()) "std" then
+    Some Shared_child_slots
+  else None
+
 (** The callable plans of the unit being lowered ({!Unit_plan.Context.t.callables}). *)
 let callables cx = (unit_context cx).callables
 

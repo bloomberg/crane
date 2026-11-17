@@ -14,6 +14,7 @@ let of_external name =
   else if String.equal name Cpp_ir.Crane_rt.shared_box || String.equal name Cpp_ir.Crane_rt.shared_or then
     Some (Base.Table.Runtime Cpp_ir.Crane_rt.shared_variant_header)
   else if String.equal name Cpp_ir.Crane_rt.rc then Some (Base.Table.Standard "memory")
+  else if String.equal name Cpp_ir.Crane_rt.shared_child_slot then Some Base.Table.erase_fn_header
   else None
 
 (* Where a mapping is written -- a match, a block, a type or a term --
@@ -129,7 +130,7 @@ module Ir = struct
       | Variant_get _ | Holds_alternative _ | Variant_get_if _ -> variant ()
       | Runtime h -> (
         match h with
-        | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box -> erase_fn ()
+        | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box | Cpp_ir.Crane_rt.Share_shared_child -> erase_fn ()
         | Cpp_ir.Crane_rt.Unbox_field -> rt Cpp_ir.Crane_rt.field_header
         | Cpp_ir.Crane_rt.Apply2 -> rt Cpp_ir.Crane_rt.fn_header
         | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal -> rt Cpp_ir.Crane_rt.shared_block_header

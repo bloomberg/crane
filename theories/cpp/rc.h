@@ -426,10 +426,18 @@ rc<T> box(T&& v, std::index_sequence<Is...>) {
     using V = typename T::variant_t;
     const std::size_t i = v.v().index();
     rc<T> shared;
-    (void)((std::is_empty_v<std::variant_alternative_t<Is, V>> && i == Is
-                ? (shared = nullary_cell<T, Is>(), true)
-                : false) ||
-           ...);
+    // Only an alternative without fields is ever built from [{}]: the others
+    // are not instantiated.
+    auto try_one = [&]<std::size_t I>(std::integral_constant<std::size_t, I>) {
+        if constexpr (std::is_empty_v<std::variant_alternative_t<I, V>>) {
+            if (i == I) {
+                shared = nullary_cell<T, I>();
+                return true;
+            }
+        }
+        return false;
+    };
+    (void)(try_one(std::integral_constant<std::size_t, Is>{}) || ...);
     if (shared) return shared;
     return make_rc<T>(std::move(v));
 }

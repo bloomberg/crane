@@ -6,6 +6,8 @@
 #pragma once
 #include "obj.h"
 #include <any>
+#include <concepts>
+#include <cstddef>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -33,6 +35,103 @@ template <typename T> T *crane_raw(const std::shared_ptr<T> &p) noexcept {
 }
 
 template <typename T> T *crane_raw(T *p) noexcept { return p; }
+
+namespace crane {
+
+// Child slots over [std::shared_ptr], the default pointer: how a factory
+// fills a field holding a value of the inductive itself, as
+// [crane::child_slot] does over [crane::rc] (rc.h).
+//
+// [shared_child_slot<T>] is the parameter type of such a field.  It is built
+// from
+//   - a value of [T]: boxed into a new cell, except that a value of a
+//     constructor without fields shares one cell per constructor (per thread,
+//     never freed): all such values are equal, nothing mutates a cell it does
+//     not own alone, and OCaml spells them as immediates;
+//   - a [shared_child_ref<T>], made by [crane::shared_child(p)] for a field
+//     [p] read out of a matched value: the new node shares the cell [p]
+//     points to, where copying the child into a new cell would allocate and
+//     bump the counts of its own children.
+// A [shared_child_ref] converts to [const T&] too, so it can stand wherever
+// the child's value is expected.
+template <typename T> struct shared_child_ref {
+  const std::shared_ptr<T> &p;
+  operator const T &() const noexcept { return *p; }
+};
+
+template <typename T> shared_child_ref<T> shared_child(const std::shared_ptr<T> &p) noexcept {
+  return {p};
+}
+
+// Any other pointer -- [this], a raw pointer a loop walks with -- names no
+// cell to share: the child is its value.
+template <typename P> decltype(auto) shared_child(const P &p) noexcept { return *p; }
+
+namespace shared_child_detail {
+
+template <typename T>
+concept variant_value = requires(const T &t) {
+  std::variant_size<typename T::variant_t>::value;
+  { t.v().index() } -> std::convertible_to<std::size_t>;
+};
+
+template <typename T, std::size_t I> const std::shared_ptr<T> &nullary_cell() {
+  using Alt = std::variant_alternative_t<I, typename T::variant_t>;
+  thread_local const std::shared_ptr<T> *cell = new std::shared_ptr<T>(std::make_shared<T>(Alt{}));
+  return *cell;
+}
+
+template <typename T, std::size_t... Is>
+std::shared_ptr<T> box(T &&v, std::index_sequence<Is...>) {
+  using V = typename T::variant_t;
+  const std::size_t i = v.v().index();
+  std::shared_ptr<T> shared;
+  // Only an alternative without fields is ever built from [{}]: the others
+  // are not instantiated.
+  auto try_one = [&]<std::size_t I>(std::integral_constant<std::size_t, I>) {
+    if constexpr (std::is_empty_v<std::variant_alternative_t<I, V>>) {
+      if (i == I) {
+        shared = nullary_cell<T, I>();
+        return true;
+      }
+    }
+    return false;
+  };
+  (void)(try_one(std::integral_constant<std::size_t, Is>{}) || ...);
+  if (shared) return shared;
+  return std::make_shared<T>(std::move(v));
+}
+
+template <typename T> std::shared_ptr<T> box_child(T &&v) {
+  if constexpr (variant_value<T>)
+    return box(std::move(v), std::make_index_sequence<std::variant_size_v<typename T::variant_t>>{});
+  else
+    return std::make_shared<T>(std::move(v));
+}
+
+} // namespace shared_child_detail
+
+template <typename T> class shared_child_slot {
+public:
+  shared_child_slot() : p_(shared_child_detail::box_child(T{})) {}
+  shared_child_slot(shared_child_ref<T> c) noexcept : p_(c.p) {}
+  shared_child_slot(T &&v) : p_(shared_child_detail::box_child(std::move(v))) {}
+  shared_child_slot(const T &v) : p_(shared_child_detail::box_child(T(v))) {}
+  // Anything else that converts to [T], once.
+  template <typename U>
+    requires(!std::is_same_v<std::remove_cvref_t<U>, T> &&
+             !std::is_same_v<std::remove_cvref_t<U>, shared_child_ref<T>> &&
+             std::is_constructible_v<T, U &&>)
+  shared_child_slot(U &&u) : p_(shared_child_detail::box_child(T(std::forward<U>(u)))) {}
+
+  // The cell, moved out: a slot is consumed by the factory it is passed to.
+  std::shared_ptr<T> take() noexcept { return std::move(p_); }
+
+private:
+  std::shared_ptr<T> p_;
+};
+
+} // namespace crane
 
 // Declared here, defined below: the generic-lambda branch of
 // [crane_erase_fn] needs it to recover a concrete result from a callable

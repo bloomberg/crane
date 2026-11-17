@@ -839,11 +839,11 @@ and pp_cpp_expr ctx env args (t : expr) =
     ++ str "("
     ++ pp_list (pp_cpp_expr ctx env args) method_args
     ++ str ")"
-  | Call (_, Runtime Cpp_ir.Crane_rt.Share_child, [arg]) -> (
+  | Call (_, Runtime ((Cpp_ir.Crane_rt.Share_child | Cpp_ir.Crane_rt.Share_shared_child) as h), [arg]) -> (
     (* A field read out of a matched value goes to the new node as the cell
        it is in; anything else is the value itself. *)
     match arg with
-    | Dereference p -> str (Cpp_ir.Crane_rt.name Cpp_ir.Crane_rt.Share_child) ++ str "(" ++ pp_cpp_expr ctx env args p ++ str ")"
+    | Dereference p -> str (Cpp_ir.Crane_rt.name h) ++ str "(" ++ pp_cpp_expr ctx env args p ++ str ")"
     | _ -> pp_cpp_expr ctx env args arg )
   | Call (_, Dereference e, ts) ->
     (* Call through a dereferenced pointer: deref + invoke pattern.
@@ -1124,7 +1124,8 @@ and pp_cpp_expr ctx env args (t : expr) =
      noted as needed. *)
   | Runtime h ->
     (match h with
-     | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box -> writes Base.Table.erase_fn_header
+     | Cpp_ir.Crane_rt.Raw | Cpp_ir.Crane_rt.Deep_box | Cpp_ir.Crane_rt.Share_shared_child ->
+       writes Base.Table.erase_fn_header
      | Cpp_ir.Crane_rt.Unbox_field -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.field_header)
      | Cpp_ir.Crane_rt.Apply2 -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.fn_header)
      | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal ->
