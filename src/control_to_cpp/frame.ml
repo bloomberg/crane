@@ -1752,12 +1752,19 @@ let own_moved_bindings body =
   in
   go body
 
+(** [_stack.pop_back()]: drops the stack's top, whose frame struct the
+    branch's binding has moved out. *)
+let pop_frame =
+  Expression (Call (call_opaque, Access (Dot, Local id_stack, id_pop_back), []))
+
 (** Build one branch of the frame-dispatch [Match].
 
     The loop variable [_frame] is the scrutinee; the frame struct type is
     represented as [External name] (avoids the struct-name qualification
-    that [Named] would add); [_f] is the frame, moved off it, that gives the
-    handler body access to the saved frame fields ({!own_moved_bindings}).
+    that [Named] would add); [_f] is the frame struct, moved out of the
+    stack's top, that gives the handler body access to the saved frame fields
+    ({!own_moved_bindings}).  The branch pops the emptied top before
+    anything else, so the handler's pushes land above the frames below it.
 
     @param frame_name Name of the frame struct (e.g. [_call], [_after_f])
     @param body       Handler body statements
@@ -1767,10 +1774,11 @@ let make_frame_branch frame_name body : branch =
     var = Some (id_f);
     field_bindings = [];
     extra_conditions = [];
-    body = own_moved_bindings body }
+    body = pop_frame :: own_moved_bindings body }
 
-(** The scrutinee of the frame-dispatch match: the loop variable [_frame],
-    owned (it was moved off the stack) and held as a variant. *)
+(** The scrutinee of the frame-dispatch match: [_popped], a reference to the
+    stack's top, owned (each branch moves its frame struct out of it before
+    popping) and held as a variant. *)
 let frame_scrutinee : scrutinee =
   { expr = Local id_frame;
     access = Arrow;
@@ -1778,8 +1786,12 @@ let frame_scrutinee : scrutinee =
     flat = false }
 
 (** Generate the while-loop body and surrounding boilerplate for the
-    frame-dispatch loop.  Each iteration moves the top frame into a local,
-    pops the stack, then dispatches via an [Match] if/else-if chain.
+    frame-dispatch loop.  Each iteration binds a reference to the top frame
+    and dispatches on it via an [Match] if/else-if chain; the branch taken
+    moves its frame struct out and pops ({!make_frame_branch}).  Dispatching
+    in place saves moving and destroying the whole variant on every
+    iteration, which for a frame holding a non-trivial field is a jump-table
+    call each.
 
     @param struct_defs The struct definitions ([_call], [_after_f], etc.)
     @param ret_ty      Return type for the [_result] declaration
@@ -1806,15 +1818,8 @@ let make_loop_and_return ?(fn_name : string option) struct_defs ret_ty init_push
   let dispatch_stmt = Match (frame_scrutinee, branches, None) in
   let loop_body =
     [
-      Bind_variable (id_frame, Declare (frame_ty, None),
-             Move
-               (Call
-                  (call_opaque, Access (Dot, Local (id_stack),
-                              id_back), [])));
-      Expression
-        (Call
-           (call_opaque, Access (Dot, Local (id_stack),
-                       id_pop_back), []));
+      Bind_variable (id_frame, Declare (Reference (Lvalue, frame_ty), None),
+             Call (call_opaque, Access (Dot, Local (id_stack), id_back), []));
       dispatch_stmt;
     ]
   in
