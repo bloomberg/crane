@@ -260,3 +260,214 @@
   (alias runtest)
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
+
+(subdir let_lambda_slot_binder
+ (rule
+  (targets let_lambda_slot_binder.t.exe)
+  (deps LetLambdaSlotBinder.vo let_lambda_slot_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} let_lambda_slot_binder.t.exe let_lambda_slot_binder.t.cpp let_lambda_slot_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps let_lambda_slot_binder.t.exe)
+  (action (run ./let_lambda_slot_binder.t.exe))))
+
+(subdir max_result_dangling_ref
+ (rule
+  (targets max_result_dangling_ref.t.exe)
+  (deps MaxResultDanglingRef.vo max_result_dangling_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} max_result_dangling_ref.t.exe max_result_dangling_ref.t.cpp max_result_dangling_ref.cpp)))
+ (rule
+  (alias runtest)
+  (deps max_result_dangling_ref.t.exe)
+  (action (run ./max_result_dangling_ref.t.exe))))
+
+(subdir fold_curried_accumulator
+ (rule
+  (targets fold_curried_accumulator.t.exe)
+  (deps FoldCurriedAccumulator.vo fold_curried_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_curried_accumulator.t.exe fold_curried_accumulator.t.cpp fold_curried_accumulator.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_curried_accumulator.t.exe)
+  (action (run ./fold_curried_accumulator.t.exe))))
+
+(subdir local_fix_returns_function
+ (rule
+  (targets local_fix_returns_function.t.exe)
+  (deps LocalFixReturnsFunction.vo local_fix_returns_function.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_returns_function.t.exe local_fix_returns_function.t.cpp local_fix_returns_function.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_returns_function.t.exe)
+  (action (run ./local_fix_returns_function.t.exe))))
+
+(subdir branch_pairs_of_lambdas
+ (rule
+  (targets branch_pairs_of_lambdas.t.exe)
+  (deps BranchPairsOfLambdas.vo branch_pairs_of_lambdas.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_pairs_of_lambdas.t.exe branch_pairs_of_lambdas.t.cpp branch_pairs_of_lambdas.cpp)))
+ (rule
+  (alias runtest)
+  (deps branch_pairs_of_lambdas.t.exe)
+  (action (run ./branch_pairs_of_lambdas.t.exe))))
+
+(subdir known_list_scrutinee_erased
+ (rule
+  (targets known_list_scrutinee_erased.t.exe)
+  (deps KnownListScrutineeErased.vo known_list_scrutinee_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} known_list_scrutinee_erased.t.exe known_list_scrutinee_erased.t.cpp known_list_scrutinee_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps known_list_scrutinee_erased.t.exe)
+  (action (run ./known_list_scrutinee_erased.t.exe))))
+
+(subdir loopify_local_fix_outer_call
+ (rule
+  (targets loopify_local_fix_outer_call.t.exe)
+  (deps LoopifyLocalFixOuterCall.vo loopify_local_fix_outer_call.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_local_fix_outer_call.t.exe loopify_local_fix_outer_call.t.cpp loopify_local_fix_outer_call.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_local_fix_outer_call.t.exe)
+  (action (run ./loopify_local_fix_outer_call.t.exe))))
+
+(subdir case_of_case_result_type
+ (rule
+  (targets case_of_case_result_type.t.exe)
+  (deps CaseOfCaseResultType.vo case_of_case_result_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} case_of_case_result_type.t.exe case_of_case_result_type.t.cpp case_of_case_result_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps case_of_case_result_type.t.exe)
+  (action (run ./case_of_case_result_type.t.exe))))
+
+(subdir self_comparison_werror
+ (rule
+  (targets self_comparison_werror.t.exe)
+  (deps SelfComparisonWerror.vo self_comparison_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_comparison_werror.t.exe self_comparison_werror.t.cpp self_comparison_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_comparison_werror.t.exe)
+  (action (run ./self_comparison_werror.t.exe))))
+
+
+(subdir local_fix_moves_captured_local
+ (rule
+  (targets local_fix_moves_captured_local.t.exe)
+  (deps LocalFixMovesCapturedLocal.vo local_fix_moves_captured_local.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_moves_captured_local.t.exe local_fix_moves_captured_local.t.cpp local_fix_moves_captured_local.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_moves_captured_local.t.exe)
+  (action (run ./local_fix_moves_captured_local.t.exe))))
+
+
+(subdir loopify_class_method_frame_save
+ (rule
+  (targets loopify_class_method_frame_save.t.exe)
+  (deps LoopifyClassMethodFrameSave.vo loopify_class_method_frame_save.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_class_method_frame_save.t.exe loopify_class_method_frame_save.t.cpp loopify_class_method_frame_save.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_class_method_frame_save.t.exe)
+  (action (run ./loopify_class_method_frame_save.t.exe))))
+
+(subdir unused_pair_binding_redefinition
+ (rule
+  (targets unused_pair_binding_redefinition.t.exe)
+  (deps UnusedPairBindingRedefinition.vo unused_pair_binding_redefinition.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unused_pair_binding_redefinition.t.exe unused_pair_binding_redefinition.t.cpp unused_pair_binding_redefinition.cpp)))
+ (rule
+  (alias runtest)
+  (deps unused_pair_binding_redefinition.t.exe)
+  (action (run ./unused_pair_binding_redefinition.t.exe))))
+
+(subdir nested_binder_scope_check
+ (rule
+  (targets nested_binder_scope_check.t.exe)
+  (deps NestedBinderScopeCheck.vo nested_binder_scope_check.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_binder_scope_check.t.exe nested_binder_scope_check.t.cpp nested_binder_scope_check.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_binder_scope_check.t.exe)
+  (action (run ./nested_binder_scope_check.t.exe))))
+
+(subdir poly_local_fix_normal_form
+ (rule
+  (targets poly_local_fix_normal_form.t.exe)
+  (deps PolyLocalFixNormalForm.vo poly_local_fix_normal_form.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_local_fix_normal_form.t.exe poly_local_fix_normal_form.t.cpp poly_local_fix_normal_form.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_local_fix_normal_form.t.exe)
+  (action (run ./poly_local_fix_normal_form.t.exe))))
+
+(subdir lifted_local_fix_drops_capture
+ (rule
+  (targets lifted_local_fix_drops_capture.t.exe)
+  (deps LiftedLocalFixDropsCapture.vo lifted_local_fix_drops_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_local_fix_drops_capture.t.exe lifted_local_fix_drops_capture.t.cpp lifted_local_fix_drops_capture.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_local_fix_drops_capture.t.exe)
+  (action (run ./lifted_local_fix_drops_capture.t.exe))))
+
+(subdir inlined_local_fix_param_type
+ (rule
+  (targets inlined_local_fix_param_type.t.exe)
+  (deps InlinedLocalFixParamType.vo inlined_local_fix_param_type.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} inlined_local_fix_param_type.t.exe inlined_local_fix_param_type.t.cpp inlined_local_fix_param_type.cpp)))
+ (rule
+  (alias runtest)
+  (deps inlined_local_fix_param_type.t.exe)
+  (action (run ./inlined_local_fix_param_type.t.exe))))
+
+(subdir reuse_nonatomic_const_v_mut
+ (rule
+  (targets reuse_nonatomic_const_v_mut.t.exe)
+  (deps ReuseNonatomicConstVMut.vo reuse_nonatomic_const_v_mut.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_nonatomic_const_v_mut.t.exe reuse_nonatomic_const_v_mut.t.cpp reuse_nonatomic_const_v_mut.cpp)))
+ (rule
+  (alias runtest)
+  (deps reuse_nonatomic_const_v_mut.t.exe)
+  (action (run ./reuse_nonatomic_const_v_mut.t.exe))))
+
+(subdir poly_nil_type_erased
+ (rule
+  (targets poly_nil_type_erased.t.exe)
+  (deps PolyNilTypeErased.vo poly_nil_type_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_nil_type_erased.t.exe poly_nil_type_erased.t.cpp poly_nil_type_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_nil_type_erased.t.exe)
+  (action (run ./poly_nil_type_erased.t.exe))))
+
+(subdir loopify_nested_call_frame_field
+ (rule
+  (targets loopify_nested_call_frame_field.t.exe)
+  (deps LoopifyNestedCallFrameField.vo loopify_nested_call_frame_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_nested_call_frame_field.t.exe loopify_nested_call_frame_field.t.cpp loopify_nested_call_frame_field.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_nested_call_frame_field.t.exe)
+  (action (run ./loopify_nested_call_frame_field.t.exe))))

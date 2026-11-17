@@ -1,0 +1,18 @@
+#ifndef INCLUDED_MAX_RESULT_DANGLING_REF
+#define INCLUDED_MAX_RESULT_DANGLING_REF
+
+#include <algorithm>
+#include <cstdint>
+
+/// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
+/// testing of Crane: a generated program, shrunk by ephyra and reduced by hand.
+///
+/// Nat.pred (Nat.max a b) lowers to auto &&_once1 = std::max(x, y);:
+/// std::max returns a reference to one of its temporaries, which dies at
+/// the end of the full-expression, so the reads of _once1 are use after
+/// free (clang's -Wdangling rejects it under -Werror).
+struct MaxResultDanglingRef {
+  static uint64_t f(uint64_t a, uint64_t b);
+};
+
+#endif // INCLUDED_MAX_RESULT_DANGLING_REF
