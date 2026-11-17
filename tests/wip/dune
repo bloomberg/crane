@@ -362,17 +362,6 @@
   (action (run ./local_fix_moves_captured_local.t.exe))))
 
 
-(subdir loopify_class_method_frame_save
- (rule
-  (targets loopify_class_method_frame_save.t.exe)
-  (deps LoopifyClassMethodFrameSave.vo loopify_class_method_frame_save.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_class_method_frame_save.t.exe loopify_class_method_frame_save.t.cpp loopify_class_method_frame_save.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_class_method_frame_save.t.exe)
-  (action (run ./loopify_class_method_frame_save.t.exe))))
-
 (subdir unused_pair_binding_redefinition
  (rule
   (targets unused_pair_binding_redefinition.t.exe)

@@ -1941,7 +1941,7 @@ let gen_record_projection cx ~expected_ty ~slot env (core_e : Core.Expr.t) ~typ 
             | Some stmts -> stmts
             | None -> [Cpp_ir.Stmt.Bind_variable (renamed_name, Declare (decl_ty, binder), e)]
           in
-          (stmts, taken) )
+          (stmts, taken || (is_typeclass && match decl_ty with Reference _ -> false | _ -> true)) )
         (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
     in
     Cpp_ir.Build.iife None
@@ -2051,7 +2051,9 @@ let gen_record_match_stmts cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Low
             | Some stmts -> stmts
             | None -> [Bind_variable (renamed_name, Declare (decl_ty, binder), e)]
           in
-          (stmts, taken && match decl_ty with Reference _ -> false | _ -> true) )
+          (* A class instance's field is a static member: the local copies
+             it, and is its own. *)
+          (stmts, (taken || is_typeclass) && match decl_ty with Reference _ -> false | _ -> true) )
         (List.mapi (fun i x -> (i, x)) (List.combine renamed_ids_fwd ids))
     in
     Binders.push_binders cx env (Match_types.retype_dependent_params typ renamed_ids);
