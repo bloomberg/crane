@@ -65,7 +65,7 @@ Crane Extract Inlined Constant PrimInt63.int => "int64_t" From "bsl_cstdint.h".
 Crane Extract Inlined Constant PrimInt63.add => "static_cast<int64_t>((static_cast<uint64_t>(%a0) + static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
 Crane Extract Inlined Constant PrimInt63.sub => "static_cast<int64_t>((static_cast<uint64_t>(%a0) - static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
 Crane Extract Inlined Constant PrimInt63.mul => "static_cast<int64_t>((static_cast<uint64_t>(%a0) * static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
-Crane Extract Inlined Constant PrimInt63.mod => "(%a1 == 0 ? 0 : %a0 % %a1)".
+Crane Extract Inlined Constant PrimInt63.mod => "(%a1 == 0 ? %a0 : %a0 % %a1)".
 Crane Extract Inlined Constant PrimInt63.div => "(%a1 == 0 ? 0 : %a0 / %a1)".
 Crane Extract Inlined Constant PrimInt63.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant PrimInt63.ltb => "%a0 < %a1".

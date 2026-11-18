@@ -14715,3 +14715,14 @@
   (alias runtest)
   (deps self_comparison_mapped_werror.t.exe)
   (action (run ./self_comparison_mapped_werror.t.exe))))
+
+(subdir n_modulo_by_zero
+ (rule
+  (targets n_modulo_by_zero.t.exe)
+  (deps NModuloByZero.vo n_modulo_by_zero.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} n_modulo_by_zero.t.exe n_modulo_by_zero.t.cpp n_modulo_by_zero.cpp)))
+ (rule
+  (alias runtest)
+  (deps n_modulo_by_zero.t.exe)
+  (action (run ./n_modulo_by_zero.t.exe))))

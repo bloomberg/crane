@@ -50,7 +50,7 @@ Crane Extract Inlined Constant N.add => "(%a0 + %a1)".
 Crane Extract Inlined Constant N.sub => "(%a0 >= %a1 ? %a0 - %a1 : mpz_class(0))".
 Crane Extract Inlined Constant N.mul => "(%a0 * %a1)".
 Crane Extract Inlined Constant N.div => "(%a1 == 0 ? mpz_class(0) : %a0 / %a1)".
-Crane Extract Inlined Constant N.modulo => "(%a1 == 0 ? mpz_class(0) : %a0 % %a1)".
+Crane Extract Inlined Constant N.modulo => "(%a1 == 0 ? %a0 : %a0 % %a1)".
 Crane Extract Inlined Constant N.succ => "(%a0 + 1)".
 Crane Extract Inlined Constant N.pred => "(%a0 == 0 ? mpz_class(0) : %a0 - 1)".
 Crane Extract Inlined Constant N.eqb => "%a0 == %a1".

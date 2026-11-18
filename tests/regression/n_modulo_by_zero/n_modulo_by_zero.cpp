@@ -8,5 +8,5 @@
 /// N.modulo 4 0 is 0 in C++.  NIntBDE and NGMP have the same zero branch;
 /// N.div x 0 = 0 is right.  Not a fixed-width effect.
 unsigned int NModuloByZero::a(unsigned int x0_, unsigned int x1_) {
-  return (x1_ == 0u ? 0u : x0_ % x1_);
+  return (x1_ == 0u ? x0_ : x0_ % x1_);
 }

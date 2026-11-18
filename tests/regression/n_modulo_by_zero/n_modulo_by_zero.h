@@ -11,5 +11,5 @@ struct N {
 /// N.div x 0 = 0 is right.  Not a fixed-width effect.
 struct NModuloByZero {
   static unsigned int a(unsigned int x0_, unsigned int x1_);
-  static inline const unsigned int t = (0u == 0u ? 0u : 4u % 0u);
+  static constexpr unsigned int t = 4u;
 };
