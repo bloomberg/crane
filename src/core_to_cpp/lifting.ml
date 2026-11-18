@@ -152,6 +152,23 @@ let build_tvar_names ~outer_tvars tvar_indices =
       if i <= n_outer then outer_arr.(i - 1) else Base.Common.tvar_id i)
     tvar_indices
 
+(** Whether a class instance of [class_temps] is constrained over the type
+    variable [id]: [T1] in [requires Sz<_tcI0, T1>]. *)
+let constrains (class_temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters) id =
+  List.exists
+    (fun ((kind : _ Cpp_ir.Template.Parameter_kind.t), _) ->
+      match kind with
+      | Concept (_, args) -> List.exists (Cpp_ir.Types.exists (Cpp_ir.Type.is_variable_named id)) args
+      | _ -> false )
+    class_temps
+
+(** The indices of the enclosing declaration's type variables, named
+    [outer_tvars], that a class instance of [class_temps] {!constrains}.  A
+    lifted helper redeclares the instance, so it has to declare these as
+    well, whether or not its own type mentions them. *)
+let class_constraint_tvars ~outer_tvars class_temps =
+  List.concat (List.mapi (fun i id -> if constrains class_temps id then [i + 1] else []) outer_tvars)
+
 (** Build extended tvar names covering both signature and body Core.Type.Variable indices.
     A body index absent from the signature is mapped, by the offset between
     the smallest such index and the smallest signature index, onto a
@@ -292,14 +309,19 @@ let build_lifted_cpp_params ?(non_fwd_source_indices = []) (convert_fn : _ -> Cp
 
     Sound only where call sites name no type argument of their own beyond a
     leading prefix they always name, since a positional explicit argument list
-    would be renumbered by the drop. *)
-let generalize_lambda_only_tparams (temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters)
+    would be renumbered by the drop.
+
+    A parameter one of the [class_temps] the head also declares is
+    constrained over, [T1] in [requires Sz<_tcI0, T1>], occurs in the head
+    and stays there. *)
+let generalize_lambda_only_tparams ~class_temps (temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters)
     (params : (_ * Cpp_ir.Lowered.Type.t) list) (ret : Cpp_ir.Lowered.Type.t) (body : Cpp_ir.Lowered.Stmt.t list) =
   let tvar_named id ty = Cpp_ir.Types.exists (Cpp_ir.Type.is_variable_named id) ty in
   let candidates =
     List.filter
       (fun ((tt : Cpp_ir.Lowered.phase Cpp_ir.Template.Parameter_kind.t), id) ->
         tt = Typename
+        && (not (constrains class_temps id))
         && (not (tvar_named id ret))
         && not (List.exists (fun (_, ty) -> tvar_named id ty) params) )
       temps

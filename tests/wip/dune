@@ -261,17 +261,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir poly_composed_lambda_tparam
- (rule
-  (targets poly_composed_lambda_tparam.t.exe)
-  (deps PolyComposedLambdaTparam.vo poly_composed_lambda_tparam.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_composed_lambda_tparam.t.exe poly_composed_lambda_tparam.t.cpp poly_composed_lambda_tparam.cpp)))
- (rule
-  (alias runtest)
-  (deps poly_composed_lambda_tparam.t.exe)
-  (action (run ./poly_composed_lambda_tparam.t.exe))))
-
 (subdir div_by_literal_zero_guard
  (rule
   (targets div_by_literal_zero_guard.t.exe)

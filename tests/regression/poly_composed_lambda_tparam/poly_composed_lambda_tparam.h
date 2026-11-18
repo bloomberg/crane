@@ -30,7 +30,7 @@ struct PolyComposedLambdaTparam {
 
   static_assert(Sz<sz_bool, bool>);
 
-  template <typename _tcI0, typename T2>
+  template <typename _tcI0, typename T1, typename T2>
     requires Sz<_tcI0, T1>
   static std::pair<bool, uint64_t> f_crane_cf(const T2) {
     return std::make_pair(true, UINT64_C(0));
@@ -40,7 +40,7 @@ struct PolyComposedLambdaTparam {
     requires Sz<_tcI0, T1>
   static std::pair<bool, uint64_t> f(T1 a, uint64_t x0_) {
     crane::fn<T1(uint64_t)> cg = [=, a = std::move(a)](uint64_t) { return a; };
-    return f_crane_cf<_tcI0>(cg(x0_));
+    return f_crane_cf<_tcI0, T1>(cg(x0_));
   }
 
   static inline const uint64_t t = (

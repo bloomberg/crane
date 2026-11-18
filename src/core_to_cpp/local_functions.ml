@@ -806,6 +806,20 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
   let body_tvars = Lifting.collect_tvars_ast [] a in
   let all_body_tvars = List.sort_uniq Int.compare body_tvars in
   let tvar_indices = List.sort Int.compare tvar_indices in
+  (* The body being lifted was written against the enclosing
+     declaration's class instances -- it spells [typename
+     _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an
+     Core type variable, so [tvar_indices] cannot mention one.  The lifted
+     head carries the instances over, ahead of the type variables and
+     explicit at every reference: nothing deduces a class instance.  An
+     instance constrained over an enclosing variable, [requires Sz<_tcI0,
+     T1>], takes that variable along, though the binding's type may not
+     mention it. *)
+  let class_temps = current_class_temps cx in
+  let class_args = List.map (fun (_, id) -> Cpp_ir.Build.named_variable id) class_temps in
+  let tvar_indices =
+    List.sort_uniq Int.compare (Lifting.class_constraint_tvars ~outer_tvars class_temps @ tvar_indices)
+  in
   (* Normal Core.Expr.Let fallback (shared by no-extra-tvars and
      thunk-with-free-vars cases) *)
   let gen_normal_letin () =
@@ -918,14 +932,6 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
       let fixed, deduced = List.partition (fun (i, _) -> not (IntSet.mem i deducible)) extra in
       Cpp_ir.Build.typenames (List.map snd (outer @ fixed @ deduced))
     in
-    (* The body being lifted was written against the enclosing
-       declaration's class instances -- it spells [typename
-       _tcI0::PTR::ptr] -- and a concept-constrained parameter is not an
-       Core type variable, so [tvar_indices] cannot mention one.  Carry the
-       head's own instances over, ahead of the type variables and explicit
-       at every reference: nothing deduces a class instance. *)
-    let class_temps = current_class_temps cx in
-    let class_args = List.map (fun (_, id) -> Cpp_ir.Build.named_variable id) class_temps in
     let free_vars = Lifting.lifted_free_vars cx ~class_temps env free_indices in
 
     let extended_tvar_names =
@@ -1155,7 +1161,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
        only occurrence is a returned lambda's binder can move into that
        lambda instead of sitting undeducible in the head. *)
     let all_temps_with_funs, compiled_body =
-      Lifting.generalize_lambda_only_tparams all_temps_with_funs cpp_params cod compiled_body
+      Lifting.generalize_lambda_only_tparams ~class_temps all_temps_with_funs cpp_params cod compiled_body
     in
     let lifted_decl =
       lifted_definition ~binders:[] ~ret:cod lifted_ref cpp_params compiled_body (class_temps @ all_temps_with_funs)
