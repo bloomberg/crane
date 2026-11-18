@@ -7,12 +7,14 @@ Open Scope Z_scope.
     that adjusts C++ truncation to Rocq's flooring.  That lambda is written
     [[&]], which C++ forbids for a lambda at class or namespace scope -- and a
     top-level [Definition] is initialised exactly there.  [Mapping.DequeList]'s
-    [List.rev] has the same shape and the same failure. *)
+    [List.rev] has the same shape and the same failure.  The dividend is a
+    definition rather than a literal, which Core would fold. *)
 
 Module MappingLambdaCaptureDefault.
 
-  Definition d : Z := Z.div (-7) 2.
-  Definition m : Z := Z.modulo (-7) 2.
+  Definition a : Z := -7.
+  Definition d : Z := Z.div a 2.
+  Definition m : Z := Z.modulo a 2.
 
   Definition run : Z := d * 10 + m.
 
