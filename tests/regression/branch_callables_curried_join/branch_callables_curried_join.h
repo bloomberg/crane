@@ -15,6 +15,8 @@
 #include <variant>
 
 template <typename A> struct List;
+struct Ascii;
+struct String;
 
 struct Nat {};
 
@@ -117,6 +119,35 @@ public:
     }
   }
 
+  template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, const A &>
+  List<T1> map(F0 &&f) const {
+    // Builds the result front to back: _write points at the empty tail the next
+    // cell fills.
+    std::optional<List<T1>> _root{};
+    std::shared_ptr<List<T1>> *_write = nullptr;
+    const List<A> *_loop_self = this;
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        auto _value = List<T1>::nil();
+        (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
+                : _root.emplace(std::move(_value)));
+        break;
+      } else {
+        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
+        auto _cell = typename List<T1>::Cons(f(a0), nullptr);
+        List<T1> &_node =
+            (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
+                    : _root.emplace(std::move(_cell)));
+        _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
+        _loop_self = crane_raw(a1);
+        continue;
+      }
+    }
+    return std::move(*_root);
+  }
+
   uint64_t length() const {
     const List<A> *_self = this;
 
@@ -154,6 +185,86 @@ public:
     }
     return _result;
   }
+};
+
+struct Ascii {
+  // DATA
+  bool a0;
+  bool a1;
+  bool a2;
+  bool a3;
+  bool a4;
+  bool a5;
+  bool a6;
+  bool a7;
+
+  // ACCESSORS
+  Ascii clone() const { return {a0, a1, a2, a3, a4, a5, a6, a7}; }
+
+  // CREATORS
+  static Ascii ascii0(bool a0, bool a1, bool a2, bool a3, bool a4, bool a5,
+                      bool a6, bool a7) {
+    return {a0, a1, a2, a3, a4, a5, a6, a7};
+  }
+};
+
+struct String {
+  // TYPES
+  struct EmptyString {};
+
+  struct String0 {
+    Ascii a0;
+    std::shared_ptr<String> a1;
+  };
+
+  using variant_t = std::variant<EmptyString, String0>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  String() {}
+
+  explicit String(EmptyString _v) : v_(_v) {}
+
+  explicit String(String0 _v) : v_(std::move(_v)) {}
+
+  static String emptystring() { return String(EmptyString{}); }
+
+  static String string0(Ascii a0, crane::shared_child_slot<String> a1) {
+    return String(String0{std::move(a0), a1.take()});
+  }
+
+  // MANIPULATORS
+  ~String() {
+    // Release the children this node alone owns in a loop, not recursively, so
+    // a deep value cannot overflow the stack.
+    auto _next = [&](variant_t &_v) -> std::shared_ptr<String> {
+      if (auto *_alt = std::get_if<String0>(&_v)) {
+        if (_alt->a1 && _alt->a1.use_count() == 1) {
+          std::atomic_thread_fence(std::memory_order_acquire);
+          return std::move(_alt->a1);
+        }
+      }
+      return nullptr;
+    };
+    std::shared_ptr<String> _cur = _next(v_mut());
+    while (_cur) {
+      _cur = _next(_cur->v_mut());
+    }
+  }
+
+  String(const String &) = default;
+  String &operator=(const String &) = default;
+  String(String &&) = default;
+  String &operator=(String &&) = default;
+
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
 };
 
 /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
@@ -701,4 +812,41 @@ struct BranchCallablesCurriedJoin {
                      uint64_t x0_, const tree &x1_);
   static inline const uint64_t v4 = f1(
       ptree<std::pair<uint64_t, uint64_t>>::pleaf(), UINT64_C(3), tree::leaf());
+  /// Round-9 variants, at ptree bool -> bool -> string: branches over a
+  /// mapped list; the match a pair's field, invoked in place, whose return
+  /// type is joined after its branches, so the lambda takes its parameters
+  /// from the branch's Core type; a fold_left step.
+  static inline const uint64_t v5 = []() {
+    crane::fn<String(ptree<bool>, bool)> w = [](const ptree<bool> &, bool) {
+      auto &&_sv = List<uint64_t>::nil().template map<tree>(
+          [](uint64_t) { return tree::leaf(); });
+      if (std::holds_alternative<typename List<tree>::Nil>(_sv.v())) {
+        return String::emptystring();
+      } else {
+        return String::string0(
+            Ascii::ascii0(true, false, false, false, false, true, true, false),
+            String::emptystring());
+      }
+    };
+    auto &&_sv = w(ptree<bool>::pleaf(), true);
+    if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+      return UINT64_C(1);
+    } else {
+      return UINT64_C(2);
+    }
+  }();
+
+  template <typename F0> static uint64_t app2(F0 &&w) {
+    auto &&_sv = w(ptree<bool>::pleaf(), true);
+    if (std::holds_alternative<typename String::EmptyString>(_sv.v())) {
+      return UINT64_C(1);
+    } else {
+      return UINT64_C(2);
+    }
+  }
+
+  static std::pair<uint64_t, crane::fn<String(ptree<bool>, bool)>>
+  v10(const List<uint64_t> &l);
+  static uint64_t v11(const List<uint64_t> &l);
+  static uint64_t v12(const List<uint64_t> &l);
 };

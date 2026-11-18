@@ -22,6 +22,11 @@ int main() {
   if (!(M::v3(std::nullopt) == 0)) { std::cout << "FAIL: M::v3(None)" << std::endl; ++fails; }
   if (!(M::v3(std::optional<uint64_t>(4)) == 4)) { std::cout << "FAIL: M::v3(Some 4)" << std::endl; ++fails; }
   if (!(M::v4 == 0)) { std::cout << "FAIL: M::v4" << std::endl; ++fails; }
+  if (!(M::v5 == 1)) { std::cout << "FAIL: M::v5" << std::endl; ++fails; }
+  if (!(M::v11(e) == 1)) { std::cout << "FAIL: M::v11(e)" << std::endl; ++fails; }
+  if (!(M::v11(one) == 2)) { std::cout << "FAIL: M::v11(one)" << std::endl; ++fails; }
+  if (!(M::v12(e) == 2)) { std::cout << "FAIL: M::v12(e)" << std::endl; ++fails; }
+  if (!(M::v12(one) == 1)) { std::cout << "FAIL: M::v12(one)" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All branch_callables_curried_join tests passed!" << std::endl;
   return fails;

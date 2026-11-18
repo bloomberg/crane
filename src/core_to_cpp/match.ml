@@ -52,6 +52,33 @@ let record_taken cx ~is_typeclass t base =
 let with_fields_plan cx case asgns f =
   with_plan cx (Ownership_ir.Region.fields_by_value cx.ctx.lexical.move_plan ~case ~by_value:(List.map snd asgns)) f
 
+(** The return type a branch of a match invoked in place, annotated [rty],
+    is written under: the one in force, [ret], where it is a function type;
+    failing that, at a function of several arguments, the annotation's, the
+    type the match joins its callables at ({!Match_types.iife_closure_return}),
+    so that a lambda in the branch's tail takes them all. *)
+let branch_return cx env (ret : Cpp_ir.Lowered.Type.t option) (rty : Core.Type.t) =
+  match ret with
+  | Some (Function _) -> ret
+  | _ when count_core_value_arrows rty >= 2 -> (
+    match Types.cpp_of_core cx env rty with
+    | Function _ as f when Types.names_only_scoped_tvars cx f && not (Base.Type_util.has_tany_written f) -> Some f
+    | _ -> ret )
+  | _ -> ret
+
+(** The slot a branch annotated [rty] hands its value to: the match's own,
+    [slot], which states the Core type a function value is written against
+    ({!Lambda.gen_lambda}) where it is one; failing that, at a function type,
+    the branch's annotation, which says it as well. *)
+let branch_slot ?slot (rty : Core.Type.t) : Slot.slot option =
+  let arrow t = match resolve_meta t with Core.Type.Arrow _ -> true | _ -> false in
+  match slot with
+  | Some ({Slot.expected_core_ty = Some t; _} : Slot.slot) when arrow t -> slot
+  | _ when arrow rty ->
+    let s = match slot with Some s -> s | None -> Slot.empty_slot in
+    Some {s with Slot.expected_core_ty = Some rty}
+  | _ -> slot
+
 (** Generate a single branch of a [Match] statement's if/else-if chain.
 
     Produces a [Cpp_ir.Grammar.Match.branch] whose body statements live directly
@@ -140,7 +167,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
       let inner_ret =
         match current_cpp_return_type cx () with
         | Some Void -> None
-        | rt -> rt
+        | rt -> branch_return cx env rt rty
       in
       with_scope cx @@ fun () ->
       with_cpp_return_type cx inner_ret (fun () ->
@@ -155,7 +182,7 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
                 Representation_plan.check cx.ctx ~site ~field:i
                   ~live:(Binders.binder_is_boxed cx (n_pat_vars - i)) () )
               rev_ids;
-          gen_stmts cx ?slot env_for_body (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ))
+          gen_stmts cx ?slot:(branch_slot ?slot rty) env_for_body (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ))
   in
   let tvars = get_current_type_vars cx in
 (* A non-self-referential field in a type-indexed inductive (no template
@@ -607,7 +634,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
           (fun {Core.Match.Branch.pattern = p; _} -> match p with Core.Pattern.Wildcard -> true | _ -> false)
       in
       Option.map
-        (fun (br : Core.Match.Branch.t) -> gen_stmts cx ?slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) br.body)
+        (fun (br : Core.Match.Branch.t) -> gen_stmts cx ?slot:(branch_slot ?slot br.result_type) env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) br.body)
         wild_br
     in
     let void_ret = Match_types.iife_void_return cx env typ pv in
@@ -721,7 +748,7 @@ and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lo
         (br :: rest, wild)
       | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ ->
         let body_stmts =
-          gen_stmts cx ?slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body
+          gen_stmts cx ?slot:(branch_slot ?slot rty) env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body
         in
         ([], Some body_stmts)
       | Core.Pattern.Tuple _ -> gen_branches (i + 1) cs
@@ -1035,7 +1062,7 @@ let gen_cpp_custom_body cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
       else k
     | _ -> k
   in
-  let body = gen_stmts cx ?slot env k body in
+  let body = gen_stmts cx ?slot:(branch_slot ?slot rty) env k body in
   (ids, ret, body)
 
 (** Generate a custom case expression using user-provided extraction syntax.

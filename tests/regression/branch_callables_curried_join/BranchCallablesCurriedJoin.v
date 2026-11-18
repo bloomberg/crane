@@ -1,6 +1,6 @@
 From Crane Require Import Mapping.NatIntStd Mapping.ZInt.
 From Crane Require Extraction.
-From Stdlib Require Import List ZArith.
+From Stdlib Require Import List ZArith Strings.String.
 Import ListNotations.
 
 (** Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
@@ -90,6 +90,34 @@ Definition f1 (a : ptree (nat * nat)) : nat -> tree -> nat :=
   go [] (let cf := (fun _ : tree => fun _ : tree => 0) in let cg := (fun _ : nat => Leaf) in fun c : nat => cf (cg c)).
 
 Definition v4 : nat := f1 PLeaf 3 Leaf.
+
+(** Round-9 variants, at [ptree bool -> bool -> string]: branches over a
+    mapped list; the match a pair's field, invoked in place, whose return
+    type is joined after its branches, so the lambda takes its parameters
+    from the branch's Core type; a [fold_left] step. *)
+Definition v5 : nat :=
+  (fun w : ptree bool -> bool -> string => match w PLeaf true with EmptyString => 1 | _ => 2 end)
+  (match map (fun _ : nat => Leaf) [] with
+   | [] => (fun _ : ptree bool => fun _ : bool => ""%string)
+   | _ :: _ => (fun (p : ptree bool) => fun (b : bool) => "a"%string)
+   end).
+
+Definition app2 (w : ptree bool -> bool -> string) : nat := match w PLeaf true with EmptyString => 1 | _ => 2 end.
+
+Definition v10 (l : list nat) : nat * (ptree bool -> bool -> string) :=
+  (0, match map (fun _ : nat => Leaf) l with
+   | [] => (fun _ : ptree bool => fun _ : bool => ""%string)
+   | _ :: _ => (let cf := (fun (_ : nat) (_ : bool) => "a"%string) in fun c : ptree bool => cf 0)
+   end).
+
+Definition v11 (l : list nat) : nat := app2 (snd (v10 l)).
+
+Definition v12 (l : list nat) : nat :=
+  app2 (fold_left (fun (acc : ptree bool -> bool -> string) (x : tree) =>
+     match x with
+     | Leaf => (fun _ : ptree bool => fun _ : bool => ""%string)
+     | Node _ _ _ => (let cf := (fun (_ : nat) (_ : bool) => "a"%string) in fun c : ptree bool => cf 0)
+     end) (map (fun _ : nat => Leaf) l) (fun _ _ => "z"%string)).
 
 End BranchCallablesCurriedJoin.
 
