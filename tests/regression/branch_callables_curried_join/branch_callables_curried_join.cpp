@@ -68,3 +68,95 @@ uint64_t BranchCallablesCurriedJoin::t2(const List<uint64_t> &l) {
         return [](bool) { return UINT64_C(7); };
       })(INT64_C(3))(true);
 }
+
+uint64_t BranchCallablesCurriedJoin::v3(const std::optional<uint64_t> &x) {
+  std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>> p = [&]() {
+    auto &&_sv = [&]() -> BranchCallablesCurriedJoin::tree {
+      if (x.has_value()) {
+        const uint64_t &o = *x;
+        return tree::leaf().tins(o);
+      } else {
+        return tree::leaf();
+      }
+    }();
+    if (std::holds_alternative<typename BranchCallablesCurriedJoin::tree::Leaf>(
+            _sv.v())) {
+      return std::make_pair(UINT64_C(0),
+                            crane::fn([](uint64_t) { return UINT64_C(0); }));
+    } else {
+      const auto &[_, a1, _] =
+          std::get<typename BranchCallablesCurriedJoin::tree::Node>(_sv.v());
+      return std::make_pair(a1, crane::fn([]() {
+        auto go =
+            [](List<uint64_t> l, crane::fn<uint64_t(uint64_t)> acc,
+               uint64_t x0_)
+                 -> uint64_t {
+              // Loop replaces the tail recursion: each recursive call updates
+              // the loop variables.
+              List<uint64_t> _loop_l = std::move(l);
+              while (true) {
+                if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                        _loop_l.v_mut())) {
+                  return acc(x0_);
+                } else {
+                  auto &[_, a4] =
+                      std::get<typename List<uint64_t>::Cons>(_loop_l.v_mut());
+                  _loop_l = List<uint64_t>(*a4);
+                }
+              }
+            };
+        return [=](uint64_t _pa0) {
+          return go(List<uint64_t>::nil(), [](uint64_t) { return UINT64_C(0); },
+                    _pa0);
+        };
+      }()));
+    }
+  }();
+  return (p.first + p.second(UINT64_C(1)));
+}
+
+uint64_t BranchCallablesCurriedJoin::f1(
+    const BranchCallablesCurriedJoin::ptree<std::pair<uint64_t, uint64_t>> &,
+    uint64_t x0_, const BranchCallablesCurriedJoin::tree &x1_) {
+  return []() {
+    auto go =
+        [](List<bool> l,
+           crane::fn<uint64_t(uint64_t, BranchCallablesCurriedJoin::tree)>,
+           uint64_t, BranchCallablesCurriedJoin::tree)
+             -> uint64_t {
+          // Loop replaces the tail recursion: each recursive call updates the
+          // loop variables.
+          List<bool> _loop_l = std::move(l);
+          while (true) {
+            if (std::holds_alternative<typename List<bool>::Nil>(
+                    _loop_l.v_mut())) {
+              return UINT64_C(0);
+            } else {
+              auto &[_, a1] =
+                  std::get<typename List<bool>::Cons>(_loop_l.v_mut());
+              const List<bool> &a1_value = *a1;
+              _loop_l = List<bool>(a1_value);
+            }
+          }
+        };
+    return [=](uint64_t _pa0, BranchCallablesCurriedJoin::tree _pa1) {
+      return go(
+          List<bool>::nil(),
+          []() {
+            crane::fn<uint64_t(BranchCallablesCurriedJoin::tree,
+                               BranchCallablesCurriedJoin::tree)> cf =
+                [](BranchCallablesCurriedJoin::tree,
+                   BranchCallablesCurriedJoin::tree) { return UINT64_C(0); };
+            crane::fn<BranchCallablesCurriedJoin::tree(uint64_t)> cg =
+                [](uint64_t) { return tree::leaf(); };
+            return [=, cf = std::move(cf), cg = std::move(cg)](
+                uint64_t c,
+                const BranchCallablesCurriedJoin::tree &eta0_) {
+              return cf(cg(c), eta0_);
+            };
+          }(),
+          _pa0,
+          _pa1);
+    };
+  }()(x0_, x1_);
+}

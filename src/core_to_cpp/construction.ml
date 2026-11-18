@@ -248,10 +248,28 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
       let has_signature (l : Cpp_ir.Lowered.phase Cpp_ir.Expr.Lambda.t) =
         not (List.exists (fun (t, _) -> Cpp_ir.Types.exists (fun t -> t = Cpp_ir.Type.Auto) t) l.params)
       in
+      (* A closure an immediately invoked lambda returns -- a local fixpoint
+         partially applied in place, say -- is one all the same: each of its
+         [return]s a closure with a signature. *)
+      let returns_closures (body : Cpp_ir.Lowered.Stmt.t list) =
+        let all = ref true and any = ref false in
+        let rec stmt (s : Cpp_ir.Lowered.Stmt.t) =
+          match s with
+          | Return (Some (Lambda l)) when has_signature l -> any := true
+          | Return _ -> all := false
+          | s -> Cpp_ir.Subterms.stmt ~expr:ignore ~stmts:(List.iter stmt) s
+        in
+        List.iter stmt body;
+        !any && !all
+      in
       match (into, List.nth_opt field_types_for_wrap i, result) with
       | None, Some ft, Lambda l
         when (not (is_passthrough_ctor_arg i)) && has_signature l && Erasure.core_expr_is_function_value cx e ->
         Coerce.name_fn_arg_for_tvar_param ft result
+      | None, Some ft, Call (_, Lambda {params = []; body; _}, [])
+        when (not (is_passthrough_ctor_arg i)) && returns_closures body
+             && (match resolve_meta ft with Core.Type.Variable _ -> true | _ -> false) ->
+        Function_value result
       | _ -> result) ts)
   in
   (* Helper to wrap expression in function call syntax if it has arguments.

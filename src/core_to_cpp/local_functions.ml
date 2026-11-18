@@ -1233,7 +1233,16 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
     List.rev
       (List.mapi
          (fun i a ->
-           let e = gen_expr cx env a in
+           (* A function value passed for a parameter of a function type is
+              written against it: a lambda takes every parameter the type
+              does ({!Lambda.gen_lambda}). *)
+           let e =
+             match List.nth_opt params i with
+             | Some (_, (Core.Type.Arrow _ as ty)) when count_core_value_arrows ty >= 2 ->
+               gen_expr cx ~expected_ty:(Types.cpp_of_core cx env ty)
+                 ~slot:{Slot.empty_slot with expected_core_ty = Some ty} env a
+             | _ -> gen_expr cx env a
+           in
            (* As at a call of the member ({!erased_member_types}). *)
            let e =
              match List.nth_opt params i with

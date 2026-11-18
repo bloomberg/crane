@@ -17,6 +17,11 @@ int main() {
   if (!(M::t2(e) == 7)) { std::cout << "FAIL: M::t2(e)" << std::endl; ++fails; }
   if (!(M::t2(one) == 7)) { std::cout << "FAIL: M::t2(one)" << std::endl; ++fails; }
   if (!(M::t2(zero_one) == 0)) { std::cout << "FAIL: M::t2(zero_one)" << std::endl; ++fails; }
+  if (!(M::v1 == 0)) { std::cout << "FAIL: M::v1" << std::endl; ++fails; }
+  if (!(M::v2 == 0)) { std::cout << "FAIL: M::v2" << std::endl; ++fails; }
+  if (!(M::v3(std::nullopt) == 0)) { std::cout << "FAIL: M::v3(None)" << std::endl; ++fails; }
+  if (!(M::v3(std::optional<uint64_t>(4)) == 4)) { std::cout << "FAIL: M::v3(Some 4)" << std::endl; ++fails; }
+  if (!(M::v4 == 0)) { std::cout << "FAIL: M::v4" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All branch_callables_curried_join tests passed!" << std::endl;
   return fails;
