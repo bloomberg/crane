@@ -170,7 +170,8 @@ public:
 /// A cofixpoint whose parameter is unused (CoFixpoint c1 (n : nat) :=
 /// sconst 0), passed unapplied to map, prints as the call c1(): "too
 /// few arguments to function call, single argument '_x' was not
-/// specified".
+/// specified".  Naming a cofixpoint calls it only where it takes no
+/// parameters.
 struct CofixUnusedParamAsValue {
   struct stream {
     // TYPES
@@ -220,5 +221,5 @@ struct CofixUnusedParamAsValue {
           UINT64_C(1),
           List<uint64_t>::cons(UINT64_C(2),
                                List<uint64_t>::nil()))
-          .template map<stream>(c1()).length();
+          .template map<stream>(c1).length();
 };

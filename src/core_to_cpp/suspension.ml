@@ -33,13 +33,16 @@ let thunk_reason cx r =
 (** Whether naming the global [r] calls it.  A definition that only throws is
     emitted as a zero-parameter function unless it has C++ parameters of its
     own -- [cpp_of] spells its type -- in which case naming it names the
-    function. *)
+    function.  So is a cofixpoint: one taking parameters is declared with
+    them, whether or not its body reads them, and named, it is the function. *)
 let naming_calls cx ~cpp_of r =
+  let declared () = Option.map cpp_of (callee_core_type cx r) in
   match thunk_reason cx r with
   | None -> false
-  | Some (Cofixpoint | Monadic) -> true
-  | Some Throws -> (
-    match Option.map cpp_of (callee_core_type cx r) with Some (Cpp_ir.Type.Function _) -> false | _ -> true )
+  | Some Monadic -> true
+  | Some Cofixpoint -> (
+    match declared () with Some (Cpp_ir.Type.Function (_ :: _, _)) -> false | _ -> true )
+  | Some Throws -> ( match declared () with Some (Cpp_ir.Type.Function _) -> false | _ -> true )
 
 (** Whether evaluating [e] is only building a value: no call is made, so it
     cannot fail to terminate.  A lambda is a value; so is a constructor of

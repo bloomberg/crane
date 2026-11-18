@@ -9,7 +9,8 @@ Import ListNotations.
     A cofixpoint whose parameter is unused ([CoFixpoint c1 (n : nat) :=
     sconst 0]), passed unapplied to [map], prints as the call [c1()]: "too
     few arguments to function call, single argument '_x' was not
-    specified". *)
+    specified".  Naming a cofixpoint calls it only where it takes no
+    parameters. *)
 Module CofixUnusedParamAsValue.
 
 CoInductive stream : Type := SCons : nat -> stream -> stream.
