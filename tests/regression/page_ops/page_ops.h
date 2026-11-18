@@ -199,9 +199,7 @@ struct PageOps {
   static inline const uint64_t test_base_for_next_page_cross_2 =
       base_for_next2(state{UINT64_C(255)});
   static inline const bool test_page_decomp_roundtrip =
-      (((UINT64_C(256) ? UINT64_C(1027) / UINT64_C(256) : 0) * UINT64_C(256)) +
-       (UINT64_C(256) ? UINT64_C(1027) % UINT64_C(256) : UINT64_C(1027))) ==
-      UINT64_C(1027);
+      ((UINT64_C(4) * UINT64_C(256)) + UINT64_C(3)) == UINT64_C(1027);
   static inline const uint64_t test_page_offset_recompose =
       recompose(addr12_of_nat(UINT64_C(1027)));
   static inline const uint64_t test_page_recompose =
