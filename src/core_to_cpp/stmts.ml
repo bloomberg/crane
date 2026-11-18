@@ -20,17 +20,6 @@ open Core_plan.Query
 open Knot
 open Match
 
-(** [in_rhs_scope f] runs [f], which lowers a let's right-hand side, and puts
-    the binder types back as they were.  The right-hand side is lowered as
-    statements of the let's own block, so a let that is itself one
-    ([let p := (let q := .. in ..) in ..]) pushes [q]'s type and would leave
-    it there; [q] is not in scope in the body, whose names {!push_vars'}
-    pushes on [env] without it, and every variable beneath [p] would read the
-    binder one further in. *)
-let in_rhs_scope cx f =
-  let saved = cx.ctx.lexical.env_types in
-  Fun.protect ~finally:(fun () -> restore_env_types cx saved) f
-
 (** The names [stmts] declare in the scope they are spliced into: their own
     declarations, and the binders a custom match's template writes outside
     braces ([const auto& [a, b] = p;]). *)
@@ -52,8 +41,21 @@ let declared_in_scope (stmts : Cpp_ir.Lowered.Stmt.t list) =
 
 (** [gen_stmts ?slot env k e] -- [e] lowered as statements, the value it
     computes handed to [k] (a [return], an assignment).  [slot] is
-    {!Expr.gen_expr}'s, carried into the tail positions. *)
-let rec gen_stmts cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
+    {!Expr.gen_expr}'s, carried into the tail positions.
+
+    It leaves the binder types as it found them.  The binders [e] introduces
+    -- a let's, a record match's fields -- are pushed for the statements
+    under them and are in scope nowhere else: a caller's [env] does not name
+    them, whether it goes on to a match's next branch, a let's body after its
+    right-hand side ([let p := (let q := .. in ..) in ..]) or the sibling
+    argument of a call, and every variable it reads beneath one left pushed
+    would read the binder one further in. *)
+let rec gen_stmts cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) ast : Cpp_ir.Lowered.Stmt.t list =
+  let saved = cx.ctx.lexical.env_types in
+  Fun.protect ~finally:(fun () -> restore_env_types cx saved) (fun () -> gen_stmts_scoped cx ?slot env k ast)
+
+(** {!gen_stmts}, the binders it pushes left for {!gen_stmts} to pop. *)
+and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
   Cpp_ir.Lowered.Stmt.t) ast :
     Cpp_ir.Lowered.Stmt.t list =
   (* Statements open a position of their own and state no type for it: the
@@ -94,7 +96,7 @@ let rec gen_stmts cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
          so we can't assign its result to a variable.  Execute the RHS for
          side effects, then declare the variable as Unit::e_TT (its only
          possible value) so the body can still reference it. *)
-      let rhs = in_rhs_scope cx (fun () -> gen_stmts cx env_rhs (fun e -> Expression e) a) in
+      let rhs = gen_stmts cx env_rhs (fun e -> Expression e) a in
       Binders.push_binders cx env [(x_renamed, t)];
       (* Drop trivially pure RHS (e.g. Unit::e_TT from tt, variable refs) *)
       let rhs = List.filter (fun (s : Cpp_ir.Lowered.Stmt.t) ->
@@ -281,7 +283,7 @@ let rec gen_stmts cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t ->
         (* [let t := x <- arg ;; ...] is a tree over [arg]'s family,
            whatever family the function returns into. *)
         let rhs_result = Types.let_value_result cx env t_effective in
-        with_cpp_return_type cx rhs_result (fun () -> in_rhs_scope cx @@ fun () ->
+        with_cpp_return_type cx rhs_result (fun () ->
           gen_stmts cx
             ~slot:
               { slot with

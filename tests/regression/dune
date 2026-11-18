@@ -14747,3 +14747,14 @@
   (alias runtest)
   (deps stream_match_sv_redefinition.t.exe)
   (action (run ./stream_match_sv_redefinition.t.exe))))
+
+(subdir functor_binder_scope_check
+ (rule
+  (targets functor_binder_scope_check.t.exe)
+  (deps FunctorBinderScopeCheck.vo functor_binder_scope_check.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_binder_scope_check.t.exe functor_binder_scope_check.t.cpp functor_binder_scope_check.cpp)))
+ (rule
+  (alias runtest)
+  (deps functor_binder_scope_check.t.exe)
+  (action (run ./functor_binder_scope_check.t.exe))))
