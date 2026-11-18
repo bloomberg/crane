@@ -196,7 +196,7 @@ uint64_t LoopifyListSubsequences::last_elem(const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        return std::move(a0);
+        return a0;
       } else {
         _loop_l = crane_raw(a1);
       }
@@ -217,7 +217,7 @@ uint64_t LoopifyListSubsequences::nth_elem(uint64_t n,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        return std::move(a0);
+        return a0;
       } else {
         _loop_l = crane_raw(a1);
         _loop_n =

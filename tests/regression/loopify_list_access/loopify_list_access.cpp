@@ -12,7 +12,7 @@ uint64_t LoopifyListAccess::nth(uint64_t n, const List<uint64_t> &l) {
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        return std::move(a0);
+        return a0;
       } else {
         _loop_l = crane_raw(a1);
         _loop_n =
@@ -34,7 +34,7 @@ uint64_t LoopifyListAccess::last(const List<uint64_t> &l) {
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
-        return std::move(a0);
+        return a0;
       } else {
         _loop_l = crane_raw(a1);
       }
@@ -103,7 +103,7 @@ LoopifyListAccess::lookup(uint64_t key,
               _loop_l->v());
       const auto &[k, v] = a0;
       if (k == key) {
-        return std::move(v);
+        return v;
       } else {
         _loop_l = crane_raw(a1);
       }
@@ -226,7 +226,7 @@ uint64_t LoopifyListAccess::nth_default(uint64_t n, uint64_t default0,
       const auto &[a0, a1] =
           std::get<typename List<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        return std::move(a0);
+        return a0;
       } else {
         _loop_l = crane_raw(a1);
         _loop_n =

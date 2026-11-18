@@ -161,7 +161,7 @@ struct LentAliasByReference {
             typename List<std::pair<uint64_t, T1>>::Cons>(_loop_t->v());
         const auto &[k_, v] = a0;
         if (k == k_) {
-          return std::move(v);
+          return v;
         } else {
           _loop_t = crane_raw(a1);
         }

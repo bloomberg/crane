@@ -36,7 +36,7 @@ uint64_t LoopifyTail::nth(uint64_t n, const LoopifyTail::list<uint64_t> &l,
       const auto &[a0, a1] =
           std::get<typename LoopifyTail::list<uint64_t>::Cons>(_loop_l->v());
       if (_loop_n == UINT64_C(0)) {
-        return std::move(a0);
+        return a0;
       } else {
         _loop_l = crane_raw(a1);
         _loop_n =

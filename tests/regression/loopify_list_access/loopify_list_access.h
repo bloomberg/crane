@@ -117,7 +117,7 @@ struct LoopifyListAccess {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l->v());
         if (p(a0)) {
-          return std::move(a0);
+          return a0;
         } else {
           _loop_l = crane_raw(a1);
         }

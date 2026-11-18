@@ -512,7 +512,7 @@ struct Comp {
               break;
             }
             case Bool0::FALSE_: {
-              return std::move(a2);
+              return a2;
             }
             default:
               std::unreachable();
