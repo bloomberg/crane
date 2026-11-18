@@ -122,11 +122,11 @@ struct MemSafetyProbe2 {
     /// TEST 14: Partial application stored in pair alongside tree.
     std::pair<crane::fn<uint64_t(uint64_t)>, tree> pair_closure_tree() const {
       tree _self_val = *this;
-      return std::make_pair(
+      return std::make_pair(crane::fn(
           [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
             return _self_val.sum_values(_x0);
-          },
-          *this);
+          }),
+                            *this);
     }
 
     /// TEST 12: Value type cloned into pair, then both halves used with
@@ -160,10 +160,10 @@ struct MemSafetyProbe2 {
     std::optional<crane::fn<uint64_t(uint64_t)>> opt_adder(bool b) const {
       tree _self_val = *this;
       if (b) {
-        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(crane::fn(
             [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
               return _self_val.sum_values(_x0);
-            });
+            }));
       } else {
         return std::optional<crane::fn<uint64_t(uint64_t)>>();
       }

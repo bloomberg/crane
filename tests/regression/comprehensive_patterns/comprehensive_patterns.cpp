@@ -47,7 +47,7 @@ ComprehensivePatterns::compose(const ComprehensivePatterns::S &s) {
 
 std::pair<crane::fn<uint64_t(uint64_t)>, ComprehensivePatterns::S>
 ComprehensivePatterns::lambda_proj(ComprehensivePatterns::S s) {
-  return std::make_pair([=](uint64_t) { return s.s_a; }, s);
+  return std::make_pair(crane::fn([=](uint64_t) { return s.s_a; }), s);
 }
 
 std::pair<std::pair<std::pair<ComprehensivePatterns::S, uint64_t>, uint64_t>,
@@ -184,8 +184,8 @@ ComprehensivePatterns::rebind(const ComprehensivePatterns::S &s1) {
 std::pair<crane::fn<uint64_t(std::monostate)>,
           crane::fn<uint64_t(std::monostate)>>
 ComprehensivePatterns::closure_pair(ComprehensivePatterns::S s) {
-  return std::make_pair([=](std::monostate) { return s.s_a; },
-                        [=](std::monostate) { return s.s_b; });
+  return std::make_pair(crane::fn([=](std::monostate) { return s.s_a; }),
+                        crane::fn([=](std::monostate) { return s.s_b; }));
 }
 
 Sig<ComprehensivePatterns::S>

@@ -102,7 +102,7 @@ struct MemSafetyProbe14 {
     /// Tests pair construction + closure capture interaction.
     std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t> fn_and_val() const {
       uint64_t s = this->tree_sum();
-      return std::make_pair([=](uint64_t n) { return (s + n); }, s);
+      return std::make_pair(crane::fn([=](uint64_t n) { return (s + n); }), s);
     }
 
     /// TEST 4: Two closures capture same tree. Both should

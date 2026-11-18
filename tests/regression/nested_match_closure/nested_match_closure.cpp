@@ -24,7 +24,7 @@ NestedMatchClosure::make_combiner(const NestedMatchClosure::tree &t) {
     if (std::holds_alternative<typename NestedMatchClosure::tree::Leaf>(
             a0_value.v())) {
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          [=](uint64_t x) { return (a1 + x); });
+          crane::fn([=](uint64_t x) { return (a1 + x); }));
     } else {
       const auto &[_, a10, _] =
           std::get<typename NestedMatchClosure::tree::Node>(a0_value.v());

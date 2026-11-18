@@ -12,7 +12,7 @@
 std::pair<uint64_t, crane::fn<uint64_t(uint64_t)>>
 FixChainBuild::build_chain(uint64_t n) {
   if (n <= 0) {
-    return std::make_pair(UINT64_C(0), [](uint64_t x) { return x; });
+    return std::make_pair(UINT64_C(0), crane::fn([](uint64_t x) { return x; }));
   } else {
     uint64_t n_ = n - 1;
     auto [_x, prev] = build_chain(n_);

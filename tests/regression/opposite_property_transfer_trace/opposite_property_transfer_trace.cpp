@@ -22,16 +22,18 @@ OppositePropertyTransferTraceCase::EquivT<
 OppositePropertyTransferTraceCase::triangle_identity_duality(
     const OppositePropertyTransferTraceCase::PreStableCategory &) {
   return std::make_pair(
-      [](const OppositePropertyTransferTraceCase::Triangle1Witness &h) {
-        uint64_t t1_seed0 = h.t1_seed;
-        uint64_t t1_value0 = h.t1_value;
-        return Triangle2Witness{t1_seed0, t1_value0};
-      },
-      [](const OppositePropertyTransferTraceCase::Triangle2Witness &h) {
-        uint64_t t2_seed0 = h.t2_seed;
-        uint64_t t2_value0 = h.t2_value;
-        return Triangle1Witness{t2_seed0, t2_value0};
-      });
+      crane::fn(
+          [](const OppositePropertyTransferTraceCase::Triangle1Witness &h) {
+            uint64_t t1_seed0 = h.t1_seed;
+            uint64_t t1_value0 = h.t1_value;
+            return Triangle2Witness{t1_seed0, t1_value0};
+          }),
+      crane::fn(
+          [](const OppositePropertyTransferTraceCase::Triangle2Witness &h) {
+            uint64_t t2_seed0 = h.t2_seed;
+            uint64_t t2_value0 = h.t2_value;
+            return Triangle1Witness{t2_seed0, t2_value0};
+          }));
 }
 
 OppositePropertyTransferTraceCase::LeftProperty
@@ -51,16 +53,16 @@ OppositePropertyTransferTraceCase::EquivT<
 OppositePropertyTransferTraceCase::dual_property_equiv(
     const OppositePropertyTransferTraceCase::PreStableCategory &) {
   return std::make_pair(
-      [](const OppositePropertyTransferTraceCase::LeftProperty &h) {
+      crane::fn([](const OppositePropertyTransferTraceCase::LeftProperty &h) {
         uint64_t lp_seed0 = h.lp_seed;
         uint64_t lp_value0 = h.lp_value;
         uint64_t lp_tag0 = h.lp_tag;
         return RightProperty{lp_seed0, lp_value0, lp_tag0};
-      },
-      [](const OppositePropertyTransferTraceCase::RightProperty &h) {
+      }),
+      crane::fn([](const OppositePropertyTransferTraceCase::RightProperty &h) {
         uint64_t rp_seed0 = h.rp_seed;
         uint64_t rp_value0 = h.rp_value;
         uint64_t rp_tag0 = h.rp_tag;
         return LeftProperty{rp_seed0, rp_value0, rp_tag0};
-      });
+      }));
 }

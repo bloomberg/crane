@@ -95,12 +95,12 @@ struct MemSafetyProbe3 {
     opt_pair(bool b) const {
       tree _self_val = *this;
       return std::make_pair((b ? std::make_optional<
-                                     crane::fn<uint64_t(uint64_t)>>(
+                                     crane::fn<uint64_t(uint64_t)>>(crane::fn(
                                      [=, _self_val = std::move(_self_val)](
                                          uint64_t _x0)
                                           -> uint64_t {
                                        return _self_val.sum_values(_x0);
-                                     })
+                                     }))
                                : std::optional<crane::fn<uint64_t(uint64_t)>>()),
                             *this);
     }
@@ -180,12 +180,13 @@ struct MemSafetyProbe3 {
         std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
         uint64_t> nested_pair() const {
       tree _self_val = *this;
-      return std::make_pair(std::make_pair(
-          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
-            return _self_val.sum_values(_x0);
-          },
-          [](uint64_t x) { return x; }),
-                            this->sum_values(UINT64_C(0)));
+      return std::make_pair(
+          std::make_pair(crane::fn(
+              [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+                return _self_val.sum_values(_x0);
+              }),
+                         crane::fn([](uint64_t x) { return x; })),
+          this->sum_values(UINT64_C(0)));
     }
 
     /// TEST 5: Mutual use: tree used BOTH as partial application arg
@@ -272,12 +273,13 @@ struct MemSafetyProbe3 {
     paired_closures(tree t2) const {
       tree _self_val = *this;
       return std::make_pair(
-          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
-            return _self_val.sum_values(_x0);
-          },
-          [=, t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
+          crane::fn(
+              [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+                return _self_val.sum_values(_x0);
+              }),
+          crane::fn([=, t2 = std::move(t2)](uint64_t _x0) -> uint64_t {
             return t2.sum_values(_x0);
-          });
+          }));
     }
 
     uint64_t sum_values(uint64_t x) const {

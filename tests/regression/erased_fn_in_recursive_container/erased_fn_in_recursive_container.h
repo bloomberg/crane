@@ -236,7 +236,7 @@ struct ErasedFnInRecursiveContainer {
       std::optional<crane::fn<uint64_t(uint64_t)>>>(rose<
       std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
       std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          [](uint64_t x) { return x; }),
+          crane::fn([](uint64_t x) { return x; })),
       List<rose<std::optional<crane::fn<uint64_t(uint64_t)>>>>::cons(
           rose<std::optional<crane::fn<uint64_t(uint64_t)>>>::node(
               std::optional<crane::fn<uint64_t(uint64_t)>>(),
