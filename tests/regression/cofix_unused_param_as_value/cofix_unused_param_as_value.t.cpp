@@ -10,6 +10,7 @@
 int main() {
   int fails = 0;
   if (!(M::t == 2)) { std::cout << "FAIL: M::t" << std::endl; ++fails; }
+  if (!(M::t2 == 3)) { std::cout << "FAIL: M::t2" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All cofix_unused_param_as_value tests passed!" << std::endl;
   return fails;

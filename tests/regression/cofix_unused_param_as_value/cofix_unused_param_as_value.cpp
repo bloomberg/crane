@@ -18,3 +18,7 @@ CofixUnusedParamAsValue::stream CofixUnusedParamAsValue::sconst(uint64_t n) {
 CofixUnusedParamAsValue::stream CofixUnusedParamAsValue::c1(uint64_t) {
   return sconst(UINT64_C(0));
 }
+
+CofixUnusedParamAsValue::stream CofixUnusedParamAsValue::c4(uint64_t _x) {
+  return c1(_x);
+}

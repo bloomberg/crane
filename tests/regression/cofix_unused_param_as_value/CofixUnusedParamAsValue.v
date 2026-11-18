@@ -19,6 +19,10 @@ CoFixpoint c1 (n : nat) : stream := sconst 0.
 
 Definition t : nat := List.length (map c1 [1; 2]).
 
+(** The same inside a [fold_left] step, at an empty list. *)
+CoFixpoint c4 (n : nat) : stream := sconst 0.
+Definition t2 : nat := fold_left (fun a (x : nat) => a + x + List.length (map c4 [])) [1; 2] 0.
+
 End CofixUnusedParamAsValue.
 
 Crane Extraction "cofix_unused_param_as_value" CofixUnusedParamAsValue.

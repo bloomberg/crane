@@ -97,6 +97,25 @@ public:
   const variant_t &v() const { return v_; }
 
   template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
+  T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    const List<A> *_loop_self = this;
+    T1 _loop_a0 = std::move(a0);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        return _loop_a0;
+      } else {
+        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a2);
+        _loop_a0 = f(std::move(_loop_a0), a1);
+      }
+    }
+  }
+
+  template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, const A &>
   List<T1> map(F0 &&f) const {
     // Builds the result front to back: _write points at the empty tail the next
@@ -222,4 +241,16 @@ struct CofixUnusedParamAsValue {
           List<uint64_t>::cons(UINT64_C(2),
                                List<uint64_t>::nil()))
           .template map<stream>(c1).length();
+  static stream c4(uint64_t _x);
+  static inline const uint64_t t2 =
+      List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2),
+                               List<uint64_t>::nil()))
+          .template fold_left<uint64_t>([](uint64_t a,
+                                           uint64_t x) {
+        return ((a + x) +
+                List<uint64_t>::nil().template map<stream>(c4).length());
+      },
+                                        UINT64_C(0));
 };
