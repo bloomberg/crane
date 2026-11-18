@@ -33,7 +33,6 @@ bool LoopifyClassMethodFrameSave::g(const List<uint64_t> &l) {
         _result = true;
       } else {
         const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-        uint64_t _tmp2;
         crane::fn<uint64_t(bool)> sz0 = sz_bool::sz;
         _stack.emplace_back(_after_g_in_Cons{std::move(sz0)});
         _stack.emplace_back(_call{crane_raw(a1)});
@@ -75,7 +74,6 @@ uint64_t LoopifyClassMethodFrameSave::h(uint64_t n) {
       } else {
         uint64_t m = n - 1;
         crane::fn<uint64_t(uint64_t)> sz0 = sz_nat::sz;
-        uint64_t _tmp2;
         crane::fn<uint64_t(uint64_t)> sz1 = sz_nat::sz;
         _stack.emplace_back(_after_h_in_S{std::move(sz0), std::move(sz1)});
         _stack.emplace_back(_call{m});

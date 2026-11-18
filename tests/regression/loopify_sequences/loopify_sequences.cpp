@@ -69,7 +69,6 @@ List<uint64_t> LoopifySequences::collatz_list_fuel(uint64_t fuel, uint64_t n) {
         if (n == UINT64_C(1)) {
           _result = List<uint64_t>::cons(UINT64_C(1), List<uint64_t>::nil());
         } else {
-          List<uint64_t> _tmp1;
           if ((UINT64_C(2) ? n % UINT64_C(2) : n) == UINT64_C(0)) {
             _stack.emplace_back(_after_collatz_list_fuel_in_true{n});
             _stack.emplace_back(_call{(UINT64_C(2) ? n / UINT64_C(2) : 0), f});

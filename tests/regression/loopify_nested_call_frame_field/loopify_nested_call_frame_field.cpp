@@ -46,7 +46,6 @@ LoopifyNestedCallFrameField::g(const List<std::pair<uint64_t, bool>> &l,
         const auto &[a0, a1] =
             std::get<typename List<std::pair<uint64_t, bool>>::Cons>(l.v());
         const List<std::pair<uint64_t, bool>> &a1_value = *a1;
-        List<uint64_t> _tmp4;
         const auto &[_x, _x0] = a0;
         _stack.emplace_back(_after_g_in_pair{a, a1});
         _stack.emplace_back(_call{a, crane_raw(a1)});
