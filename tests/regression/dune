@@ -14833,3 +14833,14 @@
   (alias runtest)
   (deps local_fix_capture_in_fold_lambda.t.exe)
   (action (run ./local_fix_capture_in_fold_lambda.t.exe))))
+
+(subdir loopify_rematch_frame_binder
+ (rule
+  (targets loopify_rematch_frame_binder.t.exe)
+  (deps LoopifyRematchFrameBinder.vo loopify_rematch_frame_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_rematch_frame_binder.t.exe loopify_rematch_frame_binder.t.cpp loopify_rematch_frame_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_rematch_frame_binder.t.exe)
+  (action (run ./loopify_rematch_frame_binder.t.exe))))

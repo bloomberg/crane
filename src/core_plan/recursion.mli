@@ -309,7 +309,11 @@ type call = private {
     its captures as arguments.  They are still read where the frame for the
     call is saved, the call being made after.  [recomputable] are the
     binders in scope, outermost first, whose value makes no call: a frame
-    may bind one again from what it reads rather than keep it. *)
+    may bind one again from what it reads rather than keep it.  A binder of
+    [live] a let, a bind or a pattern introduces records its site: a
+    continuation the backend runs in a match's branch has the branch's
+    pattern variables in scope at the levels of binders bound before the
+    match. *)
 type resume = private {
   binder : Core.Binder.t;
   live : Core.Binder.t list;

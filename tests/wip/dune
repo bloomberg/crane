@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir loopify_rematch_frame_binder
- (rule
-  (targets loopify_rematch_frame_binder.t.exe)
-  (deps LoopifyRematchFrameBinder.vo loopify_rematch_frame_binder.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_rematch_frame_binder.t.exe loopify_rematch_frame_binder.t.cpp loopify_rematch_frame_binder.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_rematch_frame_binder.t.exe)
-  (action (run ./loopify_rematch_frame_binder.t.exe))))
-
 (subdir local_fix_own_type_variable
  (rule
   (targets local_fix_own_type_variable.t.exe)

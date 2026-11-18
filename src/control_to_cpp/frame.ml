@@ -948,12 +948,16 @@ let declared_binders binders = function
 (** The locals of the scope of [ctx] that the planned resume point [p]
     keeps across its call, in the order the Core binds them: for each binder
     it finds live, the innermost local in scope standing for it that
-    [keeps] picks.  Under [CRANE_CHECK_IR] every binder it finds live has a
-    local in scope standing for it: the frame would otherwise lose it. *)
+    [keeps] picks, bound where the plan's binder is: a continuation run in
+    a match's branch has that branch's pattern variables in scope, at the
+    levels of binders bound before the match.  Under [CRANE_CHECK_IR] every
+    binder it finds live has a local in scope standing for it: the frame
+    would otherwise lose it. *)
 let planned_frame ctx ~keeps (p : Core_plan.Recursion.resume) =
   List.filter_map
     (fun b ->
-      match List.filter (fun (x, _) -> stands_for ctx b x) ctx.binders with
+      let at_site (_, b') = match b' with Some b' -> Core.Binder.same_site b b' | None -> true in
+      match List.filter (fun ((x, _) as l) -> stands_for ctx b x && at_site l) ctx.binders with
       | [] ->
         Base.Probe.violation "frame plan"
           (Pp.str "a binder the recursion plan finds live across a call has no local in scope standing for it");
