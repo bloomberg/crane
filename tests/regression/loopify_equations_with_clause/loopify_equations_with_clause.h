@@ -465,20 +465,15 @@ struct LoopifyEquationsWithClause {
       std::type_identity_t<crane::fn<T1(uint64_t, List<uint64_t>, T1)>> f2,
       const List<uint64_t> &l) {
     return zeros_graph_mut<T1, T1>(
-        std::move(f),
-        [](uint64_t, List<uint64_t>, zeros_clause_2_graph,
-           const T1 &x) { return x; },
+        std::move(f), [](uint64_t, List<uint64_t>, zeros_clause_2_graph,
+                         const T1 &x) { return x; },
         [=, f1 = std::move(f1)](uint64_t x, const List<uint64_t> &xs,
-                                zeros_graph, const T1 &eta0_) {
-          return [=](T1 _pa0) { return f1(x, xs, _pa0); }(eta0_);
-        },
+                                zeros_graph,
+                                const T1 &eta0_) { return f1(x, xs, eta0_); },
         [=, f2 = std::move(f2)](uint64_t x, const List<uint64_t> &xs,
-                                zeros_graph, const T1 &eta0_) {
-          return [=](T1 _pa0) { return f2(x, xs, _pa0); }(eta0_);
-        },
-        l,
-        zeros(l),
-        zeros_graph_correct(l));
+                                zeros_graph,
+                                const T1 &eta0_) { return f2(x, xs, eta0_); },
+        l, zeros(l), zeros_graph_correct(l));
   }
 
   template <typename F1, typename F2>
