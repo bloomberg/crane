@@ -228,11 +228,11 @@ struct FrameBinderLocalFixAcc {
       };
 
       struct _after_g1_in_Nil_2 {
-        crane::obj _x2;
+        int64_t acc29;
       };
 
       struct _after_g1_in_Nil_3 {
-        crane::obj _x2;
+        int64_t acc29;
       };
 
       struct _after_g1_in_Zneg {
@@ -277,7 +277,7 @@ struct FrameBinderLocalFixAcc {
               {
                 if (std::holds_alternative<typename List<uint64_t>::Nil>(
                         l28.v_mut())) {
-                  _stack.emplace_back(_after_g1_in_Nil_2{_x2});
+                  _stack.emplace_back(_after_g1_in_Nil_2{acc29});
                   _stack.emplace_back(_call{crane_raw(a0), true, INT64_C(0)});
                 } else {
                   _result = INT64_C(0);
@@ -298,12 +298,12 @@ struct FrameBinderLocalFixAcc {
         } else if (std::holds_alternative<_after_g1_in_Nil_2>(_popped)) {
           auto _f = std::move(std::get<_after_g1_in_Nil_2>(_popped));
           _stack.pop_back();
-          crane::obj _x2 = std::move(_f._x2);
+          int64_t acc29 = _f.acc29;
           _result = std::min(std::move(_result), acc29);
         } else if (std::holds_alternative<_after_g1_in_Nil_3>(_popped)) {
           auto _f = std::move(std::get<_after_g1_in_Nil_3>(_popped));
           _stack.pop_back();
-          crane::obj _x2 = std::move(_f._x2);
+          int64_t acc29 = _f.acc29;
           _result = std::min(std::move(_result), acc29);
         } else {
           auto _f = std::move(std::get<_after_g1_in_Zneg>(_popped));
@@ -312,7 +312,7 @@ struct FrameBinderLocalFixAcc {
           List<uint64_t> l28 = std::move(_f.l28);
           auto acc29 = std::move(_result);
           if (std::holds_alternative<typename List<uint64_t>::Nil>(l28.v_mut())) {
-            _stack.emplace_back(_after_g1_in_Nil_3{_x2});
+            _stack.emplace_back(_after_g1_in_Nil_3{acc29});
             _stack.emplace_back(_call{_f.a0, true, INT64_C(0)});
           } else {
             _result = INT64_C(0);
