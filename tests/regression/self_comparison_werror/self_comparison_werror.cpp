@@ -291,6 +291,8 @@ bool BinInt::eqb(const Z &x, const Z &y) {
 ///
 /// Fixed in Core: simpl folds a pure comparison of one variable with
 /// itself to its value (Nat, N, Pos, Z leb/eqb/ltb, Bool.eqb).
+/// It missed the argument of a recursive call (rec_arg) and two equal
+/// projection chains of one variable (proj_le_self).
 bool SelfComparisonWerror::le_self(uint64_t) { return true; }
 
 bool SelfComparisonWerror::eq_self(uint64_t _x) { return le_self(_x); }
@@ -318,6 +320,21 @@ bool SelfComparisonWerror::pos_eq_self(const Positive &_x) {
 }
 
 bool SelfComparisonWerror::pos_lt_self(const Positive &) { return false; }
+
+/// The comparison as the argument of a recursive call.
+bool SelfComparisonWerror::rec_arg(const List<uint64_t> &l, uint64_t, bool b) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return b;
+  } else {
+    const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    return rec_arg(*a1, UINT64_C(0), true);
+  }
+}
+
+/// The same pure projection of one variable on both sides.
+bool SelfComparisonWerror::proj_le_self(const SelfComparisonWerror::pt &) {
+  return true;
+}
 
 Comparison Datatypes::CompOpp(Comparison r) {
   switch (r) {

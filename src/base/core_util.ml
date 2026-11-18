@@ -2553,13 +2553,33 @@ let self_comparisons =
       (con_in_file "Stdlib.Bool.Bool" "eqb", true);
     ]
 
-(** [Some v] when [f a] is a comparison of one variable with itself, [v] its
-    value as a [bool] constructor. *)
+(** Whether [a] and [b] are one read of storage: the same variable, or the
+    same projection of the same such read -- a projection called, or a
+    record match of one branch returning one of its fields.  Evaluating
+    either is total and pure, so both evaluate to one value. *)
+let rec same_storage a b =
+  match (a, b) with
+  | Core.Expr.Bound_variable {index = i; _}, Core.Expr.Bound_variable {index = j; _} -> Int.equal i j
+  | ( Core.Expr.Apply {callee = Core.Expr.Global {callee = p; _}; arguments = xs},
+      Core.Expr.Apply {callee = Core.Expr.Global {callee = q; _}; arguments = ys} ) ->
+    (* At most the record's parameters and the record: a projection
+       applied further is a call of the field. *)
+    GlobRef.CanOrd.equal p q && Table.is_projection p
+    && List.length xs <= Table.projection_arity p + 1
+    && List.equal (fun x y -> match (x, y) with
+        | Core.Expr.Erased_value _, Core.Expr.Erased_value _ -> true
+        | _ -> same_storage x y) xs ys
+  | ( Core.Expr.Match {scrutinee = s; branches = [|{binders = l; pattern = pat; body = Core.Expr.Bound_variable {index = i; _}; _}|]; _},
+      Core.Expr.Match {scrutinee = s'; branches = [|{binders = l'; pattern = pat'; body = Core.Expr.Bound_variable {index = j; _}; _}|]; _} ) ->
+    Int.equal i j && Int.equal (List.length l) (List.length l') && i <= List.length l
+    && eq_core_pattern pat pat' && same_storage s s'
+  | _ -> false
+
+(** [Some v] when [f a] is a comparison of one read of storage with itself
+    ({!same_storage}), [v] its value as a [bool] constructor. *)
 let fold_self_comparison f a =
   match (f, a) with
-  | ( Core.Expr.Global {callee = GlobRef.ConstRef c; _},
-      [Core.Expr.Bound_variable {index = i; _}; Core.Expr.Bound_variable {index = j; _}] )
-    when Int.equal i j -> (
+  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, [x; y] when same_storage x y -> (
     match Cmap.find_opt c self_comparisons with
     | Some v ->
       let bool_ref = Rocqlib.lib_ref "core.bool.type" in

@@ -11,7 +11,9 @@ Import ListNotations.
     value is right; the generated code does not build with Crane's own flags.
 
     Fixed in Core: [simpl] folds a pure comparison of one variable with
-    itself to its value (Nat, N, Pos, Z [leb]/[eqb]/[ltb], [Bool.eqb]). *)
+    itself to its value (Nat, N, Pos, Z [leb]/[eqb]/[ltb], [Bool.eqb]).
+    It missed the argument of a recursive call ([rec_arg]) and two equal
+    projection chains of one variable ([proj_le_self]). *)
 Module SelfComparisonWerror.
 
 Definition le_self (n : nat) : bool := Nat.leb n n.
@@ -28,6 +30,15 @@ Definition n_lt_self (x : N) : bool := N.ltb x x.
 Definition pos_le_self (x : positive) : bool := Pos.leb x x.
 Definition pos_eq_self (x : positive) : bool := Pos.eqb x x.
 Definition pos_lt_self (x : positive) : bool := Pos.ltb x x.
+
+(** The comparison as the argument of a recursive call. *)
+Fixpoint rec_arg (l : list nat) (a : nat) (b : bool) : bool :=
+  match l with [] => b | _ :: r => rec_arg r 0 (Nat.eqb a a) end.
+
+Record pt : Type := mkpt { px : nat; py : nat }.
+
+(** The same pure projection of one variable on both sides. *)
+Definition proj_le_self (p : pt) : bool := Nat.leb (px p) (px p).
 
 End SelfComparisonWerror.
 
