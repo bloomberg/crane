@@ -687,10 +687,10 @@ unsigned int Coq_Pos::gcdn(uint64_t n, unsigned int a, unsigned int b) {
           return a;
         }
         case Comparison::LT: {
-          return gcdn(n0, (b_ - a_), a);
+          return gcdn(n0, (b_ > a_ ? b_ - a_ : 1u), a);
         }
         case Comparison::GT: {
-          return gcdn(n0, (a_ - b_), b);
+          return gcdn(n0, (a_ > b_ ? a_ - b_ : 1u), b);
         }
         default:
           std::unreachable();
@@ -737,13 +737,13 @@ Coq_Pos::ggcdn(uint64_t n, unsigned int a, unsigned int b) {
           return std::make_pair(a, std::make_pair(1u, 1u));
         }
         case Comparison::LT: {
-          auto [g, p] = ggcdn(n0, (b_ - a_), a);
+          auto [g, p] = ggcdn(n0, (b_ > a_ ? b_ - a_ : 1u), a);
           const auto &[ba, aa] = p;
           return std::make_pair(g, std::make_pair(aa, (aa + (2u * ba))));
           break;
         }
         case Comparison::GT: {
-          auto [g, p] = ggcdn(n0, (a_ - b_), b);
+          auto [g, p] = ggcdn(n0, (a_ > b_ ? a_ - b_ : 1u), b);
           const auto &[ab, bb] = p;
           return std::make_pair(g, std::make_pair((bb + (2u * ab)), bb));
           break;
