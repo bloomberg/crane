@@ -2520,6 +2520,58 @@ let split_arrow_coercion from into =
         put_magic_if ~from:c ~into:c' (needs_magic (c, c')) )
   | _ -> None
 
+(** The constant [label] of library [file], or of its module [modname]. *)
+let con_in_file file label =
+  Constant.make2 (ModPath.MPfile (dirpath_of_string file)) (Label.make label)
+
+let con_in_module file modname label =
+  Constant.make2
+    (ModPath.MPdot (ModPath.MPfile (dirpath_of_string file), Label.make modname))
+    (Label.make label)
+
+(** The value a pure, total comparison takes when both arguments are one
+    variable: reflexive orders and equalities are [true], strict orders
+    [false].  Keyed on canonical names, so a use through a module that
+    [Include]s the defining one (e.g. [Stdlib.Arith.PeanoNat.Nat]) is found. *)
+let self_comparisons =
+  let nat = con_in_file "Corelib.Init.Nat" in
+  let n_core = con_in_module "Corelib.BinNums.NatDef" "N" in
+  let n_std = con_in_module "Stdlib.NArith.BinNatDef" "N" in
+  let pos_core = con_in_module "Corelib.BinNums.PosDef" "Pos" in
+  let pos_std = con_in_module "Stdlib.PArith.BinPosDef" "Pos" in
+  let z = con_in_module "Corelib.BinNums.IntDef" "Z" in
+  List.fold_left
+    (fun m (c, v) -> Cmap.add c v m)
+    Cmap.empty
+    [
+      (nat "leb", true); (nat "eqb", true); (nat "ltb", false);
+      (n_core "leb", true); (n_std "eqb", true); (n_std "ltb", false);
+      (pos_core "leb", true); (pos_core "eqb", true); (pos_std "ltb", false);
+      (z "leb", true); (z "eqb", true); (z "ltb", false);
+      (con_in_file "Stdlib.Bool.Bool" "eqb", true);
+    ]
+
+(** [Some v] when [f a] is a comparison of one variable with itself, [v] its
+    value as a [bool] constructor. *)
+let fold_self_comparison f a =
+  match (f, a) with
+  | ( Core.Expr.Global {callee = GlobRef.ConstRef c; _},
+      [Core.Expr.Bound_variable {index = i; _}; Core.Expr.Bound_variable {index = j; _}] )
+    when Int.equal i j -> (
+    match Cmap.find_opt c self_comparisons with
+    | Some v ->
+      let bool_ref = Rocqlib.lib_ref "core.bool.type" in
+      let ctor = Rocqlib.lib_ref (if v then "core.bool.true" else "core.bool.false") in
+      Some
+        (Core.Expr.Construct {result_type = Core.Type.Global_app {head = bool_ref;
+                                                                  type_arguments = [];
+                                                                  index_arguments = []};
+                              constructor = ctor;
+                              arguments = [];
+                              occurrence = Core.Occurrence.fresh ()})
+    | None -> None )
+  | _ -> None
+
 (** Core simplification: beta-reduction, iota-reduction, let-inlining, and
     other optimizations. *)
 let rec simpl o = function
@@ -2615,7 +2667,10 @@ and simpl_app o a = function
     simpl o (Core.Expr.Match {scrutinee_type = typ; scrutinee = e; branches = br'; occurrence = occ})
   | (Core.Expr.Erased_value _ | Core.Expr.Runtime_error _) as e ->
     e (* We just discard arguments in those cases. *)
-  | f -> Core.Expr.Apply {callee = f; arguments = a}
+  | f -> (
+    match fold_self_comparison f a with
+    | Some b -> b
+    | None -> Core.Expr.Apply {callee = f; arguments = a} )
 
 (** Simplifies match expressions via iota-reduction and case permutation.
     Invariant: all empty matches should be [Core.Expr.Runtime_error]. *)

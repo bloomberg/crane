@@ -14496,3 +14496,14 @@
   (alias runtest)
   (deps unused_pair_binding_redefinition.t.exe)
   (action (run ./unused_pair_binding_redefinition.t.exe))))
+
+(subdir self_comparison_werror
+ (rule
+  (targets self_comparison_werror.t.exe)
+  (deps SelfComparisonWerror.vo self_comparison_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_comparison_werror.t.exe self_comparison_werror.t.cpp self_comparison_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_comparison_werror.t.exe)
+  (action (run ./self_comparison_werror.t.exe))))
