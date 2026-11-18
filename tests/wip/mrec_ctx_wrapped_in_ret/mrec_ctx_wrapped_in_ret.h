@@ -194,7 +194,7 @@ template <Params _tcI0> std::shared_ptr<ITree<Nat>> run_mrec() {
   return Recursion::template mrec<CountE<typename _tcI0::ptr>, crane::obj, Nat>(
       []() {
         return [](CountE<typename _tcI0::ptr> _x0) -> std::shared_ptr<
-            ITree<crane::obj>> { return _x0.template ctx<crane::obj>(false); };
+            ITree<crane::obj>> { return _x0.template ctx<_tcI0>(false); };
       }(),
       CountE<typename _tcI0::ptr>::count(Nat::s(Nat::s(Nat::s(Nat::o()))),
                                          _tcI0::nullp()));
