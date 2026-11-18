@@ -11,7 +11,15 @@ Set Crane Loopify.
     testing of Crane: generated program, shrunk by ephyra and delta-reduced
     (unrelated-looking declarations kept are needed for the trigger).
 
-    Under Loopify, a mutual fixpoint whose recursive branch nests a non-tail local fixpoint (its base read by an inner local fixpoint) under [mod] fails the frame-plan check under CRANE_CHECK_IR=1: "a frame keeps a binder whose local was declared at no type". *)
+    Under Loopify, a mutual fixpoint whose recursive branch nests a non-tail local fixpoint (its base read by an inner local fixpoint) under [mod] fails the frame-plan check under CRANE_CHECK_IR=1: "a frame keeps a binder whose local was declared at no type".
+
+    [go16]'s machine kept [n12], a capture of the enclosing function, which
+    the rest reads through [go22]'s call: the inner loop dropped the
+    argument that named it, so the machine's body no longer did, and only
+    what the body names counted as bound outside the machine.  Its handler
+    even assigned the frame's copy back to the captured [n12].  A local
+    fixpoint's captures now count as invariant whether or not the body
+    names them. *)
 Module LoopifyMutualFrameUntypedBinder.
 
 Inductive tree : Type := Leaf : tree | Node : tree -> nat -> tree -> tree.

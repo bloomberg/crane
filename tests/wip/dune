@@ -228,17 +228,6 @@
   (deps sum_match_const_v_mut.t.exe)
   (action (run ./sum_match_const_v_mut.t.exe))))
 
-(subdir loopify_mutual_frame_untyped_binder
- (rule
-  (targets loopify_mutual_frame_untyped_binder.t.exe)
-  (deps LoopifyMutualFrameUntypedBinder.vo loopify_mutual_frame_untyped_binder.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_mutual_frame_untyped_binder.t.exe loopify_mutual_frame_untyped_binder.t.cpp loopify_mutual_frame_untyped_binder.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_mutual_frame_untyped_binder.t.exe)
-  (action (run ./loopify_mutual_frame_untyped_binder.t.exe))))
-
 (subdir instance_op_coercion_position
  (rule
   (targets instance_op_coercion_position.t.exe)

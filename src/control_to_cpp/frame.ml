@@ -2188,12 +2188,16 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   let frames_ref = ref [] in
   (* What no re-entry rebinds: the parameters that do not vary, and what the
      body reads from an enclosing scope -- a local fixpoint's captures, bound
-     before the loop and in scope for all of it.  A frame that saved one
-     would move it out of that scope at the first push. *)
+     before the loop and in scope for all of it, those the body no longer
+     names included: a capture read only by a call whose argument a nested
+     loop dropped is still one the recursion plan finds live.  A frame that
+     saved one would move it out of that scope at the first push. *)
   let invariant_params =
+    let param_ids = Id.Set.of_list (List.map fst params) in
+    let captured = List.filter_map (fun (id, _) -> if Id.Set.mem id param_ids then None else Some id) binders in
     List.fold_left2 (fun acc (id, _) v ->
       if not v then Id.Set.add id acc else acc)
-      (Id.Set.diff (Id.Set.of_list (free_vars_body body)) (Id.Set.of_list (List.map fst params)))
+      (Id.Set.diff (Id.Set.of_list (free_vars_body body @ captured)) param_ids)
       params varying
   in
   (* Entry 1, when a body was adopted.  Every one of its parameters varies --

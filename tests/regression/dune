@@ -14932,3 +14932,14 @@
   (alias runtest)
   (deps value_order_later_constant.t.exe)
   (action (run ./value_order_later_constant.t.exe))))
+
+(subdir loopify_mutual_frame_untyped_binder
+ (rule
+  (targets loopify_mutual_frame_untyped_binder.t.exe)
+  (deps LoopifyMutualFrameUntypedBinder.vo loopify_mutual_frame_untyped_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_mutual_frame_untyped_binder.t.exe loopify_mutual_frame_untyped_binder.t.cpp loopify_mutual_frame_untyped_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_mutual_frame_untyped_binder.t.exe)
+  (action (run ./loopify_mutual_frame_untyped_binder.t.exe))))
