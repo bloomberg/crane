@@ -10,10 +10,12 @@ Import ListNotations.
     the call is inlined (the beta-redex form in local_fix_returns_function is
     fixed).
     - [t]: under an applied observer, "no matching function for call to object
-      of type 'const (lambda ...)'".
+      of type 'const (lambda ...)'": the closure for the partial application
+      passed [go]'s written arguments last first.
     - [u]: a branch returning a lambda next to one returning the accumulator:
       "return type '(lambda ...)' must match previous return type
-      'crane::fn<bool (uint64_t)>'". *)
+      'crane::fn<bool (uint64_t)>'": the let the inlined body became, in
+      expression position, was an IIFE with no declared return type. *)
 Module LocalFixFunctionResultInlined.
 
 Definition t : nat :=

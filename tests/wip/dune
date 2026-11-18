@@ -261,19 +261,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-
-
-(subdir local_fix_function_result_inlined
- (rule
-  (targets local_fix_function_result_inlined.t.exe)
-  (deps LocalFixFunctionResultInlined.vo local_fix_function_result_inlined.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_function_result_inlined.t.exe local_fix_function_result_inlined.t.cpp local_fix_function_result_inlined.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_function_result_inlined.t.exe)
-  (action (run ./local_fix_function_result_inlined.t.exe))))
-
 (subdir poly_composed_lambda_tparam
  (rule
   (targets poly_composed_lambda_tparam.t.exe)

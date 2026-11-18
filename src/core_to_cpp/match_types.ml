@@ -179,8 +179,19 @@ let iife_void_return cx env typ pv : Cpp_ir.Lowered.Type.t option =
     parameter is a deduced template parameter of its own -- [f] and [g] of the
     same Rocq type are still two C++ types, and two branches returning one
     each deduce nothing. *)
-let iife_closure_return cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
-  let found = ref false in
+let rec iife_closure_return cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
+  let branch_rty =
+    match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
+  in
+  iife_closure_return_at cx env branch_rty stmts
+
+(** The same question of an IIFE computing a value of the Core type [rty],
+    [~several] where only one returning from more than one place is asked
+    it: a single closure returned deduces its own type, which converts
+    wherever it goes. *)
+and iife_closure_return_at ?(several = false) cx env rty (stmts : Cpp_ir.Lowered.Stmt.t list) :
+    Cpp_ir.Lowered.Type.t option =
+  let found = ref false and returns = ref 0 in
   let rec is_arrow = function
     | Core.Type.Arrow _ -> true
     | Core.Type.Meta {contents = Some t} -> is_arrow t
@@ -199,19 +210,17 @@ let iife_closure_return cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp
   in
   let rec scan_stmt (s : Cpp_ir.Lowered.Stmt.t) =
     match s with
-    | Return (Some e) -> scan_expr e
+    | Return (Some e) ->
+      incr returns;
+      scan_expr e
     | _ ->
       Cpp_ir.Subterms.stmt
         ~expr:(fun _ -> ())
         ~stmts:(List.iter scan_stmt) s
   in
   List.iter scan_stmt stmts;
-  if not !found then None
-  else
-    let branch_rty =
-      match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
-    in
-    match Types.cpp_of_core cx env branch_rty with Function _ as r -> Some r | _ -> None
+  if not !found || (several && !returns < 2) then None
+  else match Types.cpp_of_core cx env rty with Function _ as r -> Some r | _ -> None
 
 (** [pattern_field_pins ~scrut_pinned ~cname ~typ ~env ~n_fields
     ~non_erased_def_site_field_tys] -- what a pattern-match branch pins down

@@ -100,10 +100,12 @@ public:
 /// the call is inlined (the beta-redex form in local_fix_returns_function is
 /// fixed).
 /// - t: under an applied observer, "no matching function for call to object
-/// of type 'const (lambda ...)'".
+/// of type 'const (lambda ...)'": the closure for the partial application
+/// passed go's written arguments last first.
 /// - u: a branch returning a lambda next to one returning the accumulator:
 /// "return type '(lambda ...)' must match previous return type
-/// 'crane::fn<bool (uint64_t)>'".
+/// 'crane::fn<bool (uint64_t)>'": the let the inlined body became, in
+/// expression position, was an IIFE with no declared return type.
 struct LocalFixFunctionResultInlined {
   static inline const uint64_t t = []() {
     return []() {
@@ -127,8 +129,8 @@ struct LocalFixFunctionResultInlined {
             }
           };
       w = [=](List<uint64_t> _pa0) {
-        return go([](const List<uint64_t> &) { return false; },
-                  List<uint64_t>::nil(), _pa0);
+        return go(List<uint64_t>::nil(),
+                  [](const List<uint64_t> &) { return false; }, _pa0);
       };
       if (w(List<uint64_t>::nil())) {
         return UINT64_C(1);
@@ -137,18 +139,17 @@ struct LocalFixFunctionResultInlined {
       }
     }();
   }();
-  static inline const bool u = (std::make_pair(
-                                    []() {
-                                      List<uint64_t> l = List<uint64_t>::nil();
-                                      crane::fn<bool(uint64_t)> acc =
-                                          [](uint64_t) { return false; };
-                                      if (std::holds_alternative<
-                                              typename List<uint64_t>::Nil>(
-                                              l.v_mut())) {
-                                        return acc;
-                                      } else {
-                                        return [](uint64_t) { return true; };
-                                      }
-                                    }(),
-                                    true)).first(UINT64_C(0));
+  static inline const bool u =
+      (std::make_pair(
+           []() -> crane::fn<bool(uint64_t)> {
+             List<uint64_t> l = List<uint64_t>::nil();
+             crane::fn<bool(uint64_t)> acc = [](uint64_t) { return false; };
+             if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+               return acc;
+             } else {
+               return [](uint64_t) { return true; };
+             }
+           }(),
+           true))
+          .first(UINT64_C(0));
 };
