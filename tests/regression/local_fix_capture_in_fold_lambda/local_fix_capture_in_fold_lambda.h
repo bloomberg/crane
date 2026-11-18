@@ -17,6 +17,8 @@
 
 template <typename A> struct List;
 
+struct Nat {};
+
 template <typename A> struct List {
   // TYPES
   struct Nil {};
@@ -241,8 +243,9 @@ public:
 /// generated prelude (class, ptree, stream) are needed to trigger it.
 /// g5 is a smaller repro: flat_map, and a match on the parameter as the
 /// local fixpoint's argument; g6 the same in a fold_left lambda; g7
-/// matches on the parameter inside the local fixpoint's step. Each function is
-/// a method of tree, its
+/// matches on the parameter inside the local fixpoint's step; g8 passes
+/// it as the local fixpoint's argument under tree_obs. Each function is a
+/// method of tree, its
 /// parameter the receiver, read as *this.  A stored lambda reading the
 /// receiver takes a copy of it, but the check for one did not look into the
 /// lambdas nested in it, here the local fixpoint's invoked one: the stored
@@ -329,6 +332,22 @@ struct LocalFixCaptureInFoldLambda {
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
+
+    uint64_t g8(uint64_t, int64_t) const {
+      tree _self_val = *this;
+      return List<uint64_t>::nil().template fold_right<uint64_t>(
+          [=, _self_val = std::move(_self_val)](uint64_t, uint64_t) {
+            return [&]() {
+              List<pt> l = List<pt>::nil();
+              if (std::holds_alternative<typename List<pt>::Nil>(l.v_mut())) {
+                return tree::leaf();
+              } else {
+                return _self_val;
+              }
+            }().tree_obs();
+          },
+          UINT64_C(0));
+    }
 
     uint64_t g7() const {
       tree _self_val = *this;
@@ -685,6 +704,11 @@ struct LocalFixCaptureInFoldLambda {
       }
       return _result;
     }
+  };
+
+  struct pt {
+    uint64_t px;
+    bool py;
   };
 
   template <typename A> struct ptree {

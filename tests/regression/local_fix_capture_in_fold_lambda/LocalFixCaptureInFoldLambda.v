@@ -1,6 +1,6 @@
-From Crane Require Import Mapping.NatIntStd Mapping.NInt.
+From Crane Require Import Mapping.NatIntStd Mapping.NInt Mapping.ZInt.
 From Crane Require Extraction.
-From Stdlib Require Import List NArith.
+From Stdlib Require Import List NArith ZArith.
 Import ListNotations.
 
 (** Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
@@ -14,7 +14,8 @@ Import ListNotations.
     generated prelude (class, ptree, stream) are needed to trigger it.
     [g5] is a smaller repro: [flat_map], and a match on the parameter as the
     local fixpoint's argument; [g6] the same in a [fold_left] lambda; [g7]
-    matches on the parameter inside the local fixpoint's step.  Each function is a method of [tree], its
+    matches on the parameter inside the local fixpoint's step; [g8] passes
+    it as the local fixpoint's argument under [tree_obs].  Each function is a method of [tree], its
     parameter the receiver, read as [*this].  A stored lambda reading the
     receiver takes a copy of it, but the check for one did not look into the
     lambdas nested in it, here the local fixpoint's invoked one: the stored
@@ -32,6 +33,7 @@ Fixpoint tins (n : nat) (t : tree) : tree :=
   | Leaf => Node Leaf n Leaf
   | Node l v r => if Nat.ltb n v then Node (tins n l) v r else Node l v (tins n r)
   end.
+Record pt : Type := mkpt { px : nat; py : bool }.
 Class Sz (A : Type) := { sz : A -> nat }.
 Inductive ptree (A : Type) : Type := PLeaf : ptree A | PNode : ptree A -> A -> ptree A -> ptree A.
 Arguments PLeaf {A}.
@@ -71,6 +73,11 @@ Fixpoint g7 (t18 : tree) : nat :=
       | x :: r => go r (match t18 with Leaf => x + a | Node _ v _ => v + a end)
       end in
     go [e; e] acc) 0 [1; 2].
+
+Fixpoint g8 (t10 : tree) (a8 : nat) (a9 : Z) : nat :=
+  fold_right (fun (e : nat) (acc : nat) =>
+    tree_obs (let fix go (l : list pt) (acc2 : tree) :=
+                match l with [] => Leaf | _ :: _ => t10 end in go [] t10)) 0 [].
 
 End LocalFixCaptureInFoldLambda.
 
