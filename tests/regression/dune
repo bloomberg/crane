@@ -14954,3 +14954,14 @@
   (alias runtest)
   (deps sum_match_const_v_mut.t.exe)
   (action (run ./sum_match_const_v_mut.t.exe))))
+
+(subdir instance_op_coercion_position
+ (rule
+  (targets instance_op_coercion_position.t.exe)
+  (deps InstanceOpCoercionPosition.vo instance_op_coercion_position.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_op_coercion_position.t.exe instance_op_coercion_position.t.cpp instance_op_coercion_position.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_op_coercion_position.t.exe)
+  (action (run ./instance_op_coercion_position.t.exe))))

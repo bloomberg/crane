@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir instance_op_coercion_position
- (rule
-  (targets instance_op_coercion_position.t.exe)
-  (deps InstanceOpCoercionPosition.vo instance_op_coercion_position.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_op_coercion_position.t.exe instance_op_coercion_position.t.cpp instance_op_coercion_position.cpp)))
- (rule
-  (alias runtest)
-  (deps instance_op_coercion_position.t.exe)
-  (action (run ./instance_op_coercion_position.t.exe))))
-
 (subdir cofix_unused_param_as_value
  (rule
   (targets cofix_unused_param_as_value.t.exe)

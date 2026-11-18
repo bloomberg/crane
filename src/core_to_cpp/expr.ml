@@ -496,8 +496,12 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ} when lang () == Cpp ->
     gen_cpp_case cx ~slot typ t env pv case_occ
   | Core.Expr.Let {binder_type = ty; _} as a ->
-    with_escape_analysis cx (fun () -> with_region cx a (fun () ->
-      with_iife_return_type cx expected_ty (fun () ->
+    (* The lambda returns the let's value, at the position's type, and its
+       region is planned at that return type too: planned under the
+       enclosing function's, a coercion at the let's tail would be planned
+       against a position lowering does not give it. *)
+    with_escape_analysis cx (fun () -> with_iife_return_type cx expected_ty (fun () ->
+      with_region cx a (fun () ->
         let body = gen_stmts cx ~slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a in
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
