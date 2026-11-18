@@ -13,6 +13,10 @@ int main() {
   auto one = List<uint64_t>::cons(1, List<uint64_t>::nil());
   if (!(M::t(e) == 1)) { std::cout << "FAIL: M::t(e)" << std::endl; ++fails; }
   if (!(M::t(one) == 2)) { std::cout << "FAIL: M::t(one)" << std::endl; ++fails; }
+  auto zero_one = List<uint64_t>::cons(0, one);
+  if (!(M::t2(e) == 7)) { std::cout << "FAIL: M::t2(e)" << std::endl; ++fails; }
+  if (!(M::t2(one) == 7)) { std::cout << "FAIL: M::t2(one)" << std::endl; ++fails; }
+  if (!(M::t2(zero_one) == 0)) { std::cout << "FAIL: M::t2(zero_one)" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All branch_callables_curried_join tests passed!" << std::endl;
   return fails;

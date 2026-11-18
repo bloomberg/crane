@@ -627,16 +627,16 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
           | In_namespace (ns, x), In_namespace (_, y) -> In_namespace (ns, join x y)
           | _ -> Any
       in
-      let rec leaf_rtys = function
+      (* The annotations of the branches the body ends in, through lets and
+         nested matches; [rty] that of the branch [e] ends, if any. *)
+      let rec leaf_rtys ?rty e =
+        match e with
         | Core.Expr.Match {branches = pv; _} ->
           List.concat_map
-            (fun {Core.Match.Branch.result_type = rty; body = body; _} ->
-              match body with
-              | Core.Expr.Match _ | Core.Expr.Let _ -> leaf_rtys body
-              | _ -> [rty] )
+            (fun {Core.Match.Branch.result_type = rty; body = body; _} -> leaf_rtys ~rty body)
             (Array.to_list pv)
-        | Core.Expr.Let {body = b; _} -> leaf_rtys b
-        | _ -> []
+        | Core.Expr.Let {body = b; _} -> leaf_rtys ?rty b
+        | _ -> ( match rty with Some t -> [t] | None -> [] )
       in
       let dropped_type_binder =
         List.exists (fun (_, ty, _) -> erased_by_extraction ty) args_with_owned

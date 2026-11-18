@@ -1,6 +1,6 @@
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatIntStd Mapping.ZInt.
 From Crane Require Extraction.
-From Stdlib Require Import List.
+From Stdlib Require Import List ZArith.
 Import ListNotations.
 
 (** Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
@@ -26,6 +26,16 @@ Definition t (l : list nat) : nat :=
    | S _ => (let cf := (fun _ : bool => (fun _ : pt => false)) in
              let cg := (fun _ : nat => true) in fun c : nat => cf (cg c))
    end).
+
+(** The same join as a [fold_left] step's result: the accumulator passes
+    through [fold_left]'s type variable, so the step returns its curried
+    spelling, and so do both branches. *)
+Definition t2 (l : list nat) : nat :=
+  (fold_left (fun (acc : Z -> bool -> nat) (x : nat) =>
+     match x with
+     | O => (fun _ : Z => (fun b : bool => if b then 1 else 0))
+     | S _ => (let cf := (fun (n : nat) (_ : bool) => n) in fun z : Z => cf (acc z false))
+     end) l (fun _ _ => 7)) 3%Z true.
 
 End BranchCallablesCurriedJoin.
 
