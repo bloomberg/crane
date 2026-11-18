@@ -1181,6 +1181,18 @@ let chosen_values (l : phase Lambda.t) : (expr * expr * expr) option =
     Some (scrutinee, e1, e2)
   | _ -> None
 
+(* A branch of a choice, converted to the function type the lambda's return
+   type joined its callables at: the conditional has no return type to convert
+   them, and two callables -- two closures, a closure and a function name --
+   have no common type of their own.  A branch that already is that function
+   value is left alone. *)
+let at_join_type (ret : ty option) (e : expr) : expr =
+  let rec bare (t : ty) = match t with Const t | Reference (_, t) -> bare t | t -> t in
+  match (Option.map bare ret, e) with
+  | Some (Function _ as ft), Converting_construct (ft', [_]) when ft' = ft -> e
+  | Some (Function _ as ft), _ -> Converting_construct (ft, [e])
+  | _ -> e
+
 (* The guards read the lambda as written, before anything nested inside it is
    rewritten: a nested conditional exposes the string literals its own lambda
    kept inside a statement. *)
@@ -1190,8 +1202,8 @@ let lower_conditionals (d : settled) : settled =
     | Call (_, Lambda l, []) -> (
       match chosen_values l with
       | Some (c, e1, e2) ->
-        let e2 = fe e2 in
-        let e1 = fe e1 in
+        let e2 = at_join_type l.return_type (fe e2) in
+        let e1 = at_join_type l.return_type (fe e1) in
         Conditional (fe c, e1, e2)
       | None -> Map.expr (rw ()) e )
     | e -> Map.expr (rw ()) e

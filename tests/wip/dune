@@ -316,17 +316,6 @@
   (deps rocq_string_type_undeclared.t.exe)
   (action (run ./rocq_string_type_undeclared.t.exe))))
 
-(subdir branch_callables_distinct_types
- (rule
-  (targets branch_callables_distinct_types.t.exe)
-  (deps BranchCallablesDistinctTypes.vo branch_callables_distinct_types.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_callables_distinct_types.t.exe branch_callables_distinct_types.t.cpp branch_callables_distinct_types.cpp)))
- (rule
-  (alias runtest)
-  (deps branch_callables_distinct_types.t.exe)
-  (action (run ./branch_callables_distinct_types.t.exe))))
-
 (subdir cofix_thunk_dangling_capture
  (rule
   (targets cofix_thunk_dangling_capture.t.exe)

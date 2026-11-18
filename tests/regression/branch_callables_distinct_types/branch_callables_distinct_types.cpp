@@ -16,12 +16,13 @@ BranchCallablesDistinctTypes::ptree<crane::fn<uint64_t(uint64_t)>>
 BranchCallablesDistinctTypes::f(bool b, List<uint64_t> l) {
   return ptree<crane::fn<uint64_t(uint64_t)>>::pnode(
       ptree<crane::fn<uint64_t(uint64_t)>>::pleaf(),
-      (b ? sz_nat::sz : [=, l = std::move(l)](uint64_t) {
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-          return UINT64_C(0);
-        } else {
-          return UINT64_C(4);
-        }
-      }),
+      (b ? crane::fn<uint64_t(uint64_t)>(sz_nat::sz)
+         : crane::fn<uint64_t(uint64_t)>([=, l = std::move(l)](uint64_t) {
+           if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+             return UINT64_C(0);
+           } else {
+             return UINT64_C(4);
+           }
+         })),
       ptree<crane::fn<uint64_t(uint64_t)>>::pleaf());
 }

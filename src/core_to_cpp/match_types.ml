@@ -178,17 +178,20 @@ let iife_void_return cx env typ pv : Cpp_ir.Lowered.Type.t option =
     and only the C++ says which.  A binder counts because a function-typed
     parameter is a deduced template parameter of its own -- [f] and [g] of the
     same Rocq type are still two C++ types, and two branches returning one
-    each deduce nothing. *)
+    each deduce nothing.  A global counts because, at a function type, it is
+    a function's name, whose type is no closure's.  The [return]s of a nested
+    lambda are its own. *)
 let rec iife_closure_return cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
     match Array.to_list pv with {Core.Match.Branch.result_type = rty; _} :: _ -> rty | [] -> typ
   in
   iife_closure_return_at cx env branch_rty stmts
 
-(** The same question of an IIFE computing a value of the Core type [rty],
-    [~several] where only one returning from more than one place is asked
-    it: a single closure returned deduces its own type, which converts
-    wherever it goes. *)
+(** The same question of any lambda whose return type C++ would deduce --
+    an IIFE, or a function value ({!Lambda.gen_lambda}) -- computing a value
+    of the Core type [rty], [~several] where only one returning from more
+    than one place is asked it: a single closure returned deduces its own
+    type, which converts wherever it goes. *)
 and iife_closure_return_at ?(several = false) cx env rty (stmts : Cpp_ir.Lowered.Stmt.t list) :
     Cpp_ir.Lowered.Type.t option =
   let found = ref false and returns = ref 0 in
@@ -204,7 +207,7 @@ and iife_closure_return_at ?(several = false) cx env rty (stmts : Cpp_ir.Lowered
   in
   let scan_expr (e : Cpp_ir.Lowered.Expr.t) =
     match e with
-    | Lambda _ -> found := true
+    | Lambda _ | Entity _ | Type_member _ -> found := true
     | Local id when binder_is_fun id -> found := true
     | _ -> ()
   in

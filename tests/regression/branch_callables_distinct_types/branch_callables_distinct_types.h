@@ -144,7 +144,7 @@ struct BranchCallablesDistinctTypes {
       crane::fn<pt(uint64_t)> w =
           List<bool>::cons(true, List<bool>::nil()).template fold_left<
               crane::fn<pt(uint64_t)>>(
-              [](crane::fn<pt(uint64_t)>, bool e) {
+              [](crane::fn<pt(uint64_t)>, bool e) -> crane::fn<pt(uint64_t)> {
                 if (!(e)) {
                   crane::fn<pt(uint64_t)> cf =
                       [](uint64_t) { return pt{UINT64_C(1), true}; };

@@ -230,7 +230,9 @@ val lower_projections : settled -> settled
     chooses between two values -- a match of one alternative against the
     rest, an [if], or a mapped two-way case whose template is an [if] -- as
     the conditional expression it computes.  A choice with a string literal
-    in a branch keeps its lambda, whose return type converts the literal. *)
+    in a branch keeps its lambda, whose return type converts the literal.  A
+    lambda returning a function type converts each branch to it, as its
+    [return]s did: two callables have no common type of their own. *)
 val lower_conditionals : settled -> settled
 
 (** [lower_access_moves decl] moves what a member read reads rather than

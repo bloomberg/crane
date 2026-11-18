@@ -665,7 +665,17 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
         | _ -> (
           match branch_join with
           | Some _ as j -> j
-          | None -> slot_result_on_disagreement () )
+          | None -> (
+            match slot_result_on_disagreement () with
+            | Some _ as r -> r
+            | None ->
+              (* ... and where the body returns callables from more than one
+                 [return], which have no common type to deduce. *)
+              let core_ty = match body_expected_core_ty with Some _ as t -> t | None -> infer_core_body_type a in
+              Option.bind core_ty (fun t ->
+                match Match_types.iife_closure_return_at ~several:true cx env t body_stmts with
+                | Some ty when Types.names_only_scoped_tvars cx ty -> Some ty
+                | _ -> None ) ) )
       in
       match
         Cpp_build.mk_lambda ?tparams:(Option.map (fun x -> [x]) carrier) (List.rev cpp_args) ret_ann
