@@ -2348,6 +2348,22 @@ and extract_cons_app env sg type_env extracted_ty ((((kn, i) as ip), j) as cp) a
               let idx = !tvar_idx in
               incr tvar_idx;
               if idx < Array.length result_metas then
+                (* Whether [ty], extracted from [coq_arg], names a type
+                   variable, and every variable it names, and every
+                   binder [coq_arg] reads, is one of the constant's own:
+                   with nothing left open or erased, it is that type. *)
+                let constant_variables_only coq_arg ty =
+                  let own n = Environ.nb_rel env - n < !constant_binders in
+                  (not (IntSet.is_empty (core_tvars ty)))
+                  && Int.Set.for_all own (Termops.free_rels sg coq_arg)
+                  && not
+                       (exists_core_type
+                          (function
+                            | Core.Type.Unknown | Core.Type.Erased _ | Core.Type.Meta _
+                            | Core.Type.Variable_app _ -> true
+                            | _ -> false)
+                          ty)
+                in
                 let direct = match result_metas.(idx) with
                   | Core.Type.Meta ({contents = None} as r) -> Some r | _ -> None in
                 ( match open_cell result_metas.(idx) with
@@ -2365,6 +2381,16 @@ and extract_cons_app env sg type_env extracted_ty ((((kn, i) as ip), j) as cp) a
                         pending_cpp_tvar_fills :=
                           (cell, Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = v})
                           :: !pending_cpp_tvar_fills
+                      (* A type built over those variables alone ([@nil (nat
+                         * A)]): the same type, at the variables its type
+                         gives them. *)
+                      | ty when constant_variables_only coq_arg ty ->
+                        let rigid = function
+                          | Core.Type.Variable {variable = v; _} ->
+                            Core.Type.Variable {rigidity = Core.Type.Rigidity.Rigid; variable = v}
+                          | t -> t
+                        in
+                        pending_cpp_tvar_fills := (cell, map_core_type rigid ty) :: !pending_cpp_tvar_fills
                       (* Another type variable is not an erased position: left
                          open, it generalises with the term that names it --
                          [B] in [fun (B : Type) (x : B) => [x]], a binding of

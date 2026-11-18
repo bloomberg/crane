@@ -121,7 +121,7 @@ public:
 /// clause rejects the step function.
 struct PolyNilPairTypeErased {
   template <typename T1> static uint64_t f(const T1 &) {
-    return List<crane::obj>::nil().template fold_left<uint64_t>(
+    return List<std::pair<uint64_t, T1>>::nil().template fold_left<uint64_t>(
         [](uint64_t acc, std::pair<uint64_t, T1>) { return (acc + 1); },
         UINT64_C(3));
   }
