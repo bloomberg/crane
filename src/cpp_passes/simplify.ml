@@ -143,27 +143,6 @@ let takes_from v stmts =
 (* Whether a value of [ty] costs more to copy than to move. *)
 let worth_moving = Ownership_ir.Region.worth_moving_cpp
 
-(* A local copied out of a member of another -- [T2 s0 = si.first] -- is a
-   [const] reference to it instead, where the other is neither assigned nor
-   moved from afterwards, and the local neither assigned nor taken from: the
-   other outlives it, and no pass after this one moves from it, so what it
-   names stays put.  The copy it saved is made only by a use that keeps the
-   value.  A type a copy costs nothing for -- a scalar, a pointer -- is
-   copied as it was. *)
-let rec bind_by_reference : stmt list -> stmt list = function
-  | [] -> []
-  | Bind_variable (x, Declare (ty, binder), rhs) :: rest
-    when (match ty with Reference _ | Const (Reference _) -> false | _ -> true)
-         && (ty = Auto || worth_moving ty)
-         && ( match member_root rhs with
-            | Some v ->
-              let assigned = V.assigned rest in
-              not (Id.Set.mem x assigned || Id.Set.mem v assigned || takes_from v rest || takes_from x rest)
-            | None -> false ) ->
-    let ty : ty = match ty with Const _ -> ty | _ -> Const ty in
-    Bind_variable (x, Declare (Reference (Lvalue, ty), binder), rhs) :: bind_by_reference rest
-  | s :: rest -> s :: bind_by_reference rest
-
 (* [stmts] with every match on one of [ids] borrowing, and the moves out of
    the fields such a match binds dropped: what a borrowing match binds is a
    [const] view, so the matches on it borrow too. *)
@@ -204,6 +183,29 @@ let borrow_matches_on ids (stmts : stmt list) =
   and within ids = Cpp_ir.Map.make ~expr:(expr ids) ~stmt:(stmt ids) ~type_:Fun.id ()
   and expr ids e = Cpp_ir.Map.expr (within ids) e in
   List.map (stmt ids) stmts
+
+(* A local copied out of a member of another -- [T2 s0 = si.first] -- is a
+   [const] reference to it instead, where the other is neither assigned nor
+   moved from afterwards, and the local neither assigned nor taken from: the
+   other outlives it, and no pass after this one moves from it, so what it
+   names stays put.  The copy it saved is made only by a use that keeps the
+   value.  A type a copy costs nothing for -- a scalar, a pointer -- is
+   copied as it was.  A match on the local, which could take the copy apart,
+   borrows the view instead ({!borrow_matches_on}). *)
+let rec bind_by_reference : stmt list -> stmt list = function
+  | [] -> []
+  | Bind_variable (x, Declare (ty, binder), rhs) :: rest
+    when (match ty with Reference _ | Const (Reference _) -> false | _ -> true)
+         && (ty = Auto || worth_moving ty)
+         && ( match member_root rhs with
+            | Some v ->
+              let assigned = V.assigned rest in
+              not (Id.Set.mem x assigned || Id.Set.mem v assigned || takes_from v rest || takes_from x rest)
+            | None -> false ) ->
+    let ty : ty = match ty with Const _ -> ty | _ -> Const ty in
+    Bind_variable (x, Declare (Reference (Lvalue, ty), binder), rhs)
+    :: bind_by_reference (borrow_matches_on [x] rest)
+  | s :: rest -> s :: bind_by_reference rest
 
 (* [stmts] with every match on a local bound by [const] reference or by
    pointer borrowing: such a local names a value something else owns. *)

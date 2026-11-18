@@ -14943,3 +14943,14 @@
   (alias runtest)
   (deps loopify_mutual_frame_untyped_binder.t.exe)
   (action (run ./loopify_mutual_frame_untyped_binder.t.exe))))
+
+(subdir sum_match_const_v_mut
+ (rule
+  (targets sum_match_const_v_mut.t.exe)
+  (deps SumMatchConstVMut.vo sum_match_const_v_mut.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_match_const_v_mut.t.exe sum_match_const_v_mut.t.cpp sum_match_const_v_mut.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_match_const_v_mut.t.exe)
+  (action (run ./sum_match_const_v_mut.t.exe))))
