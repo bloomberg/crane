@@ -14595,3 +14595,14 @@
   (alias runtest)
   (deps local_fix_returns_function.t.exe)
   (action (run ./local_fix_returns_function.t.exe))))
+
+(subdir loopify_reread_loop_pointer
+ (rule
+  (targets loopify_reread_loop_pointer.t.exe)
+  (deps LoopifyRereadLoopPointer.vo loopify_reread_loop_pointer.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_reread_loop_pointer.t.exe loopify_reread_loop_pointer.t.cpp loopify_reread_loop_pointer.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_reread_loop_pointer.t.exe)
+  (action (run ./loopify_reread_loop_pointer.t.exe))))

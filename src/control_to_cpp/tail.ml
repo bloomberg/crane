@@ -254,10 +254,15 @@ let rewrite_borrowed_shadow_uses shadow_params stmts =
           is_ptr_shadow id
         | _ -> false
       in
+      (* Its object read through [->] in the expression as well: a match
+         later lowered to a conditional tests the expression itself
+         ({!Cpp_passes.Erasure.lower_conditionals}), not the access. *)
       Match
         ( { scrut with
             expr =
-              (if ptr_scrutinee then scrut.expr else expr scrut.expr);
+              ( match scrut.expr with
+              | Call (_, Access (Dot, Local _, _), []) as e -> expr e
+              | e -> if ptr_scrutinee then e else expr e );
             access = (if ptr_scrutinee then Arrow else scrut.access) },
           List.map
             (fun (br : branch) ->

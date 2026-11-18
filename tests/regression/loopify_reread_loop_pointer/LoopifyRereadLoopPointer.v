@@ -11,7 +11,9 @@ Set Crane Loopify.
     a match ([py (match t with Leaf => fold_left ... | ...)]) reads the loop
     pointer as [_loop_t.v()] instead of [_loop_t->v()]: "member reference
     type 'const tree *' is a pointer".  Fine without Loopify, and fine when
-    the [fold_left] is replaced by a plain record. *)
+    the [fold_left] is replaced by a plain record.  The tail loop set the
+    inner match's access to [->] and left its expression [t.v()], which the
+    conditional the match is lowered to reads. *)
 Module LoopifyRereadLoopPointer.
 
 Inductive tree : Type := Leaf : tree | Node : tree -> nat -> tree -> tree.
