@@ -18,7 +18,8 @@ type group =
       (** by reference: no member escapes, so it runs where it is called *)
   | Closures
       (** holding copies: a member may outlive the scope -- named other than
-          as the function an application applies, or named at all inside a
+          as the function an application applies to every parameter it
+          takes, or named at all inside a
           closure, a lambda or a local fixpoint not generated in place, or
           the thunk suspending a coinductive constructor's arguments -- in
           the scope the group is let-bound in, or in a member's own body,
@@ -48,8 +49,9 @@ val suspended_tail : effects:Effects.t -> Core.Expr.t -> Core.Occurrence.t list
     cofixpoint where [cofix] says so, standing in [lex] under a head of
     [n_outer] type variables, in a unit whose effect operations are
     [effects] and whose coinductive constructors [suspends] says are
-    suspended: let-bound in [continuation], the let's binder and body, where
-    it is given, or else applied in place; [suspended] where it stands in
+    suspended: let-bound in [continuation] -- the member the let binds, by
+    its position in the group, the let's binder and its body -- where it is
+    given, or else applied in place; [suspended] where it stands in
     the tail of a body suspended whole ({!suspended_tail}). *)
 val group :
   effects:Effects.t ->
@@ -57,7 +59,7 @@ val group :
   suspends:suspends_constructor ->
   lex:Core.Lexenv.t ->
   suspended:bool ->
-  ?continuation:(Core.Binder_name.t * Core.Type.t) * Core.Expr.t ->
+  ?continuation:int * (Core.Binder_name.t * Core.Type.t) * Core.Expr.t ->
   cofix:bool ->
   (Names.Id.t * Core.Type.t) array ->
   Core.Expr.t array ->

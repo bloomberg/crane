@@ -13,7 +13,7 @@ type suspends_constructor =
 (* The function an application applies, under any coercion. *)
 let callee = Core.Expr.strip_crossings
 
-let arity f = List.length (fst (Base.Core_util.collect_lams f))
+let arity_of f = List.length (fst (Base.Core_util.collect_lams f))
 
 (* Whether [use] is a monadic bind generated as sequencing, as the unit's
    effect operations [effects] say. *)
@@ -77,18 +77,21 @@ let rec group ~effects ~n_outer ~suspends ~lex ~suspended ?continuation ~cofix i
     escapes_in_bodies ~effects ~n_outer ~suspends ~lex ~cofix ids bodies
     ||
     match continuation with
-    | Some (binder, b) -> escapes ~effects ~n_outer ~suspends ~tail:suspended (push [binder] lex) 1 b
+    | Some (selected, binder, b) ->
+      escapes ~effects ~n_outer ~suspends ~tail:suspended ~arity:(arity_of bodies.(selected)) (push [binder] lex) 1 b
     | None -> suspended
   then Closures
   else In_place
 
-(* Whether the local fixpoint at [k] may outlive its scope as [t], standing
-   in [lex], uses it: named other than as the function an application
-   applies, or named at all inside a closure -- a lambda, a group not
+(* Whether the local fixpoint at [k], taking [arity] parameters, may outlive
+   its scope as [t], standing in [lex], uses it: named other than as the
+   function an application applies to all of them -- applied to fewer, it
+   is held by the closure the application makes -- or named at all inside a
+   closure -- a lambda, a group not
    generated in place, the thunk suspending a coinductive constructor's
    arguments -- or, where [tail] says the continuation [t] hands its value
    to suspends it whole, in that value. *)
-and escapes ~effects ~n_outer ~suspends ~tail lex k t =
+and escapes ~effects ~n_outer ~suspends ~tail ~arity lex k t =
   let in_place_group ~lex ~suspended ?continuation ~cofix g =
     group ~effects ~n_outer ~suspends ~lex ~suspended ?continuation ~cofix (Core.Recursion.Group.functions g)
       (Core.Recursion.Group.bodies g) = In_place
@@ -99,10 +102,10 @@ and escapes ~effects ~n_outer ~suspends ~tail lex k t =
     match t with
     | Core.Expr.Bound_variable {index = i; _} -> i = k
     | Core.Expr.Let {binder = x; binder_type = ty; value = Core.Expr.Fixpoint g; body = b; _}
-      when in_place_group ~lex ~suspended:tail ~continuation:((x, ty), b) ~cofix:false g ->
+      when in_place_group ~lex ~suspended:tail ~continuation:(g.selected, (x, ty), b) ~cofix:false g ->
       in_place lex k g || go ~tail (push [(x, ty)] lex) (k + 1) b
     | Core.Expr.Let {binder = x; binder_type = ty; value = Core.Expr.Cofixpoint g; body = b; _}
-      when in_place_group ~lex ~suspended:tail ~continuation:((x, ty), b) ~cofix:true g ->
+      when in_place_group ~lex ~suspended:tail ~continuation:(g.selected, (x, ty), b) ~cofix:true g ->
       in_place lex k g || go ~tail (push [(x, ty)] lex) (k + 1) b
     | Core.Expr.Let {binder = x; binder_type = ty; value = a; body = b; _} ->
       go ~tail:false lex k a || go ~tail (push [(x, ty)] lex) (k + 1) b
@@ -126,13 +129,13 @@ and escapes ~effects ~n_outer ~suspends ~tail lex k t =
     | _ when tail -> Base.Core_util.ast_occurs k t
     | Core.Expr.Apply {callee = f; arguments = args}
       when (match callee f with Core.Expr.Bound_variable {index = i; _} -> i = k | _ -> false) ->
-      List.exists (go ~tail lex k) args
+      List.compare_length_with args arity < 0 || List.exists (go ~tail lex k) args
     | Core.Expr.Apply {callee = Core.Expr.Fixpoint g; arguments = args}
-      when List.length args >= arity (Core.Recursion.Group.selected_member g).body
+      when List.length args >= arity_of (Core.Recursion.Group.selected_member g).body
            && in_place_group ~lex ~suspended:false ~cofix:false g ->
       in_place lex k g || List.exists (go ~tail lex k) args
     | Core.Expr.Apply {callee = Core.Expr.Cofixpoint g; arguments = args}
-      when List.length args >= arity (Core.Recursion.Group.selected_member g).body
+      when List.length args >= arity_of (Core.Recursion.Group.selected_member g).body
            && in_place_group ~lex ~suspended:false ~cofix:true g ->
       in_place lex k g || List.exists (go ~tail lex k) args
     | Core.Expr.Apply {callee = f; arguments = args} -> go ~tail lex k f || List.exists (go ~tail lex k) args
@@ -187,6 +190,6 @@ and escapes_in_bodies ~effects ~n_outer ~suspends ~lex ~cofix ids bodies =
         (fun j ->
           let member = k + n - j in
           if cofix then Base.Core_util.ast_occurs member body
-          else escapes ~effects ~n_outer ~suspends ~tail:false lex member body )
+          else escapes ~effects ~n_outer ~suspends ~tail:false ~arity:(arity_of bodies.(j)) lex member body )
         (List.init n Fun.id) )
     bodies

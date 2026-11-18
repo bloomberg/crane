@@ -11,7 +11,9 @@ Import ListNotations.
     branch, called on a literal [[]]: under CRANE_CHECK_IR=1 "closure escape:
     the local fixpoint go escapes in its generated code but nowhere in Core".
     The tail-call shapes in local_fix_returns_function and
-    local_fix_function_result_inlined are fixed. *)
+    local_fix_function_result_inlined are fixed.  Eta-expanded to the
+    function's argument, [go r acc] is a partial application, whose closure
+    holds [go]: escape analysis now counts one as an escape. *)
 Module LocalFixNontailFunctionResult.
 
 Inductive tree : Type := Leaf : tree | Node : tree -> nat -> tree -> tree.

@@ -730,7 +730,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     let closures =
       kept_by_frame
       || closures_group cx ~n_outer ~occ
-           ~continuation:((Core.Binder_name.Source (fst ids.(x)), let_ty), b)
+           ~continuation:(x, (Core.Binder_name.Source (fst ids.(x)), let_ty), b)
            ~cofix ids funs
          = Closures
     in

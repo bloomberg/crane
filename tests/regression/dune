@@ -14888,3 +14888,14 @@
   (alias runtest)
   (deps frame_binder_local_fix_acc.t.exe)
   (action (run ./frame_binder_local_fix_acc.t.exe))))
+
+(subdir local_fix_nontail_function_result
+ (rule
+  (targets local_fix_nontail_function_result.t.exe)
+  (deps LocalFixNontailFunctionResult.vo local_fix_nontail_function_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_nontail_function_result.t.exe local_fix_nontail_function_result.t.cpp local_fix_nontail_function_result.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_nontail_function_result.t.exe)
+  (action (run ./local_fix_nontail_function_result.t.exe))))
