@@ -141,6 +141,25 @@ public:
   }
 
   template <typename T1, typename F0>
+    requires std::is_invocable_r_v<T1, F0 &, T1 &&, const A &>
+  T1 fold_left(F0 &&f, T1 a0) const {
+    // Loop replaces the tail recursion: each recursive call updates the loop
+    // variables.
+    const List<A> *_loop_self = this;
+    T1 _loop_a0 = std::move(a0);
+    while (true) {
+      auto &&_sv = *_loop_self;
+      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+        return _loop_a0;
+      } else {
+        const auto &[a1, a2] = std::get<typename List<A>::Cons>(_sv.v());
+        _loop_self = crane_raw(a2);
+        _loop_a0 = f(std::move(_loop_a0), a1);
+      }
+    }
+  }
+
+  template <typename T1, typename F0>
     requires std::is_invocable_r_v<List<T1>, F0 &, A &>
   List<T1> flat_map(F0 &&f) const {
     const List<A> *_self = this;
@@ -221,7 +240,8 @@ public:
 /// read after it is moved".  Fragile: the unrelated declarations kept from the
 /// generated prelude (class, ptree, stream) are needed to trigger it.
 /// g5 is a smaller repro: flat_map, and a match on the parameter as the
-/// local fixpoint's argument.  Each function is a method of tree, its
+/// local fixpoint's argument; g6 the same in a fold_left lambda. Each function
+/// is a method of tree, its
 /// parameter the receiver, read as *this.  A stored lambda reading the
 /// receiver takes a copy of it, but the check for one did not look into the
 /// lambdas nested in it, here the local fixpoint's invoked one: the stored
@@ -308,6 +328,28 @@ struct LocalFixCaptureInFoldLambda {
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
+
+    uint64_t g6() const {
+      tree _self_val = *this;
+      return List<uint64_t>::cons(
+          UINT64_C(0),
+          List<uint64_t>::cons(UINT64_C(0),
+                               List<uint64_t>::nil()))
+                 .template fold_left<uint64_t>(
+          [=, _self_val = std::move(_self_val)](uint64_t acc,
+                                                uint64_t)
+               -> uint64_t {
+            List<uint64_t> l = (std::holds_alternative<typename tree::Leaf>(
+                                    _self_val.v()) ? List<uint64_t>::nil()
+                                                   : List<uint64_t>::nil());
+            if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
+              return (acc + UINT64_C(1));
+            } else {
+              return UINT64_C(0);
+            }
+          },
+          UINT64_C(0));
+    }
 
     List<std::optional<uint64_t>> g5() const {
       tree _self_val = *this;
