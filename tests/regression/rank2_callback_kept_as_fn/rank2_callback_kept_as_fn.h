@@ -100,17 +100,15 @@ struct Rank2CallbackKeptAsFn {
   both(T1 f,
        std::type_identity_t<crane::fn<T1(crane::obj, List<crane::obj>, T1)>> g,
        const List<T2> &l) {
-    auto f0_impl = [&](auto &_self_f0, const List<crane::obj> &m) -> T1 {
-      if (std::holds_alternative<typename List<crane::obj>::Nil>(m.v())) {
+    auto f0_impl = [&](auto &_self_f0, const List<T2> &m) -> T1 {
+      if (std::holds_alternative<typename List<T2>::Nil>(m.v())) {
         return f;
       } else {
-        const auto &[a0, a1] = std::get<typename List<crane::obj>::Cons>(m.v());
-        return crane_any_cast<T1>(
-            crane_call_erased(g, a0, *a1, _self_f0(_self_f0, *a1)));
+        const auto &[a0, a1] = std::get<typename List<T2>::Cons>(m.v());
+        return crane_any_cast<T1>(g(a0, *a1, _self_f0(_self_f0, *a1)));
       }
     };
-    auto f0 =
-        [&](const List<crane::obj> &m) -> T1 { return f0_impl(f0_impl, m); };
+    auto f0 = [&](const List<T2> &m) -> T1 { return f0_impl(f0_impl, m); };
     return std::make_pair(f0(l), f0(l));
   }
 
