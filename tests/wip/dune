@@ -317,3 +317,36 @@
   (alias runtest)
   (deps loopify_control_lowering_frame_copy.t.exe)
   (action (run ./loopify_control_lowering_frame_copy.t.exe))))
+
+(subdir local_fix_capture_in_fold_lambda
+ (rule
+  (targets local_fix_capture_in_fold_lambda.t.exe)
+  (deps LocalFixCaptureInFoldLambda.vo local_fix_capture_in_fold_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_capture_in_fold_lambda.t.exe local_fix_capture_in_fold_lambda.t.cpp local_fix_capture_in_fold_lambda.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_capture_in_fold_lambda.t.exe)
+  (action (run ./local_fix_capture_in_fold_lambda.t.exe))))
+
+(subdir poly_nil_pair_type_erased
+ (rule
+  (targets poly_nil_pair_type_erased.t.exe)
+  (deps PolyNilPairTypeErased.vo poly_nil_pair_type_erased.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_nil_pair_type_erased.t.exe poly_nil_pair_type_erased.t.cpp poly_nil_pair_type_erased.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_nil_pair_type_erased.t.exe)
+  (action (run ./poly_nil_pair_type_erased.t.exe))))
+
+(subdir rocq_string_type_undeclared
+ (rule
+  (targets rocq_string_type_undeclared.t.exe)
+  (deps RocqStringTypeUndeclared.vo rocq_string_type_undeclared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_string_type_undeclared.t.exe rocq_string_type_undeclared.t.cpp rocq_string_type_undeclared.cpp)))
+ (rule
+  (alias runtest)
+  (deps rocq_string_type_undeclared.t.exe)
+  (action (run ./rocq_string_type_undeclared.t.exe))))
