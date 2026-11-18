@@ -53,35 +53,48 @@ let rec pure_choice : expr -> bool = function
     List.for_all pure_stmt body
   | _ -> false
 
-(* [stmts] without the assignments of a pure value to [x], and without the
-   statements left doing nothing but choosing, on pure tests, between
-   branches that did only that: a match the value of a [let] was lowered to,
-   each of its branches assigning the local the [let] declared. *)
+(* [stmts] without the assignments to [x], where nothing reads it: one of a
+   pure value is dropped, one of a call becomes the call, run for whatever
+   it does; and without the statements left doing nothing but choosing, on
+   pure tests, between branches that did only that -- a match the value of a
+   [let] was lowered to, each of its branches assigning the local the [let]
+   declared, after what a branch bound for it alone is dropped too. *)
 let rec unassign x (stmts : stmt list) : stmt list =
   let quiet = List.for_all (fun (ss : stmt list) -> ss = []) in
+  let body ss = drop_unused (unassign x ss) in
   List.concat_map
     (fun (s : stmt) : stmt list ->
       match s with
       | Bind_variable (y, Existing, e) when Id.equal x y && (V.pure e || pure_choice e) -> []
+      | Bind_variable (y, Existing, (Call _ as e)) when Id.equal x y -> [Expression e]
       | Match (scrut, branches, default) ->
-        let branches = List.map (fun (b : _ Cpp_ir.Stmt.Match.branch) -> {b with body = unassign x b.body}) branches in
-        let default = Option.map (unassign x) default in
+        let branches = List.map (fun (b : _ Cpp_ir.Stmt.Match.branch) -> {b with body = body b.body}) branches in
+        let default = Option.map body default in
         if pure_scrutinee scrut.expr
            && List.for_all (fun (b : _ Cpp_ir.Stmt.Match.branch) -> List.for_all V.pure b.extra_conditions) branches
-           && quiet (List.map (fun (b : _ Cpp_ir.Stmt.Match.branch) -> b.body) branches @ (match default with Some d -> [d] | None -> []))
+           && quiet
+                (List.map (fun (b : _ Cpp_ir.Stmt.Match.branch) -> b.body) branches
+                @ match default with Some d -> [d] | None -> [] )
         then []
         else [Match (scrut, branches, default)]
       | If i ->
-        let then_ = unassign x i.then_ and else_ = unassign x i.else_ in
+        let then_ = body i.then_ and else_ = body i.else_ in
         if V.pure i.condition && quiet [then_; else_] then [] else [If {i with then_; else_}]
-      | Block ss -> ( match unassign x ss with [] -> [] | ss -> [Block ss] )
+      | Custom_match m ->
+        (* A mapped match only takes its scrutinee apart: with nothing left
+           in its branches, it does nothing a pure scrutinee could. *)
+        let branches = List.map (fun (b : _ Cpp_ir.Stmt.Custom_match.branch) -> {b with body = body b.body}) m.branches in
+        if V.pure m.scrutinee && quiet (List.map (fun (b : _ Cpp_ir.Stmt.Custom_match.branch) -> b.body) branches)
+        then []
+        else [Custom_match {m with branches}]
+      | Block ss -> ( match body ss with [] -> [] | ss -> [Block ss] )
       | s -> [s] )
     stmts
 
 (* Drop each binding of a pure value nothing after it reads or assigns, and
-   each local declared without one that nothing after it reads, with the
-   pure values assigned to it ({!unassign}). *)
-let rec drop_unused : stmt list -> stmt list = function
+   each local declared without one that nothing after it reads, with what is
+   assigned to it ({!unassign}). *)
+and drop_unused : stmt list -> stmt list = function
   | [] -> []
   | Bind_variable (x, Declare _, e) :: rest
     when V.pure e && (not (V.mem x (V.free_in_body rest))) && not (Id.Set.mem x (V.assigned rest)) ->

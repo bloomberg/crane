@@ -21,9 +21,13 @@ struct List; /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differ
 /// with it the only read of x; the declaration and the assignment of the
 /// choice x's value was lowered to stayed.  Simplify now drops a local
 /// declared without a value that nothing reads, with the pure values,
-/// choices among them included, assigned to it.
+/// choices among them included, assigned to it.  g assigns x in a
+/// mapped match on nat, and y alongside; h assigns x a call, which
+/// is kept as a statement.
 struct UnusedLetLocalFixWerror {
   static uint64_t f(uint64_t _x);
+  static uint64_t g(uint64_t s);
+  static uint64_t h(uint64_t s);
 };
 
 template <typename A> struct List {

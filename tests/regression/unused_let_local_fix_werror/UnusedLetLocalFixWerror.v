@@ -13,7 +13,9 @@ Import ListNotations.
     with it the only read of [x]; the declaration and the assignment of the
     choice [x]'s value was lowered to stayed.  Simplify now drops a local
     declared without a value that nothing reads, with the pure values,
-    choices among them included, assigned to it. *)
+    choices among them included, assigned to it.  [g] assigns [x] in a
+    mapped match on [nat], and [y] alongside; [h] assigns [x] a call, which
+    is kept as a statement. *)
 Module UnusedLetLocalFixWerror.
 
 Definition f (s : nat) : nat :=
@@ -21,6 +23,19 @@ Definition f (s : nat) : nat :=
               match l with [] => 0 | _ :: _ => 7 end in go [] 0) in
   let fix go2 (l : list bool) (acc : nat) {struct l} : nat :=
     match l with [] => 0 | _ :: r => go2 r x end in go2 [] 8.
+
+Definition g (s : nat) : nat :=
+  let x := match s with O => 1 | S _ => 2 end in
+  let y := (let fix go (l : list nat) (acc : nat) {struct l} : nat :=
+              match l with [] => acc | _ :: _ => 7 end in go [] s) in
+  let fix go2 (l : list bool) (a b : nat) {struct l} : nat :=
+    match l with [] => 3 | _ :: r => go2 r x y end in go2 [] 8 9.
+
+Definition h (s : nat) : nat :=
+  let x := (let fix go (l : list nat) (acc : nat) {struct l} : nat :=
+              match l with [] => acc | n :: r => go r (n + acc) end in go [1; 2] s) in
+  let fix go2 (l : list bool) (acc : nat) {struct l} : nat :=
+    match l with [] => 4 | _ :: r => go2 r x end in go2 [] 8.
 
 End UnusedLetLocalFixWerror.
 
