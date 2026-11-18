@@ -1,0 +1,19 @@
+// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
+// testing of Crane.
+#include <branch_callables_curried_join.h>
+
+#include <cstdint>
+#include <iostream>
+
+#define M BranchCallablesCurriedJoin
+
+int main() {
+  int fails = 0;
+  auto e = List<uint64_t>::nil();
+  auto one = List<uint64_t>::cons(1, List<uint64_t>::nil());
+  if (!(M::t(e) == 1)) { std::cout << "FAIL: M::t(e)" << std::endl; ++fails; }
+  if (!(M::t(one) == 2)) { std::cout << "FAIL: M::t(one)" << std::endl; ++fails; }
+
+  if (fails == 0) std::cout << "All branch_callables_curried_join tests passed!" << std::endl;
+  return fails;
+}
