@@ -228,21 +228,6 @@ struct Monad0 {
   static typename _tcI0::template m<T2> ret(const T2 &x);
 };
 
-template <typename I>
-concept MonadIter = requires {
-  typename I::template M<crane::obj>;
-  {
-    I::template iter<crane::obj, crane::obj>(std::declval<crane::fn<
-        typename I::template M<Sum<crane::obj, crane::obj>>(crane::obj)>>(),
-                                             std::declval<crane::obj>())
-  } -> std::convertible_to<typename I::template M<crane::obj>>;
-};
-
-struct Basics {
-  template <MonadIter _tcI0, typename T2, typename T3, typename F0>
-  static typename _tcI0::template M<T2> iter(F0 &&x, const T3 &x0);
-};
-
 template <typename obj, typename c> using Id_ = crane::fn<c(obj)>;
 template <typename obj, typename c>
 using Cat = crane::fn<c(obj, obj, obj, c, c)>;
@@ -345,6 +330,30 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
+
+template <typename I>
+concept MonadIter = requires {
+  typename I::template M<crane::obj>;
+  {
+    I::template iter<crane::obj, crane::obj>(std::declval<crane::fn<
+        typename I::template M<Sum<crane::obj, crane::obj>>(crane::obj)>>(),
+                                             std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
+};
+
+struct Basics {
+  template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template M<T2> iter(F0 &&x, const T3 &x0);
+};
+
+template <typename e, typename f> using IFun = crane::fn<f(e)>;
+
+struct Function {
+  static crane::obj Id_IFun(crane::obj e);
+  static crane::obj Cat_IFun(IFun<crane::obj, crane::obj> f1,
+                             IFun<crane::obj, crane::obj> f2, crane::obj e);
+  static crane::obj Inl_sum1(crane::obj x);
 };
 
 template <typename E, typename R, typename itree> struct ItreeF {
@@ -626,13 +635,11 @@ template <typename T1> struct MonadIter_itree {
   }
 };
 
-template <typename e, typename f> using IFun = crane::fn<f(e)>;
-
-struct Function {
-  static crane::obj Id_IFun(crane::obj e);
-  static crane::obj Cat_IFun(IFun<crane::obj, crane::obj> f1,
-                             IFun<crane::obj, crane::obj> f2, crane::obj e);
-  static crane::obj Inl_sum1(crane::obj x);
+struct Subevent {
+  template <typename T1, typename T2, typename T3>
+  static crane::rebind_t<T2, T3>
+  subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
+           crane::rebind_t<T1, T3> x);
 };
 
 struct Interp {
@@ -664,14 +671,6 @@ using Handler = crane::fn<Itree<f, crane::obj>(e)>;
 Itree<crane::obj, crane::obj>
 Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
                   Handler<crane::obj, crane::obj> x0, crane::obj x1);
-
-struct Subevent {
-  template <typename T1, typename T2, typename T3>
-  static crane::rebind_t<T2, T3>
-  subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
-           crane::rebind_t<T1, T3> x);
-};
-
 template <typename I>
 concept Params = requires {
   typename I::ptr;
@@ -925,11 +924,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
 
-template <MonadIter _tcI0, typename T2, typename T3, typename F0>
-typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
-  return _tcI0::template iter<T2, T3>(x, x0);
-}
-
 template <typename T1, typename T2>
 T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
   return id_0(x0_);
@@ -978,6 +972,19 @@ CategoryOps::ReSum_inl(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
       CategoryOps::template inl_<T1, T2>(bif, std::move(h2), b, c));
 }
 
+template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
+  return _tcI0::template iter<T2, T3>(x, x0);
+}
+
+template <typename T1, typename T2, typename T3>
+crane::rebind_t<T2, T3>
+Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
+                   crane::rebind_t<T1, T3> x) {
+  return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
+      crane::obj(), crane::obj(), std::move(h0))(std::move(x)));
+}
+
 template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
 typename _tcI0::template M<T3> Interp::interp(const std::type_identity_t<
     crane::fn<typename _tcI0::template M<crane::obj>(T1)>> &h0,
@@ -1008,12 +1015,4 @@ typename _tcI0::template M<T3> Interp::interp(const std::type_identity_t<
         }
       },
       x0_);
-}
-
-template <typename T1, typename T2, typename T3>
-crane::rebind_t<T2, T3>
-Subevent::subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
-                   crane::rebind_t<T1, T3> x) {
-  return crane_any_cast<crane::rebind_t<T2, T3>>(CategoryOps::resum(
-      crane::obj(), crane::obj(), std::move(h0))(std::move(x)));
 }

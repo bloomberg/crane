@@ -239,11 +239,6 @@ public:
   }
 };
 
-struct Monads {
-  template <typename s, template <typename> class m, typename a>
-  using stateT = crane::fn<m<std::pair<s, a>>(s)>;
-};
-
 template <typename obj, typename c> using Id_ = crane::fn<c(obj)>;
 template <typename obj, typename c> using ReSum = c;
 
@@ -473,6 +468,11 @@ struct ITree {
 };
 
 template <typename e, typename f> using IFun = crane::fn<f(e)>;
+
+struct Monads {
+  template <typename s, template <typename> class m, typename a>
+  using stateT = crane::fn<m<std::pair<s, a>>(s)>;
+};
 
 struct Subevent {
   template <typename T1, typename T2, typename T3>

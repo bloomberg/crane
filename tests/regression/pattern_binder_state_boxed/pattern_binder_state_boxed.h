@@ -154,11 +154,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct Monads {
-  template <typename s, template <typename> class m, typename a>
-  using stateT = crane::fn<m<std::pair<s, a>>(s)>;
-};
-
 template <typename E, typename R, typename itree> struct ItreeF {
   // TYPES
   struct RetF {
@@ -360,6 +355,11 @@ struct ITree {
        std::type_identity_t<crane::fn<Itree<T1, T3>(T2)>> k) {
     return subst<T1, T2, T3>(std::move(k), u);
   }
+};
+
+struct Monads {
+  template <typename s, template <typename> class m, typename a>
+  using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 };
 
 template <typename I>

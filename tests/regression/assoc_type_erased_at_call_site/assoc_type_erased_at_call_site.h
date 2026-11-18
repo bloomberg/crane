@@ -12,6 +12,7 @@
 struct Nat;
 template <typename A> struct List;
 struct IPZ;
+using iptr = crane::obj;
 template <typename I>
 concept IPtr = requires {
   typename I::iptr;

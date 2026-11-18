@@ -230,6 +230,20 @@ struct Monad0 {
   static typename _tcI0::template m<T2> ret(const T2 &x);
 };
 
+template <typename obj, typename c> using Id_ = crane::fn<c(obj)>;
+template <typename obj, typename c> using ReSum = c;
+
+struct CategoryOps {
+  template <typename T1, typename T2>
+  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
+  template <typename T1, typename T2>
+  static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
+  template <typename T1, typename T2>
+  static ReSum<T1, T2> ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
+                                const T1 &x1_);
+};
+
+template <typename e, typename f> using IFun = crane::fn<f(e)>;
 template <typename I>
 concept MonadIter = requires {
   typename I::template M<crane::obj>;
@@ -245,20 +259,12 @@ struct Basics {
   static typename _tcI0::template M<T2> iter(F0 &&x, const T3 &x0);
 };
 
-template <typename obj, typename c> using Id_ = crane::fn<c(obj)>;
-template <typename obj, typename c> using ReSum = c;
-
-struct CategoryOps {
-  template <typename T1, typename T2>
-  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
-  template <typename T1, typename T2>
-  static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
-  template <typename T1, typename T2>
-  static ReSum<T1, T2> ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
-                                const T1 &x1_);
+struct Subevent {
+  template <typename T1, typename T2, typename T3>
+  static crane::rebind_t<T2, T3>
+  subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
+           crane::rebind_t<T1, T3> x);
 };
-
-template <typename e, typename f> using IFun = crane::fn<f(e)>;
 
 template <typename E, typename R, typename itree> struct ItreeF {
   // TYPES
@@ -539,13 +545,6 @@ template <typename T1> struct MonadIter_itree {
   }
 };
 
-struct Subevent {
-  template <typename T1, typename T2, typename T3>
-  static crane::rebind_t<T2, T3>
-  subevent(ReSum<crane::obj, IFun<crane::obj, crane::obj>> h0,
-           crane::rebind_t<T1, T3> x);
-};
-
 struct Interp {
   template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1,
             typename T3>
@@ -637,11 +636,6 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
 
-template <MonadIter _tcI0, typename T2, typename T3, typename F0>
-typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
-  return _tcI0::template iter<T2, T3>(x, x0);
-}
-
 template <typename T1, typename T2>
 T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
   return id_0(x0_);
@@ -656,6 +650,11 @@ template <typename T1, typename T2>
 ReSum<T1, T2> CategoryOps::ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
                                     const T1 &x1_) {
   return CategoryOps::template id_<T1, T2>(std::move(x0_), x1_);
+}
+
+template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
+  return _tcI0::template iter<T2, T3>(x, x0);
 }
 
 template <typename T1, typename T2, typename T3>

@@ -105,11 +105,6 @@ public:
   }
 };
 
-struct Monads {
-  template <typename s, template <typename> class m, typename a>
-  using stateT = crane::fn<m<std::pair<s, a>>(s)>;
-};
-
 template <typename obj, typename c> using Id_ = crane::fn<c(obj)>;
 template <typename obj, typename c>
 using Cat = crane::fn<c(obj, obj, obj, c, c)>;
@@ -421,6 +416,11 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
+
+struct Monads {
+  template <typename s, template <typename> class m, typename a>
+  using stateT = crane::fn<m<std::pair<s, a>>(s)>;
 };
 
 template <typename e, typename f> using IFun = crane::fn<f(e)>;

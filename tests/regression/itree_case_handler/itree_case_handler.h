@@ -227,21 +227,6 @@ struct Monad0 {
   static typename _tcI0::template m<T2> ret(const T2 &x);
 };
 
-template <typename I>
-concept MonadIter = requires {
-  typename I::template M<crane::obj>;
-  {
-    I::template iter<crane::obj, crane::obj>(std::declval<crane::fn<
-        typename I::template M<Sum<crane::obj, crane::obj>>(crane::obj)>>(),
-                                             std::declval<crane::obj>())
-  } -> std::convertible_to<typename I::template M<crane::obj>>;
-};
-
-struct Basics {
-  template <MonadIter _tcI0, typename T2, typename T3, typename F0>
-  static typename _tcI0::template M<T2> iter(F0 &&x, const T3 &x0);
-};
-
 template <typename obj, typename c>
 using Case = crane::fn<c(obj, obj, obj, c, c)>;
 
@@ -321,6 +306,21 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+};
+
+template <typename I>
+concept MonadIter = requires {
+  typename I::template M<crane::obj>;
+  {
+    I::template iter<crane::obj, crane::obj>(std::declval<crane::fn<
+        typename I::template M<Sum<crane::obj, crane::obj>>(crane::obj)>>(),
+                                             std::declval<crane::obj>())
+  } -> std::convertible_to<typename I::template M<crane::obj>>;
+};
+
+struct Basics {
+  template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+  static typename _tcI0::template M<T2> iter(F0 &&x, const T3 &x0);
 };
 
 template <typename E, typename R, typename itree> struct ItreeF {
@@ -733,16 +733,16 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
   return _tcI0::template ret<T2>(x);
 }
 
-template <MonadIter _tcI0, typename T2, typename T3, typename F0>
-typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
-  return _tcI0::template iter<T2, T3>(x, x0);
-}
-
 template <typename T1, typename T2, typename F0>
 T2 CategoryOps::case_(F0 &&, std::type_identity_t<Case<T1, T2>> case0,
                       const T1 &x0_, const T1 &x1_, const T1 &x2_,
                       const T2 &x3_, const T2 &x4_) {
   return case0(x0_, x1_, x2_, x3_, x4_);
+}
+
+template <MonadIter _tcI0, typename T2, typename T3, typename F0>
+typename _tcI0::template M<T2> Basics::iter(F0 &&x, const T3 &x0) {
+  return _tcI0::template iter<T2, T3>(x, x0);
 }
 
 template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1, typename T3>
