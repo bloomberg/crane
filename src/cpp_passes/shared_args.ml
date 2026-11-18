@@ -22,12 +22,17 @@ let repeating_text : expr -> string option = function
 
 let evaluates_operands = Cpp_ir.Variables.evaluates_operands
 
-(* Whether [e] may be a reference into a temporary of its own full
-   expression: a mapping's text is spliced, so nothing says what it returns,
-   and [std::max(a + 1, b)] returns a reference to one of its temporary
-   operands.  [auto &&] bound to that dangles once the statement ends. *)
-let may_refer_to_temporary : expr -> bool = function
-  | Call (_, Entity (_, _, Some {inline = Some _; _}), _) -> true
+(* Whether [e] names an object that outlives the statement: a variable,
+   [this], a member of one, or a move of one -- an xvalue, which binding by
+   value would move from before the statement reads it.  Anything else is a
+   computation, and nothing says a computation's result outlives the
+   statement: [std::max(b, 1)] returns a reference to one of its own
+   temporaries, and so may any mapping's text or function returning a
+   reference.  Such an argument is bound by value: a prvalue initialises the
+   local in place, and a reference is copied out while it is still live. *)
+let rec names_storage : expr -> bool = function
+  | Local _ | This -> true
+  | Dereference e | Move e | Member (e, _) | Project (e, _, _) | Access (_, e, _) -> names_storage e
   | _ -> false
 
 (* [e] with each argument it must evaluate once named, at every position [e]
@@ -60,9 +65,7 @@ let rec name_args fresh bind (e : expr) : expr =
 let in_stmt fresh (s : stmt) : stmt list =
   let bound = ref [] in
   let bind x a =
-    (* By value where the reference could dangle: a prvalue initialises
-       the local in place, and anything else is copied out in time. *)
-    let ty : Cpp_ir.Lowered.Type.t = if may_refer_to_temporary a then Auto else Reference (Forwarding, Auto) in
+    let ty : Cpp_ir.Lowered.Type.t = if names_storage a then Reference (Forwarding, Auto) else Auto in
     bound := (Bind_variable (x, Declare (ty, None), a) : stmt) :: !bound
   in
   let e' e = name_args fresh bind e in

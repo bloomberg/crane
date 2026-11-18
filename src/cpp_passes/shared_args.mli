@@ -9,11 +9,12 @@
     with an effect, and for a recursive call in the argument, work exponential
     in the depth.  The source evaluates it once.  So such an argument, unless
     a second evaluation is free (a variable, a literal, a field of one), is
-    bound to a local first -- [auto &&], which neither copies an lvalue nor
-    loses a temporary -- and the mapping splices the local.  An argument that
-    is itself a mapping's text is bound by value instead: it may be a
-    reference into one of its own temporaries ([std::max(a + 1, b)]), which
-    [auto &&] would outlive.
+    bound to a local first, and the mapping splices the local.  The local is
+    an [auto &&] only where the argument names an object that outlives the
+    statement (a variable, a member, a move of one); any other argument is a
+    computation, which may return a reference into its own temporaries
+    ([std::max(b, 1)], or any mapping's text) that a reference would
+    outlive, so it is bound by value.  A prvalue initialises it in place.
 
     The binding goes in front of the statement, so only a call that statement
     evaluates unconditionally, once, is rewritten: one under a conditional, a
