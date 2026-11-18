@@ -35,10 +35,10 @@ Crane Extract Numeral N => "%nu".
 
 (* Pos operations *)
 Crane Extract Inlined Constant Pos.add => "(%a0 + %a1)".
-Crane Extract Inlined Constant Pos.sub => "(%a0 - %a1)".
+Crane Extract Inlined Constant Pos.sub => "(%a0 > %a1 ? %a0 - %a1 : 1u)".
 Crane Extract Inlined Constant Pos.mul => "(%a0 * %a1)".
 Crane Extract Inlined Constant Pos.succ => "(%a0 + 1u)".
-Crane Extract Inlined Constant Pos.pred => "(%a0 - 1u)".
+Crane Extract Inlined Constant Pos.pred => "(%a0 > 1u ? %a0 - 1u : 1u)".
 Crane Extract Inlined Constant Pos.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant Pos.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Pos.leb => "%a0 <= %a1".

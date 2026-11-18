@@ -14726,3 +14726,14 @@
   (alias runtest)
   (deps n_modulo_by_zero.t.exe)
   (action (run ./n_modulo_by_zero.t.exe))))
+
+(subdir pos_sub_saturates
+ (rule
+  (targets pos_sub_saturates.t.exe)
+  (deps PosSubSaturates.vo pos_sub_saturates.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pos_sub_saturates.t.exe pos_sub_saturates.t.cpp pos_sub_saturates.cpp)))
+ (rule
+  (alias runtest)
+  (deps pos_sub_saturates.t.exe)
+  (action (run ./pos_sub_saturates.t.exe))))
