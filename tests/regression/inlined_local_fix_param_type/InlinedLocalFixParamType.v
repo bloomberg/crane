@@ -34,6 +34,17 @@ Definition g {A : Type} (a : A) : nat :=
 
 Definition u : nat := g true.
 
+(** The same defect with a record accumulator, the list's elements pairs
+    with the record, under a projection. *)
+Record pt : Type := mkpt { px : nat; py : bool }.
+
+Definition h {A : Type} (a : A) : bool :=
+  py (let fix go (l : list (A * pt)) (acc : pt) {struct l} : pt :=
+        match l with [] => acc | _ :: r => go r (mkpt 0 true) end
+      in go [(a, mkpt 0 true)] (mkpt 0 false)).
+
+Definition v : bool := h 9.
+
 End InlinedLocalFixParamType.
 
 Crane Extraction "inlined_local_fix_param_type" InlinedLocalFixParamType.

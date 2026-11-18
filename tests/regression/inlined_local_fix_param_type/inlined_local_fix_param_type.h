@@ -360,4 +360,39 @@ struct InlinedLocalFixParamType {
   }
 
   static inline const uint64_t u = g<bool>(true);
+
+  /// The same defect with a record accumulator, the list's elements pairs
+  /// with the record, under a projection.
+  struct pt {
+    uint64_t px;
+    bool py;
+  };
+
+  template <typename T1> static bool h(const T1 &a) {
+    return [&]() {
+      auto go = [](const List<std::pair<T1, pt>> &l, pt acc) -> pt {
+        // Loop replaces the tail recursion: each recursive call updates the
+        // loop variables.
+        pt _loop_acc = std::move(acc);
+        const List<std::pair<T1, pt>> *_loop_l = &l;
+        while (true) {
+          if (std::holds_alternative<typename List<std::pair<T1, pt>>::Nil>(
+                  _loop_l->v())) {
+            return _loop_acc;
+          } else {
+            const auto &[_, a1] =
+                std::get<typename List<std::pair<T1, pt>>::Cons>(_loop_l->v());
+            _loop_acc = pt{UINT64_C(0), true};
+            _loop_l = crane_raw(a1);
+          }
+        }
+      };
+      return go(List<std::pair<T1, pt>>::cons(
+          std::make_pair(a, pt{UINT64_C(0), true}),
+          List<std::pair<T1, pt>>::nil()),
+                pt{UINT64_C(0), false});
+    }().py;
+  }
+
+  static inline const bool v = h<uint64_t>(UINT64_C(9));
 };
