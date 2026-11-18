@@ -600,6 +600,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
        names for all Tvars used in the fixpoint type: - Tvars 1..n_outer reuse
        the outer function's template param names - Tvars beyond n_outer get
        fresh names T<i> *)
+    let fix_tvar_indices = Lifting.lifted_indices ~n_outer fix_tvar_indices in
     let all_tvar_names = Lifting.build_tvar_names ~outer_tvars fix_tvar_indices in
     let all_temps = Cpp_ir.Build.typenames all_tvar_names in
     (* The body being lifted was written against the enclosing declaration's
@@ -1254,6 +1255,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
   let stmts =
     if has_extra_tvars then (
       (* Lift the polymorphic inner fixpoint to a top-level function *)
+      let fix_tvar_indices = Lifting.lifted_indices ~n_outer fix_tvar_indices in
       let all_tvar_names = Lifting.build_tvar_names ~outer_tvars fix_tvar_indices in
       let all_temps = Cpp_ir.Build.typenames all_tvar_names in
       (* The body being lifted was written against the enclosing declaration's

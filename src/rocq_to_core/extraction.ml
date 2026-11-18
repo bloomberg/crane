@@ -458,16 +458,26 @@ let type_binders env =
     body is being extracted: [env] binds no type besides the definition's own
     binders, so {!db_from_rel_context} numbers each as the definition's scheme
     does, and [t] binds none of its own -- [forall B, list B -> nat], whose
-    [B] extraction numbers as it pleases. *)
-let names_signature_variables env sg t ty =
+    [B] extraction numbers as it pleases.  With [~leading], [t] may bind
+    types in front, [forall C, list C -> B -> nat]: extracted outside the
+    scope of those binders, each occurrence of [C] is [Unknown], numbered
+    nothing. *)
+let names_signature_variables ?(leading = false) env sg t ty =
   let rec binds_type env t =
     match EConstr.kind sg (whd_all env sg t) with
     | Prod (x, d, c) -> is_info_scheme env sg d || binds_type env d || binds_type (push_rel_assum (x, d) env) c
     | App (h, args) -> binds_type env h || Array.exists (binds_type env) args
     | _ -> false
   in
+  let rec past_leading env t =
+    match EConstr.kind sg (whd_all env sg t) with
+    | Prod (x, d, c) when leading && is_info_scheme env sg d -> past_leading (push_rel_assum (x, d) env) c
+    | _ -> (env, t)
+  in
   match !signature_type_binders with
-  | Some k -> Int.equal (type_binders env) k && type_maxvar ty <= k && not (binds_type env t)
+  | Some k ->
+    Int.equal (type_binders env) k && type_maxvar ty <= k
+    && not (let env, t = past_leading env t in binds_type env t)
   | None -> false
 
 (** {2 Create a type variable context from indications taken from an inductive
@@ -1808,6 +1818,26 @@ and extract_term env sg type_env (extracted_ty : Core.Type.extracted) c args =
               try_mgu a ty
             | Some ty when is_fix c1 && informative_type ty && names_signature_variables env sg t1 ty ->
               try_mgu a (rigidify ty)
+            | Some ty when is_fix c1 && names_signature_variables ~leading:true env sg t1 ty -> (
+              (* A fixpoint binding types of its own, [let fix go {C}
+                 (l : list C) (x : B)]: what the annotation says of [x] it
+                 says whatever [C] is, so each [C] is left to inference. *)
+              let rec open_ = function
+                | Core.Type.Unknown -> new_meta ()
+                | Core.Type.Meta {contents = Some t} -> open_ t
+                | Core.Type.Arrow {parameter = x; result = y} -> Core.Type.Arrow {parameter = open_ x; result = open_ y}
+                | Core.Type.Global_app g -> Core.Type.Global_app {g with type_arguments = List.map open_ g.type_arguments}
+                | Core.Type.Variable_app v -> Core.Type.Variable_app {v with arguments = List.map open_ v.arguments}
+                | t -> t
+              in
+              let rec leading = function
+                | Core.Type.Arrow {parameter = Core.Type.Erased Core.Erasure_reason.Type_argument as p; result = r} ->
+                  Option.map (fun r -> Core.Type.Arrow {parameter = p; result = r}) (leading r)
+                | t ->
+                  let t = open_ t in
+                  if informative_type t then Some t else None
+              in
+              match leading ty with Some ty -> try_mgu a (rigidify ty) | None -> ())
             | _ -> ()
         in
         let c1' =

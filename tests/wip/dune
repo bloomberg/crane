@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir local_fix_own_type_variable
- (rule
-  (targets local_fix_own_type_variable.t.exe)
-  (deps LocalFixOwnTypeVariable.vo local_fix_own_type_variable.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_own_type_variable.t.exe local_fix_own_type_variable.t.cpp local_fix_own_type_variable.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_own_type_variable.t.exe)
-  (action (run ./local_fix_own_type_variable.t.exe))))
-
 (subdir unused_let_local_fix_werror
  (rule
   (targets unused_let_local_fix_werror.t.exe)

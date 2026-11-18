@@ -14,7 +14,15 @@ Import ListNotations.
     [x : B] is a metavariable nothing in the body solves (the declared type
     binds [C] of its own, so extraction does not unify it), minted as a
     third variable rather than [B]; numbered from [1] it lands on [B] by
-    coincidence.  The binder needs its declared type first. *)
+    coincidence.  The binder needs its declared type first.
+
+    Extraction now unifies a let-bound fixpoint with its declared type also
+    where that type binds types of its own in front, each occurrence of one
+    left to inference, so [x] is [B]; the group's own variables are minted
+    past the definition's variables its signature names (from [1] where it
+    names none, as its body numbers a binder shadowing one by name); and the helper it is lifted to is a template over
+    every variable up to its greatest, [h]'s [T1] included, since type
+    conversion reads a variable by its position. *)
 Module LocalFixOwnTypeVariable.
 
 Record pt : Type := mkpt { px : nat; py : bool }.

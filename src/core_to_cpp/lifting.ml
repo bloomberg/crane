@@ -179,6 +179,16 @@ let constrains (class_temps : Cpp_ir.Lowered.phase Cpp_ir.Template.parameters) i
 let class_constraint_tvars ~outer_tvars class_temps =
   List.concat (List.mapi (fun i id -> if constrains class_temps id then [i + 1] else []) outer_tvars)
 
+(** The variables a group lifted with [indices] of its own and the enclosing
+    declaration's [n_outer] is a template over: every one from [1] to the
+    greatest.  A group's own variables are numbered past the declaration's
+    that its signatures name ({!Core_passes.Local_types}), and type
+    conversion reads a variable by its position in the names it is given, so
+    a declaration variable the group does not name still takes its place; a
+    call spells the declaration's variables explicitly
+    ({!Calls.lifted_call_type_args}). *)
+let lifted_indices ~n_outer indices = List.init (List.fold_left max n_outer indices) succ
+
 (** Build extended tvar names covering both signature and body Core.Type.Variable indices.
     A body index absent from the signature is mapped, by the offset between
     the smallest such index and the smallest signature index, onto a

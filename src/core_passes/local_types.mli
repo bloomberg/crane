@@ -55,9 +55,10 @@ val check_let_lambda : outer:int -> Core.Type.t -> Core.Expr.t -> unit
 
     A recursive group's are minted at each of the shapes translation lowers
     one in -- a let-bound group's signatures; an applied group's signatures,
-    bodies and arguments; a bare group's signatures -- each numbered from
-    [1], as its lifting expects, after the codomains its bodies determine
-    are filled.  A let-bound lambda's, everything it contains included, are
+    bodies and arguments; a bare group's signatures -- each numbered past
+    the variables of the declaration it is in that its signatures name, from
+    [1] where they name none, after the codomains its bodies determine are
+    filled.  A let-bound lambda's, everything it contains included, are
     numbered past the variables of the declaration it is in, which name its
     head's. *)
 val structure : lowering -> Core.Program.extracted -> unit

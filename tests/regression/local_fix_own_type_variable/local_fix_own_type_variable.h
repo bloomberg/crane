@@ -143,55 +143,56 @@ public:
 /// binds C of its own, so extraction does not unify it), minted as a
 /// third variable rather than B; numbered from 1 it lands on B by
 /// coincidence.  The binder needs its declared type first.
+///
+/// Extraction now unifies a let-bound fixpoint with its declared type also
+/// where that type binds types of its own in front, each occurrence of one
+/// left to inference, so x is B; the group's own variables are minted
+/// past the definition's variables its signature names (from 1 where it
+/// names none, as its body numbers a binder shadowing one by name); and the
+/// helper it is lifted to is a template over
+/// every variable up to its greatest, h's T1 included, since type
+/// conversion reads a variable by its position.
 struct LocalFixOwnTypeVariable {
   struct pt {
     uint64_t px;
     bool py;
   };
 
-  template <typename T1> static uint64_t f(T1 a) {
-    {
-      const List<T1> &_lc1_l = List<pt>::cons(
-          pt{UINT64_C(1), true},
-          List<pt>::cons(pt{UINT64_C(2), false}, List<pt>::nil()));
-      const List<T1> &_lc1_acc = List<T1>::cons(a, List<T1>::nil());
-      // Loop replaces the tail recursion: each recursive call updates the loop
-      // variables.
-      List<T1> _lc1_loop_acc = _lc1_acc;
-      const List<T1> *_lc1_loop_l = &_lc1_l;
-      while (true) {
-        if (std::holds_alternative<typename List<T1>::Nil>(_lc1_loop_l->v())) {
-          return _lc1_loop_acc.length();
-        } else {
-          const auto &[_, a1] =
-              std::get<typename List<T1>::Cons>(_lc1_loop_l->v());
-          _lc1_loop_acc = List<T1>::cons(a, std::move(_lc1_loop_acc));
-          _lc1_loop_l = crane_raw(a1);
-        }
-      }
+  template <typename T1, typename T2>
+  static uint64_t f_crane_go(const List<T2> l, const List<T1> acc, const T1 a) {
+    if (std::holds_alternative<typename List<T2>::Nil>(l.v())) {
+      return acc.length();
+    } else {
+      const auto &[_, a1] = std::get<typename List<T2>::Cons>(l.v());
+      return f_crane_go<T1, T2>(*a1, List<T1>::cons(a, acc), a);
     }
+  }
+
+  template <typename T1> static uint64_t f(T1 a) {
+    return f_crane_go(
+        List<pt>::cons(pt{UINT64_C(1), true},
+                       List<pt>::cons(pt{UINT64_C(2), false}, List<pt>::nil())),
+        List<T1>::cons(a, List<T1>::nil()), a);
   }
 
   static inline const uint64_t t = f<uint64_t>(UINT64_C(7));
 
+  template <typename T1, typename T2, typename T3>
+  static uint64_t h_crane_go(const List<T3> l, const T2 x) {
+    if (std::holds_alternative<typename List<T3>::Nil>(l.v())) {
+      return UINT64_C(0);
+    } else {
+      const auto &[_, a1] = std::get<typename List<T3>::Cons>(l.v());
+      return (h_crane_go<T1, T2, T3>(*a1, x) + 1);
+    }
+  }
+
   template <typename T1, typename T2>
   static uint64_t h(const T1 &a, const T2 &b) {
-    auto go_impl =
-        [](auto &_self_go, const List<T1> &l, const T2 &x) -> uint64_t {
-          if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
-            return UINT64_C(0);
-          } else {
-            const auto &[_, a1] = std::get<typename List<T1>::Cons>(l.v());
-            return (_self_go(_self_go, *a1, x) + 1);
-          }
-        };
-    auto go =
-        [&](const List<T1> &l,
-            const T2 &x)
-             -> uint64_t { return go_impl(go_impl, l, x); };
-    return ((go(List<T1>::cons(a, List<T1>::cons(a, List<T1>::nil())), b) +
-             go(List<T2>::cons(b, List<T2>::nil()), b)) +
-            go(List<bool>::cons(true, List<bool>::nil()), b));
+    return ((h_crane_go<T1>(
+                 List<T1>::cons(a, List<T1>::cons(a, List<T1>::nil())), b) +
+             h_crane_go<T1>(List<T2>::cons(b, List<T2>::nil()), b)) +
+            h_crane_go<T1>(List<bool>::cons(true, List<bool>::nil()), b));
   }
 
   static inline const uint64_t v = h<uint64_t, bool>(UINT64_C(1), false);

@@ -14855,3 +14855,14 @@
   (alias runtest)
   (deps lifted_local_fix_result_cast.t.exe)
   (action (run ./lifted_local_fix_result_cast.t.exe))))
+
+(subdir local_fix_own_type_variable
+ (rule
+  (targets local_fix_own_type_variable.t.exe)
+  (deps LocalFixOwnTypeVariable.vo local_fix_own_type_variable.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_own_type_variable.t.exe local_fix_own_type_variable.t.cpp local_fix_own_type_variable.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_own_type_variable.t.exe)
+  (action (run ./local_fix_own_type_variable.t.exe))))

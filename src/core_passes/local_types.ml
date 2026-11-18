@@ -164,12 +164,24 @@ let fill_codomain_hole cx (_, ty) body =
   | _ -> ()
 
 (* Settles one group as translation reads it: codomains filled and recovered,
-   then the signatures' remaining metavariables minted from [1].  The minting
+   then the signatures' remaining metavariables minted past the variables of
+   the enclosing declaration the signatures name: from [1] where they name
+   none, which is how the group's body numbers the type binders it shares a
+   name with ({!Rocq_to_core.Extraction.db_from_rel_context}).  The minting
    goes on for an applied group, into its bodies and arguments. *)
 let settle cx ids funs =
   Array.iter2 (fill_codomain_hole cx) ids funs;
   let ids, funs = recover_fix_codomains_with cx ~find:find_extracted ids funs in
-  let mint = mint ~minted:ignore ~next:(ref 1) in
+  let rec named n = function
+    | Core.Type.Meta {contents = Some t} -> named n t
+    | Core.Type.Variable {variable = i; _} -> max i n
+    | Core.Type.Variable_app {head = i; arguments = l} -> List.fold_left named (max i n) l
+    | Core.Type.Arrow {parameter = a; result = b} -> named (named n a) b
+    | Core.Type.Global_app {type_arguments = l; _} -> List.fold_left named n l
+    | _ -> n
+  in
+  let named = Array.fold_left (fun n (_, ty) -> named n ty) 0 ids in
+  let mint = mint ~minted:ignore ~next:(ref (named + 1)) in
   Array.iter (fun (_, ty) -> mint ty) ids;
   (funs, mint)
 
