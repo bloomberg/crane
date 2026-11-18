@@ -262,3 +262,58 @@
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
 
+
+(subdir local_fix_function_result_inlined
+ (rule
+  (targets local_fix_function_result_inlined.t.exe)
+  (deps LocalFixFunctionResultInlined.vo local_fix_function_result_inlined.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_function_result_inlined.t.exe local_fix_function_result_inlined.t.cpp local_fix_function_result_inlined.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_function_result_inlined.t.exe)
+  (action (run ./local_fix_function_result_inlined.t.exe))))
+
+(subdir poly_composed_lambda_tparam
+ (rule
+  (targets poly_composed_lambda_tparam.t.exe)
+  (deps PolyComposedLambdaTparam.vo poly_composed_lambda_tparam.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} poly_composed_lambda_tparam.t.exe poly_composed_lambda_tparam.t.cpp poly_composed_lambda_tparam.cpp)))
+ (rule
+  (alias runtest)
+  (deps poly_composed_lambda_tparam.t.exe)
+  (action (run ./poly_composed_lambda_tparam.t.exe))))
+
+(subdir div_by_literal_zero_guard
+ (rule
+  (targets div_by_literal_zero_guard.t.exe)
+  (deps DivByLiteralZeroGuard.vo div_by_literal_zero_guard.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} div_by_literal_zero_guard.t.exe div_by_literal_zero_guard.t.cpp div_by_literal_zero_guard.cpp)))
+ (rule
+  (alias runtest)
+  (deps div_by_literal_zero_guard.t.exe)
+  (action (run ./div_by_literal_zero_guard.t.exe))))
+
+(subdir loopify_reread_loop_pointer
+ (rule
+  (targets loopify_reread_loop_pointer.t.exe)
+  (deps LoopifyRereadLoopPointer.vo loopify_reread_loop_pointer.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_reread_loop_pointer.t.exe loopify_reread_loop_pointer.t.cpp loopify_reread_loop_pointer.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_reread_loop_pointer.t.exe)
+  (action (run ./loopify_reread_loop_pointer.t.exe))))
+
+(subdir loopify_control_lowering_frame_copy
+ (rule
+  (targets loopify_control_lowering_frame_copy.t.exe)
+  (deps LoopifyControlLoweringFrameCopy.vo loopify_control_lowering_frame_copy.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_control_lowering_frame_copy.t.exe loopify_control_lowering_frame_copy.t.cpp loopify_control_lowering_frame_copy.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_control_lowering_frame_copy.t.exe)
+  (action (run ./loopify_control_lowering_frame_copy.t.exe))))
