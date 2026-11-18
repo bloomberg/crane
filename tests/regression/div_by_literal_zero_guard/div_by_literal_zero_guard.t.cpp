@@ -10,6 +10,7 @@
 int main() {
   int fails = 0;
   if (!(M::t == 5)) { std::cout << "FAIL: M::t" << std::endl; ++fails; }
+  if (!(M::t2 == 12)) { std::cout << "FAIL: M::t2" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All div_by_literal_zero_guard tests passed!" << std::endl;
   return fails;

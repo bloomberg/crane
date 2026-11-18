@@ -15,6 +15,15 @@ Definition f {A : Type} (a : A) : nat := Nat.div 0 0 + Nat.modulo 5 0.
 
 Definition t : nat := f true.
 
+(** A literal [Nat.modulo 12 0] in a branch of a mutual fixpoint, which is
+    not polymorphic. *)
+Fixpoint ev (l : list nat) : nat :=
+  match l with [] => Nat.modulo 12 0 | _ :: r => od r end
+with od (l : list nat) : nat :=
+  match l with [] => 0 | _ :: r => ev r end.
+
+Definition t2 : nat := ev [1; 2].
+
 End DivByLiteralZeroGuard.
 
 Crane Extraction "div_by_literal_zero_guard" DivByLiteralZeroGuard.
