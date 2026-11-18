@@ -16,6 +16,8 @@
 /// - w: a match whose branches are all lambdas, applied to k: the
 /// lambdas move out of the match and the branches kept their arrow type,
 /// -> crane::fn<uint64_t(uint64_t)>; does not compile.
+/// - t2: the bool match inside a pair in a match branch: Rocq
+/// t2 1 = (0, 151), C++ (0, 1).
 ///
 /// The wrong values have no diagnostic (with a literal left operand clang
 /// flags g via -Wtautological-constant-out-of-range-compare).
@@ -43,4 +45,23 @@ bool CaseOfCaseResultType::w(uint64_t k, uint64_t n) {
       return (k + UINT64_C(9));
     }
   }();
+}
+
+/// The bool match sits in the second component of a pair in a branch
+/// of an outer match: after case-of-case its IIFE kept -> bool and
+/// t2 1 gave (0, 1).
+std::pair<uint64_t, uint64_t> CaseOfCaseResultType::t2(uint64_t n) {
+  if (n <= 0) {
+    return std::make_pair(UINT64_C(0), UINT64_C(0));
+  } else {
+    uint64_t m = n - 1;
+    return std::make_pair(UINT64_C(0), [&]() -> uint64_t {
+      if (m <= 0) {
+        return UINT64_C(151);
+      } else {
+        uint64_t _x = m - 1;
+        return UINT64_C(151);
+      }
+    }());
+  }
 }

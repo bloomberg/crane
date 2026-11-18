@@ -19,6 +19,8 @@ Import ListNotations.
     - [w]: a match whose branches are all lambdas, applied to [k]: the
       lambdas move out of the match and the branches kept their arrow type,
       [-> crane::fn<uint64_t(uint64_t)>]; does not compile.
+    - [t2]: the [bool] match inside a pair in a match branch: Rocq
+      [t2 1 = (0, 151)], C++ [(0, 1)].
 
     The wrong values have no diagnostic (with a literal left operand clang
     flags [g] via -Wtautological-constant-out-of-range-compare). *)
@@ -49,6 +51,15 @@ Definition v : nat :=
     branches, which then return what their functions did. *)
 Definition w (k n : nat) : bool :=
   Nat.leb 3 ((match n with 0 => fun x : nat => x | S _ => fun x => x + 9 end) k).
+
+(** The [bool] match sits in the second component of a pair in a branch
+    of an outer match: after case-of-case its IIFE kept [-> bool] and
+    [t2 1] gave [(0, 1)]. *)
+Definition t2 (n : nat) : nat * nat :=
+  match n with
+  | 0 => (0, 0)
+  | S m => (0, if (match m with 0 => true | S _ => true end) then 151 else 0)
+  end.
 
 End CaseOfCaseResultType.
 

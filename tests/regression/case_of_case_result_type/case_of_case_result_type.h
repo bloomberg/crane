@@ -129,6 +129,8 @@ public:
 /// - w: a match whose branches are all lambdas, applied to k: the
 /// lambdas move out of the match and the branches kept their arrow type,
 /// -> crane::fn<uint64_t(uint64_t)>; does not compile.
+/// - t2: the bool match inside a pair in a match branch: Rocq
+/// t2 1 = (0, 151), C++ (0, 1).
 ///
 /// The wrong values have no diagnostic (with a literal left operand clang
 /// flags g via -Wtautological-constant-out-of-range-compare).
@@ -181,4 +183,8 @@ struct CaseOfCaseResultType {
   /// A match applied to an argument: the argument is pushed into the
   /// branches, which then return what their functions did.
   static bool w(uint64_t k, uint64_t n);
+  /// The bool match sits in the second component of a pair in a branch
+  /// of an outer match: after case-of-case its IIFE kept -> bool and
+  /// t2 1 gave (0, 1).
+  static std::pair<uint64_t, uint64_t> t2(uint64_t n);
 };

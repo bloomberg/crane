@@ -1821,6 +1821,19 @@ let rec ast_size e =
 
 and ast_sizes l = List.fold_left (fun n a -> n + ast_size a) 0 l
 
+(** [branch_type_applied n ty] is the result type of a match branch whose
+    value, of type [ty], has been applied to [n] arguments or stripped of [n]
+    lambdas: [ty] with [n] arrows taken off.  [ty] itself when it has fewer,
+    which leaves it no less accurate than it was. *)
+let branch_type_applied n ty =
+  let rec go n ty =
+    if n = 0 then Some ty
+    else match core_resolve ty with
+      | Core.Type.Arrow {result = r; _} -> go (n - 1) r
+      | _ -> None
+  in
+  match go n ty with Some r -> r | None -> ty
+
 (* [canonical_app f args], [f] canonical: the application, its head read
    through.  A global applied twice is applied once to both argument lists; a
    coercion at the head is dropped; a single-branch match at the head takes
@@ -1838,8 +1851,10 @@ let rec canonical_app f args =
   | Core.Expr.Runtime_error _ | Core.Expr.Erased_value _ -> f
   | Core.Expr.Match {scrutinee_type = ty;
                      scrutinee = scrut;
-                     branches = [|({Core.Match.Branch.binders = ids; body = body; _} as br)|];
+                     branches = [|({Core.Match.Branch.binders = ids; body = body; result_type = rty; _} as br)|];
                      occurrence = occ} ->
+    (* The branch now returns its value applied to [args]. *)
+    let br = {br with Core.Match.Branch.result_type = branch_type_applied (List.length args) rty} in
     let args = List.map (ast_lift (List.length ids)) args in
     let body =
       match body with
@@ -2366,19 +2381,6 @@ let rec only_throws = function
   | Core.Expr.Lambda_group_barrier {value = a; _} ->
     only_throws a
   | _ -> false
-
-(** [branch_type_applied n ty] is the result type of a match branch whose
-    value, of type [ty], has been applied to [n] arguments or stripped of [n]
-    lambdas: [ty] with [n] arrows taken off.  [ty] itself when it has fewer,
-    which leaves it no less accurate than it was. *)
-let branch_type_applied n ty =
-  let rec go n ty =
-    if n = 0 then Some ty
-    else match core_resolve ty with
-      | Core.Type.Arrow {result = r; _} -> go (n - 1) r
-      | _ -> None
-  in
-  match go n ty with Some r -> r | None -> ty
 
 (** Permutes a case expression with surrounding function applications when all
     branches are functions.  The lambdas leave the branches, so each branch's
