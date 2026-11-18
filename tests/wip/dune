@@ -293,3 +293,14 @@
   (alias runtest)
   (deps value_order_later_constant.t.exe)
   (action (run ./value_order_later_constant.t.exe))))
+
+(subdir cofix_unused_param_as_value
+ (rule
+  (targets cofix_unused_param_as_value.t.exe)
+  (deps CofixUnusedParamAsValue.vo cofix_unused_param_as_value.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_unused_param_as_value.t.exe cofix_unused_param_as_value.t.cpp cofix_unused_param_as_value.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_unused_param_as_value.t.exe)
+  (action (run ./cofix_unused_param_as_value.t.exe))))
