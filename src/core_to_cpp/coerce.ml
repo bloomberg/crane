@@ -508,10 +508,10 @@ let adapter_param_moves (ty : Cpp_ir.Lowered.Type.t) =
 let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(callee_site = Cpp_ir.Types.Declared)
   ?(exact = false) core_ty
     (cglob : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let decl_dom =
+  let decl_dom, decl_cod =
     match Option.map (Types.cpp_of_core cx env) core_ty with
-    | Some (Function (dom, _)) -> dom
-    | _ -> []
+    | Some (Function (dom, cod)) -> (dom, Some cod)
+    | _ -> ([], None)
   in
   (* Number of parameters the outer lambda takes; the rest, if any, go into a
      nested one.  Only the arity comes from [exp_dom]; the types come from the
@@ -548,8 +548,54 @@ let curry_value_to_expected cx env ?(expected_ty : Cpp_ir.Lowered.Type.t option)
             | _ -> ty )
           decl_dom
     in
+    (* Where the slot is declared at a type variable -- a parameter of
+       [fold_left]'s step, [A -> B -> A] -- what the declaration takes or
+       returns at a function type passes through that variable, which spells
+       it curried ({!Cpp_ir.Types.spell_arrows}): the adapter takes such a
+       parameter curried and hands the callee a flat closure applying it one
+       argument at a time, and returns curried what follows. *)
+    let exp_dom, exp_cod =
+      let rec strip (t : Cpp_ir.Lowered.Type.t) = match t with Const t | Reference (_, t) -> strip t | t -> t in
+      match Option.map strip expected_ty with
+      | Some (Function (dom, cod)) -> (List.map strip dom, Some (strip cod))
+      | _ -> ([], None)
+    in
+    let through_variable i =
+      match List.nth_opt exp_dom i with Some (Cpp_ir.Type.Variable _) -> true | _ -> false
+    in
+    let curried (ty : Cpp_ir.Lowered.Type.t) = Cpp_ir.Types.spell_arrows Through_tvar ty in
+    let decl_dom =
+      List.mapi
+        (fun i (ty : Cpp_ir.Lowered.Type.t) ->
+          match ty with Function (_ :: _ :: _, _) when through_variable i -> curried ty | ty -> ty )
+        decl_dom
+    in
     let params = adapter_params ~prefix:"_ec" decl_dom in
-    let call = apply_at_site callee_site cglob (List.map adapter_arg params) in
+    let passed i ((ty : Cpp_ir.Lowered.Type.t), id) : Cpp_ir.Lowered.Expr.t =
+      match (List.nth_opt exp_dom i, ty) with
+      | Some (Variable _), Function ([_], Function _) -> (
+        (* The flat signature the curried parameter stands for. *)
+        let rec flat (t : Cpp_ir.Lowered.Type.t) =
+          match t with
+          | Function ([a], (Function _ as c)) -> (
+            match flat c with Cpp_ir.Type.Function (d, r) -> Cpp_ir.Type.Function (a :: d, r) | r -> r )
+          | t -> t
+        in
+        match flat ty with
+        | Function (dom, _) ->
+          let ps = adapter_params ~prefix:(Id.to_string (Option.get id) ^ "_") dom in
+          stored_adapter ps (apply_at_site Through_tvar (Local (Option.get id)) (List.map adapter_arg ps))
+        | _ -> adapter_arg (ty, id) )
+      | _ -> adapter_arg (ty, id)
+    in
+    let call = apply_at_site callee_site cglob (List.mapi passed params) in
+    let expected_ty =
+      match (expected_ty, exp_cod, decl_cod) with
+      | Some _, Some (Variable _), Some cod when List.length decl_dom > List.length exp_dom ->
+        let rest = List.filteri (fun i _ -> i >= List.length exp_dom) decl_dom in
+        Some (Cpp_ir.Type.Function (exp_dom, curried (Function (rest, cod))))
+      | _ -> expected_ty
+    in
     (* One lambda per group of arguments the slot takes at a time, as deep as
        it nests: [fn<fn<fn<R(C)>(B)>(A)>] takes [A], then [B], then [C].  A
        group's lambda does nothing but return the next one, so the next one

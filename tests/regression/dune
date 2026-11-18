@@ -14987,3 +14987,14 @@
   (alias runtest)
   (deps cofix_unused_param_as_value.t.exe)
   (action (run ./cofix_unused_param_as_value.t.exe))))
+
+(subdir fold_global_step_curried_acc
+ (rule
+  (targets fold_global_step_curried_acc.t.exe)
+  (deps FoldGlobalStepCurriedAcc.vo fold_global_step_curried_acc.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_global_step_curried_acc.t.exe fold_global_step_curried_acc.t.cpp fold_global_step_curried_acc.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_global_step_curried_acc.t.exe)
+  (action (run ./fold_global_step_curried_acc.t.exe))))
