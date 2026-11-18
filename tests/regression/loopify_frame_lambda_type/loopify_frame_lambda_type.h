@@ -291,12 +291,12 @@ struct LoopifyFrameLambdaType {
           if (std::holds_alternative<typename List<T2>::Nil>(l2.v())) {
             _result = Monad_res::template ret<
                 std::pair<List<std::pair<T1, T2>>, List<T2>>>(
-                std::make_pair(List<std::pair<crane::obj, crane::obj>>::nil(),
+                std::make_pair(List<std::pair<T1, T2>>::nil(),
                                List<T2>::nil()));
           } else {
             _result = Monad_res::template ret<
-                std::pair<List<std::pair<T1, T2>>, List<T2>>>(std::make_pair(
-                List<std::pair<crane::obj, crane::obj>>::nil(), l2));
+                std::pair<List<std::pair<T1, T2>>, List<T2>>>(
+                std::make_pair(List<std::pair<T1, T2>>::nil(), l2));
           }
         } else {
           const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l1.v());
