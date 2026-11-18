@@ -13491,6 +13491,7 @@
   (alias runtest)
   (deps loopify_shadow_from_reference.t.exe)
   (action (run ./loopify_shadow_from_reference.t.exe))))
+
 (subdir switch_default_reads_binding
  (rule
   (targets switch_default_reads_binding.t.exe)
@@ -13567,6 +13568,7 @@
   (alias runtest)
   (deps sequential_monad_alias.t.exe)
   (action (run ./sequential_monad_alias.t.exe))))
+
 (subdir loopify_out_of_line_method
  (rule
   (targets loopify_out_of_line_method.t.exe)
@@ -13577,6 +13579,7 @@
   (alias runtest)
   (deps loopify_out_of_line_method.t.exe)
   (action (run ./loopify_out_of_line_method.t.exe))))
+
 (subdir local_tail_loop_calls_back
  (rule
   (targets local_tail_loop_calls_back.t.exe)
@@ -13587,6 +13590,7 @@
   (alias runtest)
   (deps local_tail_loop_calls_back.t.exe)
   (action (run ./local_tail_loop_calls_back.t.exe))))
+
 (subdir loopify_adopted_fix_alias_result
  (rule
   (targets loopify_adopted_fix_alias_result.t.exe)
@@ -13597,6 +13601,7 @@
   (alias runtest)
   (deps loopify_adopted_fix_alias_result.t.exe)
   (action (run ./loopify_adopted_fix_alias_result.t.exe))))
+
 (subdir loopify_receiver_from_temporary
  (rule
   (targets loopify_receiver_from_temporary.t.exe)
@@ -13607,6 +13612,7 @@
   (alias runtest)
   (deps loopify_receiver_from_temporary.t.exe)
   (action (run ./loopify_receiver_from_temporary.t.exe))))
+
 (subdir loopify_coerced_recursive_call
  (rule
   (targets loopify_coerced_recursive_call.t.exe)
@@ -13617,6 +13623,7 @@
   (alias runtest)
   (deps loopify_coerced_recursive_call.t.exe)
   (action (run ./loopify_coerced_recursive_call.t.exe))))
+
 (subdir loopify_recursor_instantiated
  (rule
   (targets loopify_recursor_instantiated.t.exe)
@@ -14057,7 +14064,6 @@
   (deps promoted_alias_out_of_line.t.exe)
   (action (run ./promoted_alias_out_of_line.t.exe))))
 
-
 (subdir mutual_lambda_ground_instance
  (rule
   (targets mutual_lambda_ground_instance.t.exe)
@@ -14222,6 +14228,7 @@
   (alias runtest)
   (deps ptr_word.t.exe)
   (action (run ./ptr_word.t.exe))))
+
 (subdir inductive_letin_params
  (rule
   (targets inductive_letin_params.t.exe)
@@ -14639,6 +14646,7 @@
   (alias runtest)
   (deps branch_callables_distinct_types.t.exe)
   (action (run ./branch_callables_distinct_types.t.exe))))
+
 (subdir cofix_thunk_dangling_capture
  (rule
   (targets cofix_thunk_dangling_capture.t.exe)
@@ -14737,6 +14745,7 @@
   (alias runtest)
   (deps pos_sub_saturates.t.exe)
   (action (run ./pos_sub_saturates.t.exe))))
+
 (subdir stream_match_sv_redefinition
  (rule
   (targets stream_match_sv_redefinition.t.exe)
@@ -14813,3 +14822,14 @@
   (alias runtest)
   (deps methodified_constraint_tparam.t.exe)
   (action (run ./methodified_constraint_tparam.t.exe))))
+
+(subdir local_fix_capture_in_fold_lambda
+ (rule
+  (targets local_fix_capture_in_fold_lambda.t.exe)
+  (deps LocalFixCaptureInFoldLambda.vo local_fix_capture_in_fold_lambda.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_capture_in_fold_lambda.t.exe local_fix_capture_in_fold_lambda.t.cpp local_fix_capture_in_fold_lambda.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_capture_in_fold_lambda.t.exe)
+  (action (run ./local_fix_capture_in_fold_lambda.t.exe))))

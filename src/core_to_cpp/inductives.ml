@@ -81,18 +81,23 @@ and replace_return_this_stmt inner_ty (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lower
 let replace_this_in_lambdas ?receiver (self_type : Cpp_ir.Lowered.Type.t) (stmts : Cpp_ir.Lowered.Stmt.t list) =
   let self_id = Id.of_string "_self" in
   let visit ~expr ~stmt : _ Cpp_ir.Children.visitor = {expr; stmt; type_ = ignore} in
-  (* Whether [this] or [shared_from_this()] appears in an expression, not
-     looking into the statements of a lambda's body. *)
+  (* Whether [this] or [shared_from_this()] appears in an expression, the
+     bodies of the lambdas in it included: a lambda nested in a stored one,
+     an invoked local fixpoint's, reads the receiver through the stored
+     one's capture. *)
   let rec expr_has_this (e : Cpp_ir.Lowered.Expr.t) =
     match e with
     | This | Shared_from_this _ -> true
     | e ->
       let found = ref false in
-      Cpp_ir.Children.expr (visit ~expr:(fun e' -> if expr_has_this e' then found := true) ~stmt:ignore) e;
+      Cpp_ir.Children.expr
+        (visit
+           ~expr:(fun e' -> if expr_has_this e' then found := true)
+           ~stmt:(fun s -> if stmt_has_this s then found := true) )
+        e;
       !found
-  in
   (* Whether [this] or [shared_from_this()] appears in a statement. *)
-  let rec stmt_has_this s =
+  and stmt_has_this s =
     let found = ref false in
     Cpp_ir.Children.stmt
       (visit

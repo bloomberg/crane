@@ -217,18 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir local_fix_capture_in_fold_lambda
- (rule
-  (targets local_fix_capture_in_fold_lambda.t.exe)
-  (deps LocalFixCaptureInFoldLambda.vo local_fix_capture_in_fold_lambda.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_capture_in_fold_lambda.t.exe local_fix_capture_in_fold_lambda.t.cpp local_fix_capture_in_fold_lambda.cpp)))
- (rule
-  (alias runtest)
-  (deps local_fix_capture_in_fold_lambda.t.exe)
-  (action (run ./local_fix_capture_in_fold_lambda.t.exe))))
-
-
 (subdir loopify_rematch_frame_binder
  (rule
   (targets loopify_rematch_frame_binder.t.exe)

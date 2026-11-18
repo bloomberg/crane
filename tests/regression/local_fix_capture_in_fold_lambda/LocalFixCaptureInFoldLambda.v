@@ -1,6 +1,6 @@
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatIntStd Mapping.NInt.
 From Crane Require Extraction.
-From Stdlib Require Import List.
+From Stdlib Require Import List NArith.
 Import ListNotations.
 
 (** Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
@@ -11,7 +11,13 @@ Import ListNotations.
     declared ("use of undeclared identifier 't6'").  With the parameter also
     matched on ([g3]), CRANE_CHECK_IR=1 reports "moved value read: in g3, t6 is
     read after it is moved".  Fragile: the unrelated declarations kept from the
-    generated prelude (class, ptree, stream) are needed to trigger it. *)
+    generated prelude (class, ptree, stream) are needed to trigger it.
+    [g5] is a smaller repro: [flat_map], and a match on the parameter as the
+    local fixpoint's argument.  Each function is a method of [tree], its
+    parameter the receiver, read as [*this].  A stored lambda reading the
+    receiver takes a copy of it, but the check for one did not look into the
+    lambdas nested in it, here the local fixpoint's invoked one: the stored
+    lambda kept [this] and took [t6], a name no longer bound, by move. *)
 Module LocalFixCaptureInFoldLambda.
 
 Inductive tree : Type := Leaf : tree | Node : tree -> nat -> tree -> tree.
@@ -43,6 +49,12 @@ Fixpoint g3 (t6 : tree) (a4 : option nat) (a5 : nat) : tree :=
                 match l13 with [] => t6 | e15 :: rest16 => Leaf end in go12 [] t6)) Leaf []
   | Node tl7 tv8 tr9 => Node (g3 tl7 None 0) 0 (g3 tr9 None 0)
   end.
+
+Fixpoint g5 (t48 : tree) : list (option nat) :=
+  flat_map (fun _ : nat =>
+    let fix go (l : list N) (acc : list (option nat)) {struct l} : list (option nat) :=
+      match l with [] => [] | _ :: _ => acc end in
+    go (match t48 with Leaf => [] | Node _ _ _ => [] end) []) (@nil nat).
 
 End LocalFixCaptureInFoldLambda.
 
