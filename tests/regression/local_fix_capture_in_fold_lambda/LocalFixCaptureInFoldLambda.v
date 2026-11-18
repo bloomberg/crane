@@ -13,7 +13,8 @@ Import ListNotations.
     read after it is moved".  Fragile: the unrelated declarations kept from the
     generated prelude (class, ptree, stream) are needed to trigger it.
     [g5] is a smaller repro: [flat_map], and a match on the parameter as the
-    local fixpoint's argument; [g6] the same in a [fold_left] lambda.  Each function is a method of [tree], its
+    local fixpoint's argument; [g6] the same in a [fold_left] lambda; [g7]
+    matches on the parameter inside the local fixpoint's step.  Each function is a method of [tree], its
     parameter the receiver, read as [*this].  A stored lambda reading the
     receiver takes a copy of it, but the check for one did not look into the
     lambdas nested in it, here the local fixpoint's invoked one: the stored
@@ -61,6 +62,15 @@ Fixpoint g6 (t : tree) : nat :=
     let fix go (l : list nat) (a : nat) {struct l} : nat :=
       match l with [] => a + 1 | _ :: _ => 0 end in
     go (match t with Leaf => [] | Node _ _ _ => [] end) acc) [0; 0] 0.
+
+Fixpoint g7 (t18 : tree) : nat :=
+  fold_right (fun (e : nat) (acc : nat) =>
+    let fix go (l : list nat) (a : nat) {struct l} : nat :=
+      match l with
+      | [] => a
+      | x :: r => go r (match t18 with Leaf => x + a | Node _ v _ => v + a end)
+      end in
+    go [e; e] acc) 0 [1; 2].
 
 End LocalFixCaptureInFoldLambda.
 

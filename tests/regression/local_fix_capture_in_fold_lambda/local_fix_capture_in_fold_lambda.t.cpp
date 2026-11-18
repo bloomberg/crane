@@ -15,6 +15,8 @@ int main() {
   if (!(lf.g3(std::nullopt, 0).tree_obs() == 1)) { std::cout << "FAIL: lf.g3(std::nullopt, 0).tree_obs()" << std::endl; ++fails; }
   if (!(nd.g3(std::nullopt, 0).tree_obs() == 10)) { std::cout << "FAIL: nd.g3(std::nullopt, 0).tree_obs()" << std::endl; ++fails; }
   if (!(nd.g6() == 2)) { std::cout << "FAIL: nd.g6()" << std::endl; ++fails; }
+  if (!(lf.g7() == 6)) { std::cout << "FAIL: lf.g7()" << std::endl; ++fails; }
+  if (!(nd.g7() == 12)) { std::cout << "FAIL: nd.g7()" << std::endl; ++fails; }
   if (!std::holds_alternative<List<std::optional<uint64_t>>::Nil>(nd.g5().v())) { std::cout << "FAIL: nd.g5() is nil" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All local_fix_capture_in_fold_lambda tests passed!" << std::endl;

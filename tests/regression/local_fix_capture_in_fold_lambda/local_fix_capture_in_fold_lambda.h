@@ -240,8 +240,9 @@ public:
 /// read after it is moved".  Fragile: the unrelated declarations kept from the
 /// generated prelude (class, ptree, stream) are needed to trigger it.
 /// g5 is a smaller repro: flat_map, and a match on the parameter as the
-/// local fixpoint's argument; g6 the same in a fold_left lambda. Each function
-/// is a method of tree, its
+/// local fixpoint's argument; g6 the same in a fold_left lambda; g7
+/// matches on the parameter inside the local fixpoint's step. Each function is
+/// a method of tree, its
 /// parameter the receiver, read as *this.  A stored lambda reading the
 /// receiver takes a copy of it, but the check for one did not look into the
 /// lambdas nested in it, here the local fixpoint's invoked one: the stored
@@ -328,6 +329,47 @@ struct LocalFixCaptureInFoldLambda {
 
     // ACCESSORS
     const variant_t &v() const { return v_; }
+
+    uint64_t g7() const {
+      tree _self_val = *this;
+      return List<uint64_t>::cons(
+          UINT64_C(1),
+          List<uint64_t>::cons(UINT64_C(2),
+                               List<uint64_t>::nil()))
+                 .template fold_right<uint64_t>(
+          [=, _self_val = std::move(_self_val)](uint64_t e, uint64_t acc) {
+            auto go = [&](const List<uint64_t> &l, uint64_t a) -> uint64_t {
+              // Loop replaces the tail recursion: each recursive call updates
+              // the loop variables.
+              uint64_t _loop_a = a;
+              const List<uint64_t> *_loop_l = &l;
+              while (true) {
+                if (std::holds_alternative<typename List<uint64_t>::Nil>(
+                        _loop_l->v())) {
+                  return _loop_a;
+                } else {
+                  const auto &[a0, a1] =
+                      std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+                  _loop_a = [&]() {
+                    if (std::holds_alternative<typename tree::Leaf>(
+                            _self_val.v())) {
+                      return (a0 + _loop_a);
+                    } else {
+                      const auto &[_, a10, _] =
+                          std::get<typename tree::Node>(_self_val.v());
+                      return (a10 + _loop_a);
+                    }
+                  }();
+                  _loop_l = crane_raw(a1);
+                }
+              }
+            };
+            return go(List<uint64_t>::cons(
+                e, List<uint64_t>::cons(e, List<uint64_t>::nil())),
+                      acc);
+          },
+          UINT64_C(0));
+    }
 
     uint64_t g6() const {
       tree _self_val = *this;
