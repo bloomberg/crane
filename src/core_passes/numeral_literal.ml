@@ -136,10 +136,45 @@ let literal = function
   | Core.Expr.Construct _ as e -> constructor_literal e
   | _ -> None
 
+(* Rocq's Euclidean quotient and remainder of [nat], [N] and [Z], keyed on
+   canonical names, so a use through a module that [Include]s the defining
+   one ([PeanoNat.Nat.div]) is found. *)
+type division = Quotient | Remainder
+
+let divisions =
+  let nat = Base.Core_util.con_in_file "Corelib.Init.Nat" in
+  let n = Base.Core_util.con_in_module "Stdlib.NArith.BinNatDef" "N" in
+  let z = Base.Core_util.con_in_module "Corelib.BinNums.IntDef" "Z" in
+  List.fold_left
+    (fun m (c, d) -> Cmap.add c d m)
+    Cmap.empty
+    [ (nat "div", Quotient); (nat "modulo", Remainder);
+      (n "div", Quotient); (n "modulo", Remainder);
+      (z "div", Quotient); (z "modulo", Remainder) ]
+
+(* A division by a literal, as the value it computes: dividing by zero
+   gives a quotient of zero and leaves the dividend as the remainder, and a
+   literal divided by another is the literal of its floored quotient or
+   remainder.  The dividend is pure and total, so leaving it out loses
+   nothing. *)
+let division = function
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee = GlobRef.ConstRef c; _}; arguments = [a; b]} as e -> (
+    match (Cmap.find_opt c divisions, strip_magic b) with
+    | Some d, Core.Expr.Numeral {inductive; value = divisor} -> (
+      let literal value = Core.Expr.Numeral {inductive; value} in
+      match (d, strip_magic a) with
+      | Quotient, _ when Z.equal divisor Z.zero -> literal Z.zero
+      | Remainder, _ when Z.equal divisor Z.zero -> a
+      | Quotient, Core.Expr.Numeral {value = n; _} -> literal (Z.fdiv n divisor)
+      | Remainder, Core.Expr.Numeral {value = n; _} -> literal Z.(n - (divisor * fdiv n divisor))
+      | _ -> e )
+    | _ -> e )
+  | e -> e
+
 let fold e =
   match literal e with
   | Some (info, n) -> Core.Expr.Numeral {inductive = info.Base.Table.ind; value = n}
-  | None -> e
+  | None -> division e
 
 let folds e = Option.has_some (literal e)
 

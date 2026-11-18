@@ -14660,3 +14660,14 @@
   (alias runtest)
   (deps poly_composed_lambda_tparam.t.exe)
   (action (run ./poly_composed_lambda_tparam.t.exe))))
+
+(subdir div_by_literal_zero_guard
+ (rule
+  (targets div_by_literal_zero_guard.t.exe)
+  (deps DivByLiteralZeroGuard.vo div_by_literal_zero_guard.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} div_by_literal_zero_guard.t.exe div_by_literal_zero_guard.t.cpp div_by_literal_zero_guard.cpp)))
+ (rule
+  (alias runtest)
+  (deps div_by_literal_zero_guard.t.exe)
+  (action (run ./div_by_literal_zero_guard.t.exe))))

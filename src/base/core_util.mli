@@ -599,6 +599,14 @@ val ast_pop : 'p Core.Expr.at -> 'p Core.Expr.at
 (** The number of nodes of a term, each counted once. *)
 val ast_size : 'p Core.Expr.at -> int
 
+(** [con_in_file file label]: the constant [label] of the library [file]
+    ([Corelib.Init.Nat]), as its canonical name. *)
+val con_in_file : string -> string -> Constant.t
+
+(** [con_in_module file modname label]: the constant [label] of the module
+    [modname] of the library [file]. *)
+val con_in_module : string -> string -> string -> Constant.t
+
 (** [canonical_app f args], [f] and [args] canonical: the canonical form of
     [Core.Expr.Apply (f, args)], read whole: a global applied in stages is applied once
     to every argument, a coercion of the head is dropped, and applying a

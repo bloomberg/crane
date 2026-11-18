@@ -32,7 +32,10 @@ val constructor_literal : 'p Core.Expr.at -> (Base.Table.numeral_info * Z.t) opt
 (** [fold e]: [e], where it is a numeral literal -- a numeral converter
     applied to a digit chain ({!converter_literal}) or a constructor term
     ({!constructor_literal}) -- as the literal, at its numeral inductive;
-    otherwise [e] itself.  Reads [e]'s head node and the chain under it
+    a quotient or remainder of [nat], [N] or [Z] by a literal as the value
+    Rocq computes for it: a quotient by zero is zero and a remainder by zero
+    is the dividend, and of two literals it is a literal; otherwise [e]
+    itself.  Reads [e]'s head node and the chain or literals under it
     only. *)
 val fold : 'p Core.Expr.at -> 'p Core.Expr.at
 
