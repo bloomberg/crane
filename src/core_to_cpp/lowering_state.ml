@@ -185,6 +185,11 @@ type input = {
      constant's initialiser or a member's: Loopify lowers every local
      fixpoint of a function's body, and only the tail loops of others. *)
   body_function : bool;
+  (** The local fixpoint groups, by occurrence, standing in the tail of that
+     body where it is suspended whole ({!Core_plan.Closures.suspended_tail}):
+     what the value they hand on names runs in the thunk, after the scope has
+     ended. *)
+  suspended_tail : Core.Occurrence.t list;
   (** ITree extraction mode: controls whether itree types are erased
      ([Sequential]) or preserved as [shared_ptr<ITree<R>>] ([Reified]).  A
      property of the declaration ({!with_itree_mode}). *)
@@ -368,6 +373,7 @@ let create ~pp_cpp_type () =
           current_parameters = [];
           body_owner = None;
           body_function = false;
+          suspended_tail = [];
           itree_mode = Sequential;
           method_self_ns = Core.Ref.User.Set.empty;
           generating = None;

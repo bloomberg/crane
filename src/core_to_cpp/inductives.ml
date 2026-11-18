@@ -699,7 +699,12 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
   (* Generate the method body, owning its owned parameters.  The de Bruijn
      environment has parameters in reverse order: ids_normal_order has
      outermost-first, push_vars' reverses them. *)
-  begin_body cx ~owner:func_ref ();
+  begin_body cx ~owner:func_ref
+    ~suspended_tail:
+      ( if is_cofix_method then
+          Core_plan.Closures.suspended_tail ~effects:cx.ctx.input.unit.effects inner_body
+        else [] )
+    ();
   let method_n_params = List.length ids_with_types in
   (* method_owned_flags[i] corresponds to de Bruijn index i+1.
      db index i+1 maps to ids_with_types[i] (innermost first, the order

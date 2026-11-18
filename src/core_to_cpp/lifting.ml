@@ -590,6 +590,23 @@ let fixpoint_escapes_in_stmts target_id (stmts : Cpp_ir.Lowered.Stmt.t list) =
   in
   check_stmts stmts
 
+(** Whether the statements [stmts] name the local fixpoint [target_id] in a
+    value they return, outside every expression's own statements: where the
+    group stands in the tail of a body suspended whole, a [return] there may
+    be an IIFE's, which {!Cpp_build.inline_iife} hands to the suspending
+    continuation afterwards, so the value escapes into the thunk though
+    the statements do not yet show it. *)
+let fixpoint_named_in_returns target_id (stmts : Cpp_ir.Lowered.Stmt.t list) =
+  let rec stmt (s : Cpp_ir.Lowered.Stmt.t) =
+    match s with
+    | Return (Some e) -> List.exists (Id.equal target_id) (Cpp_ir.Variables.free_in_expr e)
+    | s ->
+      let found = ref false in
+      Cpp_ir.Subterms.stmt ~expr:ignore ~stmts:(fun ss -> if List.exists stmt ss then found := true) s;
+      !found
+  in
+  List.exists stmt stmts
+
 (** Whether the generated bodies [funs_with_params] of a local fixpoint
     group let a member of [renamed_ids] escape ({!fixpoint_escapes_in_stmts}):
     the oracle of {!Core_plan.Closures} for a group's own bodies. *)

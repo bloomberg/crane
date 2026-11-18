@@ -14639,3 +14639,13 @@
   (alias runtest)
   (deps branch_callables_distinct_types.t.exe)
   (action (run ./branch_callables_distinct_types.t.exe))))
+(subdir cofix_thunk_dangling_capture
+ (rule
+  (targets cofix_thunk_dangling_capture.t.exe)
+  (deps CofixThunkDanglingCapture.vo cofix_thunk_dangling_capture.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} cofix_thunk_dangling_capture.t.exe cofix_thunk_dangling_capture.t.cpp cofix_thunk_dangling_capture.cpp)))
+ (rule
+  (alias runtest)
+  (deps cofix_thunk_dangling_capture.t.exe)
+  (action (run ./cofix_thunk_dangling_capture.t.exe))))

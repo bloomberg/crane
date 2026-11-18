@@ -10,6 +10,7 @@
 int main() {
   int fails = 0;
   if (!(M::t == 0)) { std::cout << "FAIL: M::t" << std::endl; ++fails; }
+  if (!(M::t2 == 0)) { std::cout << "FAIL: M::t2" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All cofix_thunk_dangling_capture tests passed!" << std::endl;
   return fails;

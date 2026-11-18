@@ -1434,7 +1434,10 @@ let gen_dfun cx ~minted n b cty ty temps =
             | Base.Table.AssertComment comment -> Some (Assert (Stated comment)) )
         assertions
   in
-  begin_body cx ~owner:n ~function_:true ();
+  begin_body cx ~owner:n ~function_:true
+    ~suspended_tail:
+      (if is_cofix_return then Core_plan.Closures.suspended_tail ~effects:cx.ctx.input.unit.effects b else [])
+    ();
   set_current_parameters cx (List.map snd (parameter_binders cx env all_ids));
   let resumes =
     Control_to_cpp.Lower.function_resumes ~unit:(Lowering_state.unit_context cx) n ~depth:(List.length all_ids)

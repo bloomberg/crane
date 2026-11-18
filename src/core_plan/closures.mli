@@ -19,23 +19,45 @@ type group =
   | Closures
       (** holding copies: a member may outlive the scope -- named other than
           as the function an application applies, or named at all inside a
-          closure, a lambda or a local fixpoint not generated in place --
-          in the scope the group is let-bound in, or in a member's own body,
+          closure, a lambda or a local fixpoint not generated in place, or
+          the thunk suspending a coinductive constructor's arguments -- in
+          the scope the group is let-bound in, or in a member's own body,
           where a self-call in a closure a member returns runs after the
           scope has gone.  A cofixpoint's body is suspended, so any mention
-          of a member there escapes.  A let, a match, a bind generated as
-          sequencing and a group generated in place, applied or let-bound,
-          run where they stand. *)
+          of a member there escapes; so does any in the value a body
+          suspended whole returns, and a group applied there is one.  A
+          let, a match, a bind generated as sequencing and a group
+          generated in place, applied or let-bound, run where they stand. *)
 
-(** [group ~effects ~n_outer ?continuation ~cofix ids bodies], of the group of
-    binders [ids] and bodies [bodies], a cofixpoint where [cofix] says so,
-    generated under a head of [n_outer] type variables, in a unit whose
-    effect operations are [effects]: let-bound in [continuation], where it
-    is given, or else applied in place. *)
+(** Whether a coinductive constructor is suspended, given the type of each
+    binder where it stands, by de Bruijn index: the inductive it heads and
+    its arguments ({!Core_to_cpp.Suspension.suspends_constructor}). *)
+type suspends_constructor =
+  binder_type:(int -> Core.Type.t option) -> Names.GlobRef.t -> Core.Expr.t list -> bool
+
+(** [suspended_tail ~effects body]: the occurrences of the local fixpoint
+    groups standing in the tail of [body], let-bound or applied, where the
+    value they hand on is the one a body suspended whole returns -- the body
+    of a let, the branches of a match, the continuation of a bind generated
+    as sequencing.  Their declarations run where the body does, and what
+    the value names runs in the thunk. *)
+val suspended_tail : effects:Effects.t -> Core.Expr.t -> Core.Occurrence.t list
+
+(** [group ~effects ~n_outer ~suspends ~lex ~suspended ?continuation ~cofix
+    ids bodies], of the group of binders [ids] and bodies [bodies], a
+    cofixpoint where [cofix] says so, standing in [lex] under a head of
+    [n_outer] type variables, in a unit whose effect operations are
+    [effects] and whose coinductive constructors [suspends] says are
+    suspended: let-bound in [continuation], the let's binder and body, where
+    it is given, or else applied in place; [suspended] where it stands in
+    the tail of a body suspended whole ({!suspended_tail}). *)
 val group :
   effects:Effects.t ->
   n_outer:int ->
-  ?continuation:Core.Expr.t ->
+  suspends:suspends_constructor ->
+  lex:Core.Lexenv.t ->
+  suspended:bool ->
+  ?continuation:(Core.Binder_name.t * Core.Type.t) * Core.Expr.t ->
   cofix:bool ->
   (Names.Id.t * Core.Type.t) array ->
   Core.Expr.t array ->

@@ -25,6 +25,20 @@ open Application
 
 module IntSet = Core_plan.Escape.IntSet
 
+(** Whether the local fixpoint group [occ] stands in the tail of a body
+    suspended whole ([suspended_tail] in {!Lowering_state}). *)
+let in_suspended_tail cx occ = List.exists (Core.Occurrence.equal occ) cx.ctx.input.suspended_tail
+
+(** How the local fixpoint group [occ] standing where generation is, let-bound
+    in [continuation] or else applied, is generated ({!Core_plan.Closures.group}):
+    its constructors suspended as {!Suspension.suspends_constructor} says,
+    and in the value a body suspended whole returns where the body says so
+    ([suspended_tail] in {!Lowering_state}). *)
+let closures_group cx ~n_outer ~occ ?continuation ~cofix ids funs =
+  Core_plan.Closures.group ~effects:cx.ctx.input.unit.effects ~n_outer
+    ~suspends:(Suspension.suspends_constructor cx ~self:cx.ctx.input.body_owner)
+    ~lex:(current_lexenv cx ()) ~suspended:(in_suspended_tail cx occ) ?continuation ~cofix ids funs
+
 (** The binders of the local fixpoint [occ], as the source has them, each
    with the member of the fixpoint it binds and the Core binders of that
    member's parameters, as [compiled], what {!gen_fix} made of each member,
@@ -708,8 +722,11 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
     let closures =
       kept_by_frame
-        || Core_plan.Closures.group ~effects:cx.ctx.input.unit.effects ~n_outer ~continuation:b ~cofix
-          ids funs = Closures in
+      || closures_group cx ~n_outer ~occ
+           ~continuation:((Core.Binder_name.Source (fst ids.(x)), let_ty), b)
+           ~cofix ids funs
+         = Closures
+    in
     let funs_compiled =
       Array.to_list
         (Array.mapi
@@ -747,10 +764,13 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     Binders.push_binders cx env [projected_id];
     let declared = declaring (fst projected_id) (core_binder cx ~site:(Binding let_occ) env_with_fix 1) in
     let cont = gen_stmts cx ~slot env_with_fix k b in
+    let suspended = in_suspended_tail cx occ in
     check_fixpoint_escape (fst projected_id) ~closures:(closures && not kept_by_frame) (fun () ->
         (not kept_by_frame)
         && ( List.exists
-               (fun (id, _) -> Lifting.fixpoint_escapes_in_stmts id cont)
+               (fun (id, _) ->
+                 Lifting.fixpoint_escapes_in_stmts id cont
+                 || (suspended && Lifting.fixpoint_named_in_returns id cont) )
                renamed_ids
            || Lifting.fix_escapes_in_own_bodies renamed_ids funs_with_params ) );
     let passing = local_passing cx ~closures funs in
@@ -1294,7 +1314,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
          applied to fewer arguments than its function takes parameters of
          a runtime value: their bodies own every parameter. *)
       let cofix = match fix_term with Core.Expr.Cofixpoint _ -> true | _ -> false in
-      let escapes = Core_plan.Closures.group ~effects:cx.ctx.input.unit.effects ~n_outer ~cofix ids funs = Closures in
+      let escapes = closures_group cx ~n_outer ~occ ~cofix ids funs = Closures in
       let partial =
         List.compare_length_with args
           (List.length (List.filter (fun (_, ty) -> not (void_binder ty)) (fst (collect_lams funs.(x)))))
@@ -1357,34 +1377,44 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
         decls @ defs
         @ deref_subst [k (Cpp_ir.Build.lambda pa_params None [Return (Some full_call)] ~capture:Stored)]
       end
-      else if
+      else
         let closures = escapes in
+        let declared =
+          if closures then
+            let decls, defs, deref_subst =
+              gen_local_fix_ycomb cx env ~binders:(local_fix_binders cx env fix_term occ ids funs_compiled)
+                ~passing:(local_passing cx ~closures:true funs)
+                ~captures:(fix_captures cx ~in_place:false fix_term)
+                renamed_ids funs_with_params
+            in
+            fun call -> decls @ defs @ deref_subst [call]
+          else
+            let decls, defs =
+              gen_local_fix_by_ref cx env ~binders:(local_fix_binders cx env fix_term occ ids funs_compiled)
+                ~passing:(local_passing cx ~closures:false funs) ~captures:(fix_captures cx ~in_place:true fix_term)
+                renamed_ids funs_with_params
+            in
+            fun call -> decls @ defs @ [call]
+        in
+        (* The call, handed to [k]: into a thunk where the group stands in
+           the value a body suspended whole returns, which it escapes into.
+           A match generated as an inlined IIFE hands the call to its own
+           [return], which the suspending continuation takes in only once
+           the IIFE is inlined ({!Lifting.fixpoint_named_in_returns}). *)
+        let call =
+          k
+            (made_of occ
+               (Call (Cpp_ir.Build.signature ~nargs:0 (), Local (fst (List.nth renamed_ids x)), List.rev args)) )
+        in
+        let suspended = in_suspended_tail cx occ in
         check_fixpoint_escape (fst (List.nth renamed_ids x)) ~closures (fun () ->
-            Lifting.fix_escapes_in_own_bodies renamed_ids funs_with_params );
-        closures
-      then
-        let decls, defs, deref_subst =
-          gen_local_fix_ycomb cx env ~binders:(local_fix_binders cx env fix_term occ ids funs_compiled)
-            ~passing:(local_passing cx ~closures:true funs)
-            ~captures:(fix_captures cx ~in_place:false fix_term)
-            renamed_ids funs_with_params
-        in
-        decls @ defs
-        @ deref_subst
-            [ k
-                (made_of occ
-                   (Call (Cpp_ir.Build.signature ~nargs:0 (), Local (fst (List.nth renamed_ids x)), List.rev args)) ) ]
-      else begin
-        let decls, defs =
-          gen_local_fix_by_ref cx env ~binders:(local_fix_binders cx env fix_term occ ids funs_compiled)
-            ~passing:(local_passing cx ~closures:false funs) ~captures:(fix_captures cx ~in_place:true fix_term)
-            renamed_ids funs_with_params
-        in
-        decls @ defs
-        @ [ k
-              (made_of occ
-                 (Call (Cpp_ir.Build.signature ~nargs:0 (), Local (fst (List.nth renamed_ids x)), List.rev args)) ) ]
-      end
+            Lifting.fix_escapes_in_own_bodies renamed_ids funs_with_params
+            || List.exists
+                 (fun (id, _) ->
+                   Lifting.fixpoint_escapes_in_stmts id [call]
+                   || (suspended && Lifting.fixpoint_named_in_returns id [call]) )
+                 renamed_ids );
+        declared call
   in
   !evaluated @ stmts
 
