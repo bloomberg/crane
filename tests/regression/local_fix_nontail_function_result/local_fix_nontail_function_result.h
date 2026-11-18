@@ -92,6 +92,44 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
+
+  uint64_t length() const {
+    const List<A> *_self = this;
+
+    // Explicit stack replaces the non-tail recursion of length: _call frames
+    // are pending calls, _after frames resume a caller.
+    struct _call {
+      const List<A> *_self;
+    };
+
+    struct _after_length_in_Cons {};
+
+    using _frame = std::variant<_call, _after_length_in_Cons>;
+    uint64_t _result{};
+    crane::small_vector<_frame> _stack;
+    _stack.emplace_back(_call{_self});
+    while (!_stack.empty()) {
+      _frame &_popped = _stack.back();
+      if (std::holds_alternative<_call>(_popped)) {
+        auto _f = std::move(std::get<_call>(_popped));
+        _stack.pop_back();
+        const List<A> *_self = _f._self;
+        auto &&_sv = *_self;
+        if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
+          _result = UINT64_C(0);
+        } else {
+          const auto &[_, a1] = std::get<typename List<A>::Cons>(_sv.v());
+          _stack.emplace_back(_after_length_in_Cons{});
+          _stack.emplace_back(_call{crane_raw(a1)});
+        }
+      } else {
+        auto _f = std::move(std::get<_after_length_in_Cons>(_popped));
+        _stack.pop_back();
+        _result = (std::move(_result) + 1);
+      }
+    }
+    return _result;
+  }
 };
 
 /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
@@ -242,4 +280,18 @@ struct LocalFixNontailFunctionResult {
   static inline const bool t =
       (std::holds_alternative<typename tree::Leaf>(
            g(tree::leaf(), [](uint64_t x) { return x; }).v()) ? true : false);
+
+  struct pt {
+    uint64_t px;
+    bool py;
+  };
+
+  /// Variants: the call in mutual fixpoints, through a second local fixpoint
+  /// whose step returns its function accumulator, and with the outer
+  /// fixpoint called inside the inner one's step.
+  static List<pt> h6a(uint64_t n, const tree &x0_);
+  static List<pt> h6b(uint64_t n, const tree &x0_);
+  static List<pt> k1(uint64_t n, const tree &x0_);
+  static inline const uint64_t t2 = (h6a(UINT64_C(3), tree::leaf()).length() +
+                                     k1(UINT64_C(2), tree::leaf()).length());
 };
