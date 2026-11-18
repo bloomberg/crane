@@ -679,8 +679,8 @@ ComprehensivePatterns::let_used_twice(const ComprehensivePatterns::NC &r) {
 }
 
 bool ComprehensivePatterns::base_in_call_and_proj(
-    const ComprehensivePatterns::NC &r) {
-  return r.nc_a == r.nc_a;
+    const ComprehensivePatterns::NC &) {
+  return true;
 }
 
 uint64_t ComprehensivePatterns::chained_lets_same_base(

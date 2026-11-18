@@ -350,7 +350,7 @@ struct ComprehensivePatterns {
   static uint64_t multi_function_calls(const NC &r);
   static uint64_t proj_then_match(const NC &r);
   static uint64_t let_used_twice(const NC &r);
-  static bool base_in_call_and_proj(const NC &r);
+  static bool base_in_call_and_proj(const NC &_x);
   static uint64_t chained_lets_same_base(const NC &r);
 
   struct OuterNC {
