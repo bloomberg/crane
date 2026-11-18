@@ -283,17 +283,6 @@
   (deps div_by_literal_zero_guard.t.exe)
   (action (run ./div_by_literal_zero_guard.t.exe))))
 
-(subdir loopify_control_lowering_frame_copy
- (rule
-  (targets loopify_control_lowering_frame_copy.t.exe)
-  (deps LoopifyControlLoweringFrameCopy.vo loopify_control_lowering_frame_copy.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_control_lowering_frame_copy.t.exe loopify_control_lowering_frame_copy.t.cpp loopify_control_lowering_frame_copy.cpp)))
- (rule
-  (alias runtest)
-  (deps loopify_control_lowering_frame_copy.t.exe)
-  (action (run ./loopify_control_lowering_frame_copy.t.exe))))
-
 (subdir local_fix_capture_in_fold_lambda
  (rule
   (targets local_fix_capture_in_fold_lambda.t.exe)

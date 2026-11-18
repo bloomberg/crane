@@ -565,8 +565,11 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
   (* The live binders [rest], standing under [depth] binders, passes on to
      a recursive call [targets] names that enters the machine: one whose
      value is what a let or a bind binds, or what [rest] returns.  A call
-     whose value goes into some other term stays a call. *)
-  let passings ~fixpoints ~targets ~live depth rest =
+     whose value goes into some other term stays a call.  A call of a local
+     fixpoint's member passes on what the fixpoint captures as well: a
+     machine adopting it enters it with its captures, each the binder it
+     names. *)
+  let passings ~fixpoints ~captures ~targets ~live depth rest =
     let found = ref [] in
     let rec go ~enters d e =
       ( match targets ~depth:(depth + d) e with
@@ -579,7 +582,16 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
                 (fun p -> found := {passed = binder (depth + d - j); into = p; call = c} :: !found)
                 (into ~fixpoints c i)
             | _ -> () )
-          (arguments e)
+          (arguments e);
+        ( match c.target with
+        | Member (o, _) ->
+          let captured =
+            Option.default [] (List.find_map (fun (o', l) -> if Core.Occurrence.equal o o' then Some l else None) captures)
+          in
+          List.iter
+            (fun l -> if List.mem l live then found := {passed = binder l; into = binder l; call = c} :: !found)
+            captured
+        | Function _ | Entering _ -> () )
       | _ -> () );
       match e with
       | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> ()
@@ -649,7 +661,8 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         passes =
           dedup_passings
             (inherited
-             @ passings ~fixpoints ~targets ~live:(List.filter (fun l -> not (List.mem l awaited)) live) (depth + 1) rest);
+             @ passings ~fixpoints ~captures ~targets ~live:(List.filter (fun l -> not (List.mem l awaited)) live)
+                 (depth + 1) rest);
         read_by_call = List.map binder (List.filter (fun l -> List.mem l arguments_read) live);
         recomputable =
           List.filter_map

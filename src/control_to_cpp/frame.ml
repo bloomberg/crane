@@ -182,7 +182,7 @@ let saved_local_type (env : (Id.t * ty) list) id : ty option =
 
     @param rest The remaining statements (the continuation)
     @return Sorted, unique list of free variable [Core.Binder_name.Source.t] values *)
-let compute_rest_free_vars rest =
+let compute_rest_free_vars ?check rest =
   let rest_defined =
     List.filter_map
       (function
@@ -191,7 +191,15 @@ let compute_rest_free_vars rest =
         | _ -> None)
       rest
   in
-  List.concat_map free_vars_stmt rest
+  (* A call entering an adopted fixpoint passes its captures as well,
+     which the statement does not name ({!adopted_checker}). *)
+  let entering =
+    match check with
+    | Some check ->
+      List.concat_map (fun cs -> List.concat_map free_vars_expr cs.args) (collect_stmts check ~in_visitor:false rest)
+    | None -> []
+  in
+  List.concat_map free_vars_stmt rest @ entering
   |> List.filter (fun v -> not (List.exists (Id.equal v) rest_defined))
   |> List.sort_uniq (fun a b -> Id.compare a b)
 
@@ -1172,7 +1180,7 @@ and rewrite_enter_stmts ctx stmts =
   | [] -> []
   | Bind_variable (id, tgt, e) :: rest when count_calls_expr check e >= 1 ->
     let n_calls = count_calls_expr check e in
-    let rest_free = compute_rest_free_vars rest in
+    let rest_free = compute_rest_free_vars ~check rest in
     (* The continuation of [id = f(args)]: a frame saving what the rest
        reads, whose handler binds [id] to the call's result and runs the
        rest, pushed under [enter], the call's re-entry.  [cast] is what the
@@ -2155,12 +2163,20 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
       params (List.combine varying entry_pointers)
     ||
     match adopted with
-    | Some (ad, _) ->
+    | Some (ad, capture_params) ->
       List.exists2
         (fun (id, _) pointer ->
           pointer && match List.assoc_opt id ad.binders with Some b' -> Core.Binder.equal b b' | None -> false )
         ad.params
         (List.filteri (fun i _ -> i < List.length ad.params) adopted_pointers)
+      (* A capture the adopted entry holds by pointer is the binder it
+         names in this scope, which a call of the fixpoint passes on as it
+         is ({!Core_plan.Recursion.passing}). *)
+      || List.exists2
+           (fun (id, _) pointer ->
+             pointer && match List.assoc_opt id ad.binders with Some b' -> Core.Binder.equal b b' | None -> false )
+           capture_params
+           (List.filteri (fun i _ -> i >= List.length ad.params) adopted_pointers)
     | None -> false
   in
   (
