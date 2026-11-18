@@ -239,17 +239,6 @@
   (deps reuse_shared_poly_frame_save.t.exe)
   (action (run ./reuse_shared_poly_frame_save.t.exe))))
 
-(subdir frame_binder_local_fix_acc
- (rule
-  (targets frame_binder_local_fix_acc.t.exe)
-  (deps FrameBinderLocalFixAcc.vo frame_binder_local_fix_acc.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_binder_local_fix_acc.t.exe frame_binder_local_fix_acc.t.cpp frame_binder_local_fix_acc.cpp)))
- (rule
-  (alias runtest)
-  (deps frame_binder_local_fix_acc.t.exe)
-  (action (run ./frame_binder_local_fix_acc.t.exe))))
-
 (subdir local_fix_nontail_function_result
  (rule
   (targets local_fix_nontail_function_result.t.exe)

@@ -128,7 +128,10 @@ public:
 /// g1 recurses on a tree; its Node branch calls a local fixpoint whose
 /// base case and initial accumulator both call g1 on the left subtree.
 /// The explicit-stack frames read acc29, declared only as a member of
-/// _after_g1_in_Nil: "use of undeclared identifier 'acc29'".
+/// _after_g1_in_Nil: "use of undeclared identifier 'acc29'".  The frame
+/// kept the local _x2 a pattern bound at acc29's level in the branch the
+/// continuation ran in; it now keeps the local bound at the site the
+/// recursion plan names (as loopify_rematch_frame_binder).
 
 template <typename I, typename A>
 concept Sz = requires {
