@@ -96,7 +96,11 @@ public:
 /// returning its variable, T1 f_crane_go(List<T1>, T1).  Called at a
 /// record under a projection, its result is cast to the enclosing
 /// function's return type, crane::any_cast<bool>(f_crane_go(..)).py,
-/// where it is the record: it does not compile.
+/// where it is the record: it does not compile.  The body calls go as a
+/// local whose type binder makes it higher-rank, so lowering read its
+/// result back from a box, at the only type it had, the function's; the
+/// template it is lifted to returns its result unboxed, and the call
+/// standing for it is now the call alone.
 struct LiftedLocalFixResultCast {
   struct pt {
     uint64_t px;
@@ -108,7 +112,7 @@ struct LiftedLocalFixResultCast {
       return d;
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
-      return crane_any_cast<T1>(f_crane_go<T1>(*a1, a0));
+      return f_crane_go<T1>(*a1, a0);
     }
   }
 

@@ -14844,3 +14844,14 @@
   (alias runtest)
   (deps loopify_rematch_frame_binder.t.exe)
   (action (run ./loopify_rematch_frame_binder.t.exe))))
+
+(subdir lifted_local_fix_result_cast
+ (rule
+  (targets lifted_local_fix_result_cast.t.exe)
+  (deps LiftedLocalFixResultCast.vo lifted_local_fix_result_cast.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lifted_local_fix_result_cast.t.exe lifted_local_fix_result_cast.t.cpp lifted_local_fix_result_cast.cpp)))
+ (rule
+  (alias runtest)
+  (deps lifted_local_fix_result_cast.t.exe)
+  (action (run ./lifted_local_fix_result_cast.t.exe))))

@@ -76,13 +76,22 @@ let rec collect_tvars_ast acc = function
     With [~extra_args], an occurrence in callee position also gains those
     arguments.  Lifting a local binding to a top-level function turns its free
     variables into trailing parameters, and every call has to grow to match;
-    the list is in source order. *)
-let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = []) (target : Id.t) (repl : Cpp_ir.Lowered.Expr.t)
-    (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
-  let sub = local_var_subst_expr ~keep_cast ~extra_args target repl in
+    the list is in source order.
+
+    With [~concrete_result:true], a call of [target] read out of a box
+    ([any_cast<T>(target(..))]) is the call alone: [target] is a local of
+    the higher-rank type its own type binder gives it, whose result lowering
+    reads back from a box, and [repl] the template it is lifted to, which
+    returns its result unboxed. *)
+let rec local_var_subst_expr ?(keep_cast = false) ?(concrete_result = false) ?(extra_args = []) (target : Id.t)
+    (repl : Cpp_ir.Lowered.Expr.t) (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
+  let sub = local_var_subst_expr ~keep_cast ~concrete_result ~extra_args target repl in
   match e with
   | Any_cast (ty, Local id) when keep_cast && Id.equal id target ->
     Cpp_passes.Erasure.unbox ty (match repl with Any_cast (_, inner) -> inner | r -> r)
+  | (Any_cast (_, (Call (_, Local id, _) as call)) | Tolerant_any_cast (_, (Call (_, Local id, _) as call)))
+    when concrete_result && Id.equal id target ->
+    sub call
   | Call (o, Local id, args) when extra_args <> [] && Id.equal id target ->
     Call (o, repl, List.map sub args @ extra_args)
   | Local id when Id.equal id target -> repl
@@ -113,17 +122,18 @@ let rec local_var_subst_expr ?(keep_cast = false) ?(extra_args = []) (target : I
       | _ -> e
     in
     Cpp_ir.Map.expr
-      (Cpp_ir.Map.make ~expr:sub ~stmt:(local_var_subst_stmt ~keep_cast ~extra_args target repl) ~type_:Fun.id ())
+      (Cpp_ir.Map.make ~expr:sub ~stmt:(local_var_subst_stmt ~keep_cast ~concrete_result ~extra_args target repl)
+         ~type_:Fun.id ())
       e
 
 (** Statement-level counterpart of [local_var_subst_expr]: substitute
     [Local target] with [repl] inside a single C++ statement. *)
-and local_var_subst_stmt ?(keep_cast = false) ?(extra_args = []) (target : Id.t) (repl : Cpp_ir.Lowered.Expr.t)
-    (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
+and local_var_subst_stmt ?(keep_cast = false) ?(concrete_result = false) ?(extra_args = []) (target : Id.t)
+    (repl : Cpp_ir.Lowered.Expr.t) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
   Cpp_ir.Map.stmt
     (Cpp_ir.Map.make
-       ~expr:(local_var_subst_expr ~keep_cast ~extra_args target repl)
-       ~stmt:(local_var_subst_stmt ~keep_cast ~extra_args target repl)
+       ~expr:(local_var_subst_expr ~keep_cast ~concrete_result ~extra_args target repl)
+       ~stmt:(local_var_subst_stmt ~keep_cast ~concrete_result ~extra_args target repl)
        ~type_:Fun.id ())
     s
 
@@ -232,10 +242,21 @@ let lifted_member_refs occ ids =
     by [renamed] (in array order), called as the helper [refs] lifts it to at
     [targs], the group's own type arguments, and passed [extra_args], what the
     group captures.  A member reaches its partners as it reaches itself. *)
-let subst_lifted_members ?(extra_args = []) renamed refs targs (body : Cpp_ir.Lowered.Stmt.t list) =
+let subst_lifted_members ?(extra_args = []) ~concrete renamed refs targs (body : Cpp_ir.Lowered.Stmt.t list) =
   List.fold_left2
-    (fun body id r -> List.map (local_var_subst_stmt ~extra_args id (mk_cppglob r targs)) body)
-    body renamed (Array.to_list refs)
+    (fun body (id, concrete_result) r ->
+      List.map (local_var_subst_stmt ~concrete_result ~extra_args id (mk_cppglob r targs)) body )
+    body
+    (List.combine renamed (Array.to_list concrete))
+    (Array.to_list refs)
+
+(** Whether each member of a group lifted at [convert], converting its type
+    under the helpers' type variables, returns its result unboxed: where its
+    codomain is not erased ({!local_var_subst_expr}'s [concrete_result]). *)
+let concrete_results convert ids =
+  Array.map
+    (fun (_, ty) -> match (convert ty : Cpp_ir.Lowered.Type.t) with Function (_, cod) | cod -> not (Cpp_ir.Types.prints_as_any cod))
+    ids
 
 (** Convert Core params to C++ types with const/ref wrapping, and create
     forwarding-ref template parameters for function-typed params, except

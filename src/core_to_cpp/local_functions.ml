@@ -637,6 +637,9 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
                funs ) )
     in
     let renamed = List.map (fun ((id, _), _, _, _) -> id) funs_compiled in
+    (* The helpers return their codomains as their templates spell them; only
+       an erased one is a box. *)
+    let concrete = Lifting.concrete_results (Types.cpp_ir_of_core_type cx env all_tvar_names) ids in
     (* Build a lifted definition for each fixpoint function (usually just one) *)
     let ungeneralised = Callable_params.lifted_fix_ungeneralised_params funs in
     List.iteri
@@ -656,7 +659,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         (* Replace references to the group's members with calls to the
            lifted functions *)
         let body =
-          Lifting.subst_lifted_members ~extra_args:(List.rev free_args) renamed member_refs
+          Lifting.subst_lifted_members ~extra_args:(List.rev free_args) ~concrete renamed member_refs
             (class_args @ List.map (fun id -> Cpp_ir.Build.named_variable id) all_tvar_names)
             body
         in
@@ -690,7 +693,10 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
     let lifted_call = mk_cppglob lifted_ref call_type_args in
     let result = gen_stmts cx ~slot env_with_fix k b in
     let extra_args = List.rev free_args in
-    List.map (fun st -> Lifting.local_var_subst_stmt ~extra_args fix_name lifted_call st) result )
+    (* The helper returns its codomain as the template spells it; only an
+       erased one is a box. *)
+    List.map (fun st -> Lifting.local_var_subst_stmt ~concrete_result:concrete.(x) ~extra_args fix_name lifted_call st)
+      result )
   else
     (* No extra type variables: proceed with local fixpoint approach.
 
@@ -1292,7 +1298,9 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
               params
           in
           let body =
-            Lifting.subst_lifted_members renamed member_refs
+            Lifting.subst_lifted_members
+              ~concrete:(Lifting.concrete_results (Types.cpp_ir_of_core_type cx env extended_tvar_names) ids)
+              renamed member_refs
               (class_args @ List.map (fun id -> Cpp_ir.Build.named_variable id) all_tvar_names)
               body
           in
