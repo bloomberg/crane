@@ -249,3 +249,47 @@
   (alias runtest)
   (deps local_fix_nontail_function_result.t.exe)
   (action (run ./local_fix_nontail_function_result.t.exe))))
+
+(subdir sum_match_const_v_mut
+ (rule
+  (targets sum_match_const_v_mut.t.exe)
+  (deps SumMatchConstVMut.vo sum_match_const_v_mut.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sum_match_const_v_mut.t.exe sum_match_const_v_mut.t.cpp sum_match_const_v_mut.cpp)))
+ (rule
+  (alias runtest)
+  (deps sum_match_const_v_mut.t.exe)
+  (action (run ./sum_match_const_v_mut.t.exe))))
+
+(subdir loopify_mutual_frame_untyped_binder
+ (rule
+  (targets loopify_mutual_frame_untyped_binder.t.exe)
+  (deps LoopifyMutualFrameUntypedBinder.vo loopify_mutual_frame_untyped_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} loopify_mutual_frame_untyped_binder.t.exe loopify_mutual_frame_untyped_binder.t.cpp loopify_mutual_frame_untyped_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps loopify_mutual_frame_untyped_binder.t.exe)
+  (action (run ./loopify_mutual_frame_untyped_binder.t.exe))))
+
+(subdir instance_op_coercion_position
+ (rule
+  (targets instance_op_coercion_position.t.exe)
+  (deps InstanceOpCoercionPosition.vo instance_op_coercion_position.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} instance_op_coercion_position.t.exe instance_op_coercion_position.t.cpp instance_op_coercion_position.cpp)))
+ (rule
+  (alias runtest)
+  (deps instance_op_coercion_position.t.exe)
+  (action (run ./instance_op_coercion_position.t.exe))))
+
+(subdir value_order_later_constant
+ (rule
+  (targets value_order_later_constant.t.exe)
+  (deps ValueOrderLaterConstant.vo value_order_later_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} value_order_later_constant.t.exe value_order_later_constant.t.cpp value_order_later_constant.cpp)))
+ (rule
+  (alias runtest)
+  (deps value_order_later_constant.t.exe)
+  (action (run ./value_order_later_constant.t.exe))))
