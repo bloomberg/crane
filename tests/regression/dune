@@ -14758,3 +14758,47 @@
   (alias runtest)
   (deps functor_binder_scope_check.t.exe)
   (action (run ./functor_binder_scope_check.t.exe))))
+
+(subdir hk_carrier_written_at_partial_app
+ (rule
+  (targets hk_carrier_written_at_partial_app.t.exe)
+  (deps HkCarrierWrittenAtPartialApp.vo hk_carrier_written_at_partial_app.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} hk_carrier_written_at_partial_app.t.exe hk_carrier_written_at_partial_app.t.cpp hk_carrier_written_at_partial_app.cpp)))
+ (rule
+  (alias runtest)
+  (deps hk_carrier_written_at_partial_app.t.exe)
+  (action (run ./hk_carrier_written_at_partial_app.t.exe))))
+
+(subdir tyarg_equal_count_shift
+ (rule
+  (targets tyarg_equal_count_shift.t.exe)
+  (deps TyargEqualCountShift.vo tyarg_equal_count_shift.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_equal_count_shift.t.exe tyarg_equal_count_shift.t.cpp tyarg_equal_count_shift.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_equal_count_shift.t.exe)
+  (action (run ./tyarg_equal_count_shift.t.exe))))
+
+(subdir tyarg_implicit_type_binder
+ (rule
+  (targets tyarg_implicit_type_binder.t.exe)
+  (deps TyargImplicitTypeBinder.vo tyarg_implicit_type_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_implicit_type_binder.t.exe tyarg_implicit_type_binder.t.cpp tyarg_implicit_type_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_implicit_type_binder.t.exe)
+  (action (run ./tyarg_implicit_type_binder.t.exe))))
+
+(subdir tyarg_partial_type_application
+ (rule
+  (targets tyarg_partial_type_application.t.exe)
+  (deps TyargPartialTypeApplication.vo tyarg_partial_type_application.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} tyarg_partial_type_application.t.exe tyarg_partial_type_application.t.cpp tyarg_partial_type_application.cpp)))
+ (rule
+  (alias runtest)
+  (deps tyarg_partial_type_application.t.exe)
+  (action (run ./tyarg_partial_type_application.t.exe))))
