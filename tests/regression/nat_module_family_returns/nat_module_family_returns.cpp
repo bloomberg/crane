@@ -506,7 +506,7 @@ uint64_t Nat::shiftl(uint64_t a, uint64_t n) {
     return a;
   } else {
     uint64_t n0 = n - 1;
-    auto &&_once1 = shiftl(a, n0);
+    auto _once1 = shiftl(a, n0);
     return (_once1 + _once1);
   }
 }
@@ -639,12 +639,12 @@ uint64_t Nat::log2_up(uint64_t a) {
 }
 
 uint64_t Nat::Private_NLcmProp::lcm(uint64_t a, uint64_t b) {
-  auto &&_once1 = gcd(a, b);
+  auto _once1 = gcd(a, b);
   return (a * (_once1 ? b / _once1 : 0));
 }
 
 uint64_t Nat::lcm(uint64_t a, uint64_t b) {
-  auto &&_once1 = gcd(a, b);
+  auto _once1 = gcd(a, b);
   return (a * (_once1 ? b / _once1 : 0));
 }
 
@@ -669,7 +669,7 @@ uint64_t Nat::clearbit(uint64_t a, uint64_t n) {
 }
 
 uint64_t Nat::ones(uint64_t n) {
-  auto &&_once1 = shiftl(UINT64_C(1), n);
+  auto _once1 = shiftl(UINT64_C(1), n);
   return (_once1 ? _once1 - 1 : _once1);
 }
 

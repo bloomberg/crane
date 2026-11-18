@@ -54,8 +54,8 @@ uint64_t GlobalStateTests::fib_fun(uint64_t n) {
 }
 
 uint64_t GlobalStateTests::counter() {
-  auto &&_once1 = GlobalStateExamples::template ctr_idx<
-      GlobalStateTests::nat_idx, uint64_t>();
+  auto _once1 = GlobalStateExamples::template ctr_idx<GlobalStateTests::nat_idx,
+                                                      uint64_t>();
   return (_crane_globals[_once1] = UINT64_C(0), _once1);
 }
 

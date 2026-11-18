@@ -17,8 +17,8 @@ uint64_t CpuEmulator::pair_base(uint64_t r) {
 
 uint64_t CpuEmulator::get_pair(const CpuEmulator::state &s, uint64_t r) {
   uint64_t base = pair_base(r);
-  auto &&_once1 = get_reg(s, (base + 1));
-  auto &&_once2 = get_reg(s, base);
+  auto _once1 = get_reg(s, (base + 1));
+  auto _once2 = get_reg(s, base);
   return (((UINT64_C(16) ? _once2 % UINT64_C(16) : _once2) * UINT64_C(16)) +
           (UINT64_C(16) ? _once1 % UINT64_C(16) : _once1));
 }
@@ -84,7 +84,7 @@ CpuEmulator::state CpuEmulator::execute(const CpuEmulator::state &s,
   } else if (std::holds_alternative<typename CpuEmulator::instr::SUB>(i.v())) {
     const auto &[r0] = std::get<typename CpuEmulator::instr::SUB>(i.v());
     auto _once7 = (s.ex_acc + UINT64_C(16));
-    auto &&_once8 = get_reg(s, r0);
+    auto _once8 = get_reg(s, r0);
     uint64_t diff = (((_once7 - _once8) > _once7 ? 0 : (_once7 - _once8)));
     auto _once9 = (s.ex_pc + UINT64_C(1));
     return state{(UINT64_C(16) ? diff % UINT64_C(16) : diff), s.ex_regs,
@@ -256,7 +256,7 @@ CpuEmulator::state CpuEmulator::execute(const CpuEmulator::state &s,
                  s.ex_stack, s.ex_pair_bus, s.ex_ports};
   } else if (std::holds_alternative<typename CpuEmulator::instr::JIN>(i.v())) {
     const auto &[r0] = std::get<typename CpuEmulator::instr::JIN>(i.v());
-    auto &&_once31 = get_pair(s, r0);
+    auto _once31 = get_pair(s, r0);
     return state{s.ex_acc, s.ex_regs, s.ex_carry,
                  (UINT64_C(4096) ? _once31 % UINT64_C(4096) : _once31),
                  s.ex_stack, s.ex_pair_bus, s.ex_ports};

@@ -15,7 +15,7 @@ uint64_t WrmThenRdmReadsBack::get_reg_pair(const WrmThenRdmReadsBack::state &s,
 WrmThenRdmReadsBack::state
 WrmThenRdmReadsBack::execute_src(const WrmThenRdmReadsBack::state &s,
                                  uint64_t r) {
-  auto &&_once1 = get_reg_pair(s, r);
+  auto _once1 = get_reg_pair(s, r);
   return state{s.regs, s.acc, s.ram,
                (UINT64_C(16) ? _once1 % UINT64_C(16) : _once1)};
 }

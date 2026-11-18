@@ -429,7 +429,7 @@ uint64_t shiftl(uint64_t a, uint64_t n) {
     return a;
   } else {
     uint64_t n0 = n - 1;
-    auto &&_once1 = shiftl(a, n0);
+    auto _once1 = shiftl(a, n0);
     return (_once1 + _once1);
   }
 }

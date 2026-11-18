@@ -242,9 +242,9 @@ struct GlobalStateTests {
   template <typename _tcI0, typename _tcI1>
     requires GlobRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
   static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    auto &&_once1 = _tcI1::zero();
+    auto _once1 = _tcI1::zero();
     uint64_t r1 = (_crane_globals[_once1] = UINT64_C(5), _once1);
-    auto &&_once2 = _tcI1::suc(_tcI1::zero());
+    auto _once2 = _tcI1::suc(_tcI1::zero());
     uint64_t r2 = (_crane_globals[_once2] = UINT64_C(6), _once2);
     uint64_t x1 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r1)));
     uint64_t x2 = crane::any_cast<uint64_t>(_crane_globals.at(std::move(r2)));
@@ -257,9 +257,9 @@ struct GlobalStateTests {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      auto &&_once1 = _tcI1::zero();
+      auto _once1 = _tcI1::zero();
       uint64_t x = (_crane_globals[_once1] = UINT64_C(0), _once1);
-      auto &&_once2 = _tcI1::suc(_tcI1::zero());
+      auto _once2 = _tcI1::suc(_tcI1::zero());
       uint64_t y = (_crane_globals[_once2] = UINT64_C(1), _once2);
       auto fib_loop = [](uint64_t k, uint64_t x0, uint64_t y0) -> uint64_t {
         // Loop replaces the tail recursion: each recursive call updates the

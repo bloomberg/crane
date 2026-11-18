@@ -1645,12 +1645,12 @@ unsigned int N::log2_up(unsigned int a) {
 }
 
 unsigned int N::Private_NLcmProp::lcm(unsigned int a, unsigned int b) {
-  auto &&_once1 = gcd(a, b);
+  auto _once1 = gcd(a, b);
   return (a * (_once1 == 0u ? 0u : b / _once1));
 }
 
 unsigned int N::lcm(unsigned int a, unsigned int b) {
-  auto &&_once1 = gcd(a, b);
+  auto _once1 = gcd(a, b);
   return (a * (_once1 == 0u ? 0u : b / _once1));
 }
 
@@ -1675,7 +1675,7 @@ unsigned int N::clearbit(unsigned int a, unsigned int n) {
 }
 
 unsigned int N::ones(unsigned int n) {
-  auto &&_once1 = shiftl(1u, n);
+  auto _once1 = shiftl(1u, n);
   return (_once1 == 0u ? 0u : _once1 - 1u);
 }
 

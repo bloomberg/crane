@@ -210,7 +210,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
         }
       }
     };
-    auto &&_once8 = xs.length();
+    auto _once8 = xs.length();
     [&]() {
       static std::vector<std::pair<
           std::pair<std::pair<std::vector<uint64_t> *, uint64_t>, uint64_t>,
@@ -233,8 +233,8 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
           auto [arr0, arr_idx] = std::move(p0);
           if (nat_idx::toNat(l) < nat_idx::toNat(r)) {
             uint64_t newPivot = [&]() {
-              auto &&_once1 = nat_idx::toNat(r);
-              auto &&_once2 = nat_idx::toNat(l);
+              auto _once1 = nat_idx::toNat(r);
+              auto _once2 = nat_idx::toNat(l);
               uint64_t pivotValue =
                   (*arr0)[nat_idx::fromNat(
                        (nat_idx::toNat(l) +
@@ -244,8 +244,8 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                                        UINT64_C(2)
                                      : 0)))];
               [&]() {
-                auto &&_once3 = nat_idx::toNat(r);
-                auto &&_once4 = nat_idx::toNat(l);
+                auto _once3 = nat_idx::toNat(r);
+                auto _once4 = nat_idx::toNat(l);
                 uint64_t leftVal =
                     (*arr0)[nat_idx::fromNat(
                          (nat_idx::toNat(l) +
@@ -255,8 +255,8 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                                          UINT64_C(2)
                                        : 0)))];
                 uint64_t rightVal = (*arr0)[r];
-                auto &&_once5 = nat_idx::toNat(r);
-                auto &&_once6 = nat_idx::toNat(l);
+                auto _once5 = nat_idx::toNat(r);
+                auto _once6 = nat_idx::toNat(l);
                 (*arr0)[nat_idx::fromNat(
                      (nat_idx::toNat(l) +
                       (UINT64_C(2) ? (((_once5 - _once6) > _once5
@@ -319,7 +319,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
               }();
               return storeIndex;
             }();
-            auto &&_once7 = nat_idx::toNat(newPivot);
+            auto _once7 = nat_idx::toNat(newPivot);
             (
                 _stack.push_back(std::make_pair(
                     std::make_pair(std::make_pair(arr0, arr_idx), l),
