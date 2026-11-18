@@ -14965,3 +14965,14 @@
   (alias runtest)
   (deps instance_op_coercion_position.t.exe)
   (action (run ./instance_op_coercion_position.t.exe))))
+
+(subdir bool_negation_self_werror
+ (rule
+  (targets bool_negation_self_werror.t.exe)
+  (deps BoolNegationSelfWerror.vo bool_negation_self_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bool_negation_self_werror.t.exe bool_negation_self_werror.t.cpp bool_negation_self_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps bool_negation_self_werror.t.exe)
+  (action (run ./bool_negation_self_werror.t.exe))))

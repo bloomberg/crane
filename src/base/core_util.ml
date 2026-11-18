@@ -2579,23 +2579,37 @@ let rec same_storage a b =
     && eq_core_pattern pat pat' && same_storage s s'
   | _ -> false
 
+(** [v] as a [bool] constructor. *)
+let bool_value v =
+  Core.Expr.Construct {result_type = Core.Type.Global_app {head = Rocqlib.lib_ref "core.bool.type";
+                                                           type_arguments = [];
+                                                           index_arguments = []};
+                       constructor = Rocqlib.lib_ref (if v then "core.bool.true" else "core.bool.false");
+                       arguments = [];
+                       occurrence = Core.Occurrence.fresh ()}
+
+(** Whether [x] and [y] are one read of storage and the other's [negb]. *)
+let negation_of_itself x y =
+  let negb = Rocqlib.lib_ref "core.bool.negb" in
+  let negates a b =
+    match a with
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = n; _}; arguments = [a']} ->
+      GlobRef.CanOrd.equal n negb && same_storage a' b
+    | _ -> false
+  in
+  negates x y || negates y x
+
 (** [Some v] when [f a] is a comparison of one read of storage with itself
-    ({!same_storage}), [v] its value as a [bool] constructor. *)
+    ({!same_storage}), or an [orb] or [andb] of one read and its [negb], [v]
+    its value as a [bool] constructor. *)
 let fold_self_comparison f a =
   match (f, a) with
-  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, [x; y] when same_storage x y -> (
-    match Cmap.find_opt c self_comparisons with
-    | Some v ->
-      let bool_ref = Rocqlib.lib_ref "core.bool.type" in
-      let ctor = Rocqlib.lib_ref (if v then "core.bool.true" else "core.bool.false") in
-      Some
-        (Core.Expr.Construct {result_type = Core.Type.Global_app {head = bool_ref;
-                                                                  type_arguments = [];
-                                                                  index_arguments = []};
-                              constructor = ctor;
-                              arguments = [];
-                              occurrence = Core.Occurrence.fresh ()})
-    | None -> None )
+  | Core.Expr.Global {callee = GlobRef.ConstRef c; _}, [x; y] when same_storage x y ->
+    Option.map bool_value (Cmap.find_opt c self_comparisons)
+  | Core.Expr.Global {callee = c; _}, [x; y] when negation_of_itself x y ->
+    if GlobRef.CanOrd.equal c (Rocqlib.lib_ref "core.bool.orb") then Some (bool_value true)
+    else if GlobRef.CanOrd.equal c (Rocqlib.lib_ref "core.bool.andb") then Some (bool_value false)
+    else None
   | _ -> None
 
 (** Core simplification: beta-reduction, iota-reduction, let-inlining, and

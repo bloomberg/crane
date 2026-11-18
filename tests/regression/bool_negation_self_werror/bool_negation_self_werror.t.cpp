@@ -11,6 +11,8 @@ int main() {
   int fails = 0;
   if (!(M::f(false) == true)) { std::cout << "FAIL: M::f(false)" << std::endl; ++fails; }
   if (!(M::g(true) == false)) { std::cout << "FAIL: M::g(true)" << std::endl; ++fails; }
+  if (!(M::f_(true) == true)) { std::cout << "FAIL: M::f_(true)" << std::endl; ++fails; }
+  if (!(M::g_(false) == false)) { std::cout << "FAIL: M::g_(false)" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All bool_negation_self_werror tests passed!" << std::endl;
   return fails;

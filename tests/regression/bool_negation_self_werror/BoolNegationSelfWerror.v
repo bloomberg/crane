@@ -14,6 +14,9 @@ Module BoolNegationSelfWerror.
 
 Definition f (b : bool) : bool := orb b (negb b).
 Definition g (b : bool) : bool := andb b (negb b).
+(** The negation first. *)
+Definition f' (b : bool) : bool := orb (negb b) b.
+Definition g' (b : bool) : bool := andb (negb b) b.
 
 End BoolNegationSelfWerror.
 
