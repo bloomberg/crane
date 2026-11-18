@@ -2542,6 +2542,8 @@ let self_comparisons =
   let pos_core = con_in_module "Corelib.BinNums.PosDef" "Pos" in
   let pos_std = con_in_module "Stdlib.PArith.BinPosDef" "Pos" in
   let z = con_in_module "Corelib.BinNums.IntDef" "Z" in
+  let z_std = con_in_module "Stdlib.ZArith.BinIntDef" "Z" in
+  let int63 = con_in_file "Corelib.Numbers.Cyclic.Int63.PrimInt63" in
   List.fold_left
     (fun m (c, v) -> Cmap.add c v m)
     Cmap.empty
@@ -2550,6 +2552,8 @@ let self_comparisons =
       (n_core "leb", true); (n_std "eqb", true); (n_std "ltb", false);
       (pos_core "leb", true); (pos_core "eqb", true); (pos_std "ltb", false);
       (z "leb", true); (z "eqb", true); (z "ltb", false);
+      (z_std "geb", true); (z_std "gtb", false);
+      (int63 "leb", true); (int63 "eqb", true); (int63 "ltb", false);
       (con_in_file "Stdlib.Bool.Bool" "eqb", true);
     ]
 

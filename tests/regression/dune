@@ -14704,3 +14704,14 @@
   (alias runtest)
   (deps sub_self_guard_werror.t.exe)
   (action (run ./sub_self_guard_werror.t.exe))))
+
+(subdir self_comparison_mapped_werror
+ (rule
+  (targets self_comparison_mapped_werror.t.exe)
+  (deps SelfComparisonMappedWerror.vo self_comparison_mapped_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} self_comparison_mapped_werror.t.exe self_comparison_mapped_werror.t.cpp self_comparison_mapped_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps self_comparison_mapped_werror.t.exe)
+  (action (run ./self_comparison_mapped_werror.t.exe))))
