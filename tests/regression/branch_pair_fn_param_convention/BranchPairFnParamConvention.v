@@ -11,7 +11,9 @@ Import ListNotations.
     ignores it.  After the callable-join fix both become [crane::fn], but one
     takes [const String &] and the other [String], so the conditional is
     ambiguous ("pair<fn<pt (const String &)>, ..> can be converted to
-    pair<fn<pt (String)>, ..> and vice versa"). *)
+    pair<fn<pt (String)>, ..> and vice versa").  A closure stored at a
+    field instantiated at a function type now converts to that type, spelled
+    from the instantiation, not deduced from the closure. *)
 Module BranchPairFnParamConvention.
 
 Record pt : Type := mkpt { px : nat; py : bool }.

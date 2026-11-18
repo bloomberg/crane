@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir branch_pair_fn_param_convention
- (rule
-  (targets branch_pair_fn_param_convention.t.exe)
-  (deps BranchPairFnParamConvention.vo branch_pair_fn_param_convention.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_pair_fn_param_convention.t.exe branch_pair_fn_param_convention.t.cpp branch_pair_fn_param_convention.cpp)))
- (rule
-  (alias runtest)
-  (deps branch_pair_fn_param_convention.t.exe)
-  (action (run ./branch_pair_fn_param_convention.t.exe))))
-
 (subdir eta_partial_app_wrong_argument
  (rule
   (targets eta_partial_app_wrong_argument.t.exe)

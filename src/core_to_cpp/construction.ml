@@ -262,14 +262,39 @@ let gen_expr_custom_cons cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot
         List.iter stmt body;
         !any && !all
       in
+      (* The function type the field is instantiated at, where it is one
+         this scope can spell: what each closure stored there converts to,
+         so that two constructions of one Rocq type -- the branches of a
+         conditional -- agree on it whatever conventions their closures
+         take their parameters by. *)
+      let instantiated_fn ft =
+        match (resolve_meta ft, ty) with
+        | Core.Type.Variable {variable = j; _}, Core.Type.Global_app {type_arguments = tys; _} -> (
+          match List.nth_opt tys (j - 1) with
+          | Some a when not (core_type_contains_erased ~in_arrows:true a) -> (
+            (* Spelled as the instantiation the construction writes is
+               ({!Types.template_params_of_core}, at [Declared]). *)
+            match Types.template_params_of_core cx ~site:Cpp_ir.Types.Declared env [a] with
+            | [(Function _ as f)]
+              when Types.names_only_scoped_tvars cx f && not (Base.Type_util.has_tany_written f) ->
+              Some f
+            | _ -> None )
+          | _ -> None )
+        | _ -> None
+      in
+      let named ft =
+        match instantiated_fn ft with
+        | Some f -> Cpp_ir.Expr.Converting_construct (f, [result])
+        | None -> Function_value result
+      in
       match (into, List.nth_opt field_types_for_wrap i, result) with
       | None, Some ft, Lambda l
         when (not (is_passthrough_ctor_arg i)) && has_signature l && Erasure.core_expr_is_function_value cx e ->
-        Coerce.name_fn_arg_for_tvar_param ft result
+        ( match resolve_meta ft with Core.Type.Variable _ -> named ft | _ -> result )
       | None, Some ft, Call (_, Lambda {params = []; body; _}, [])
         when (not (is_passthrough_ctor_arg i)) && returns_closures body
              && (match resolve_meta ft with Core.Type.Variable _ -> true | _ -> false) ->
-        Function_value result
+        named ft
       | _ -> result) ts)
   in
   (* Helper to wrap expression in function call syntax if it has arguments.

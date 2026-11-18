@@ -8,12 +8,14 @@
 /// ignores it.  After the callable-join fix both become crane::fn, but one
 /// takes const String & and the other String, so the conditional is
 /// ambiguous ("pair<fn<pt (const String &)>, ..> can be converted to
-/// pair<fn<pt (String)>, ..> and vice versa").
+/// pair<fn<pt (String)>, ..> and vice versa").  A closure stored at a
+/// field instantiated at a function type now converts to that type, spelled
+/// from the instantiation, not deduced from the closure.
 uint64_t BranchPairFnParamConvention::t(bool b) {
   return (
       b
           ? std::make_pair(
-                crane::fn(
+                crane::fn<BranchPairFnParamConvention::pt(String)>(
                     [](const String &y) -> BranchPairFnParamConvention::pt {
                       if (std::holds_alternative<typename String::EmptyString>(
                               y.v())) {
@@ -23,8 +25,8 @@ uint64_t BranchPairFnParamConvention::t(bool b) {
                       }
                     }),
                 UINT64_C(0))
-          : std::make_pair(
-                crane::fn([](String) { return pt{UINT64_C(2), true}; }),
-                UINT64_C(0)))
+          : std::make_pair(crane::fn<BranchPairFnParamConvention::pt(String)>(
+                [](String) { return pt{UINT64_C(2), true}; }),
+                           UINT64_C(0)))
              .first(String::emptystring()).px;
 }
