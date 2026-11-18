@@ -14802,3 +14802,14 @@
   (alias runtest)
   (deps tyarg_partial_type_application.t.exe)
   (action (run ./tyarg_partial_type_application.t.exe))))
+
+(subdir methodified_constraint_tparam
+ (rule
+  (targets methodified_constraint_tparam.t.exe)
+  (deps MethodifiedConstraintTparam.vo methodified_constraint_tparam.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} methodified_constraint_tparam.t.exe methodified_constraint_tparam.t.cpp methodified_constraint_tparam.cpp)))
+ (rule
+  (alias runtest)
+  (deps methodified_constraint_tparam.t.exe)
+  (action (run ./methodified_constraint_tparam.t.exe))))

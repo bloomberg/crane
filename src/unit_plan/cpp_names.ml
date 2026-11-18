@@ -890,9 +890,23 @@ let method_type_args d n tys =
   match tys with
   | [] -> []
   | _ ->
+    (* The dictionaries come first, as for a free function; the positions
+       carried and dropped count the function's variables after them. *)
+    let instances =
+      match Core_plan.Callable_abi.lookup d n with
+      | Some abi ->
+        List.length
+          (List.filter
+             (fun (p : Core_plan.Callable_abi.template_parameter) ->
+               match p.origin with From_instance _ -> true | _ -> false )
+             (Core_plan.Callable_abi.template_head abi) )
+      | None -> 0
+    in
     let carried = lookup_method_ind_tvar_positions n in
     let dropped = Core_plan.Callable_abi.dropped_positions d n in
-    List.filteri (fun i _ -> not (List.mem i carried || List.mem i dropped)) tys
+    List.filteri
+      (fun i _ -> i < instances || not (List.mem (i - instances) carried || List.mem (i - instances) dropped))
+      tys
 
 module IdSet = Set.Make (Names.Id)
 

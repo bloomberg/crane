@@ -268,7 +268,8 @@ val lookup_method_this_pos : Names.GlobRef.t -> int option
 (** [method_type_args d n tys] -- of the type arguments [tys] a reference to
     the method [n] was instantiated at, the ones a call must write: the
     receiver's struct carries its own parameters, and the parameters the
-    method's plan drops are not in its signature at all. *)
+    method's plan drops are not in its signature at all.  The dictionaries
+    lead [tys], as they lead the method's head, and are all written. *)
 val method_type_args : Core_plan.Callable_abi.decided -> Names.GlobRef.t -> 'a list -> 'a list
 
 (** Sets of identifiers ([Names.variable]). *)

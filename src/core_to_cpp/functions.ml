@@ -188,17 +188,19 @@ and var_subst_map id repl =
   Cpp_ir.Map.make ~expr:(var_subst_expr id repl) ~stmt:(var_subst_stmt id repl) ~type_:Fun.id ()
 
 (** Substitute unnamed type variables with named ones based on a variable
-    list: each unnamed variable [Ti] in [s] is named by the [i]th of
+    list: each unnamed variable [Ti] in a type is named by the [i]th of
     [tvars].  Used when generating methods, to name [T1], [T2], ... by the
     struct's template parameters. *)
+let tvar_subst_type (tvars : Id.t list) : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t =
+  Cpp_ir.Types.map (fun (ty : Cpp_ir.Lowered.Type.t) ->
+      match ty with
+      | Variable (Index (i, None)) -> (
+        match List.nth_opt tvars (pred i) with Some x -> Variable (Index (i, Some x)) | None -> ty )
+      | _ -> ty )
+
+(** {!tvar_subst_type} throughout a statement. *)
 let tvar_subst_stmt (tvars : Id.t list) (s : Cpp_ir.Lowered.Stmt.t) : Cpp_ir.Lowered.Stmt.t =
-  let type_ =
-    Cpp_ir.Types.map (fun (ty : Cpp_ir.Lowered.Type.t) ->
-        match ty with
-        | Variable (Index (i, None)) -> (
-          try Variable (Index (i, Some (List.nth tvars (pred i)))) with Failure _ -> ty )
-        | _ -> ty )
-  in
+  let type_ = tvar_subst_type tvars in
   let rec expr e = Cpp_ir.Map.expr (m ()) e
   and stmt s = Cpp_ir.Map.stmt (m ()) s
   and m () = Cpp_ir.Map.make ~expr ~stmt ~type_ () in

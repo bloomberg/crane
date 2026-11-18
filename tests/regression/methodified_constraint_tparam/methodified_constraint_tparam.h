@@ -341,7 +341,7 @@ struct MethodifiedConstraintTparam {
     const variant_t &v() const { return v_; }
 
     template <typename _tcI0>
-      requires Sz<_tcI0, T1>
+      requires Sz<_tcI0, A>
     std::optional<A> f2(const A &a9, const A &) const {
       return std::make_optional<A>(a9);
     }
@@ -457,8 +457,8 @@ struct MethodifiedConstraintTparam {
   };
 
   static inline const uint64_t t = []() -> uint64_t {
-    auto _cs = ptree<uint64_t>::pleaf().template f2<uint64_t>(UINT64_C(4),
-                                                              UINT64_C(5));
+    auto _cs =
+        ptree<uint64_t>::pleaf().template f2<sz_nat>(UINT64_C(4), UINT64_C(5));
     if (_cs.has_value()) {
       const uint64_t &x = *_cs;
       return x;

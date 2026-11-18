@@ -410,9 +410,17 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
     List.map (fun (_, tt, fname) -> (tt, fname)) fun_params
   in
   (* The instances come first, as they do for a free function: a call site
-     spells the same list in the same order. *)
+     spells the same list in the same order.  An instance's constraint
+     ([requires Sz<_tcI0, T1>]) is over the function's variables, renumbered,
+     and names them as the signature and the body do: the inductive's by the
+     struct's parameters, the function's own by theirs. *)
   let template_params =
-    List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps
+    let named =
+      Cpp_ir.Map.make ~expr:Fun.id ~stmt:Fun.id
+        ~type_:(fun t -> tvar_subst_type (vars @ extra_tvar_names) (subst_extra_tvars t))
+        ()
+    in
+    Cpp_ir.Map.template_parameters named (List.map (fun (tt, id, _, _) -> (tt, id)) typeclass_temps)
     @ extra_type_params
     @ fun_template_params
   in
