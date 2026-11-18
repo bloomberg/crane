@@ -14921,3 +14921,14 @@
   (alias runtest)
   (deps reuse_shared_poly_frame_save.t.exe)
   (action (run ./reuse_shared_poly_frame_save.t.exe))))
+
+(subdir value_order_later_constant
+ (rule
+  (targets value_order_later_constant.t.exe)
+  (deps ValueOrderLaterConstant.vo value_order_later_constant.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} value_order_later_constant.t.exe value_order_later_constant.t.cpp value_order_later_constant.cpp)))
+ (rule
+  (alias runtest)
+  (deps value_order_later_constant.t.exe)
+  (action (run ./value_order_later_constant.t.exe))))

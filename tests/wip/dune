@@ -250,17 +250,6 @@
   (deps instance_op_coercion_position.t.exe)
   (action (run ./instance_op_coercion_position.t.exe))))
 
-(subdir value_order_later_constant
- (rule
-  (targets value_order_later_constant.t.exe)
-  (deps ValueOrderLaterConstant.vo value_order_later_constant.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} value_order_later_constant.t.exe value_order_later_constant.t.cpp value_order_later_constant.cpp)))
- (rule
-  (alias runtest)
-  (deps value_order_later_constant.t.exe)
-  (action (run ./value_order_later_constant.t.exe))))
-
 (subdir cofix_unused_param_as_value
  (rule
   (targets cofix_unused_param_as_value.t.exe)

@@ -11,7 +11,11 @@ Infix "/" := Nat.div.
     testing of Crane: generated program, shrunk by ephyra and delta-reduced
     (unrelated-looking declarations kept are needed for the trigger).
 
-    [t_1] computes 0 through [mconcat] of a match on a local fixpoint; the C++ initialiser of [t_1] reads [f4], a constant [0] defined after it in the same file (static initialisation order), and CRANE_CHECK_IR=1 reports "value order: the value t_1 reads f4, written after it". *)
+    [t_1] computes 0 through [mconcat] of a match on a local fixpoint; the C++ initialiser of [t_1] reads [f4], a constant [0] defined after it in the same file (static initialisation order), and CRANE_CHECK_IR=1 reports "value order: the value t_1 reads f4, written after it".
+
+    [t_1] reads no [f4]: it names [tree] as a type, and the check followed
+    a struct to everything its methods read, [g6]'s [f4] included.  A method
+    is now a function of its own to the check, by its global. *)
 Module ValueOrderLaterConstant.
 
 Inductive tree : Type := Leaf : tree | Node : tree -> nat -> tree -> tree.

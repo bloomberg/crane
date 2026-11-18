@@ -3286,17 +3286,31 @@ let check_value_order cx scheduled =
       Cpp_ir.Globrefs.iter (fun r -> found := r :: !found) d;
       !found
     in
-    (* What each function's definition names, whichever file writes it. *)
+    (* What each function's definition names, whichever file writes it.  A
+       method is a function of its own, by its global: naming a struct, as
+       a type, runs none of its methods. *)
     let functions =
-      List.fold_left
-        (fun m (d : Cpp_ir.Resolved.Decl.t) ->
-          match d with
-          | Variable _ -> m
-          | d -> (
-            match Cpp_ir.Globrefs.declared d with
-            | Some r -> Core.Ref.Can.Map.update r (fun l -> Some (names d @ Option.default [] l)) m
-            | None -> m ))
-        Core.Ref.Can.Map.empty (Cpp_passes.Unit_program.installed_finished ())
+      let add r d m = Core.Ref.Can.Map.update r (fun l -> Some (names d @ Option.default [] l)) m in
+      let rec index m (d : Cpp_ir.Resolved.Decl.t) =
+        match d with
+        | Variable _ -> m
+        | Template (_, _, inner) -> index m inner
+        | Struct st ->
+          let rec members m (fields : _ Cpp_ir.Field.member list) =
+            List.fold_left
+              (fun m ((f, v, sec) : _ Cpp_ir.Field.member) ->
+                match f with
+                | Method {globref = Some g; _} -> add g (Struct {st with fields = [(f, v, sec)]}) m
+                | Nested_struct (_, ms) -> members m ms
+                | _ -> m )
+              m fields
+          in
+          members m st.fields
+        | Member_definition {member = Method {globref = Some g; _}; _} -> add g d m
+        | Member_definition _ -> m
+        | d -> ( match Cpp_ir.Globrefs.declared d with Some r -> add r d m | None -> m )
+      in
+      List.fold_left index Core.Ref.Can.Map.empty (Cpp_passes.Unit_program.installed_finished ())
     in
     (* The values of the file [r]'s initialiser reads, directly or through a
        function: what a value reads is its own to check. *)
