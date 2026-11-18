@@ -7,10 +7,9 @@
 /// variable with itself (a >= a ? a - a : 0u for N.sub a a, (a - a) > a
 /// for nat), which -Wtautological-compare rejects under -Werror (the
 /// comparison forms in self_comparison_werror are fixed).  Values are right.
-unsigned int SubSelfGuardWerror::f(unsigned int a) {
-  return (a >= a ? a - a : 0u);
-}
+unsigned int SubSelfGuardWerror::f(unsigned int) { return 0u; }
 
-uint64_t SubSelfGuardWerror::g(uint64_t a) {
-  return (((a - a) > a ? 0 : (a - a)));
-}
+uint64_t SubSelfGuardWerror::g(uint64_t) { return UINT64_C(0); }
+
+/// Pos.sub stops at one, so p - p is one.
+unsigned int SubSelfGuardWerror::h(unsigned int) { return 1u; }

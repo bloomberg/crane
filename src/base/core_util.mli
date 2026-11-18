@@ -599,6 +599,11 @@ val ast_pop : 'p Core.Expr.at -> 'p Core.Expr.at
 (** The number of nodes of a term, each counted once. *)
 val ast_size : 'p Core.Expr.at -> int
 
+(** Whether [a] and [b] are one read of storage: the same variable, or the
+    same projection of the same such read.  Evaluating either is total and
+    pure, so both evaluate to one value. *)
+val same_storage : 'p Core.Expr.at -> 'p Core.Expr.at -> bool
+
 (** [con_in_file file label]: the constant [label] of the library [file]
     ([Corelib.Init.Nat]), as its canonical name. *)
 val con_in_file : string -> string -> Constant.t

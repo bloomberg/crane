@@ -171,10 +171,48 @@ let division = function
     | _ -> e )
   | e -> e
 
+(* The value Rocq gives the subtraction of [nat], [N], [positive] and [Z]
+   of one number from itself, as the constant constructor that spells it,
+   with its inductive: zero, but one for [positive], whose subtraction stops
+   at one. *)
+let self_subtractions =
+  let nat = Base.Core_util.con_in_file "Corelib.Init.Nat" in
+  let n = Base.Core_util.con_in_module "Corelib.BinNums.NatDef" "N" in
+  let pos = Base.Core_util.con_in_module "Corelib.BinNums.PosDef" "Pos" in
+  let z = Base.Core_util.con_in_module "Corelib.BinNums.IntDef" "Z" in
+  List.fold_left
+    (fun m (c, v) -> Cmap.add c v m)
+    Cmap.empty
+    [ (nat "sub", ("num.nat.type", "num.nat.O")); (n "sub", ("num.N.type", "num.N.N0"));
+      (pos "sub", ("num.pos.type", "num.pos.xH")); (z "sub", ("num.Z.type", "num.Z.Z0")) ]
+
+(* A subtraction of one read of storage from itself
+   ({!Base.Core_util.same_storage}), as the value it computes, a literal
+   where its number type is a numeral mapping's: a mapping's guard would
+   compare the read with itself. *)
+let self_subtraction = function
+  | Core.Expr.Apply {callee = Core.Expr.Global {callee = GlobRef.ConstRef c; _}; arguments = [a; b]} as e
+    when Base.Core_util.same_storage a b -> (
+    match Cmap.find_opt c self_subtractions with
+    | Some (ind, ctor) when Rocqlib.has_ref ind && Rocqlib.has_ref ctor ->
+      let value =
+        Core.Expr.Construct
+          { result_type =
+              Core.Type.Global_app {head = Rocqlib.lib_ref ind; type_arguments = []; index_arguments = []};
+            constructor = Rocqlib.lib_ref ctor;
+            arguments = [];
+            occurrence = Core.Occurrence.fresh () }
+      in
+      ( match constructor_literal value with
+      | Some (info, n) -> Core.Expr.Numeral {inductive = info.Base.Table.ind; value = n}
+      | None -> value )
+    | _ -> e )
+  | e -> e
+
 let fold e =
   match literal e with
   | Some (info, n) -> Core.Expr.Numeral {inductive = info.Base.Table.ind; value = n}
-  | None -> division e
+  | None -> self_subtraction (division e)
 
 let folds e = Option.has_some (literal e)
 

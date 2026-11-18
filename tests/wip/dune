@@ -273,17 +273,6 @@
   (action (run ./local_fix_capture_in_fold_lambda.t.exe))))
 
 
-(subdir sub_self_guard_werror
- (rule
-  (targets sub_self_guard_werror.t.exe)
-  (deps SubSelfGuardWerror.vo sub_self_guard_werror.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} sub_self_guard_werror.t.exe sub_self_guard_werror.t.cpp sub_self_guard_werror.cpp)))
- (rule
-  (alias runtest)
-  (deps sub_self_guard_werror.t.exe)
-  (action (run ./sub_self_guard_werror.t.exe))))
-
 (subdir loopify_rematch_frame_binder
  (rule
   (targets loopify_rematch_frame_binder.t.exe)

@@ -14,6 +14,8 @@ Module SubSelfGuardWerror.
 
 Definition f (a : N) : N := N.sub a a.
 Definition g (a : nat) : nat := a - a.
+(** [Pos.sub] stops at one, so [p - p] is one. *)
+Definition h (p : positive) : positive := Pos.sub p p.
 
 End SubSelfGuardWerror.
 

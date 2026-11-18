@@ -2,7 +2,9 @@
 
 #include <cstdint>
 
-struct N {
+struct N {};
+
+struct Pos {
 }; /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
 
 /// testing of Crane: a generated program, shrunk by ephyra and reduced by hand.
@@ -14,4 +16,6 @@ struct N {
 struct SubSelfGuardWerror {
   static unsigned int f(unsigned int a);
   static uint64_t g(uint64_t a);
+  /// Pos.sub stops at one, so p - p is one.
+  static unsigned int h(unsigned int p);
 };
