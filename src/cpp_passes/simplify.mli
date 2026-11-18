@@ -8,7 +8,9 @@
     {- A condition that is a literal selects its branch.}
     {- [if (c) return true; else return false;] returns [c], for a [c] that
        is a comparison or a connective, and so a [bool].}
-    {- A binding of a pure value nothing reads is dropped.}
+    {- A binding of a pure value nothing reads is dropped, and so is a local
+       declared without one that nothing reads, with the pure values -- a
+       choice among them on pure tests included -- assigned to it.}
     {- A local copied out of a member of another, neither assigned
        afterwards, is a [const] reference to it.}
     {- A local closure whose result is applied at once, [k(a)(b)], is

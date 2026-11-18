@@ -17,7 +17,11 @@ struct List; /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differ
 /// A let bound to a local fixpoint's result, read only in the never-taken
 /// recursive arm of another local fixpoint that is called on []: the arm is
 /// dropped but the binding is kept, "variable 'x' set but not used" under
-/// -Werror.  The value is right.
+/// -Werror.  The value is right.  go2's loop drops its unread acc, and
+/// with it the only read of x; the declaration and the assignment of the
+/// choice x's value was lowered to stayed.  Simplify now drops a local
+/// declared without a value that nothing reads, with the pure values,
+/// choices among them included, assigned to it.
 struct UnusedLetLocalFixWerror {
   static uint64_t f(uint64_t _x);
 };

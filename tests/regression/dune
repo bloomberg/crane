@@ -14866,3 +14866,14 @@
   (alias runtest)
   (deps local_fix_own_type_variable.t.exe)
   (action (run ./local_fix_own_type_variable.t.exe))))
+
+(subdir unused_let_local_fix_werror
+ (rule
+  (targets unused_let_local_fix_werror.t.exe)
+  (deps UnusedLetLocalFixWerror.vo unused_let_local_fix_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unused_let_local_fix_werror.t.exe unused_let_local_fix_werror.t.cpp unused_let_local_fix_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps unused_let_local_fix_werror.t.exe)
+  (action (run ./unused_let_local_fix_werror.t.exe))))
