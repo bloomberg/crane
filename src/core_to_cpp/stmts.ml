@@ -404,7 +404,7 @@ and gen_stmts_scoped cx ?(slot = Slot.empty_slot) env (k : Cpp_ir.Lowered.Expr.t
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
-    gen_custom_cpp_case cx env k typ t pv case_occ
+    gen_custom_cpp_case cx ~slot env k typ t pv case_occ
   | Core.Expr.Construct {constructor = r; arguments = []; _} when Base.Table.is_tt_constructor r
       && returns_void cx ->
     (* tt (unit constructor) in tail position of a void-returning function *)

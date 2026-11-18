@@ -140,6 +140,10 @@ public:
 /// => cf (cg c)), bound by a beta-redex: the C++ declares the variable at
 /// one branch's type and assigns the other ("no viable overloaded '='").
 /// Remaining after d7cf5aaae (common crane::fn type for joined callables).
+/// A match's branches now carry the slot into their tails, so the lambda
+/// knows the Core type backing the two-parameter function it is written
+/// against, and takes the parameter its body leaves to a partial
+/// application.
 struct BranchCallablesCurriedJoin {
   struct pt {
     uint64_t px;

@@ -489,16 +489,16 @@ let rec gen_expr cx ?(expected_ty : Cpp_ir.Lowered.Type.t option) ?(slot = Slot.
                      branches = pv;
                      occurrence = case_occ}
                        when Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ = Core_plan.Match_kind.Custom ->
-    Match.gen_custom_match_expr cx env ~typ ~t ~pv ~case_occ
+    Match.gen_custom_match_expr cx ~slot env ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ}
     when Core_plan.Match_kind.is_record (Core_plan.Elaborate.match_kind ~walk:(elaborations cx) typ pv case_occ) ->
     Match.gen_record_projection cx ~expected_ty ~slot env core_e ~typ ~t ~pv ~case_occ
   | Core.Expr.Match {scrutinee_type = typ; scrutinee = t; branches = pv; occurrence = case_occ} when lang () == Cpp ->
-    gen_cpp_case cx typ t env pv case_occ
+    gen_cpp_case cx ~slot typ t env pv case_occ
   | Core.Expr.Let {binder_type = ty; _} as a ->
     with_escape_analysis cx (fun () -> with_region cx a (fun () ->
       with_iife_return_type cx expected_ty (fun () ->
-        let body = gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a in
+        let body = gen_stmts cx ~slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) a in
         (* Returning a closure from one path and another closure, or a
            function-typed local, from the next, the lambda deduces no
            common type: it is declared at the let's own.  The expected

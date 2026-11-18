@@ -189,9 +189,22 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
               ( Core.Binder_name.Generated (Id.of_string (Printf.sprintf "_eta%d" (k - 1 - i))),
                 Core.Type.Unknown ) )
         in
-        Some
-          ( fresh @ args,
-            Core_passes.Spines.apply (ast_lift k a) (List.init k (fun i -> Core.Expr.fresh_rel (k - i))) )
+        (* The body applied to the binders, [rels] their indices where it
+           stands, taken in where the body makes the closure the call would
+           apply, so that no closure is built at every call: into a let's
+           body, a lambda's parameter, and the arguments of a local
+           function applied to fewer than it takes. *)
+        let rec applied (a : Core.Expr.t) rels =
+          match (a, rels) with
+          | _, [] -> a
+          | Core.Expr.Apply {callee = Core.Expr.Bound_variable _ as f; arguments}, _ ->
+            Core.Expr.Apply {callee = f; arguments = arguments @ List.map Core.Expr.fresh_rel rels}
+          | Core.Expr.Let l, _ -> Core.Expr.Let {l with body = applied l.body (List.map succ rels)}
+          | Core.Expr.Lambda {body; _}, r :: rest ->
+            applied (Base.Core_util.ast_subst_each (fun () -> Core.Expr.fresh_rel r) body) rest
+          | a, _ -> Core_passes.Spines.apply a (List.map Core.Expr.fresh_rel rels)
+        in
+        Some (fresh @ args, applied (ast_lift k a) (List.init k (fun i -> k - i)))
     in
     match Option.bind expected_ty fun_ty_of with
     | Some (n, cod) when n > 0 && fun_ty_of cod <> None ->

@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir branch_callables_curried_join
- (rule
-  (targets branch_callables_curried_join.t.exe)
-  (deps BranchCallablesCurriedJoin.vo branch_callables_curried_join.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_callables_curried_join.t.exe branch_callables_curried_join.t.cpp branch_callables_curried_join.cpp)))
- (rule
-  (alias runtest)
-  (deps branch_callables_curried_join.t.exe)
-  (action (run ./branch_callables_curried_join.t.exe))))
-
 (subdir reuse_shared_poly_frame_save
  (rule
   (targets reuse_shared_poly_frame_save.t.exe)

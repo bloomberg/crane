@@ -83,7 +83,7 @@ let with_fields_plan cx case asgns f =
     @param match_i  nesting level counter for name suffixing
     @param scrut    the value being matched, shared by every branch
     @param site     the match and this branch, binding [ids] *)
-let gen_match_branch cx env (typ : Core.Type.t) rty cname ids dummies body sname
+let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body sname
     match_i (scrut : Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.scrutinee) ~scrut_db ~site :
     Cpp_ir.Lowered.phase Cpp_ir.Grammar.Match.branch =
   let ctor_type = Match_types.ctor_type_of_match cx env typ cname in
@@ -155,7 +155,7 @@ let gen_match_branch cx env (typ : Core.Type.t) rty cname ids dummies body sname
                 Representation_plan.check cx.ctx ~site ~field:i
                   ~live:(Binders.binder_is_boxed cx (n_pat_vars - i)) () )
               rev_ids;
-          gen_stmts cx env_for_body (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ))
+          gen_stmts cx ?slot env_for_body (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body ))
   in
   let tvars = get_current_type_vars cx in
 (* A non-self-referential field in a type-indexed inductive (no template
@@ -523,7 +523,7 @@ let gen_match_branch cx env (typ : Core.Type.t) rty cname ids dummies body sname
     {b Type resolution.}  The match type is first refined from the type of
     the variable the scrutinee reads ({!Match_types.match_scrutinee_type}), so that
     field types and constructor type parameters are concrete. *)
-let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
+let gen_cpp_case cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
   let typ =
     let var_type i = try Some (get_env_type cx i) with _ -> None in
     let at bt = Match_types.match_scrutinee_type cx env typ t pv ~var_type ~var_cpp_type:(fun _ -> bt) in
@@ -588,7 +588,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
         in
         let body_stmts =
           Binders.with_binders cx env ids' (fun () ->
-              gen_stmts cx env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body )
+              gen_stmts cx ?slot env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body )
         in
         (ctor_name, body_stmts) :: gen_enum_branches cs
       | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ | Core.Pattern.Tuple _ -> gen_enum_branches cs
@@ -600,7 +600,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
           (fun {Core.Match.Branch.pattern = p; _} -> match p with Core.Pattern.Wildcard -> true | _ -> false)
       in
       Option.map
-        (fun (br : Core.Match.Branch.t) -> gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) br.body)
+        (fun (br : Core.Match.Branch.t) -> gen_stmts cx ?slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) br.body)
         wild_br
     in
     let void_ret = Match_types.iife_void_return cx env typ pv in
@@ -705,7 +705,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
         let saved_erased = Binders.save_erased_env cx () in
         let ids', env', dummies = process_match_pattern_vars ids env in
         let br =
-          gen_match_branch cx env' typ rty r ids' dummies body sname
+          gen_match_branch cx ?slot env' typ rty r ids' dummies body sname
             match_i scrut ~scrut_db ~site:(Branch (case_occ, i))
         in
         restore_env_types cx saved_env_types;
@@ -714,7 +714,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
         (br :: rest, wild)
       | Core.Pattern.Wildcard | Core.Pattern.Bound_variable _ ->
         let body_stmts =
-          gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body
+          gen_stmts cx ?slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body
         in
         ([], Some body_stmts)
       | Core.Pattern.Tuple _ -> gen_branches (i + 1) cs
@@ -935,7 +935,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
                   with_plan cx
                     (Ownership_ir.Region.reuse_arm cx.ctx.lexical.move_plan ~scrutinee:t ~branch:branch_idx
                        ~constructor:tail_ctor)
-                    (fun () -> gen_stmts cx env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) )
+                    (fun () -> gen_stmts cx ?slot env' (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) body) )
             in
             restore_env_types cx saved_env_types;
             Some (branch_idx, extract @ body_stmts, unique_cond)
@@ -971,7 +971,7 @@ let gen_cpp_case cx (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.
     [body] as statements ending in [k], an erased variable returned at a
     template-parameter type unboxed first.  [site] is the branch, binding
     [ids]. *)
-let gen_cpp_custom_body cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) rty ids body scrut_ind_opt ~site =
+let gen_cpp_custom_body cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) rty ids body scrut_ind_opt ~site =
   let tvars = get_current_type_vars cx in
   let ret = Types.cpp_of_core cx env rty in
   let n_pat_vars = List.length ids in
@@ -1028,7 +1028,7 @@ let gen_cpp_custom_body cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
       else k
     | _ -> k
   in
-  let body = gen_stmts cx env k body in
+  let body = gen_stmts cx ?slot env k body in
   (ids, ret, body)
 
 (** Generate a custom case expression using user-provided extraction syntax.
@@ -1036,7 +1036,7 @@ let gen_cpp_custom_body cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
     Returns statements: when the scrutinee is non-trivial and the
     template uses [%scrut] more than once, a cache declaration
     [auto _cs = expr;] is prepended before the [Custom_match] statement. *)
-let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (typ : Core.Type.t) t pv case_occ :
+let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t) (typ : Core.Type.t) t pv case_occ :
     Cpp_ir.Lowered.Stmt.t list =
   (* Save the Core type for temps computation after fix_a_fired is known. *)
   let core_typ = typ in
@@ -1276,7 +1276,7 @@ let gen_custom_cpp_case cx env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt
         | _ -> None
       in
       let (br_ids, br_ret, br_stmts) =
-        gen_cpp_custom_body cx env' k rty ids' t scrut_ind_opt ~site:(Branch (case_occ, i))
+        gen_cpp_custom_body cx ?slot env' k rty ids' t scrut_ind_opt ~site:(Branch (case_occ, i))
       in
       restore_env_types cx saved_env_types;
       (* Use-site [any_cast] insertion: when [fix_a_fired], pair fields are all
@@ -1507,7 +1507,7 @@ let record_read_once cx env ~is_typeclass t : Cpp_ir.Lowered.Expr.t * Cpp_ir.Low
 (** The custom match of [t] at [typ] with branches [pv] at [case_occ], in
     expression position: an immediately invoked lambda over its template's
     statements. *)
-let gen_custom_match_expr cx env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Expr.t =
+let gen_custom_match_expr cx ?slot env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Expr.t =
   let iife_ret =
     let branch_rty =
       match Array.to_list pv with
@@ -1526,7 +1526,7 @@ let gen_custom_match_expr cx env ~typ ~t ~pv ~case_occ : Cpp_ir.Lowered.Expr.t =
       | _ -> current_cpp_return_type cx ()
     in
     with_cpp_return_type cx ret (fun () ->
-        gen_custom_cpp_case cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) typ t pv case_occ )
+        gen_custom_cpp_case cx ?slot env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) typ t pv case_occ )
   in
   Cpp_ir.Build.iife (Some iife_ret) stmts
 
