@@ -12,6 +12,7 @@ int main() {
   if (!(M::f(3) == 0)) { std::cout << "FAIL: M::f(3)" << std::endl; ++fails; }
   if (!(M::g(3) == 0)) { std::cout << "FAIL: M::g(3)" << std::endl; ++fails; }
   if (!(M::h(3) == 1)) { std::cout << "FAIL: M::h(3)" << std::endl; ++fails; }
+  if (!(M::tk == 0)) { std::cout << "FAIL: M::tk" << std::endl; ++fails; }
 
   if (fails == 0) std::cout << "All sub_self_guard_werror tests passed!" << std::endl;
   return fails;

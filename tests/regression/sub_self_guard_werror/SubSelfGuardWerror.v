@@ -17,6 +17,14 @@ Definition g (a : nat) : nat := a - a.
 (** [Pos.sub] stops at one, so [p - p] is one. *)
 Definition h (p : positive) : positive := Pos.sub p p.
 
+(** The subtraction inside a local fixpoint, of its accumulator. *)
+Definition k (l : list nat) (n : N) : N :=
+  let fix go (l : list nat) (acc : N) {struct l} : N :=
+    match l with [] => N.sub acc acc | _ :: r => go r (N.succ acc) end in
+  go l n.
+
+Definition tk : N := k [1; 2] 5.
+
 End SubSelfGuardWerror.
 
 Crane Extraction "sub_self_guard_werror" SubSelfGuardWerror.
