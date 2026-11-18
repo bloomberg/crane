@@ -1,6 +1,6 @@
-From Crane Require Import Mapping.NatIntStd.
+From Crane Require Import Mapping.NatIntStd Mapping.ZInt.
 From Crane Require Extraction.
-From Stdlib Require Import List.
+From Stdlib Require Import List String ZArith.
 Import ListNotations.
 Set Crane Loopify.
 
@@ -19,14 +19,27 @@ Set Crane Loopify.
     the fixpoint as passing its captures on, so a frame saved before it
     kept [a1_value] by value, and the entry pushed from its handler pointed
     at the handler's copy; and a handler entering [go59] did not bind again
-    the [a1_value] its frame recomputes from [a1]. *)
+    the [a1_value] its frame recomputes from [a1].  [g1] is a much smaller
+    trigger the fuzzer found later. *)
 Module LoopifyControlLoweringFrameCopy.
 
 Inductive tree : Type := Leaf : tree | Node : tree -> nat -> tree -> tree.
 Record pt : Type := mkpt { px : nat; py : bool }.
+Inductive ptree (A : Type) : Type := PLeaf : ptree A | PNode : ptree A -> A -> ptree A -> ptree A.
+Arguments PLeaf {A}.
+Arguments PNode {A} _ _ _.
 
 Fixpoint g3 (l38 : (list (list bool))) (a36 : nat) (a37 : nat) : (tree * bool) :=
   match l38 with [] => (Leaf, true) | h39 :: r40 => (let fix go59 (l60 : (list (list pt))) (acc61 : (tree * bool)) {struct l60} : (tree * bool) := match l60 with [] => (Leaf, true) | e62 :: rest63 => go59 rest63 (g3 r40 0 0) end in go59 (@nil (list pt)) (g3 r40 (let fix go84 (l85 : (list pt)) (acc86 : nat) {struct l85} : nat := match l85 with [] => 0 | e87 :: rest88 => let rv89 := go84 rest88 acc86 in rv89 end in go84 (fold_right (fun (e91 : nat) (acc90 : (list pt)) => (@nil pt)) (@nil pt) [0]) 0) 0))
+  end.
+
+Fixpoint g1 (t : tree) (a : bool * (bool * nat)) (b : nat * nat) : ptree Z :=
+  match t with
+  | Leaf => PLeaf
+  | Node tl _ _ =>
+    let fix go (l : list (nat * nat)) (acc : ptree Z) {struct l} : ptree Z :=
+      match l with [] => PLeaf | _ :: r => go r (g1 tl (true, (true, 0)) (0, 0)) end in
+    go (flat_map (fun _ : string => @nil (nat * nat)) (@nil string)) PLeaf
   end.
 
 End LoopifyControlLoweringFrameCopy.

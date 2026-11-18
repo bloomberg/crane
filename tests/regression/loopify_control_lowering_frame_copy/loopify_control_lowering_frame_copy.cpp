@@ -15,7 +15,8 @@
 /// the fixpoint as passing its captures on, so a frame saved before it
 /// kept a1_value by value, and the entry pushed from its handler pointed
 /// at the handler's copy; and a handler entering go59 did not bind again
-/// the a1_value its frame recomputes from a1.
+/// the a1_value its frame recomputes from a1.  g1 is a much smaller
+/// trigger the fuzzer found later.
 std::pair<LoopifyControlLoweringFrameCopy::tree, bool>
 LoopifyControlLoweringFrameCopy::g3(const List<List<bool>> &l38, uint64_t _x,
                                     uint64_t _x0) {
@@ -133,6 +134,87 @@ LoopifyControlLoweringFrameCopy::g3(const List<List<bool>> &l38, uint64_t _x,
       std::shared_ptr<List<List<LoopifyControlLoweringFrameCopy::pt>>> a10 =
           std::move(_f.a10);
       _stack.emplace_back(_call_go59{std::move(_result), *a10, &a1_value});
+    }
+  }
+  return _result;
+}
+
+LoopifyControlLoweringFrameCopy::ptree<int64_t>
+LoopifyControlLoweringFrameCopy::g1(
+    const LoopifyControlLoweringFrameCopy::tree &t,
+    const std::pair<bool, std::pair<bool, uint64_t>> &_x,
+    const std::pair<uint64_t, uint64_t> &_x0) {
+  // Explicit stack replaces the non-tail recursion of g1: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
+    std::pair<uint64_t, uint64_t> _x0;
+    std::pair<bool, std::pair<bool, uint64_t>> _x;
+    const LoopifyControlLoweringFrameCopy::tree *t;
+  };
+
+  struct _call_go {
+    LoopifyControlLoweringFrameCopy::ptree<int64_t> _x3;
+    List<std::pair<uint64_t, uint64_t>> l;
+    const LoopifyControlLoweringFrameCopy::tree *a0_value;
+  };
+
+  struct _after_g1_in_Cons {
+    const LoopifyControlLoweringFrameCopy::tree *a0_value;
+    std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> a10;
+  };
+
+  using _frame = std::variant<_call, _call_go, _after_g1_in_Cons>;
+  LoopifyControlLoweringFrameCopy::ptree<int64_t> _result{};
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{_x0, _x, &t});
+  while (!_stack.empty()) {
+    _frame &_popped = _stack.back();
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
+      const std::pair<uint64_t, uint64_t> _x0 = _f._x0;
+      const std::pair<bool, std::pair<bool, uint64_t>> _x = _f._x;
+      const LoopifyControlLoweringFrameCopy::tree &t = *_f.t;
+      if (std::holds_alternative<
+              typename LoopifyControlLoweringFrameCopy::tree::Leaf>(t.v())) {
+        _result = ptree<int64_t>::pleaf();
+      } else {
+        const auto &[a0, _, _] =
+            std::get<typename LoopifyControlLoweringFrameCopy::tree::Node>(
+                t.v());
+        const LoopifyControlLoweringFrameCopy::tree &a0_value = *a0;
+        _stack.emplace_back(_call_go{
+            ptree<int64_t>::pleaf(),
+            List<String>::nil().template flat_map<std::pair<uint64_t,
+                                                            uint64_t>>([](
+                String) { return List<std::pair<uint64_t, uint64_t>>::nil(); }),
+            crane_raw(a0)});
+      }
+    } else if (std::holds_alternative<_call_go>(_popped)) {
+      auto _f = std::move(std::get<_call_go>(_popped));
+      _stack.pop_back();
+      const LoopifyControlLoweringFrameCopy::ptree<int64_t> &_x3 = _f._x3;
+      const List<std::pair<uint64_t, uint64_t>> &l = _f.l;
+      const LoopifyControlLoweringFrameCopy::tree &a0_value = *_f.a0_value;
+      if (std::holds_alternative<
+              typename List<std::pair<uint64_t, uint64_t>>::Nil>(l.v())) {
+        _result = ptree<int64_t>::pleaf();
+      } else {
+        const auto &[_, a10] =
+            std::get<typename List<std::pair<uint64_t, uint64_t>>::Cons>(l.v());
+        _stack.emplace_back(_after_g1_in_Cons{&a0_value, a10});
+        _stack.emplace_back(_call{
+            std::make_pair(UINT64_C(0), UINT64_C(0)),
+            std::make_pair(true, std::make_pair(true, UINT64_C(0))),
+            &a0_value});
+      }
+    } else {
+      auto _f = std::move(std::get<_after_g1_in_Cons>(_popped));
+      _stack.pop_back();
+      const LoopifyControlLoweringFrameCopy::tree &a0_value = *_f.a0_value;
+      std::shared_ptr<List<std::pair<uint64_t, uint64_t>>> a10 =
+          std::move(_f.a10);
+      _stack.emplace_back(_call_go{std::move(_result), *a10, &a0_value});
     }
   }
   return _result;
