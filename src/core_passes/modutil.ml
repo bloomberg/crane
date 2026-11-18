@@ -126,18 +126,13 @@ let record_iter_references do_term = function
     List.iter (fun (f : Core.Record.Field.t) -> Option.iter do_term f.projection) l
   | _ -> ()
 
-(** Iterate over all GlobRef.t occurring in a Core type. *)
+(** Iterate over all GlobRef.t occurring in a Core type, through a resolved
+    meta: a type extracted but not yet frozen reaches what it names through
+    the metas unification solved. *)
 let type_iter_references do_type t =
-  let rec iter = function
-    | Core.Type.Global_app {head = r; type_arguments = l; _} ->
-      do_type r;
-      List.iter iter l
-    | Core.Type.Arrow {parameter = a; result = b} ->
-      iter a;
-      iter b
-    | _ -> ()
-  in
-  iter t
+  Base.Core_util.fold_core_type
+    (fun () -> function Core.Type.Global_app {head = r; _} -> do_type r | _ -> ())
+    () t
 
 (** Iterate over constructor references in a pattern. *)
 let patt_iter_references do_cons p =
@@ -169,16 +164,24 @@ let ast_iter_references ?(prune = fun _ -> false) do_term do_cons do_type a =
     | Core.Expr.Global ({callee = r; _} as use) ->
       do_term r;
       Core.Global_use.iter_types (type_iter_references do_type) use
-    | Core.Expr.Construct {constructor = r; _} -> do_cons r
     | Core.Expr.Match {scrutinee_type = ty; branches = v; _} ->
       type_iter_references do_type ty;
       Array.iter (fun {Core.Match.Branch.pattern = p; _} -> patt_iter_references do_cons p) v
+    (* A binder's type is spelled where the binder is declared -- the
+       parameter of a lambda, a local, a local fixpoint -- and a
+       constructor's result type where it is built, [List<String>::nil()]:
+       a type named only there is needed as much as one a global is
+       instantiated at. *)
+    | Core.Expr.Lambda {parameter_type = ty; _} | Core.Expr.Let {binder_type = ty; _} ->
+      type_iter_references do_type ty
+    | Core.Expr.Construct {constructor = r; result_type = ty; _} ->
+      do_cons r;
+      type_iter_references do_type ty
+    | Core.Expr.Fixpoint g | Core.Expr.Cofixpoint g ->
+      Array.iter (fun (_, ty) -> type_iter_references do_type ty) (Core.Recursion.Group.functions g)
     | Core.Expr.Bound_variable _
-     |Core.Expr.Lambda _
      |Core.Expr.Apply _
-     |Core.Expr.Let _
      |Core.Expr.Tuple _
-     |Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _
      |Core.Expr.Runtime_error _
      |Core.Expr.Erased_value _
      |Core.Expr.Axiom_value _

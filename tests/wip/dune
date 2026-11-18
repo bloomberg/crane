@@ -272,17 +272,6 @@
   (deps local_fix_capture_in_fold_lambda.t.exe)
   (action (run ./local_fix_capture_in_fold_lambda.t.exe))))
 
-(subdir rocq_string_type_undeclared
- (rule
-  (targets rocq_string_type_undeclared.t.exe)
-  (deps RocqStringTypeUndeclared.vo rocq_string_type_undeclared.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} rocq_string_type_undeclared.t.exe rocq_string_type_undeclared.t.cpp rocq_string_type_undeclared.cpp)))
- (rule
-  (alias runtest)
-  (deps rocq_string_type_undeclared.t.exe)
-  (action (run ./rocq_string_type_undeclared.t.exe))))
-
 
 (subdir sub_self_guard_werror
  (rule
