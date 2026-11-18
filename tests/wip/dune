@@ -381,3 +381,36 @@
   (alias runtest)
   (deps lifted_local_fix_result_cast.t.exe)
   (action (run ./lifted_local_fix_result_cast.t.exe))))
+
+(subdir n_modulo_by_zero
+ (rule
+  (targets n_modulo_by_zero.t.exe)
+  (deps NModuloByZero.vo n_modulo_by_zero.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} n_modulo_by_zero.t.exe n_modulo_by_zero.t.cpp n_modulo_by_zero.cpp)))
+ (rule
+  (alias runtest)
+  (deps n_modulo_by_zero.t.exe)
+  (action (run ./n_modulo_by_zero.t.exe))))
+
+(subdir stream_match_sv_redefinition
+ (rule
+  (targets stream_match_sv_redefinition.t.exe)
+  (deps StreamMatchSvRedefinition.vo stream_match_sv_redefinition.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stream_match_sv_redefinition.t.exe stream_match_sv_redefinition.t.cpp stream_match_sv_redefinition.cpp)))
+ (rule
+  (alias runtest)
+  (deps stream_match_sv_redefinition.t.exe)
+  (action (run ./stream_match_sv_redefinition.t.exe))))
+
+(subdir unused_let_local_fix_werror
+ (rule
+  (targets unused_let_local_fix_werror.t.exe)
+  (deps UnusedLetLocalFixWerror.vo unused_let_local_fix_werror.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unused_let_local_fix_werror.t.exe unused_let_local_fix_werror.t.cpp unused_let_local_fix_werror.cpp)))
+ (rule
+  (alias runtest)
+  (deps unused_let_local_fix_werror.t.exe)
+  (action (run ./unused_let_local_fix_werror.t.exe))))
