@@ -20,6 +20,14 @@ Class Sz (A : Type) := { sz : A -> nat }.
 Fixpoint g (l : list nat) : bool :=
   match l with [] => true | _ :: r => Nat.leb 1 (sz (g r)) end.
 
+(** Two method calls nested on the recursive result, [sz (sz (h m))]: the
+    frame keeps both instance fields, and the outer one, read once the let
+    binding the call's result is done, was planned as kept where the C++
+    reading moves it ("frame save", as above). *)
+#[global] Instance sz_nat : Sz nat := { sz n := S n }.
+
+Fixpoint h (n : nat) : nat := match n with 0 => 0 | S m => sz (sz (h m)) end.
+
 End LoopifyClassMethodFrameSave.
 
 Crane Extraction "loopify_class_method_frame_save" LoopifyClassMethodFrameSave.

@@ -55,8 +55,9 @@ type resumes = {
    frame saved for the call keeps, with its level, and whether the save is
    its last read -- nothing the turn evaluates after the save, the call's
    arguments, nor anything a closure reads at its uses, nor what follows the
-   let, reads it or a part of it, nor is another binder the frame keeps a
-   part of it or it one of that one; and it is no variable closures copy. *)
+   let besides the binders the frame keeps, reads it or a part of it, nor is
+   another binder the frame keeps a part of it or it one of that one; and it
+   is no variable closures copy. *)
 type save = {save_at : Core.Occurrence.t; saved : (Core.Binder.t * int * bool) list}
 
 (* A call that may enter a frame of the machine the region is lowered as
@@ -630,7 +631,11 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
             | _ -> Levels.empty )
         | _ -> Levels.empty
       in
-      let read_after = Levels.union (free parents d t) (Levels.union s.outside entered) in
+      (* What follows the let reads a binder the frame keeps in the frame
+         ({!resume.kept}), there or in a handler further on: the let's
+         binder may be an argument, [sz0 (let r := g m in sz1 r)], and what
+         reads [sz0] after the let is the same handler. *)
+      let read_after = Levels.union (free parents d t) (Levels.union (Levels.diff s.outside s.kept) entered) in
       let last l =
         (not (Levels.mem l copied))
         && (not (Levels.exists (overlap parents l) read_after))

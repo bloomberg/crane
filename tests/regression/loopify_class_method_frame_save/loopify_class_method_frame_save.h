@@ -122,4 +122,11 @@ struct LoopifyClassMethodFrameSave {
 
   static_assert(Sz<sz_bool, bool>);
   static bool g(const List<uint64_t> &l);
+
+  struct sz_nat {
+    constexpr static uint64_t sz(uint64_t n) { return (n + 1); }
+  };
+
+  static_assert(Sz<sz_nat, uint64_t>);
+  static uint64_t h(uint64_t n);
 };
