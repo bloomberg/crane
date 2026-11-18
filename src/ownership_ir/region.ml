@@ -1556,12 +1556,19 @@ module Frame_save = struct
 
   let lookup binder = List.find_map (fun (b, t) -> if same b binder then Some t else None) !recorded
 
+  let alternatives = Base.State.cell Base.State.Extraction 0
+
+  let generating_alternatives f =
+    alternatives := !alternatives + 1;
+    Fun.protect ~finally:(fun () -> alternatives := !alternatives - 1) f
+
   let record binder t =
     match lookup binder with
     | Some t' when List.equal Core.Binder.equal t t' -> ()
     | Some t' ->
-      Base.Probe.violation "frame save"
-        (Pp.str "a let a frame machine resumes at is generated saving its frame otherwise than it was before");
+      if !alternatives = 0 then
+        Base.Probe.violation "frame save"
+          (Pp.str "a let a frame machine resumes at is generated saving its frame otherwise than it was before");
       let both = List.filter (fun b -> List.exists (Core.Binder.equal b) t') t in
       recorded := (binder, both) :: List.filter (fun (b, _) -> not (same b binder)) !recorded
     | None -> recorded := (binder, t) :: !recorded

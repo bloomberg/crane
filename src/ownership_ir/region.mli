@@ -371,6 +371,13 @@ module Frame_save : sig
       both move is moved. *)
   val record : Core.Binder.t -> t -> unit
 
+  (** [generating_alternatives f]: [f ()], which may generate a let more
+      than once under plans of its own -- a match's reuse arm, owning the
+      fields its shared arm borrows, and that arm -- so that what each
+      plan's save moves differs by right, and only what all of them move is
+      moved, with no violation. *)
+  val generating_alternatives : (unit -> 'a) -> 'a
+
   (** What was recorded of the let binding [binder]: [None] where no frame
       is saved there. *)
   val lookup : Core.Binder.t -> t option

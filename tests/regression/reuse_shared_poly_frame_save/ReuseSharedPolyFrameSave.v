@@ -11,7 +11,10 @@ Set Crane SharedVariant.
     Under Reuse and SharedVariant, a polymorphic non-tail local fixpoint
     building a list of lists fails the ownership check under CRANE_CHECK_IR=1:
     "frame save: a let a frame machine resumes at is generated saving its
-    frame otherwise than it was before". *)
+    frame otherwise than it was before".  The match's reuse arm generates
+    the branch, and the let in it, again under the arm's plan, which owns
+    what the shared arm borrows; the save at that let now records what both
+    move. *)
 Module ReuseSharedPolyFrameSave.
 
 Definition f {A : Type} (a : A) : list (list A) :=

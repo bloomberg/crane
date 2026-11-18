@@ -523,7 +523,14 @@ let gen_match_branch cx ?slot env (typ : Core.Type.t) rty cname ids dummies body
     {b Type resolution.}  The match type is first refined from the type of
     the variable the scrutinee reads ({!Match_types.match_scrutinee_type}), so that
     field types and constructor type parameters are concrete. *)
-let gen_cpp_case cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
+let rec gen_cpp_case cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
+  (* A match that may reuse its cell generates each branch body in a reuse
+     arm, under the arm's plan, and again in the shared arm. *)
+  if Base.Table.reuse_here () && Lowering_state.matches_reuse cx then
+    Ownership_ir.Region.Frame_save.generating_alternatives (fun () -> gen_cpp_case_once cx ?slot typ t env pv case_occ)
+  else gen_cpp_case_once cx ?slot typ t env pv case_occ
+
+and gen_cpp_case_once cx ?slot (typ : Core.Type.t) t env pv case_occ : Cpp_ir.Lowered.Expr.t =
   let typ =
     let var_type i = try Some (get_env_type cx i) with _ -> None in
     let at bt = Match_types.match_scrutinee_type cx env typ t pv ~var_type ~var_cpp_type:(fun _ -> bt) in

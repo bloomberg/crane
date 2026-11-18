@@ -217,17 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir reuse_shared_poly_frame_save
- (rule
-  (targets reuse_shared_poly_frame_save.t.exe)
-  (deps ReuseSharedPolyFrameSave.vo reuse_shared_poly_frame_save.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} reuse_shared_poly_frame_save.t.exe reuse_shared_poly_frame_save.t.cpp reuse_shared_poly_frame_save.cpp)))
- (rule
-  (alias runtest)
-  (deps reuse_shared_poly_frame_save.t.exe)
-  (action (run ./reuse_shared_poly_frame_save.t.exe))))
-
 (subdir sum_match_const_v_mut
  (rule
   (targets sum_match_const_v_mut.t.exe)
