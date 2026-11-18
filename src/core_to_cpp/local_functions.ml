@@ -1351,7 +1351,9 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
           List.map (fun (_, id_opt) : Cpp_ir.Lowered.Expr.t -> Local (Option.get id_opt)) pa_params
         in
         let fix_id = fst (List.nth renamed_ids x) in
-        let full_call = Cpp_ir.Build.call (Local fix_id) (args @ pa_exprs) in
+        (* [args] is last first ({!gen_args}), as the full calls below read
+           it. *)
+        let full_call = Cpp_ir.Build.call (Local fix_id) (List.rev args @ pa_exprs) in
         decls @ defs
         @ deref_subst [k (Cpp_ir.Build.lambda pa_params None [Return (Some full_call)] ~capture:Stored)]
       end

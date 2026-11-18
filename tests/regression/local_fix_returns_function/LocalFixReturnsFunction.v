@@ -19,6 +19,22 @@ Definition t (l : list nat) : nat :=
   (let fix go (l : list nat) (acc : nat -> nat) {struct l} : nat -> nat :=
      match l with [] => (fun x => x + 1) | _ :: r => go r acc end in go l (fun x => x)).
 
+(** The same fixpoint at top level, applied to fewer arguments than it
+    binds once eta-expansion gives it the definition's last parameter: the
+    closure for the partial application passed the written arguments last
+    first, [go(acc, l, _pa0)], which does not compile for [g] and swaps
+    [l] and [acc] for [h]. *)
+Definition g (n : nat) : option nat -> option nat :=
+  let fix go (l : list bool) (acc : option nat -> option nat) {struct l} : option nat -> option nat :=
+    match l with [] => (fun _ => None) | _ :: r => go r acc end in go [] (fun _ => None).
+
+Definition h (n : nat) : option nat -> option nat :=
+  let fix go (l : list bool) (acc : nat) {struct l} : option nat -> option nat :=
+    match l with
+    | [] => (fun x => match x with Some y => Some (y + acc) | None => Some acc end)
+    | _ :: r => go r (S acc)
+    end in go [true] n.
+
 End LocalFixReturnsFunction.
 
 Crane Extraction "local_fix_returns_function" LocalFixReturnsFunction.

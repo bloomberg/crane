@@ -30,3 +30,73 @@ uint64_t LocalFixReturnsFunction::t(const List<uint64_t> &l) {
     }
   }
 }
+
+/// The same fixpoint at top level, applied to fewer arguments than it
+/// binds once eta-expansion gives it the definition's last parameter: the
+/// closure for the partial application passed the written arguments last
+/// first, go(acc, l, _pa0), which does not compile for g and swaps
+/// l and acc for h.
+std::optional<uint64_t>
+LocalFixReturnsFunction::g(uint64_t, const std::optional<uint64_t> &x0_) {
+  return []() {
+    auto go =
+        [](List<bool> l,
+           crane::fn<std::optional<uint64_t>(std::optional<uint64_t>)>,
+           std::optional<uint64_t>)
+             -> std::optional<uint64_t> {
+          // Loop replaces the tail recursion: each recursive call updates the
+          // loop variables.
+          List<bool> _loop_l = std::move(l);
+          while (true) {
+            if (std::holds_alternative<typename List<bool>::Nil>(
+                    _loop_l.v_mut())) {
+              return std::optional<uint64_t>();
+            } else {
+              auto &[_, a1] =
+                  std::get<typename List<bool>::Cons>(_loop_l.v_mut());
+              _loop_l = List<bool>(*a1);
+            }
+          }
+        };
+    return [=](std::optional<uint64_t> _pa0) {
+      return go(List<bool>::nil(), [](const std::optional<uint64_t> &) {
+        return std::optional<uint64_t>();
+      },
+                _pa0);
+    };
+  }()(x0_);
+}
+
+std::optional<uint64_t>
+LocalFixReturnsFunction::h(uint64_t n, const std::optional<uint64_t> &x0_) {
+  return [&]() {
+    auto go =
+        [](List<bool> l, uint64_t acc,
+           std::optional<uint64_t> x0_0)
+             -> std::optional<uint64_t> {
+          // Loop replaces the tail recursion: each recursive call updates the
+          // loop variables.
+          uint64_t _loop_acc = acc;
+          List<bool> _loop_l = std::move(l);
+          while (true) {
+            if (std::holds_alternative<typename List<bool>::Nil>(
+                    _loop_l.v_mut())) {
+              if (x0_0.has_value()) {
+                const uint64_t &y = *x0_0;
+                return std::make_optional<uint64_t>((y + _loop_acc));
+              } else {
+                return std::make_optional<uint64_t>(_loop_acc);
+              }
+            } else {
+              auto &[_, a1] =
+                  std::get<typename List<bool>::Cons>(_loop_l.v_mut());
+              _loop_acc = (_loop_acc + 1);
+              _loop_l = List<bool>(*a1);
+            }
+          }
+        };
+    return [=](std::optional<uint64_t> _pa0) {
+      return go(List<bool>::cons(true, List<bool>::nil()), n, _pa0);
+    };
+  }()(x0_);
+}

@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
@@ -23,6 +24,15 @@ struct List; /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differ
 /// generated code but nowhere in Core".
 struct LocalFixReturnsFunction {
   static uint64_t t(const List<uint64_t> &l);
+  /// The same fixpoint at top level, applied to fewer arguments than it
+  /// binds once eta-expansion gives it the definition's last parameter: the
+  /// closure for the partial application passed the written arguments last
+  /// first, go(acc, l, _pa0), which does not compile for g and swaps
+  /// l and acc for h.
+  static std::optional<uint64_t> g(uint64_t _x,
+                                   const std::optional<uint64_t> &x0_);
+  static std::optional<uint64_t> h(uint64_t n,
+                                   const std::optional<uint64_t> &x0_);
 };
 
 template <typename A> struct List {
