@@ -188,8 +188,8 @@ struct StreamMatchSvRedefinition {
 
   static stream sconst(uint64_t n);
   static inline const uint64_t t = []() {
-    auto &&_sv = sconst(UINT64_C(0));
-    const auto &[a0, _] = std::get<typename stream::SCons>(_sv.v());
+    auto &&_sv0 = sconst(UINT64_C(0));
+    const auto &[a0, _] = std::get<typename stream::SCons>(_sv0.v());
     auto &&_sv = ListDef::seq(a0, (UINT64_C(7) ? a0 % UINT64_C(7) : a0));
     if (std::holds_alternative<typename List<uint64_t>::Nil>(_sv.v())) {
       return List<bool>::nil();

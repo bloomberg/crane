@@ -956,8 +956,17 @@ let is_named_object : expr -> bool = function Local _ | This | Dereference This 
    temporary lives across the branches; any other computed scrutinee is bound
    whole by [const] reference.  A match of one constructor, exhaustive, that
    binds nothing never reads its scrutinee, and holds nothing. *)
-let held_scrutinee (scrut : phase Match.scrutinee) (branches : phase Match.branch list) default : (stmt * expr) option =
-  let local () = Id.of_string (scrutinee_name branches) in
+let held_scrutinee ~avoid (scrut : phase Match.scrutinee) (branches : phase Match.branch list) default :
+    (stmt * expr) option =
+  let local () =
+    let base = scrutinee_name branches in
+    let rec from i =
+      let x = Id.of_string (base ^ string_of_int i) in
+      if Cpp_ir.Variables.mem x avoid then from (i + 1) else x
+    in
+    let x = Id.of_string base in
+    if Cpp_ir.Variables.mem x avoid then from 0 else x
+  in
   let is_v v = Id.to_string v = "v" in
   let forwarding : ty = Reference (Forwarding, Auto) in
   match (branches, default, scrut.expr) with
@@ -974,19 +983,46 @@ let held_scrutinee (scrut : phase Match.scrutinee) (branches : phase Match.branc
     let x = local () in
     Some (Bind_variable (x, Declare (Reference (Lvalue, Const Auto), None), e), Local x)
 
+(* The names [s] declares in the scope it is written in: its own
+   declarations, and those of a match of one constructor, exhaustive, which
+   is written without a block of its own -- its binding and its branch's
+   statements are the enclosing scope's. *)
+let rec declared_in_scope (s : stmt) : Id.t list =
+  match s with
+  | Bind_variable (x, Declare _, _) | Declare (x, _, _) | Declare_value_initialized (x, _) -> [x]
+  | Structured_binding (xs, _) -> xs
+  | Match (_, [br], None) ->
+    (match br.var with Some x -> [x] | None -> [])
+    @ List.map (fun (fb : phase Match.field_binding) -> fb.name) br.field_bindings
+    @ List.concat_map declared_in_scope br.body
+  | _ -> []
+
+(* The name a match holds its scrutinee under is fresh for the names declared
+   in its scope before it and for those the match itself declares there: a
+   match in the branch of a match of one constructor -- named first, inside
+   out -- shares its scope. *)
 let name_scrutinees (d : settled) : settled =
-  let rec stmts ss = List.concat_map stmt ss
-  and stmt (s : stmt) : stmt list =
+  let rec stmts ss =
+    let _, outs =
+      List.fold_left
+        (fun (names, acc) s ->
+          let out = stmt ~names s in
+          (names @ List.concat_map declared_in_scope out, out :: acc) )
+        ([], []) ss
+    in
+    List.concat (List.rev outs)
+  and stmt ~names (s : stmt) : stmt list =
     match Map.stmt (rw ()) s with
     | Match (scrut, branches, default) as s -> (
-      match held_scrutinee scrut branches default with
+      let avoid = names @ declared_in_scope s in
+      match held_scrutinee ~avoid scrut branches default with
       | Some (held, expr) -> [held; Match ({scrut with expr}, branches, default)]
       | None -> [s] )
     | s -> [s]
   (* Every statement a statement or a declaration holds is in a list, which
      [stmts] rewrites; nothing asks for one statement alone. *)
   and one s =
-    match stmt s with
+    match stmt ~names:[] s with
     | [s] -> s
     | _ -> CErrors.anomaly (Pp.str "name_scrutinees: a match held outside a statement list")
   and fe e = Map.expr (rw ()) e
