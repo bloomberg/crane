@@ -15185,3 +15185,14 @@
   (alias runtest)
   (deps unit_accum_local_fix.t.exe)
   (action (run ./unit_accum_local_fix.t.exe))))
+
+(subdir module_alias_shadows_global
+ (rule
+  (targets module_alias_shadows_global.t.exe)
+  (deps ModuleAliasShadowsGlobal.vo module_alias_shadows_global.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_alias_shadows_global.t.exe module_alias_shadows_global.t.cpp module_alias_shadows_global.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_alias_shadows_global.t.exe)
+  (action (run ./module_alias_shadows_global.t.exe))))

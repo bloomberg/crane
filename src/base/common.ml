@@ -1315,6 +1315,17 @@ let kinded kinds rls =
   let scopes, base = split kinds rls in
   Cpp_name.name scopes base
 
+(** [name], a value ([k] is [Term]) fully qualified from global scope,
+    written from there ([::]) where it is bare and a scope of [vis] declares
+    a member of the same spelling, which would otherwise find that member: a
+    monolithic file writes no qualifier, so its definitions are bare at
+    global scope.  A type is not: what it is written as (capitalised, through
+    its wrapper struct) is decided later, against other names. *)
+let rooted_if_hidden k vis name =
+  match (k, Cpp_name.scopes name) with
+  | Term, [] when hidden_by_member vis (Cpp_name.base name) -> Cpp_name.within Cpp_name.Global name
+  | _ -> name
+
 (** Print a locally-visible reference. [pp_ocaml_local] : [mp] has something in
     common with the innermost scope of [vis] but isn't equal to it.
     @param vis    The scopes visible where the reference is written
@@ -1339,8 +1350,11 @@ let pp_ocaml_local vis k prefix mp kinds rls olab =
     (* C++ lets a name be qualified from inside the scope that declares it, so
        a local clash is resolved by spelling the name in full.  OCaml cannot,
        and resolved it instead by duplicating the definition into a [Coq__N]
-       wrapper module; Crane has no need of that. *)
-    kinded kinds rls
+       wrapper module; Crane has no need of that.  In full is still bare for a
+       definition of a monolithic file, which writes no qualifier: a member
+       [P::dbl] aliasing the file's [dbl] would spell it [dbl], itself. *)
+    let rec inner = function v :: vis when not (ModPath.equal v.mp prefix) -> v :: inner vis | _ -> [] in
+    rooted_if_hidden k (inner vis) (kinded kinds rls)
 
 (** Print an externally-defined reference. [pp_ocaml_extern] : [mp] isn't local,
     it is defined in another [MPfile], and the file is always named.  OCaml
@@ -1407,7 +1421,9 @@ let pp_cpp_gen vis k mp kinds rls olab =
     else if is_non_output_module base then
       Cpp_name.unqualified (unquote (last rls))
     else
-      pp_ocaml_extern vis base kinds rls
+      (* A definition of another monolithic file is bare too, and hidden
+         alike by a member of the same name. *)
+      rooted_if_hidden k vis (pp_ocaml_extern vis base kinds rls)
 
 (** The innermost module of a visibility. *)
 let innermost_mp = function
