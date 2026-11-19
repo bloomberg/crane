@@ -291,7 +291,7 @@ struct LocalFixMethodPointerJoin {
     return []() {
       crane::fn<uint64_t(uint64_t)> w177;
       List<uint64_t> l118 = List<uint64_t>::nil();
-      w177 = [&]() {
+      w177 = [&]() -> crane::fn<uint64_t(uint64_t)> {
         if (std::holds_alternative<typename List<uint64_t>::Nil>(l118.v_mut())) {
           if (mon_bool::mop(true, true)) {
             return List<unsigned int>::nil().template fold_left<
