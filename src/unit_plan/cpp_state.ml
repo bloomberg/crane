@@ -1027,8 +1027,10 @@ let bystander_struct_name mp =
     wrapper's struct to namespace scope does not have the struct as its
     scope.
     - A bare name is the one a use inside the reference's own module would
-      say, and the wrapper's name alone does not get back to it: a bystander
-      keeps its own struct, so the path runs through that struct too.
+      say (or [::name], where a member hid it, which the wrapper's name gets
+      past as well), and the wrapper's name alone does not get back to it: a
+      bystander keeps its own struct, so the path runs through that struct
+      too.
       Flattened children have no struct left to name, and for them the
       wrapper's name is the whole of it.
     - A qualified name, as its visibility qualifies it ([N::add]): a
@@ -1044,7 +1046,7 @@ let wrapper_qualify layout (r : GlobRef.t) (name : Base.Cpp_name.t) : Base.Cpp_n
     let mp = modpath_of_r r in
     match (Core_plan.Module_plan.wrapper layout mp, name) with
     | None, _ | _, Base.Cpp_name.Foreign _ -> name
-    | Some (struct_name, role), Base.Cpp_name.Name {scopes = []; base} ->
+    | Some (struct_name, role), Base.Cpp_name.Name {scopes = [] | [Base.Cpp_name.Global]; base} ->
       let through_child =
         if role = Core_plan.Module_plan.Bystander then [Base.Cpp_name.Class (bystander_struct_name mp)]
         else []
