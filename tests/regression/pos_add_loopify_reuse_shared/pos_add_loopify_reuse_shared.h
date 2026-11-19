@@ -168,9 +168,12 @@ struct Coq_Pos {
   }
 
   static uint64_t to_nat(const Positive &x);
+  static Positive of_succ_nat(uint64_t n);
 };
 
 struct Pos {
+  static Positive succ(const Positive &x);
+
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, T1 &, T1 &> &&
              std::is_invocable_r_v<T1, F0 &, T1 &&, T1 &&>
@@ -218,22 +221,29 @@ struct Pos {
   }
 
   static uint64_t to_nat(const Positive &x);
+  static Positive of_succ_nat(uint64_t n);
 };
 
 struct BinNat {
   static N add(N n, N m);
   static uint64_t to_nat(const N &a0);
+  static N of_nat(uint64_t n);
 };
 
 /// Found by Ephyra (https://github.com/datadog-labs/ephyra) differential
 /// testing of Crane: a generated program, shrunk by ephyra and reduced by hand.
 ///
-/// Wrong value, no diagnostic.  With Loopify, Reuse and SharedVariant all on
-/// (any two are fine), Stdlib's Pos.add 9 19 is 20 in C++ instead of
-/// 28 (so N.add 9 19 too, without any N mapping); Pos.add 1 1,
-/// Pos.add 3 1, Pos.succ 7 are right.  The mutually recursive
-/// Pos.add/Pos.add_carry run as explicit-stack frames reusing their
-/// matched cells in place.  No sanitizer report.
+/// Was a wrong value, no diagnostic.  With Loopify, Reuse and SharedVariant
+/// all on (any two were fine), Stdlib's Pos.add 9 19 was 20 in C++
+/// instead of 28 (so N.add 9 19 too, without any N mapping);
+/// Pos.add 1 1, Pos.add 3 1, Pos.succ 7 were right.  No sanitizer
+/// report.
+///
+/// The mutually recursive Pos.add/Pos.add_carry run as one machine,
+/// add_carry adopted as an entry taking its arguments by value.  Its
+/// handler matched them through v_mut(), which copies a shared block, and
+/// pushed a _call of add pointing into the copy's fields; the copy died
+/// with the handler and the pool gave its memory to the next block.
 struct PosAddLoopifyReuseShared {
   static inline const uint64_t a = Coq_Pos::to_nat(Coq_Pos::add(
       Positive::xi(Positive::xo(Positive::xo(Positive::xh()))),
@@ -244,4 +254,25 @@ struct PosAddLoopifyReuseShared {
           Positive::xi(Positive::xo(Positive::xo(Positive::xh())))))));
   static inline const uint64_t c =
       Coq_Pos::to_nat(Coq_Pos::add(Positive::xh(), Positive::xh()));
+  static inline const uint64_t d = Coq_Pos::to_nat(Coq_Pos::add_carry(
+      Positive::xi(Positive::xo(Positive::xo(Positive::xh()))),
+      Positive::xi(Positive::xi(Positive::xo(Positive::xo(Positive::xh()))))));
+  static inline const uint64_t e = Coq_Pos::to_nat(
+      Coq_Pos::add(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+          Positive::xi(Positive::xi(Positive::xi(Positive::xh()))))))),
+                   Positive::xh()));
+  static inline const uint64_t f =
+      Coq_Pos::to_nat(Coq_Pos::add(
+          Positive::xi(
+              Positive::xi(Positive::xi(Positive::xi(Positive::xi(Positive::xi(
+                  Positive::xi(Positive::xi(Positive::xi(Positive::xh()))))))))),
+          Positive::xi(
+              Positive::xo(
+                  Positive::xo(Positive::xo(
+                      Positive::xo(Positive::xo(Positive::xo(Positive::xo(
+                          Positive::xo(Positive::xo(Positive::xh()))))))))))));
+  /// Sums of positives built at run time, so held once, across every carry.
+  static uint64_t pos_add(uint64_t x, uint64_t y);
+  static uint64_t pos_add_carry(uint64_t x, uint64_t y);
+  static uint64_t n_add(uint64_t x, uint64_t y);
 };
