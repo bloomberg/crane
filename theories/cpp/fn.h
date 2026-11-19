@@ -39,12 +39,13 @@ namespace crane {
 #ifdef CRANE_FN_STATS
 struct fn_stats_t {
   unsigned long long made = 0;   // blocks allocated
+  unsigned long long closed = 0; // made from a callable holding nothing: no block
   unsigned long long shared = 0; // copies that bumped a count
   unsigned long long calls = 0;
   unsigned long long freed = 0;
   ~fn_stats_t() {
-    std::fprintf(stderr, "crane::fn: made=%llu shared=%llu calls=%llu freed=%llu\n",
-                 made, shared, calls, freed);
+    std::fprintf(stderr, "crane::fn: made=%llu closed=%llu shared=%llu calls=%llu freed=%llu\n",
+                 made, closed, shared, calls, freed);
   }
 };
 inline fn_stats_t &fn_stats() noexcept {
@@ -142,6 +143,23 @@ struct holder : block<R, A...>,
     holder::dispose(static_cast<const holder *>(static_cast<const shared_block *>(b)), h);
   }
 };
+
+// The block of a callable that holds nothing -- a lambda that captures
+// nothing, a stateless function object: one per type and signature, made
+// on first use and immortal, so every [fn] made from such a callable shares
+// it and making one allocates nothing, as OCaml allocates a closed closure
+// once, statically.  Its count is never written, so it is shared across
+// threads under any count policy; it is allocated outside the thread heaps,
+// so that no thread's exit takes it with it.
+template <class D, class R, class... A, class G> const block<R, A...> *closed(G &&g) {
+  using H = holder<D, R, A...>;
+  static const block<R, A...> *const b = [&] {
+    H *h = ::new (::operator new(sizeof(H))) H(std::forward<G>(g));
+    h->rc.make_immortal();
+    return static_cast<const block<R, A...> *>(h);
+  }();
+  return b;
+}
 
 // The signature a callable's own [operator()] states, for the deduction
 // guide: the same rule [std::function]'s guide follows.
@@ -290,8 +308,13 @@ public:
                   fn_detail::is_std_function<D>::value)
       if (!f)
         return;
-    p_ = new fn_detail::holder<D, R, A...>(std::forward<F>(f));
-    CRANE_FN_STAT(made);
+    if constexpr (std::is_empty_v<D>) {
+      p_ = fn_detail::closed<D, R, A...>(std::forward<F>(f));
+      CRANE_FN_STAT(closed);
+    } else {
+      p_ = new fn_detail::holder<D, R, A...>(std::forward<F>(f));
+      CRANE_FN_STAT(made);
+    }
   }
 
 #ifndef CRANE_STRICT_ARITY
