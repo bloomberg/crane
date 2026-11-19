@@ -1368,16 +1368,9 @@ let gen_dfun cx ~minted n b cty ty temps =
     if is_cofix_return then
       suspend_whole ~cpp_of:(Types.cpp_ir_of_core_type cx env type_var_ids) ~cod core_ret x
     else if cod = Void then
-      (* void function: execute expression for side effects, then return.
-         Some tail expressions (like writeTVar) have side effects that must
-         not be discarded. Skip pure expressions (variables, enum values,
-         inline-custom literals like std::monostate{}) to avoid dead-code
-         warnings. *)
-      ( match x with
-      | Enum_value _ | Local _ | Literal (Int _) | Literal (Float _) | Foreign_text _ ->
-        Return None
-      | Entity (_, _, Some ci) when ci.inline <> None -> Return None
-      | _ -> Block [Expression x; Return None] )
+      (* Some tail expressions (like writeTVar) have side effects that must
+         not be discarded. *)
+      Cpp_build.return_into_void x
     else
       Return (Some x)
   in

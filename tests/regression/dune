@@ -15163,3 +15163,14 @@
   (alias runtest)
   (deps functor_st_list_optional_obj.t.exe)
   (action (run ./functor_st_list_optional_obj.t.exe))))
+
+(subdir unit_accum_local_fix
+ (rule
+  (targets unit_accum_local_fix.t.exe)
+  (deps UnitAccumLocalFix.vo unit_accum_local_fix.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} unit_accum_local_fix.t.exe unit_accum_local_fix.t.cpp unit_accum_local_fix.cpp)))
+ (rule
+  (alias runtest)
+  (deps unit_accum_local_fix.t.exe)
+  (action (run ./unit_accum_local_fix.t.exe))))

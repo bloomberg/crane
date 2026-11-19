@@ -106,6 +106,14 @@ let mentions_unresolved_promoted cx (ty : Cpp_ir.Lowered.Type.t) =
 let type_term_arg : (Lowering_state.t -> env -> Core.Expr.t -> Cpp_ir.Lowered.Expr.t) ref =
   ref (fun _ _ _ -> CErrors.anomaly (Pp.str "Lower_expr.type_term_arg: unset"))
 
+(** Whether a function whose Core result is [t2], converted to [c], returns
+    C++ [void]: [c] is the unit type, or [t2] is unit under a sequential
+    monad ({!Monadic.core_type_is_void_call}).  Every function type's codomain
+    is decided here, so a body generated against a function's result reads
+    the same answer its signature does. *)
+let result_is_void (t2 : Core.Type.t) (c : Cpp_ir.Lowered.Type.t) =
+  is_cpp_unit_type c || Monadic.core_type_is_void_call t2
+
 (** [cpp_ir_of_core_type env ~ns tvars t] is the C++ type of the Core type [t],
     a variable named as [tvars] names it; [ns] are the inductives whose
     recursive occurrences, at a constructor's storage, are held behind a
@@ -148,9 +156,7 @@ let rec cpp_ir_of_core_type cx
          to match void-ified function definitions. Check the Core type [t2]
          since the C++ type may still be a monad Core.Type.Global_app, not bare unit. *)
       let voidify_cod (c : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
-        if is_cpp_unit_type c then Void
-        else if Monadic.core_type_is_void_call t2 then Void
-        else c
+        if result_is_void t2 c then Void else c
       in
       (* A result the arguments only pin down as a type index is not something
          a template parameter can stand for; erase it. *)

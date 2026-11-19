@@ -21,6 +21,18 @@ open Base.Type_util
     them apart. *)
 let dead_branch_message = "unreachable: impossible dependent match branch"
 
+(** The statement returning [x] from a function whose result is [void]: [x]
+    runs for its side effects, then a bare [return;].  A pure [x] (a
+    variable, an enumerator, a literal, an inline custom's text such as
+    [std::monostate{}]) is dropped.  The continuation of a body whose result
+    is [void], so a value a branch hands back -- a [unit] accumulator, say --
+    is returned as nothing, as the signature declares. *)
+let return_into_void (x : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Stmt.t =
+  match x with
+  | Enum_value _ | Local _ | Literal (Int _) | Literal (Float _) | Foreign_text _ -> Return None
+  | Entity (_, _, Some ci) when ci.inline <> None -> Return None
+  | _ -> Block [Expression x; Return None]
+
 (** [mk_lambda ?tparams params ret body ~capture] is {!Cpp_ir.Build.lambda}
     with template parameters of its own, [tparams], less those none of its
     [params] (source order) deduces ({!Core_plan.Head_relaxation.settle_lowered_lambda}). *)
