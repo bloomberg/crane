@@ -316,7 +316,6 @@ Section Classes.
       change (@ITree.bind ?E) with (@Monad.bind (itree E) _) in Hintrp.
       setoid_rewrite bind_Ret_l in Hintrp.
       cbv beta iota in Hintrp.
-      unfold Ret in Hintrp.
       rewrite interp_st_Ret in Hintrp.
       eapply eutt_inv_Ret in Hintrp.
       inversion Hintrp. subst. split.
@@ -354,7 +353,6 @@ Section Classes.
       change (@ITree.bind ?E) with (@Monad.bind (itree E) _) in Hintrp.
       setoid_rewrite bind_Ret_l in Hintrp.
       cbv beta iota in Hintrp.
-      unfold Ret in Hintrp.
       rewrite interp_st_Ret in Hintrp.
       eapply eutt_inv_Ret in Hintrp. inversion Hintrp. subst.
       split.
