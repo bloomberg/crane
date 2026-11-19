@@ -147,3 +147,11 @@ Ltac stforward_inner simp_interp_fun :=
 Ltac stforward_refine := stforward_inner simp_interp_leaf_refl.
 
 Ltac stforward := stforward_inner simp_interp_leaf.
+
+(** Prove [runST (fun S => p) ≈ Ret v] for a straight-line program [p] (no
+    loops, already unfolded) by running it step by step. *)
+Ltac strun :=
+  unfold runST;
+  etransitivity;
+  [ eapply eutt_fmap; repeat (stforward_refine || setoid_rewrite bind_bind) | ];
+  setoid_rewrite map_bind; monad_simpl_inner; cbn; reflexivity.

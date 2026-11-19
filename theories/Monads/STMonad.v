@@ -164,7 +164,15 @@ Section Translation.
     : itree E (list (V idx)) :=
     trigger (GetElems T S V idx arr).
 
-  
+  (** Exchange the elements at positions [i] and [j] of [arr]. *)
+  Definition swapArray {idx : T} (arr : STArray T S (V idx)) (i j : T)
+    : itree E unit :=
+    vi <- readArray (idx := idx) arr i;;
+    vj <- readArray (idx := idx) arr j;;
+    writeArray (idx := idx) arr i vj;;
+    writeArray (idx := idx) arr j vi.
+
+
   (* key type definitions *)
 
   Definition pkey (J K : Type) := (J * K)%type.
@@ -285,6 +293,16 @@ Section Translation.
 
   
 End Translation.
+
+(** Left fold of a monadic step over a list, threading an accumulator: the
+    shape of an imperative [for] loop. Written as a [Fixpoint] because the
+    equivalent [foldM] does not extract well. *)
+Fixpoint for_each_with {E : Type -> Type} {A B : Type}
+  (xs : list A) (v : B) (f : B -> A -> itree E B) : itree E B :=
+  match xs with
+  | nil => Ret v
+  | h :: t => v' <- f v h;; for_each_with t v' f
+  end.
 
 Definition runST {A : Type}
   {T S : Type} {ltu : T -> T -> Prop}

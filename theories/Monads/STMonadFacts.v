@@ -4,6 +4,7 @@
 From Stdlib Require Import
   Arith.PeanoNat
   Arith.Peano_dec
+  Classes.EquivDec
   Init.Peano
   List
   Morphisms
@@ -295,7 +296,39 @@ Proof.
   apply eutt_eq_bind'; [assumption | intuition].
 Qed.
 
+(** Run the head of a bind whose effect on the store is already known, and
+    continue with the rest of the program in the resulting store. *)
+Lemma interp_st_bind_Ret_l {U R}
+  (t : itree (STEvent T S V +' E) R)
+  (k : R -> itree (STEvent T S V +' E) U)
+  (lmem lmem' : mem) (r : R) (rest : itree E (mem * U)) :
+  interp_st ltu R t lmem ≈ Ret (lmem', r) ->
+  interp_st ltu U (k r) lmem' ≈ rest ->
+  interp_st ltu U (ITree.bind t k) lmem ≈ rest.
+Proof.
+  intros Ht Hk. rewrite interp_st_bind_eutt, Ht. setoid_rewrite bind_Ret_l. exact Hk.
+Qed.
+
 End InterpSTTheorems.
+
+Section RunST.
+
+  Context {T S : Type} {ltu : T -> T -> Prop}.
+  Context `{Ix_Correct T ltu} `{STRefClass T}.
+  Context {E : Type -> Type} {V : T -> Type} `{exceptE Err -< E}.
+
+  (** [runST] returns what the interpreted program returns from the empty store. *)
+  Lemma runST_Ret {A : Type} (f : forall (S : Type), itree ((STEvent T S V) +' E) A)
+    (m : mem) (r : A) :
+    interp_st ltu A (f unit) HMap.empty ≈ Ret (m, r) ->
+    runST (ltu := ltu) (S := S) f ≈ Ret r.
+  Proof.
+    intros Hf. unfold runST.
+    etransitivity; [ eapply eutt_fmap; exact Hf |].
+    setoid_rewrite map_ret. reflexivity.
+  Qed.
+
+End RunST.
 
 Lemma IdxRefSameIdx : forall (n : nat) S A,
   STRefToIx S A (mkSTRef S A n) = n.

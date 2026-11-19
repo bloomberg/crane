@@ -1,135 +1,6 @@
-#include "stmonad.h"
+#include "st_quicksort.h"
 
-uint64_t STMonadTests::array_simp_fixed_init() {
-  std::vector<uint64_t> * arr;
-  arr = new std::remove_pointer_t<decltype(arr)>(nat_idx::suc(
-      nat_idx::suc(nat_idx::suc(nat_idx::suc(nat_idx::suc(nat_idx::zero()))))) -
-                                                 nat_idx::zero() + 1,
-                                                 UINT64_C(5));
-  return (*std::move(arr))[nat_idx::suc(nat_idx::zero())];
-}
-
-std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-STMonadTests::array_simp_list() {
-  std::vector<uint64_t> * arr;
-  arr = new std::remove_pointer_t<decltype(arr)>(
-      nat_idx::suc(nat_idx::suc(nat_idx::suc(nat_idx::zero()))) -
-      nat_idx::zero() + 1);
-  {
-    auto _xs = List<uint64_t>::cons(
-        UINT64_C(5),
-        List<uint64_t>::cons(
-            UINT64_C(4),
-            List<uint64_t>::cons(
-                UINT64_C(3),
-                List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil()))));
-    for (size_t _i = 0; _i < arr->size(); _i++) {
-      if (holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(
-              _xs.v())) {
-        const auto &[_a, _l] =
-            get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v());
-        (*arr)[_i] = _a;
-        if (_l) _xs = *_l;
-      }
-    }
-  };
-  uint64_t elem = (*arr)[nat_idx::zero()];
-  auto &&_once1 = std::move(arr);
-  List<uint64_t> lst = [&]() {
-    using _E = typename std::remove_pointer_t<
-        std::remove_cvref_t<decltype(_once1)>>::value_type;
-    List<_E> _r = List<_E>::nil();
-    for (size_t _i = _once1->size(); _i > 0; _i--) {
-      _r = List<_E>::cons((*_once1)[_i - 1], std::move(_r));
-    }
-    return _r;
-  }();
-  return std::make_pair(std::make_pair(elem, lst.length()), lst);
-}
-
-uint64_t STMonadTests::fib_fun(uint64_t n) {
-  // Explicit stack replaces the non-tail recursion of fib_fun: _call frames are
-  // pending calls, _after frames resume a caller.
-  struct _call {
-    uint64_t n;
-  };
-
-  struct _after_fib_fun_in_S {
-    uint64_t m;
-  };
-
-  struct _after_fib_fun_in_S_2 {
-    uint64_t _tmp2;
-  };
-
-  using _frame =
-      std::variant<_call, _after_fib_fun_in_S, _after_fib_fun_in_S_2>;
-  uint64_t _result{};
-  crane::small_vector<_frame> _stack;
-  _stack.emplace_back(_call{n});
-  while (!_stack.empty()) {
-    _frame &_popped = _stack.back();
-    if (std::holds_alternative<_call>(_popped)) {
-      auto _f = std::move(std::get<_call>(_popped));
-      _stack.pop_back();
-      uint64_t n = _f.n;
-      if (n <= 0) {
-        _result = UINT64_C(0);
-      } else {
-        uint64_t m0 = n - 1;
-        if (m0 <= 0) {
-          _result = UINT64_C(1);
-        } else {
-          uint64_t m = m0 - 1;
-          _stack.emplace_back(_after_fib_fun_in_S{m});
-          _stack.emplace_back(_call{m0});
-        }
-      }
-    } else if (std::holds_alternative<_after_fib_fun_in_S>(_popped)) {
-      auto _f = std::move(std::get<_after_fib_fun_in_S>(_popped));
-      _stack.pop_back();
-      uint64_t m = _f.m;
-      _stack.emplace_back(_after_fib_fun_in_S_2{std::move(_result)});
-      _stack.emplace_back(_call{m});
-    } else {
-      auto _f = std::move(std::get<_after_fib_fun_in_S_2>(_popped));
-      _stack.pop_back();
-      _result = (_f._tmp2 + std::move(_result));
-    }
-  }
-  return _result;
-}
-
-uint64_t STMonadTests::nth(uint64_t n, const List<uint64_t> &l,
-                           uint64_t default0) {
-  // Loop replaces the tail recursion: each recursive call updates the loop
-  // variables.
-  const List<uint64_t> *_loop_l = &l;
-  uint64_t _loop_n = n;
-  while (true) {
-    if (_loop_n <= 0) {
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        return default0;
-      } else {
-        const auto &[a0, _] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        return a0;
-      }
-    } else {
-      uint64_t m = _loop_n - 1;
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
-        return default0;
-      } else {
-        const auto &[_, a10] =
-            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
-        _loop_l = crane_raw(a10);
-        _loop_n = m;
-      }
-    }
-  }
-}
-
-List<uint64_t> STMonadTests::quicksort_fun(const List<uint64_t> &x) {
+List<uint64_t> StQuicksort::quicksort_fun(const List<uint64_t> &x) {
   // Explicit stack replaces the non-tail recursion of quicksort_fun: _call
   // frames are pending calls, _after frames resume a caller.
   struct _call {
@@ -188,7 +59,7 @@ List<uint64_t> STMonadTests::quicksort_fun(const List<uint64_t> &x) {
   return _result;
 }
 
-List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
+List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(xs.v())) {
     return List<uint64_t>::nil();
   } else {
@@ -246,7 +117,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
               [&]() {
                 auto _once3 = nat_idx::toNat(r);
                 auto _once4 = nat_idx::toNat(l);
-                uint64_t leftVal =
+                uint64_t vi =
                     (*arr0)[nat_idx::fromNat(
                          (nat_idx::toNat(l) +
                           (UINT64_C(2) ? (((_once3 - _once4) > _once3
@@ -254,7 +125,7 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                                                : (_once3 - _once4))) /
                                          UINT64_C(2)
                                        : 0)))];
-                uint64_t rightVal = (*arr0)[r];
+                uint64_t vj = (*arr0)[r];
                 auto _once5 = nat_idx::toNat(r);
                 auto _once6 = nat_idx::toNat(l);
                 (*arr0)[nat_idx::fromNat(
@@ -263,8 +134,8 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                                            ? 0
                                            : (_once5 - _once6))) /
                                      UINT64_C(2)
-                                   : 0)))] = rightVal;
-                (*arr0)[r] = leftVal;
+                                   : 0)))] = vj;
+                (*arr0)[r] = vi;
                 return std::monostate{};
               }();
               uint64_t storeIndex = [&]() {
@@ -297,11 +168,10 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                                        uint64_t val = (*arr0)[i];
                                        if (val <= pivotValue) {
                                          [&]() {
-                                           uint64_t leftVal = (*arr0)[i];
-                                           uint64_t rightVal =
-                                               (*arr0)[storeIndex];
-                                           (*arr0)[i] = rightVal;
-                                           (*arr0)[storeIndex] = leftVal;
+                                           uint64_t vi = (*arr0)[i];
+                                           uint64_t vj = (*arr0)[storeIndex];
+                                           (*arr0)[i] = vj;
+                                           (*arr0)[storeIndex] = vi;
                                            return std::monostate{};
                                          }();
                                          return nat_idx::suc(storeIndex);
@@ -311,10 +181,10 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
                                      });
               }();
               [&]() {
-                uint64_t leftVal = (*arr0)[storeIndex];
-                uint64_t rightVal = (*arr0)[r];
-                (*arr0)[storeIndex] = rightVal;
-                (*arr0)[r] = leftVal;
+                uint64_t vi = (*arr0)[storeIndex];
+                uint64_t vj = (*arr0)[r];
+                (*arr0)[storeIndex] = vj;
+                (*arr0)[r] = vi;
                 return std::monostate{};
               }();
               return storeIndex;
@@ -353,7 +223,36 @@ List<uint64_t> STMonadTests::quicksort_ST_mine(const List<uint64_t> &xs) {
   }
 }
 
-std::string STMonadTests::list_to_string_helper(const List<uint64_t> &l) {
+uint64_t StQuicksort::nth(uint64_t n, const List<uint64_t> &l,
+                          uint64_t default0) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  const List<uint64_t> *_loop_l = &l;
+  uint64_t _loop_n = n;
+  while (true) {
+    if (_loop_n <= 0) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        return default0;
+      } else {
+        const auto &[a0, _] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        return a0;
+      }
+    } else {
+      uint64_t m = _loop_n - 1;
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l->v())) {
+        return default0;
+      } else {
+        const auto &[_, a10] =
+            std::get<typename List<uint64_t>::Cons>(_loop_l->v());
+        _loop_l = crane_raw(a10);
+        _loop_n = m;
+      }
+    }
+  }
+}
+
+std::string StQuicksort::list_to_string_helper(const List<uint64_t> &l) {
   // Explicit stack replaces the non-tail recursion of list_to_string_helper:
   // _call frames are pending calls, _after frames resume a caller.
   struct _call {
@@ -392,53 +291,17 @@ std::string STMonadTests::list_to_string_helper(const List<uint64_t> &l) {
   return _result;
 }
 
-std::string STMonadTests::list_to_string(const List<uint64_t> &l) {
+std::string StQuicksort::list_to_string(const List<uint64_t> &l) {
   return std::string("[ ") + list_to_string_helper(l) + std::string(" ]");
 }
 
-List<uint64_t> STMonadTests::rep_list_nat(List<uint64_t> l, uint64_t n) {
-  // Explicit stack replaces the non-tail recursion of rep_list_nat: _call
-  // frames are pending calls, _after frames resume a caller.
-  struct _call {
-    uint64_t n;
-  };
-
-  struct _after_rep_list_nat_in_S {};
-
-  using _frame = std::variant<_call, _after_rep_list_nat_in_S>;
-  List<uint64_t> _result{};
-  crane::small_vector<_frame> _stack;
-  _stack.emplace_back(_call{n});
-  while (!_stack.empty()) {
-    _frame &_popped = _stack.back();
-    if (std::holds_alternative<_call>(_popped)) {
-      auto _f = std::move(std::get<_call>(_popped));
-      _stack.pop_back();
-      uint64_t n = _f.n;
-      if (n <= 0) {
-        _result = l;
-      } else {
-        uint64_t x = n - 1;
-        _stack.emplace_back(_after_rep_list_nat_in_S{});
-        _stack.emplace_back(_call{x});
-      }
-    } else {
-      auto _f = std::move(std::get<_after_rep_list_nat_in_S>(_popped));
-      _stack.pop_back();
-      _result = l.app(std::move(_result));
-    }
-  }
-  return _result;
-}
-
-std::string STMonadTests::test_quicksort_ST() {
+std::string StQuicksort::test_quicksort_ST() {
   List<uint64_t> out = quicksort_ST_mine(input_lst1);
   return list_to_string(std::move(out));
 }
 
-std::string STMonadTests::test_quicksort_fun() {
-  List<uint64_t> out = quicksort_fun(input_lst1);
-  return list_to_string(std::move(out));
+std::string StQuicksort::test_quicksort_fun() {
+  return list_to_string(quicksort_fun(input_lst1));
 }
 
 List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {

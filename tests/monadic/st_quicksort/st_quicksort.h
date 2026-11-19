@@ -263,13 +263,6 @@ struct Err {
   static Err error(std::string x) { return {std::move(x)}; }
 };
 
-struct STMonadExamples {
-  template <typename F1>
-    requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
-  static List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
-                                                 F1 &&quicksort_fun0);
-};
-
 struct STRefNat {
   // DATA
   uint64_t s;
@@ -283,7 +276,24 @@ struct STRefNat {
   uint64_t STRefToIxNat() const;
 };
 
-struct STMonadTests {
+template <typename F1>
+  requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
+List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
+                                        F1 &&quicksort_fun0) {
+  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
+    return List<uint64_t>::nil();
+  } else {
+    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
+    const List<uint64_t> &a1_value = *a1;
+    return quicksort_fun0(a1_value.filter([=](uint64_t x) {
+      return x < a0;
+    }))
+               .app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
+        quicksort_fun0(a1_value.filter([=](uint64_t x) { return a0 <= x; }))));
+  }
+}
+
+struct StQuicksort {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
       auto _once1 = (UINT64_C(1) + sp);
@@ -332,102 +342,11 @@ struct STMonadTests {
   };
 
   static_assert(STRefClass<nat_stref, uint64_t>);
-  static uint64_t array_simp_fixed_init();
-  static std::pair<std::pair<uint64_t, uint64_t>, List<uint64_t>>
-  array_simp_list();
-
-  template <typename _tcI0, typename _tcI1>
-    requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
-  static uint64_t fib_ST(uint64_t n) {
-    if (n < UINT64_C(2)) {
-      return n;
-    } else {
-      std::shared_ptr<uint64_t> x;
-      x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
-      std::shared_ptr<uint64_t> y;
-      y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
-      auto fib_loop =
-          [](uint64_t k, std::shared_ptr<uint64_t> x0,
-             std::shared_ptr<uint64_t> y0, uint64_t, uint64_t)
-               -> uint64_t {
-            // Loop replaces the tail recursion: each recursive call updates the
-            // loop variables.
-            uint64_t _loop_k = k;
-            while (true) {
-              if (_loop_k <= 0) {
-                return *x0;
-              } else {
-                uint64_t k_ = _loop_k - 1;
-                uint64_t x_ = *x0;
-                uint64_t y_ = *y0;
-                *x0 = y_;
-                *y0 = (x_ + y_);
-                _loop_k = k_;
-              }
-            }
-          };
-      return fib_loop(n, std::move(x), std::move(y), _tcI1::zero(),
-                      _tcI1::suc(_tcI1::zero()));
-    }
-  }
-
-  static uint64_t fib_fun(uint64_t n);
-  static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
-
-  template <typename _tcI0, typename _tcI1>
-    requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
-  static std::pair<bool, bool> new_and_read_both_bool() {
-    std::shared_ptr<bool> r1;
-    r1 = std::make_shared<decltype(false)>(false);
-    std::shared_ptr<bool> r2;
-    r2 = std::make_shared<decltype(true)>(true);
-    bool x1 = *std::move(r1);
-    bool x2 = *std::move(r2);
-    return std::make_pair(x1, x2);
-  }
-
-  template <typename _tcI0, typename _tcI1>
-    requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
-  static std::pair<uint64_t, uint64_t> new_and_read_both_nat() {
-    std::shared_ptr<uint64_t> r1;
-    r1 = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
-    std::shared_ptr<uint64_t> r2;
-    r2 = std::make_shared<decltype(UINT64_C(6))>(UINT64_C(6));
-    uint64_t x1 = *std::move(r1);
-    uint64_t x2 = *std::move(r2);
-    return std::make_pair(x1, x2);
-  }
-
-  template <typename _tcI0, typename _tcI1>
-    requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
-  static uint64_t tree_simp_another_nat() {
-    std::shared_ptr<uint64_t> v;
-    v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
-    *v = UINT64_C(6);
-    return *std::move(v);
-  }
-
-  template <typename _tcI0, typename _tcI1>
-    requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
-  static bool tree_simp_bool() {
-    std::shared_ptr<bool> v;
-    v = std::make_shared<decltype(true)>(true);
-    return *std::move(v);
-  }
-
-  template <typename _tcI0, typename _tcI1>
-    requires STRefClass<_tcI0, uint64_t> && Ix<_tcI1, uint64_t>
-  static uint64_t tree_simp_nat() {
-    std::shared_ptr<uint64_t> v;
-    v = std::make_shared<decltype(UINT64_C(5))>(UINT64_C(5));
-    return *std::move(v);
-  }
-
   static List<uint64_t> quicksort_fun(const List<uint64_t> &x);
   static List<uint64_t> quicksort_ST_mine(const List<uint64_t> &xs);
+  static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
   static std::string list_to_string_helper(const List<uint64_t> &l);
   static std::string list_to_string(const List<uint64_t> &l);
-  static List<uint64_t> rep_list_nat(List<uint64_t> l, uint64_t n);
   [[gnu::used]] static inline const List<uint64_t> input_lst1 =
       List<uint64_t>::cons(
           UINT64_C(212498),
@@ -453,24 +372,6 @@ struct STMonadTests {
   static std::string test_quicksort_ST();
   static std::string test_quicksort_fun();
 };
-
-template <typename F1>
-  requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
-List<uint64_t>
-STMonadExamples::quicksort_fun_functional(const List<uint64_t> &l,
-                                          F1 &&quicksort_fun0) {
-  if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
-    return List<uint64_t>::nil();
-  } else {
-    const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
-    const List<uint64_t> &a1_value = *a1;
-    return quicksort_fun0(a1_value.filter([=](uint64_t x) {
-      return x < a0;
-    }))
-               .app(List<uint64_t>::cons(a0, List<uint64_t>::nil()).app(
-        quicksort_fun0(a1_value.filter([=](uint64_t x) { return a0 <= x; }))));
-  }
-}
 
 inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;
