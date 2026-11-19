@@ -17,9 +17,12 @@
        [crane::apply2(k, a, b)], which skips the closure in between; and a
        lambda that only returns a lambda returns it unboxed, so that the
        skip has something to skip.}
-    {- Under [Crane Reuse], a match on a local bound by [const] reference or
-       by pointer borrows its scrutinee ({!borrow_matches_on}): the local
-       names a value something else owns.}}
+    {- A match on a local that is [const] where it is written borrows its
+       scrutinee ({!borrow_matches_on}): one declared [const], a [const]
+       reference or a pointer to [const], a field a borrowing match binds,
+       or one a by-copy lambda captured -- closures are never [mutable].  A
+       [const] value cannot be taken apart, whatever the ownership plan
+       decided over Core.}}
 
     Effects and evaluation counts are kept: a mapped constant is never pure,
     so nothing its text might do is removed. *)

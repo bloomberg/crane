@@ -11,7 +11,10 @@ Infix "/" := Nat.div.
     testing of Crane: generated program, shrunk by ephyra and delta-reduced
     (unrelated-looking declarations kept are needed for the trigger).
 
-    A [fold_right] step lambda over [list pt] passes [match e5 with [] | [_] | _ :: _ :: _ => ..] as a local fixpoint's argument while the fixpoint's step folds over [e5]: the nested match calls [v_mut()] on a [const List<pt>] ("function is not marked const").  Same family as the fixed sum_match_const_v_mut. *)
+    A [fold_right] step lambda over [list pt] passes [match e5 with [] | [_] | _ :: _ :: _ => ..] as a local fixpoint's argument while the fixpoint's step folds over [e5]: the nested match calls [v_mut()] on a [const List<pt>] ("function is not marked const").  The eta closure around the partial
+    application captures [e5] by copy, so [e5] is [const] in its body, while
+    the ownership plan, made over Core, saw the match where [e5] is owned.
+    Same family as the fixed sum_match_const_v_mut. *)
 Module FoldStepListMatchConstVMut.
 Record pt : Type := mkpt { px : nat; py : bool }.
 CoInductive stream : Type := SCons : nat -> stream -> stream.

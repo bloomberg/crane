@@ -15042,3 +15042,14 @@
   (alias runtest)
   (deps pos_add_loopify_reuse_shared.t.exe)
   (action (run ./pos_add_loopify_reuse_shared.t.exe))))
+
+(subdir fold_step_list_match_const_v_mut
+ (rule
+  (targets fold_step_list_match_const_v_mut.t.exe)
+  (deps FoldStepListMatchConstVMut.vo fold_step_list_match_const_v_mut.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_step_list_match_const_v_mut.t.exe fold_step_list_match_const_v_mut.t.cpp fold_step_list_match_const_v_mut.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_step_list_match_const_v_mut.t.exe)
+  (action (run ./fold_step_list_match_const_v_mut.t.exe))))

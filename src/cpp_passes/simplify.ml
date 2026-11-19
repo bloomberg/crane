@@ -143,6 +143,16 @@ let takes_from v stmts =
 (* Whether a value of [ty] costs more to copy than to move. *)
 let worth_moving = Ownership_ir.Region.worth_moving_cpp
 
+(* [stmts] without the moves out of the locals [bound]: fields a borrowing
+   match binds, [const] views a move would only copy. *)
+let strip_moves bound =
+  let rec expr : expr -> expr = function
+    | Move (Local x) when V.mem x bound -> Local x
+    | e -> Cpp_ir.Map.expr (children ()) e
+  and stmt s = Cpp_ir.Map.stmt (children ()) s
+  and children () = Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id () in
+  List.map stmt
+
 (* [stmts] with every match on one of [ids] borrowing, and the moves out of
    the fields such a match binds dropped: what a borrowing match binds is a
    [const] view, so the matches on it borrow too. *)
@@ -154,14 +164,6 @@ let borrow_matches_on ids (stmts : stmt list) =
     let ignore_ _ = () in
     Cpp_ir.Children.expr {expr = (fun c -> found := !found || mentions ids c); stmt = ignore_; type_ = ignore_} e;
     !found
-  in
-  let strip_moves bound =
-    let rec expr : expr -> expr = function
-      | Move (Local x) when V.mem x bound -> Local x
-      | e -> Cpp_ir.Map.expr (children ()) e
-    and stmt s = Cpp_ir.Map.stmt (children ()) s
-    and children () = Cpp_ir.Map.make ~expr ~stmt ~type_:Fun.id () in
-    List.map stmt
   in
   let rec stmt ids : stmt -> stmt = function
     | Match (scrut, branches, default) ->
@@ -204,32 +206,79 @@ let rec bind_by_reference : stmt list -> stmt list = function
             | None -> false ) ->
     let ty : ty = match ty with Const _ -> ty | _ -> Const ty in
     Bind_variable (x, Declare (Reference (Lvalue, ty), binder), rhs)
-    :: bind_by_reference (borrow_matches_on [x] rest)
+    :: bind_by_reference rest
   | s :: rest -> s :: bind_by_reference rest
 
-(* [stmts] with every match on a local bound by [const] reference or by
-   pointer borrowing: such a local names a value something else owns. *)
-let borrow_bound_matches (stmts : stmt list) =
-  let ids = ref [] in
-  let rec scan (s : stmt) =
-    ( match s with
-    | Bind_variable (x, Declare ((Reference (Lvalue, Const _) | Pointer _), _), _) -> ids := x :: !ids
-    | _ -> () );
-    let nested s =
-      scan s;
-      s
-    in
-    ignore (Cpp_ir.Map.stmt (Cpp_ir.Map.make ~expr:Fun.id ~stmt:nested ~type_:Fun.id ()) s)
-  in
-  List.iter scan stmts;
-  if !ids = [] then stmts else borrow_matches_on !ids stmts
+(* Whether a local declared at [ty] is [const] in C++: declared [const],
+   a [const] reference, or a pointer to [const]. *)
+let const_declared : ty -> bool = function
+  | Const _ | Reference (_, Const _) | Pointer (Const _) -> true
+  | _ -> false
 
-(* Under Reuse, a match-only scrutinee may be marked owned so that a reuse arm
-   can consume it; one reached through a [const] reference or a pointer cannot
-   be, and its matches borrow. *)
-let borrow_bound ss = if Base.Table.reuse_here () then borrow_bound_matches ss else ss
+(* Whether a match over [branches] may take its scrutinee apart, a value it
+   owns, given the locals [consts] that are [const] where it is written:
+   not when its scrutinee reads one of them -- a [const] value cannot be
+   taken apart. *)
+let may_take_apart consts (scrut : _ Cpp_ir.Grammar.Match.scrutinee) _branches =
+  scrut.owned && not (List.exists (fun x -> Id.Set.mem x consts) (V.free_in_expr scrut.expr))
 
-let rec stmts ss = borrow_bound (bind_by_reference (drop_unused (List.map stmt ss)))
+(* The access mode of every match, settled over the finished declaration: a
+   match the plan made over Core marked owned borrows where it may not take
+   its scrutinee apart ({!may_take_apart}), and the moves out of the fields
+   it binds are dropped.  A local is [const] where a match is written when
+   its declaration says so, when a by-copy lambda between its declaration
+   and the match captured it -- a closure is never [mutable], so its
+   captures are [const] in its body -- or when a borrowing match bound it.
+   The rewrite of a declaration's children, none [const] at its top. *)
+let borrow_const_matches =
+  let declare consts x ty = if const_declared ty then Id.Set.add x consts else Id.Set.remove x consts in
+  let rec block consts : stmt list -> stmt list = function
+    | [] -> []
+    | s :: rest ->
+      let s = stmt consts s in
+      let consts =
+        match s with
+        | Declare (x, ty, _) | Declare_value_initialized (x, ty) | Bind_variable (x, Declare (ty, _), _) ->
+          declare consts x ty
+        | _ -> consts
+      in
+      s :: block consts rest
+  and stmt consts (s : stmt) : stmt =
+    match s with
+    | Match (scrut, branches, default) ->
+      let scrut = {scrut with expr = expr consts scrut.expr} in
+      let owned = may_take_apart consts scrut branches in
+      let borrowed = scrut.owned && not owned in
+      let branch (b : _ Cpp_ir.Stmt.Match.branch) =
+        let bound = List.map (fun (f : _ Cpp_ir.Stmt.Match.field_binding) -> f.name) b.field_bindings in
+        let bound = match b.var with Some v -> v :: bound | None -> bound in
+        let consts =
+          List.fold_left (fun c x -> if owned then Id.Set.remove x c else Id.Set.add x c) consts bound
+        in
+        let body = block consts b.body in
+        { b with
+          extra_conditions = List.map (expr consts) b.extra_conditions;
+          body = (if borrowed then strip_moves bound body else body) }
+      in
+      Match ({scrut with owned}, List.map branch branches, Option.map (block consts) default)
+    | _ -> Cpp_ir.Map.stmt (within consts) s
+  and expr consts (e : expr) : expr =
+    match e with
+    | Lambda l ->
+      let consts =
+        match l.capture with
+        | Stored | Written (By_copy _) -> Id.Set.union consts (Id.Set.of_list (V.free_in_expr e))
+        | Runs_in_place | Written (By_reference | Nothing) -> consts
+      in
+      let consts =
+        List.fold_left (fun c (ty, x) -> match x with Some x -> declare c x ty | None -> c) consts l.params
+      in
+      Lambda (Cpp_ir.Map.lambda (within consts) l)
+    | _ -> Cpp_ir.Map.expr (within consts) e
+  and within consts = Cpp_ir.Map.make ~stmts:(block consts) ~expr:(expr consts) ~stmt:(stmt consts) ~type_:Fun.id () in
+  within Id.Set.empty
+
+let rec stmts ss = bind_by_reference (drop_unused (List.map stmt ss))
 
 and stmt (s : stmt) : stmt =
   match s with
@@ -261,4 +310,6 @@ and expr (e : expr) : expr =
 
 and children () = Cpp_ir.Map.make ~stmts ~expr ~stmt ~type_:Fun.id ()
 
-let transform_decl d = Cpp_ir.Map.decl (children ()) d
+(* The const-scrutinee rule runs once over the finished declaration, after
+   the rewrites above have settled which locals are [const]. *)
+let transform_decl d = Cpp_ir.Map.decl borrow_const_matches (Cpp_ir.Map.decl (children ()) d)

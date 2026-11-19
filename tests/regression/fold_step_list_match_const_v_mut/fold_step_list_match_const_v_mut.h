@@ -169,7 +169,10 @@ public:
 /// A fold_right step lambda over list pt passes match e5 with [] | [_] | _ :: _
 /// :: _ => .. as a local fixpoint's argument while the fixpoint's step folds
 /// over e5: the nested match calls v_mut() on a const List<pt> ("function is
-/// not marked const"). Same family as the fixed sum_match_const_v_mut.
+/// not marked const"). The eta closure around the partial
+/// application captures e5 by copy, so e5 is const in its body, while
+/// the ownership plan, made over Core, saw the match where e5 is owned.
+/// Same family as the fixed sum_match_const_v_mut.
 struct FoldStepListMatchConstVMut {
   struct pt {
     uint64_t px;
@@ -246,11 +249,11 @@ struct FoldStepListMatchConstVMut {
                   return go6(
                       [&]() {
                         if (std::holds_alternative<typename List<pt>::Nil>(
-                                e5.v_mut())) {
+                                e5.v())) {
                           return List<bool>::nil();
                         } else {
-                          auto &[_, a10] =
-                              std::get<typename List<pt>::Cons>(e5.v_mut());
+                          const auto &[_, a10] =
+                              std::get<typename List<pt>::Cons>(e5.v());
                           auto &&_sv = *a10;
                           if (std::holds_alternative<typename List<pt>::Nil>(
                                   _sv.v())) {
