@@ -18,7 +18,7 @@ struct Rank2AliasDefinitionAsValue {
     return n;
   }
 
-  static uint64_t csum(clist<uint64_t> l);
+  static uint64_t csum(const clist<uint64_t> &l);
   using nfold = crane::fn<
       crane::obj(crane::fn<crane::obj(uint64_t, crane::obj)>, crane::obj)>;
 
@@ -26,7 +26,7 @@ struct Rank2AliasDefinitionAsValue {
     return n;
   }
 
-  static uint64_t fsum(nfold l);
+  static uint64_t fsum(const nfold &l);
   template <typename a>
   using box = crane::fn<crane::obj(crane::fn<crane::obj(a)>)>;
 
@@ -34,7 +34,7 @@ struct Rank2AliasDefinitionAsValue {
     return k(UINT64_C(3));
   }
 
-  static uint64_t unbox(box<uint64_t> b);
+  static uint64_t unbox(const box<uint64_t> &b);
   static inline const uint64_t result =
       ((csum(crane_erase_fn<crane::obj>(
             [](crane::fn<crane::obj(uint64_t, crane::obj)> _ec0,

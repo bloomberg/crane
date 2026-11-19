@@ -1,7 +1,7 @@
 #include "rank2_alias_definition_as_value.h"
 
 uint64_t Rank2AliasDefinitionAsValue::csum(
-    Rank2AliasDefinitionAsValue::clist<uint64_t> l) {
+    const Rank2AliasDefinitionAsValue::clist<uint64_t> &l) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto erased_fn = crane::immortal(crane_erase_fn<crane::obj>(
@@ -10,7 +10,7 @@ uint64_t Rank2AliasDefinitionAsValue::csum(
 }
 
 uint64_t
-Rank2AliasDefinitionAsValue::fsum(Rank2AliasDefinitionAsValue::nfold l) {
+Rank2AliasDefinitionAsValue::fsum(const Rank2AliasDefinitionAsValue::nfold &l) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto erased_fn = crane::immortal(crane_erase_fn<crane::obj>(
@@ -19,7 +19,7 @@ Rank2AliasDefinitionAsValue::fsum(Rank2AliasDefinitionAsValue::nfold l) {
 }
 
 uint64_t Rank2AliasDefinitionAsValue::unbox(
-    Rank2AliasDefinitionAsValue::box<uint64_t> b) {
+    const Rank2AliasDefinitionAsValue::box<uint64_t> &b) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto erased_fn =

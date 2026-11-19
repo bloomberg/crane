@@ -571,17 +571,18 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                        input.pi_carbs_g.grams_val == UINT64_C(0))) {
                     return PrecisionResult::precerror(prec_error_iob_high);
                   } else {
+                    const auto &input_pi_now = input.pi_now;
                     uint64_t tdd_current =
                         input.pi_bolus_history.template fold_left<uint64_t>(
                             [=](uint64_t acc,
                                 const ValidatedPumpDeliveryTraceCase::BolusEvent &e)
                                  -> uint64_t {
-                              if (((((input.pi_now - UINT64_C(1440)) >
-                                     input.pi_now
+                              if (((((input_pi_now - UINT64_C(1440)) >
+                                     input_pi_now
                                          ? 0
-                                         : (input.pi_now - UINT64_C(1440)))) <=
+                                         : (input_pi_now - UINT64_C(1440)))) <=
                                    e.be_time_minutes &&
-                                   e.be_time_minutes <= input.pi_now)) {
+                                   e.be_time_minutes <= input_pi_now)) {
                                 return (acc + e.be_dose_twentieths);
                               } else {
                                 return acc;

@@ -1,12 +1,11 @@
 #include "let_bound_monad_family.h"
 
 Itree<crane::obj, crane::obj>
-Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
-                  Handler<crane::obj, crane::obj> x0, crane::obj x1) {
+Case_sum1_Handler(const Handler<crane::obj, crane::obj> &x,
+                  const Handler<crane::obj, crane::obj> &x0, crane::obj x1) {
   return Handler_Mod::template case_<crane::obj, crane::obj, crane::obj,
                                      crane::obj>(
-      std::move(x), std::move(x0),
-      crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
+      x, x0, crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
 }
 
 Itree<LetBoundMonadFamily::BotE<crane::obj>, Nat>
@@ -75,8 +74,9 @@ std::optional<Nat> LetBoundMonadFamily::run(
 
 crane::obj Function::Id_IFun(crane::obj e) { return e; }
 
-crane::obj Function::Cat_IFun(IFun<crane::obj, crane::obj> f1,
-                              IFun<crane::obj, crane::obj> f2, crane::obj e) {
+crane::obj Function::Cat_IFun(const IFun<crane::obj, crane::obj> &f1,
+                              const IFun<crane::obj, crane::obj> &f2,
+                              crane::obj e) {
   return f2(f1(e));
 }
 

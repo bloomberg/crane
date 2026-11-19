@@ -6,8 +6,8 @@ Rank1PolymorphicDefinition::three(const crane::fn<crane::obj(crane::obj)> &f,
   return f(f(f(x)));
 }
 
-uint64_t
-Rank1PolymorphicDefinition::to_nat(Rank1PolymorphicDefinition::church c) {
+uint64_t Rank1PolymorphicDefinition::to_nat(
+    const Rank1PolymorphicDefinition::church &c) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto erased_fn = crane::immortal(
@@ -15,7 +15,8 @@ Rank1PolymorphicDefinition::to_nat(Rank1PolymorphicDefinition::church c) {
   return crane::any_cast<uint64_t>(c(erased_fn, UINT64_C(0)));
 }
 
-bool Rank1PolymorphicDefinition::to_bool(Rank1PolymorphicDefinition::church c) {
+bool Rank1PolymorphicDefinition::to_bool(
+    const Rank1PolymorphicDefinition::church &c) {
   // Built on the first call and immortal: every thread reads it without
   // touching its counts.
   static const auto erased_fn = crane::immortal(

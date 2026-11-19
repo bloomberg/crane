@@ -1,12 +1,11 @@
 #include "itree_case_handler.h"
 
 Itree<crane::obj, crane::obj>
-Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
-                  Handler<crane::obj, crane::obj> x0, crane::obj x1) {
+Case_sum1_Handler(const Handler<crane::obj, crane::obj> &x,
+                  const Handler<crane::obj, crane::obj> &x0, crane::obj x1) {
   return Handler_Mod::template case_<crane::obj, crane::obj, crane::obj,
                                      crane::obj>(
-      std::move(x), std::move(x0),
-      crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
+      x, x0, crane::any_cast<Sum1<crane::obj, crane::obj, crane::obj>>(x1));
 }
 
 std::optional<Nat>

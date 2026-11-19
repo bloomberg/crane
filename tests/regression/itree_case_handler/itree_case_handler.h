@@ -232,7 +232,7 @@ using Case = crane::fn<c(obj, obj, obj, c, c)>;
 
 struct CategoryOps {
   template <typename T1, typename T2, typename F0>
-  static T2 case_(F0 &&_x, std::type_identity_t<Case<T1, T2>> case0,
+  static T2 case_(F0 &&_x, const std::type_identity_t<Case<T1, T2>> &case0,
                   const T1 &x0_, const T1 &x1_, const T1 &x2_, const T2 &x3_,
                   const T2 &x4_);
 };
@@ -609,8 +609,8 @@ struct Handler_Mod {
 template <typename e, typename f>
 using Handler = crane::fn<Itree<f, crane::obj>(e)>;
 Itree<crane::obj, crane::obj>
-Case_sum1_Handler(Handler<crane::obj, crane::obj> x,
-                  Handler<crane::obj, crane::obj> x0, crane::obj x1);
+Case_sum1_Handler(const Handler<crane::obj, crane::obj> &x,
+                  const Handler<crane::obj, crane::obj> &x0, crane::obj x1);
 
 struct Interp {
   template <MonadIter _tcI0, Monad _tcI1, Functor _tcI2, typename T1,
@@ -734,7 +734,7 @@ typename _tcI0::template m<T2> Monad0::ret(const T2 &x) {
 }
 
 template <typename T1, typename T2, typename F0>
-T2 CategoryOps::case_(F0 &&, std::type_identity_t<Case<T1, T2>> case0,
+T2 CategoryOps::case_(F0 &&, const std::type_identity_t<Case<T1, T2>> &case0,
                       const T1 &x0_, const T1 &x1_, const T1 &x2_,
                       const T2 &x3_, const T2 &x4_) {
   return case0(x0_, x1_, x2_, x3_, x4_);

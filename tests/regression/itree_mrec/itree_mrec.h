@@ -200,22 +200,23 @@ template <typename obj, typename c> using ReSum = c;
 
 struct CategoryOps {
   template <typename T1, typename T2>
-  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
+  static T2 id_(const std::type_identity_t<Id_<T1, T2>> &id_0, const T1 &x0_);
   template <typename T1, typename T2>
-  static T2 cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
+  static T2 cat(const std::type_identity_t<Cat<T1, T2>> &cat0, const T1 &x0_,
                 const T1 &x1_, const T1 &x2_, const T2 &x3_, const T2 &x4_);
   template <typename T1, typename T2, typename F0>
-  static T2 inl_(F0 &&_x, std::type_identity_t<Inl<T1, T2>> inl0, const T1 &x0_,
-                 const T1 &x1_);
+  static T2 inl_(F0 &&_x, const std::type_identity_t<Inl<T1, T2>> &inl0,
+                 const T1 &x0_, const T1 &x1_);
   template <typename T1, typename T2>
   static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
   template <typename T1, typename T2>
-  static ReSum<T1, T2> ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
+  static ReSum<T1, T2> ReSum_id(const std::type_identity_t<Id_<T1, T2>> &x0_,
                                 const T1 &x1_);
   template <typename T1, typename T2, typename F0>
     requires std::is_invocable_r_v<T1, F0 &, const T1 &, const T1 &>
-  static ReSum<T1, T2> ReSum_inl(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
-                                 std::type_identity_t<Inl<T1, T2>> h2,
+  static ReSum<T1, T2> ReSum_inl(F0 &&bif,
+                                 const std::type_identity_t<Cat<T1, T2>> &h0,
+                                 const std::type_identity_t<Inl<T1, T2>> &h2,
                                  const T1 &a, const T1 &b, const T1 &c, T2 h4);
 };
 
@@ -529,8 +530,9 @@ template <typename e, typename f> using IFun = crane::fn<f(e)>;
 
 struct Function {
   static crane::obj Id_IFun(crane::obj e);
-  static crane::obj Cat_IFun(IFun<crane::obj, crane::obj> f1,
-                             IFun<crane::obj, crane::obj> f2, crane::obj e);
+  static crane::obj Cat_IFun(const IFun<crane::obj, crane::obj> &f1,
+                             const IFun<crane::obj, crane::obj> &f2,
+                             crane::obj e);
   static crane::obj Inl_sum1(crane::obj x);
 };
 
@@ -706,19 +708,20 @@ struct ItreeMrec {
 };
 
 template <typename T1, typename T2>
-T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
+T2 CategoryOps::id_(const std::type_identity_t<Id_<T1, T2>> &id_0,
+                    const T1 &x0_) {
   return id_0(x0_);
 }
 
 template <typename T1, typename T2>
-T2 CategoryOps::cat(std::type_identity_t<Cat<T1, T2>> cat0, const T1 &x0_,
-                    const T1 &x1_, const T1 &x2_, const T2 &x3_,
+T2 CategoryOps::cat(const std::type_identity_t<Cat<T1, T2>> &cat0,
+                    const T1 &x0_, const T1 &x1_, const T1 &x2_, const T2 &x3_,
                     const T2 &x4_) {
   return cat0(x0_, x1_, x2_, x3_, x4_);
 }
 
 template <typename T1, typename T2, typename F0>
-T2 CategoryOps::inl_(F0 &&, std::type_identity_t<Inl<T1, T2>> inl0,
+T2 CategoryOps::inl_(F0 &&, const std::type_identity_t<Inl<T1, T2>> &inl0,
                      const T1 &x0_, const T1 &x1_) {
   return inl0(x0_, x1_);
 }
@@ -729,21 +732,22 @@ T2 CategoryOps::resum(const T1 &, const T1 &, T2 reSum) {
 }
 
 template <typename T1, typename T2>
-ReSum<T1, T2> CategoryOps::ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
-                                    const T1 &x1_) {
-  return CategoryOps::template id_<T1, T2>(std::move(x0_), x1_);
+ReSum<T1, T2>
+CategoryOps::ReSum_id(const std::type_identity_t<Id_<T1, T2>> &x0_,
+                      const T1 &x1_) {
+  return CategoryOps::template id_<T1, T2>(x0_, x1_);
 }
 
 template <typename T1, typename T2, typename F0>
   requires std::is_invocable_r_v<T1, F0 &, const T1 &, const T1 &>
 ReSum<T1, T2>
-CategoryOps::ReSum_inl(F0 &&bif, std::type_identity_t<Cat<T1, T2>> h0,
-                       std::type_identity_t<Inl<T1, T2>> h2, const T1 &a,
+CategoryOps::ReSum_inl(F0 &&bif, const std::type_identity_t<Cat<T1, T2>> &h0,
+                       const std::type_identity_t<Inl<T1, T2>> &h2, const T1 &a,
                        const T1 &b, const T1 &c, T2 h4) {
   return CategoryOps::template cat<T1, T2>(
-      std::move(h0), a, b, bif(b, c),
+      h0, a, b, bif(b, c),
       CategoryOps::template resum<T1, T2>(a, b, std::move(h4)),
-      CategoryOps::template inl_<T1, T2>(bif, std::move(h2), b, c));
+      CategoryOps::template inl_<T1, T2>(bif, h2, b, c));
 }
 
 template <typename T1, typename T2, typename T3>

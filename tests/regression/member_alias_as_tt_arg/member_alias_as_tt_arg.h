@@ -110,7 +110,7 @@ using stateT = crane::fn<m<std::pair<a, s>>(s)>;
 
 template <Monad _tcI0, typename T2>
 typename _tcI0::template m<std::pair<Nat, T2>>
-run(std::type_identity_t<stateT<T2, _tcI0::template m, Nat>> step,
+run(const std::type_identity_t<stateT<T2, _tcI0::template m, Nat>> &step,
     const T2 &x0_) {
   return crane_container_cast<typename _tcI0::template m<std::pair<Nat, T2>>>(
       step(x0_));

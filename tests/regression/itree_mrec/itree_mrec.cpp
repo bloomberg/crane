@@ -39,8 +39,9 @@ std::optional<Nat> ItreeMrec::run(const Nat &fuel,
 
 crane::obj Function::Id_IFun(crane::obj e) { return e; }
 
-crane::obj Function::Cat_IFun(IFun<crane::obj, crane::obj> f1,
-                              IFun<crane::obj, crane::obj> f2, crane::obj e) {
+crane::obj Function::Cat_IFun(const IFun<crane::obj, crane::obj> &f1,
+                              const IFun<crane::obj, crane::obj> &f2,
+                              crane::obj e) {
   return f2(f1(e));
 }
 

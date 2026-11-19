@@ -13,8 +13,8 @@ struct Rank1PolymorphicDefinition {
       crane::fn<crane::obj(crane::fn<crane::obj(crane::obj)>, crane::obj)>;
   static crane::obj three(const crane::fn<crane::obj(crane::obj)> &f,
                           crane::obj x);
-  static uint64_t to_nat(church c);
-  static bool to_bool(church c);
+  static uint64_t to_nat(const church &c);
+  static bool to_bool(const church &c);
   static inline const uint64_t total =
       (to_nat(crane_erase_global<three, crane::obj>()) +
        (to_bool(crane_erase_global<three, crane::obj>()) ? UINT64_C(10)

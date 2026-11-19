@@ -47,8 +47,9 @@ ComprehensivePatterns::compose(const ComprehensivePatterns::S &s) {
 
 std::pair<crane::fn<uint64_t(uint64_t)>, ComprehensivePatterns::S>
 ComprehensivePatterns::lambda_proj(ComprehensivePatterns::S s) {
+  const auto &s_s_a = s.s_a;
   return std::make_pair(
-      crane::fn<uint64_t(uint64_t)>([=](uint64_t) { return s.s_a; }), s);
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t) { return s_s_a; }), s);
 }
 
 std::pair<std::pair<std::pair<ComprehensivePatterns::S, uint64_t>, uint64_t>,

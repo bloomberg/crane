@@ -49,12 +49,13 @@ CapturedRecordCopiedPerEvent::ticks(const Nat &k) {
 Itree<CapturedRecordCopiedPerEvent::TickE, Nat>
 CapturedRecordCopiedPerEvent::step(const CapturedRecordCopiedPerEvent::blk &b,
                                    const Nat &k) {
+  const auto &b_tag = b.tag;
   return ITree::template bind<CapturedRecordCopiedPerEvent::TickE,
                               std::monostate, Nat>(
       ticks(k), [=](std::monostate) {
         return Itree<CapturedRecordCopiedPerEvent::TickE, Nat>::go(ItreeF<
             CapturedRecordCopiedPerEvent::TickE, Nat,
-            Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::retf(b.tag));
+            Itree<CapturedRecordCopiedPerEvent::TickE, Nat>>::retf(b_tag));
       });
 }
 

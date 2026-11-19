@@ -244,11 +244,11 @@ template <typename obj, typename c> using ReSum = c;
 
 struct CategoryOps {
   template <typename T1, typename T2>
-  static T2 id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_);
+  static T2 id_(const std::type_identity_t<Id_<T1, T2>> &id_0, const T1 &x0_);
   template <typename T1, typename T2>
   static T2 resum(const T1 &_x, const T1 &_x0, T2 reSum);
   template <typename T1, typename T2>
-  static ReSum<T1, T2> ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
+  static ReSum<T1, T2> ReSum_id(const std::type_identity_t<Id_<T1, T2>> &x0_,
                                 const T1 &x1_);
 };
 
@@ -596,7 +596,8 @@ struct BinderTypeNamesSectionField {
 };
 
 template <typename T1, typename T2>
-T2 CategoryOps::id_(std::type_identity_t<Id_<T1, T2>> id_0, const T1 &x0_) {
+T2 CategoryOps::id_(const std::type_identity_t<Id_<T1, T2>> &id_0,
+                    const T1 &x0_) {
   return id_0(x0_);
 }
 
@@ -606,9 +607,10 @@ T2 CategoryOps::resum(const T1 &, const T1 &, T2 reSum) {
 }
 
 template <typename T1, typename T2>
-ReSum<T1, T2> CategoryOps::ReSum_id(std::type_identity_t<Id_<T1, T2>> x0_,
-                                    const T1 &x1_) {
-  return CategoryOps::template id_<T1, T2>(std::move(x0_), x1_);
+ReSum<T1, T2>
+CategoryOps::ReSum_id(const std::type_identity_t<Id_<T1, T2>> &x0_,
+                      const T1 &x1_) {
+  return CategoryOps::template id_<T1, T2>(x0_, x1_);
 }
 
 template <typename T1, typename T2, typename T3>

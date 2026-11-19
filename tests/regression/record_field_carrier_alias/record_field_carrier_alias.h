@@ -241,9 +241,8 @@ struct RecordFieldCarrierAlias {
     }
   };
 
-  static Holder
-  mk(std::type_identity_t<stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9,
-                                 bool>> m);
+  static Holder mk(const std::type_identity_t<
+      stateT<Nat, crane_carrier_tc_73ef07e9f18b86f9, bool>> &m);
   static inline const Nat five =
       Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))));
 };
