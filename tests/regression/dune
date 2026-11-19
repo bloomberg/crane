@@ -15031,3 +15031,14 @@
   (alias runtest)
   (deps local_fix_alias_function_result.t.exe)
   (action (run ./local_fix_alias_function_result.t.exe))))
+
+(subdir pos_add_loopify_reuse_shared
+ (rule
+  (targets pos_add_loopify_reuse_shared.t.exe)
+  (deps PosAddLoopifyReuseShared.vo pos_add_loopify_reuse_shared.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} pos_add_loopify_reuse_shared.t.exe pos_add_loopify_reuse_shared.t.cpp pos_add_loopify_reuse_shared.cpp)))
+ (rule
+  (alias runtest)
+  (deps pos_add_loopify_reuse_shared.t.exe)
+  (action (run ./pos_add_loopify_reuse_shared.t.exe))))

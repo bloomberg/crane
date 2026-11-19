@@ -2372,7 +2372,14 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
 
      Mirrors [make_param_copies.bind_field] exactly: use [strip_ref_type]
      (not [strip_ref_and_const_type]) so that [const T&] params (which are
-     bound as [const T& id = _f.id], not moved) are excluded. *)
+     bound as [const T& id = _f.id], not moved) are excluded.
+
+     A handle on a counted block -- a coinductive's node, a shared
+     variant's alternative -- is excluded too: [v_mut()] on a block another
+     value holds copies it first, and a pointer the handler then takes to one
+     of its fields, which the recursion plan lets a frame keep because the
+     field lies in the caller's block, points into the copy instead, which
+     dies with the handler. *)
   let owned_varying_names ee =
     List.filter_map
       (fun p ->
@@ -2380,7 +2387,9 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
         else
           match strip_ref_type p.ty with
           | Const _ -> None  (* const-ref bind: not owned *)
-          | Entity_application (r, _, _) when Base.Table.is_coinductive r -> None
+          | t when (match Base.Type_util.unqualify_ty t with
+                     | Entity_application (r, _, _) -> Base.Table.is_coinductive r || Base.Table.is_shared_variant r
+                     | _ -> false) -> None
           | t when not (copies_cheaply t) -> Some p.name
           | _ -> None )
       ee.Entry_emission.params
