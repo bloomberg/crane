@@ -228,17 +228,6 @@
   (deps stm.t.exe)
   (action (run ./stm.t.exe))))
 
-(subdir stmonad
- (rule
-  (targets stmonad.t.exe)
-  (deps STMonadExamples.vo stmonad.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} stmonad.t.exe stmonad.t.cpp stmonad.cpp)))
- (rule
-  (alias runtest)
-  (deps stmonad.t.exe)
-  (action (run ./stmonad.t.exe))))
-
 (subdir st_refs
  (rule
   (targets st_refs.t.exe)
