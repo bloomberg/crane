@@ -15076,6 +15076,17 @@
   (deps lazy_direct_layer.t.exe)
   (action (run ./lazy_direct_layer.t.exe))))
 
+(subdir lazy_throw_twice
+ (rule
+  (targets lazy_throw_twice.t.exe)
+  (deps LazyThrowTwice.vo lazy_throw_twice.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lazy_throw_twice.t.exe lazy_throw_twice.t.cpp lazy_throw_twice.cpp)))
+ (rule
+  (alias runtest)
+  (deps lazy_throw_twice.t.exe)
+  (action (run ./lazy_throw_twice.t.exe))))
+
 (subdir nested_tree_match_null_ref
  (rule
   (targets nested_tree_match_null_ref.t.exe)

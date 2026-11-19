@@ -3,6 +3,7 @@
 #pragma once
 #include <cstdint>
 #include <cstring>
+#include <exception>
 #include <new>
 #include <stdexcept>
 #include <type_traits>
@@ -31,12 +32,16 @@ inline void release(const base *b) noexcept {
 // copies what it computed -- a coinductive value is copied freely (captured
 // by value in the next thunk, returned, converted).
 //
-// The word is null, or the address of a heap node in one of four states:
+// The word is null, or the address of a heap node in one of five states:
 //   - a thunk producing the value,
 //   - a thunk producing another [lazy] whose value this one is -- what a
 //     body that returns an existing coinductive value suspends to,
 //   - the value,
-//   - a link to the [lazy] such a thunk produced.
+//   - a link to the [lazy] such a thunk produced,
+//   - the exception such a thunk threw.
+// A thunk that throws is not run again: it may have moved out of what it
+// captured before it threw.  Its exception is kept, and every later force
+// rethrows it, as OCaml's [Lazy.force] may.
 // Forcing replaces a thunk by what it produced and so releases the thunk
 // and everything it held onto.  A link is followed, never copied through:
 // [force] hands out a reference to the one value the chain ends at.
@@ -259,7 +264,7 @@ public:
         try {
           r = thunk();
         } catch (...) {
-          end->state.template emplace<1>(std::move(thunk));
+          end->state.template emplace<6>(std::current_exception());
           throw;
         }
         thunk = nullptr;
@@ -272,7 +277,7 @@ public:
         try {
           p.run(end);
         } catch (...) {
-          end->state.template emplace<5>(p);
+          end->state.template emplace<6>(std::current_exception());
           throw;
         }
         continue;
@@ -284,6 +289,8 @@ public:
       case 4:
         throw std::logic_error(
             "crane: a lazy value was forced while it was being computed");
+      case 6:
+        std::rethrow_exception(std::get<6>(end->state));
       default:
         break;
       }
@@ -313,8 +320,11 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
   // from inside it -- a computation that needs its own result -- is an
   // error, as it is for OCaml's [Lazy.force], and not a second run that
   // would destroy the first one's result under it.  [pending] is a
-  // [thunk_node]'s thunk, not yet run.
-  std::variant<fn<T()>, fn<lazy()>, T, lazy, std::monostate, pending> state;
+  // [thunk_node]'s thunk, not yet run.  [std::exception_ptr] is what a
+  // thunk threw, rethrown by every later force.
+  std::variant<fn<T()>, fn<lazy()>, T, lazy, std::monostate, pending,
+               std::exception_ptr>
+      state;
 
   // The cell a thunk produced, as this one's: its value moved in where no
   // one else holds it and it has one -- the fresh [go(...)] a corecursive
@@ -337,14 +347,14 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
   }
 
   // Runs the thunk in alternative [From] and stores its result as [To].  A
-  // thunk that throws leaves the node as it found it.
+  // thunk that throws leaves its exception in the node.
   template <std::size_t From, std::size_t To> void run() {
     auto thunk = std::get<From>(std::move(state));
     state.template emplace<4>();
     try {
       state.template emplace<To>(thunk());
     } catch (...) {
-      state.template emplace<From>(std::move(thunk));
+      state.template emplace<6>(std::current_exception());
       throw;
     }
   }
@@ -392,14 +402,24 @@ struct lazy<T>::thunk_node : lazy<T>::node {
     void *p = pool_detail::this_thread_heap().template take<sizeof(thunk_node)>();
     return ::new (p) thunk_node(std::forward<G>(g));
   }
+  // The thunk's result; a thunk that throws is let go of here, and [force]
+  // keeps its exception in the state.
+  decltype(auto) call() {
+    try {
+      return f();
+    } catch (...) {
+      f.~F();
+      throw;
+    }
+  }
   static void run_it(node *n) {
     auto *self = static_cast<thunk_node *>(n);
     if constexpr (std::is_same_v<std::remove_cvref_t<decltype(self->f())>, lazy>) {
-      lazy r = self->f();
+      lazy r = self->call();
       self->f.~F();
       n->adopt(std::move(r));
     } else {
-      n->state.template emplace<2>(self->f());
+      n->state.template emplace<2>(self->call());
       self->f.~F();
     }
   }

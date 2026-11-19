@@ -36,19 +36,24 @@ int main() {
   assert(throws_logic_error([&] { return reentrant.force(); }));
   assert(runs == 1);
 
+  // A thunk that throws runs once: every later force rethrows what it threw.
   bool fail = true;
-  crane::lazy<int> retried(crane::fn<int()>([&]() -> int {
+  int tries = 0;
+  crane::lazy<int> kept(crane::fn<int()>([&]() -> int {
+    ++tries;
     if (fail)
       throw std::runtime_error("not yet");
     return 9;
   }));
-  try {
-    retried.force();
-    assert(false);
-  } catch (const std::runtime_error &) {
+  for (int i = 0; i < 2; ++i) {
+    try {
+      kept.force();
+      assert(false);
+    } catch (const std::runtime_error &) {
+    }
+    fail = false;
   }
-  fail = false;
-  assert(retried.force() == 9);
+  assert(tries == 1);
 
   std::vector<crane::fn<std::uintptr_t()>> fs;
   for (int i = 0; i < 16; ++i) {

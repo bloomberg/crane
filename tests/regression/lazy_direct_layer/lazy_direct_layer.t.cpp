@@ -88,22 +88,26 @@ int main() {
   }
   ASSERT(ret_of(chain) == 7);
 
-  // A thunk that throws is left as it was and forced again.
+  // A thunk that throws runs once: forced again, it rethrows what it threw.
   bool fail = true;
+  int tries = 0;
   tree thr = tree::lazy_([&]() -> tree::Go {
+    ++tries;
     if (fail)
       throw std::runtime_error("not yet");
     return {F::retf(3)};
   });
-  threw = false;
-  try {
-    (void)layer(thr);
-  } catch (const std::runtime_error &) {
-    threw = true;
+  for (int i = 0; i < 2; ++i) {
+    threw = false;
+    try {
+      (void)layer(thr);
+    } catch (const std::runtime_error &) {
+      threw = true;
+    }
+    ASSERT(threw);
+    fail = false;
   }
-  ASSERT(threw);
-  fail = false;
-  ASSERT(ret_of(thr) == 3);
+  ASSERT(tries == 1);
 
   // A thunk that forces its own cell.
   tree *self = nullptr;
