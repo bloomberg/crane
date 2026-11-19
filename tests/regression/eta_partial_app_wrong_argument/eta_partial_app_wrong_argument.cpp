@@ -8,7 +8,10 @@
 /// _pa1, _loop_x0); }: the lambda's parameter is left unnamed and the call
 /// passes the loop's accumulator (crane::fn<bool(uint64_t)>) in its place,
 /// "no viable conversion from 'const crane::fn<bool (uint64_t)>' to
-/// 'uint64_t'".
+/// 'uint64_t'".  The eta-expansion's parameter is _x0, spelled like
+/// go's accumulator, and the tail loop renamed every _x0 to _loop_x0,
+/// the lambda's own included.  The renaming now stops at a lambda whose
+/// parameter shadows the name.
 bool EtaPartialAppWrongArgument::z(const List<uint64_t> &l,
                                    const List<uint64_t> &m, uint64_t x0_) {
   if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
@@ -22,12 +25,11 @@ bool EtaPartialAppWrongArgument::z(const List<uint64_t> &l,
       const auto &[a00, a10] = std::get<typename List<uint64_t>::Cons>(m.v());
       const List<uint64_t> &a10_value = *a10;
       auto go =
-          [&](const List<bool> &k, const crane::fn<bool(uint64_t)> &_x0,
+          [&](const List<bool> &k, const crane::fn<bool(uint64_t)> &,
               uint64_t x0_0)
                -> bool {
             // Loop replaces the tail recursion: each recursive call updates the
             // loop variables.
-            crane::fn<bool(uint64_t)> _loop_x0 = _x0;
             const List<bool> *_loop_k = &k;
             while (true) {
               if (std::holds_alternative<typename List<bool>::Nil>(_loop_k->v())) {
@@ -39,12 +41,6 @@ bool EtaPartialAppWrongArgument::z(const List<uint64_t> &l,
                 const auto &[_, a11] =
                     std::get<typename List<bool>::Cons>(_loop_k->v());
                 const List<bool> &a11_value = *a11;
-                _loop_x0 = [&]() {
-                  auto _pa1 = List<uint64_t>::nil();
-                  return [=](uint64_t) -> bool {
-                    return z(a1_value, _pa1, _loop_x0);
-                  };
-                }();
                 _loop_k = &a11_value;
               }
             }

@@ -216,14 +216,3 @@
   (alias runtest)
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
-
-(subdir eta_partial_app_wrong_argument
- (rule
-  (targets eta_partial_app_wrong_argument.t.exe)
-  (deps EtaPartialAppWrongArgument.vo eta_partial_app_wrong_argument.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} eta_partial_app_wrong_argument.t.exe eta_partial_app_wrong_argument.t.cpp eta_partial_app_wrong_argument.cpp)))
- (rule
-  (alias runtest)
-  (deps eta_partial_app_wrong_argument.t.exe)
-  (action (run ./eta_partial_app_wrong_argument.t.exe))))

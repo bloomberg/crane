@@ -1028,18 +1028,21 @@ and this_to_self_stmt (self_id : Id.t) (s : stmt) : stmt =
 (** Substitute variable names in an expression using a mapping
     [(old_id, new_id)].  A closure taking a renamed variable by move takes
     the variable by its new name: the move was planned of the variable, not
-    of the name it had. *)
+    of the name it had.  A lambda's parameter shadows a variable of its
+    name in the lambda's body, which is left as it is there: an
+    eta-expansion [\[=\](uint64_t _x0) { ... _x0 ... }] whose parameter
+    is spelled like a loop variable reads its own parameter. *)
 let rec subst_expr (subs : (Id.t * Id.t) list) e =
   let rename id =
     List.fold_left (fun id (old_id, new_id) -> if Id.equal id old_id then new_id else id) id subs
   in
-  let e' =
-    match e with
-    | Local id -> Local (rename id)
-    | Lambda l when l.moved <> [] -> Lambda {l with moved = List.map rename l.moved}
-    | _ -> e
-  in
-  map_expr (subst_expr subs) (subst_stmt subs) (fun t -> t) e'
+  match e with
+  | Lambda l ->
+    let bound = List.filter_map snd l.params in
+    let inner = List.filter (fun (old_id, _) -> not (List.exists (Id.equal old_id) bound)) subs in
+    Lambda {l with moved = List.map rename l.moved; body = List.map (subst_stmt inner) l.body}
+  | Local id -> Local (rename id)
+  | _ -> map_expr (subst_expr subs) (subst_stmt subs) (fun t -> t) e
 
 (** Substitute variable names in a statement using a mapping
     [(old_id, new_id)]. Statement-level companion of {!subst_expr}. *)

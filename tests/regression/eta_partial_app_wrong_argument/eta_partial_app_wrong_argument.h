@@ -101,7 +101,10 @@ public:
 /// _pa1, _loop_x0); }: the lambda's parameter is left unnamed and the call
 /// passes the loop's accumulator (crane::fn<bool(uint64_t)>) in its place,
 /// "no viable conversion from 'const crane::fn<bool (uint64_t)>' to
-/// 'uint64_t'".
+/// 'uint64_t'".  The eta-expansion's parameter is _x0, spelled like
+/// go's accumulator, and the tail loop renamed every _x0 to _loop_x0,
+/// the lambda's own included.  The renaming now stops at a lambda whose
+/// parameter shadows the name.
 struct EtaPartialAppWrongArgument {
   static bool z(const List<uint64_t> &l, const List<uint64_t> &m, uint64_t x0_);
   static inline const bool t =
