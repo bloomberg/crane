@@ -503,6 +503,16 @@ let rec type_occurs alpha t =
 
 (** {2 Most General Unificator} *)
 
+type function_abbrevs = {body : 'p. GlobRef.t -> 'p Core.Type.at option}
+
+(* The bodies of the type definitions standing for a function type, which
+   extraction keeps as their names ({!type_expand_values}): [st A] where [st A
+   := nat -> A * nat].  Unification unfolds one only where it meets the
+   arrows it stands for. *)
+let function_abbrevs = ref {body = (fun _ -> None)}
+
+let set_function_abbrevs f = function_abbrevs := f
+
 let rec mgu : type p. p Core.Type.at * p Core.Type.at -> unit = function
   | Core.Type.Meta (m : _ Core.Extracted.Meta.cell), Core.Type.Meta (m' : _ Core.Extracted.Meta.cell)
     when Int.equal m.id m'.id ->
@@ -551,6 +561,10 @@ let rec mgu : type p. p Core.Type.at * p Core.Type.at -> unit = function
   | Core.Type.Unknown, Core.Type.Unknown -> ()
   | Core.Type.Axiom, Core.Type.Axiom -> ()
   | Core.Type.String, Core.Type.String -> ()
+  | Core.Type.Global_app {head = r; type_arguments = l; _}, u when Option.has_some (!function_abbrevs.body r) ->
+    mgu (type_subst_list l (Option.get (!function_abbrevs.body r)), u)
+  | u, Core.Type.Global_app {head = r; type_arguments = l; _} when Option.has_some (!function_abbrevs.body r) ->
+    mgu (u, type_subst_list l (Option.get (!function_abbrevs.body r)))
   | _ -> raise Impossible
 
 (* An unknown standing for the application [M B] of an unsolved head
@@ -1012,6 +1026,14 @@ let type_expand env t =
   if Table.type_expand () then expand t else t
 
 let type_simpl t = type_expand (fun _ -> None) t
+
+let type_expand_values env t =
+  let rec is_arrow = function
+    | Core.Type.Meta {contents = Some t} -> is_arrow t
+    | Core.Type.Arrow _ -> true
+    | _ -> false
+  in
+  type_expand (fun r -> match env r with Some b when not (is_arrow (type_expand env b)) -> Some b | _ -> None) t
 
 (** {2 Generating a signature from a Core type} *)
 

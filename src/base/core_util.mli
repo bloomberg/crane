@@ -358,6 +358,17 @@ type 'p abbrev_map = GlobRef.t -> 'p Core.Type.at option
     @param t   the Core type to expand *)
 val type_expand : 'p abbrev_map -> 'p Core.Type.at -> 'p Core.Type.at
 
+(** {!type_expand} but for a definition standing for a function type, [st A]
+    where [st A := nat -> A * nat]: one spelling of such a type, its name,
+    whatever the term met it as. *)
+val type_expand_values : 'p abbrev_map -> 'p Core.Type.at -> 'p Core.Type.at
+
+(** The bodies of the definitions standing for a function type, which
+    unification unfolds only where it meets the arrows one stands for. *)
+type function_abbrevs = {body : 'p. GlobRef.t -> 'p Core.Type.at option}
+
+val set_function_abbrevs : function_abbrevs -> unit
+
 (** Simplify a Core type: {!type_expand} with no abbreviation, which only
     replaces solved metavariables by their contents (when type expansion is
     enabled). *)

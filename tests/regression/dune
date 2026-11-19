@@ -15119,3 +15119,14 @@
   (alias runtest)
   (deps local_fix_method_pointer_join.t.exe)
   (action (run ./local_fix_method_pointer_join.t.exe))))
+
+(subdir function_alias_spelling
+ (rule
+  (targets function_alias_spelling.t.exe)
+  (deps FunctionAliasSpelling.vo function_alias_spelling.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} function_alias_spelling.t.exe function_alias_spelling.t.cpp function_alias_spelling.cpp)))
+ (rule
+  (alias runtest)
+  (deps function_alias_spelling.t.exe)
+  (action (run ./function_alias_spelling.t.exe))))

@@ -21,6 +21,11 @@ open Declareops
 open Environ
 open Reductionops
 open Retyping
+
+(* The environment of the extraction under way, for {!Base.Core_util.mgu}'s
+   function-abbreviation hook: inside a module or functor the abbreviation's
+   constant is in this environment, not in [Global.env ()]. *)
+let abbrev_env = Base.State.cell Base.State.Extraction (None : Environ.env option)
 open Inductiveops
 open Namegen
 open Base.Table
@@ -1553,6 +1558,13 @@ and constant_body_at : 'p. Environ.env -> GlobRef.t -> 'p Core.Type.at option =
 and expand : 'p. Environ.env -> 'p Core.Type.at -> 'p Core.Type.at =
  fun env t -> type_expand (constant_body_at env) t
 
+(** {!expand} but for a definition standing for a function type, kept as
+    its name ({!Base.Core_util.type_expand_values}). *)
+and expand_values : 'p. Environ.env -> 'p Core.Type.at -> 'p Core.Type.at =
+ fun env t ->
+  abbrev_env := Some env;
+  type_expand_values (constant_body_at env) t
+
 (** Converts a Core type to a type signature (Keep/Kill list). *)
 and type2signature : 'p. Environ.env -> 'p Core.Type.at -> Core.Signature.t =
  fun env t -> type_to_signature (constant_body_at env) t
@@ -2122,7 +2134,7 @@ and freeze_instantiation schema ~rigid metas written_at =
 and extract_cst_app env sg type_env extracted_ty kn args =
   (* First, the {!Core.Schema} of the constant, in expanded version. *)
   let schema = record_constant_type env sg kn None in
-  let schema = Core.Schema.with_body (expand env (Core.Schema.body schema)) schema in
+  let schema = Core.Schema.with_body (expand_values env (Core.Schema.body schema)) schema in
   (* The metas the scheme's type variables are instantiated with, kept so
      that the call's own type arguments can be given to them below. *)
   let tvar_metas = Array.init (Core.Schema.arity schema) (fun _ -> new_meta ()) in
@@ -2219,7 +2231,7 @@ and extract_cst_app env sg type_env extracted_ty kn args =
   List.iter
     (fun v ->
       match given v with
-      | Some t -> try_mgu tvar_metas.(Core.Scheme.Var.ordinal v - 1) (expand env t)
+      | Some t -> try_mgu tvar_metas.(Core.Scheme.Var.ordinal v - 1) (expand_values env t)
       | None -> () )
     (Core.Schema.vars schema);
   let arg_terms = make_args env sg type_env s args metas in
@@ -2257,7 +2269,7 @@ and extract_cst_app env sg type_env extracted_ty kn args =
     let s' = List.skipn la s in
     (* Recover resolved argument types from the instantiated+unified constant
        type so that eta-expansion lambdas get proper types instead of Core.Type.Axiom. *)
-    let all_arg_types = List.map type_simpl (fst (type_decomp instantiated)) in
+    let all_arg_types = List.map type_simpl (fst (type_decomp (expand env instantiated))) in
     let missing_types = List.lastn ls' all_arg_types in
     let arg_terms = List.map (ast_lift ls') arg_terms @ eta_args_sign ls' s' in
     let e = anonym_or_dummy_lams_typed (apply_args head arg_terms) missing_types s' in
@@ -2291,7 +2303,7 @@ and extract_cons_app env sg type_env extracted_ty ((((kn, i) as ip), j) as cp) a
      itself. Using signature avoids including them in the result type's type arg
      list, preventing mgu mismatches. *)
   let nb_tvars = List.length (List.filter (fun x -> x == Core.Signature.Argument.Runtime) oi.signature)
-  and types = List.map (fun t -> expand env (Core.Widen.type_ t)) oi.constructor_argument_types.(j - 1) in
+  and types = List.map (fun t -> expand_values env (Core.Widen.type_ t)) oi.constructor_argument_types.(j - 1) in
   let list_tvar = List.map (fun i -> Core.Type.Variable {rigidity = Core.Type.Rigidity.Schematic;
                                                          variable = i}) (List.interval 1 nb_tvars) in
   let type_cons =
@@ -2686,7 +2698,7 @@ and extract_case env sg type_env (((kn, i) as ip), c, br) extracted_ty =
       let extract_branch i =
         let r = GlobRef.ConstructRef (ip, i + 1) in
         (* The types of the arguments of the corresponding constructor. *)
-        let f t = type_subst_vect metas (expand env (Core.Widen.type_ t)) in
+        let f t = type_subst_vect metas (expand_values env (Core.Widen.type_ t)) in
         let l = List.map f oi.constructor_argument_types.(i) in
         (* the corresponding signature *)
         let s = List.map (type2sign env) oi.constructor_argument_types.(i) in
@@ -2736,6 +2748,23 @@ and extract_fix ?tys env sg type_env i ((fi, ti, ci) as recd) is_cofix extracted
   if is_cofix then Core.Expr.Cofixpoint group else Core.Expr.Fixpoint group
 
 (** {1 Core declarations} *)
+
+let () =
+  let rec is_arrow = function
+    | Core.Type.Meta {contents = Some t} -> is_arrow t
+    | Core.Type.Arrow _ -> true
+    | _ -> false
+  in
+  set_function_abbrevs
+    { body =
+        (fun r ->
+          if not (Base.Table.type_expand ()) then None
+          else
+            let env = Option.default (Global.env ()) !abbrev_env in
+            match r with
+            | GlobRef.ConstRef kn when Environ.mem_constant kn env -> (
+              match constant_body_at env r with Some b when is_arrow (expand env b) -> Some b | _ -> None )
+            | _ -> None ) }
 
 (* [decomp_lams_eta env c t] finds the number [n] of products in the type [t],
    and decompose the term [c] in [n] lambdas, with eta-expansion if needed. *)
