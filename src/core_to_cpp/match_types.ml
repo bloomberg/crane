@@ -179,7 +179,8 @@ let iife_void_return cx env typ pv : Cpp_ir.Lowered.Type.t option =
     parameter is a deduced template parameter of its own -- [f] and [g] of the
     same Rocq type are still two C++ types, and two branches returning one
     each deduce nothing.  A global counts because, at a function type, it is
-    a function's name, whose type is no closure's.  The [return]s of a nested
+    a function's name, whose type is no closure's; so does a member named
+    through a scope, a class method [I::m] among them.  The [return]s of a nested
     lambda are its own. *)
 let rec iife_closure_return cx env typ pv (stmts : Cpp_ir.Lowered.Stmt.t list) : Cpp_ir.Lowered.Type.t option =
   let branch_rty =
@@ -207,7 +208,7 @@ and iife_closure_return_at ?(several = false) cx env rty (stmts : Cpp_ir.Lowered
   in
   let scan_expr (e : Cpp_ir.Lowered.Expr.t) =
     match e with
-    | Lambda _ | Entity _ | Type_member _ -> found := true
+    | Lambda _ | Entity _ | Type_member _ | Scope _ -> found := true
     | Local id when binder_is_fun id -> found := true
     | _ -> ()
   in
