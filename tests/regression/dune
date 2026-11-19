@@ -15076,6 +15076,17 @@
   (deps stream_match_v_mut_missing.t.exe)
   (action (run ./stream_match_v_mut_missing.t.exe))))
 
+(subdir lazy_conversion_origin
+ (rule
+  (targets lazy_conversion_origin.t.exe)
+  (deps LazyConversionOrigin.vo lazy_conversion_origin.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lazy_conversion_origin.t.exe lazy_conversion_origin.t.cpp lazy_conversion_origin.cpp)))
+ (rule
+  (alias runtest)
+  (deps lazy_conversion_origin.t.exe)
+  (action (run ./lazy_conversion_origin.t.exe))))
+
 (subdir lazy_direct_layer
  (rule
   (targets lazy_direct_layer.t.exe)

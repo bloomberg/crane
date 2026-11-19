@@ -68,9 +68,13 @@ private:
 
   // Defined below: its state holds a [lazy], complete only there.
   struct node;
+  // A node that remembers the cell it was converted from; see
+  // [converted_from].
+  struct converted_node;
   // A node holding its thunk in place, rather than in an [fn] of its own:
-  // one block where there would be two.
-  template <typename F> struct thunk_node;
+  // one block where there would be two.  [Base] is [node], or
+  // [converted_node] for a conversion's.
+  template <typename F, typename Base = node> struct thunk_node;
   // The state of a [thunk_node] whose thunk has not run: how to run it and
   // store what it produced.
   struct pending {
@@ -237,18 +241,23 @@ public:
   template <typename S, typename F>
   static lazy converted_from(const lazy<S> &source, F &&thunk) {
     const base *src = source.counted();
-    if (src && !source.holds_value() && source.nd()->origin_tag == &tag) {
-      CRANE_STAT(lazy_roundtrip);
-      return of_word(source.nd()->origin);
+    if (src && !source.holds_value() && source.nd()->state.converted) {
+      const auto *c = static_cast<const typename lazy<S>::converted_node *>(source.nd());
+      if (c->origin_tag == &tag) {
+        CRANE_STAT(lazy_roundtrip);
+        return of_word(c->origin);
+      }
     }
     CRANE_STAT(lazy_convert);
-    lazy converted(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));
-    if (src) {
-      src->rc.inc();
-      converted.nd()->origin = src;
-      converted.nd()->origin_tag = &lazy<S>::tag;
-    }
-    return converted;
+    if (!src)
+      return lazy(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));
+    node *n = thunk_node<std::decay_t<F>, converted_node>::make(std::forward<F>(thunk));
+    src->rc.inc();
+    auto *c = static_cast<converted_node *>(n);
+    c->origin = src;
+    c->origin_tag = &lazy<S>::tag;
+    n->state.converted = true;
+    return lazy(n);
   }
 
   const T &force() const {
@@ -335,6 +344,8 @@ template <typename T> struct lazy<T>::state_t {
                                                  pending, std::exception_ptr>>;
 
   unsigned char i;
+  // Whether the node is a [converted_node]; in what would be padding.
+  bool converted = false;
   union {
     fn<T()> a0;
     fn<lazy()> a1;
@@ -438,11 +449,6 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
       throw;
     }
   }
-  // The cell this one was converted from, if it was, and the
-  // instantiation it has; see [converted_from].
-  const base *origin = nullptr;
-  const void *origin_tag = nullptr;
-
   template <typename... A>
   explicit node(A &&...a)
       : base{{}, &drop}, state(std::forward<A>(a)...) {}
@@ -451,19 +457,30 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
   template <typename... A>
   explicit node(with_destroy_t, pool_detail::destroy_fn d, A &&...a)
       : base{{}, d}, state(std::forward<A>(a)...) {}
-  ~node() { lazy_detail::release(origin); }
   static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
     auto *self = static_cast<node *>(const_cast<base *>(static_cast<const base *>(b)));
     self->state.visit([&](auto &s) { crane::release_into(s, h); });
-    if (self->origin) self->origin->release_into(h);
-    self->origin = nullptr;
     node::dispose(self, h);
   }
 };
 
+// Only a conversion's node pays for the two words naming its source: the
+// cell it was converted from, and the instantiation that cell has.
 template <typename T>
-template <typename F>
-struct lazy<T>::thunk_node : lazy<T>::node {
+struct lazy<T>::converted_node : lazy<T>::node {
+  const base *origin = nullptr;
+  const void *origin_tag = nullptr;
+  using node::node;
+  ~converted_node() { lazy_detail::release(origin); }
+  void release_origin_into(pool_detail::thread_heap &h) noexcept {
+    if (origin) origin->release_into(h);
+    origin = nullptr;
+  }
+};
+
+template <typename T>
+template <typename F, typename Base>
+struct lazy<T>::thunk_node : Base {
   // Alive while the state is [pending]: run, the thunk is let go of -- and
   // what it captured -- before a [lazy] it produced is stored, and as soon
   // as a value it produced is built in place.
@@ -472,7 +489,7 @@ struct lazy<T>::thunk_node : lazy<T>::node {
   };
   template <typename G>
   explicit thunk_node(G &&g)
-      : node(typename node::with_destroy_t{}, &drop, std::in_place_index<5>, pending{&run_it}),
+      : Base(typename node::with_destroy_t{}, &drop, std::in_place_index<5>, pending{&run_it}),
         f(std::forward<G>(g)) {}
   ~thunk_node() {
     if (this->state.index() == 5) f.~F();
@@ -507,8 +524,7 @@ struct lazy<T>::thunk_node : lazy<T>::node {
     auto *self = static_cast<thunk_node *>(
         static_cast<node *>(const_cast<base *>(static_cast<const base *>(b))));
     self->state.visit([&](auto &s) { crane::release_into(s, h); });
-    if (self->origin) self->origin->release_into(h);
-    self->origin = nullptr;
+    if constexpr (!std::is_same_v<Base, node>) self->release_origin_into(h);
     self->~thunk_node();
     h.template give<sizeof(thunk_node)>(self);
   }
