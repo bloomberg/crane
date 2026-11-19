@@ -1114,8 +1114,12 @@ let live_inductive_head ctx r : Cpp_resolution.head =
   else if is_enum_cached ctx.unit r then
     (* Enum types at global scope need no struct qualification. Enums inside
        structs (e.g., Comparison::cmp) need it. *)
-    let qualifier = if is_global_scope_enum_cached ctx.unit.modules r then [] else struct_scopes_for ctx r type_name in
-    {(unqualified_head (enum_name type_name r)) with outer = qualifier}
+    let head = enum_name type_name r in
+    let qualifier =
+      if is_global_scope_enum_cached ctx.unit.modules r then global_scopes_for ctx.unit r head
+      else struct_scopes_for ctx r type_name
+    in
+    {(unqualified_head head) with outer = qualifier}
   else if Base.Cpp_name.is_qualified type_name then
     let cap =
       if Base.Common.get_force_cross_file_qualification () then capitalize_base type_name else type_name
