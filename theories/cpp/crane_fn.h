@@ -395,6 +395,12 @@ template <class T> T crane_any_cast(const crane::obj &a) {
         if (auto *p = crane::any_cast<E>(&a)) {
           return T(*p);
         }
+        // Another instantiation boxed as itself, readable at [E]; at [T]
+        // itself, it is read as it is.
+        if (auto *p = crane::any_cast<T>(&a))
+          return *p;
+        if (a.template reads_erased_as<E>())
+          return T(a.template read_erased<E>());
       }
     }
     return crane::any_cast<T>(a);
@@ -570,7 +576,9 @@ template <class Dst, class Src> consteval crane_route crane_convert_route() {
   // [crane_all_any]) -- and a reader at a concrete instantiation recovers it
   // through [crane_any_cast]'s fallback.  A nested event [Sum1<BE, CE, X>]
   // inside an event already boxed at [Sum1<any, any, any>] is read by the
-  // inner [case_] at the same shape.
+  // inner [case_] at the same shape.  A counted word (a shared variant) is
+  // boxed as itself instead, and built at that instantiation, one level at a
+  // time, only where something reads it there (see [crane::obj::viewed_as]).
   else if constexpr (std::is_same_v<Dst, crane::obj> &&
                      requires { typename crane_all_any<S>::type; })
     return crane_route::box_all_any;
@@ -584,6 +592,12 @@ template <class Dst, class Src> consteval crane_route crane_convert_route() {
     return crane_route::walk;
   else
     return crane_route::none;
+}
+
+// [*src], an [S], built at [E] in [dst]: what a reader at [E] of an [S] boxed
+// as itself gets (see [crane::obj::viewed_as]).
+template <class E, class S> void crane_view_at(const void *src, void *dst) {
+  ::new (dst) E(*static_cast<const S *>(src));
 }
 
 // Whether [crane_convert<Dst>] has a route from [Src].  A generated
@@ -606,8 +620,14 @@ template <class Dst, class Src> Dst crane_convert(Src &&src) {
   else if constexpr (route == crane_route::box_all_any) {
     using S = std::remove_cvref_t<Src>;
     using E = typename crane_all_any<S>::type;
-    if constexpr (!std::is_same_v<E, S> &&
-                  crane_convert_route<E, const S &>() != crane_route::none)
+    // A counted word goes in as itself, readable at [E] (see
+    // [crane::obj::viewed_as]): built there only if a reader asks for it
+    // there.  Anything else is boxed at [E].
+    if constexpr (!std::is_same_v<E, S> && crane::obj_detail::held_handle<S> &&
+                  crane::obj_detail::held_handle<E> && std::is_constructible_v<E, const S &>)
+      return crane::obj(crane::obj::viewed_as<E, &crane_view_at<E, S>>{}, std::forward<Src>(src));
+    else if constexpr (!std::is_same_v<E, S> &&
+                       crane_convert_route<E, const S &>() != crane_route::none)
       return crane::obj(crane_convert<E>(src));
     else
       return crane::obj(std::forward<Src>(src));
