@@ -104,6 +104,7 @@ type t = {
   suspended : Core.Ref.User.Set.t;  (* the definitions whose body suspends *)
   resumes : resume list Core.Ref.User.Map.t;  (* per definition, its resume points *)
   adoptable : Core.Occurrence.t list Core.Ref.User.Map.t;  (* per definition, {!flow_fixpoints} calling its group *)
+  adopted : Core.Occurrence.t Core.Ref.User.Map.t;  (* per definition, the fixpoint its machine adopts, if any *)
   kinds : kind Core.Ref.User.Map.t;  (* per definition, its own calls *)
   calls : Core.Occurrence.t list Core.Ref.User.Map.t;  (* per member, the uses heading its calls in its group's bodies *)
   let_lambdas : Core.Occurrence.t list;  (* the lets binding a lambda *)
@@ -118,6 +119,7 @@ let empty =
     suspended = Core.Ref.User.Set.empty;
     resumes = Core.Ref.User.Map.empty;
     adoptable = Core.Ref.User.Map.empty;
+    adopted = Core.Ref.User.Map.empty;
     kinds = Core.Ref.User.Map.empty;
     calls = Core.Ref.User.Map.empty;
     let_lambdas = [] }
@@ -828,15 +830,19 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
          the body are the copy's, a member of the fixpoint at that level. *)
       let targets, heads, fixpoints, captures =
         match a with
-        | Core.Expr.Fixpoint {members = [|_|]; occurrence = occ; _} when entered occ ->
+        | Core.Expr.Fixpoint ({members = [|_|]; occurrence = occ; _} as group) when entered occ ->
           let level = depth in
+          (* A call applied to fewer arguments than the copy's parameters
+             is a closure the C++ makes, entering nothing where it stands. *)
+          let arity = fst (split_params 0 (Core.Recursion.Group.bodies group).(0)) in
           let rec entering ~depth:d = function
             | Core.Expr.Coerce {value = e; _}
             | Core.Expr.Boxed_value {value = e; _}
             | Core.Expr.Lambda_group_barrier {value = e; _} ->
               entering ~depth:d e
             | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k;
-                                                                  occurrence = read}; _} when d - k = level ->
+                                                                  occurrence = read}; arguments = args}
+              when d - k = level && List.length args >= arity ->
               [{target = Member (occ, 0); occurrence = read}]
             | e -> targets ~depth:d e
           in
@@ -882,8 +888,9 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
         | Core.Expr.Boxed_value {value = e; _}
         | Core.Expr.Lambda_group_barrier {value = e; _} ->
           member ~depth e
-        | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; occurrence = read}; _} when first <= depth - k
-          && depth - k < first + n ->
+        | Core.Expr.Apply {callee = Core.Expr.Bound_variable {index = k; occurrence = read}; arguments = args}
+          when first <= depth - k && depth - k < first + n
+               && List.length args >= fst (split_params 0 funs.(depth - k - first)) ->
           [{target = Member (occ, depth - k - first); occurrence = read}]
         | _ -> []
       in
@@ -905,10 +912,44 @@ let resumes_of ~effects ~entered ~origin ~targets lex body =
     ~sites:[] (Core.Lexenv.depth lex) body;
   List.rev !found
 
+(* Whether every member of the fixpoint [group] is named in its bodies only
+   as the head of a call with an argument for each of its parameters, where
+   the bodies run: a machine adopting the fixpoint makes no function of it,
+   so a member applied to fewer arguments, or read in a closure, would name
+   nothing. *)
+let only_entered group =
+  let funs = Core.Recursion.Group.bodies group in
+  let n = Array.length funs in
+  let arities = Array.map (fun f -> fst (split_params 0 f)) funs in
+  (* The member the variable [index] names, [depth] binders inside a body
+     before its parameters. *)
+  let member depth index = let k = n + depth - index in if 0 <= k && k < n then Some k else None in
+  let called depth f =
+    match strip f with Core.Expr.Bound_variable {index = i; _} -> member depth i | _ -> None
+  in
+  let names depth e = Base.Core_util.ast_occurs_itvl (depth + 1) (depth + n) e in
+  let rec ok depth e =
+    match e with
+    | Core.Expr.Bound_variable {index = i; _} -> Option.is_empty (member depth i)
+    | Core.Expr.Apply {callee = f; arguments = args} when Option.has_some (called depth f) ->
+      List.length args >= arities.(Option.get (called depth f)) && List.for_all (ok depth) args
+    | Core.Expr.Lambda _ | Core.Expr.Fixpoint _ | Core.Expr.Cofixpoint _ -> not (names depth e)
+    | Core.Expr.Let {value = a; body = b; _} -> ok depth a && ok (depth + 1) b
+    | Core.Expr.Match {scrutinee = s; branches; _} ->
+      ok depth s
+      && Array.for_all (fun {Core.Match.Branch.binders = ids; body = b; _} -> ok (depth + List.length ids) b) branches
+    | e ->
+      let all = ref true in
+      Base.Core_util.ast_iter (fun c -> if not (ok depth c) then all := false) e;
+      !all
+  in
+  Array.for_all2 (fun arity f -> ok arity (snd (split_params 0 f))) arities funs
+
 (* The local fixpoints in the flow of [body], standing under [depth]
    binders -- run where the code made of [body] runs, not under a lambda nor
    in another local fixpoint -- some member of which names a function
-   [names ~depth] recognises, in the order they are met. *)
+   [names ~depth] recognises, and which a machine can adopt
+   ({!only_entered}), in the order they are met. *)
 let flow_fixpoints ~names depth body =
   let rec mentions depth e =
     names ~depth e
@@ -934,7 +975,7 @@ let flow_fixpoints ~names depth body =
       let ids = Core.Recursion.Group.functions rec_group
       and funs = Core.Recursion.Group.bodies rec_group
       and occ = rec_group.occurrence in
-      if Array.exists (mentions (depth + Array.length ids)) funs then found := occ :: !found
+      if Array.exists (mentions (depth + Array.length ids)) funs && only_entered rec_group then found := occ :: !found
     | Core.Expr.Lambda _ -> ()
     | Core.Expr.Let {value = a; body = b; _} ->
       flow depth a;
@@ -1610,6 +1651,41 @@ let analyze ~suspension groups program =
         if definition_suspends ~suspension r fd.type_ fd.body then Core.Ref.User.Set.add r s else s )
       defs Core.Ref.User.Set.empty
   in
+  let adoptable =
+    Core.Ref.User.Map.mapi
+      (fun r (fd : Core.Recursion.Definition.t) ->
+        let members = match Core.Ref.User.Map.find_opt r by_member with Some g -> g.members | None -> [] in
+        let names ~depth:_ = function
+          | Core.Expr.Global (use : Core.Global_use.t) -> List.exists (Base.Common.globref_equal use.callee) members
+          | _ -> false
+        in
+        let lex, body = Elaborate.declaration_scope fd.type_ fd.body in
+        flow_fixpoints ~names (Core.Lexenv.depth lex) body )
+      defs
+  in
+  (* The fixpoint the machine of each definition adopts: the first adoptable
+     one of a single member yielding what the definition does -- a machine
+     has one result. *)
+  let adopted =
+    Core.Ref.User.Map.fold
+      (fun r (fd : Core.Recursion.Definition.t) m ->
+        let candidates = Option.default [] (Core.Ref.User.Map.find_opt r adoptable) in
+        let fits = ref [] in
+        let rec walk e =
+          ( match e with
+          | Core.Expr.Fixpoint {members = [|member|]; occurrence = o; _}
+          | Core.Expr.Cofixpoint {members = [|member|]; occurrence = o; _}
+            when List.exists (Core.Occurrence.equal o) candidates && yields_alike fd.type_ member.type_ ->
+            fits := o :: !fits
+          | _ -> () );
+          Base.Core_util.ast_iter walk e
+        in
+        if candidates <> [] then walk fd.body;
+        match List.find_opt (fun o -> List.exists (Core.Occurrence.equal o) !fits) candidates with
+        | Some o -> Core.Ref.User.Map.add r o m
+        | None -> m )
+      defs Core.Ref.User.Map.empty
+  in
   (* A definition off every group that does not recurse only by tail calls
      resumes nowhere but in its local fixpoints. *)
   let resumes =
@@ -1633,20 +1709,13 @@ let analyze ~suspension groups program =
           | _ -> []
         in
         let lex, body = Elaborate.declaration_scope fd.type_ fd.body in
-        resumes_of ~effects ~entered:(Core_passes.Splices.is_entered_copy (Core_passes.Phase.splices program))
-          ~origin:r ~targets lex body )
-      defs
-  in
-  let adoptable =
-    Core.Ref.User.Map.mapi
-      (fun r (fd : Core.Recursion.Definition.t) ->
-        let members = match Core.Ref.User.Map.find_opt r by_member with Some g -> g.members | None -> [] in
-        let names ~depth:_ = function
-          | Core.Expr.Global (use : Core.Global_use.t) -> List.exists (Base.Common.globref_equal use.callee) members
-          | _ -> false
+        (* The machine enters a partner's copy spliced into the body, and
+           the fixpoint it adopts. *)
+        let entered o =
+          Core_passes.Splices.is_entered_copy (Core_passes.Phase.splices program) o
+          || Option.cata (Core.Occurrence.equal o) false (Core.Ref.User.Map.find_opt r adopted)
         in
-        let lex, body = Elaborate.declaration_scope fd.type_ fd.body in
-        flow_fixpoints ~names (Core.Lexenv.depth lex) body )
+        resumes_of ~effects ~entered ~origin:r ~targets lex body )
       defs
   in
   let calls =
@@ -1677,6 +1746,7 @@ let analyze ~suspension groups program =
     suspended;
     resumes;
     adoptable;
+    adopted;
     kinds;
     calls;
     let_lambdas =
@@ -1743,6 +1813,7 @@ let equal a b =
                  r.recomputable r'.recomputable ) )
        a.resumes b.resumes
   && Core.Ref.User.Map.equal (List.equal Core.Occurrence.equal) a.adoptable b.adoptable
+  && Core.Ref.User.Map.equal Core.Occurrence.equal a.adopted b.adopted
   && Core.Ref.User.Map.equal ( = ) a.kinds b.kinds
   && Core.Ref.User.Map.equal (List.equal Core.Occurrence.equal) a.calls b.calls
   && List.equal Core.Occurrence.equal a.let_lambdas b.let_lambdas
@@ -1866,6 +1937,8 @@ let strategy_at t ~pointer_fields (occurrence, member) =
     None t.locals
 
 let adoptable_in t r = Option.default [] (Core.Ref.User.Map.find_opt r t.adoptable)
+
+let adopted t r = Core.Ref.User.Map.find_opt r t.adopted
 
 (* Copies of a fixpoint share its occurrence, and plan alike. *)
 let adoptable_at t (occurrence, member) =

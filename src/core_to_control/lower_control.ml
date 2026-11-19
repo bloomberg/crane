@@ -251,22 +251,6 @@ let lower ~methods plan program =
     let parameters, inner = generated fd in
     (parameters, if builds then Core_plan.Recursion.restore_temporaries inner else inner)
   in
-  (* What the machine of the function [r], whose body is [inner], adopts:
-     the first fixpoint of one member the plan has it adopt
-     ({!Control_to_cpp.Frame.find_adopted}), where it returns what [r] does: a
-     machine has one result. *)
-  let adoption r inner =
-    let single (_, _, funs) = Array.length funs = 1 in
-    let first o = List.find_opt single (fixpoints [o] [] inner) in
-    let yields_own ty =
-      match Names.GlobRef.Map_env.find_opt r !defs with
-      | Some own -> Core_plan.Recursion.yields_alike own.type_ ty
-      | None -> false
-    in
-    match List.find_map first (Core_plan.Recursion.adoptable_in plan r) with
-    | Some (o, types, _) when yields_own types.(0) -> Some o
-    | Some _ | None -> None
-  in
   (* A partner's copy spliced into the body of [r] is entered by the
      machine [lowered] lowers it as ({!Core_passes.Splices.entered_copy}). *)
   let check_entered r lowered =
@@ -301,7 +285,7 @@ let lower ~methods plan program =
               | _ -> None
             in
             let target = Loop.Function fd.entity in
-            let adopted = if frames && not (methods fd.entity) then adoption fd.entity inner else None in
+            let adopted = if frames && not (methods fd.entity) then Core_plan.Recursion.adopted plan fd.entity else None in
             let lowered = tail_loop ~modulo_cons:builds ~frames ?adopted ~effects ~target ~callee inner in
             add target parameters lowered;
             check_entered fd.entity (Some lowered)

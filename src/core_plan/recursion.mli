@@ -184,6 +184,11 @@ val strategy_of_let : t -> Core.Occurrence.t -> strategy option
     ({!Control_to_cpp.Frame.find_adopted}). *)
 val adoptable_in : t -> Names.GlobRef.t -> Core.Occurrence.t list
 
+(** The fixpoint the machine of [r] adopts, if it is a machine: the first of
+    {!adoptable_in} of a single member yielding what [r] does.  Its resume
+    points read a call of it as entering the machine. *)
+val adopted : t -> Names.GlobRef.t -> Core.Occurrence.t option
+
 (** [splice_partners ~loopified ~inlines p]: [p], a program being
     normalized, with the partners of each function [loopified] says it
     loopifies, in its recursive group, spliced into its Core body, a copy

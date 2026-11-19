@@ -863,9 +863,12 @@ module Binding = struct
     | _ -> false
 
   (* A variant match takes apart a scrutinee the region owns, binding its
-     fields by mutable reference. *)
-  let owns_scrutinee ~owned scrut =
-    match scrutinee_var scrut with Some (i, o) -> owned i o | None -> false
+     fields by mutable reference, where nothing after the match reads the
+     variable: what is taken apart, or recycled, is gone for a later read. *)
+  let owns_scrutinee ~owned ~fate scrut =
+    match scrutinee_var scrut with
+    | Some (i, o) -> owned i o && (match fate o with Read_again -> false | Last_use | Inspected | Unplanned -> true)
+    | None -> false
 end
 
 (* [ownership ~reads ~arms ~owned t] says, of every read in [t], whether the
@@ -1085,7 +1088,7 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
           (* An owned variant is matched through references into it: it is
              not read whole by value while the branch runs, and its fields
              are the branch's own unless the branch reads it whole. *)
-          let consumed = Binding.owns_scrutinee ~owned:(owned_var owned d) scrut in
+          let consumed = Binding.owns_scrutinee ~owned:(owned_var owned d) ~fate:(fate_in ~whole:true reads) scrut in
           let owned =
             match scrutinee_storage scrut with
             | Some (i, o) when owned_var owned d i o -> Levels.remove (d - i) owned
@@ -1381,7 +1384,7 @@ let rec takes_record ~throws p t =
   | Core.Expr.Global {callee = r; _} -> Base.Table.is_cofixpoint r || throws r
   | t -> ( match field_of t with Some r -> takes_record ~throws p r | None -> true )
 
-let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p)
+let owns_scrutinee p = Binding.owns_scrutinee ~owned:(owned p) ~fate:(fate ~whole:true p)
 
 let pair_by_value p = Binding.pair_by_value ~owned:(owned p)
 
