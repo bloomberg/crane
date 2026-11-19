@@ -74,7 +74,8 @@ MutualStFramePlanBinder::h4a(const List<MutualStFramePlanBinder::tree> &n50) {
           std::move(_f.a1);
       _stack.emplace_back(_call_go65{
           std::move(_result),
-          List<std::pair<bool, MutualStFramePlanBinder::tree>>::nil(), a1});
+          List<std::pair<bool, MutualStFramePlanBinder::tree>>::nil(),
+          std::move(a1)});
     }
   }
   return _result;

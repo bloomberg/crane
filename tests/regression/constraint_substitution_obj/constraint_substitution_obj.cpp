@@ -77,8 +77,8 @@ ConstraintSubstitutionObj::h2b(uint64_t n36) {
                     std::get<typename List<ConstraintSubstitutionObj::st<
                         ConstraintSubstitutionObj::pt>>::Cons>(_loop_l42->v());
                 _loop_acc43 = [&]() -> Sum<
-                    crane::fn<std::pair<uint64_t, uint64_t>(uint64_t)>,
-                    std::optional<crane::obj>> {
+                    ConstraintSubstitutionObj::st<uint64_t>,
+                    std::optional<ConstraintSubstitutionObj::tree>> {
                   if (n36 <= 0) {
                     return Sum<ConstraintSubstitutionObj::st<uint64_t>,
                                std::optional<ConstraintSubstitutionObj::tree>>::inl(

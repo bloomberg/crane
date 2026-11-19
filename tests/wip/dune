@@ -217,28 +217,6 @@
   (deps nullary_unit_effect_dropped.t.exe)
   (action (run ./nullary_unit_effect_dropped.t.exe))))
 
-(subdir constraint_substitution_obj
- (rule
-  (targets constraint_substitution_obj.t.exe)
-  (deps ConstraintSubstitutionObj.vo constraint_substitution_obj.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} constraint_substitution_obj.t.exe constraint_substitution_obj.t.cpp constraint_substitution_obj.cpp)))
- (rule
-  (alias runtest)
-  (deps constraint_substitution_obj.t.exe)
-  (action (run ./constraint_substitution_obj.t.exe))))
-
-(subdir functor_st_list_optional_obj
- (rule
-  (targets functor_st_list_optional_obj.t.exe)
-  (deps FunctorStListOptionalObj.vo functor_st_list_optional_obj.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} functor_st_list_optional_obj.t.exe functor_st_list_optional_obj.t.cpp functor_st_list_optional_obj.cpp)))
- (rule
-  (alias runtest)
-  (deps functor_st_list_optional_obj.t.exe)
-  (action (run ./functor_st_list_optional_obj.t.exe))))
-
 (subdir poly_sum_payload_obj
  (rule
   (targets poly_sum_payload_obj.t.exe)

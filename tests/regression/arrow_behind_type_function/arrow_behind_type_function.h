@@ -123,9 +123,8 @@ struct ArrowBehindTypeFunction {
     };
   }
 
-  static inline const uint64_t escaped =
-      callcc<uint64_t, uint64_t, uint64_t>([](const crane::fn<
-          crane::fn<uint64_t(crane::fn<uint64_t(uint64_t)>)>(uint64_t)> &esc) {
+  static inline const uint64_t escaped = callcc<uint64_t, uint64_t, uint64_t>(
+      [](const crane::fn<cont<uint64_t, uint64_t>(uint64_t)> &esc) {
         return cbind<uint64_t, uint64_t, uint64_t>(
             esc(UINT64_C(5)),
             [](uint64_t) { return cret<uint64_t, uint64_t>(UINT64_C(100)); });

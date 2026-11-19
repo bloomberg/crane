@@ -828,8 +828,9 @@ struct LiftedHelperFamilyGeneralised {
 
   static_assert(Params<natParams>);
   static inline const top<typename natParams::ptr, Sum<Nat, Nat>> c =
-      puts<natParams>()(
-          List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))), List<Nat>::nil()));
+      crane::any_cast<top<typename natParams::ptr, Sum<Nat, Nat>>>(
+          puts<natParams>()(List<Nat>::cons(Nat::s(Nat::s(Nat::s(Nat::o()))),
+                                            List<Nat>::nil())));
 };
 
 template <Functor _tcI0, typename T2, typename T3, typename F0>

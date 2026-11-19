@@ -112,15 +112,10 @@ struct LocalFixAliasFunctionResult {
 
   static inline const uint64_t t = []() {
     st<uint64_t> w;
-    crane::fn<st<uint64_t>(List<bool>, st<uint64_t>)> go =
-        [](const List<bool> &l, st<uint64_t>) -> st<uint64_t> {
-          if (std::holds_alternative<typename List<bool>::Nil>(l.v())) {
-            return sret<uint64_t>(UINT64_C(7));
-          } else {
-            return sret<uint64_t>(UINT64_C(9));
-          }
-        };
-    w = go(List<bool>::nil(), sret<uint64_t>(UINT64_C(1)));
+    List<bool> l = List<bool>::nil();
+    w = (std::holds_alternative<typename List<bool>::Nil>(l.v())
+             ? sret<uint64_t>(UINT64_C(7))
+             : sret<uint64_t>(UINT64_C(9)));
     return w(UINT64_C(3)).first;
   }();
 };
