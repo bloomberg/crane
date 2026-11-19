@@ -104,8 +104,10 @@ struct MemSafetyProbe25 {
     match_closure_opt(bool b) const {
       tree _self_val = *this;
       if (b) {
-        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(crane::fn(
-            [=, _self_val = std::move(_self_val)](uint64_t x) -> uint64_t {
+        return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
+            crane::fn<uint64_t(uint64_t)>([=, _self_val = std::move(_self_val)](
+                uint64_t x)
+                                               -> uint64_t {
               if (std::holds_alternative<typename tree::Leaf>(_self_val.v())) {
                 return x;
               } else {
@@ -174,15 +176,18 @@ struct MemSafetyProbe25 {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
     pair_closures() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return std::make_pair(crane::fn([](uint64_t x) { return x; }),
-                              crane::fn([](uint64_t x) { return x; }));
+        return std::make_pair(
+            crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }),
+            crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }));
       } else {
         const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return std::make_pair(
-            crane::fn([=](uint64_t x) { return (x + a0_value.tree_sum()); }),
-            crane::fn([=](uint64_t x) { return (x + a2_value.tree_sum()); }));
+            crane::fn<uint64_t(uint64_t)>(
+                [=](uint64_t x) { return (x + a0_value.tree_sum()); }),
+            crane::fn<uint64_t(uint64_t)>(
+                [=](uint64_t x) { return (x + a2_value.tree_sum()); }));
       }
     }
 

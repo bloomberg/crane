@@ -42,6 +42,6 @@ struct ClassInstanceAtFunctionType {
         WeighFn::weigh([](uint64_t n) { return (n * UINT64_C(2)); })) +
        WeighPair<WeighNat, WeighFn, uint64_t,
                  crane::fn<uint64_t(uint64_t)>>::weigh(std::make_pair(
-           UINT64_C(3),
-           crane::fn([](uint64_t n) { return (n + UINT64_C(1)); }))));
+           UINT64_C(3), crane::fn<uint64_t(uint64_t)>(
+                            [](uint64_t n) { return (n + UINT64_C(1)); }))));
 };

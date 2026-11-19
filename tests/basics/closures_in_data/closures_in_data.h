@@ -198,7 +198,7 @@ struct ClosuresInData {
       compose_all(pipeline, UINT64_C(3));
   static inline const uint64_t test_maybe_some =
       maybe_apply(std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn([](uint64_t x) { return (x + 1); })),
+          crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return (x + 1); })),
                   UINT64_C(41));
   static inline const uint64_t test_maybe_none =
       maybe_apply(std::optional<crane::fn<uint64_t(uint64_t)>>(), UINT64_C(42));

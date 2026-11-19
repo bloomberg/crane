@@ -30,11 +30,11 @@ uint64_t PairClosureEscape::sum_values(const PairClosureEscape::tree &t,
 /// return_captures_by_value doesn't handle lambdas inside std::make_pair.
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 PairClosureEscape::pair_escape(PairClosureEscape::tree t) {
-  return std::make_pair(
-      crane::fn([=, t = std::move(t)](uint64_t _x0) -> uint64_t {
+  return std::make_pair(crane::fn<uint64_t(uint64_t)>(
+      [=, t = std::move(t)](uint64_t _x0) -> uint64_t {
         return sum_values(std::move(t), _x0);
       }),
-      UINT64_C(0));
+                        UINT64_C(0));
 }
 
 uint64_t PairClosureEscape::use_pair(

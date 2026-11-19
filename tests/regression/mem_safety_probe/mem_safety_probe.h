@@ -164,11 +164,12 @@ struct MemSafetyProbe {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>
     pair_of_closures() const {
       tree _self_val = *this;
-      return std::make_pair(crane::fn(
-          [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
-            return _self_val.sum_values(_x0);
-          }),
-                            crane::fn([](uint64_t n) { return n; }));
+      return std::make_pair(
+          crane::fn<uint64_t(uint64_t)>(
+              [=, _self_val = std::move(_self_val)](uint64_t _x0) -> uint64_t {
+                return _self_val.sum_values(_x0);
+              }),
+          crane::fn<uint64_t(uint64_t)>([](uint64_t n) { return n; }));
     }
 
     /// Sum all values in a tree, plus an accumulator.

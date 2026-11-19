@@ -16,9 +16,11 @@ ClosureEscapeMatch::make_prepender_opt(
         ClosureEscapeMatch::mylist<uint64_t>>::Mycons>(l.v());
     return std::make_optional<crane::fn<ClosureEscapeMatch::mylist<uint64_t>(
         ClosureEscapeMatch::mylist<uint64_t>)>>(
-        crane::fn([=](ClosureEscapeMatch::mylist<uint64_t> x) {
-          return app<uint64_t>(a0, std::move(x));
-        }));
+        crane::fn<ClosureEscapeMatch::mylist<uint64_t>(
+            ClosureEscapeMatch::mylist<uint64_t>)>(
+            [=](ClosureEscapeMatch::mylist<uint64_t> x) {
+              return app<uint64_t>(a0, std::move(x));
+            }));
   }
 }
 
@@ -37,9 +39,10 @@ ClosureEscapeMatch::make_pair_fn_opt(
     const ClosureEscapeMatch::mylist<uint64_t> &a1_value = *a1;
     return std::make_optional<
         crane::fn<std::pair<uint64_t, uint64_t>(std::monostate)>>(
-        crane::fn([=](std::monostate) {
-          return std::make_pair(a0, length<uint64_t>(a1_value));
-        }));
+        crane::fn<std::pair<uint64_t, uint64_t>(std::monostate)>(
+            [=](std::monostate) {
+              return std::make_pair(a0, length<uint64_t>(a1_value));
+            }));
   }
 }
 
@@ -57,7 +60,7 @@ ClosureEscapeMatch::nested_closure_opt(
       const auto &[a00, _] = std::get<
           typename ClosureEscapeMatch::mylist<uint64_t>::Mycons>(b.v());
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn([=](uint64_t n) { return (a00 + n); }));
+          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return (a00 + n); }));
     }
   } else {
     const auto &[a0, _] =
@@ -65,12 +68,13 @@ ClosureEscapeMatch::nested_closure_opt(
     if (std::holds_alternative<
             typename ClosureEscapeMatch::mylist<uint64_t>::Mynil>(b.v())) {
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn([=](uint64_t n) { return (a0 + n); }));
+          crane::fn<uint64_t(uint64_t)>([=](uint64_t n) { return (a0 + n); }));
     } else {
       const auto &[a00, _] = std::get<
           typename ClosureEscapeMatch::mylist<uint64_t>::Mycons>(b.v());
       return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-          crane::fn([=](uint64_t n) { return ((a0 + a00) + n); }));
+          crane::fn<uint64_t(uint64_t)>(
+              [=](uint64_t n) { return ((a0 + a00) + n); }));
     }
   }
 }
@@ -83,15 +87,19 @@ ClosureEscapeMatch::closure_in_pair(
   if (std::holds_alternative<typename ClosureEscapeMatch::mylist<
           ClosureEscapeMatch::mylist<uint64_t>>::Mynil>(l.v())) {
     return std::make_pair(
-        UINT64_C(0),
-        crane::fn([](ClosureEscapeMatch::mylist<uint64_t> x) { return x; }));
+        UINT64_C(0), crane::fn<ClosureEscapeMatch::mylist<uint64_t>(
+                         ClosureEscapeMatch::mylist<uint64_t>)>([](
+                         ClosureEscapeMatch::mylist<uint64_t> x) {
+                       return x;
+                     }));
   } else {
     const auto &[a0, _] = std::get<typename ClosureEscapeMatch::mylist<
         ClosureEscapeMatch::mylist<uint64_t>>::Mycons>(l.v());
-    return std::make_pair(
-        length<uint64_t>(a0),
-        crane::fn([=](ClosureEscapeMatch::mylist<uint64_t> x) {
-          return app<uint64_t>(a0, std::move(x));
-        }));
+    return std::make_pair(length<uint64_t>(a0),
+                          crane::fn<ClosureEscapeMatch::mylist<uint64_t>(
+                              ClosureEscapeMatch::mylist<uint64_t>)>(
+                              [=](ClosureEscapeMatch::mylist<uint64_t> x) {
+                                return app<uint64_t>(a0, std::move(x));
+                              }));
   }
 }

@@ -120,8 +120,9 @@ uint64_t MemSafetyProbe10::choose_fn(const std::optional<bool> &o, uint64_t v,
 /// Tests pair construction with closure.
 std::pair<crane::fn<uint64_t(uint64_t)>, uint64_t>
 MemSafetyProbe10::pair_with_fn(uint64_t n) {
-  return std::make_pair(crane::fn([=](uint64_t x) { return (n + x); }),
-                        (n * UINT64_C(2)));
+  return std::make_pair(
+      crane::fn<uint64_t(uint64_t)>([=](uint64_t x) { return (n + x); }),
+      (n * UINT64_C(2)));
 }
 
 /// TEST 7: Mutually recursive functions using a fixpoint

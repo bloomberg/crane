@@ -81,12 +81,14 @@ uint64_t BranchCallablesCurriedJoin::v3(const std::optional<uint64_t> &x) {
     }();
     if (std::holds_alternative<typename BranchCallablesCurriedJoin::tree::Leaf>(
             _sv.v())) {
-      return std::make_pair(UINT64_C(0),
-                            crane::fn([](uint64_t) { return UINT64_C(0); }));
+      return std::make_pair(UINT64_C(0), crane::fn<uint64_t(uint64_t)>([](
+                                             uint64_t) {
+                                           return UINT64_C(0);
+                                         }));
     } else {
       const auto &[_, a1, _] =
           std::get<typename BranchCallablesCurriedJoin::tree::Node>(_sv.v());
-      return std::make_pair(a1, crane::fn([]() {
+      return std::make_pair(a1, crane::fn<uint64_t(uint64_t)>([]() {
         auto go =
             [](List<uint64_t> l, crane::fn<uint64_t(uint64_t)> acc,
                uint64_t x0_)
@@ -165,16 +167,17 @@ std::pair<uint64_t,
           crane::fn<String(BranchCallablesCurriedJoin::ptree<bool>, bool)>>
 BranchCallablesCurriedJoin::v10(const List<uint64_t> &l) {
   return std::make_pair(
-      UINT64_C(0), crane::fn([&]() -> crane::fn<
+      UINT64_C(0), crane::fn<
+                       String(BranchCallablesCurriedJoin::ptree<bool>, bool)>([
+                       &]() -> crane::fn<
                        String(BranchCallablesCurriedJoin::ptree<bool>, bool)> {
                      auto &&_sv =
                          l.template map<BranchCallablesCurriedJoin::tree>(
                              [](uint64_t) { return tree::leaf(); });
                      if (std::holds_alternative<typename List<
                              BranchCallablesCurriedJoin::tree>::Nil>(_sv.v())) {
-                       return [](
-                           const BranchCallablesCurriedJoin::ptree<bool> &,
-                           bool) { return String::emptystring(); };
+                       return [](BranchCallablesCurriedJoin::ptree<bool>,
+                                 bool) { return String::emptystring(); };
                      } else {
                        crane::fn<String(uint64_t, bool)> cf =
                            [](uint64_t,

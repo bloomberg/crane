@@ -303,16 +303,19 @@ struct MemSafetyProbe7 {
               crane::fn<uint64_t(std::monostate)>>
     make_subtree_getters() const {
       if (std::holds_alternative<typename tree::Leaf>(this->v())) {
-        return std::make_pair(
-            crane::fn([](std::monostate) { return UINT64_C(0); }),
-            crane::fn([](std::monostate) { return UINT64_C(0); }));
+        return std::make_pair(crane::fn<uint64_t(std::monostate)>(
+            [](std::monostate) { return UINT64_C(0); }),
+                              crane::fn<uint64_t(std::monostate)>(
+                                  [](std::monostate) { return UINT64_C(0); }));
       } else {
         const auto &[a0, _, a2] = std::get<typename tree::Node>(this->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return std::make_pair(
-            crane::fn([=](std::monostate) { return a0_value.tree_sum(); }),
-            crane::fn([=](std::monostate) { return a2_value.tree_sum(); }));
+            crane::fn<uint64_t(std::monostate)>(
+                [=](std::monostate) { return a0_value.tree_sum(); }),
+            crane::fn<uint64_t(std::monostate)>(
+                [=](std::monostate) { return a2_value.tree_sum(); }));
       }
     }
 

@@ -217,10 +217,14 @@ struct DoubleOppositeWitnessesCase {
                            typename _tcI0::base_category::Obj)>>>::existt(
             out_of_double_opposite_functor<typename _tcI0::base_category>(),
             std::make_pair(
-                crane::fn([](typename _tcI0::base_category::Obj) {
+                crane::fn<Path<typename _tcI0::base_category::Obj>(
+                    typename _tcI0::base_category::Obj)>([](
+                    typename _tcI0::base_category::Obj) {
                   return Path<typename _tcI0::base_category::Obj>::path_refl();
                 }),
-                crane::fn([](typename _tcI0::base_category::Obj) {
+                crane::fn<Path<typename _tcI0::base_category::Obj>(
+                    typename _tcI0::base_category::Obj)>([](
+                    typename _tcI0::base_category::Obj) {
                   return Path<typename _tcI0::base_category::Obj>::path_refl();
                 }))));
   }

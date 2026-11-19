@@ -98,13 +98,16 @@ struct ClosurePairThis {
       tree _self_val = *this;
       if (flag <= 0) {
         return std::make_pair(
-            crane::fn([=](uint64_t x) { return (x + _self_val.tree_sum()); }),
-            crane::fn([=](uint64_t x) { return (_self_val.tree_sum() * x); }));
+            crane::fn<uint64_t(uint64_t)>(
+                [=](uint64_t x) { return (x + _self_val.tree_sum()); }),
+            crane::fn<uint64_t(uint64_t)>(
+                [=](uint64_t x) { return (_self_val.tree_sum() * x); }));
       } else {
         uint64_t _x = flag - 1;
-        return std::make_pair(crane::fn([=, _self_val = std::move(_self_val)](
-            uint64_t x) { return (_self_val.tree_sum() + x); }),
-                              crane::fn([](uint64_t x) { return x; }));
+        return std::make_pair(
+            crane::fn<uint64_t(uint64_t)>([=, _self_val = std::move(_self_val)](
+                uint64_t x) { return (_self_val.tree_sum() + x); }),
+            crane::fn<uint64_t(uint64_t)>([](uint64_t x) { return x; }));
       }
     }
 
