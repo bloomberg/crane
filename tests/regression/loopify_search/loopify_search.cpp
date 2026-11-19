@@ -864,16 +864,15 @@ LoopifySearch::merge_sorted_fuel(uint64_t fuel, const List<uint64_t> &l1,
       } else {
         const auto &[a0, a1] =
             std::get<typename List<uint64_t>::Cons>(_loop_l1->v());
-        if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                _loop_l2.v_mut())) {
+        if (std::holds_alternative<typename List<uint64_t>::Nil>(_loop_l2.v())) {
           auto _value = *_loop_l1;
           (_write ? *(*_write =
                           std::make_shared<List<uint64_t>>(std::move(_value)))
                   : _root.emplace(std::move(_value)));
           break;
         } else {
-          auto &[a00, a10] =
-              std::get<typename List<uint64_t>::Cons>(_loop_l2.v_mut());
+          const auto &[a00, a10] =
+              std::get<typename List<uint64_t>::Cons>(_loop_l2.v());
           if (a0 <= a00) {
             auto _cell = typename List<uint64_t>::Cons(a0, nullptr);
             List<uint64_t> &_node =
@@ -1105,7 +1104,7 @@ LoopifySearch::perms_choices_fuel(uint64_t fuel, const List<uint64_t> &choices,
               std::get<typename List<uint64_t>::Cons>(choices.v());
           List<uint64_t> remaining = remove_first(a0, orig);
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                  remaining.v_mut())) {
+                  remaining.v())) {
             _stack.emplace_back(_after_perms_choices_fuel_in_Nil{a0});
             _stack.emplace_back(_call{orig, *a1, f});
           } else {

@@ -477,45 +477,22 @@ struct NestedTreeMatchNullRef {
     bool rc;
   };
 
-  static inline const uint64_t t_5 = []() {
-    return sz_tree::sz([]() {
-      // Built on the first call and immortal: every thread reads it without
-      // touching its counts.
-      static const auto k =
-          crane::immortal(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
-      auto _cs = []() {
-        r3 rr23 = r3{UINT64_C(0), List<uint64_t>::nil(), true};
-        return r3{rr23.ra, List<uint64_t>::nil(), !(rr23.rc)};
-      }();
-      uint64_t ma25 = std::move(_cs).ra;
-      crane::obj _x = std::move(_cs).rb;
-      crane::obj _x0 = std::move(_cs).rc;
-      tree tr30 = tree::node(tree::leaf(), ma25, tree::leaf());
-      return tree::node(
-          [&]() {
-            // Reuse the matched cell in place when this is its only owner;
-            // otherwise rebuild.
-            if (tr30.v().index() == 1) {
-              if (tr30.v().unique()) {
-                return tree::node_crane_reuse(std::move(tr30), tree::leaf(),
-                                              UINT64_C(0), tree::leaf());
-              } else {
-                if (crane::holds_alternative<typename tree::Leaf>(tr30.v())) {
-                  return tree::leaf();
-                } else {
-                  return k;
-                }
-              }
-            } else {
-              if (crane::holds_alternative<typename tree::Leaf>(tr30.v())) {
-                return tree::leaf();
-              } else {
-                return k;
-              }
-            }
-          }(),
-          UINT64_C(0),
-          tr30);
-    }());
-  }();
+  static inline const uint64_t t_5 = sz_tree::sz([]() {
+    // Built on the first call and immortal: every thread reads it without
+    // touching its counts.
+    static const auto k =
+        crane::immortal(tree::node(tree::leaf(), UINT64_C(0), tree::leaf()));
+    auto _cs = []() {
+      r3 rr23 = r3{UINT64_C(0), List<uint64_t>::nil(), true};
+      return r3{rr23.ra, List<uint64_t>::nil(), !(rr23.rc)};
+    }();
+    uint64_t ma25 = std::move(_cs).ra;
+    crane::obj _x = std::move(_cs).rb;
+    crane::obj _x0 = std::move(_cs).rc;
+    tree tr30 = tree::node(tree::leaf(), ma25, tree::leaf());
+    return tree::node(
+        (crane::holds_alternative<typename tree::Leaf>(tr30.v()) ? tree::leaf()
+                                                                 : k),
+        UINT64_C(0), tr30);
+  }());
 };

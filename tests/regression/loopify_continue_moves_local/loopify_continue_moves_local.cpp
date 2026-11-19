@@ -85,10 +85,10 @@ LoopifyContinueMovesLocal::peel(uint64_t n, const List<uint64_t> &acc,
     } else {
       uint64_t m = _loop_n - 1;
       List<uint64_t> next = List<uint64_t>::cons(m, _loop_acc);
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(next.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(next.v())) {
         return std::make_pair(_loop_acc, _loop_rest);
       } else {
-        auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(next.v_mut());
+        const auto &[_, a1] = std::get<typename List<uint64_t>::Cons>(next.v());
         _loop_rest = List<uint64_t>(*a1);
         _loop_acc = next;
         _loop_n = m;

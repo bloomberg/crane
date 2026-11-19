@@ -2060,12 +2060,11 @@ template <OrderedType X> struct Raw {
   static t<T3> map2(F0 &&f, List<std::pair<typename X::t, T1>> m0,
                     const t<T2> &x0_) {
     if (std::holds_alternative<typename List<std::pair<typename X::t,
-                                                       T1>>::Nil>(m0.v_mut())) {
+                                                       T1>>::Nil>(m0.v())) {
       return map2_r<T1, T2, T3>(f, x0_);
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
-              m0.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(m0.v());
       const auto &[k, e] = a0;
       auto map2_aux_impl =
           [&](auto &_self_map2_aux,
@@ -2110,16 +2109,15 @@ template <OrderedType X> struct Raw {
   static t<std::pair<std::optional<T1>, std::optional<T2>>>
   combine(List<std::pair<typename X::t, T1>> m0, const t<T2> &x0_) {
     if (std::holds_alternative<typename List<std::pair<typename X::t,
-                                                       T1>>::Nil>(m0.v_mut())) {
+                                                       T1>>::Nil>(m0.v())) {
       return map<T2, std::pair<std::optional<T1>, std::optional<T2>>>([](
           const T2 &e_) {
         return std::make_pair(std::optional<T1>(), std::make_optional<T2>(e_));
       },
                                                                       x0_);
     } else {
-      auto &[a0, a1] =
-          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
-              m0.v_mut());
+      const auto &[a0, a1] =
+          std::get<typename List<std::pair<typename X::t, T1>>::Cons>(m0.v());
       const List<std::pair<typename X::t, T1>> &a1_value = *a1;
       const auto &[k, e] = a0;
       auto combine_aux_impl =

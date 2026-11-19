@@ -15075,3 +15075,36 @@
   (alias runtest)
   (deps lazy_direct_layer.t.exe)
   (action (run ./lazy_direct_layer.t.exe))))
+
+(subdir nested_tree_match_null_ref
+ (rule
+  (targets nested_tree_match_null_ref.t.exe)
+  (deps NestedTreeMatchNullRef.vo nested_tree_match_null_ref.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nested_tree_match_null_ref.t.exe nested_tree_match_null_ref.t.cpp nested_tree_match_null_ref.cpp)))
+ (rule
+  (alias runtest)
+  (deps nested_tree_match_null_ref.t.exe)
+  (action (run ./nested_tree_match_null_ref.t.exe))))
+
+(subdir nontail_fold_resume_plan
+ (rule
+  (targets nontail_fold_resume_plan.t.exe)
+  (deps NontailFoldResumePlan.vo nontail_fold_resume_plan.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} nontail_fold_resume_plan.t.exe nontail_fold_resume_plan.t.cpp nontail_fold_resume_plan.cpp)))
+ (rule
+  (alias runtest)
+  (deps nontail_fold_resume_plan.t.exe)
+  (action (run ./nontail_fold_resume_plan.t.exe))))
+
+(subdir mutual_st_frame_plan_binder
+ (rule
+  (targets mutual_st_frame_plan_binder.t.exe)
+  (deps MutualStFramePlanBinder.vo mutual_st_frame_plan_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} mutual_st_frame_plan_binder.t.exe mutual_st_frame_plan_binder.t.cpp mutual_st_frame_plan_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps mutual_st_frame_plan_binder.t.exe)
+  (action (run ./mutual_st_frame_plan_binder.t.exe))))

@@ -17,10 +17,10 @@ uint64_t SigmaTypes::get_positive(uint64_t n) {
 Sig<uint64_t> SigmaTypes::double_positive(uint64_t n) {
   Sig<uint64_t> p = positive_succ(n);
   return Sig<uint64_t>::exist(([&]() {
-    auto &[x] = p;
+    const auto &[x] = p;
     return x;
   }() + [&]() {
-    auto &[x0] = p;
+    const auto &[x0] = p;
     return x0;
   }()));
 }

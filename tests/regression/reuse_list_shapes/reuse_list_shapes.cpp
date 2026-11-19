@@ -189,10 +189,10 @@ N BinNat::double_(N n) {
 }
 
 N BinNat::sub(N n, N m) {
-  if (crane::holds_alternative<typename N::N0>(n.v_mut())) {
+  if (crane::holds_alternative<typename N::N0>(n.v())) {
     return N::n0();
   } else {
-    auto &[a0] = crane::get<typename N::Npos>(n.v_mut());
+    const auto &[a0] = crane::get<typename N::Npos>(n.v());
     if (crane::holds_alternative<typename N::N0>(m.v_mut())) {
       return n;
     } else {
@@ -278,7 +278,7 @@ std::pair<N, N> BinNat::div_eucl(const N &a, N b) {
     return std::make_pair(N::n0(), N::n0());
   } else {
     const auto &[a0] = crane::get<typename N::Npos>(a.v());
-    if (crane::holds_alternative<typename N::N0>(b.v_mut())) {
+    if (crane::holds_alternative<typename N::N0>(b.v())) {
       return std::make_pair(N::n0(), a);
     } else {
       return BinNat::pos_div_eucl(*a0, b);
@@ -375,10 +375,10 @@ List<uint64_t> ReuseListShapes::take(uint64_t n, List<uint64_t> l) {
 }
 
 List<uint64_t> ReuseListShapes::ins(uint64_t k, List<uint64_t> s) {
-  if (crane::holds_alternative<typename List<uint64_t>::Nil>(s.v_mut())) {
+  if (crane::holds_alternative<typename List<uint64_t>::Nil>(s.v())) {
     return List<uint64_t>::cons(k, List<uint64_t>::nil());
   } else {
-    auto &[a0, a1] = crane::get<typename List<uint64_t>::Cons>(s.v_mut());
+    const auto &[a0, a1] = crane::get<typename List<uint64_t>::Cons>(s.v());
     if (k < crane::unbox(a0)) {
       return List<uint64_t>::cons(k, s);
     } else {

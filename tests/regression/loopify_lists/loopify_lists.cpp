@@ -653,7 +653,7 @@ LoopifyLists::windows_aux(uint64_t fuel, uint64_t n,
         } else {
           LoopifyLists::list<uint64_t> window = take_n(n, *_loop_l);
           if (std::holds_alternative<typename LoopifyLists::list<uint64_t>::Nil>(
-                  window.v_mut())) {
+                  window.v())) {
             auto _value = list<LoopifyLists::list<uint64_t>>::nil();
             (_write ? *(*_write = std::make_shared<
                             LoopifyLists::list<LoopifyLists::list<uint64_t>>>(

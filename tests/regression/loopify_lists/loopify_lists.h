@@ -723,7 +723,7 @@ struct LoopifyLists {
         } else {
           list<T1> chunk = take(n, _loop_l);
           list<T1> rest = drop0(n, _loop_l);
-          if (std::holds_alternative<typename list<T1>::Nil>(chunk.v_mut())) {
+          if (std::holds_alternative<typename list<T1>::Nil>(chunk.v())) {
             auto _value = list<list<T1>>::nil();
             (_write ? *(*_write =
                             std::make_shared<list<list<T1>>>(std::move(_value)))
@@ -1235,7 +1235,7 @@ struct LoopifyLists {
           } else {
             list<T1> heads = map_head(_loop_m);
             list<list<T1>> tails0 = map_tail(_loop_m);
-            if (std::holds_alternative<typename list<T1>::Nil>(heads.v_mut())) {
+            if (std::holds_alternative<typename list<T1>::Nil>(heads.v())) {
               auto _value = list<list<T1>>::nil();
               (_write ? *(*_write = std::make_shared<list<list<T1>>>(
                               std::move(_value)))

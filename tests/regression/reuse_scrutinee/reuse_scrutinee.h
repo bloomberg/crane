@@ -120,7 +120,7 @@ struct ReuseScrutinee {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return UINT64_C(0);
     } else {
       return subtree_sum(t);
@@ -132,10 +132,10 @@ struct ReuseScrutinee {
     tree t = tree::node(tree::node(tree::leaf(), UINT64_C(10), tree::leaf()),
                         UINT64_C(20),
                         tree::node(tree::leaf(), UINT64_C(30), tree::leaf()));
-    if (std::holds_alternative<typename tree::Leaf>(t.v_mut())) {
+    if (std::holds_alternative<typename tree::Leaf>(t.v())) {
       return tree::leaf();
     } else {
-      auto &[_, _, a2] = std::get<typename tree::Node>(t.v_mut());
+      const auto &[_, _, a2] = std::get<typename tree::Node>(t.v());
       return tree::node(tree::leaf(), subtree_sum(t), crane::shared_child(a2));
     }
   }();

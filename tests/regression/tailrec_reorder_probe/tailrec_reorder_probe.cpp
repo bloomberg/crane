@@ -43,13 +43,12 @@ TailrecReorderProbe::weave(TailrecReorderProbe::mylist<uint64_t> l1,
   TailrecReorderProbe::mylist<uint64_t> _loop_l1 = std::move(l1);
   while (true) {
     if (std::holds_alternative<
-            typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(
-            _loop_l1.v_mut())) {
+            typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(_loop_l1.v())) {
       return my_rev_append<uint64_t>(_loop_acc, std::move(_loop_l2));
     } else {
-      auto &[a0, a1] =
+      const auto &[a0, a1] =
           std::get<typename TailrecReorderProbe::mylist<uint64_t>::Mycons>(
-              _loop_l1.v_mut());
+              _loop_l1.v());
       if (std::holds_alternative<
               typename TailrecReorderProbe::mylist<uint64_t>::Mynil>(
               _loop_l2.v_mut())) {

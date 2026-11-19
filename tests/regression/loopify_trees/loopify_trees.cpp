@@ -769,7 +769,7 @@ List<List<uint64_t>> LoopifyTrees::tree_levels_fuel(
     } else {
       uint64_t f = _loop_fuel - 1;
       List<uint64_t> values = extract_tree_values(_loop_trees);
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(values.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(values.v())) {
         auto _value = List<List<uint64_t>>::nil();
         (_write ? *(*_write = std::make_shared<List<List<uint64_t>>>(
                         std::move(_value)))

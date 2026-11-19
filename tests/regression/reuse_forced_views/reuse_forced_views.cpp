@@ -338,7 +338,7 @@ ReuseForcedViews::carry(List<ReuseForcedViews::tree> q,
     if (std::holds_alternative<typename List<ReuseForcedViews::tree>::Nil>(
             _loop_q->v())) {
       if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
-              _loop_t.v_mut())) {
+              _loop_t.v())) {
         *_write = crane::make_rc<List<ReuseForcedViews::tree>>(
             List<ReuseForcedViews::tree>::nil());
         break;
@@ -358,7 +358,7 @@ ReuseForcedViews::carry(List<ReuseForcedViews::tree> q,
         break;
       } else {
         if (std::holds_alternative<typename ReuseForcedViews::tree::Leaf>(
-                _loop_t.v_mut())) {
+                _loop_t.v())) {
           *_write = crane::make_rc<List<ReuseForcedViews::tree>>(
               List<ReuseForcedViews::tree>::cons(a0, crane::child(a1)));
           break;

@@ -128,7 +128,7 @@ List<List<uint64_t>> LoopifyCombinatorics::perms_choices_fuel(
               std::get<typename List<uint64_t>::Cons>(choices.v());
           List<uint64_t> remaining = remove(a0, orig);
           if (std::holds_alternative<typename List<uint64_t>::Nil>(
-                  remaining.v_mut())) {
+                  remaining.v())) {
             _stack.emplace_back(_after_perms_choices_fuel_in_Nil{a0});
             _stack.emplace_back(_call{orig, *a1, f});
           } else {

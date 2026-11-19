@@ -304,12 +304,11 @@ List<uint64_t> LoopifyHofs::longest_run_fuel(uint64_t fuel,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> rec_result = std::move(_result);
-      if (std::holds_alternative<typename List<uint64_t>::Nil>(
-              rec_result.v_mut())) {
+      if (std::holds_alternative<typename List<uint64_t>::Nil>(rec_result.v())) {
         _result = List<uint64_t>::cons(a0, List<uint64_t>::nil());
       } else {
-        auto &[a01, _] =
-            std::get<typename List<uint64_t>::Cons>(rec_result.v_mut());
+        const auto &[a01, _] =
+            std::get<typename List<uint64_t>::Cons>(rec_result.v());
         if (a0 == a01) {
           _result = std::move(rec_result);
         } else {
