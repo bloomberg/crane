@@ -148,8 +148,7 @@ val instantiate_foreign : settled -> settled
 
 (** [lower_qualifiers decl] spells each type qualifying a member in value
     position as what the printer writes there: a named global becomes the
-    value it names; and a suspension becomes its type's [lazy_] factory
-    applied to the thunk.  After {!instantiate_foreign}, which turns a mapped
+    value it names.  After {!instantiate_foreign}, which turns a mapped
     qualifier into its instantiated text first. *)
 val lower_qualifiers : settled -> settled
 
@@ -189,7 +188,11 @@ val narrow_captures : settled -> settled
 
 (** [decide_captures decl] writes down each lambda's capture from how it
     holds its scope and what its finished body names: nothing, by
-    reference, or by copy -- [this] and the moved variables included.  After
+    reference, or by copy -- [this] and the moved variables included, and
+    whether it is called at most once: a suspension's thunk, which then
+    becomes its type's [lazy_] factory applied to the thunk.  A variable
+    worth moving that is [const] where a by-copy lambda is written is copied
+    into a capture of its own, so that moving the closure moves it.  After
     every pass that changes a body. *)
 val decide_captures : settled -> settled
 

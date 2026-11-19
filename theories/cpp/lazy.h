@@ -167,7 +167,9 @@ public:
     using R = std::remove_cvref_t<decltype(thunk())>;
     CRANE_STAT(lazy_thunk);
     if constexpr (requires(const R &r) { r.lazy_cell(); }) {
-      auto cell = [f = std::forward<F>(thunk)]() -> lazy { return f().lazy_cell(); };
+      // [mutable]: a generated thunk is, and may move out of what it holds,
+      // since it runs once.
+      auto cell = [f = std::forward<F>(thunk)]() mutable -> lazy { return f().lazy_cell(); };
       return lazy(thunk_node<decltype(cell)>::make(std::move(cell)));
     } else
       return lazy(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));

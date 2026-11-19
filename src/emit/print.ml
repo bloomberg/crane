@@ -72,10 +72,11 @@ let escape_cpp_string (s : string) : string =
 let pp_capture : I.Expr.Written_capture.t -> _ = function
   | Nothing -> str "[]"
   | By_reference -> str "[&]"
-  | By_copy {this; moved} ->
+  | By_copy {this; moved; copied; once = _} ->
     if moved <> [] then writes_standard "utility";
+    let copies = List.map (fun x -> str ", " ++ Id.print x ++ str " = " ++ Id.print x) copied in
     let moves = List.map (fun x -> str ", " ++ Id.print x ++ str " = std::move(" ++ Id.print x ++ str ")") moved in
-    str "[=" ++ (if this then str ", this" else mt ()) ++ seq moves ++ str "]"
+    str "[=" ++ (if this then str ", this" else mt ()) ++ seq copies ++ seq moves ++ str "]"
 
 (** The C++ source spelling of a binary operator. *)
 let spell_binop : I.Binary_operator.t -> _ = function
@@ -898,8 +899,10 @@ and pp_cpp_expr ctx env args (t : expr) =
         ++ pp_list (fun id -> str "typename " ++ Id.print id) ids
         ++ str ">"
     in
-    (* Never [mutable]: a closure's captures are [const] in its body, which
-       is what lets every copy of a [crane::fn] share one closure. *)
+    (* [mutable] only where it is called at most once, a suspension's thunk:
+       elsewhere a closure's captures are [const] in its body, which is what
+       lets every copy of a [crane::fn] share one closure. *)
+    let mutable_ = match capture with By_copy {once = true; _} -> str " mutable" | _ -> mt () in
     let capture = pp_capture capture ++ tparams_str ++ str "(" in
     let body_s = pp_list_stmt (pp_cpp_stmt ctx env args) body in
     let read = I.Written.reads_as_printed body in
@@ -917,6 +920,7 @@ and pp_cpp_expr ctx env args (t : expr) =
         ( capture
         ++ params_s
         ++ str ")"
+        ++ mutable_
         ++ str " -> "
         ++ pp_cpp_type ctx false [] ty )
       ++ str " {"
@@ -925,7 +929,7 @@ and pp_cpp_expr ctx env args (t : expr) =
       ++ fnl ()
       ++ str "}"
     | None ->
-      (capture ++ params_s ++ str ")")
+      (capture ++ params_s ++ str ")" ++ mutable_)
       ++ str " {"
       ++ fnl ()
       ++ body_s

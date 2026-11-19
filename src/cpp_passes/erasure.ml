@@ -832,17 +832,12 @@ let value_qualifier : ty -> expr option = function
     Some (Entity (r, tys, Some {inline; custom_yields = None}))
   | _ -> None
 
+let qualified ty id : expr =
+  match value_qualifier ty with Some q -> Scope (q, id, []) | None -> Type_member (ty, id)
+
 let lower_qualifiers (d : settled) : settled =
-  let qualified ty id : expr =
-    match value_qualifier ty with Some q -> Scope (q, id, []) | None -> Type_member (ty, id) in
   let rec fe (e : expr) : expr =
     match Map.expr (rw ()) e with
-    (* A suspension is its type's [lazy_] factory applied to the thunk. *)
-    | Suspend (ty, thunk) ->
-      Call
-        ( {yields = Yields ty; params = Unknown; constructs = None; occurrence = None},
-          qualified ty (Id.of_string "lazy_"),
-          [thunk] )
     | Type_member (ty, id) -> qualified ty id
     | e -> e
   and fs s = Map.stmt (rw ()) s
@@ -1184,21 +1179,145 @@ let narrow_captures (d : settled) : settled =
 (** {2 Captures} *)
 
 (* Inner lambdas first: what an outer body names is read off the inner
-   lambdas' bodies, which deciding leaves as they are. *)
-let decide_captures (d : settled) : settled =
-  let rec fe (e : expr) : expr =
-    match Map.expr (rw ()) e with
-    | Lambda ({capture = (Runs_in_place | Stored) as how; _} as l) ->
+   lambdas' bodies, which deciding leaves as they are.  A suspension's thunk
+   runs once, when the suspension is first forced, and is let go of then:
+   its capture is written [once].  The suspension is then its type's
+   [lazy_] factory applied to the thunk. *)
+let rec decide_captures (d : settled) : settled =
+  let decide ~once (l : phase Lambda.t) : expr =
+    match l.capture with
+    | (Runs_in_place | Stored) as how ->
       let names_scope, this = lambda_needs_capture l.params l.body in
       let written : Written_capture.t =
         if not names_scope then Nothing
-        else match how with Runs_in_place -> By_reference | _ -> By_copy {this; moved = l.moved}
+        else match how with Runs_in_place -> By_reference | _ -> By_copy {this; moved = l.moved; copied = []; once}
       in
       Lambda {l with capture = Written written}
-    | e -> e
+    | Written _ -> Lambda l
+  in
+  let rec fe (e : expr) : expr =
+    match e with
+    | Suspend (ty, thunk) ->
+      let thunk =
+        match thunk with
+        | Lambda _ -> ( match Map.expr (rw ()) thunk with Lambda l -> decide ~once:true l | t -> t )
+        | _ -> fe thunk
+      in
+      Call
+        ( {yields = Yields ty; params = Unknown; constructs = None; occurrence = None},
+          qualified ty (Id.of_string "lazy_"),
+          [thunk] )
+    | _ -> (
+    match Map.expr (rw ()) e with
+    | Lambda l -> decide ~once:false l
+    | e -> e )
   and fs s = Map.stmt (rw ()) s
   and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
-  Map.decl (rw ()) d
+  copy_const_captures (Map.decl (rw ()) d)
+
+(* Each variable a by-copy lambda captures that is [const] where the lambda
+   is written, and worth moving, is copied into a capture of its own: one
+   [\[=\]] captures is a [const] member, which every move of the closure
+   copies -- into the [crane::fn] holding it, into a suspension's node.  A
+   variable is [const] where it is declared so (a parameter, a local, a
+   field a borrowing match binds), and in the body of a lambda that is not
+   [mutable], where what it captured is.  Declared at a type not worth
+   moving, it is left to [\[=\]]; at a type not known, the capture of an
+   enclosing lambda, it is copied. *)
+and copy_const_captures (d : settled) : settled =
+  let const_declared : ty -> bool = function
+    | Const _ | Reference (_, Const _) -> true
+    | _ -> false
+  in
+  (* Each local in scope: whether it is [const] there, and the type it is
+     declared at, where that is known. *)
+  let declare consts x (ty : ty) = Id.Map.add x (const_declared ty, Some ty) consts in
+  let held ~const consts xs =
+    List.fold_left (fun c x -> match Id.Map.find_opt x c with Some (_, ty) -> Id.Map.add x (const, ty) c | None -> c) consts xs
+  in
+  let worth = function
+    | Some (ty : ty) -> Ownership_ir.Region.worth_moving_cpp (match ty with Reference (_, t) -> t | t -> t)
+    | None -> true
+  in
+  let rec block consts : stmt list -> stmt list = function
+    | [] -> []
+    | s :: rest ->
+      let s = stmt consts s in
+      let consts =
+        match s with
+        | Declare (x, ty, _) | Declare_value_initialized (x, ty) | Bind_variable (x, Declare (ty, _), _) ->
+          declare consts x ty
+        | _ -> consts
+      in
+      s :: block consts rest
+  and stmt consts (s : stmt) : stmt =
+    match s with
+    | Match (scrut, branches, default) ->
+      let scrut = {scrut with expr = expr consts scrut.expr} in
+      let branch (b : phase Match.branch) =
+        let consts =
+          List.fold_left
+            (fun c (f : phase Match.field_binding) ->
+              Id.Map.add f.name (not scrut.owned, Some f.type_) c )
+            consts b.field_bindings
+        in
+        let consts = match b.var with Some v -> Id.Map.add v (false, None) consts | None -> consts in
+        {b with extra_conditions = List.map (expr consts) b.extra_conditions; body = block consts b.body}
+      in
+      Match (scrut, List.map branch branches, Option.map (block consts) default)
+    | _ -> Map.stmt (within consts) s
+  and expr consts (e : expr) : expr =
+    match e with
+    | Lambda l ->
+      let free = Cpp_ir.Variables.free_in_expr e in
+      let capture : phase Capture.t =
+        match l.capture with
+        | Written (By_copy c) ->
+          let copied =
+            List.filter
+              (fun x ->
+                (not (List.mem x c.moved))
+                && match Id.Map.find_opt x consts with Some (true, ty) -> worth ty | _ -> false )
+              (List.sort_uniq Id.compare free)
+          in
+          Written (By_copy {c with copied})
+        | k -> k
+      in
+      let consts =
+        match capture with
+        | Written (By_copy {once; _}) -> held ~const:(not once) consts free
+        | _ -> consts
+      in
+      let consts =
+        List.fold_left (fun c (ty, x) -> match x with Some x -> declare c x ty | None -> c) consts l.params
+      in
+      Lambda (Map.lambda (within consts) {l with capture})
+    | _ -> Map.expr (within consts) e
+  and within consts = Map.make ~stmts:(block consts) ~expr:(expr consts) ~stmt:(stmt consts) ~type_:same_type () in
+  let params consts ps = List.fold_left (fun c (x, ty) -> declare c x ty) consts ps in
+  let rec decl : decl -> decl = function
+    | Function ({shape = Definition (ps, body); _} as f) ->
+      Function {f with shape = Definition (ps, block (params Id.Map.empty ps) body)}
+    | Template (ps, c, d) -> Template (ps, c, decl d)
+    | Namespace (w, ds) -> Namespace (w, List.map decl ds)
+    | Struct s -> Struct (struct_ s)
+    | Merged_struct_members s -> Merged_struct_members (struct_ s)
+    | Member_definition ({member = Method m; _} as md) -> Member_definition {md with member = Method (method_ m)}
+    | d -> Map.decl (within Id.Map.empty) d
+  and method_ (m : phase Method.t) = {m with body = block (params Id.Map.empty m.params) m.body}
+  and struct_ (s : phase Struct.t) = {s with fields = List.map member s.fields}
+  and member ((f, v, sec) : phase Field.member) : phase Field.member =
+    let f : phase Field.t =
+      match f with
+      | Method m -> Method (method_ m)
+      | Constructor c -> Constructor {c with body = block (params Id.Map.empty c.params) c.body}
+      | Nested_struct (x, ms) -> Nested_struct (x, List.map member ms)
+      | Out_of_line_declaration (Method m) -> Out_of_line_declaration (Method (method_ m))
+      | f -> f
+    in
+    (f, v, sec)
+  in
+  decl d
 
 (* An initialiser invoked in place by a lambda capturing nothing, which is
    what this pass writes, is left as it is: the pass is a fixed point. *)

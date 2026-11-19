@@ -230,7 +230,18 @@ and Written_capture : sig
     | By_copy of {
         this : bool;
         moved : Id.t list;
-      }  (** [\[=\]], with [this] and the moved variables *)
+        copied : Id.t list;
+        once : bool;
+      }
+        (** [\[=\]], with [this], the moved variables and the [copied] ones,
+            each copied into a capture of its own ([x = x]) rather than
+            implicitly: a variable [const] where the lambda is written, which
+            [\[=\]] would hold [const], so that every move of the closure --
+            into the [crane::fn] or the suspension that keeps it -- would copy
+            it; [once]: it is
+            called at most once -- a suspension's thunk -- so it is
+            [mutable], and a move its body makes out of what it holds takes
+            the value rather than copying it *)
 end =
   Written_capture
 
