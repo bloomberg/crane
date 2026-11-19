@@ -15053,3 +15053,14 @@
   (alias runtest)
   (deps fold_step_list_match_const_v_mut.t.exe)
   (action (run ./fold_step_list_match_const_v_mut.t.exe))))
+
+(subdir stream_match_v_mut_missing
+ (rule
+  (targets stream_match_v_mut_missing.t.exe)
+  (deps StreamMatchVMutMissing.vo stream_match_v_mut_missing.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} stream_match_v_mut_missing.t.exe stream_match_v_mut_missing.t.cpp stream_match_v_mut_missing.cpp)))
+ (rule
+  (alias runtest)
+  (deps stream_match_v_mut_missing.t.exe)
+  (action (run ./stream_match_v_mut_missing.t.exe))))

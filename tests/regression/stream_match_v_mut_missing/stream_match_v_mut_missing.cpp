@@ -16,8 +16,8 @@ std::pair<uint64_t, uint64_t> StreamMatchVMutMissing::g(uint64_t n) {
   } else {
     auto &[a0, _] = std::get<
         typename List<StreamMatchVMutMissing::stream>::Cons>(l.v_mut());
-    auto &[a00, _] =
-        std::get<typename StreamMatchVMutMissing::stream::SCons>(a0.v_mut());
-    return std::make_pair(n, std::move(a00));
+    const auto &[a00, _] =
+        std::get<typename StreamMatchVMutMissing::stream::SCons>(a0.v());
+    return std::make_pair(n, a00);
   }
 }

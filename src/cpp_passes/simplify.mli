@@ -22,7 +22,8 @@
        reference or a pointer to [const], a field a borrowing match binds,
        or one a by-copy lambda captured -- closures are never [mutable].  A
        [const] value cannot be taken apart, whatever the ownership plan
-       decided over Core.}}
+       decided over Core; nor can a coinductive one, whose variant sits in
+       a lazy cell read only through [v()].}}
 
     Effects and evaluation counts are kept: a mapped constant is never pure,
     so nothing its text might do is removed. *)

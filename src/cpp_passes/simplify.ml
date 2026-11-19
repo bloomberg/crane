@@ -215,12 +215,25 @@ let const_declared : ty -> bool = function
   | Const _ | Reference (_, Const _) | Pointer (Const _) -> true
   | _ -> false
 
+(* The inductive a match branch's constructor type is a member of. *)
+let rec matched_inductive : ty -> GlobRef.t option = function
+  | Member (t, _) | In_namespace (_, t) | Const t -> matched_inductive t
+  | Entity_application (r, _, _) -> Some r
+  | _ -> None
+
 (* Whether a match over [branches] may take its scrutinee apart, a value it
    owns, given the locals [consts] that are [const] where it is written:
    not when its scrutinee reads one of them -- a [const] value cannot be
-   taken apart. *)
-let may_take_apart consts (scrut : _ Cpp_ir.Grammar.Match.scrutinee) _branches =
-  scrut.owned && not (List.exists (fun x -> Id.Set.mem x consts) (V.free_in_expr scrut.expr))
+   taken apart -- and not when it matches a coinductive value, whose variant
+   sits in a lazy cell read only through [v()]. *)
+let may_take_apart consts (scrut : _ Cpp_ir.Grammar.Match.scrutinee) branches =
+  scrut.owned
+  && (not (List.exists (fun x -> Id.Set.mem x consts) (V.free_in_expr scrut.expr)))
+  && not
+       (List.exists
+          (fun (b : _ Cpp_ir.Stmt.Match.branch) ->
+            Option.cata Base.Table.is_coinductive false (matched_inductive b.ctor_type) )
+          branches )
 
 (* The access mode of every match, settled over the finished declaration: a
    match the plan made over Core marked owned borrows where it may not take
