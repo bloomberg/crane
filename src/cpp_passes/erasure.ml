@@ -1029,6 +1029,158 @@ let name_scrutinees (d : settled) : settled =
   and rw () = rewriter ~stmts ~expr:fe ~stmt:one ~type_:same_type () in
   Map.decl (rw ()) d
 
+(** {2 Narrowed captures} *)
+
+(* The C++ name a field read is bound to in front of the statement holding the
+   lambdas that read it: [<record>_<field>], made unique in the declaration. *)
+let narrowed_name ~(taken : Id.Set.t ref) (h : Id.t) (r : GlobRef.t) : Id.t =
+  let field = match r with GlobRef.ConstRef c -> Id.to_string (Label.to_id (Constant.label c)) | _ -> "field" in
+  let base = Base.Common.modular_rename (Id.of_string (Id.to_string h ^ "_" ^ field)) in
+  let rec pick k =
+    let x = Id.of_string (if k = 0 then base else base ^ string_of_int k) in
+    if Id.Set.mem x !taken then pick (k + 1) else x
+  in
+  let x = pick 0 in
+  taken := Id.Set.add x !taken;
+  x
+
+(* Every name a declaration reads or declares. *)
+let names_of_decl (d : settled) : Id.Set.t =
+  let acc = ref Id.Set.empty in
+  let rec fe (e : expr) : expr =
+    (match e with
+     | Local x -> acc := Id.Set.add x !acc
+     | Lambda l -> List.iter (fun (_, x) -> Option.iter (fun x -> acc := Id.Set.add x !acc) x) l.params
+     | _ -> ());
+    Map.expr (rw ()) e
+  and fs (s : stmt) : stmt =
+    List.iter (fun x -> acc := Id.Set.add x !acc) (Cpp_ir.Variables.declared [s]);
+    Map.stmt (rw ()) s
+  and rw () = rewriter ~expr:fe ~stmt:fs ~type_:same_type () in
+  ignore (Map.decl (rw ()) d);
+  !acc
+
+(* A stored lambda reads a local record [h] only through some of its fields:
+   [h]'s field reads, by field, and whether it reads [h] any other way. *)
+type record_reads = {mutable fields : (GlobRef.t * expr) list; mutable whole : bool}
+
+(* A stored lambda that reads a local record only through a few of its
+   fields captures those fields rather than the record.  [[=]] copies the
+   whole record -- a type class's dictionary is a record of closures, each
+   copy a count bump -- where the lambda reads one or two of them: Vellvm's
+   [VIntVMemInt] wraps eight methods of a thirty-field dictionary, and every
+   wrapper copied all thirty.  Each field read is bound, by reference, in
+   front of the statement holding the lambdas, which then capture the
+   binding: the record is in scope there (it is free in the statement), and
+   the statement neither assigns nor moves it, nor captures it by move.  Only when the lambdas read at
+   most half the record's fields, so that the captures do not grow. *)
+let narrow_captures (d : settled) : settled =
+  let taken = ref (names_of_decl d) in
+  (* The reads, inside stored lambdas, of each local; and the outermost stored
+     lambdas of the statement, by whether a loop of the statement holds them. *)
+  let scan (s : stmt) =
+    let reads : (Id.t, record_reads) Hashtbl.t = Hashtbl.create 8 in
+    let entry h =
+      match Hashtbl.find_opt reads h with
+      | Some r -> r
+      | None ->
+        let r = {fields = []; whole = false} in
+        Hashtbl.replace reads h r;
+        r
+    in
+    let note h r read =
+      let en = entry h in
+      if not (List.exists (fun (r', _) -> GlobRef.CanOrd.equal r r') en.fields) then en.fields <- (r, read) :: en.fields
+    in
+    let fixpoint = ref false and moved = ref [] in
+    let rec expr ~stored (e : expr) =
+      (match e with Move (Local h) -> moved := h :: !moved | _ -> ());
+      match e with
+      | Projection {record = Local h; projection = r; args} when stored ->
+        note h r (Projection {record = Local h; projection = r; args = []});
+        List.iter (expr ~stored) args
+      | Project (Local h, r, _) when stored -> note h r e
+      | Local h when stored -> (entry h).whole <- true
+      | Lambda l ->
+        if l.fixpoint <> None then fixpoint := true;
+        (* A record a lambda takes by move is gone once the lambda is built,
+           and the binding in front of the statement would read it after. *)
+        moved := l.moved @ !moved;
+        let stored = stored || (match l.capture with Stored -> true | _ -> false) in
+        List.iter (stmt ~stored) l.body
+      | _ -> Cpp_ir.Subterms.expr ~expr:(expr ~stored) ~stmts:(List.iter (stmt ~stored)) e
+    and stmt ~stored (s : stmt) = Cpp_ir.Subterms.stmt ~expr:(expr ~stored) ~stmts:(List.iter (stmt ~stored)) s in
+    stmt ~stored:false s;
+    (reads, !fixpoint, !moved)
+  in
+  (* The fields of the record a projection reads. *)
+  let field_count (r : GlobRef.t) =
+    match Base.Table.projection_info r with
+    | ind, _ -> List.length (Base.Table.get_record_fields (GlobRef.IndRef ind))
+    | exception Not_found -> 0
+  in
+  (* Of [s], the field reads to bind in front of it: [(h, r, x)], the field
+     [r] of [h] bound to [x]. *)
+  let narrowings (s : stmt) : (Id.t * GlobRef.t * Id.t * expr) list =
+    let reads, fixpoint, moved = scan s in
+    if fixpoint then []
+    else
+      let free = Cpp_ir.Variables.free_in_stmt s and assigned = Cpp_ir.Variables.assigned [s] in
+      Hashtbl.fold
+        (fun h (r : record_reads) acc ->
+          match r.fields with
+          | [] -> acc
+          | (r0, _) :: _ as fields ->
+            let n = field_count r0 in
+            if
+              r.whole
+              || (not (Cpp_ir.Variables.mem h free))
+              || Id.Set.mem h assigned
+              || Cpp_ir.Variables.mem h moved
+              || 2 * List.length fields > n
+            then acc
+            else List.map (fun (f, read) -> (h, f, narrowed_name ~taken h f, read)) fields @ acc )
+        reads []
+  in
+  let rewrite_lambdas (bound : (Id.t * GlobRef.t * Id.t * expr) list) (s : stmt) : stmt =
+    let find h r =
+      List.find_map (fun (h', r', x, _) -> if Id.equal h h' && GlobRef.CanOrd.equal r r' then Some x else None) bound
+    in
+    let rec fe ~stored (e : expr) : expr =
+      match e with
+      | Projection {record = Local h; projection = r; args} when stored -> (
+        let args = List.map (fe ~stored) args in
+        match find h r with
+        | None -> Projection {record = Local h; projection = r; args}
+        | Some x -> if args = [] then Local x else call (Local x) args )
+      | Project (Local h, r, _) when stored -> ( match find h r with None -> e | Some x -> Local x )
+      | Lambda l ->
+        let stored = stored || (match l.capture with Stored -> true | _ -> false) in
+        Map.expr (rw ~stored) e
+      | _ -> Map.expr (rw ~stored) e
+    and fs ~stored (s : stmt) = Map.stmt (rw ~stored) s
+    and rw ~stored = rewriter ~expr:(fe ~stored) ~stmt:(fs ~stored) ~type_:same_type () in
+    Map.stmt (rw ~stored:false) s
+  in
+  let rec stmts (ss : stmt list) : stmt list =
+    List.concat_map
+      (fun s ->
+        let s = Map.stmt (rw ()) s in
+        match narrowings s with
+        | [] -> [s]
+        | bound ->
+          let binds =
+            List.map
+              (fun (_, _, x, read) : stmt -> Bind_variable (x, Declare (Reference (Lvalue, Const Auto), None), read))
+              bound
+          in
+          binds @ [rewrite_lambdas bound s] )
+      ss
+  and fe e = Map.expr (rw ()) e
+  and fs s = Map.stmt (rw ()) s
+  and rw () = rewriter ~stmts ~expr:fe ~stmt:fs ~type_:same_type () in
+  Map.decl (rw ()) d
+
 (** {2 Captures} *)
 
 (* Inner lambdas first: what an outer body names is read off the inner

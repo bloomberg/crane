@@ -94,6 +94,7 @@ let qualifiers = Base.Pipeline_trace.pass "qualifiers" Erasure.lower_qualifiers
 let pointer_slots u = Base.Pipeline_trace.pass "pointer_slots" (Erasure.lower_pointer_slots u)
 let unused_bindings = Base.Pipeline_trace.pass "unused_bindings" Erasure.mark_unused_bindings
 let scrutinees = Base.Pipeline_trace.pass "scrutinees" Erasure.name_scrutinees
+let narrow_captures = Base.Pipeline_trace.pass "narrow_captures" Erasure.narrow_captures
 let captures = Base.Pipeline_trace.pass "captures" Erasure.decide_captures
 let initialisers = Base.Pipeline_trace.pass "initialisers" Erasure.invoke_capturing_initialisers
 
@@ -178,12 +179,13 @@ let settled_passes u : Erasure.settled Base.Pipeline_trace.pass list =
     A type qualifying a member in value position is spelled as the value it
     names.  A pointer is written in the slot its pointee is held in.  A match field
     its branch does not read is marked, to be written [_].  Each
-    match's computed scrutinee is declared, named, in front of it.  With
-    every body final, what each lambda captures is written down; last, an
+    match's computed scrutinee is declared, named, in front of it.  A
+    lambda reading a few fields of a local record captures those fields.
+    With every body final, what each lambda captures is written down; last, an
     initialiser holding a lambda that captures is invoked in place.  [u] is
     the unit the declaration is of. *)
 let instantiation_passes u =
-  [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; captures; initialisers]
+  [foreign; qualifiers; pointer_slots u; unused_bindings; scrutinees; narrow_captures; captures; initialisers]
 
 let pass_names =
   Base.Pipeline_trace.names (lowered_passes ~check_control:(fun ~unit:_ _ -> ()) Unit_plan.Context.detached)

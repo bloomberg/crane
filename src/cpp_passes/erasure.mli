@@ -181,6 +181,12 @@ val mark_unused_bindings : settled -> settled
     names nothing. *)
 val name_scrutinees : settled -> settled
 
+(** [narrow_captures decl]: a stored lambda reading a local record only
+    through at most half its fields captures those fields, each bound by
+    reference in front of the statement holding it, instead of the whole
+    record. *)
+val narrow_captures : settled -> settled
+
 (** [decide_captures decl] writes down each lambda's capture from how it
     holds its scope and what its finished body names: nothing, by
     reference, or by copy -- [this] and the moved variables included.  After
