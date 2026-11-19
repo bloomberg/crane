@@ -15163,3 +15163,14 @@
   (alias runtest)
   (deps functor_st_list_optional_obj.t.exe)
   (action (run ./functor_st_list_optional_obj.t.exe))))
+
+(subdir module_alias_shadows_global
+ (rule
+  (targets module_alias_shadows_global.t.exe)
+  (deps ModuleAliasShadowsGlobal.vo module_alias_shadows_global.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} module_alias_shadows_global.t.exe module_alias_shadows_global.t.cpp module_alias_shadows_global.cpp)))
+ (rule
+  (alias runtest)
+  (deps module_alias_shadows_global.t.exe)
+  (action (run ./module_alias_shadows_global.t.exe))))
