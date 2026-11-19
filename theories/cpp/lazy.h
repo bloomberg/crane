@@ -87,7 +87,12 @@ private:
   static constexpr bool direct() { return word_detail::is_word_owner<T>(); }
 
   // The word: a node's address as a [base *], or a direct value's bytes.
-  alignas(void *) unsigned char w_[sizeof(void *)] = {};
+  // The word's storage is not a character array, which in a local -- and
+  // a generated function holds many such values -- makes the compiler guard
+  // the function's stack (-fstack-protector), a canary load and check on
+  // every call.  It is only ever read and written whole, through
+  // [std::memcpy], or as the object built in it.
+  alignas(void *) std::uintptr_t w_[1];
 
   base *word() const noexcept {
     base *w;
@@ -95,6 +100,12 @@ private:
     return w;
   }
   void set_word(base *w) noexcept { std::memcpy(w_, &w, sizeof w); }
+  void swap_word(lazy &o) noexcept {
+    std::uintptr_t tmp[1];
+    std::memcpy(tmp, w_, sizeof w_);
+    std::memcpy(w_, o.w_, sizeof w_);
+    std::memcpy(o.w_, tmp, sizeof w_);
+  }
   std::uintptr_t bits() const noexcept { return reinterpret_cast<std::uintptr_t>(word()); }
   // The block the word counts, if any: not null, not an odd tag.
   base *counted() const noexcept {
@@ -141,7 +152,7 @@ private:
 public:
   // No node: the state a moved-from value is in, given a name so that a
   // slot written before it is read (a loop's result) can start there.
-  lazy() = default;
+  lazy() noexcept { set_word(nullptr); }
 
   explicit lazy(T value) {
     if constexpr (direct())
@@ -197,12 +208,12 @@ public:
   // so its word is read before anything is released.
   lazy &operator=(const lazy &o) noexcept {
     lazy copy(o);
-    std::swap(w_, copy.w_);
+    swap_word(copy);
     return *this;
   }
   lazy &operator=(lazy &&o) noexcept {
     lazy taken(std::move(o));
-    std::swap(w_, taken.w_);
+    swap_word(taken);
     return *this;
   }
   ~lazy() { release(); }

@@ -309,7 +309,13 @@ template <class T, class... Ts> const T *get_if(const shared_variant<Ts...> *v) 
 // The slot a recursive field holds a shared value in: the value itself, in
 // place, in one word, with 0 for empty.
 template <class T> class shared_box {
-  alignas(void *) unsigned char s_[sizeof(void *)] = {};
+  // The word's storage is not a character array, which in a local -- and
+  // a generated function holds many such values -- makes the compiler guard
+  // the function's stack (-fstack-protector), a canary load and check on
+  // every call.  It is only ever read and written whole, through
+  // [std::memcpy], or as the object built in it.
+  alignas(void *) std::uintptr_t s_[1];
+  void clear() noexcept { std::memset(s_, 0, sizeof s_); }
 
   static constexpr void fits() {
     static_assert(sizeof(T) == sizeof(void *) && alignof(T) <= alignof(void *),
@@ -320,11 +326,11 @@ template <class T> class shared_box {
     std::memcpy(&w, s_, sizeof w);
     return w != 0;
   }
-  T *ptr() const { return std::launder(reinterpret_cast<T *>(const_cast<unsigned char *>(s_))); }
+  T *ptr() const { return std::launder(reinterpret_cast<T *>(const_cast<std::uintptr_t *>(s_))); }
   // Whole-word copies, which keep a pointer's capability where a bytewise
   // swap would not (Fil-C).
   void swap_word(shared_box &o) noexcept {
-    alignas(void *) unsigned char tmp[sizeof s_];
+    std::uintptr_t tmp[1];
     std::memcpy(tmp, s_, sizeof s_);
     std::memcpy(s_, o.s_, sizeof s_);
     std::memcpy(o.s_, tmp, sizeof s_);
@@ -336,8 +342,8 @@ public:
   using crane_cheap_copy = void;
   using crane_counted_word = void;
 
-  shared_box() = default;
-  shared_box(std::nullptr_t) noexcept {}
+  shared_box() noexcept { clear(); }
+  shared_box(std::nullptr_t) noexcept { clear(); }
   // The value built in place from [a], as [make_rc<T>(a...)] would build it.
   template <class... A> static shared_box make(A &&...a) {
     fits();
@@ -347,6 +353,7 @@ public:
   }
   shared_box(const shared_box &o) {
     if (o.full()) ::new (s_) T(*o.ptr());
+    else clear();
   }
   shared_box(shared_box &&o) noexcept {
     std::memcpy(s_, o.s_, sizeof s_);

@@ -100,9 +100,14 @@ public:
 
 private:
   const obj_detail::type_tag *tag_ = nullptr;
+  // [bytes_] is not a character array, which in a local -- and
+  // a generated function holds many such values -- makes the compiler guard
+  // the function's stack (-fstack-protector), a canary load and check on
+  // every call.  It is only ever read and written whole, through
+  // [std::memcpy], or as the object built in it.
   union {
     const shared_block *box_;
-    alignas(void *) unsigned char bytes_[sizeof(void *)];
+    std::uintptr_t bytes_[1];
   };
 
   bool boxed() const noexcept { return tag_ && !tag_->inline_; }
@@ -159,7 +164,7 @@ public:
 
   void swap(obj &o) noexcept {
     std::swap(tag_, o.tag_);
-    alignas(void *) unsigned char tmp[sizeof bytes_];
+    std::uintptr_t tmp[1];
     std::memcpy(tmp, bytes_, sizeof bytes_);
     std::memcpy(bytes_, o.bytes_, sizeof bytes_);
     std::memcpy(o.bytes_, tmp, sizeof bytes_);
