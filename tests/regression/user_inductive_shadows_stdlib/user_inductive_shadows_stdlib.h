@@ -4,11 +4,6 @@
 #include <utility>
 
 enum class Comparison;
-
-struct Nat {
-  static Comparison compare(uint64_t n, uint64_t m);
-};
-
 enum class Comparison { EQ, LT, GT };
 
 /// A user inductive called Comparison and the standard library's
@@ -44,6 +39,18 @@ struct UserInductiveShadowsStdlib {
 
   static uint64_t mine(Comparison c);
   static uint64_t theirs(uint64_t a, uint64_t b);
+  /// The standard comparison named as a type inside the struct, where the
+  /// bare name finds the user's Comparison.
+  static ::Comparison theirs_cmp(uint64_t a, uint64_t b);
   static inline const uint64_t run =
-      (mine(Comparison::EQ_) + theirs(UINT64_C(1), UINT64_C(2)));
+      ((mine(Comparison::EQ_) + theirs(UINT64_C(1), UINT64_C(2))) + []() {
+        switch (theirs_cmp(UINT64_C(3), UINT64_C(3))) {
+        case ::Comparison::EQ: {
+          return UINT64_C(10);
+        }
+        default: {
+          return UINT64_C(0);
+        }
+        }
+      }());
 };

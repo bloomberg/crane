@@ -12,9 +12,7 @@
 
 template <typename A> struct List;
 
-struct Nat {
-  static bool eq_dec(uint64_t n, uint64_t m);
-};
+struct Nat {};
 
 template <typename A> struct List {
   // TYPES
@@ -206,6 +204,6 @@ struct PropBinderBeforeTypeBinder {
   }
 
   static inline const uint64_t selected =
-      sel<uint64_t>([](uint64_t n) { return Nat::eq_dec(n, UINT64_C(2)); },
-                    UINT64_C(0), UINT64_C(2), UINT64_C(6));
+      sel<uint64_t>([](uint64_t n) { return n == UINT64_C(2); }, UINT64_C(0),
+                    UINT64_C(2), UINT64_C(6));
 };

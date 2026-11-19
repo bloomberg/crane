@@ -193,12 +193,4 @@ End UnionFind.
 
 Set Crane Loopify.
 
-(* [NatIntStd] leaves [Nat.compare] and [Nat.eq_dec] structural, so each key
-   comparison in [NatMap] would take time linear in the keys. *)
-Crane Extract Inlined Constant Nat.compare =>
-  "(%a0 < %a1 ? Comparison::LT : (%a1 < %a0 ? Comparison::GT : Comparison::EQ))".
-Crane Extract Inlined Constant PeanoNat.Nat.compare =>
-  "(%a0 < %a1 ? Comparison::LT : (%a1 < %a0 ? Comparison::GT : Comparison::EQ))".
-Crane Extract Inlined Constant PeanoNat.Nat.eq_dec => "%a0 == %a1".
-
 Crane Extraction "union_find" UnionFind.

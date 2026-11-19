@@ -24,7 +24,8 @@ UserInductiveShadowsStdlib::mine(UserInductiveShadowsStdlib::Comparison c) {
 }
 
 uint64_t UserInductiveShadowsStdlib::theirs(uint64_t a, uint64_t b) {
-  switch (Nat::compare(a, b)) {
+  switch ((a < b ? ::Comparison::LT
+                 : (b < a ? ::Comparison::GT : ::Comparison::EQ))) {
   case ::Comparison::EQ: {
     return UINT64_C(1);
   }
@@ -39,21 +40,12 @@ uint64_t UserInductiveShadowsStdlib::theirs(uint64_t a, uint64_t b) {
   }
 }
 
-Comparison Nat::compare(uint64_t n, uint64_t m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return ::Comparison::EQ;
-    } else {
-      uint64_t _x = m - 1;
-      return ::Comparison::LT;
-    }
+/// The standard comparison named as a type inside the struct, where the
+/// bare name finds the user's Comparison.
+::Comparison UserInductiveShadowsStdlib::theirs_cmp(uint64_t a, uint64_t b) {
+  if (a == b) {
+    return ::Comparison::EQ;
   } else {
-    uint64_t n_ = n - 1;
-    if (m <= 0) {
-      return ::Comparison::GT;
-    } else {
-      uint64_t m_ = m - 1;
-      return Nat::compare(n_, m_);
-    }
+    return ::Comparison::LT;
   }
 }

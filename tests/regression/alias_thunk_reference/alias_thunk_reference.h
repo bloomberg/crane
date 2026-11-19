@@ -7,9 +7,7 @@
 #include <utility>
 #include <variant>
 
-struct Nat {
-  static bool eq_dec(uint64_t n, uint64_t m);
-};
+struct Nat {};
 
 struct AliasThunkReference {
   struct A {
@@ -63,5 +61,5 @@ struct AliasThunkReference {
   using B = A;
   static inline const uint64_t from_cofix = B::hd(B::ones());
   static inline const uint64_t from_throwing =
-      (Nat::eq_dec(UINT64_C(0), UINT64_C(1)) ? B::absurd_nat() : UINT64_C(9));
+      (UINT64_C(0) == UINT64_C(1) ? B::absurd_nat() : UINT64_C(9));
 };

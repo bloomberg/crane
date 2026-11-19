@@ -92,25 +92,6 @@ Uint0 Coq_Little::succ(const Uint0 &d) {
 
 uint64_t Nat::succ(uint64_t x) { return (x + 1); }
 
-Comparison Nat::compare(uint64_t n, uint64_t m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return Comparison::EQ;
-    } else {
-      uint64_t _x = m - 1;
-      return Comparison::LT;
-    }
-  } else {
-    uint64_t n_ = n - 1;
-    if (m <= 0) {
-      return Comparison::GT;
-    } else {
-      uint64_t m_ = m - 1;
-      return compare(n_, m_);
-    }
-  }
-}
-
 bool Nat::even(uint64_t n) {
   if (n <= 0) {
     return true;
@@ -546,30 +527,6 @@ Decidable Nat::Decidable_le_nat(uint64_t x, uint64_t y) {
   return Decidable{x <= y};
 }
 
-bool Nat::eq_dec(uint64_t n, uint64_t m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      uint64_t _x = m - 1;
-      return false;
-    }
-  } else {
-    uint64_t n0 = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      uint64_t n1 = m - 1;
-      bool s = eq_dec(n0, n1);
-      if (s) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-}
-
 Reflect Nat::leb_spec0(uint64_t x, uint64_t y) {
   return Bool::iff_reflect(x <= y);
 }
@@ -617,7 +574,9 @@ bool Nat::min_dec(uint64_t x0_, uint64_t x1_) {
 }
 
 uint64_t Nat::sqrt_up(uint64_t a) {
-  switch (compare(UINT64_C(0), a)) {
+  switch (
+      (UINT64_C(0) < a ? Comparison::LT
+                       : (a < UINT64_C(0) ? Comparison::GT : Comparison::EQ))) {
   case Comparison::LT: {
     return (sqrt((a ? a - 1 : a)) + 1);
   }
@@ -628,7 +587,9 @@ uint64_t Nat::sqrt_up(uint64_t a) {
 }
 
 uint64_t Nat::log2_up(uint64_t a) {
-  switch (compare(UINT64_C(1), a)) {
+  switch (
+      (UINT64_C(1) < a ? Comparison::LT
+                       : (a < UINT64_C(1) ? Comparison::GT : Comparison::EQ))) {
   case Comparison::LT: {
     return (log2((a ? a - 1 : a)) + 1);
   }

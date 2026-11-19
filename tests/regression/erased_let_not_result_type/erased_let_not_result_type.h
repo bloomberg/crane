@@ -8,9 +8,7 @@
 #include <utility>
 #include <variant>
 
-struct Nat {
-  static bool eq_dec(uint64_t n, uint64_t m);
-};
+struct Nat {};
 
 template <typename M>
 concept SYMS = requires {
@@ -96,7 +94,7 @@ struct ErasedLetNotResultType {
     }
 
     static result finish(uint64_t x, uint64_t x_, bool un, crane::obj v_) {
-      if (Nat::eq_dec(x_, x)) {
+      if (x_ == x) {
         auto v = S::cast(x_, x, std::move(v_));
         if (un) {
           return result::unique(std::move(v));

@@ -290,46 +290,6 @@ Pos::mask Pos::sub_mask_carry(unsigned int x, unsigned int y) {
   }
 }
 
-Comparison Pos::compare_cont(Comparison r, unsigned int x, unsigned int y) {
-  if (x == 1u) {
-    if (y == 1u) {
-      return r;
-    } else if (y % 2u != 0u) {
-      unsigned int _x = (y - 1u) / 2u;
-      return Comparison::LT;
-    } else {
-      unsigned int _x = y / 2u;
-      return Comparison::LT;
-    }
-  } else if (x % 2u != 0u) {
-    unsigned int p = (x - 1u) / 2u;
-    if (y == 1u) {
-      return Comparison::GT;
-    } else if (y % 2u != 0u) {
-      unsigned int q = (y - 1u) / 2u;
-      return compare_cont(r, p, q);
-    } else {
-      unsigned int q = y / 2u;
-      return compare_cont(Comparison::GT, p, q);
-    }
-  } else {
-    unsigned int p = x / 2u;
-    if (y == 1u) {
-      return Comparison::GT;
-    } else if (y % 2u != 0u) {
-      unsigned int q = (y - 1u) / 2u;
-      return compare_cont(Comparison::LT, p, q);
-    } else {
-      unsigned int q = y / 2u;
-      return compare_cont(r, p, q);
-    }
-  }
-}
-
-Comparison Pos::compare(unsigned int x0_, unsigned int x1_) {
-  return compare_cont(Comparison::EQ, x0_, x1_);
-}
-
 std::pair<unsigned int, Pos::mask> Pos::sqrtrem(unsigned int p) {
   if (p == 1u) {
     return std::make_pair(1u, mask::isnul());
@@ -588,46 +548,6 @@ unsigned int Coq_Pos::pred_N(unsigned int x) {
   }
 }
 
-Comparison Coq_Pos::compare_cont(Comparison r, unsigned int x, unsigned int y) {
-  if (x == 1u) {
-    if (y == 1u) {
-      return r;
-    } else if (y % 2u != 0u) {
-      unsigned int _x = (y - 1u) / 2u;
-      return Comparison::LT;
-    } else {
-      unsigned int _x = y / 2u;
-      return Comparison::LT;
-    }
-  } else if (x % 2u != 0u) {
-    unsigned int p = (x - 1u) / 2u;
-    if (y == 1u) {
-      return Comparison::GT;
-    } else if (y % 2u != 0u) {
-      unsigned int q = (y - 1u) / 2u;
-      return compare_cont(r, p, q);
-    } else {
-      unsigned int q = y / 2u;
-      return compare_cont(Comparison::GT, p, q);
-    }
-  } else {
-    unsigned int p = x / 2u;
-    if (y == 1u) {
-      return Comparison::GT;
-    } else if (y % 2u != 0u) {
-      unsigned int q = (y - 1u) / 2u;
-      return compare_cont(Comparison::LT, p, q);
-    } else {
-      unsigned int q = y / 2u;
-      return compare_cont(r, p, q);
-    }
-  }
-}
-
-Comparison Coq_Pos::compare(unsigned int x0_, unsigned int x1_) {
-  return compare_cont(Comparison::EQ, x0_, x1_);
-}
-
 unsigned int Coq_Pos::pow(unsigned int x, unsigned int x0_) {
   return iter<unsigned int>(
       [=](unsigned int _x0) -> unsigned int { return (x * _x0); }, 1u, x0_);
@@ -682,7 +602,8 @@ unsigned int Coq_Pos::gcdn(uint64_t n, unsigned int a, unsigned int b) {
         return 1u;
       } else if (b % 2u != 0u) {
         unsigned int b_ = (b - 1u) / 2u;
-        switch (compare(a_, b_)) {
+        switch ((a_ < b_ ? Comparison::LT
+                         : (b_ < a_ ? Comparison::GT : Comparison::EQ))) {
         case Comparison::EQ: {
           return a;
         }
@@ -732,7 +653,8 @@ Coq_Pos::ggcdn(uint64_t n, unsigned int a, unsigned int b) {
         return std::make_pair(1u, std::make_pair(a, 1u));
       } else if (b % 2u != 0u) {
         unsigned int b_ = (b - 1u) / 2u;
-        switch (compare(a_, b_)) {
+        switch ((a_ < b_ ? Comparison::LT
+                         : (b_ < a_ ? Comparison::GT : Comparison::EQ))) {
         case Comparison::EQ: {
           return std::make_pair(a, std::make_pair(1u, 1u));
         }
@@ -1076,75 +998,12 @@ Uint0 Coq_Pos::to_hex_uint(unsigned int p) {
   return to_little_hex_uint(p).rev0();
 }
 
-bool Coq_Pos::eq_dec(unsigned int p, unsigned int x0) {
-  if (p == 1u) {
-    if (x0 == 1u) {
-      return true;
-    } else if (x0 % 2u != 0u) {
-      unsigned int _x = (x0 - 1u) / 2u;
-      return false;
-    } else {
-      unsigned int _x = x0 / 2u;
-      return false;
-    }
-  } else if (p % 2u != 0u) {
-    unsigned int p0 = (p - 1u) / 2u;
-    if (x0 == 1u) {
-      return false;
-    } else if (x0 % 2u != 0u) {
-      unsigned int p1 = (x0 - 1u) / 2u;
-      if (eq_dec(p0, p1)) {
-        return true;
-      } else {
-        return false;
-      }
-    } else {
-      unsigned int _x = x0 / 2u;
-      return false;
-    }
-  } else {
-    unsigned int p0 = p / 2u;
-    if (x0 == 1u) {
-      return false;
-    } else if (x0 % 2u != 0u) {
-      unsigned int _x = (x0 - 1u) / 2u;
-      return false;
-    } else {
-      unsigned int p1 = x0 / 2u;
-      if (eq_dec(p0, p1)) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-}
-
 unsigned int N::succ_pos(unsigned int n) {
   if (n == 0u) {
     return 1u;
   } else {
     unsigned int p = n;
     return (p + 1u);
-  }
-}
-
-Comparison N::compare(unsigned int n, unsigned int m) {
-  if (n == 0u) {
-    if (m == 0u) {
-      return Comparison::EQ;
-    } else {
-      unsigned int _x = m;
-      return Comparison::LT;
-    }
-  } else {
-    unsigned int n_ = n;
-    if (m == 0u) {
-      return Comparison::GT;
-    } else {
-      unsigned int m_ = m;
-      return Pos::compare(n_, m_);
-    }
   }
 }
 
@@ -1544,29 +1403,6 @@ Signed_int1 N::to_num_hex_int(unsigned int n) {
   return Signed_int1::inthexadecimal(to_hex_int(n));
 }
 
-bool N::eq_dec(unsigned int n, unsigned int m) {
-  if (n == 0u) {
-    if (m == 0u) {
-      return true;
-    } else {
-      unsigned int _x = m;
-      return false;
-    }
-  } else {
-    unsigned int p = n;
-    if (m == 0u) {
-      return false;
-    } else {
-      unsigned int p0 = m;
-      if (Coq_Pos::eq_dec(p, p0)) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-}
-
 Sumor<Sig<unsigned int>> N::discr(unsigned int n) {
   if (n == 0u) {
     return Sumor<Sig<unsigned int>>::inright();
@@ -1623,7 +1459,8 @@ bool N::min_dec(unsigned int x0_, unsigned int x1_) {
 }
 
 unsigned int N::sqrt_up(unsigned int a) {
-  switch (compare(0u, a)) {
+  switch (
+      (0u < a ? Comparison::LT : (a < 0u ? Comparison::GT : Comparison::EQ))) {
   case Comparison::LT: {
     return (sqrt((a == 0u ? 0u : a - 1u)) + 1u);
   }
@@ -1634,7 +1471,8 @@ unsigned int N::sqrt_up(unsigned int a) {
 }
 
 unsigned int N::log2_up(unsigned int a) {
-  switch (compare(1u, a)) {
+  switch (
+      (1u < a ? Comparison::LT : (a < 1u ? Comparison::GT : Comparison::EQ))) {
   case Comparison::LT: {
     return (log2((a == 0u ? 0u : a - 1u)) + 1u);
   }

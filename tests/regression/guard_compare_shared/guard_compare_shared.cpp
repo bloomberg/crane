@@ -1,31 +1,5 @@
 #include "guard_compare_shared.h"
 
-Comparison Nat::compare(uint64_t n, uint64_t m) {
-  // Loop replaces the tail recursion: each recursive call updates the loop
-  // variables.
-  uint64_t _loop_m = m;
-  uint64_t _loop_n = n;
-  while (true) {
-    if (_loop_n <= 0) {
-      if (_loop_m <= 0) {
-        return Comparison::EQ;
-      } else {
-        uint64_t _x = _loop_m - 1;
-        return Comparison::LT;
-      }
-    } else {
-      uint64_t n_ = _loop_n - 1;
-      if (_loop_m <= 0) {
-        return Comparison::GT;
-      } else {
-        uint64_t m_ = _loop_m - 1;
-        _loop_m = m_;
-        _loop_n = n_;
-      }
-    }
-  }
-}
-
 Comparison GuardCompareShared::tcompare(const GuardCompareShared::tree &a,
                                         const GuardCompareShared::tree &b) {
   // Explicit stack replaces the non-tail recursion of tcompare: _call frames
@@ -90,7 +64,8 @@ Comparison GuardCompareShared::tcompare(const GuardCompareShared::tree &a,
       Comparison _tmp1 = std::move(_result);
       switch (_tmp1) {
       case Comparison::EQ: {
-        switch (Nat::compare(a1, a10)) {
+        switch ((a1 < a10 ? Comparison::LT
+                          : (a10 < a1 ? Comparison::GT : Comparison::EQ))) {
         case Comparison::EQ: {
           _stack.emplace_back(_call{&a20, &a2});
           break;

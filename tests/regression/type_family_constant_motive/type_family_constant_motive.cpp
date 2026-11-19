@@ -1,24 +1,5 @@
 #include "type_family_constant_motive.h"
 
-Comparison Nat::compare(uint64_t n, uint64_t m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return Comparison::EQ;
-    } else {
-      uint64_t _x = m - 1;
-      return Comparison::LT;
-    }
-  } else {
-    uint64_t n_ = n - 1;
-    if (m <= 0) {
-      return Comparison::GT;
-    } else {
-      uint64_t m_ = m - 1;
-      return compare(n_, m_);
-    }
-  }
-}
-
 bool Nat::Private_Dec::max_dec(uint64_t n, uint64_t m) {
   return max_case<bool>(
       n,

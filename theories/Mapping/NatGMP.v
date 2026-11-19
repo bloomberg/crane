@@ -33,6 +33,8 @@ Crane Extract Inlined Constant Nat.min => "(%a0 <= %a1 ? %a0 : %a1)".
 Crane Extract Inlined Constant Nat.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant Nat.compare =>
+  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
 
 From Stdlib Require PeanoNat.
 
@@ -48,6 +50,9 @@ Crane Extract Inlined Constant PeanoNat.Nat.min => "(%a0 <= %a1 ? %a0 : %a1)".
 Crane Extract Inlined Constant PeanoNat.Nat.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant PeanoNat.Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant PeanoNat.Nat.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant PeanoNat.Nat.compare =>
+  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
+Crane Extract Inlined Constant PeanoNat.Nat.eq_dec => "%a0 == %a1".
 
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.
