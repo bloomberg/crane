@@ -767,7 +767,7 @@ struct LiftedHelperFamilyGeneralised {
                 },
                 crane::obj())));
     crane::fn<top<typename _tcI0::ptr, Nat>(Nat)> body =
-        [=](const Nat &u) -> top<typename _tcI0::ptr, Sum<Nat, Nat>> {
+        [=](const Nat &u) -> top<typename _tcI0::ptr, Nat> {
           if (std::holds_alternative<typename Nat::O>(u.v())) {
             return raiseUB<AllE<typename _tcI0::ptr, crane::obj>, Nat>(
                 resum_inr, Nat::o());
