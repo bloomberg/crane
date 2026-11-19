@@ -239,6 +239,50 @@
   (deps stmonad.t.exe)
   (action (run ./stmonad.t.exe))))
 
+(subdir st_refs
+ (rule
+  (targets st_refs.t.exe)
+  (deps StRefs.vo StRefsProofs.vo st_refs.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_refs.t.exe st_refs.t.cpp st_refs.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_refs.t.exe)
+  (action (run ./st_refs.t.exe))))
+
+(subdir st_arrays
+ (rule
+  (targets st_arrays.t.exe)
+  (deps StArrays.vo StArraysProofs.vo st_arrays.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_arrays.t.exe st_arrays.t.cpp st_arrays.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_arrays.t.exe)
+  (action (run ./st_arrays.t.exe))))
+
+(subdir st_fibonacci
+ (rule
+  (targets st_fibonacci.t.exe)
+  (deps StFibonacci.vo StFibonacciProofs.vo st_fibonacci.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_fibonacci.t.exe st_fibonacci.t.cpp st_fibonacci.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_fibonacci.t.exe)
+  (action (run ./st_fibonacci.t.exe))))
+
+(subdir st_quicksort
+ (rule
+  (targets st_quicksort.t.exe)
+  (deps StQuicksort.vo StQuicksortProofs.vo st_quicksort.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} st_quicksort.t.exe st_quicksort.t.cpp st_quicksort.cpp)))
+ (rule
+  (alias runtest)
+  (deps st_quicksort.t.exe)
+  (action (run ./st_quicksort.t.exe))))
+
 (subdir object_model
  (rule
   (targets object_model.t.exe)
