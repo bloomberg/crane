@@ -535,12 +535,22 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
   (* The body returns the fixpoint's own codomain, not the enclosing
      function's: a result recovered from a box inside it is recovered at
      the [T1] a [fix F (m : list A) : P A m] returns, not at the pair the
-     function around it builds from two calls. *)
+     function around it builds from two calls.  A unit codomain is [void],
+     as the lambda's signature, read off the fixpoint's function type,
+     declares it ({!Types.result_is_void}), so the body's [return]s agree
+     with it. *)
   let fix_return_type =
     let n_values = List.length (List.filter (fun (_, t) -> not (erased_by_extraction t)) ids) in
-    match Option.map (Types.cpp_of_core cx env) (core_codomain_after n_values ty) with
-    | Some t when not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) -> Some t
-    | _ -> current_cpp_return_type cx ()
+    match core_codomain_after n_values ty with
+    | Some cod ->
+      let t = Types.cpp_of_core cx env cod in
+      let returns_nothing =
+        n_values > 0 && (match t with Function _ -> false | _ -> Types.result_is_void cod t)
+      in
+      if returns_nothing then Some Cpp_ir.Type.Void
+      else if not (Cpp_ir.Types.exists Cpp_ir.Types.prints_as_any t) then Some t
+      else current_cpp_return_type cx ()
+    | None -> current_cpp_return_type cx ()
   in
   (* The local fixpoint at [local], of one member, lowered as a machine with
      a stack of frames ({!local_fix_stmts}, or as the entry of the machine
@@ -564,12 +574,15 @@ let gen_fix cx env ?(all_fix_ids = []) ?(by_value = false) ?local ?lifted ~fix_i
         None )
     | _ -> (None, None)
   in
+  let return_ : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t =
+    if fix_return_type = Some Void then Cpp_build.return_into_void else fun x -> Return (Some x)
+  in
   let result =
     ( (renamed_n, ty),
       ids,
       with_cpp_return_type cx fix_return_type (fun () ->
           with_region cx ~owned:owned_params ?resumes ?certain f
-            (fun () -> gen_stmts cx env (fun x : Cpp_ir.Lowered.Stmt.t -> Return (Some x)) f) ),
+            (fun () -> gen_stmts cx env return_ f) ),
       parameter_binders cx env ids )
   in
   restore_env_types cx saved_env_types;
