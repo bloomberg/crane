@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Check that dune files have correct test rules for all test directories
 # Usage: ./scripts/check-dune-rules.sh [--fix] [--no-prompt]
 #

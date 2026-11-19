@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Compile C++ files with GMP (GNU Multiple Precision) library
 # Usage: compile-gmp.sh <project_root> output.exe source1.cpp source2.cpp ...
 

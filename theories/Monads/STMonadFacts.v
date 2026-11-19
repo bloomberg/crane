@@ -13,17 +13,6 @@ From Stdlib Require Import
   Strings.String
 .
 
-From Crane Require Import
-  Extraction
-  Monads.Error
-  Monads.ITree
-  Monads.Indices
-  Monads.STMonad
-  Monads.MonadFacts
-  Utils.HAList
-  Utils.HMap
-.
-
 From ExtLib Require Import
   Data.Bool
   Data.List
@@ -50,6 +39,18 @@ From ITree Require Import
   ITree
   ITreeFacts
 .
+
+From Crane Require Import
+  Extraction
+  Monads.Error
+  Monads.ITree
+  Monads.Indices
+  Monads.STMonad
+  Monads.MonadFacts
+  Utils.HAList
+  Utils.HMap
+.
+
 
 Import Monads.
 Import ListNotations.
