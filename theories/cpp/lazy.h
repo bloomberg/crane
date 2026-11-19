@@ -4,8 +4,10 @@
 #include <cstdint>
 #include <cstring>
 #include <exception>
+#include <memory>
 #include <new>
 #include <stdexcept>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -74,6 +76,8 @@ private:
   struct pending {
     void (*run)(node *);
   };
+  // A node's state (below), as a tagged union.
+  struct state_t;
 
   // One address per instantiation, naming it without RTTI.
   static constexpr char tag = 0;
@@ -258,13 +262,13 @@ public:
         end->template run<0, 2>();
         break;
       case 1: {
-        auto thunk = std::get<1>(std::move(end->state));
-        end->state.template emplace<4>();
+        auto thunk = std::move(end->state.template get<1>());
+        end->state.template become<1, 4>();
         lazy r;
         try {
           r = thunk();
         } catch (...) {
-          end->state.template emplace<6>(std::current_exception());
+          end->state.template become<4, 6>(std::current_exception());
           throw;
         }
         thunk = nullptr;
@@ -272,25 +276,25 @@ public:
         continue;
       }
       case 5: {
-        pending p = std::get<5>(end->state);
-        end->state.template emplace<4>();
+        pending p = end->state.template get<5>();
+        end->state.template become<5, 4>();
         try {
           p.run(end);
         } catch (...) {
-          end->state.template emplace<6>(std::current_exception());
+          end->state.template become<4, 6>(std::current_exception());
           throw;
         }
         continue;
       }
       case 3:
         CRANE_STAT(lazy_link);
-        end = std::get<3>(end->state).nd();
+        end = end->state.template get<3>().nd();
         continue;
       case 4:
         throw std::logic_error(
             "crane: a lazy value was forced while it was being computed");
       case 6:
-        std::rethrow_exception(std::get<6>(end->state));
+        std::rethrow_exception(end->state.template get<6>());
       default:
         break;
       }
@@ -301,16 +305,82 @@ public:
     // otherwise make its k-th force take k steps.
     lazy held; // the node being retargeted, once nothing else may hold it
     for (node *n = start; n != end;) {
-      lazy next = std::get<3>(n->state);
+      lazy next = n->state.template get<3>();
       if (next.nd() != end) {
         end->rc.inc();
         CRANE_STAT(lazy_compress);
-        n->state.template emplace<3>(lazy(end));
+        n->state.template become<3, 3>(lazy(end));
       }
       n = next.nd();
       held = std::move(next);
     }
-    return std::get<2>(end->state);
+    return end->state.template get<2>();
+  }
+};
+
+template <typename T> struct lazy<T>::state_t {
+  template <std::size_t K>
+  using alt = std::tuple_element_t<K, std::tuple<fn<T()>, fn<lazy()>, T, lazy, std::monostate,
+                                                 pending, std::exception_ptr>>;
+
+  unsigned char i;
+  union {
+    fn<T()> a0;
+    fn<lazy()> a1;
+    T a2;
+    lazy a3;
+    pending a5;
+    std::exception_ptr a6;
+  };
+
+  template <std::size_t K, typename... A>
+  explicit state_t(std::in_place_index_t<K>, A &&...a) {
+    make<K>(std::forward<A>(a)...);
+  }
+  state_t(const state_t &) = delete;
+  state_t &operator=(const state_t &) = delete;
+  ~state_t() { visit([](auto &x) { std::destroy_at(&x); }); }
+
+  std::size_t index() const noexcept { return i; }
+
+  template <std::size_t K> alt<K> &get() noexcept {
+    if constexpr (K == 0) return a0;
+    else if constexpr (K == 1) return a1;
+    else if constexpr (K == 2) return a2;
+    else if constexpr (K == 3) return a3;
+    else if constexpr (K == 5) return a5;
+    else return a6;
+  }
+  template <std::size_t K> const alt<K> &get() const noexcept {
+    return const_cast<state_t *>(this)->template get<K>();
+  }
+
+  // From [From], which is what is held -- so no question is asked of it
+  // -- to [To] built from [a].  [a] is read before [From] goes; should
+  // building [To] throw, the state is [std::monostate].
+  template <std::size_t From, std::size_t To, typename... A> void become(A &&...a) {
+    if constexpr (From != 4) std::destroy_at(&get<From>());
+    i = 4;
+    make<To>(std::forward<A>(a)...);
+  }
+
+  // [f] applied to what is held; nothing for [std::monostate].
+  template <typename F> void visit(F &&f) {
+    switch (i) {
+    case 0: f(a0); break;
+    case 1: f(a1); break;
+    case 2: f(a2); break;
+    case 3: f(a3); break;
+    case 5: f(a5); break;
+    case 6: f(a6); break;
+    default: break;
+    }
+  }
+
+private:
+  template <std::size_t K, typename... A> void make(A &&...a) {
+    if constexpr (K != 4) ::new (static_cast<void *>(&get<K>())) alt<K>(std::forward<A>(a)...);
+    i = K;
   }
 };
 
@@ -322,9 +392,7 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
   // would destroy the first one's result under it.  [pending] is a
   // [thunk_node]'s thunk, not yet run.  [std::exception_ptr] is what a
   // thunk threw, rethrown by every later force.
-  std::variant<fn<T()>, fn<lazy()>, T, lazy, std::monostate, pending,
-               std::exception_ptr>
-      state;
+  state_t state;
 
   // The cell a thunk produced, as this one's: its value moved in where no
   // one else holds it and it has one -- the fresh [go(...)] a corecursive
@@ -334,27 +402,28 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
     if constexpr (direct())
       if (r.holds_value()) {
         CRANE_STAT(lazy_adopt);
-        state.template emplace<2>(std::move(r.value()));
+        state.template become<4, 2>(std::move(r.value()));
         r.set_word(nullptr);
         return;
       }
     node *q = r.nd();
     if (q && q->rc.sole() && q->state.index() == 2) {
       CRANE_STAT(lazy_adopt);
-      state.template emplace<2>(std::move(std::get<2>(q->state)));
+      state.template become<4, 2>(std::move(q->state.template get<2>()));
     } else
-      state.template emplace<3>(std::move(r));
+      state.template become<4, 3>(std::move(r));
   }
 
   // Runs the thunk in alternative [From] and stores its result as [To].  A
   // thunk that throws leaves its exception in the node.
   template <std::size_t From, std::size_t To> void run() {
-    auto thunk = std::get<From>(std::move(state));
-    state.template emplace<4>();
+    auto thunk = std::move(state.template get<From>());
+    state.template become<From, 4>();
     try {
-      state.template emplace<To>(thunk());
+      T v = thunk();
+      state.template become<4, To>(std::move(v));
     } catch (...) {
-      state.template emplace<6>(std::current_exception());
+      state.template become<4, 6>(std::current_exception());
       throw;
     }
   }
@@ -374,8 +443,7 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
   ~node() { lazy_detail::release(origin); }
   static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
     auto *self = static_cast<node *>(const_cast<base *>(static_cast<const base *>(b)));
-    if (!self->state.valueless_by_exception())
-      std::visit([&](auto &s) { crane::release_into(s, h); }, self->state);
+    self->state.visit([&](auto &s) { crane::release_into(s, h); });
     if (self->origin) self->origin->release_into(h);
     self->origin = nullptr;
     node::dispose(self, h);
@@ -419,15 +487,15 @@ struct lazy<T>::thunk_node : lazy<T>::node {
       self->f.~F();
       n->adopt(std::move(r));
     } else {
-      n->state.template emplace<2>(self->call());
+      T v = self->call();
       self->f.~F();
+      n->state.template become<4, 2>(std::move(v));
     }
   }
   static void drop(const void *b, pool_detail::thread_heap &h) noexcept {
     auto *self = static_cast<thunk_node *>(
         static_cast<node *>(const_cast<base *>(static_cast<const base *>(b))));
-    if (!self->state.valueless_by_exception())
-      std::visit([&](auto &s) { crane::release_into(s, h); }, self->state);
+    self->state.visit([&](auto &s) { crane::release_into(s, h); });
     if (self->origin) self->origin->release_into(h);
     self->origin = nullptr;
     self->~thunk_node();
