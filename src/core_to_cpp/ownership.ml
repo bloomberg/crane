@@ -84,6 +84,23 @@ and abbreviates_value_inductive args body =
     match List.nth_opt args (j - 1) with Some t -> names_value_inductive t | None -> false )
   | _ -> false
 
+(* Whether the body [body] of a type abbreviation is a closure: an arrow,
+   under the type abstractions erasure removes -- [IFun A B := forall T, A T
+   -> B T], an event handler's type -- or an abbreviation of one.  Read off
+   the body as written, its variables not substituted, so that the Core and
+   the C++ readings of a parameter's type agree. *)
+let rec body_is_closure (body : Core.Type.t) =
+  match resolve_meta body with
+  | Core.Type.Arrow {parameter = d; result = rest} when Base.Core_util.is_erased_type d -> body_is_closure rest
+  | Core.Type.Arrow _ -> true
+  | Core.Type.Global_app {head = GlobRef.ConstRef kn as r; _} when not (Base.Table.is_custom r) ->
+    abbreviates_closure kn
+  | _ -> false
+
+(* Whether the type abbreviation [kn] names a closure ({!body_is_closure}). *)
+and abbreviates_closure kn =
+  match Base.Table.lookup_typedef_unchecked kn with Some body -> body_is_closure body | None -> false
+
 (** Whether a parameter of C++ type [cpp_ty] that its function does not own
     is lent by const reference, read off the C++ type: a [shared_ptr], a
     value inductive (an inductive named through an abbreviation too,
@@ -93,12 +110,15 @@ and abbreviates_value_inductive args body =
     A closure and a coinductive value are a pointer to a shared block, as a
     [shared_ptr] is: copying one in is a retain, and dropping it at the end
     of the call a release.  Borrowed, they too are passed by const
-    reference. *)
+    reference -- a closure named through an abbreviation too
+    ({!abbreviates_closure}). *)
 let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
   let rec shared_block (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Function _ -> true
     | Non_deduced t | In_namespace (_, t) -> shared_block t
+    | Entity_application ((GlobRef.ConstRef kn as r), _, _) when not (Base.Table.is_custom r) ->
+      Base.Table.is_coinductive r || abbreviates_closure kn
     | Entity_application (r, _, _) -> Base.Table.is_coinductive r
     | _ -> false
   in
@@ -124,6 +144,11 @@ let rec core_lent_by_reference cx ty =
     Some ((not (Base.Table.is_enum_inductive r)) && not (Base.Table.is_custom_scalar_ref r))
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = args; _}
     when (not (Base.Table.is_custom r)) && not (Base.Table.is_promoted_type_var r || Base.Table.is_erased_type_const r) -> (
+    (* A closure through an abbreviation is written at whatever the
+       abbreviation's C++ spelling is -- the closure, or an erased box where
+       its parameters are erased -- so the C++ type decides. *)
+    if abbreviates_closure kn then None
+    else
     match Base.Table.lookup_typedef_unchecked kn with
     | Some body -> (
       (* As {!names_value_inductive} reads an abbreviation: its body a value
