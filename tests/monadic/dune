@@ -272,6 +272,17 @@
   (deps st_quicksort.t.exe)
   (action (run ./st_quicksort.t.exe))))
 
+(subdir union_find
+ (rule
+  (targets union_find.t.exe)
+  (deps UnionFind.vo UnionFindProofs.vo union_find.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} union_find.t.exe union_find.t.cpp union_find.cpp)))
+ (rule
+  (alias runtest)
+  (deps union_find.t.exe)
+  (action (run ./union_find.t.exe))))
+
 (subdir object_model
  (rule
   (targets object_model.t.exe)
