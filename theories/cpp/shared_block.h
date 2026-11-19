@@ -24,6 +24,7 @@
 #include <cstddef>
 #include <new>
 #include "pool.h"
+#include "stats.h"
 #ifndef CRANE_NON_ATOMIC_RC
 #include <atomic>
 #endif
@@ -95,6 +96,7 @@ struct count {
 [[gnu::noinline]] inline void
 free_block(const void *block, pool_detail::destroy_fn destroy) noexcept {
   pool_detail::thread_heap &h = pool_detail::this_thread_heap();
+  CRANE_STAT(block_free);
   if (h.depth != 0) {
     h.reclaim({block, destroy});
     return;
@@ -103,6 +105,7 @@ free_block(const void *block, pool_detail::destroy_fn destroy) noexcept {
   destroy(block, h);
   while (h.size != 0) {
     pool_detail::pending_free f = h.items[--h.size];
+    CRANE_STAT(block_drain);
     f.destroy(f.block, h);
   }
   h.depth = 0;

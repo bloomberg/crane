@@ -15064,3 +15064,14 @@
   (alias runtest)
   (deps stream_match_v_mut_missing.t.exe)
   (action (run ./stream_match_v_mut_missing.t.exe))))
+
+(subdir lazy_direct_layer
+ (rule
+  (targets lazy_direct_layer.t.exe)
+  (deps LazyDirectLayer.vo lazy_direct_layer.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} lazy_direct_layer.t.exe lazy_direct_layer.t.cpp lazy_direct_layer.cpp)))
+ (rule
+  (alias runtest)
+  (deps lazy_direct_layer.t.exe)
+  (action (run ./lazy_direct_layer.t.exe))))

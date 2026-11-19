@@ -1,11 +1,16 @@
 // Copyright 2025 Bloomberg Finance L.P.
 // Distributed under the terms of the GNU LGPL v2.1 license.
 #pragma once
+#include <cstdint>
+#include <cstring>
+#include <new>
 #include <stdexcept>
 #include <type_traits>
 #include <utility>
 #include <variant>
 #include "fn.h"
+#include "stats.h"
+#include "word.h"
 
 namespace crane {
 
@@ -22,11 +27,11 @@ inline void release(const base *b) noexcept {
 } // namespace lazy_detail
 
 // A suspended value, evaluated at most once: call-by-need.  A [lazy] is one
-// pointer to one heap node, shared by every copy, so a copy neither re-runs
-// the computation nor copies what it computed -- a coinductive value is
-// copied freely (captured by value in the next thunk, returned, converted).
+// word, shared by every copy, so a copy neither re-runs the computation nor
+// copies what it computed -- a coinductive value is copied freely (captured
+// by value in the next thunk, returned, converted).
 //
-// The node is in one of four states:
+// The word is null, or the address of a heap node in one of four states:
 //   - a thunk producing the value,
 //   - a thunk producing another [lazy] whose value this one is -- what a
 //     body that returns an existing coinductive value suspends to,
@@ -35,12 +40,19 @@ inline void release(const base *b) noexcept {
 // Forcing replaces a thunk by what it produced and so releases the thunk
 // and everything it held onto.  A link is followed, never copied through:
 // [force] hands out a reference to the one value the chain ends at.
+//
+// A value that is itself one word naming its own block (a word owner,
+// word.h) -- a coinductive's evaluated interaction-tree layer -- needs no
+// node: the [lazy] holds it in its word, as OCaml's [Lazy.from_val] holds an
+// evaluated value, and tells it from a node by asking the value's type
+// whether the block is one of its own.  Both are counted blocks, so a copy
+// is the same count bump either way.
 template <typename T> class lazy {
   template <typename> friend class lazy;
 
 public:
   // A copy is a refcount bump (see field.h), and the value is one counted
-  // word: null or the address of a [shared_block] (see obj.h).
+  // word: null, an odd tag, or the address of a [shared_block] (see obj.h).
   using crane_cheap_copy = void;
   using crane_counted_word = void;
 
@@ -61,26 +73,90 @@ private:
   // One address per instantiation, naming it without RTTI.
   static constexpr char tag = 0;
 
-  node *p_ = nullptr;
+  // Whether a value is held in the word (see above).  Asked only where [T]
+  // is complete.
+  static constexpr bool direct() { return word_detail::is_word_owner<T>(); }
 
-  explicit lazy(node *p) noexcept : p_(p) {}
-  void release() noexcept { lazy_detail::release(p_); }
+  // The word: a node's address as a [base *], or a direct value's bytes.
+  alignas(void *) unsigned char w_[sizeof(void *)] = {};
+
+  base *word() const noexcept {
+    base *w;
+    std::memcpy(&w, w_, sizeof w);
+    return w;
+  }
+  void set_word(base *w) noexcept { std::memcpy(w_, &w, sizeof w); }
+  std::uintptr_t bits() const noexcept { return reinterpret_cast<std::uintptr_t>(word()); }
+  // The block the word counts, if any: not null, not an odd tag.
+  base *counted() const noexcept {
+    std::uintptr_t b = bits();
+    return b != 0 && (b & 1) == 0 ? word() : nullptr;
+  }
+  // Whether the word is a value rather than a node.
+  bool holds_value() const noexcept {
+    if constexpr (direct()) {
+      std::uintptr_t b = bits();
+      if (b == 0) return false;
+      if (b & 1) return true;
+      return word_detail::owns_destroy<T>(word()->destroy);
+    } else
+      return false;
+  }
+  // The node, when the word is not a value.
+  node *nd() const noexcept { return static_cast<node *>(word()); }
+  const T &value() const noexcept { return *std::launder(reinterpret_cast<const T *>(w_)); }
+  T &value() noexcept { return *std::launder(reinterpret_cast<T *>(w_)); }
+
+  explicit lazy(node *p) noexcept { set_word(static_cast<base *>(p)); }
+  // A lazy over the block [b] another lazy's word named, now counted here too.
+  static lazy of_word(const base *b) noexcept {
+    b->rc.inc();
+    lazy r;
+    r.set_word(const_cast<base *>(b));
+    return r;
+  }
+  void release() noexcept { lazy_detail::release(counted()); }
+
+  // [v] held in the word, unless its word is null -- a value that names no
+  // block and no alternative, which would read as no value at all.
+  template <typename... A> void hold(A &&...a) {
+    ::new (static_cast<void *>(w_)) T(std::forward<A>(a)...);
+    if (word() == nullptr) [[unlikely]] {
+      T v(std::move(value()));
+      set_word(static_cast<base *>(new node(std::in_place_index<2>, std::move(v))));
+      CRANE_STAT(lazy_value);
+    } else
+      CRANE_STAT(lazy_direct);
+  }
 
 public:
   // No node: the state a moved-from value is in, given a name so that a
   // slot written before it is read (a loop's result) can start there.
   lazy() = default;
 
-  explicit lazy(T value)
-      : p_(new node(std::in_place_index<2>, std::move(value))) {}
+  explicit lazy(T value) {
+    if constexpr (direct())
+      hold(std::move(value));
+    else {
+      set_word(static_cast<base *>(new node(std::in_place_index<2>, std::move(value))));
+      CRANE_STAT(lazy_value);
+    }
+  }
 
-  // The value built in the node from [a]: no move of it on the way in.
-  template <typename... A>
-  explicit lazy(std::in_place_t, A &&...a)
-      : p_(new node(std::in_place_index<2>, std::forward<A>(a)...)) {}
+  // The value built in place from [a]: no move of it on the way in.
+  template <typename... A> explicit lazy(std::in_place_t, A &&...a) {
+    if constexpr (direct())
+      hold(std::forward<A>(a)...);
+    else {
+      set_word(static_cast<base *>(new node(std::in_place_index<2>, std::forward<A>(a)...)));
+      CRANE_STAT(lazy_value);
+    }
+  }
 
-  explicit lazy(fn<T()> thunk)
-      : p_(new node(std::in_place_index<0>, std::move(thunk))) {}
+  explicit lazy(fn<T()> thunk) {
+    set_word(static_cast<base *>(new node(std::in_place_index<0>, std::move(thunk))));
+    CRANE_STAT(lazy_thunk);
+  }
 
   // The value of whatever [thunk] returns, once it is asked for: a [lazy];
   // a coinductive value, which is one wrapped around its [lazy_cell()]; or
@@ -89,6 +165,7 @@ public:
   // thunk is kept in the node ([thunk_node]).
   template <typename F> static lazy delegate(F &&thunk) {
     using R = std::remove_cvref_t<decltype(thunk())>;
+    CRANE_STAT(lazy_thunk);
     if constexpr (requires(const R &r) { r.lazy_cell(); }) {
       auto cell = [f = std::forward<F>(thunk)]() -> lazy { return f().lazy_cell(); };
       return lazy(thunk_node<decltype(cell)>::make(std::move(cell)));
@@ -96,33 +173,34 @@ public:
       return lazy(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));
   }
 
-  lazy(const lazy &o) noexcept : p_(o.p_) {
-    if (p_)
-      p_->rc.inc();
+  lazy(const lazy &o) noexcept {
+    std::memcpy(w_, o.w_, sizeof w_);
+    if (base *b = counted())
+      b->rc.inc();
   }
-  lazy(lazy &&o) noexcept : p_(std::exchange(o.p_, nullptr)) {}
+  lazy(lazy &&o) noexcept {
+    std::memcpy(w_, o.w_, sizeof w_);
+    o.set_word(nullptr);
+  }
   // [o] may live inside the node this one releases -- [l = field_of(l)] --
-  // so its pointer is read before anything is released.
+  // so its word is read before anything is released.
   lazy &operator=(const lazy &o) noexcept {
-    node *q = o.p_;
-    if (q)
-      q->rc.inc();
-    release();
-    p_ = q;
+    lazy copy(o);
+    std::swap(w_, copy.w_);
     return *this;
   }
   lazy &operator=(lazy &&o) noexcept {
-    node *q = std::exchange(o.p_, nullptr);
-    release();
-    p_ = q;
+    lazy taken(std::move(o));
+    std::swap(w_, taken.w_);
     return *this;
   }
   ~lazy() { release(); }
 
-  // [crane::release_into]: the node released into [h], this cell empty.
+  // [crane::release_into]: the word's block released into [h], this cell
+  // empty.
   void release_into(pool_detail::thread_heap &h) noexcept {
-    if (p_) p_->release_into(h);
-    p_ = nullptr;
+    if (base *b = counted()) b->release_into(h);
+    set_word(nullptr);
   }
 
   // The cell of a value converted from [source] by [thunk].  A coinductive
@@ -132,28 +210,41 @@ public:
   // and forcing the k-th step would walk k of them.  Converting back to the
   // type the source was itself converted from is the source.  The thunk is
   // kept in the node ([thunk_node]), and the value it builds goes straight
-  // in: one block per conversion.
+  // in: one block per conversion.  The source is remembered by its word's
+  // block, a node or a direct value's own.
   template <typename S, typename F>
   static lazy converted_from(const lazy<S> &source, F &&thunk) {
-    const auto *src = source.p_;
-    if (src && src->origin_tag == &tag) {
-      src->origin->rc.inc();
-      return lazy(static_cast<node *>(const_cast<base *>(src->origin)));
+    const base *src = source.counted();
+    if (src && !source.holds_value() && source.nd()->origin_tag == &tag) {
+      CRANE_STAT(lazy_roundtrip);
+      return of_word(source.nd()->origin);
     }
+    CRANE_STAT(lazy_convert);
     lazy converted(thunk_node<std::decay_t<F>>::make(std::forward<F>(thunk)));
     if (src) {
       src->rc.inc();
-      converted.p_->origin = src;
-      converted.p_->origin_tag = &lazy<S>::tag;
+      converted.nd()->origin = src;
+      converted.nd()->origin_tag = &lazy<S>::tag;
     }
     return converted;
   }
 
   const T &force() const {
-    if (!p_)
+    if constexpr (direct())
+      if (holds_value()) {
+        CRANE_STAT(lazy_force_direct);
+        return value();
+      }
+    node *start = nd();
+    if (!start)
       throw std::logic_error("crane: forced a lazy value that holds nothing");
     // Run what is pending until the chain from here ends at a value.
-    node *end = p_;
+    CRANE_STAT(lazy_force);
+#ifdef CRANE_STATS
+    if (start->state.index() == 2)
+      CRANE_STAT(lazy_force_value);
+#endif
+    node *end = start;
     for (;;) {
       switch (end->state.index()) {
       case 0:
@@ -185,7 +276,8 @@ public:
         continue;
       }
       case 3:
-        end = std::get<3>(end->state).p_;
+        CRANE_STAT(lazy_link);
+        end = std::get<3>(end->state).nd();
         continue;
       case 4:
         throw std::logic_error(
@@ -199,13 +291,14 @@ public:
     // walks the chain again: a loop that delegates at each step would
     // otherwise make its k-th force take k steps.
     lazy held; // the node being retargeted, once nothing else may hold it
-    for (node *n = p_; n != end;) {
+    for (node *n = start; n != end;) {
       lazy next = std::get<3>(n->state);
-      if (next.p_ != end) {
+      if (next.nd() != end) {
         end->rc.inc();
+        CRANE_STAT(lazy_compress);
         n->state.template emplace<3>(lazy(end));
       }
-      n = next.p_;
+      n = next.nd();
       held = std::move(next);
     }
     return std::get<2>(end->state);
@@ -226,9 +319,18 @@ struct lazy<T>::node : base, pool_detail::pooled<typename lazy<T>::node> {
   // body returns -- so that no chain is left to walk and its block goes
   // back while it is warm; a link to it otherwise.
   void adopt(lazy r) {
-    if (r.p_ && r.p_->rc.sole() && r.p_->state.index() == 2)
-      state.template emplace<2>(std::move(std::get<2>(r.p_->state)));
-    else
+    if constexpr (direct())
+      if (r.holds_value()) {
+        CRANE_STAT(lazy_adopt);
+        state.template emplace<2>(std::move(r.value()));
+        r.set_word(nullptr);
+        return;
+      }
+    node *q = r.nd();
+    if (q && q->rc.sole() && q->state.index() == 2) {
+      CRANE_STAT(lazy_adopt);
+      state.template emplace<2>(std::move(std::get<2>(q->state)));
+    } else
       state.template emplace<3>(std::move(r));
   }
 

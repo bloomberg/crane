@@ -87,6 +87,21 @@ private:
 
   template <std::size_t I> static constexpr bool inline_alt = std::is_empty_v<alt<I>>;
 
+public:
+  // A word owner (word.h): [d] destroys one of this type's blocks.
+  using crane_word_owner = void;
+  template <class D> static bool crane_owns_destroy(D d) noexcept {
+    auto one = [&]<std::size_t I>(std::integral_constant<std::size_t, I>) {
+      if constexpr (inline_alt<I>) return false;
+      else return d == &block<I>::drop;
+    };
+    return [&]<std::size_t... I>(std::index_sequence<I...>) {
+      return (one(std::integral_constant<std::size_t, I>{}) || ...);
+    }(std::index_sequence_for<Ts...>{});
+  }
+
+private:
+
   // 0: moved from, no alternative.  Odd: an alternative with no fields, its
   // index above the tag bit.  Otherwise the address of a block.
   // Held as a pointer, not an integer, so that a capability-carrying
@@ -110,7 +125,10 @@ private:
 
   template <std::size_t I, class... A> static word make(A &&...a) {
     if constexpr (inline_alt<I>) return tag_word(I);
-    else return static_cast<shared_block *>(new block<I>(std::forward<A>(a)...));
+    else {
+      CRANE_STAT(sv_block);
+      return static_cast<shared_block *>(new block<I>(std::forward<A>(a)...));
+    }
   }
 
   void release() {

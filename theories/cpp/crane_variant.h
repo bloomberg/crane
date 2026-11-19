@@ -33,6 +33,8 @@
 #include <utility>
 #include <variant>
 
+#include "word.h"
+
 namespace crane {
 
 template <class T, class... Ts> struct variant_index;
@@ -182,6 +184,55 @@ public:
   template <std::size_t I> const alt<I> *at_if() const {
     return index_ == I ? &raw<I>() : nullptr;
   }
+};
+
+// One alternative that is one word naming its own block (word.h): the
+// alternative alone, with no tag -- there is nothing to tell apart -- so the
+// variant is that word too, and a word owner.  A coinductive's constructor
+// around its interaction-tree layer is such an alternative, and its lazy
+// cell then holds an evaluated layer in place (lazy.h).
+template <class X>
+  requires(word_detail::is_owner_aggregate<X>())
+class variant<X> {
+  X x_;
+
+public:
+  using crane_word_owner = void;
+  template <class D> static bool crane_owns_destroy(D d) noexcept {
+    return word_detail::owns_destroy<word_detail::first_field_t<X>>(d);
+  }
+
+  variant() : x_() {}
+  template <class T, class D = std::decay_t<T>,
+            class = std::enable_if_t<std::is_same_v<D, X>>>
+  variant(T &&t) : x_(std::forward<T>(t)) {}
+  template <class... A>
+  explicit variant(std::in_place_index_t<0>, A &&...a) : x_(std::forward<A>(a)...) {}
+
+  template <class T, class D = std::decay_t<T>,
+            class = std::enable_if_t<std::is_same_v<D, X>>>
+  variant &operator=(T &&t) {
+    x_ = std::forward<T>(t);
+    return *this;
+  }
+  template <std::size_t I, class... A> X &emplace(A &&...a) {
+    static_assert(I == 0);
+    x_ = X(std::forward<A>(a)...);
+    return x_;
+  }
+
+  std::size_t index() const { return 0; }
+  template <class T> bool holds() const { return std::is_same_v<T, X>; }
+  template <std::size_t I> X &at() {
+    static_assert(I == 0);
+    return x_;
+  }
+  template <std::size_t I> const X &at() const {
+    static_assert(I == 0);
+    return x_;
+  }
+  template <std::size_t I> X *at_if() { return I == 0 ? &x_ : nullptr; }
+  template <std::size_t I> const X *at_if() const { return I == 0 ? &x_ : nullptr; }
 };
 
 template <class T, class... Ts> bool holds_alternative(const variant<Ts...> &v) {
