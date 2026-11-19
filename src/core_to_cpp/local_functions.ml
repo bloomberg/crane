@@ -866,9 +866,12 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
          takes a [tree], whatever [w] takes.  Only a signature the position
          states is replaced: the result any other position falls back to is
          what a let in the lambda's body falls back to as well
-         ({!Types.let_value_result}). *)
+         ({!Types.let_value_result}).  A position stating its signature
+         through an alias, [st nat] for [nat -> nat * nat], states one all
+         the same: {!Lambda.gen_lambda} unfolds it, and would write the
+         binding's lambda to return the pair. *)
       let asgn =
-        match current_cpp_return_type cx () with
+        match Option.map (Types.unfold_cpp_typedef cx env) (current_cpp_return_type cx ()) with
         | Some (Function _) -> with_cpp_return_type cx (Types.let_value_result cx env t) (fun () -> gen_stmts cx env afun a)
         | _ -> gen_stmts cx env afun a
       in

@@ -15020,3 +15020,14 @@
   (alias runtest)
   (deps eta_partial_app_wrong_argument.t.exe)
   (action (run ./eta_partial_app_wrong_argument.t.exe))))
+
+(subdir local_fix_alias_function_result
+ (rule
+  (targets local_fix_alias_function_result.t.exe)
+  (deps LocalFixAliasFunctionResult.vo local_fix_alias_function_result.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} local_fix_alias_function_result.t.exe local_fix_alias_function_result.t.cpp local_fix_alias_function_result.cpp)))
+ (rule
+  (alias runtest)
+  (deps local_fix_alias_function_result.t.exe)
+  (action (run ./local_fix_alias_function_result.t.exe))))

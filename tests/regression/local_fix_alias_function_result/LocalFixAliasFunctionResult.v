@@ -8,11 +8,11 @@ Import ListNotations.
 
     A local fixpoint whose result type is a function type behind a
     definition ([st A := nat -> A * nat], a state monad), applied by an
-    observer: the fixpoint is eta-expanded to return [std::pair<..>] but its
-    branches return [st<..>] ([crane::fn]) values: "no viable conversion from
-    returned value of type 'st<unsigned long long>' to 'std::pair<..>'".  The
-    literal-arrow forms (local_fix_returns_function,
-    local_fix_function_result_inlined) are fixed. *)
+    observer.  The fixpoint does not recur, so it is bound as a lambda, and
+    the lambda took the signature of the position the let stands in, [st
+    nat] unfolded: declared to return [std::pair<..>], its branches returned
+    [st<..>] ([crane::fn]) values: "no viable conversion from returned value
+    of type 'st<unsigned long long>' to 'std::pair<..>'". *)
 Module LocalFixAliasFunctionResult.
 
 Definition st (A : Type) : Type := nat -> A * nat.

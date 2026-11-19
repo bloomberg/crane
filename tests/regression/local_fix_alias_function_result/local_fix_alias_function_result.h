@@ -98,11 +98,11 @@ public:
 ///
 /// A local fixpoint whose result type is a function type behind a
 /// definition (st A := nat -> A * nat, a state monad), applied by an
-/// observer: the fixpoint is eta-expanded to return std::pair<..> but its
-/// branches return st<..> (crane::fn) values: "no viable conversion from
-/// returned value of type 'st<unsigned long long>' to 'std::pair<..>'".  The
-/// literal-arrow forms (local_fix_returns_function,
-/// local_fix_function_result_inlined) are fixed.
+/// observer.  The fixpoint does not recur, so it is bound as a lambda, and
+/// the lambda took the signature of the position the let stands in, st
+/// nat unfolded: declared to return std::pair<..>, its branches returned
+/// st<..> (crane::fn) values: "no viable conversion from returned value
+/// of type 'st<unsigned long long>' to 'std::pair<..>'".
 struct LocalFixAliasFunctionResult {
   template <typename a> using st = crane::fn<std::pair<a, uint64_t>(uint64_t)>;
 
@@ -113,7 +113,7 @@ struct LocalFixAliasFunctionResult {
   static inline const uint64_t t = []() {
     st<uint64_t> w;
     crane::fn<st<uint64_t>(List<bool>, st<uint64_t>)> go =
-        [](const List<bool> &l, st<uint64_t>) -> std::pair<uint64_t, uint64_t> {
+        [](const List<bool> &l, st<uint64_t>) -> st<uint64_t> {
           if (std::holds_alternative<typename List<bool>::Nil>(l.v())) {
             return sret<uint64_t>(UINT64_C(7));
           } else {
