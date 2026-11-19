@@ -18,7 +18,13 @@ Module UserInductiveShadowsStdlib.
   Definition theirs (a b : nat) : nat :=
     match Nat.compare a b with Lt => 0 | Eq => 1 | Gt => 2 end.
 
-  Definition run : nat := mine eq_ + theirs 1 2.
+  (** The standard [comparison] named as a type inside the struct, where the
+      bare name finds the user's [Comparison]. *)
+  Definition theirs_cmp (a b : nat) : comparison :=
+    if Nat.eqb a b then Eq else Lt.
+
+  Definition run : nat :=
+    mine eq_ + theirs 1 2 + match theirs_cmp 3 3 with Eq => 10 | _ => 0 end.
 End UserInductiveShadowsStdlib.
 
 Crane Extraction "user_inductive_shadows_stdlib" UserInductiveShadowsStdlib.

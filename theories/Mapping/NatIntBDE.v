@@ -45,6 +45,8 @@ Crane Extract Inlined Constant Nat.min => "bsl::min(%a0, %a1)" From "bsl_algorit
 Crane Extract Inlined Constant Nat.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant Nat.compare =>
+  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
 
 
 Crane Extract Inlined Constant Nat.iter =>
@@ -64,6 +66,9 @@ Crane Extract Inlined Constant PeanoNat.Nat.min => "bsl::min(%a0, %a1)" From "bs
 Crane Extract Inlined Constant PeanoNat.Nat.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant PeanoNat.Nat.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant PeanoNat.Nat.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant PeanoNat.Nat.compare =>
+  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
+Crane Extract Inlined Constant PeanoNat.Nat.eq_dec => "%a0 == %a1".
 
 Crane Extract Inlined Constant PeanoNat.Nat.iter =>
   "[](unsigned int _crane_n, auto _crane_f, auto _crane_seed) { %ret _crane_acc = std::move(_crane_seed); for (unsigned int _crane_i = 0; _crane_i < _crane_n; _crane_i++) { _crane_acc = _crane_f(std::move(_crane_acc)); } return _crane_acc; }(%a0, %a1, %a2)" From "type_traits" "utility".

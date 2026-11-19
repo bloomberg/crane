@@ -11,9 +11,7 @@
 
 enum class Comparison;
 
-struct Nat {
-  static Comparison compare(uint64_t n, uint64_t m);
-};
+struct Nat {};
 
 enum class Comparison { EQ, LT, GT };
 

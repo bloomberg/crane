@@ -10,9 +10,7 @@
 #include <utility>
 #include <variant>
 
-struct Nat {
-  static bool eq_dec(uint64_t n, uint64_t m);
-};
+struct Nat {};
 
 struct List {
   template <typename A> struct list {
@@ -144,7 +142,7 @@ struct List {
   };
 
   template <typename T1, typename F0>
-  static List::list<T1> remove(F0 &&eq_dec0, const T1 &x,
+  static List::list<T1> remove(F0 &&eq_dec, const T1 &x,
                                const List::list<T1> &l);
 };
 
@@ -157,17 +155,16 @@ struct LoopifySelfTemplateArgs {
 };
 
 template <typename T1, typename F0>
-List::list<T1> List::remove(F0 &&eq_dec0, const T1 &x,
-                            const List::list<T1> &l) {
+List::list<T1> List::remove(F0 &&eq_dec, const T1 &x, const List::list<T1> &l) {
   if (std::holds_alternative<typename List::list<T1>::Nil>(l.v())) {
     return List::template list<T1>::nil();
   } else {
     const auto &[a0, a1] = std::get<typename List::list<T1>::Cons>(l.v());
-    if (eq_dec0(x, a0)) {
-      return List::template remove<T1>(eq_dec0, x, *a1);
+    if (eq_dec(x, a0)) {
+      return List::template remove<T1>(eq_dec, x, *a1);
     } else {
       return List::template list<T1>::cons(
-          a0, List::template remove<T1>(eq_dec0, x, *a1));
+          a0, List::template remove<T1>(eq_dec, x, *a1));
     }
   }
 }

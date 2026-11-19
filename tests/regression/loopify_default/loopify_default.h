@@ -14,10 +14,6 @@
 template <typename A> struct List;
 enum class Comparison;
 
-struct Nat {
-  static Comparison compare(uint64_t n, uint64_t m);
-};
-
 template <typename A> struct List {
   // TYPES
   struct Nil {};

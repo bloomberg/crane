@@ -568,6 +568,17 @@
   (deps user_inductive_shadows_stdlib.t.exe)
   (action (run ./user_inductive_shadows_stdlib.t.exe))))
 
+(subdir native_number_compare
+ (rule
+  (targets native_number_compare.t.exe)
+  (deps NativeNumberCompare.vo native_number_compare.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} native_number_compare.t.exe native_number_compare.t.cpp native_number_compare.cpp)))
+ (rule
+  (alias runtest)
+  (deps native_number_compare.t.exe)
+  (action (run ./native_number_compare.t.exe))))
+
 (subdir well_founded_rec
  (rule
   (targets well_founded_rec.t.exe)

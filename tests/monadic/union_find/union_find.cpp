@@ -1100,10 +1100,6 @@ List<bool> run_fun(uint64_t n,
   return std::move(*_root);
 }
 
-/// The ST side is extracted as one function, with the array a local
-/// variable that the recursive helpers capture. Crane passes an STArray
-/// argument as const std::vector<T> *&, a pointer to a const vector,
-/// through which the writes do not compile.
 List<bool> UnionFind::union_find_ST(uint64_t n, const List<Op> &ops) {
   std::vector<std::pair<uint64_t, uint64_t>> * _lc1_a;
   _lc1_a = new std::remove_pointer_t<decltype(_lc1_a)>(

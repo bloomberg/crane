@@ -44,7 +44,8 @@ List<uint64_t> LoopifyDefault::merge_steps(uint64_t n, const List<uint64_t> &xs,
         } else {
           const auto &[a01, a11] =
               std::get<typename List<uint64_t>::Cons>(_loop_ys->v());
-          switch (Nat::compare(a00, a01)) {
+          switch ((a00 < a01 ? Comparison::LT
+                             : (a01 < a00 ? Comparison::GT : Comparison::EQ))) {
           case Comparison::GT: {
             auto _cell = typename List<uint64_t>::Cons(a01, nullptr);
             List<uint64_t> &_node =
@@ -149,30 +150,4 @@ uint64_t LoopifyDefault::len(const List<uint64_t> &l) {
     }
   }
   return _result;
-}
-
-Comparison Nat::compare(uint64_t n, uint64_t m) {
-  // Loop replaces the tail recursion: each recursive call updates the loop
-  // variables.
-  uint64_t _loop_m = m;
-  uint64_t _loop_n = n;
-  while (true) {
-    if (_loop_n <= 0) {
-      if (_loop_m <= 0) {
-        return Comparison::EQ;
-      } else {
-        uint64_t _x = _loop_m - 1;
-        return Comparison::LT;
-      }
-    } else {
-      uint64_t n_ = _loop_n - 1;
-      if (_loop_m <= 0) {
-        return Comparison::GT;
-      } else {
-        uint64_t m_ = _loop_m - 1;
-        _loop_m = m_;
-        _loop_n = n_;
-      }
-    }
-  }
 }

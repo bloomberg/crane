@@ -1,30 +1,8 @@
 #include "loopify_self_template_args.h"
 
-bool Nat::eq_dec(uint64_t n, uint64_t m) {
-  if (n <= 0) {
-    if (m <= 0) {
-      return true;
-    } else {
-      uint64_t _x = m - 1;
-      return false;
-    }
-  } else {
-    uint64_t n0 = n - 1;
-    if (m <= 0) {
-      return false;
-    } else {
-      uint64_t n1 = m - 1;
-      bool s = eq_dec(n0, n1);
-      if (s) {
-        return true;
-      } else {
-        return false;
-      }
-    }
-  }
-}
-
 List::list<uint64_t>
 LoopifySelfTemplateArgs::rm(const List::list<uint64_t> &l) {
-  return List::template remove<uint64_t>(Nat::eq_dec, UINT64_C(2), l);
+  return List::template remove<uint64_t>(
+      [](uint64_t _x0, uint64_t _x1) -> bool { return _x0 == _x1; },
+      UINT64_C(2), l);
 }

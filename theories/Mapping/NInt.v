@@ -42,6 +42,9 @@ Crane Extract Inlined Constant Pos.pred => "(%a0 > 1u ? %a0 - 1u : 1u)".
 Crane Extract Inlined Constant Pos.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant Pos.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Pos.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant Pos.compare =>
+  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
+Crane Extract Inlined Constant Pos.eq_dec => "%a0 == %a1".
 Crane Extract Inlined Constant Pos.min => "std::min(%a0, %a1)" From "algorithm".
 Crane Extract Inlined Constant Pos.max => "std::max(%a0, %a1)" From "algorithm".
 
@@ -56,6 +59,9 @@ Crane Extract Inlined Constant N.pred => "(%a0 == 0u ? 0u : %a0 - 1u)".
 Crane Extract Inlined Constant N.eqb => "%a0 == %a1".
 Crane Extract Inlined Constant N.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant N.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant N.compare =>
+  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
+Crane Extract Inlined Constant N.eq_dec => "%a0 == %a1".
 Crane Extract Inlined Constant N.min => "std::min(%a0, %a1)" From "algorithm".
 Crane Extract Inlined Constant N.max => "std::max(%a0, %a1)" From "algorithm".
 Crane Extract Inlined Constant N.double => "(%a0 * 2u)".

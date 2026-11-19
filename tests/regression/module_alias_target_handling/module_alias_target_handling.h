@@ -1193,9 +1193,6 @@ struct Pos {
     }
   }
 
-  static Comparison compare_cont(Comparison r, unsigned int x, unsigned int y);
-  static Comparison compare(unsigned int x0_, unsigned int x1_);
-
   template <typename F0, typename F1>
   static std::pair<unsigned int, mask>
   sqrtrem_step(F0 &&f0, F1 &&g, std::pair<unsigned int, mask> p) {
@@ -1242,8 +1239,6 @@ struct Coq_Pos {
     }
   }
 
-  static Comparison compare_cont(Comparison r, unsigned int x, unsigned int y);
-  static Comparison compare(unsigned int x0_, unsigned int x1_);
   static unsigned int pow(unsigned int x, unsigned int x0_);
   static unsigned int square(unsigned int p);
   static uint64_t size_nat(unsigned int p);
@@ -1265,7 +1260,6 @@ struct Coq_Pos {
   static Uint to_uint(unsigned int p);
   static Uint0 to_little_hex_uint(unsigned int p);
   static Uint0 to_hex_uint(unsigned int p);
-  static bool eq_dec(unsigned int p, unsigned int x0);
 
   template <typename T1>
   static T1 peano_rect(T1 a,
@@ -1294,7 +1288,6 @@ struct Coq_Pos {
 
 struct N {
   static unsigned int succ_pos(unsigned int n);
-  static Comparison compare(unsigned int n, unsigned int m);
   static std::pair<unsigned int, unsigned int> pos_div_eucl(unsigned int a,
                                                             unsigned int b);
   static unsigned int lor(unsigned int n, unsigned int m);
@@ -1351,7 +1344,6 @@ struct N {
   static Signed_int0 to_hex_int(unsigned int n);
   static Signed_int1 to_num_int(unsigned int n);
   static Signed_int1 to_num_hex_int(unsigned int n);
-  static bool eq_dec(unsigned int n, unsigned int m);
   static Sumor<Sig<unsigned int>> discr(unsigned int n);
 
   template <typename T1>
@@ -1473,8 +1465,9 @@ struct N {
                                      const T1 &>
     static T1 max_case_strong(unsigned int n, unsigned int m, F2 &&compat,
                               const T1 &hl, const T1 &hr) {
-      CompareSpecT c =
-          Datatypes::template CompSpec2Type<unsigned int>(n, m, compare(n, m));
+      CompareSpecT c = Datatypes::template CompSpec2Type<unsigned int>(
+          n, m,
+          (n < m ? Comparison::LT : (m < n ? Comparison::GT : Comparison::EQ)));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(n, std::max(n, m), hl);
@@ -1499,8 +1492,9 @@ struct N {
                                      const T1 &>
     static T1 min_case_strong(unsigned int n, unsigned int m, F2 &&compat,
                               const T1 &hl, const T1 &hr) {
-      CompareSpecT c =
-          Datatypes::template CompSpec2Type<unsigned int>(n, m, compare(n, m));
+      CompareSpecT c = Datatypes::template CompSpec2Type<unsigned int>(
+          n, m,
+          (n < m ? Comparison::LT : (m < n ? Comparison::GT : Comparison::EQ)));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(m, std::min(n, m), hr);

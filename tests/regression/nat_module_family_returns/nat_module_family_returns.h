@@ -1158,7 +1158,6 @@ struct Nat {
   static constexpr uint64_t one = UINT64_C(1);
   static constexpr uint64_t two = UINT64_C(2);
   static uint64_t succ(uint64_t x);
-  static Comparison compare(uint64_t n, uint64_t m);
   static bool even(uint64_t n);
   static bool odd(uint64_t n);
   static uint64_t pow(uint64_t n, uint64_t m);
@@ -1223,7 +1222,6 @@ struct Nat {
 
   static Decidable Decidable_eq_nat(uint64_t x, uint64_t y);
   static Decidable Decidable_le_nat(uint64_t x, uint64_t y);
-  static bool eq_dec(uint64_t n, uint64_t m);
   static Reflect leb_spec0(uint64_t x, uint64_t y);
   static Reflect ltb_spec0(uint64_t x, uint64_t y);
 
@@ -1280,8 +1278,9 @@ struct Nat {
       requires std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t, const T1 &>
     static T1 max_case_strong(uint64_t n, uint64_t m, F2 &&compat, const T1 &hl,
                               const T1 &hr) {
-      CompareSpecT c =
-          Datatypes::template CompSpec2Type<uint64_t>(n, m, compare(n, m));
+      CompareSpecT c = Datatypes::template CompSpec2Type<uint64_t>(
+          n, m,
+          (n < m ? Comparison::LT : (m < n ? Comparison::GT : Comparison::EQ)));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(n, std::max(n, m), hl);
@@ -1305,8 +1304,9 @@ struct Nat {
       requires std::is_invocable_r_v<T1, F2 &, uint64_t &, uint64_t, const T1 &>
     static T1 min_case_strong(uint64_t n, uint64_t m, F2 &&compat, const T1 &hl,
                               const T1 &hr) {
-      CompareSpecT c =
-          Datatypes::template CompSpec2Type<uint64_t>(n, m, compare(n, m));
+      CompareSpecT c = Datatypes::template CompSpec2Type<uint64_t>(
+          n, m,
+          (n < m ? Comparison::LT : (m < n ? Comparison::GT : Comparison::EQ)));
       switch (c) {
       case CompareSpecT::COMPGTT: {
         return compat(m, std::min(n, m), hr);

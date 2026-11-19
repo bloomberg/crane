@@ -1402,7 +1402,6 @@ template <Int I, OrderedType X> struct Raw {
     // TYPES
     struct Leaf {};
 
-    /// A node of the forest: its parent and its rank.
     struct Node {
       std::shared_ptr<tree<elt>> a0;
       key a1;
@@ -1456,7 +1455,6 @@ template <Int I, OrderedType X> struct Raw {
 
     static tree<elt> leaf() { return tree<elt>(Leaf{}); }
 
-    /// A node of the forest: its parent and its rank.
     static tree<elt> node(crane::shared_child_slot<tree<elt>> a0, key a1,
                           elt a2, crane::shared_child_slot<tree<elt>> a3,
                           typename I::t a4) {
@@ -3026,11 +3024,8 @@ template <Int I, OrderedType X> struct IntMake {
 
 template <OrderedType X> struct Make : IntMake<Z_as_Int, X> {};
 
-/// A node of the forest: its parent and its rank.
 using node = std::pair<uint64_t, uint64_t>;
 
-/// A batch of operations: Union x y merges the sets of x and y,
-/// Same x y asks whether they are in the same set.
 struct Op {
   // TYPES
   struct Union {
@@ -3089,10 +3084,6 @@ List<bool> run_fun(uint64_t n,
                    const List<Op> &ops);
 
 struct UnionFind {
-  /// The ST side is extracted as one function, with the array a local
-  /// variable that the recursive helpers capture. Crane passes an STArray
-  /// argument as const std::vector<T> *&, a pointer to a const vector,
-  /// through which the writes do not compile.
   static List<bool> union_find_ST(uint64_t n, const List<Op> &ops);
   static List<bool> union_find_fun(uint64_t n, const List<Op> &ops);
 };

@@ -18,7 +18,6 @@ inline constexpr uint64_t zero = UINT64_C(0);
 inline constexpr uint64_t one = UINT64_C(1);
 inline constexpr uint64_t two = UINT64_C(2);
 uint64_t succ(uint64_t x);
-Datatypes::Comparison compare(uint64_t n, uint64_t m);
 bool even(uint64_t n);
 bool odd(uint64_t n);
 uint64_t pow(uint64_t n, uint64_t m);

@@ -72,6 +72,9 @@ Crane Extract Inlined Constant Z.ltb => "%a0 < %a1".
 Crane Extract Inlined Constant Z.leb => "%a0 <= %a1".
 Crane Extract Inlined Constant Z.gtb => "%a0 > %a1".
 Crane Extract Inlined Constant Z.geb => "%a0 >= %a1".
+Crane Extract Inlined Constant Z.compare =>
+  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
+Crane Extract Inlined Constant Z.eq_dec => "%a0 == %a1".
 Crane Extract Inlined Constant Z.min => "std::min(%a0, %a1)" From "algorithm".
 Crane Extract Inlined Constant Z.max => "std::max(%a0, %a1)" From "algorithm".
 
