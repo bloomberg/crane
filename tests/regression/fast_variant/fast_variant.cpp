@@ -8,7 +8,7 @@ FastVariant::tree FastVariant::build(const List<uint64_t> &l) {
 }
 
 FastVariant::stream FastVariant::from(uint64_t n) {
-  return stream::lazy_([=]() -> typename FastVariant::stream::Cons {
+  return stream::lazy_([=]() mutable -> typename FastVariant::stream::Cons {
     return {n, from((n + 1))};
   });
 }

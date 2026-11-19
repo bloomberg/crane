@@ -128,7 +128,9 @@ uint64_t MemSafetyProbe4::double_partial(
             l.v());
         const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &a1_value = *a1;
         crane::fn<uint64_t(uint64_t)> f =
-            [=](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); };
+            [=, a0 = a0](uint64_t _x0) -> uint64_t {
+              return a0.sum_values(_x0);
+            };
         crane::fn<uint64_t(uint64_t)> g =
             [&](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); };
         _stack.emplace_back(
@@ -181,7 +183,9 @@ uint64_t MemSafetyProbe4::weighted_sum(
             l.v());
         const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &a1_value = *a1;
         crane::fn<uint64_t(uint64_t)> f =
-            [=](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); };
+            [=, a0 = a0](uint64_t _x0) -> uint64_t {
+              return a0.sum_values(_x0);
+            };
         _stack.emplace_back(_after_weighted_sum_in_Mycons{w, f});
         _stack.emplace_back(_call{f(UINT64_C(0)), crane_raw(a1)});
       }
@@ -309,7 +313,9 @@ uint64_t MemSafetyProbe4::process_list(
             l.v());
         const MemSafetyProbe4::mylist<MemSafetyProbe4::tree> &a1_value = *a1;
         crane::fn<uint64_t(uint64_t)> f =
-            [=](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); };
+            [=, a0 = a0](uint64_t _x0) -> uint64_t {
+              return a0.sum_values(_x0);
+            };
         _stack.emplace_back(_after_process_list_in_Mycons{std::move(f)});
         _stack.emplace_back(_call{crane_raw(a1)});
       }

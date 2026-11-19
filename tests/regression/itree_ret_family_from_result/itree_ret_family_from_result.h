@@ -364,9 +364,9 @@ struct ItreeRetFamilyFromResult {
                                    Itree<Sum1<AE, BE, crane::obj>, T1>>::TauF>(
               _sv.v());
       return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::lazy_(
-          [=]() -> typename Itree<Sum1<AE, BE, crane::obj>,
-                                  Sum<uint64_t,
-                                      T1>>::Go {
+          [=]() mutable -> typename Itree<Sum1<AE, BE, crane::obj>,
+                                          Sum<uint64_t,
+                                              T1>>::Go {
             return {ItreeF<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>,
                            Itree<Sum1<AE, BE, crane::obj>,
                                  Sum<uint64_t, T1>>>::tauf(run_exc<T1>(t0))};
@@ -387,14 +387,13 @@ struct ItreeRetFamilyFromResult {
         return Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>::go(
             ItreeF<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>,
                    Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>>::visf(
-                x,
-                crane::fn<Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>(
-                    crane::obj)>(
-                    [=](const crane::obj &x0) -> Itree<Sum1<AE, BE, crane::obj>,
-                                                       Sum<uint64_t,
-                                                           T1>> {
-                      return run_exc<T1>(crane_call_erased(e0, x0));
-                    })));
+                x, crane::fn<Itree<Sum1<AE, BE, crane::obj>, Sum<uint64_t, T1>>(
+                       crane::obj)>([=, e0 = e0](const crane::obj &x0) -> Itree<
+                       Sum1<AE, BE, crane::obj>,
+                       Sum<uint64_t,
+                           T1>> {
+                     return run_exc<T1>(crane_call_erased(e0, x0));
+                   })));
       }
     }
   }

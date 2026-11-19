@@ -37,7 +37,8 @@ bool ProgramTargetsRegionScan::target_in_layoutb(
 bool ProgramTargetsRegionScan::program_targets_okb(
     const List<ProgramTargetsRegionScan::instruction> &prog,
     const ProgramTargetsRegionScan::layout &l) {
-  return prog.forallb([=](ProgramTargetsRegionScan::instruction _x0) -> bool {
-    return target_in_layoutb(l, _x0);
-  });
+  return prog.forallb(
+      [=, l = l](ProgramTargetsRegionScan::instruction _x0) -> bool {
+        return target_in_layoutb(l, _x0);
+      });
 }

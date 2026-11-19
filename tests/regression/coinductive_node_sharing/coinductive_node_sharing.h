@@ -255,8 +255,8 @@ struct ITree {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
       return Itree<T1, T3>::lazy_(
-          [=, k = std::move(k)]() -> typename Itree<T1,
-                                                    T3>::Go {
+          [=, k = std::move(k)]() mutable -> typename Itree<T1,
+                                                            T3>::Go {
             return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
                 subst<T1, T2, T3>(std::move(k), t0))};
           });
@@ -264,11 +264,13 @@ struct ITree {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
-          x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1,
-                                                                      T3> {
-                   return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
-                 })));
+          x,
+          crane::fn<Itree<T1, T3>(crane::obj)>([=, e0 = e0, k = std::move(k)](
+              const crane::obj &x0)
+                                                    -> Itree<T1,
+                                                             T3> {
+            return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
+          })));
     }
   }
 
@@ -284,14 +286,15 @@ struct ITree {
   iter(const std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> &step,
        const T3 &i) {
     return bind<T1, Sum<T3, T2>, T2>(
-        step(i), [=](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
+        step(i), [=, step = step](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
           if (std::holds_alternative<typename Sum<T3, T2>::Inl>(lr.v())) {
             const auto &[a0] = std::get<typename Sum<T3, T2>::Inl>(lr.v());
-            return Itree<T1, T2>::lazy_([=]() -> typename Itree<T1,
-                                                                T2>::Go {
-              return {ItreeF<T1, T2, Itree<T1, T2>>::tauf(
-                  iter<T1, T2, T3>(step, a0))};
-            });
+            return Itree<T1, T2>::lazy_(
+                [=, a0 = a0, step = step]() mutable -> typename Itree<T1,
+                                                                      T2>::Go {
+                  return {ItreeF<T1, T2, Itree<T1, T2>>::tauf(
+                      iter<T1, T2, T3>(step, a0))};
+                });
           } else {
             const auto &[a0] = std::get<typename Sum<T3, T2>::Inr>(lr.v());
             return Itree<T1, T2>::go(ItreeF<T1, T2, Itree<T1, T2>>::retf(a0));

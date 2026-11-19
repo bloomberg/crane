@@ -214,7 +214,7 @@ Recursion::interp_mrec(const std::type_identity_t<
     crane::fn<std::shared_ptr<ITree<crane::obj>>(T1)>> &ctx0,
                        const std::shared_ptr<ITree<T3>> &x0_) {
   return itree_iter(
-      [=](const std::shared_ptr<ITree<T3>> &t) -> std::shared_ptr<
+      [=, ctx0 = ctx0](const std::shared_ptr<ITree<T3>> &t) -> std::shared_ptr<
           ITree<Sum<std::shared_ptr<ITree<T3>>, T3>>> {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {

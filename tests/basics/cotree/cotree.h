@@ -286,13 +286,14 @@ struct Cotree {
     template <typename T1>
     cotree<T1> comap_cotree(const crane::fn<T1(A)> &g) const {
       const auto &[a0, a1] = std::get<typename cotree<A>::Conode>(this->v());
-      return cotree<T1>::lazy_([=]() -> typename cotree<T1>::Conode {
-        return {g(a0),
-                comap<cotree<A>, cotree<T1>>([=](cotree<A> _x0) -> cotree<T1> {
-                  return _x0.template comap_cotree<T1>(g);
-                },
-                                             a1)};
-      });
+      return cotree<T1>::lazy_(
+          [=, a0 = a0, g = g]() mutable -> typename cotree<T1>::Conode {
+            return {g(a0), comap<cotree<A>, cotree<T1>>(
+                               [=](cotree<A> _x0) -> cotree<T1> {
+                                 return _x0.template comap_cotree<T1>(g);
+                               },
+                               a1)};
+          });
     }
   };
 
@@ -409,9 +410,10 @@ struct Cotree {
       return colist<T2>::conil();
     } else {
       const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-      return colist<T2>::lazy_([=]() -> typename colist<T2>::Cocons {
-        return {f(a0), comap<T1, T2>(f, a1)};
-      });
+      return colist<T2>::lazy_(
+          [=, a0 = a0, f = f]() mutable -> typename colist<T2>::Cocons {
+            return {f(a0), comap<T1, T2>(f, a1)};
+          });
     }
   }
 
@@ -423,12 +425,13 @@ struct Cotree {
   static cotree<T1>
   unfold_cotree(const std::type_identity_t<crane::fn<colist<T1>(T1)>> &next,
                 const T1 &init) {
-    return cotree<T1>::lazy_([=]() -> typename cotree<T1>::Conode {
-      return {init, comap<T1, cotree<T1>>([=](T1 _x0) -> cotree<T1> {
-        return unfold_cotree<T1>(next, _x0);
-      },
-                                          next(init))};
-    });
+    return cotree<T1>::lazy_(
+        [=, init = init, next = next]() mutable -> typename cotree<T1>::Conode {
+          return {init, comap<T1, cotree<T1>>([=](T1 _x0) -> cotree<T1> {
+            return unfold_cotree<T1>(next, _x0);
+          },
+                                              next(init))};
+        });
   }
 
   template <typename T1>

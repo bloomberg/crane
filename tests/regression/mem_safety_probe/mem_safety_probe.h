@@ -491,7 +491,8 @@ struct MemSafetyProbe {
         const auto &[a0, a1] =
             std::get<typename mylist<tree>::Mycons>(_loop_trees->v());
         const mylist<tree> &a1_value = *a1;
-        _loop_acc = [=](uint64_t n) { return _loop_acc(a0.sum_values(n)); };
+        _loop_acc =
+            [=, a0 = a0](uint64_t n) { return _loop_acc(a0.sum_values(n)); };
         _loop_trees = &a1_value;
       }
     }

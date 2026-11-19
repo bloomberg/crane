@@ -939,8 +939,10 @@ struct FrameBinderLocalFixAcc {
 
   static stream smap(const crane::fn<uint64_t(uint64_t)> &f, const stream &s) {
     const auto &[a0, a1] = std::get<typename stream::SCons>(s.v());
-    return stream::lazy_(
-        [=]() -> typename stream::SCons { return {f(a0), smap(f, a1)}; });
+    return stream::lazy_([=,
+                          f = f]() mutable -> typename stream::SCons {
+      return {f(a0), smap(f, a1)};
+    });
   }
 
   static List<uint64_t> stake(uint64_t k, const stream &s);

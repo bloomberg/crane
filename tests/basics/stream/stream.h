@@ -212,7 +212,9 @@ public:
   Stream<A> interleave(const Stream<A> &sb) const {
     const auto &[a0, a1] = std::get<typename Stream<A>::Scons>(this->v());
     return Stream<A>::lazy_(
-        [=]() -> typename Stream<A>::Scons { return {a0, sb.interleave(a1)}; });
+        [=, a0 = a0]() mutable -> typename Stream<A>::Scons {
+          return {a0, sb.interleave(a1)};
+        });
   }
 
   template <typename T1>
@@ -228,13 +230,16 @@ public:
 
   template <typename T1> static Stream<T1> repeat(const T1 &x) {
     return Stream<T1>::lazy_(
-        [=]() -> typename Stream<T1>::Scons { return {x, repeat<T1>(x)}; });
+        [=, x = x]() mutable -> typename Stream<T1>::Scons {
+          return {x, repeat<T1>(x)};
+        });
   }
 
   static Stream<Nat> nats_from(const Nat &n) {
-    return Stream<Nat>::lazy_([=]() -> typename Stream<Nat>::Scons {
-      return {n, nats_from(Nat::s(n))};
-    });
+    return Stream<Nat>::lazy_(
+        [=, n = n]() mutable -> typename Stream<Nat>::Scons {
+          return {n, nats_from(Nat::s(n))};
+        });
   }
 
   static const Stream<Nat> &ones() {

@@ -29,7 +29,9 @@ MemSafetyProbe11::collect_dual_captures(
     const MemSafetyProbe11::tree &a0_value = *a0;
     const MemSafetyProbe11::tree &a2_value = *a2;
     crane::fn<uint64_t(uint64_t)> f =
-        [=](uint64_t) { return (a0_value.tree_sum() + a2_value.tree_sum()); };
+        [=, a0_value = a0_value, a2_value = a2_value](uint64_t) {
+          return (a0_value.tree_sum() + a2_value.tree_sum());
+        };
     MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>> acc2 =
         mylist<crane::fn<uint64_t(uint64_t)>>::mycons(std::move(f),
                                                       std::move(acc));
@@ -53,7 +55,7 @@ MemSafetyProbe11::capture_tails(
         std::get<typename MemSafetyProbe11::mylist<uint64_t>::Mycons>(l.v());
     const MemSafetyProbe11::mylist<uint64_t> &a1_value = *a1;
     crane::fn<uint64_t(uint64_t)> f =
-        [=](uint64_t) { return (a0 + a1_value.length()); };
+        [=, a1_value = a1_value](uint64_t) { return (a0 + a1_value.length()); };
     return capture_tails(
         a1_value, mylist<crane::fn<uint64_t(uint64_t)>>::mycons(std::move(f),
                                                                 std::move(acc)));
@@ -75,9 +77,9 @@ MemSafetyProbe11::triple_use_tree(
     const MemSafetyProbe11::tree &a0_value = *a0;
     const MemSafetyProbe11::tree &a2_value = *a2;
     crane::fn<uint64_t(uint64_t)> fl =
-        [=](uint64_t) { return a0_value.tree_sum(); };
+        [=, a0_value = a0_value](uint64_t) { return a0_value.tree_sum(); };
     crane::fn<uint64_t(uint64_t)> fr =
-        [=](uint64_t) { return a2_value.tree_sum(); };
+        [=, a2_value = a2_value](uint64_t) { return a2_value.tree_sum(); };
     MemSafetyProbe11::mylist<crane::fn<uint64_t(uint64_t)>> acc2 =
         mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
             std::move(fr), mylist<crane::fn<uint64_t(uint64_t)>>::mycons(

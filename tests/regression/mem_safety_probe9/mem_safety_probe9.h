@@ -102,8 +102,9 @@ struct MemSafetyProbe9 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         uint64_t lsum = a0_value.tree_sum();
-        crane::fn<uint64_t(uint64_t)> f =
-            [=](uint64_t n) { return (a2_value.tree_sum() + n); };
+        crane::fn<uint64_t(uint64_t)> f = [=, a2_value = a2_value](uint64_t n) {
+          return (a2_value.tree_sum() + n);
+        };
         return (f(lsum) + f(a1));
       }
     }
@@ -120,9 +121,9 @@ struct MemSafetyProbe9 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         crane::fn<uint64_t(uint64_t)> f1 =
-            [=](uint64_t) { return a0_value.tree_sum(); };
+            [=, a0_value = a0_value](uint64_t) { return a0_value.tree_sum(); };
         crane::fn<uint64_t(uint64_t)> f2 =
-            [=](uint64_t) { return a2_value.tree_sum(); };
+            [=, a2_value = a2_value](uint64_t) { return a2_value.tree_sum(); };
         crane::fn<uint64_t(uint64_t)> f3 =
             [=, _self_val = std::move(_self_val)](uint64_t) {
               return _self_val.tree_sum();

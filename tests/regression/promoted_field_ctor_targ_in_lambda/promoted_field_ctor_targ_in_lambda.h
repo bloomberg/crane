@@ -347,7 +347,7 @@ struct PromotedFieldCtorTargInLambda {
       return f0(a0);
     } else {
       const auto &[a0] = std::get<typename memS<T1, T2>::Mget>(m.v());
-      return f1(a0, [=](const T1 &y) {
+      return f1(a0, [=, a0 = a0, f = f, f0 = f0, f1 = f1](const T1 &y) {
         return memS_rect<T1, T2, T3>(f, f0, f1, a0(y));
       });
     }
@@ -371,7 +371,7 @@ struct PromotedFieldCtorTargInLambda {
       return memS<T1, T3>::mub(a0);
     } else {
       const auto &[a0] = std::get<typename memS<T1, T2>::Mget>(c.v());
-      return memS<T1, T3>::mget([=, k = std::move(k)](const T1 &s) {
+      return memS<T1, T3>::mget([=, a0 = a0, k = std::move(k)](const T1 &s) {
         return memS_bind<T1, T2, T3>(a0(s), k);
       });
     }
@@ -421,7 +421,7 @@ struct PromotedFieldCtorTargInLambda {
     return memS_mon<St<typename _tcI0::ptr>>::template bind<
         St<typename _tcI0::ptr>, Nat>(
         get<St<typename _tcI0::ptr>>(),
-        [=](const St<typename _tcI0::ptr> &s) -> memS<
+        [=, msg = msg](const St<typename _tcI0::ptr> &s) -> memS<
             typename StateV<_tcI0>::state, Nat> {
           auto &&_sv = StateV<_tcI0>::size_of(s);
           if (std::holds_alternative<typename Nat::O>(_sv.v())) {

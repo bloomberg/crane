@@ -48,7 +48,7 @@ uint64_t FunctorBinderScopeCheck::h(uint64_t a, Z z, const List<uint64_t> &l,
             }
           }
         };
-    return [=](uint64_t _pa0) {
+    return [=, l = l](uint64_t _pa0) {
       return go(l, [](uint64_t) { return UINT64_C(0); }, _pa0);
     };
   }()(x0_);

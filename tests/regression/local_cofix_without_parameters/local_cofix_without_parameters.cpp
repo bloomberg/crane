@@ -27,7 +27,7 @@ LocalCofixWithoutParameters::zeros_or(bool b) {
            std::monostate)
              -> LocalCofixWithoutParameters::stream {
           return stream::lazy_(
-              [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
+              [=]() mutable -> typename LocalCofixWithoutParameters::stream::Cons {
                 return {UINT64_C(0), _self_z(_self_z, std::monostate{})};
               });
         };
@@ -42,7 +42,7 @@ LocalCofixWithoutParameters::zeros_or(bool b) {
            std::monostate)
              -> LocalCofixWithoutParameters::stream {
           return stream::lazy_(
-              [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
+              [=]() mutable -> typename LocalCofixWithoutParameters::stream::Cons {
                 return {UINT64_C(1), _self_o(_self_o, std::monostate{})};
               });
         };
@@ -67,7 +67,7 @@ LocalCofixWithoutParameters::ones_then(const List<uint64_t> &l) {
                std::monostate)
                  -> LocalCofixWithoutParameters::stream {
               return stream::lazy_(
-                  [=]() -> typename LocalCofixWithoutParameters::stream::Cons {
+                  [=]() mutable -> typename LocalCofixWithoutParameters::stream::Cons {
                     return {UINT64_C(1), _self_o(_self_o, std::monostate{})};
                   });
             };

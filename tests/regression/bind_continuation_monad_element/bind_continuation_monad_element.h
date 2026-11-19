@@ -303,7 +303,8 @@ struct BindContinuationMonadElement {
             auto &[a0, a1] = std::get<typename List<T2>::Cons>(l0.v_mut());
             const List<T2> &a1_value = *a1;
             return _tcI0::template bind<T3, List<T3>>(
-                f(std::move(a0)), [=, acc = std::move(acc)](const T3 &b) {
+                f(std::move(a0)),
+                [=, a1_value = a1_value, acc = std::move(acc)](const T3 &b) {
                   return _self_loop(_self_loop, List<T3>::cons(b, acc),
                                     a1_value);
                 });

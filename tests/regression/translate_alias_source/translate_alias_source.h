@@ -276,25 +276,25 @@ struct TranslateAliasSource {
   }
 
   static inline const SrcTop<uint64_t> prog = []() {
-    return Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(ItreeF<
-        Sum1<AE, BE, crane::obj>, uint64_t,
-        Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::tauf(Itree<
-        Sum1<AE, BE, crane::obj>, uint64_t>::go(ItreeF<
-        Sum1<AE, BE, crane::obj>, uint64_t,
-        Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::visf(
-        Sum1<AE, BE, AE>::inl1(AE::A),
-        crane::fn<Itree<Sum1<AE, BE, crane::obj>, uint64_t>(crane::obj)>(
-            [](const crane::obj &x) -> Itree<Sum1<AE, BE, crane::obj>,
-                                             uint64_t> {
-              return Itree<Sum1<AE, BE, crane::obj>, uint64_t>::lazy_(
-                  [=]() -> typename Itree<Sum1<AE, BE, crane::obj>,
-                                          uint64_t>::Go {
-                    return {
-                        ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
-                               Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::retf(
+    return Itree<Sum1<AE, BE, crane::obj>, uint64_t>::go(
+        ItreeF<Sum1<AE, BE, crane::obj>, uint64_t,
+               Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::tauf(Itree<
+            Sum1<AE, BE, crane::obj>, uint64_t>::go(ItreeF<
+            Sum1<AE, BE, crane::obj>, uint64_t,
+            Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::visf(
+            Sum1<AE, BE, AE>::inl1(AE::A),
+            crane::fn<Itree<Sum1<AE, BE, crane::obj>, uint64_t>(crane::obj)>(
+                [](const crane::obj &x) -> Itree<Sum1<AE, BE, crane::obj>,
+                                                 uint64_t> {
+                  return Itree<Sum1<AE, BE, crane::obj>, uint64_t>::lazy_(
+                      [=]() mutable -> typename Itree<Sum1<AE, BE, crane::obj>,
+                                                      uint64_t>::Go {
+                        return {ItreeF<
+                            Sum1<AE, BE, crane::obj>, uint64_t,
+                            Itree<Sum1<AE, BE, crane::obj>, uint64_t>>::retf(
                             (crane::any_cast<uint64_t>(x) + UINT64_C(1)))};
-                  });
-            })))));
+                      });
+                })))));
   }();
   static uint64_t
   run(uint64_t fuel,
@@ -317,13 +317,17 @@ Itree<T2, T3> Interp::translateF(
           t.v())) {
     const auto &[t1] =
         std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(t.v());
-    return Itree<T2, T3>::lazy_([=, rec = std::move(rec)]() -> typename Itree<
-        T2, T3>::Go { return {ItreeF<T2, T3, Itree<T2, T3>>::tauf(rec(t1))}; });
+    return Itree<T2, T3>::lazy_(
+        [=, rec = std::move(rec)]() mutable -> typename Itree<T2,
+                                                              T3>::Go {
+          return {ItreeF<T2, T3, Itree<T2, T3>>::tauf(rec(t1))};
+        });
   } else {
     const auto &[x, e0] =
         std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::VisF>(t.v());
     return Itree<T2, T3>::lazy_(
-        [=, rec = std::move(rec)]() -> typename Itree<T2, T3>::Go {
+        [=, e0 = e0, h = h, x = x,
+         rec = std::move(rec)]() mutable -> typename Itree<T2, T3>::Go {
           return {
               ItreeF<T2, T3, Itree<T2, T3>>::visf(
                   h(x),
@@ -338,7 +342,7 @@ template <typename T1, typename T2, typename T3>
 Itree<T2, T3>
 Interp::translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
                   const Itree<T1, T3> &t) {
-  return Itree<T2, T3>::lazy_([=]() -> Itree<T2, T3> {
+  return Itree<T2, T3>::lazy_([=, h = h]() mutable -> Itree<T2, T3> {
     return Interp::template translateF<T1, T2, T3>(
         h, [=](Itree<T1, T3> _x0) -> Itree<T2,
                                            T3> {

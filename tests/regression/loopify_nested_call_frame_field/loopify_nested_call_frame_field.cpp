@@ -65,9 +65,8 @@ LoopifyNestedCallFrameField::g(const List<std::pair<uint64_t, bool>> &l,
       const List<uint64_t> &a = _f.a;
       std::shared_ptr<List<std::pair<uint64_t, bool>>> a1 = std::move(_f.a1);
       const List<std::pair<uint64_t, bool>> &a1_value = *a1;
-      _result = _result.filter([=, a = std::move(a)](uint64_t y) {
-        return g(a1_value, g(a1_value, a)).length() == y;
-      });
+      _result = _result.filter([=, a1_value = a1_value, a = std::move(a)](
+          uint64_t y) { return g(a1_value, g(a1_value, a)).length() == y; });
     }
   }
   return _result;

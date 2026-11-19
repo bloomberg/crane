@@ -179,9 +179,10 @@ struct LoopifyCoindColist {
       return colist<T2>::conil();
     } else {
       const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-      return colist<T2>::lazy_([=]() -> typename colist<T2>::Cocons {
-        return {f(a0), comap<T1, T2>(f, a1)};
-      });
+      return colist<T2>::lazy_(
+          [=, a0 = a0, f = f]() mutable -> typename colist<T2>::Cocons {
+            return {f(a0), comap<T1, T2>(f, a1)};
+          });
     }
   }
 
@@ -195,9 +196,10 @@ struct LoopifyCoindColist {
         return colist<T1>::conil();
       } else {
         const auto &[a0, a1] = std::get<typename colist<T1>::Cocons>(l.v());
-        return colist<T1>::lazy_([=]() -> typename colist<T1>::Cocons {
-          return {a0, cotake<T1>(n_, a1)};
-        });
+        return colist<T1>::lazy_(
+            [=, a0 = a0]() mutable -> typename colist<T1>::Cocons {
+              return {a0, cotake<T1>(n_, a1)};
+            });
       }
     }
   }
@@ -208,9 +210,10 @@ struct LoopifyCoindColist {
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       const List<T1> &a1_value = *a1;
-      return colist<T1>::lazy_([=]() -> typename colist<T1>::Cocons {
-        return {a0, from_list<T1>(a1_value)};
-      });
+      return colist<T1>::lazy_(
+          [=, a0 = a0, a1_value = a1_value]() mutable -> typename colist<T1>::Cocons {
+            return {a0, from_list<T1>(a1_value)};
+          });
     }
   }
 

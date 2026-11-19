@@ -10,8 +10,10 @@ CoindFamilyParam::count(const Nat &n, const Nat &acc) {
     const auto &[a0] = std::get<typename Nat::S>(n.v());
     const Nat &a0_value = *a0;
     return tree<CoindFamilyParam::voidE, Nat>::lazy_(
-        [=]() -> typename CoindFamilyParam::tree<CoindFamilyParam::voidE,
-                                                 Nat>::Go {
+        [=, a0_value = a0_value,
+         acc = acc]() mutable -> typename CoindFamilyParam::tree<
+            CoindFamilyParam::voidE,
+            Nat>::Go {
           return {
               treeF<CoindFamilyParam::voidE, Nat,
                     CoindFamilyParam::tree<CoindFamilyParam::voidE, Nat>>::tauf(

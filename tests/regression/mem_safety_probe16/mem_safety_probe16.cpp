@@ -67,7 +67,9 @@ MemSafetyProbe16::build_summers(
       const MemSafetyProbe16::mylist<MemSafetyProbe16::tree> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe16::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t _x0) -> uint64_t { return a0.make_summer(_x0); },
+          [=, a0 = a0](uint64_t _x0) -> uint64_t {
+            return a0.make_summer(_x0);
+          },
           nullptr);
       MemSafetyProbe16::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe16::mylist<

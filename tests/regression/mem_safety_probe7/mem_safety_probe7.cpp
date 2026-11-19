@@ -64,8 +64,9 @@ MemSafetyProbe7::build_len_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
               _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe7::mylist<
-          crane::fn<uint64_t(std::monostate)>>::Mycons(
-          [=](std::monostate) { return a1_value.length(); }, nullptr);
+          crane::fn<uint64_t(std::monostate)>>::Mycons([=, a1_value = a1_value](
+          std::monostate) { return a1_value.length(); },
+                                                       nullptr);
       MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
                           crane::fn<uint64_t(std::monostate)>>>(
@@ -147,8 +148,9 @@ MemSafetyProbe7::build_sum_closures(const MemSafetyProbe7::mylist<uint64_t> &l) 
               _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe7::mylist<
-          crane::fn<uint64_t(std::monostate)>>::Mycons(
-          [=](std::monostate) { return sum_list(a1_value); }, nullptr);
+          crane::fn<uint64_t(std::monostate)>>::Mycons([=, a1_value = a1_value](
+          std::monostate) { return sum_list(a1_value); },
+                                                       nullptr);
       MemSafetyProbe7::mylist<crane::fn<uint64_t(std::monostate)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
                           crane::fn<uint64_t(std::monostate)>>>(
@@ -191,8 +193,9 @@ MemSafetyProbe7::build_accum_closures(
               _loop_l->v());
       const MemSafetyProbe7::mylist<uint64_t> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe7::mylist<
-          crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t n) { return ((a0 + sum_list(a1_value)) + n); }, nullptr);
+          crane::fn<uint64_t(uint64_t)>>::Mycons([=, a1_value = a1_value](
+          uint64_t n) { return ((a0 + sum_list(a1_value)) + n); },
+                                                 nullptr);
       MemSafetyProbe7::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe7::mylist<
                           crane::fn<uint64_t(uint64_t)>>>(std::move(_cell)))

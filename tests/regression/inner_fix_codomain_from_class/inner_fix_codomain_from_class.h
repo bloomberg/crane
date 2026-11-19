@@ -343,7 +343,8 @@ collect(const Nat &n, const List<std::pair<typename _tcI0::PTR::ptr,
                     List<dv<typename _tcI0::PTR::ptr,
                             typename _tcI0::IPTR::iptr>>>(
                     _self_go(_self_go, m, a1_value),
-                    [=](const List<std::pair<typename _tcI0::PTR::ptr,
+                    [=, a0 = a0](
+                        const List<std::pair<typename _tcI0::PTR::ptr,
                                              typename _tcI0::IPTR::iptr>> &rest)
                          -> EOU<List<dv<typename _tcI0::PTR::ptr,
                                         typename _tcI0::IPTR::iptr>>> {

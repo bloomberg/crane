@@ -45,9 +45,10 @@ bool EtaPartialAppWrongArgument::z(const List<uint64_t> &l,
               }
             }
           };
-      return go(List<bool>::nil(), [=](uint64_t _x0) -> bool {
-        return z(a1_value, a10_value, _x0);
-      },
+      return go(List<bool>::nil(), [=, a10_value = a10_value,
+                                    a1_value = a1_value](uint64_t _x0) -> bool {
+                                     return z(a1_value, a10_value, _x0);
+                                   },
                 x0_);
     }
   }

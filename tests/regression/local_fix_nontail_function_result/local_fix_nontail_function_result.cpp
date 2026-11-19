@@ -33,7 +33,7 @@ List<LocalFixNontailFunctionResult::pt> LocalFixNontailFunctionResult::h6a(
             const List<uint64_t> &a1_value = *a1;
             crane::fn<List<LocalFixNontailFunctionResult::pt>(
                 LocalFixNontailFunctionResult::tree)> rv =
-                [=, acc = std::move(acc)](
+                [=, a1_value = a1_value, acc = std::move(acc)](
                     LocalFixNontailFunctionResult::tree _pa0) {
                   return _self_go(_self_go, a1_value, std::move(acc), _pa0);
                 };
@@ -108,7 +108,8 @@ List<LocalFixNontailFunctionResult::pt> LocalFixNontailFunctionResult::k1(
             auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v_mut());
             const List<uint64_t> &a1_value = *a1;
             auto go2 =
-                [=](List<uint64_t> l2,
+                [=, a1_value = a1_value](
+                    List<uint64_t> l2,
                     crane::fn<List<LocalFixNontailFunctionResult::pt>(
                         LocalFixNontailFunctionResult::tree)> a2,
                     LocalFixNontailFunctionResult::tree x0_1)

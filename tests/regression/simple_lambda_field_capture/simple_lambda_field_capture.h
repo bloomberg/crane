@@ -85,10 +85,9 @@ struct SimpleLambdaFieldCapture {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
         const mylist &a1_value = *a1;
         return std::make_optional<crane::fn<uint64_t(uint64_t)>>(
-            crane::fn<uint64_t(uint64_t)>(
-                [=](uint64_t x) {
-                  return ((x + a0) + a1_value.mylist_sum());
-                }));
+            crane::fn<uint64_t(uint64_t)>([=, a1_value = a1_value](uint64_t x) {
+              return ((x + a0) + a1_value.mylist_sum());
+            }));
       }
     }
 

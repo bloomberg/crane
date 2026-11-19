@@ -29,7 +29,7 @@ MemSafetyProbe::build_adders(
       const MemSafetyProbe::mylist<MemSafetyProbe::tree> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); },
+          [=, a0 = a0](uint64_t _x0) -> uint64_t { return a0.sum_values(_x0); },
           nullptr);
       MemSafetyProbe::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (
@@ -129,7 +129,8 @@ MemSafetyProbe::box_from_match(const MemSafetyProbe::tree &t) {
     const auto &[a0, _, _] =
         std::get<typename MemSafetyProbe::tree::Node>(t.v());
     const MemSafetyProbe::tree &a0_value = *a0;
-    return fn_box::box(
-        [=](uint64_t _x0) -> uint64_t { return a0_value.sum_values(_x0); });
+    return fn_box::box([=, a0_value = a0_value](uint64_t _x0) -> uint64_t {
+      return a0_value.sum_values(_x0);
+    });
   }
 }

@@ -249,10 +249,11 @@ struct LocalFixNontailFunctionResult {
             } else {
               auto &[_, a10] = std::get<typename List<tree>::Cons>(l.v_mut());
               const List<tree> &a10_value = *a10;
-              crane::fn<tree(crane::fn<uint64_t(uint64_t)>)> rv = [
-                  =, acc = std::move(acc)](crane::fn<uint64_t(uint64_t)> _pa0) {
-                return _self_go(_self_go, a10_value, std::move(acc), _pa0);
-              };
+              crane::fn<tree(crane::fn<uint64_t(uint64_t)>)> rv =
+                  [=, a10_value = a10_value, acc = std::move(acc)](
+                      crane::fn<uint64_t(uint64_t)> _pa0) {
+                    return _self_go(_self_go, a10_value, std::move(acc), _pa0);
+                  };
               if (UINT64_C(0) == UINT64_C(1)) {
                 return tree::leaf();
               } else {

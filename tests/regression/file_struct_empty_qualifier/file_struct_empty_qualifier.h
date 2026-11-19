@@ -336,13 +336,22 @@ struct Helpers {
     } else {
       const auto &[a1, a2] = std::get<typename List<T2>::Cons>(l.v());
       const List<T2> &a2_value = *a2;
-      return _tcI0::template bind<T3, List<T3>>(f(a1), [=](const T3 &b0) {
-        return _tcI0::template bind<List<T3>, List<T3>>(
-            Helpers::template map_monad<_tcI0, T2, T3>(f, a2_value),
-            [=](const List<T3> &bs) {
-              return _tcI0::template ret<List<T3>>(List<T3>::cons(b0, bs));
-            });
-      });
+      return _tcI0::template bind<T3, List<T3>>(f(a1),
+                                                [=, a2_value = a2_value, f = f](
+                                                    const T3 &b0) {
+                                                  return _tcI0::template bind<
+                                                      List<T3>, List<T3>>(
+                                                      Helpers::template map_monad<
+                                                          _tcI0, T2, T3>(
+                                                          f, a2_value),
+                                                      [=, b0 = b0](
+                                                          const List<T3> &bs) {
+                                                        return _tcI0::template ret<
+                                                            List<T3>>(
+                                                            List<T3>::cons(b0,
+                                                                           bs));
+                                                      });
+                                                });
     }
   }
 };

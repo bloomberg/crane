@@ -112,7 +112,7 @@ struct CpsContinuationCopy {
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       const List<uint64_t> &a1_value = *a1;
-      return sumk(a1_value, [=](uint64_t s) { return k((a0 + s)); });
+      return sumk(a1_value, [=, k = k](uint64_t s) { return k((a0 + s)); });
     }
   }
 

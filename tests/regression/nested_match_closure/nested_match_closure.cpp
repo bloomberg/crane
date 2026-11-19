@@ -101,14 +101,17 @@ NestedMatchClosure::make_param_combiner(const NestedMatchClosure::tree &t,
         std::get<typename NestedMatchClosure::tree::Node>(t.v());
     const NestedMatchClosure::tree &a0_value = *a0;
     const NestedMatchClosure::tree &a2_value = *a2;
-    auto go_impl = [=](auto &_self_go, uint64_t x) -> uint64_t {
-      if (x <= 0) {
-        return (((base + a1) + tree_sum(a0_value)) + tree_sum(a2_value));
-      } else {
-        uint64_t x_ = x - 1;
-        return (_self_go(_self_go, x_) + 1);
-      }
-    };
+    auto go_impl =
+        [=, a0_value = a0_value, a2_value = a2_value](auto &_self_go,
+                                                      uint64_t x)
+             -> uint64_t {
+          if (x <= 0) {
+            return (((base + a1) + tree_sum(a0_value)) + tree_sum(a2_value));
+          } else {
+            uint64_t x_ = x - 1;
+            return (_self_go(_self_go, x_) + 1);
+          }
+        };
     auto go =
         [=, go_impl = std::move(go_impl)](uint64_t x) -> uint64_t {
           return go_impl(go_impl, x);

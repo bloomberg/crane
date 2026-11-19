@@ -215,7 +215,7 @@ Interp::interp(const std::type_identity_t<
     crane::fn<typename _tcI0::template M<crane::obj>(T1)>> &h0,
                const std::shared_ptr<ITree<T3>> &x0_) {
   return _tcI0::template iter<T3, std::shared_ptr<ITree<T3>>>(
-      [=](const std::shared_ptr<ITree<T3>> &t) -> typename _tcI0::template M<
+      [=, h0 = h0](const std::shared_ptr<ITree<T3>> &t) -> typename _tcI0::template M<
           Sum<std::shared_ptr<ITree<T3>>, T3>> {
         auto _cs = t->observe();
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {

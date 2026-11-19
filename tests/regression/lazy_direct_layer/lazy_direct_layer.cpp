@@ -17,11 +17,12 @@ LazyDirectLayer::tree LazyDirectLayer::Tau(const LazyDirectLayer::tree &t) {
 
 LazyDirectLayer::tree LazyDirectLayer::taus(uint64_t n, uint64_t r) {
   if (n <= 0) {
-    return tree::lazy_([=]() -> LazyDirectLayer::tree { return Ret(r); });
+    return tree::lazy_(
+        [=]() mutable -> LazyDirectLayer::tree { return Ret(r); });
   } else {
     uint64_t m = n - 1;
     return tree::lazy_(
-        [=]() -> LazyDirectLayer::tree { return Tau(taus(m, r)); });
+        [=]() mutable -> LazyDirectLayer::tree { return Tau(taus(m, r)); });
   }
 }
 

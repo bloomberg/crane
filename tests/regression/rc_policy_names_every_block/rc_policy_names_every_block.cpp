@@ -2,7 +2,7 @@
 
 RcPolicyNamesEveryBlock::stream RcPolicyNamesEveryBlock::from(uint64_t n) {
   return stream::lazy_(
-      [=]() -> typename RcPolicyNamesEveryBlock::stream::SCons {
+      [=]() mutable -> typename RcPolicyNamesEveryBlock::stream::SCons {
         return {n, from((n + 1))};
       });
 }

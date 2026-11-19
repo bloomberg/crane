@@ -42,7 +42,7 @@ CapturedRecordCopiedPerEvent::ticks(const Nat &k) {
             Subevent::template subevent<CapturedRecordCopiedPerEvent::TickE,
                                         CapturedRecordCopiedPerEvent::TickE,
                                         std::monostate>(resum_id, TickE::TICK)),
-        [=](std::monostate) { return ticks(a0_value); });
+        [=, a0_value = a0_value](std::monostate) { return ticks(a0_value); });
   }
 }
 
@@ -71,8 +71,9 @@ CapturedRecordCopiedPerEvent::steps(const Nat &n, const Nat &k,
     const auto &[a0] = std::get<typename Nat::S>(n.v());
     const Nat &a0_value = *a0;
     return ITree::template bind<CapturedRecordCopiedPerEvent::TickE, Nat, Nat>(
-        step(b, k),
-        [=](Nat x) { return steps(a0_value, k, b, acc.add(std::move(x))); });
+        step(b, k), [=, a0_value = a0_value, acc = acc, b = b, k = k](Nat x) {
+          return steps(a0_value, k, b, acc.add(std::move(x)));
+        });
   }
 }
 

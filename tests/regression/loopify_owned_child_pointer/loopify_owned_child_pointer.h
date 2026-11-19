@@ -361,7 +361,9 @@ struct LoopifyOwnedChildPointer {
           crane::shared_box<tree> a0 = std::move(_f.a0);
           const tree &a0_value = *a0;
           _result = List<crane::fn<uint64_t(uint64_t)>>::cons(
-              [=](uint64_t y) { return (y + a0_value.sum()); },
+              [=, a0_value = a0_value](uint64_t y) {
+                return (y + a0_value.sum());
+              },
               _f._tmp2.app(std::move(_result)));
         }
       }

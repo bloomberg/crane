@@ -2,7 +2,7 @@
 
 Cotree::colist<uint64_t> Cotree::nats(uint64_t n) {
   return colist<uint64_t>::lazy_(
-      [=]() -> typename Cotree::colist<uint64_t>::Cocons {
+      [=]() mutable -> typename Cotree::colist<uint64_t>::Cocons {
         return {n, nats((n + 1))};
       });
 }

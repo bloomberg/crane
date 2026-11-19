@@ -128,7 +128,7 @@ MemSafetyProbe14::tree_level_fns(const MemSafetyProbe14::tree &t,
       _result = mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
           [=](uint64_t n) { return (((depth * UINT64_C(100)) + a1) + n); },
           mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-              [=](uint64_t n) {
+              [=, a0_value = a0_value, a2_value = a2_value](uint64_t n) {
                 return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
               },
               _f._tmp2.mylist_append(std::move(_result))));

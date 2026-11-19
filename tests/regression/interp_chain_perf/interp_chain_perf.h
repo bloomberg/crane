@@ -351,8 +351,8 @@ struct Monads {
       return [=, f = std::move(f), run = std::move(run)](const T1 &s) {
         return _tcI0::template fmap<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
-            [=](const std::pair<T1,
-                                CraneA0> &sa) {
+            [=, f = f](const std::pair<T1,
+                                       CraneA0> &sa) {
               return std::make_pair(sa.first, f(sa.second));
             },
             run(s));
@@ -382,8 +382,8 @@ struct Monads {
       return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
         return _tcI0::template bind<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
-            t(s), [=](const std::pair<T1,
-                                      CraneA0> &sa) {
+            t(s), [=, k = k](const std::pair<T1,
+                                             CraneA0> &sa) {
                     return crane::apply2(k, sa.second, sa.first);
                   });
       };
@@ -420,7 +420,7 @@ template <Monad _tcI0, MonadIter _tcI1, typename T1> struct MonadIter_stateT0 {
     return [=, i = std::move(i), step = std::move(step)](const T1 &s) {
       return _tcI1::template iter<std::pair<T1, CraneA0>,
                                   std::pair<T1, CraneA1>>(
-          [=](const std::pair<T1, CraneA1> &si) {
+          [=, step = step](const std::pair<T1, CraneA1> &si) {
             T1 s0 = si.first;
             CraneA1 i0 = si.second;
             return _tcI0::template bind<
@@ -650,8 +650,8 @@ struct ITree {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
       return Itree<T1, T3>::lazy_(
-          [=, k = std::move(k)]() -> typename Itree<T1,
-                                                    T3>::Go {
+          [=, k = std::move(k)]() mutable -> typename Itree<T1,
+                                                            T3>::Go {
             return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
                 subst<T1, T2, T3>(std::move(k), t0))};
           });
@@ -659,11 +659,13 @@ struct ITree {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
-          x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1,
-                                                                      T3> {
-                   return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
-                 })));
+          x,
+          crane::fn<Itree<T1, T3>(crane::obj)>([=, e0 = e0, k = std::move(k)](
+              const crane::obj &x0)
+                                                    -> Itree<T1,
+                                                             T3> {
+            return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
+          })));
     }
   }
 
@@ -679,14 +681,15 @@ struct ITree {
   iter(const std::type_identity_t<crane::fn<Itree<T1, Sum<T3, T2>>(T3)>> &step,
        const T3 &i) {
     return bind<T1, Sum<T3, T2>, T2>(
-        step(i), [=](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
+        step(i), [=, step = step](const Sum<T3, T2> &lr) -> Itree<T1, T2> {
           if (std::holds_alternative<typename Sum<T3, T2>::Inl>(lr.v())) {
             const auto &[a0] = std::get<typename Sum<T3, T2>::Inl>(lr.v());
-            return Itree<T1, T2>::lazy_([=]() -> typename Itree<T1,
-                                                                T2>::Go {
-              return {ItreeF<T1, T2, Itree<T1, T2>>::tauf(
-                  iter<T1, T2, T3>(step, a0))};
-            });
+            return Itree<T1, T2>::lazy_(
+                [=, a0 = a0, step = step]() mutable -> typename Itree<T1,
+                                                                      T2>::Go {
+                  return {ItreeF<T1, T2, Itree<T1, T2>>::tauf(
+                      iter<T1, T2, T3>(step, a0))};
+                });
           } else {
             const auto &[a0] = std::get<typename Sum<T3, T2>::Inr>(lr.v());
             return Itree<T1, T2>::go(ItreeF<T1, T2, Itree<T1, T2>>::retf(a0));
@@ -697,7 +700,7 @@ struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
                            const Itree<T1, T2> &t) {
-    return bind<T1, T2, T3>(t, [=](const T2 &x) {
+    return bind<T1, T2, T3>(t, [=, f = f](const T2 &x) {
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));
     });
   }
@@ -835,7 +838,7 @@ struct InterpChainPerf {
               Subevent::template subevent<crane::obj,
                                           Sum1<outE, noE, crane::obj>, T2>(h0,
                                                                            e)),
-          [=](const T2 &r) {
+          [=, s = s](const T2 &r) {
             return Itree<BotE<crane::obj>, std::pair<Nat, T2>>::go(
                 ItreeF<BotE<crane::obj>, std::pair<Nat, T2>,
                        Itree<BotE<crane::obj>, std::pair<Nat, T2>>>::retf(
@@ -1011,7 +1014,7 @@ typename _tcI0::template M<T3> Interp::interp(const std::type_identity_t<
     crane::fn<typename _tcI0::template M<crane::obj>(T1)>> &h0,
                                               const Itree<T1, T3> &x0_) {
   return _tcI0::template iter<T3, Itree<T1, T3>>(
-      [=](const Itree<T1, T3> &t) -> typename _tcI0::template M<
+      [=, h0 = h0](const Itree<T1, T3> &t) -> typename _tcI0::template M<
           Sum<Itree<T1, T3>, T3>> {
         auto &&_sv = t.observe();
         if (std::holds_alternative<typename ItreeF<T1, T3,
@@ -1030,9 +1033,11 @@ typename _tcI0::template M<T3> Interp::interp(const std::type_identity_t<
         } else {
           const auto &[x, e0] =
               std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::VisF>(_sv.v());
-          return _tcI2::template fmap<crane::obj, Sum<Itree<T1, T3>, T3>>([=](
-              const auto &x0) { return Sum<Itree<T1, T3>, T3>::inl(e0(x0)); },
-                                                                          h0(x));
+          return _tcI2::template fmap<crane::obj, Sum<Itree<T1, T3>, T3>>(
+              [=, e0 = e0](const auto &x0) {
+                return Sum<Itree<T1, T3>, T3>::inl(e0(x0));
+              },
+              h0(x));
         }
       },
       x0_);

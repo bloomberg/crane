@@ -51,7 +51,9 @@ OptionClosureEscape::match_pair(const OptionClosureEscape::tree &t) {
         std::get<typename OptionClosureEscape::tree::Node>(t.v());
     const OptionClosureEscape::tree &a0_value = *a0;
     return std::make_pair(crane::fn<uint64_t(uint64_t)>(
-        [=](uint64_t _x0) -> uint64_t { return sum_values(a0_value, _x0); }),
+        [=, a0_value = a0_value](uint64_t _x0) -> uint64_t {
+          return sum_values(a0_value, _x0);
+        }),
                           a1);
   }
 }

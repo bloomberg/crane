@@ -27,11 +27,10 @@ List<NontailFoldResumePlan::pt> NontailFoldResumePlan::g4(uint64_t n80,
                 std::get<typename List<NontailFoldResumePlan::pt>::Cons>(
                     l93.v_mut());
             const List<NontailFoldResumePlan::pt> &a1_value = *a1;
-            crane::fn<List<NontailFoldResumePlan::pt>(int64_t)> rv97 =
-                [=, acc94 = std::move(acc94)](int64_t _pa0) {
-                  return _self_go92(_self_go92, a1_value, std::move(acc94),
-                                    _pa0);
-                };
+            crane::fn<List<NontailFoldResumePlan::pt>(int64_t)> rv97 = [
+                =, a1_value = a1_value, acc94 = std::move(acc94)](int64_t _pa0) {
+              return _self_go92(_self_go92, a1_value, std::move(acc94), _pa0);
+            };
             return List<List<uint64_t>>::nil().template fold_right<
                 crane::fn<List<NontailFoldResumePlan::pt>(int64_t)>>(
                 [](List<uint64_t>,

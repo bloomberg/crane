@@ -104,7 +104,7 @@ struct FreeMonad {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
       return crane_any_cast<T1>(
           f0(*a, IO_rect<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2, *a),
-             b, [=](const auto &a0) {
+             b, [=, b = b, f = f, f0 = f0, f2 = f2](const auto &a0) {
                return IO_rect<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2,
                                               b(a0));
              }));
@@ -131,7 +131,7 @@ struct FreeMonad {
       const auto &[a, b] = std::get<typename IO::Bind>(i.v());
       return crane_any_cast<T1>(
           f0(*a, IO_rec<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2, *a),
-             b, [=](const auto &a0) {
+             b, [=, b = b, f = f, f0 = f0, f2 = f2](const auto &a0) {
                return IO_rec<T1, crane::obj>(crane_erase_fn<T1>(f), f0, f1, f2,
                                              b(a0));
              }));

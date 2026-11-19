@@ -66,8 +66,8 @@ struct Monads {
       return [=, f = std::move(f), run = std::move(run)](const T1 &s) {
         return _tcI0::template fmap<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
-            [=](const std::pair<T1,
-                                CraneA0> &sa) {
+            [=, f = f](const std::pair<T1,
+                                       CraneA0> &sa) {
               return std::make_pair(sa.first, f(sa.second));
             },
             run(s));
@@ -253,7 +253,7 @@ struct ITree {
             _sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
+      return Itree<T1, T3>::lazy_([=]() mutable -> typename Itree<T1, T3>::Go {
         return {[&]() {
           return ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0));
         }()};
@@ -262,11 +262,13 @@ struct ITree {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
-          x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1,
-                                                                      T3> {
-                   return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
-                 })));
+          x,
+          crane::fn<Itree<T1, T3>(crane::obj)>([=, e0 = e0, k = std::move(k)](
+              const crane::obj &x0)
+                                                    -> Itree<T1,
+                                                             T3> {
+            return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
+          })));
     }
   }
 
@@ -280,7 +282,7 @@ struct ITree {
   template <typename T1, typename T2, typename T3>
   static Itree<T1, T3> map(const std::type_identity_t<crane::fn<T3(T2)>> &f,
                            const Itree<T1, T2> &t) {
-    return bind<T1, T2, T3>(t, [=](const T2 &x) {
+    return bind<T1, T2, T3>(t, [=, f = f](const T2 &x) {
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::retf(f(x)));
     });
   }

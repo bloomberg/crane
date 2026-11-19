@@ -401,13 +401,17 @@ Itree<T2, T3> Interp::translateF(
           t0.v())) {
     const auto &[t2] =
         std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::TauF>(t0.v());
-    return Itree<T2, T3>::lazy_([=, rec = std::move(rec)]() -> typename Itree<
-        T2, T3>::Go { return {ItreeF<T2, T3, Itree<T2, T3>>::tauf(rec(t2))}; });
+    return Itree<T2, T3>::lazy_(
+        [=, rec = std::move(rec)]() mutable -> typename Itree<T2,
+                                                              T3>::Go {
+          return {ItreeF<T2, T3, Itree<T2, T3>>::tauf(rec(t2))};
+        });
   } else {
     const auto &[x, e0] =
         std::get<typename ItreeF<T1, T3, Itree<T1, T3>>::VisF>(t0.v());
     return Itree<T2, T3>::lazy_(
-        [=, rec = std::move(rec)]() -> typename Itree<T2, T3>::Go {
+        [=, e0 = e0, h = h, x = x,
+         rec = std::move(rec)]() mutable -> typename Itree<T2, T3>::Go {
           return {
               ItreeF<T2, T3, Itree<T2, T3>>::visf(
                   h(x),
@@ -422,7 +426,7 @@ template <typename T1, typename T2, typename T3>
 Itree<T2, T3>
 Interp::translate(const std::type_identity_t<crane::fn<T2(T1)>> &h,
                   const Itree<T1, T3> &t0) {
-  return Itree<T2, T3>::lazy_([=]() -> Itree<T2, T3> {
+  return Itree<T2, T3>::lazy_([=, h = h]() mutable -> Itree<T2, T3> {
     return Interp::template translateF<T1, T2, T3>(
         h, [=](Itree<T1, T3> _x0) -> Itree<T2,
                                            T3> {

@@ -38,7 +38,7 @@ struct LoopifyItreeReified {
       const auto &_itf = *std::get_if<typename ITree<T1>::Vis>(&ot);
       auto e = crane_event_as<crane::obj>(_itf.effect);
       auto k = _itf.cont;
-      return itree_vis(e, [=](const auto &x) { return rec(k(x)); });
+      return itree_vis(e, [=, rec = rec](const auto &x) { return rec(k(x)); });
     }
   }
 

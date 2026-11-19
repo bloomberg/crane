@@ -99,7 +99,7 @@ struct DependentChoiceContinuation {
       return f(a0);
     } else {
       const auto &[c0, k0] = std::get<typename MemS<T1>::Mchoose>(m.v());
-      return f0(c0, k0, [=](memCType m0) {
+      return f0(c0, k0, [=, f = f, f0 = f0, k0 = k0](memCType m0) {
         return MemS_rect<T1, T2>(f, crane_erase_fn<T2>(f0),
                                  crane_call_erased(k0, std::move(m0)));
       });

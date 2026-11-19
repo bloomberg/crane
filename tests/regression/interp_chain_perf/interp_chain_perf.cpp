@@ -30,8 +30,8 @@ InterpChainPerf::prog(const Nat &n) {
           crane::obj())));
   return ITree::template iter<InterpChainPerf::TopE<crane::obj>, Nat,
                               std::pair<Nat, Nat>>(
-      [=](std::pair<Nat, Nat> pat) -> Itree<InterpChainPerf::TopE<crane::obj>,
-                                            Sum<std::pair<Nat, Nat>, Nat>> {
+      [=, n = n](std::pair<Nat, Nat> pat) -> Itree<
+          InterpChainPerf::TopE<crane::obj>, Sum<std::pair<Nat, Nat>, Nat>> {
         auto [i, acc] = std::move(pat);
         if (i.eqb(n)) {
           return Itree<InterpChainPerf::TopE<crane::obj>,

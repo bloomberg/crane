@@ -296,7 +296,7 @@ struct ITree {
             _sv.v())) {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
-      return Itree<T1, T3>::lazy_([=]() -> typename Itree<T1, T3>::Go {
+      return Itree<T1, T3>::lazy_([=]() mutable -> typename Itree<T1, T3>::Go {
         return {[&]() {
           return ItreeF<T1, T3, Itree<T1, T3>>::tauf(subst<T1, T2, T3>(k, t0));
         }()};
@@ -305,11 +305,13 @@ struct ITree {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
-          x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1,
-                                                                      T3> {
-                   return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
-                 })));
+          x,
+          crane::fn<Itree<T1, T3>(crane::obj)>([=, e0 = e0, k = std::move(k)](
+              const crane::obj &x0)
+                                                    -> Itree<T1,
+                                                             T3> {
+            return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
+          })));
     }
   }
 
@@ -385,7 +387,7 @@ struct LoopifyResultNoDefault {
         auto a0 = std::move(_f.a0);
         _result = _tcI0::template bind<T3, T3>(
             std::move(_result),
-            [=, a0 = std::move(a0)](const T3 &r) { return f(r, a0); });
+            [=, f = f, a0 = std::move(a0)](const T3 &r) { return f(r, a0); });
       }
     }
     return _result;

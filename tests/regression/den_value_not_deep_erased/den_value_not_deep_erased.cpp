@@ -10,11 +10,12 @@ uint64_t DenValueNotDeepErased::size(const DenValueNotDeepErased::ty &t,
     const DenValueNotDeepErased::ty &a0_value = *a0;
     return List<DenValueNotDeepErased::den>(
         crane::any_cast<List<crane::obj>>(std::move(n)))
-               .template fold_left<uint64_t>([=](uint64_t acc,
-                                                 DenValueNotDeepErased::den x) {
-      return (acc + size(a0_value, std::move(x)));
-    },
-                                             UINT64_C(0));
+               .template fold_left<uint64_t>(
+        [=, a0_value = a0_value](uint64_t acc,
+                                 DenValueNotDeepErased::den x) {
+          return (acc + size(a0_value, std::move(x)));
+        },
+        UINT64_C(0));
   }
 }
 

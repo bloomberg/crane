@@ -229,6 +229,6 @@ typename _tcI0::template m<T3> monad_fold_right(const std::type_identity_t<
     const List<T2> &a1_value = *a1;
     return _tcI0::template bind<T3, T3>(
         monad_fold_right<_tcI0, T2, T3>(f, a1_value, b),
-        [=](const T3 &r) { return f(r, a0); });
+        [=, a0 = a0, f = f](const T3 &r) { return f(r, a0); });
   }
 }

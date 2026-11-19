@@ -10,7 +10,7 @@
 /// parameters.
 CofixUnusedParamAsValue::stream CofixUnusedParamAsValue::sconst(uint64_t n) {
   return stream::lazy_(
-      [=]() -> typename CofixUnusedParamAsValue::stream::SCons {
+      [=]() mutable -> typename CofixUnusedParamAsValue::stream::SCons {
         return {n, sconst(n)};
       });
 }

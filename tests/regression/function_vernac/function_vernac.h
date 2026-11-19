@@ -459,8 +459,8 @@ struct FunctionVernac {
                                    uint64_t &, List<uint64_t> &, T1 &>
   static T1 list_sum_rect(F0 &&f, F1 &&f0, const List<uint64_t> &l) {
     crane::fn<T1(uint64_t, List<uint64_t>, T1)> f1 =
-        [=](uint64_t _pa0, List<uint64_t> _pa1,
-            T1 _pa2) { return f0(l, _pa0, _pa1, _pa2); };
+        [=, l = l](uint64_t _pa0, List<uint64_t> _pa1,
+                   T1 _pa2) { return f0(l, _pa0, _pa1, _pa2); };
     T1 f2 = f(l);
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
       return f2;
@@ -468,7 +468,9 @@ struct FunctionVernac {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       const List<uint64_t> &a1_value = *a1;
       crane::fn<T1(T1)> f3 =
-          [=, f1 = std::move(f1)](T1 _pa0) { return f1(a0, a1_value, _pa0); };
+          [=, a1_value = a1_value, f1 = std::move(f1)](T1 _pa0) {
+            return f1(a0, a1_value, _pa0);
+          };
       T1 hrec = list_sum_rect<T1>(f, f0, a1_value);
       return f3(std::move(hrec));
     }

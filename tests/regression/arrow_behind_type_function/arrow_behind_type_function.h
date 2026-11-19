@@ -106,7 +106,8 @@ struct ArrowBehindTypeFunction {
   cbind(std::type_identity_t<cont<T1, T2>> m,
         std::type_identity_t<crane::fn<cont<T1, T3>(T2)>> f) {
     return [=, f = std::move(f), m = std::move(m)](const crane::fn<T1(T3)> &k) {
-      return m([=](const T2 &a) { return crane::apply2(f, a, k); });
+      return m(
+          [=, f = f, k = k](const T2 &a) { return crane::apply2(f, a, k); });
     };
   }
 
@@ -117,7 +118,9 @@ struct ArrowBehindTypeFunction {
       return crane::apply2(
           f,
           [=](T2 a) {
-            return [=, a = std::move(a)](crane::fn<T1(T3)>) { return k(a); };
+            return [=, k = k, a = std::move(a)](crane::fn<T1(T3)>) {
+              return k(a);
+            };
           },
           k);
     };

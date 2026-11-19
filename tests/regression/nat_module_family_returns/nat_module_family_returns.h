@@ -1240,7 +1240,7 @@ struct Nat {
                           uint64_t, F2 &&iH, const T1 &x) {
     uint64_t t0 = f(x);
     auto f0_impl = [=, f = std::move(f)](auto &_self_f0, uint64_t, T1 y) -> T2 {
-      return iH(std::move(y), [=](const T1 &y_) {
+      return iH(std::move(y), [=, f = f](const T1 &y_) {
         uint64_t y0 = f(y_);
         return _self_f0(_self_f0, y0, y_);
       });
@@ -1295,8 +1295,8 @@ struct Nat {
     template <typename T1, typename F2>
     static T1 max_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return max_case_strong<T1>(n, m, x, [=]() { return x0; }(),
-                                 [=]() { return x1; }());
+      return max_case_strong<T1>(n, m, x, [=, x0 = x0]() { return x0; }(),
+                                 [=, x1 = x1]() { return x1; }());
     }
 
     static bool max_dec(uint64_t n, uint64_t m);
@@ -1320,8 +1320,8 @@ struct Nat {
     template <typename T1, typename F2>
     static T1 min_case(uint64_t n, uint64_t m, F2 &&x, const T1 &x0,
                        const T1 &x1) {
-      return min_case_strong<T1>(n, m, x, [=]() { return x0; }(),
-                                 [=]() { return x1; }());
+      return min_case_strong<T1>(n, m, x, [=, x0 = x0]() { return x0; }(),
+                                 [=, x1 = x1]() { return x1; }());
     }
 
     static bool min_dec(uint64_t n, uint64_t m);
@@ -1335,8 +1335,8 @@ struct Nat {
 
   template <typename T1>
   static T1 max_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
-    return max_case_strong<T1>(n, m, [=]() { return x; }(),
-                               [=]() { return x0; }());
+    return max_case_strong<T1>(n, m, [=, x = x]() { return x; }(),
+                               [=, x0 = x0]() { return x0; }());
   }
 
   static bool max_dec(uint64_t x0_, uint64_t x1_);
@@ -1349,8 +1349,8 @@ struct Nat {
 
   template <typename T1>
   static T1 min_case(uint64_t n, uint64_t m, const T1 &x, const T1 &x0) {
-    return min_case_strong<T1>(n, m, [=]() { return x; }(),
-                               [=]() { return x0; }());
+    return min_case_strong<T1>(n, m, [=, x = x]() { return x; }(),
+                               [=, x0 = x0]() { return x0; }());
   }
 
   static bool min_dec(uint64_t x0_, uint64_t x1_);

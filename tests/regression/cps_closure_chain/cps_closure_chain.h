@@ -125,11 +125,12 @@ struct CpsClosureChain {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
       const tree &a0_value = *a0;
       const tree &a2_value = *a2;
-      return tree_sum_cps(a0_value, [=](uint64_t left_sum) {
-        return tree_sum_cps(a2_value, [=](uint64_t right_sum) {
-          return k(((left_sum + a1) + right_sum));
-        });
-      });
+      return tree_sum_cps(
+          a0_value, [=, a2_value = a2_value, k = k](uint64_t left_sum) {
+            return tree_sum_cps(a2_value, [=, k = k](uint64_t right_sum) {
+              return k(((left_sum + a1) + right_sum));
+            });
+          });
     }
   }
 
@@ -163,12 +164,16 @@ struct CpsClosureChain {
       const auto &[a0, a1, a2] = std::get<typename tree::Node>(t.v());
       const tree &a0_value = *a0;
       const tree &a2_value = *a2;
-      return tree_fold_cps(a0_value, base, combine, [=](uint64_t left_result) {
-        return tree_fold_cps(a2_value, base, combine,
-                             [=](uint64_t right_result) {
-                               return k(combine(left_result, a1, right_result));
-                             });
-      });
+      return tree_fold_cps(
+          a0_value, base, combine,
+          [=, a2_value = a2_value, combine = combine, k = k](
+              uint64_t left_result) {
+            return tree_fold_cps(
+                a2_value, base, combine,
+                [=, combine = combine, k = k](uint64_t right_result) {
+                  return k(combine(left_result, a1, right_result));
+                });
+          });
     }
   }
 

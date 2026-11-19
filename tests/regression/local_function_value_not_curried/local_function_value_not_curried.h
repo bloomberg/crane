@@ -154,7 +154,7 @@ struct LocalFunctionValueNotCurried {
   static List<crane::fn<uint64_t(uint64_t)>>
   from_param(F0 &&x0_, const List<uint64_t> &x1_) {
     return x1_.template map<crane::fn<uint64_t(uint64_t)>>([=](uint64_t _ec0) {
-      return [=](uint64_t _ec1) { return x0_(_ec0, _ec1); };
+      return [=, x0_ = x0_](uint64_t _ec1) { return x0_(_ec0, _ec1); };
     });
   }
 

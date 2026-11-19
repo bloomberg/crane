@@ -118,9 +118,10 @@ struct MemSafetyProbe13 {
               std::get<typename tree::Node>(a0_value.v());
           const tree &a00_value = *a00;
           const tree &a20_value = *a20;
-          crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
-            return ((a2_value.tree_sum() + a20_value.tree_sum()) + n);
-          };
+          crane::fn<uint64_t(uint64_t)> f =
+              [=, a20_value = a20_value, a2_value = a2_value](uint64_t n) {
+                return ((a2_value.tree_sum() + a20_value.tree_sum()) + n);
+              };
           return (f(a10) + a00_value.tree_sum());
         }
       }

@@ -118,9 +118,10 @@ MemSafetyProbe13::tree_vals_and_fns(const MemSafetyProbe13::tree &t) {
       const MemSafetyProbe13::tree &a0_value = *a0;
       const MemSafetyProbe13::tree &a2_value = a2;
       auto [rvals, rfns] = std::move(_result);
-      crane::fn<uint64_t(uint64_t)> f = [=](uint64_t n) {
-        return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
-      };
+      crane::fn<uint64_t(uint64_t)> f =
+          [=, a0_value = a0_value, a2_value = a2_value](uint64_t n) {
+            return ((a0_value.tree_sum() + a2_value.tree_sum()) + n);
+          };
       _result = std::make_pair(
           mylist<uint64_t>::mycons(a1, lvals.app(std::move(rvals))),
           mylist<crane::fn<uint64_t(uint64_t)>>::mycons(

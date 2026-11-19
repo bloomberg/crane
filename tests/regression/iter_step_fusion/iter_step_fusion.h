@@ -253,17 +253,19 @@ struct IterStepFusion {
     if (std::holds_alternative<typename itreeF<T1, itree<T1>>::RetF>(_sv.v())) {
       const auto &[r0] =
           std::get<typename itreeF<T1, itree<T1>>::RetF>(_sv.v());
-      return itree<T2>::lazy_([=]() -> itree<T2> { return k(r0); });
+      return itree<T2>::lazy_(
+          [=, k = k, r0 = r0]() mutable -> itree<T2> { return k(r0); });
     } else if (std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(
                    _sv.v())) {
       const auto &[t0] =
           std::get<typename itreeF<T1, itree<T1>>::TauF>(_sv.v());
-      return itree<T2>::lazy_(
-          [=]() -> itree<T2> { return Tau<T2>(subst<T1, T2>(k, t0)); });
+      return itree<T2>::lazy_([=, k = k]() mutable -> itree<T2> {
+        return Tau<T2>(subst<T1, T2>(k, t0));
+      });
     } else {
       const auto &[e0, k0] =
           std::get<typename itreeF<T1, itree<T1>>::VisF>(_sv.v());
-      return itree<T2>::lazy_([=]() -> itree<T2> {
+      return itree<T2>::lazy_([=, k = k, k0 = k0]() mutable -> itree<T2> {
         return Vis<T2>(e0, [=](uint64_t x) { return subst<T1, T2>(k, k0(x)); });
       });
     }
@@ -281,7 +283,7 @@ struct IterStepFusion {
   iter(const std::type_identity_t<crane::fn<itree<Sum<T1, T2>>(T1)>> &step0,
        const T1 &i) {
     return bind<Sum<T1, T2>, T2>(
-        step0(i), [=](const Sum<T1, T2> &lr) -> itree<T2> {
+        step0(i), [=, step0 = step0](const Sum<T1, T2> &lr) -> itree<T2> {
           if (std::holds_alternative<typename Sum<T1, T2>::Inl>(lr.v())) {
             const auto &[a0] = std::get<typename Sum<T1, T2>::Inl>(lr.v());
             return Tau<T2>(iter<T1, T2>(step0, a0));
@@ -295,7 +297,7 @@ struct IterStepFusion {
   template <typename T1, typename T2>
   static itree<T2> fmap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
                         const itree<T1> &t) {
-    return bind<T1, T2>(t, [=](const T1 &x) { return Ret<T2>(f(x)); });
+    return bind<T1, T2>(t, [=, f = f](const T1 &x) { return Ret<T2>(f(x)); });
   }
 
   /// Specialized: the step is a lambda.
@@ -306,19 +308,22 @@ struct IterStepFusion {
     if (std::holds_alternative<typename itreeF<T1, itree<T1>>::RetF>(_sv.v())) {
       const auto &[r0] =
           std::get<typename itreeF<T1, itree<T1>>::RetF>(_sv.v());
-      return itree<T1>::lazy_([=]() -> itree<T1> { return Ret<T1>(r0); });
+      return itree<T1>::lazy_(
+          [=, r0 = r0]() mutable -> itree<T1> { return Ret<T1>(r0); });
     } else if (std::holds_alternative<typename itreeF<T1, itree<T1>>::TauF>(
                    _sv.v())) {
       const auto &[t0] =
           std::get<typename itreeF<T1, itree<T1>>::TauF>(_sv.v());
-      return itree<T1>::lazy_(
-          [=]() -> itree<T1> { return Tau<T1>(interp<T1>(h, t0)); });
+      return itree<T1>::lazy_([=, h = h]() mutable -> itree<T1> {
+        return Tau<T1>(interp<T1>(h, t0));
+      });
     } else {
       const auto &[e0, k0] =
           std::get<typename itreeF<T1, itree<T1>>::VisF>(_sv.v());
       itree<Sum<itree<T1>, T1>> step0 = fmap<uint64_t, Sum<itree<T1>, T1>>(
-          [=](uint64_t x) { return Sum<itree<T1>, T1>::inl(k0(x)); }, h(e0));
-      return itree<T1>::lazy_([=]() -> itree<T1> {
+          [=, k0 = k0](uint64_t x) { return Sum<itree<T1>, T1>::inl(k0(x)); },
+          h(e0));
+      return itree<T1>::lazy_([=, h = h]() mutable -> itree<T1> {
         return bind<Sum<itree<T1>, T1>, T1>(
             step0, [=](const Sum<itree<T1>, T1> &lr) -> itree<T1> {
               if (std::holds_alternative<typename Sum<itree<T1>, T1>::Inl>(
@@ -354,16 +359,16 @@ struct IterStepFusion {
       const auto &[e0, k0] =
           std::get<typename itreeF<T1, itree<T1>>::VisF>(_sv.v());
       return fmap<uint64_t, Sum<itree<T1>, T1>>(
-          [=](uint64_t x) { return Sum<itree<T1>, T1>::inl(k0(x)); }, h(e0));
+          [=, k0 = k0](uint64_t x) { return Sum<itree<T1>, T1>::inl(k0(x)); },
+          h(e0));
     }
   }
 
   template <typename T1>
   static itree<T1> interp_by_name(const crane::fn<itree<uint64_t>(uint64_t)> &h,
                                   const itree<T1> &x0_) {
-    return iter<itree<T1>, T1>(
-        [=](itree<T1> _x0) -> itree<Sum<itree<T1>,
-                                        T1>> { return step<T1>(h, _x0); },
-        x0_);
+    return iter<itree<T1>, T1>([=, h = h](itree<T1> _x0) -> itree<
+        Sum<itree<T1>, T1>> { return step<T1>(h, _x0); },
+                               x0_);
   }
 };

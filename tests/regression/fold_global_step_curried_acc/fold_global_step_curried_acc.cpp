@@ -14,9 +14,9 @@ uint64_t FoldGlobalStepCurriedAcc::t1(const List<uint64_t> &l) {
   return l.template fold_left<crane::fn<crane::fn<uint64_t(bool)>(int64_t)>>(
       [](crane::fn<crane::fn<uint64_t(bool)>(int64_t)> _ec0, uint64_t _ec1) {
         return [=, _ec0 = std::move(_ec0)](int64_t _ec2) {
-          return [=](bool _ec3) {
-            return step([=](int64_t _ec0_0,
-                            bool _ec0_1) {
+          return [=, _ec0 = _ec0](bool _ec3) {
+            return step([=, _ec0 = _ec0](int64_t _ec0_0,
+                                         bool _ec0_1) {
               return crane::apply2(_ec0, _ec0_0, _ec0_1);
             },
                         _ec1, _ec2, _ec3);

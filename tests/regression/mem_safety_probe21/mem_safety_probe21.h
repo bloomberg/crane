@@ -202,8 +202,8 @@ struct MemSafetyProbe21 {
         const auto &[a0, a1, a2] = std::get<typename tree::Node>(_loop_t->v());
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
-        _loop_k = [=](uint64_t lsum) {
-          return cps_sum(a2_value, [=](uint64_t rsum) {
+        _loop_k = [=, a2_value = a2_value](uint64_t lsum) {
+          return cps_sum(a2_value, [=, _loop_k = _loop_k](uint64_t rsum) {
             return _loop_k(((lsum + a1) + rsum));
           });
         };

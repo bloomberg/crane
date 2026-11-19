@@ -173,8 +173,8 @@ struct Monads {
       return [=, k = std::move(k), t = std::move(t)](const T1 &s) {
         return _tcI0::template bind<std::pair<T1, CraneA0>,
                                     std::pair<T1, CraneA1>>(
-            t(s), [=](const std::pair<T1,
-                                      CraneA0> &sa) {
+            t(s), [=, k = k](const std::pair<T1,
+                                             CraneA0> &sa) {
                     return crane::apply2(k, sa.second, sa.first);
                   });
       };
@@ -228,7 +228,7 @@ Monads::template stateT<env, itree_tc_609e8855cd7ad294, T2> twice(Ev e) {
       handle<T1, T2>(e), [](const T2 &res) {
         return Monads::template Monad_stateT<Monad_itree<T1>,
                                              env>::template bind<Nat, T2>(
-            step<_tcI0, T1>(Nat::s(Nat::o())), [=](Nat) {
+            step<_tcI0, T1>(Nat::s(Nat::o())), [=, res = res](Nat) {
               return Monads::template Monad_stateT<Monad_itree<T1>,
                                                    env>::template ret<T2>(res);
             });

@@ -10,7 +10,7 @@ MemSafetyProbe26::build_tree_closures(const MemSafetyProbe26::tree &t) {
     const MemSafetyProbe26::tree &a0_value = *a0;
     const MemSafetyProbe26::tree &a2_value = *a2;
     return mylist<crane::fn<uint64_t(uint64_t)>>::mycons(
-        [=](uint64_t x) {
+        [=, a0_value = a0_value, a2_value = a2_value](uint64_t x) {
           return (((x + a0_value.tree_sum()) + a1) + a2_value.tree_sum());
         },
         mylist<crane::fn<uint64_t(uint64_t)>>::mynil());

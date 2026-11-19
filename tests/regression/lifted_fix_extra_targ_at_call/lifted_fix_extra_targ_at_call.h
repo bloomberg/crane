@@ -439,7 +439,8 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
                     Dvalue<typename _tcI0::ptr>,
                     List<Dvalue<typename _tcI0::ptr>>>(to_dvalue<_tcI0>(
                     dbs0, std::move(a0)),
-                                                       [=, offset =
+                                                       [=, a1_value = a1_value,
+                                                        offset =
                                                             std::move(offset),
                                                         padding =
                                                             std::move(padding)](
@@ -456,8 +457,9 @@ std::optional<Dvalue<typename _tcI0::ptr>> to_dvalue(const List<Nat> &dbs,
                                                                      padding),
                                                                  a1_value,
                                                                  dbs0),
-                                                             [=](const List<Dvalue<
-                                                                 typename _tcI0::ptr>> &rest) {
+                                                             [=, f = f](const List<
+                                                                 Dvalue<
+                                                                     typename _tcI0::ptr>> &rest) {
                                                                return Monad_option::template ret<
                                                                    List<Dvalue<
                                                                        typename _tcI0::ptr>>>(
@@ -534,7 +536,7 @@ template <Monad _tcI0, typename T2, typename T3>
 typename _tcI0::template m<T3>
 Monad0::liftM(const std::type_identity_t<crane::fn<T3(T2)>> &f,
               typename _tcI0::template m<T2> x) {
-  return _tcI0::template bind<T2, T3>(std::move(x), [=](const T2 &x0) {
+  return _tcI0::template bind<T2, T3>(std::move(x), [=, f = f](const T2 &x0) {
     return _tcI0::template ret<T3>(f(x0));
   });
 }

@@ -198,27 +198,30 @@ struct LoopifyCoindStream {
   template <typename T1>
   static stream<T1> iterate(const std::type_identity_t<crane::fn<T1(T1)>> &f,
                             const T1 &x) {
-    return stream<T1>::lazy_([=]() -> typename stream<T1>::Scons {
-      return {x, iterate<T1>(f, f(x))};
-    });
+    return stream<T1>::lazy_(
+        [=, f = f, x = x]() mutable -> typename stream<T1>::Scons {
+          return {x, iterate<T1>(f, f(x))};
+        });
   }
 
   template <typename T1, typename T2>
   static stream<T2> smap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
                          const stream<T1> &s) {
-    return stream<T2>::lazy_([=]() -> typename stream<T2>::Scons {
-      return {f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s))};
-    });
+    return stream<T2>::lazy_(
+        [=, f = f]() mutable -> typename stream<T2>::Scons {
+          return {f(hd<T1>(s)), smap<T1, T2>(f, tl<T1>(s))};
+        });
   }
 
   template <typename T1, typename T2, typename T3>
   static stream<T3>
   zipWith(const std::type_identity_t<crane::fn<T3(T1, T2)>> &f,
           const stream<T1> &s1, const stream<T2> &s2) {
-    return stream<T3>::lazy_([=]() -> typename stream<T3>::Scons {
-      return {f(hd<T1>(s1), hd<T2>(s2)),
-              zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2))};
-    });
+    return stream<T3>::lazy_(
+        [=, f = f]() mutable -> typename stream<T3>::Scons {
+          return {f(hd<T1>(s1), hd<T2>(s2)),
+                  zipWith<T1, T2, T3>(f, tl<T1>(s1), tl<T2>(s2))};
+        });
   }
 
   template <typename T1, typename T2>
@@ -227,7 +230,8 @@ struct LoopifyCoindStream {
          const T2 &seed) {
     auto [a, s_] = f(seed);
     return stream<T1>::lazy_(
-        [=, a = std::move(a), s_ = std::move(s_)]() -> typename stream<T1>::Scons {
+        [=, f = f, a = std::move(a),
+         s_ = std::move(s_)]() mutable -> typename stream<T1>::Scons {
           return {std::move(a), unfold<T1, T2>(f, std::move(s_))};
         });
   }

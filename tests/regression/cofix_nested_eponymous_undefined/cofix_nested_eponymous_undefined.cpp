@@ -3,7 +3,7 @@
 CofixNestedEponymousUndefined::Stream::stream
 CofixNestedEponymousUndefined::Stream::from(uint64_t n) {
   return stream::lazy_(
-      [=]() -> typename CofixNestedEponymousUndefined::Stream::stream::Scons {
+      [=]() mutable -> typename CofixNestedEponymousUndefined::Stream::stream::Scons {
         return {n, from((n + 1))};
       });
 }

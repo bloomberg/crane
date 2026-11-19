@@ -1472,8 +1472,8 @@ struct Coq_Pos {
     auto _lc1_pa0 = f(Positive::xh(), a);
     crane::fn<T1(Positive)> f2 = [=](Positive _x0) -> T1 {
       return peano_rect<T1>(
-          _lc1_pa0, [=](const Positive &p0,
-                        const T1 &x) {
+          _lc1_pa0, [=, f = f](const Positive &p0,
+                               const T1 &x) {
                       return f(succ(Positive::xo(p0)), f(Positive::xo(p0), x));
                     },
           _x0);
@@ -1754,8 +1754,8 @@ struct Coq_Pos {
     static T1 max_case(Positive n, Positive m0, F2 &&x, const T1 &x0,
                        const T1 &x1) {
       return max_case_strong<T1>(std::move(n), std::move(m0), x,
-                                 [=]() { return x0; }(),
-                                 [=]() { return x1; }());
+                                 [=, x0 = x0]() { return x0; }(),
+                                 [=, x1 = x1]() { return x1; }());
     }
 
     static bool max_dec(Positive n, Positive m0);
@@ -1780,8 +1780,8 @@ struct Coq_Pos {
     static T1 min_case(Positive n, Positive m0, F2 &&x, const T1 &x0,
                        const T1 &x1) {
       return min_case_strong<T1>(std::move(n), std::move(m0), x,
-                                 [=]() { return x0; }(),
-                                 [=]() { return x1; }());
+                                 [=, x0 = x0]() { return x0; }(),
+                                 [=, x1 = x1]() { return x1; }());
     }
 
     static bool min_dec(Positive n, Positive m0);
@@ -1798,7 +1798,8 @@ struct Coq_Pos {
   template <typename T1>
   static T1 max_case(Positive n, Positive m0, const T1 &x, const T1 &x0) {
     return max_case_strong<T1>(std::move(n), std::move(m0),
-                               [=]() { return x; }(), [=]() { return x0; }());
+                               [=, x = x]() { return x; }(),
+                               [=, x0 = x0]() { return x0; }());
   }
 
   static bool max_dec(Positive x0_, Positive x1_);
@@ -1814,7 +1815,8 @@ struct Coq_Pos {
   template <typename T1>
   static T1 min_case(Positive n, Positive m0, const T1 &x, const T1 &x0) {
     return min_case_strong<T1>(std::move(n), std::move(m0),
-                               [=]() { return x; }(), [=]() { return x0; }());
+                               [=, x = x]() { return x; }(),
+                               [=, x0 = x0]() { return x0; }());
   }
 
   static bool min_dec(Positive x0_, Positive x1_);
@@ -2187,8 +2189,8 @@ template <OrderedType X> struct Raw {
   fold_right_pair(const std::type_identity_t<crane::fn<T3(T1, T2, T3)>> &f,
                   const List<std::pair<T1, T2>> &l, T3 i) {
     return l.template fold_right<T3>(
-        [=](const std::pair<T1, T2> &p,
-            const T3 &eta0_) { return f(p.first, p.second, eta0_); },
+        [=, f = f](const std::pair<T1, T2> &p,
+                   const T3 &eta0_) { return f(p.first, p.second, eta0_); },
         std::move(i));
   }
 
@@ -2203,8 +2205,8 @@ template <OrderedType X> struct Raw {
         combine<T1, T2>(std::move(m0), m_);
     List<std::pair<typename X::t, std::optional<T3>>> m2 =
         map<std::pair<std::optional<T1>, std::optional<T2>>, std::optional<T3>>(
-            [=](const std::pair<std::optional<T1>,
-                                std::optional<T2>> &p) {
+            [=, f = f](const std::pair<std::optional<T1>,
+                                       std::optional<T2>> &p) {
               return f(p.first, p.second);
             },
             std::move(m1));

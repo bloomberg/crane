@@ -16,7 +16,7 @@
 CofixThunkDanglingCapture::stream
 CofixThunkDanglingCapture::sconst(uint64_t n) {
   return stream::lazy_(
-      [=]() -> typename CofixThunkDanglingCapture::stream::SCons {
+      [=]() mutable -> typename CofixThunkDanglingCapture::stream::SCons {
         return {n, sconst(n)};
       });
 }
@@ -47,7 +47,7 @@ CofixThunkDanglingCapture::stream CofixThunkDanglingCapture::h(uint64_t n) {
             }
           }
         };
-    return stream::lazy_([=]() -> CofixThunkDanglingCapture::stream {
+    return stream::lazy_([=]() mutable -> CofixThunkDanglingCapture::stream {
       return go(List<uint64_t>::cons(
           UINT64_C(1),
           List<uint64_t>::cons(UINT64_C(2), List<uint64_t>::nil())),
@@ -79,7 +79,10 @@ CofixThunkDanglingCapture::g2(const CofixThunkDanglingCapture::tree &t0) {
     CofixThunkDanglingCapture::stream acc9 = sconst(UINT64_C(0));
     if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v_mut())) {
       return stream::lazy_(
-          [=]() -> CofixThunkDanglingCapture::stream { return g2(a0_value); });
+          [=,
+           a0_value = a0_value]() mutable -> CofixThunkDanglingCapture::stream {
+            return g2(a0_value);
+          });
     } else {
       auto go12 =
           [=](List<std::optional<uint64_t>> l2,
@@ -102,7 +105,7 @@ CofixThunkDanglingCapture::g2(const CofixThunkDanglingCapture::tree &t0) {
               }
             }
           };
-      return stream::lazy_([=]() -> CofixThunkDanglingCapture::stream {
+      return stream::lazy_([=]() mutable -> CofixThunkDanglingCapture::stream {
         return go12(List<std::optional<uint64_t>>::nil(), sconst(UINT64_C(0)));
       });
     }

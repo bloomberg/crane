@@ -327,12 +327,21 @@ MemoryBytes::map_monad(const std::type_identity_t<
   } else {
     const auto &[a0, a1] = std::get<typename List<T2>::Cons>(l.v());
     const List<T2> &a1_value = *a1;
-    return _tcI0::template bind<T3, List<T3>>(f(a0), [=](const T3 &y) {
-      return _tcI0::template bind<List<T3>, List<T3>>(
-          MemoryBytes::template map_monad<_tcI0, T2, T3>(f, a1_value),
-          [=](const List<T3> &ys) {
-            return _tcI0::template ret<List<T3>>(List<T3>::cons(y, ys));
-          });
-    });
+    return _tcI0::template bind<T3, List<T3>>(f(a0),
+                                              [=, a1_value = a1_value, f = f](
+                                                  const T3 &y) {
+                                                return _tcI0::template bind<
+                                                    List<T3>, List<T3>>(
+                                                    MemoryBytes::template map_monad<
+                                                        _tcI0, T2, T3>(f,
+                                                                       a1_value),
+                                                    [=, y = y](
+                                                        const List<T3> &ys) {
+                                                      return _tcI0::template ret<
+                                                          List<T3>>(
+                                                          List<T3>::cons(y,
+                                                                         ys));
+                                                    });
+                                              });
   }
 }

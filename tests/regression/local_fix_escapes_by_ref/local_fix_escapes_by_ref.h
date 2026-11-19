@@ -251,7 +251,8 @@ struct LocalFixEscapesByRef {
             auto &[a0, a1] = std::get<typename List<T1>::Cons>(l0.v_mut());
             const List<T1> &a1_value = *a1;
             return Monad_st::template bind<T2, List<T2>>(
-                f(std::move(a0)), [=, acc = std::move(acc)](const T2 &b) {
+                f(std::move(a0)),
+                [=, a1_value = a1_value, acc = std::move(acc)](const T2 &b) {
                   return _self_loop(_self_loop, List<T2>::cons(b, acc),
                                     a1_value);
                 });

@@ -500,8 +500,8 @@ struct AccumClosureEscape {
     } else {
       const auto &[a0, a1] = std::get<typename mylist<uint64_t>::Mycons>(l.v());
       const mylist<uint64_t> &a1_value = *a1;
-      return compose_from_list(a1_value,
-                               [=](uint64_t x) { return acc((a0 + x)); }, x0_);
+      return compose_from_list(
+          a1_value, [=, acc = acc](uint64_t x) { return acc((a0 + x)); }, x0_);
     }
   }
 

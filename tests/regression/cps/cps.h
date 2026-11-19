@@ -143,7 +143,7 @@ struct CPS {
       return k(UINT64_C(1));
     } else {
       uint64_t n_ = n - 1;
-      return fact_cps(n_, [=](uint64_t r) { return k(((n_ + 1) * r)); });
+      return fact_cps(n_, [=, k = k](uint64_t r) { return k(((n_ + 1) * r)); });
     }
   }
 
@@ -158,8 +158,8 @@ struct CPS {
         return k(UINT64_C(1));
       } else {
         uint64_t n_ = n1 - 1;
-        return fib_cps(n_, [=](uint64_t a) {
-          return fib_cps(n1, [=](uint64_t b) { return k((a + b)); });
+        return fib_cps(n_, [=, k = k](uint64_t a) {
+          return fib_cps(n1, [=, k = k](uint64_t b) { return k((a + b)); });
         });
       }
     }
@@ -271,10 +271,11 @@ struct CPS {
       const auto &[a0, a1] = std::get<typename tree::Node>(t.v());
       const tree &a0_value = *a0;
       const tree &a1_value = *a1;
-      return tree_sum_cps(a0_value, [=](uint64_t sl) {
-        return tree_sum_cps(a1_value,
-                            [=](uint64_t sr) { return k((sl + sr)); });
-      });
+      return tree_sum_cps(
+          a0_value, [=, a1_value = a1_value, k = k](uint64_t sl) {
+            return tree_sum_cps(
+                a1_value, [=, k = k](uint64_t sr) { return k((sl + sr)); });
+          });
     }
   }
 
@@ -287,7 +288,7 @@ struct CPS {
     } else {
       const auto &[a0, a1] = std::get<typename List<uint64_t>::Cons>(l.v());
       const List<uint64_t> &a1_value = *a1;
-      return sum_cps(a1_value, [=](uint64_t r) { return k((a0 + r)); });
+      return sum_cps(a1_value, [=, k = k](uint64_t r) { return k((a0 + r)); });
     }
   }
 

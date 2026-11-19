@@ -1,8 +1,8 @@
 #include "itree_mapping_hijacks_monad.h"
 
 Err<Nat> twice(const Err<Nat> &x) {
-  return Monad_Err::template bind<Nat, Nat>(x, [=](const Nat &a) {
-    return Monad_Err::template bind<Nat, Nat>(x, [=](Nat b) {
+  return Monad_Err::template bind<Nat, Nat>(x, [=, x = x](const Nat &a) {
+    return Monad_Err::template bind<Nat, Nat>(x, [=, a = a](Nat b) {
       return Monad_Err::template ret<Nat>(a.add(std::move(b)));
     });
   });

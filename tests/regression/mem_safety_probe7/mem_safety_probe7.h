@@ -312,10 +312,10 @@ struct MemSafetyProbe7 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return std::make_pair(
-            crane::fn<uint64_t(std::monostate)>(
-                [=](std::monostate) { return a0_value.tree_sum(); }),
-            crane::fn<uint64_t(std::monostate)>(
-                [=](std::monostate) { return a2_value.tree_sum(); }));
+            crane::fn<uint64_t(std::monostate)>([=, a0_value = a0_value](
+                std::monostate) { return a0_value.tree_sum(); }),
+            crane::fn<uint64_t(std::monostate)>([=, a2_value = a2_value](
+                std::monostate) { return a2_value.tree_sum(); }));
       }
     }
 
@@ -329,9 +329,13 @@ struct MemSafetyProbe7 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return mylist<crane::fn<uint64_t(std::monostate)>>::mycons(
-            [=](std::monostate) { return a0_value.tree_sum(); },
+            [=, a0_value = a0_value](std::monostate) {
+              return a0_value.tree_sum();
+            },
             mylist<crane::fn<uint64_t(std::monostate)>>::mycons(
-                [=](std::monostate) { return a2_value.tree_sum(); },
+                [=, a2_value = a2_value](std::monostate) {
+                  return a2_value.tree_sum();
+                },
                 mylist<crane::fn<uint64_t(std::monostate)>>::mynil()));
       }
     }

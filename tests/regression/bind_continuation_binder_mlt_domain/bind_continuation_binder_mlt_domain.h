@@ -411,8 +411,8 @@ bytes_to_dv(typename _tcI0::addr a, const Nat &n, const List<Byte> &bs) {
       const List<Byte> &a10_value = *a10;
       const auto &[a01] = a00;
       auto go_impl =
-          [=, a = std::move(a)](auto &_self_go, List<Nat> ds,
-                                List<Byte> bs0)
+          [=, a0_value = a0_value, a = std::move(a)](
+              auto &_self_go, List<Nat> ds, List<Byte> bs0)
                -> EOU<List<Dv<typename _tcI0::tag, typename _tcI0::addr>>> {
             if (std::holds_alternative<typename List<Nat>::Nil>(ds.v_mut())) {
               return EOU_monad::template ret<
@@ -425,12 +425,13 @@ bytes_to_dv(typename _tcI0::addr a, const Nat &n, const List<Byte> &bs) {
                   Dv<typename _tcI0::tag, typename _tcI0::addr>,
                   List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
                   bytes_to_dv<_tcI0>(a, a0_value, bs0),
-                  [=](const Dv<typename _tcI0::tag, typename _tcI0::addr> &f) {
+                  [=, a12_value = a12_value](
+                      const Dv<typename _tcI0::tag, typename _tcI0::addr> &f) {
                     return EOU_monad::template bind<
                         List<Dv<typename _tcI0::tag, typename _tcI0::addr>>,
                         List<Dv<typename _tcI0::tag, typename _tcI0::addr>>>(
                         _self_go(_self_go, a12_value, bs0),
-                        [=](const List<
+                        [=, f = f](const List<
                             Dv<typename _tcI0::tag,
                                typename _tcI0::addr>> &r) {
                           return EOU_monad::template ret<List<

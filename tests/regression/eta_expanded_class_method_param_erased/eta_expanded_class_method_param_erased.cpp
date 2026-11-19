@@ -22,8 +22,9 @@ List<std::pair<Nat, Nat>> build_saturated(const List<std::pair<Nat, Nat>> &l) {
 
 List<std::pair<Nat, Nat>> partial(const Nat &k, const Nat &v,
                                   const List<std::pair<Nat, Nat>> &l) {
-  return apply_it(
-      [=](List<std::pair<Nat,
-                         Nat>> _sat0) { return map_alist::add(k, v, _sat0); },
-      l);
+  return apply_it([=, k = k, v = v](List<std::pair<Nat,
+                                                   Nat>> _sat0) {
+    return map_alist::add(k, v, _sat0);
+  },
+                  l);
 }

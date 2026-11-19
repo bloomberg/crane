@@ -184,10 +184,12 @@ struct MemSafetyProbe25 {
         const tree &a0_value = *a0;
         const tree &a2_value = *a2;
         return std::make_pair(
-            crane::fn<uint64_t(uint64_t)>(
-                [=](uint64_t x) { return (x + a0_value.tree_sum()); }),
-            crane::fn<uint64_t(uint64_t)>(
-                [=](uint64_t x) { return (x + a2_value.tree_sum()); }));
+            crane::fn<uint64_t(uint64_t)>([=, a0_value = a0_value](uint64_t x) {
+              return (x + a0_value.tree_sum());
+            }),
+            crane::fn<uint64_t(uint64_t)>([=, a2_value = a2_value](uint64_t x) {
+              return (x + a2_value.tree_sum());
+            }));
       }
     }
 

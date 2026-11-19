@@ -266,7 +266,7 @@ ValidatedVirtualCrossmatchTraceCase::epitope_dedup(
         l.v());
     const List<ValidatedVirtualCrossmatchTraceCase::HLAEpitope> &a1_value = *a1;
 
-    if (a1_value.existsb([=](
+    if (a1_value.existsb([=, a0 = a0](
             ValidatedVirtualCrossmatchTraceCase::HLAEpitope _x0)
                               -> bool { return epitope_eqb(a0, _x0); })) {
       return epitope_dedup(a1_value);

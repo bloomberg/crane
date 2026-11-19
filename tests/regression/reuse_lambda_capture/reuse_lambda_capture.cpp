@@ -32,7 +32,7 @@ ReuseLambdaCapture::add_length_to_each(const ReuseLambdaCapture::mylist &l,
       const ReuseLambdaCapture::mylist &a1_value = *a1;
       return mylist::mycons(
           (a0 + UINT64_C(1)),
-          map([=](uint64_t x) { return (x + length(l)); }, a1_value));
+          map([=, l = l](uint64_t x) { return (x + length(l)); }, a1_value));
     } else {
       return mylist::mynil();
     }

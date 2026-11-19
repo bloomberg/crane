@@ -186,7 +186,8 @@ public:
   Sseq<A> smap(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
     return Sseq<A>::lazy_(
-        [=, _self_val = std::move(_self_val)]() -> typename Sseq<A>::SCons {
+        [=, f = f, _self_val = std::move(_self_val)]() mutable -> typename Sseq<
+            A>::SCons {
           return {_self_val.double_head(f), _self_val.stail().smap(f)};
         });
   }
@@ -194,7 +195,8 @@ public:
   Sseq<A> smap_direct(const crane::fn<A(A)> &f) const {
     Sseq<A> _self_val = *this;
     return Sseq<A>::lazy_(
-        [=, _self_val = std::move(_self_val)]() -> typename Sseq<A>::SCons {
+        [=, f = f, _self_val = std::move(_self_val)]() mutable -> typename Sseq<
+            A>::SCons {
           return {f(_self_val.shead()), _self_val.stail().smap_direct(f)};
         });
   }
@@ -210,9 +212,10 @@ public:
   }
 
   static Sseq<uint64_t> nats_from(uint64_t n) {
-    return Sseq<uint64_t>::lazy_([=]() -> typename Sseq<uint64_t>::SCons {
-      return {n, nats_from((n + 1))};
-    });
+    return Sseq<uint64_t>::lazy_(
+        [=]() mutable -> typename Sseq<uint64_t>::SCons {
+          return {n, nats_from((n + 1))};
+        });
   }
 
   /// Sum of a list

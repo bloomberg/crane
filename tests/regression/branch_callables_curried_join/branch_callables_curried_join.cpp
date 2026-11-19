@@ -58,7 +58,7 @@ uint64_t BranchCallablesCurriedJoin::t2(const List<uint64_t> &l) {
           crane::fn<uint64_t(uint64_t, bool)> cf =
               [](uint64_t n, bool) { return n; };
           return [=, acc = std::move(acc), cf = std::move(cf)](int64_t z) {
-            return [=](bool _pa0) {
+            return [=, acc = acc, cf = cf](bool _pa0) {
               return cf(crane::apply2(acc, z, false), _pa0);
             };
           };
@@ -231,7 +231,9 @@ uint64_t BranchCallablesCurriedJoin::v12(const List<uint64_t> &l) {
               };
               return [=, cf = std::move(cf)](
                   BranchCallablesCurriedJoin::ptree<bool>) {
-                return [=](bool _pa0) { return cf(UINT64_C(0), _pa0); };
+                return [=, cf = cf](bool _pa0) {
+                  return cf(UINT64_C(0), _pa0);
+                };
               };
             }
           },

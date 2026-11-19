@@ -40,7 +40,7 @@ struct ITreeReified {
             std::cout << std::string("[tau]") << '\n';
             return std::any{};
           }),
-          [=](const auto &) { return itree_tau(rec(t_)); });
+          [=, rec = rec](const auto &) { return itree_tau(rec(t_)); });
     } else {
       const auto &_itf = *std::get_if<typename ITree<T2>::Vis>(&ot);
       auto e = crane_event_as<crane::obj>(_itf.effect);
@@ -50,9 +50,10 @@ struct ITreeReified {
             std::cout << std::string("[vis]") << '\n';
             return std::any{};
           }),
-          [=](const auto &) {
-            return itree_vis(sum1_inr(e),
-                             [=](const auto &x) { return rec(k(x)); });
+          [=, rec = rec](const auto &) {
+            return itree_vis(sum1_inr(e), [=, rec = rec](const auto &x) {
+              return rec(k(x));
+            });
           });
     }
   }

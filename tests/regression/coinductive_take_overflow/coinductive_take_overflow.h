@@ -187,9 +187,10 @@ struct CoinductiveTakeOverflow {
   static stream<T2> smap(const std::type_identity_t<crane::fn<T2(T1)>> &f,
                          const stream<T1> &s) {
     const auto &[a0, a1] = std::get<typename stream<T1>::Cons>(s.v());
-    return stream<T2>::lazy_([=]() -> typename stream<T2>::Cons {
-      return {f(a0), smap<T1, T2>(f, a1)};
-    });
+    return stream<T2>::lazy_(
+        [=, a0 = a0, f = f]() mutable -> typename stream<T2>::Cons {
+          return {f(a0), smap<T1, T2>(f, a1)};
+        });
   }
 
   template <typename T1> static List<T1> take(uint64_t n, const stream<T1> &s) {

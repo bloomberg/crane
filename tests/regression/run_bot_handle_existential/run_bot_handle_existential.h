@@ -473,9 +473,9 @@ struct RunBotHandleExistential {
           Itree<Sum1<outE<typename _tcI0::ptr>, FailE, crane::obj>, T1>>::TauF>(
           _sv.v());
       return Itree<crane::obj, Sum<Run_error, T1>>::lazy_(
-          [=]() -> typename Itree<crane::obj,
-                                  Sum<Run_error,
-                                      T1>>::Go {
+          [=]() mutable -> typename Itree<crane::obj,
+                                          Sum<Run_error,
+                                              T1>>::Go {
             return {ItreeF<crane::obj, Sum<Run_error, T1>,
                            Itree<crane::obj, Sum<Run_error, T1>>>::tauf(
                 run_bot<_tcI0, T1>(t0))};
@@ -498,9 +498,9 @@ struct RunBotHandleExistential {
         const auto &[a00] =
             std::get<typename Sum<Run_error, crane::obj>::Inr>(_sv0.v());
         return Itree<crane::obj, Sum<Run_error, T1>>::lazy_(
-            [=]() -> typename Itree<crane::obj,
-                                    Sum<Run_error,
-                                        T1>>::Go {
+            [=, e0 = e0]() mutable -> typename Itree<crane::obj,
+                                                     Sum<Run_error,
+                                                         T1>>::Go {
               return {ItreeF<crane::obj, Sum<Run_error, T1>,
                              Itree<crane::obj, Sum<Run_error, T1>>>::tauf(
                   run_bot<_tcI0, T1>(crane_call_erased(e0, a00)))};

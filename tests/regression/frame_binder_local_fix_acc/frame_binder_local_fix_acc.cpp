@@ -12,15 +12,17 @@
 /// continuation ran in; it now keeps the local bound at the site the
 /// recursion plan names (as loopify_rematch_frame_binder).
 FrameBinderLocalFixAcc::stream FrameBinderLocalFixAcc::sconst(uint64_t n) {
-  return stream::lazy_([=]() -> typename FrameBinderLocalFixAcc::stream::SCons {
-    return {n, sconst(n)};
-  });
+  return stream::lazy_(
+      [=]() mutable -> typename FrameBinderLocalFixAcc::stream::SCons {
+        return {n, sconst(n)};
+      });
 }
 
 FrameBinderLocalFixAcc::stream FrameBinderLocalFixAcc::sfrom(uint64_t n) {
-  return stream::lazy_([=]() -> typename FrameBinderLocalFixAcc::stream::SCons {
-    return {n, sfrom((n + 1))};
-  });
+  return stream::lazy_(
+      [=]() mutable -> typename FrameBinderLocalFixAcc::stream::SCons {
+        return {n, sfrom((n + 1))};
+      });
 }
 
 List<uint64_t>

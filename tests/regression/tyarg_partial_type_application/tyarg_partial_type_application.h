@@ -196,7 +196,7 @@ struct TyargPartialTypeApplication {
   static typename _tcI0::template M<T3>
   liftO(const std::type_identity_t<crane::fn<T3(T2)>> &f,
         typename _tcI0::template M<T2> m) {
-    return _tcI0::template bnd<T2, T3>(std::move(m), [=](const T2 &a) {
+    return _tcI0::template bnd<T2, T3>(std::move(m), [=, f = f](const T2 &a) {
       return _tcI0::template ret<T3>(f(a));
     });
   }

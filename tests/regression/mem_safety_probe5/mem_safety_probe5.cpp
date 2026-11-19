@@ -73,7 +73,9 @@ MemSafetyProbe5::build_getters(
       const MemSafetyProbe5::mylist<MemSafetyProbe5::tree> &a1_value = *a1;
       auto _cell = typename MemSafetyProbe5::mylist<
           crane::fn<uint64_t(uint64_t)>>::Mycons(
-          [=](uint64_t _x0) -> uint64_t { return a0.get_left_val(_x0); },
+          [=, a0 = a0](uint64_t _x0) -> uint64_t {
+            return a0.get_left_val(_x0);
+          },
           nullptr);
       MemSafetyProbe5::mylist<crane::fn<uint64_t(uint64_t)>> &_node =
           (_write ? *(*_write = std::make_shared<MemSafetyProbe5::mylist<

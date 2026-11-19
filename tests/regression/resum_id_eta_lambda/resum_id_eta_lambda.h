@@ -296,8 +296,8 @@ struct ITree {
       const auto &[t0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::TauF>(_sv.v());
       return Itree<T1, T3>::lazy_(
-          [=, k = std::move(k)]() -> typename Itree<T1,
-                                                    T3>::Go {
+          [=, k = std::move(k)]() mutable -> typename Itree<T1,
+                                                            T3>::Go {
             return {ItreeF<T1, T3, Itree<T1, T3>>::tauf(
                 subst<T1, T2, T3>(std::move(k), t0))};
           });
@@ -305,11 +305,13 @@ struct ITree {
       const auto &[x, e0] =
           std::get<typename ItreeF<T1, T2, Itree<T1, T2>>::VisF>(_sv.v());
       return Itree<T1, T3>::go(ItreeF<T1, T3, Itree<T1, T3>>::visf(
-          x, crane::fn<Itree<T1, T3>(crane::obj)>(
-                 [=, k = std::move(k)](const crane::obj &x0) -> Itree<T1,
-                                                                      T3> {
-                   return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
-                 })));
+          x,
+          crane::fn<Itree<T1, T3>(crane::obj)>([=, e0 = e0, k = std::move(k)](
+              const crane::obj &x0)
+                                                    -> Itree<T1,
+                                                             T3> {
+            return subst<T1, T2, T3>(k, crane_call_erased(e0, x0));
+          })));
     }
   }
 
@@ -482,7 +484,7 @@ struct ResumIdEtaLambda {
                   crane::obj, Sum1<aE<typename _tcI0::ptr>,
                                    Sum1<BE, CE, crane::obj>, crane::obj>,
                   T2>(h0, e)),
-          [=](const T2 &r) {
+          [=, s = s](const T2 &r) {
             return Itree<BotE<typename _tcI0::ptr, crane::obj>,
                          std::pair<Nat, T2>>::go(ItreeF<
                 BotE<typename _tcI0::ptr, crane::obj>, std::pair<Nat, T2>,

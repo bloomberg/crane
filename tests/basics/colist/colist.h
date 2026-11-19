@@ -230,9 +230,10 @@ public:
       return Colist<T1>::conil();
     } else {
       const auto &[a0, a1] = std::get<typename Colist<A>::Cocons>(this->v());
-      return Colist<T1>::lazy_([=]() -> typename Colist<T1>::Cocons {
-        return {f(a0), a1.template comap<T1>(f)};
-      });
+      return Colist<T1>::lazy_(
+          [=, a0 = a0, f = f]() mutable -> typename Colist<T1>::Cocons {
+            return {f(a0), a1.template comap<T1>(f)};
+          });
     }
   }
 
@@ -253,7 +254,9 @@ public:
 
   static Colist<Nat> nats(const Nat &n) {
     return Colist<Nat>::lazy_(
-        [=]() -> typename Colist<Nat>::Cocons { return {n, nats(Nat::s(n))}; });
+        [=, n = n]() mutable -> typename Colist<Nat>::Cocons {
+          return {n, nats(Nat::s(n))};
+        });
   }
 
   static const List<Nat> &first_three() {

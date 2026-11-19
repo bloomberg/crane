@@ -10,7 +10,7 @@
 StreamMatchSvRedefinition::stream
 StreamMatchSvRedefinition::sconst(uint64_t n) {
   return stream::lazy_(
-      [=]() -> typename StreamMatchSvRedefinition::stream::SCons {
+      [=]() mutable -> typename StreamMatchSvRedefinition::stream::SCons {
         return {n, sconst(n)};
       });
 }

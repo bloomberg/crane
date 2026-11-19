@@ -94,14 +94,17 @@ struct FixSharedPtrField {
       } else {
         const auto &[a0, a1] = std::get<typename mylist::Mycons>(this->v());
         const mylist &a1_value = *a1;
-        auto compute_impl = [=](auto &_self_compute, uint64_t x) -> uint64_t {
-          if (x <= 0) {
-            return (a0 + a1_value.mylist_sum());
-          } else {
-            uint64_t x_ = x - 1;
-            return (UINT64_C(1) + _self_compute(_self_compute, x_));
-          }
-        };
+        auto compute_impl =
+            [=, a1_value = a1_value](auto &_self_compute,
+                                     uint64_t x)
+                 -> uint64_t {
+              if (x <= 0) {
+                return (a0 + a1_value.mylist_sum());
+              } else {
+                uint64_t x_ = x - 1;
+                return (UINT64_C(1) + _self_compute(_self_compute, x_));
+              }
+            };
         auto compute =
             [=, compute_impl = std::move(compute_impl)](uint64_t x) -> uint64_t {
               return compute_impl(compute_impl, x);

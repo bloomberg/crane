@@ -516,8 +516,9 @@ struct TopologicalSort {
   static List<T1>
   graph_lookup(const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
                const T1 &elem, const List<std::pair<T1, List<T1>>> &graph0) {
-    auto _cs = graph0.find([=](const std::pair<T1,
-                                               List<T1>> &entry0) {
+    auto _cs = graph0.find([=, elem = elem, eqb_node = eqb_node](
+        const std::pair<T1,
+                        List<T1>> &entry0) {
       return eqb_node(elem, entry0.first);
     });
     if (_cs.has_value()) {
@@ -533,7 +534,9 @@ struct TopologicalSort {
   static bool
   contains(const std::type_identity_t<crane::fn<bool(T1, T1)>> &eqb_node,
            const T1 &elem, const List<T1> &es) {
-    auto _cs = es.find([=](const T1 &x) { return eqb_node(elem, x); });
+    auto _cs = es.find([=, elem = elem, eqb_node = eqb_node](const T1 &x) {
+      return eqb_node(elem, x);
+    });
     if (_cs.has_value()) {
       const T1 &_x = *_cs;
       return true;
@@ -593,7 +596,7 @@ struct TopologicalSort {
         return cycl;
       } else {
         return graph_lookup<T1>(eqb_node, elem, graph0).template fold_right<
-            List<T1>>([=](T1 _x0, List<T1> _x1) -> List<T1> {
+            List<T1>>([=, graph0 = graph0](T1 _x0, List<T1> _x1) -> List<T1> {
           return cycle_extract_aux<T1>(eqb_node, graph0, c, _x0, _x1);
         },
                       List<T1>::cons(elem, std::move(cycl)));
@@ -647,19 +650,21 @@ struct TopologicalSort {
         } else {
           mins_ = std::move(mins);
         }
-        List<std::pair<T1, List<T1>>> rest =
-            graph0.filter([=](const std::pair<T1,
-                                              List<T1>> &entry0) {
+        List<std::pair<T1, List<T1>>> rest = graph0.filter(
+            [=, eqb_node = eqb_node](const std::pair<T1,
+                                                     List<T1>> &entry0) {
               return !(contains<T1>(eqb_node, entry0.first, mins_));
             });
         List<std::pair<T1, List<T1>>> rest_ =
-            rest.template map<std::pair<T1, List<T1>>>(
-                [=](const std::pair<T1, List<T1>> &entry0) {
-                  return std::make_pair(
-                      entry0.first, entry0.second.filter([=](const T1 &e) {
+            rest.template map<std::pair<T1, List<T1>>>([=, eqb_node = eqb_node](
+                const std::pair<T1, List<T1>> &entry0) {
+              return std::make_pair(
+                  entry0.first,
+                  entry0.second.filter(
+                      [=, eqb_node = eqb_node, mins_ = mins_](const T1 &e) {
                         return !(contains<T1>(eqb_node, e, mins_));
                       }));
-                });
+            });
         return List<List<T1>>::cons(
             std::move(mins_),
             topological_sort_aux<T1>(eqb_node, std::move(rest_), c));

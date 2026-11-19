@@ -117,7 +117,7 @@ template <Monad _tcI0, typename T1> struct Monad_stateT {
               crane_container_cast<
                   typename _tcI0::template m<std::pair<CraneA0, T1>>>(
                   c1.runStateT(s)),
-              [=](const std::pair<CraneA0, T1> &vs) {
+              [=, c2 = c2](const std::pair<CraneA0, T1> &vs) {
                 const auto &[v, s0] = vs;
                 return crane_container_cast<
                     typename _tcI0::template m<std::pair<CraneA1, T1>>>(

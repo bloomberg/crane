@@ -130,7 +130,7 @@ struct HktLambdaParamCarrier {
                                                   crane::fn<
                                                       typename _tcI0::template M<
                                                           T2>(T2)>> &f) {
-    return _tcI0::template bind<T2, T2>(std::move(m), [=](const T2 &x) {
+    return _tcI0::template bind<T2, T2>(std::move(m), [=, f = f](const T2 &x) {
       return _tcI0::template bind<T2, T2>(
           f(x), [](const T2 &y) { return _tcI0::template ret<T2>(y); });
     });

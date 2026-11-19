@@ -285,12 +285,12 @@ struct NestedTree {
       return List<List<T2>>::nil();
     } else {
       const auto &[a0, a1] = std::get<typename tree::Node>(t0.v());
-      return List<List<T2>>::cons(f(a0),
-                                  flatten_tree_crane_go<T1, T2>(
-                                      [=](std::pair<T1, T1> _x0) -> List<T2> {
-                                        return lift<T1, T2>(f, _x0);
-                                      },
-                                      *a1));
+      return List<List<T2>>::cons(
+          f(a0), flatten_tree_crane_go<T1, T2>(
+                     [=, f = f](std::pair<T1, T1> _x0) -> List<T2> {
+                       return lift<T1, T2>(f, _x0);
+                     },
+                     *a1));
     }
   }
 
