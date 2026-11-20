@@ -80,6 +80,9 @@ type t = {
 (** Whether an [OperationMapping] instance names [g]. *)
 val is_operation_head : Names.GlobRef.t -> bool
 
+(** Every plan this extraction has compiled. *)
+val compiled : unit -> t list
+
 (** The plan of the operation [g]; a user error when no instance applies to
     every instantiation of its parameters, or the template uses what this
     stage does not compile. *)

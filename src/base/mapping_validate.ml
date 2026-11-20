@@ -321,18 +321,67 @@ let type_mapping env sigma ~instance ~source (m : type_mapping) =
               v.case_fields)
           c.ctor_view)
       ctors);
+  (* The head of the type of field [n] of the constructor [k]: [`Self] for
+     the constructor's own inductive, [`Other] for another inductive. *)
+  let field_head (((mind, _) as ind, _) as k) n =
+    let mib = Environ.lookup_mind mind env in
+    let ty, _ = Typeops.type_of_global_in_context env (GlobRef.ConstructRef k) in
+    let decls = List.rev (fst (Term.decompose_prod_decls ty)) in
+    match List.nth_opt decls (mib.Declarations.mind_nparams + n) with
+    | Some decl -> (
+      match Constr.kind (fst (Constr.decompose_app_list (Context.Rel.Declaration.get_type decl))) with
+      | Constr.Ind (ind', _) when Ind.CanOrd.equal ind ind' -> `Self
+      | Constr.Ind _ -> `Other
+      | _ -> `Neither )
+    | None -> `Neither
+  in
   Option.iter
     (fun s ->
+      let seen = ref [] in
       List.iter
         (fun c ->
           let where = "the numeral case " ^ pr_decl c.numeral_constructor in
           let k = member where c.numeral_constructor in
+          if List.exists (Construct.CanOrd.equal k) !seen then
+            failf "%s: the constructor has more than one numeral case" where;
+          seen := k :: !seen;
           match c.numeral_action with
-          | Numeral_successor n | Numeral_double n | Numeral_double_plus_one n
+          | Numeral_successor n | Numeral_double n | Numeral_double_plus_one n ->
+            field where k n;
+            if field_head k n <> `Self then
+              failf "%s: field %d is not of the mapped type, so it cannot be the number this action builds on" where n
           | Numeral_identity n | Numeral_negate n ->
-            field where k n
+            field where k n;
+            if field_head k n <> `Other then
+              failf "%s: field %d is not of another inductive type, whose numeral this action reads" where n
           | Numeral_zero | Numeral_one -> ())
-        s.numeral_cases)
+        s.numeral_cases;
+      (* The emitter writes only validated digits and a sign between text
+         that builds a numeric literal or a call of a named constructor. *)
+      let allowed extra text =
+        String.for_all
+          (fun ch ->
+            (ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z') || (ch >= '0' && ch <= '9') || String.contains extra ch)
+          text
+      in
+      ( match s.numeral_emitter with
+      | Integer_token (prefix, suffix) ->
+        if not (allowed "_()<>:, +-" prefix && allowed "_()<>:, +-" suffix) then
+          failf
+            "the IntegerToken emitter's prefix or suffix contains a character              that does not build a numeric literal or a wrapping macro or cast"
+      | Decimal_constructor callee ->
+        if callee = "" || not (allowed "_:<>, " callee) then
+          failf "the DecimalConstructor emitter's callee %s is not a qualified C++ name" (quote callee) );
+      List.iter
+        (fun (d : declaration) ->
+          let ty, _ = Typeops.type_of_global_in_context env d.reference in
+          let rec conclusion t =
+            match Constr.kind t with Constr.Prod (_, _, b) | Constr.LetIn (_, _, _, b) -> conclusion b | _ -> t
+          in
+          match (Constr.kind (fst (Constr.decompose_app_list (conclusion ty))), fam) with
+          | Constr.Ind (ind, _), Some fam when Ind.CanOrd.equal ind fam -> ()
+          | _ -> failf "the numeral converter %s does not return the mapped type" (pr_decl d))
+        s.numeral_converters)
     m.type_numerals
 
 (** {1 Operation mappings} *)

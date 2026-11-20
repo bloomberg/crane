@@ -1553,10 +1553,15 @@ let rec is_literal_type (ty : ty) =
   | Function _ | Decay _ -> false
   (* A mapping asks what the application it instantiates asks. *)
   | Foreign fr -> is_literal_type (Entity_application (fr.custom, fr.types, fr.values))
-  (* A typed-mapped type asks what its structured type asks, before
-     instantiation as after ({!instantiated_type}). *)
+  (* A typed-mapped type is what its copy model says, before instantiation
+     as after ({!instantiated_type}): a [BitCopy] type is, a
+     [CopyComponents] one is when its components are, a type that
+     duplicates or retains anything ([mpz_class], [std::string], a handle)
+     is not -- its structured type names a class this pass cannot see
+     into. *)
   | Entity_application (r, tys, _) when Base.Mapping_plan.is_type_head r ->
-    is_literal_type (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find r) tys)
+    Base.Mapping_plan.copies_cheaply (Base.Mapping_plan.find r) ~argument:(fun i ->
+        match List.nth_opt tys i with Some t -> is_literal_type t | None -> false)
   | Entity_application (r, _, _) when is_axiom_type_ref r -> false
   | Entity_application (r, [], _) when Base.Table.is_custom_scalar_ref r -> true
   (* A generated inductive other than an enum has user-provided constructors
@@ -1568,6 +1573,8 @@ let rec is_literal_type (ty : ty) =
   (* A defined constant with no arguments is an alias nothing here sees
      through, as is a named type with none. *)
   | Entity_application (GlobRef.ConstRef _, [], _) | Named (_, []) -> false
+  (* An instantiated typed-mapped type that duplicates its value. *)
+  | External (s, _) when Base.Mapping_plan.duplicates_name s -> false
   | Entity_application (_, tys, _) | Named (_, tys) | External (_, tys) -> List.for_all is_literal_type tys
   | Rebind (h, x) -> is_literal_type h && is_literal_type x
   | Carrier_parameter | Erased _ -> true

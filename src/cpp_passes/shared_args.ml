@@ -50,11 +50,13 @@ let operation_text : expr -> operation option = function
   | _ -> None
 
 (* Whether evaluating [e] may do something an evaluation order could
-   reveal: it calls an operation mapping that is not pure, or holds a
-   statement (a lambda's body is not evaluated, but nothing here looks
-   inside one).  The rest of what Crane generates is the value of a Rocq
-   term, which has no effect to order: the monads sequence theirs by
-   statements. *)
+   reveal: it calls an operation mapping that is not pure.  The rest of what
+   Crane generates is the value of a Rocq term, which has no effect to
+   order: the monads sequence theirs by statements.  A legacy mapping has no
+   contract to read; it is taken as pure, as legacy lowering always took it
+   (it never ordered the arguments of one legacy mapping against another),
+   so the arguments of a pure operation over legacy calls stay in place.  A
+   lambda's body is not evaluated. *)
 let rec may_have_effect (e : expr) : bool =
   match e with
   | Entity (r, _, _) when Base.Table.is_mapped_operation r ->
@@ -73,7 +75,8 @@ let splices text i =
 (* An operation mapping's arguments, evaluated once each, in source order,
    before its text (design 11.9): unless at most one of them computes
    anything and the text splices that one once, or the operation is pure
-   and splices each computing argument, none with an effect, once, each argument that is not
+   and no computing argument has an effect (then only the arguments the
+   text repeats or drops are), each argument that is not
    free to repeat is bound ahead of the call, in order -- or, where the text
    does not splice it (an [Ignore] argument), evaluated as a statement and
    discarded.  An argument bound by value and spliced once is moved from its
@@ -85,11 +88,26 @@ let prepare_operation_args fresh bind discard {text; in_place; pure} (args : exp
   match computing with
   | [] -> args
   | [(i, _)] when splices text i = 1 -> args
-  | _ when pure && List.for_all (fun (i, a) -> splices text i = 1 && not (may_have_effect a)) computing ->
-    (* A pure operation splicing each computing argument once, none of which
-       has an effect: evaluating them where the text places them evaluates
-       each once, and their order is not observable (design 11.9). *)
-    args
+  | _ when pure && List.for_all (fun (_, a) -> not (may_have_effect a)) computing ->
+    (* A pure operation none of whose computing arguments has an effect:
+       their order is not observable, so only an argument the text splices
+       more than once is bound ahead (once), and one it does not splice is
+       evaluated and discarded; the rest are evaluated where the text places
+       them (design 11.9). *)
+    List.mapi
+      (fun i (a : expr) ->
+        if free_to_repeat a then a
+        else
+          match splices text i with
+          | 1 -> a
+          | 0 ->
+            discard a;
+            a
+          | _ ->
+            let x = fresh () in
+            bind ~by_value:(match a with Move _ -> true | a -> not (names_storage a)) x a;
+            (Local x : expr))
+      args
   | _ ->
     List.mapi
       (fun i (a : expr) ->
