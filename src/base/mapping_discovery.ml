@@ -273,6 +273,7 @@ type operation_binder = {
 
 type operation_binders = {
   binders_env : Environ.env;
+  binders_sigma : Evd.evar_map;
   binders : operation_binder list;
   result_type : EConstr.types;
   generic_use : EConstr.t;
@@ -344,7 +345,7 @@ let operation_binders env sigma g =
   in
   let binders_env, binders, result_type = go env 0 0 0 [] (Retyping.get_type_of env sigma head) in
   let generic_use = EConstr.mkApp (head, Array.of_list (List.map (fun b -> EConstr.mkVar b.binder_id) binders)) in
-  {binders_env; binders; result_type; generic_use}
+  {binders_env; binders_sigma = sigma; binders; result_type; generic_use}
 
 let runtime_binders b = List.filter (fun b -> match b.role with Runtime _ -> true | _ -> false) b.binders
 
@@ -353,6 +354,7 @@ let runtime_binders b = List.filter (fun b -> match b.role with Runtime _ -> tru
 let operation_context env g =
   let sigma = Evd.from_env env in
   let b = operation_binders env sigma g in
+  let sigma = b.binders_sigma in
   let known t =
     Option.map (fun r -> r.type_mapping) (resolve_type_mapping b.binders_env sigma t)
   in

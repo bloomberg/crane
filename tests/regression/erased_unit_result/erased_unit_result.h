@@ -52,10 +52,8 @@ struct ErasedUnitResult {
 
   template <typename T1, typename F0>
   static void run_twice(F0 &&f, const T1 &x) {
-    {
-      f(x);
-      return;
-    }
+    f(x);
+    return;
   }
 
   static bool is_tt();

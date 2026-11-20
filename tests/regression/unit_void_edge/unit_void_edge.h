@@ -98,9 +98,7 @@ struct UnitVoidEdge {
   static void return_unit(uint64_t _x);
   static inline const uint64_t let_bind_void_call = []() {
     return_unit(UINT64_C(5));
-    {
-      return UINT64_C(42);
-    }
+    return UINT64_C(42);
   }();
   static void count_down(uint64_t n);
 

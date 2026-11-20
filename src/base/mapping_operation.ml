@@ -141,6 +141,7 @@ let compile g =
   let env = Global.env () in
   let sigma = Evd.from_env env in
   let binders = Mapping_discovery.operation_binders env sigma g in
+  let sigma = binders.binders_sigma in
   let resolved =
     match Mapping_discovery.resolve_operation_mapping binders.binders_env sigma binders.generic_use with
     | Some r -> r
