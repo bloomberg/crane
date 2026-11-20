@@ -17,6 +17,10 @@
 open Names
 open Analysis
 
+(** [function_modes f params]: how each of [params], parameters of the
+    function [f], is passed, as [f] records it ({!Analysis.param_modes}). *)
+val function_modes : func -> (Id.t * ty) list -> Cpp_ir.Param_mode.t list
+
 (** [after_tail_loop ~tparams f params loop] is the body of the function
     [f] once Loopify's transform has made [loop] of it: the local fixpoints
     in [loop] lowered, and the outcome recorded, [strategy] -- a tail loop
@@ -176,11 +180,12 @@ val lower_local_tail_loops :
 val lower_function_locals :
   unit:Unit_plan.Context.t -> tparams:(param_kind * Id.t) list -> (Id.t * ty) list -> stmt list -> stmt list
 
-(** [local_frame_machine ~member ~name ~binders ~varying ~parts ~tparams
+(** [local_frame_machine ~member ~name ~binders ~varying ~parts ~modes ~tparams
     check params ret_ty body] is the body of the machine with a stack of
     frames of the local fixpoint [name], the function [member] of a Core
-    fixpoint, its body [body] over its parameters [params], standing for the
-    Core binders [binders], with its tail calls exposed: [check] recognises
+    fixpoint, its body [body] over its parameters [params], passed as
+    [modes] says, standing for the Core binders [binders], with its tail
+    calls exposed: [check] recognises
     the calls entering it, its frames save the parameters [varying], and
     hold by pointer those [parts] marks.
     The local fixpoints in it are lowered after it, as Loopify
@@ -195,6 +200,7 @@ val local_frame_machine :
   binders:(Id.t * Core.Binder.t) list ->
   varying:bool list ->
   parts:bool list ->
+  modes:Cpp_ir.Param_mode.t list ->
   tparams:(param_kind * Id.t) list ->
   Analysis.call_checker ->
   (Id.t * ty) list ->
@@ -220,12 +226,18 @@ type member_plan = {
           value ({!Ownership_ir.Region.continue_moves}); empty for a machine. *)
 }
 
-(** [member_plan ~frames member params] is the plan of the local fixpoint
-    function [member] whose lambda takes [params], the last first, lowered as a machine with
+(** [member_plan ~frames ~modes member params] is the plan of the local fixpoint
+    function [member] whose lambda takes [params], the last first, passed
+    as [modes] says, lowered as a machine with
     a stack of frames where [frames]; [None] where it has no ControlIR loop,
     or the lambda takes other parameters than the loop. *)
 val member_plan :
-  unit:Unit_plan.Context.t -> frames:bool -> Core.Occurrence.t * int -> (Names.Id.t * ty) list -> member_plan option
+  unit:Unit_plan.Context.t ->
+  frames:bool ->
+  modes:Cpp_ir.Param_mode.t list ->
+  Core.Occurrence.t * int ->
+  (Names.Id.t * ty) list ->
+  member_plan option
 
 val worthwhile_move_type : ty -> bool
 (** Whether a value of this type is expensive enough to copy that writing

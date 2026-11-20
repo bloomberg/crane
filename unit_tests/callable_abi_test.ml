@@ -69,11 +69,11 @@ let () =
         Core.Scheme.Var.equal a (var 1) && Core.Scheme.Var.equal b (var 2)
       | _ -> false );
   (* How the value parameters are passed is part of the head. *)
-  let owned = of_head ~passing:[Owned; Borrowed] ~callee ~scheme:(Some scheme) [] in
-  let borrowed = of_head ~passing:[Borrowed; Borrowed] ~callee ~scheme:(Some scheme) [] in
-  check "passing is part of the plan"
-    (passing owned = Some [Owned; Borrowed] && not (equal owned borrowed));
-  check "a foreign plan does not say how it passes" (passing f = None)
+  let owned = of_head ~modes:[Cpp_ir.Param_mode.owned; Cpp_ir.Param_mode.lent] ~callee ~scheme:(Some scheme) [] in
+  let borrowed = of_head ~modes:[Cpp_ir.Param_mode.lent; Cpp_ir.Param_mode.lent] ~callee ~scheme:(Some scheme) [] in
+  check "the parameter modes are part of the plan"
+    (modes owned = Some [Cpp_ir.Param_mode.owned; Cpp_ir.Param_mode.lent] && not (equal owned borrowed));
+  check "a foreign plan does not say how it passes" (modes f = None)
 
 (* A plan records why its convention omits a variable, and a call reads the
    variables it keeps, and those its dictionaries stand at, from the plan. *)

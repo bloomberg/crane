@@ -49,6 +49,7 @@ let mk_lambda ?(tparams = []) params (ret : Cpp_ir.Lowered.Type.t option) body ~
           capture;
           moved = [];
           binders = [];
+          modes = [];
           fixpoint = None }
     in
     ( match (params, body) with

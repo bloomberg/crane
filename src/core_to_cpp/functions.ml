@@ -455,10 +455,10 @@ let declared_signature : Cpp_ir.Lowered.Decl.t -> _ = function
     the signature [declared]: both relaxed together
     ({!Core_plan.Plan_templates.relax_function_head}), the plan recording what the
     relaxations decided, which carry them through the declaration. *)
-let plan_function_head cx ?deduced_callables ?passing ~minted n ty (temps : head_params)
+let plan_function_head cx ?deduced_callables ?modes ~minted n ty (temps : head_params)
     (declared : Core_plan.Callable_abi.signature) =
   let temps, signature, relaxations = relax_function_head temps declared in
-  Core_plan.Callable_abi.of_head ?deduced_callables ?passing ~signature ~relaxations ~minted
+  Core_plan.Callable_abi.of_head ?deduced_callables ?modes ~signature ~relaxations ~minted
     ~omitted:(Tvars.type_arg_omission n)
     ~phantom_prefix:(Types.leading_phantom_count cx n)
     ~relaxed:(fun i -> IntSet.mem i (Base.Type_util.relaxed_higher_kinded_tvars ty))
@@ -499,8 +499,8 @@ module Body_scope = struct
         (** Each promoted type variable, qualified through the instance
             parameter that provides it. *)
     owned_flags : bool list;  (** Whether the body owns each of {!Body_scope.all_ids}. *)
-    passing : Core_plan.Callable_abi.passing list;
-        (** How each value parameter is passed, in declaration order. *)
+    modes : (Id.t * Cpp_ir.Param_mode.t) list;
+        (** How each of {!Body_scope.ids} is passed, by name. *)
     self_call_undeducible : (Id.t -> bool) option;
         (** Under polymorphic recursion, the parameters a self-call has to
             write although the call is not at the declaration's own
@@ -879,10 +879,12 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = Monadic.reify_monadic_param_type cx ty cpp_ty in
-        let wrapped = Ownership.wrap_param_by_ownership cx ~is_owned:owned ~core:ty cpp_ty in
-        (x, wrapped) )
+        let wrapped, mode = Ownership.wrap_param_by_ownership cx ~is_owned:owned ~core:ty cpp_ty in
+        ((x, wrapped), (x, mode)) )
       ids_with_owned
   in
+  let ids, wrapped_modes = List.split ids in
+  let wrapped_mode x = List.assoc x wrapped_modes in
   (* Promote forwarded function-typed parameters to C++ template parameters.
 
      Function-typed parameters (those with C++ type [Tconst (Tfun(...))])
@@ -923,15 +925,17 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
      type parameters that were filtered out as phantom
      ({!Core_plan.Plan_templates.phantom_aware_temps}, via {!with_function_head}). *)
   let primary = primary_tvar_indices dom cod in
-  let unwrap_fun_ty2 : Cpp_ir.Lowered.Type.t -> Cpp_ir.Lowered.Type.t option = function
-    | Const (Function _ as f) | Reference (Lvalue, Const (Function _ as f)) -> Some f
-    | Function _ as f -> Some f
+  (* The callable a parameter declared at [ty] holds, under the declarator
+     its mode adds. *)
+  let unwrap_fun_ty2 x ty : Cpp_ir.Lowered.Type.t option =
+    match Cpp_ir.Param_mode.value_type (wrapped_mode x) ty with
+    | Const (Function _ as f) | (Function _ as f) -> Some f
     | _ -> None
   in
   let fun_tys =
     List.filter_map
       (fun (x, ty, i) ->
-        match unwrap_fun_ty2 ty with
+        match unwrap_fun_ty2 x ty with
         | Some (Function (fdom, fcod) as f)
           when Callable_params.generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
           let fun_idx = get_tvar_indices f in
@@ -963,16 +967,22 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
      template type variable [F&&]. Non-forwarded params are left untouched — they
      keep [Tconst (Tfun(dom, cod))] which prints as [const
      crane::fn<R(Args...)>]. This loop iterates [ids] in de Bruijn order. *)
+  let promoted x ty =
+    match unwrap_fun_ty2 x ty with
+    | Some (Function _ as f) -> Callable_params.generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f
+    | _ -> false
+  in
+  let modes =
+    List.map (fun (x, ty) -> (x, if promoted x ty then Cpp_ir.Param_mode.forwarded else wrapped_mode x)) ids
+  in
   let ids =
     List.mapi
       (fun i (x, ty) ->
-        match unwrap_fun_ty2 ty with
-        | Some (Function _ as f)
-          when Callable_params.generalises_callable ~kept_as_fn:(Id.Set.mem x kept_as_fn) ~primary f ->
+        if promoted x ty then
           ( x,
             (Reference (Forwarding, Variable (Named (fun_tparam_id (List.length ids - i - 1))))
               : Cpp_ir.Lowered.Type.t) )
-        | _ -> (x, ty) )
+        else (x, ty) )
       ids
   in
   (* A parameter whose type is a callable behind a type alias -- a one-method
@@ -1163,9 +1173,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
       @ List.map (fun (_, _, id, i) -> (id, Core_plan.Callable_abi.Callable_param i)) fun_tys;
     promoted_var_resolutions = promoted_var_resolutions;
     owned_flags = owned_flags;
-    passing =
-      List.rev
-        (List.map2 (fun (_, ty) (_, _, owned) -> Ownership.param_passing ~owned ty) ids ids_with_owned);
+    modes = modes;
     self_call_undeducible = self_call_undeducible;
     gen_body_stmts = gen_body_stmts;
     no_pure = no_pure;
@@ -1176,7 +1184,7 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
     callers see it: outside the type-variable scope its body is generated in. *)
 let plan_scope_head cx n ty scope =
   with_type_vars cx [] (fun () ->
-      plan_function_head cx ~deduced_callables:scope.Body_scope.deduced_callables ~passing:scope.passing
+      plan_function_head cx ~deduced_callables:scope.Body_scope.deduced_callables ~modes:(List.rev_map (fun (x, _) -> List.assoc x scope.modes) scope.ids)
         ~minted:scope.minted n ty scope.temps
         {Core_plan.Callable_abi.params = List.rev_map snd scope.ids; ret = scope.cod})
 
@@ -1442,8 +1450,8 @@ let gen_dfun cx ~minted n b cty ty temps =
   let owned_params =
     Ownership.owned_parameters (List.length owned_flags)
       ~owned:(fun i ->
-        match List.assoc_opt (fst (List.nth all_ids i)) scope.ids with
-        | Some ty -> not (Ownership.declared_by_reference ty)
+        match List.assoc_opt (fst (List.nth all_ids i)) scope.modes with
+        | Some mode -> Cpp_ir.Param_mode.holds_own_value mode
         | None -> List.nth owned_flags i )
       ~declared:(fun i -> List.assoc_opt (fst (List.nth all_ids i)) scope.ids)
       ~ty:(fun i -> snd (List.nth all_params i))
@@ -1479,6 +1487,7 @@ let gen_dfun cx ~minted n b cty ty temps =
         constexpr = Undecided;
         shape = Definition (List.rev scope.ids, finish_fn_body cx scope.cod (guarded (sigma_asserts @ body)));
         binders = parameter_binders cx env scope.ids;
+        modes = scope.modes;
         loop = None }
   in
   let inner =
@@ -1714,6 +1723,7 @@ let thunk n ret body : Cpp_ir.Lowered.Decl.t =
       constexpr = Undecided;
       shape = Definition ([], [Return (Some body)]);
       binders = [];
+      modes = [];
       loop = None }
 
 (** The constant [n] of C++ type [ty], initialised with [init], the value
@@ -1921,6 +1931,7 @@ let gen_spec__inner cx n b ty =
             constexpr = Undecided;
             shape = Definition ([], []);
             binders = [];
+            modes = [];
             loop = None }
       in
       (templated inner, empty_env ())

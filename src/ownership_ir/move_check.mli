@@ -33,7 +33,7 @@
     convention its callable plan states ({!convention_violations}), and the
     lambda of each local fixpoint in its body -- its parameters other than
     the members it calls through -- against its function's
-    ({!Region.Local_passing}).  A local fixpoint lambda whose plan
+    ({!Region.Local_passing}) and the modes the lambda records.  A local fixpoint lambda whose plan
     captures by reference ({!Region.Local_captures}) must be written
     capturing by reference and must not escape the block that binds it.
 
@@ -57,13 +57,20 @@ val stale_references : Cpp_ir.Lowered.Stmt.t list -> (Names.Id.t * Names.Id.t) l
 
 (** [convention_violations d r params body]: what the parameters [params]
     of the callable [r], in declaration order, and its [body] contradict of
-    the convention its callable plan in [d] states ({!Core_plan.Callable_abi.passing}), [None]
-    where no plan states one.  The plan passes each parameter one way: a
-    deduced callable forwarded exactly where the declaration is an [F &&],
-    one it owns declared by value, and none it lends by reference moved out
-    of by name -- the ownership plan moves only what the convention hands
+    the convention its callable plan in [d] states ({!Core_plan.Callable_abi.modes}), [None]
+    where no plan states one.  The plan passes each parameter one way: in
+    the form its declared type spells, with an ownership that form can have
+    ({!Cpp_ir.Param_mode.disagreement}), and none it lends by reference moved
+    out of by name -- the ownership plan moves only what the convention hands
     the body (a name the body declares again, as a frame handler binds a
     parameter's to the frame's field, is that local's). *)
 val convention_violations :
   Core_plan.Callable_abi.decided ->
   Names.GlobRef.t -> (Names.Id.t * Cpp_ir.Lowered.Type.t) list -> Cpp_ir.Lowered.Stmt.t list -> string list option
+
+(** [check_modes d]: under [CRANE_CHECK_IR], each mode a function, method
+    or lambda of [d] records of a parameter ({!Cpp_ir.Param_mode}) agrees with
+    the type the parameter is declared at
+    ({!Cpp_ir.Param_mode.disagreement}), and is of a parameter it has: a
+    producer that sets one without the other is reported. *)
+val check_modes : Cpp_ir.Lowered.Decl.t -> unit

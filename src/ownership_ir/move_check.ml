@@ -366,18 +366,24 @@ let check_body owner ss =
           ++ str " is read after " ++ Id.print base ++ str " is given a new value" ) )
     (List.sort_uniq compare report.stale)
 
-(* Whether a parameter of type [t] is declared by reference: a [const]
-   type is one, as the declaration writes it. *)
-let rec declared_by_reference : ty -> bool = function
-  | Reference _ | Const _ -> true
-  | In_namespace (_, t) -> declared_by_reference t
-  | _ -> false
+(* What is wrong of the modes [modes] a declaration records of its
+   parameters [params] ({!Cpp_ir.Param_mode.disagreement}): a mode recorded
+   of no parameter, or one its parameter's declared type does not spell. *)
+let mode_violations (modes : (Id.t * Cpp_ir.Param_mode.t) list) (params : (Id.t * ty) list) =
+  List.filter_map
+    (fun (x, m) ->
+      match List.assoc_opt x params with
+      | None -> Some ("a mode is recorded of " ^ Id.to_string x ^ ", which is no parameter")
+      | Some ty ->
+        Option.map (fun what -> "the parameter " ^ Id.to_string x ^ " is " ^ what) (Cpp_ir.Param_mode.disagreement m ty) )
+    modes
 
 (* What the parameters [params] of a callable whose plan passes them as
-   [passing] says, and whose body is [body], break of it. *)
-let passing_violations (passing : Core_plan.Callable_abi.passing list) params body =
-  if List.compare_lengths passing params <> 0 then
-    [ Printf.sprintf "the plan passes %d parameters, the declaration takes %d" (List.length passing)
+   [modes] says, and whose body is [body], break of it: a mode the declared
+   type does not spell, or a move out of one the plan lends by reference. *)
+let passing_violations (modes : Cpp_ir.Param_mode.t list) params body =
+  if List.compare_lengths modes params <> 0 then
+    [ Printf.sprintf "the plan passes %d parameters, the declaration takes %d" (List.length modes)
         (List.length params) ]
   else
     (* What the body moves by name, and the names it declares again: a
@@ -393,25 +399,22 @@ let passing_violations (passing : Core_plan.Callable_abi.passing list) params bo
     List.iter (fun s -> ignore (fs s)) body;
     List.concat
       (List.map2
-         (fun (p : Core_plan.Callable_abi.passing) (x, (ty : ty)) ->
+         (fun (m : Cpp_ir.Param_mode.t) (x, (ty : ty)) ->
            let name = Id.to_string x in
-           match (p, ty) with
-           | Forwarded, Reference (Forwarding, _) -> []
-           | Forwarded, _ -> ["the plan forwards " ^ name ^ ", declared otherwise"]
-           | (Owned | Borrowed), Reference (Forwarding, _) ->
-             ["the declaration forwards " ^ name ^ ", the plan does not"]
-           | Owned, _ when declared_by_reference ty -> ["the plan owns " ^ name ^ ", declared by reference"]
-           | Borrowed, _
-             when declared_by_reference ty && List.exists (Id.equal x) !moved
+           match Cpp_ir.Param_mode.disagreement m ty with
+           | Some what -> ["the plan passes " ^ name ^ " otherwise than it is declared: " ^ what]
+           | None
+             when m.ownership = Borrowed && (not (Cpp_ir.Param_mode.by_value m))
+                  && List.exists (Id.equal x) !moved
                   && not (List.exists (Id.equal x) !declared) ->
              ["the body moves out of " ^ name ^ ", which the plan lends it"]
-           | (Owned | Borrowed), _ -> [] )
-         passing params )
+           | None -> [] )
+         modes params )
 
 let convention_violations d r params body =
   Option.map
-    (fun passing -> passing_violations passing params body)
-    (Option.bind (Core_plan.Callable_abi.lookup d r) Core_plan.Callable_abi.passing)
+    (fun modes -> passing_violations modes params body)
+    (Option.bind (Core_plan.Callable_abi.lookup d r) Core_plan.Callable_abi.modes)
 
 let report_conventions owner =
   List.iter (fun what -> Base.Probe.violation "callable convention" Pp.(str "in " ++ owner ++ str ", " ++ str what))
@@ -420,12 +423,13 @@ let check_convention d owner r params body =
   report_conventions owner (Option.default [] (convention_violations d r params body))
 
 (* The lambda of each local fixpoint in [ss] against the plan of the
-   function it is generated for ({!Region.Local_passing}): the
-   parameters it takes other than the members it calls through. *)
+   function it is generated for ({!Region.Local_passing}) and the modes it
+   records: the parameters it takes other than the members it calls
+   through. *)
 let check_local_conventions owner ss =
   let rec fe (e : expr) =
     ( match e with
-    | Lambda {fixpoint = Some lf; params; body; _} -> (
+    | Lambda {fixpoint = Some lf; params; body; modes; _} -> (
       match Region.Local_passing.lookup lf.member with
       | Some passing ->
         let selves = match lf.encoding with Self_passing ids -> ids | Knot | Lowered -> [] in
@@ -438,15 +442,58 @@ let check_local_conventions owner ss =
               | None -> Some (Id.of_string "_", ty) )
             params
         in
-        report_conventions
-          Pp.(owner ++ str ", the local fixpoint " ++ Id.print lf.name)
-          (passing_violations (List.filter_map Fun.id passing) params body)
+        let owner = Pp.(owner ++ str ", the local fixpoint " ++ Id.print lf.name) in
+        let recorded = List.map (fun (x, _) -> List.assoc_opt x modes) params in
+        if List.exists Option.is_empty recorded then report_conventions owner ["a parameter records no mode"]
+        else
+          let modes = List.map Option.get recorded in
+          let planned = List.filter_map Fun.id passing in
+          if
+            List.compare_lengths planned modes = 0
+            && not (List.for_all2 (fun o (m : Cpp_ir.Param_mode.t) -> o = m.ownership) planned modes)
+          then report_conventions owner ["a parameter records another ownership than its plan"];
+          report_conventions owner (passing_violations modes params body)
       | None -> () )
     | _ -> () );
     Cpp_ir.Map.expr (rw ()) e
   and fs s = Cpp_ir.Map.stmt (rw ()) s
   and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:fs ~type_:Fun.id () in
   List.iter (fun s -> ignore (fs s)) ss
+
+(* The modes every function, method and lambda of [d] records, against
+   the types its parameters are declared at ({!mode_violations}). *)
+let check_modes (d : Cpp_ir.Lowered.Decl.t) =
+  let report owner = List.iter (fun what -> Base.Probe.violation "parameter mode" Pp.(str "in " ++ owner ++ str ", " ++ str what)) in
+  let named = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) in
+  let rec fe owner (e : expr) =
+    ( match e with
+    | Lambda l -> report Pp.(owner ++ str ", a lambda") (mode_violations l.modes (named l.params))
+    | _ -> () );
+    Cpp_ir.Map.expr (rw owner) e
+  and fs owner s = Cpp_ir.Map.stmt (rw owner) s
+  and rw owner = Cpp_ir.Map.make ~expr:(fe owner) ~stmt:(fs owner) ~type_:Fun.id () in
+  let body owner ss = List.iter (fun s -> ignore (fs owner s)) ss in
+  let rec field ((f, _, _) : phase Field.member) =
+    match f with
+    | Method m ->
+      report (Id.print m.name) (mode_violations m.modes m.params);
+      body (Id.print m.name) m.body
+    | Nested_struct (_, fs) -> List.iter field fs
+    | _ -> ()
+  in
+  let rec decl : Cpp_ir.Lowered.Decl.t -> unit = function
+    | Function ({shape = Definition (params, ss); path; _} as f) ->
+      let owner = GlobRef.print (fst path.outer) in
+      report owner (mode_violations f.modes params);
+      body owner ss
+    | Function ({shape = Declaration params; path; _} as f) ->
+      report (GlobRef.print (fst path.outer)) (mode_violations f.modes (named (List.map (fun (x, t) -> (t, x)) params)))
+    | Template (_, _, inner) -> decl inner
+    | Namespace (_, ds) -> List.iter decl ds
+    | Struct s | Merged_struct_members s -> List.iter field s.fields
+    | _ -> ()
+  in
+  decl d
 
 (* Whether [l] reads the scope it is made in by reference. *)
 let by_reference (l : phase Lambda.t) =

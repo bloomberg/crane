@@ -388,6 +388,9 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
           (* The parameter's C++ type at the arity its declaration was written
              at ([Declared_at]): the arrows substitution moved into the
              callable's parameter list go back where the signature had them. *)
+          (* A method of an instance's struct takes each value parameter
+             by value, its own. *)
+          let instance_param_mode = Cpp_ir.Param_mode.owned in
           let param_cpp_ty n core_ty =
             let ty = Types.cpp_ir_of_core_type cx base_env type_var_names core_ty in
             match
@@ -579,7 +582,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                     ~owned:(fun i ->
                       let name, _, cpp_ty = params_db.(i) in
                       List.exists (fun (n, _, _) -> Id.equal n name) cast_info
-                      || not (Ownership.declared_by_reference cpp_ty) )
+                      || Cpp_ir.Param_mode.holds_own_value instance_param_mode )
                     ~declared:(fun i -> let _, _, cpp_ty = params_db.(i) in Some cpp_ty)
                     ~ty:(fun i -> snd (List.nth core_vars i))
                 in
@@ -672,7 +675,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
                       Ownership.owned_parameters (Array.length binders_db)
                         ~owned:(fun i ->
                           binders_db.(i).kind = `Value
-                          && not (Ownership.declared_by_reference binders_db.(i).cpp_ty) )
+                          && Cpp_ir.Param_mode.holds_own_value instance_param_mode )
                         ~declared:(fun i -> Some binders_db.(i).cpp_ty)
                         ~ty:(fun i -> binders_db.(i).core_ty)
                     in
@@ -713,6 +716,7 @@ let gen_instance_struct cx ?(bodies = true) (name : GlobRef.t) (body : Core.Expr
               is_noexcept = false;
               is_conversion = false;
               binders = [];
+              modes = List.map (fun (x, _) -> (x, instance_param_mode)) cpp_params;
               receiver_binder = None;
               loop = None }
           in

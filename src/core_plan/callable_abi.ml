@@ -53,11 +53,6 @@ type omission =
   | Class_carrier
   | Unmentioned
 
-type passing =
-  | Owned
-  | Borrowed
-  | Forwarded
-
 type signature = {
   params : ty list;
   ret : ty;
@@ -68,7 +63,7 @@ type t = {
   head : template_parameter list;
   deduced_callables : Param_pos.orig Param_pos.pos list;
   receiver : receiver option;
-  passing : passing list option;
+  modes : Cpp_ir.Param_mode.t list option;
   signature : signature option;
   variables : (Core.Scheme.Var.t * omission option) list;
       (** every variable of the callee's scheme, with why the convention
@@ -146,7 +141,7 @@ let minted_origin ~relaxed ~scheme minted name =
   | None -> Derived name
 
 let of_head ?omitted ?(phantom_prefix = 0) ?(relaxed = fun _ -> false) ?(deduced_callables = [])
-    ?receiver ?passing ?signature ?(relaxations = []) ?(minted = []) ~callee ~scheme temps =
+    ?receiver ?modes ?signature ?(relaxations = []) ?(minted = []) ~callee ~scheme temps =
   let head =
     List.mapi
       (fun position (kind, name) ->
@@ -164,14 +159,14 @@ let of_head ?omitted ?(phantom_prefix = 0) ?(relaxed = fun _ -> false) ?(deduced
     head = mark_phantoms phantom_prefix head;
     deduced_callables;
     receiver;
-    passing;
+    modes;
     signature;
     variables = scheme_variables ?omitted scheme;
     relaxations;
     core_type = recorded_core_type callee;
     phase = Base.Common.get_phase () }
 
-let passing abi = abi.passing
+let modes abi = abi.modes
 let signature abi = abi.signature
 
 (* A method of an instance's struct belongs to the instance: it has no
@@ -249,7 +244,7 @@ let same_head a b =
   List.equal (fun p q -> key p = key q) a.head b.head
   && List.equal Param_pos.equal a.deduced_callables b.deduced_callables
   && Option.equal ( = ) (Option.map receiver_key a.receiver) (Option.map receiver_key b.receiver)
-  && Option.equal (List.equal ( = )) a.passing b.passing
+  && Option.equal (List.equal Cpp_ir.Param_mode.equal) a.modes b.modes
   && Option.equal ( = ) a.signature b.signature
   && variables_key a = variables_key b
   && List.equal Head_relaxation.equal a.relaxations b.relaxations
@@ -418,7 +413,7 @@ let foreign ?omitted ?(instances = 0) ?(higher_kinded = fun _ -> false) ?(kept =
       head = mark_phantoms phantom_prefix head;
       deduced_callables = [];
       receiver = None;
-      passing = None;
+      modes = None;
       signature = None;
       variables = scheme_variables ?omitted scheme;
       relaxations = [];

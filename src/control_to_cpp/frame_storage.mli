@@ -51,13 +51,14 @@ type parameter =
 val value_inductive : abbreviations:bool -> Core.Type.t -> bool
 
 (** Whether a frame can hold by pointer a parameter of Core type [ty] that
-    its callable passes as [passing] says: lent by const reference, or under
+    its callable passes with the ownership [ownership]
+    ({!Cpp_ir.Param_mode.ownership}): borrowed, so lent by const reference, or under
     Reuse with NonAtomicRc owned by value -- either lives for the call, and
     nothing moves out of it -- at a value inductive, named as itself or
     through an abbreviation ({!Core_to_cpp.Ownership.wrap_param_by_ownership}
     declares either by reference).  A parameter of no runtime value
     ([None]) is held by none.  NonAtomicRc is the unit [u]'s. *)
-val passed_holdable : Unit_plan.Context.t -> Core_plan.Callable_abi.passing option -> Core.Type.t -> bool
+val passed_holdable : Unit_plan.Context.t -> Cpp_ir.Param_mode.ownership option -> Core.Type.t -> bool
 
 (** Whether a frame can hold the parameter at position [i] of the loop [l]
     by pointer, as the plan of the local fixpoint's function [l] is made

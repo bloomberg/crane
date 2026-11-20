@@ -71,6 +71,47 @@ and Reference_kind : sig
 end =
   Reference_kind
 
+and Param_mode : sig
+  (** Whether the callee owns what a parameter holds: [Owned], the caller
+      moving or copying its argument in; [Borrowed], the caller keeping it;
+      [Forwarded], a callable the head deduces, taken as the caller has
+      it. *)
+  type ownership =
+    | Owned
+    | Borrowed
+    | Forwarded
+
+  (** The physical form a parameter is declared in, over the type of the
+      value it stands for: [T], [const T] (a lifted helper's), [const T &],
+      the [T &&] a deduced callable is, or a mutable [T &].  No parameter is
+      planned [By_reference] yet: only a declaration read back has it
+      ({!Cpp_ir.Param_mode.spelled}).  A view taken through a conversion is
+      a form to come. *)
+  type form =
+    | By_value
+    | By_const_value
+    | By_const_reference
+    | By_forwarding_reference
+    | By_reference
+
+  (** What the parameter is to its body: a value, or the receiver a loop
+      over a method is entered with, [_self], a pointer to the object the
+      method runs on rather than a value borrowed through one. *)
+  type role =
+    | Value
+    | Receiver
+
+  (** How a parameter is passed: a decision recorded where it is made, read
+      wherever it matters, its declared type ({!Type.t}) only the spelling of
+      it. *)
+  type t = {
+    ownership : ownership;
+    form : form;
+    role : role;
+  }
+end =
+  Param_mode
+
 and Type : sig
   (** A C++ type. *)
   type _ t =
@@ -298,6 +339,10 @@ and Lambda : sig
     binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where the lambda is the body of a Core function *)
+    modes : (Id.t * Param_mode.t) list;
+        (** how each parameter is passed, by the parameter's name, where
+            the lambda records it: a local fixpoint's, its self-parameters
+            aside *)
     fixpoint : Local_fixpoint.t option;
         (** the local fixpoint whose body this lambda is *)
   }
@@ -883,6 +928,8 @@ and Method : sig
     binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where translation bound it for one *)
+    modes : (Id.t * Param_mode.t) list;
+        (** how each parameter is passed, by the parameter's name *)
     receiver_binder : Core.Binder.t option;
         (** the Core binder the receiver stands for, where there is one *)
     loop : Control_ir.Loop.t option;
@@ -1027,6 +1074,9 @@ and Function : sig
     binders : (Id.t * Core.Binder.t) list;
         (** the Core binder each parameter stands for, by the parameter's
             name, where translation bound it for one *)
+    modes : (Id.t * Param_mode.t) list;
+        (** how each parameter of a definition is passed, by the
+            parameter's name *)
     loop : Control_ir.Loop.t option;
         (** the ControlIR loop the body already is, where it was lowered
             from there; no later pass lowers its control *)

@@ -344,6 +344,7 @@ module Frame_param = struct
   type t = {
     name : Id.t;
     ty : ty;
+    mode : Cpp_ir.Param_mode.t;  (** how the entry is passed it *)
     pointer_safe : bool;
   }
 end
@@ -366,17 +367,19 @@ module Machine_entry = struct
   type t = {
     enter_id : Id.t;  (** Frame struct entering this point goes through *)
     params : (Id.t * ty) list;  (** The parameters this entry binds *)
+    modes : Cpp_ir.Param_mode.t list;  (** How each of {!Machine_entry.params} is passed *)
     varying : bool list;  (** Mask over {!Machine_entry.params} *)
   }
 end
 
-(** An entry binding [params], entered through [enter_id], carrying the
-    positions [varying] selects. *)
-let machine_entry ~enter_id ~params ~varying =
+(** An entry binding [params], passed as [modes] says, entered through
+    [enter_id], carrying the positions [varying] selects. *)
+let machine_entry ~enter_id ~params ~modes ~varying =
   ignore
     (map2_exn ~what:"a machine entry's varying mask" (fun _ _ -> ()) varying
        params );
-  {Machine_entry.enter_id = enter_id; params = params; varying = varying}
+  ignore (map2_exn ~what:"a machine entry's modes" (fun _ _ -> ()) modes params);
+  {Machine_entry.enter_id = enter_id; params = params; modes; varying = varying}
 
 (** The parameters [en] carries in its frame: those that vary across calls.
     The invariant ones are in scope at the handler already. *)
@@ -406,17 +409,17 @@ end
     all-false: only an entry whose parameters come from the enclosing
     function's own can borrow rather than own them. *)
 let entry_emission ?pointer_safe en body =
-  let params = entry_varying_params en in
+  let params = List.combine (entry_varying_params en) (filter_by_mask en.Machine_entry.varying en.modes) in
   let params =
     match pointer_safe with
     | None ->
       List.map
-        (fun (id, ty) -> {Frame_param.name = id; ty = ty; pointer_safe = false})
+        (fun ((id, ty), mode) -> {Frame_param.name = id; ty = ty; mode; pointer_safe = false})
         params
     | Some ps ->
       map2_exn ~what:"an entry emission's pointer-safe mask"
-        (fun safe (id, ty) ->
-          {Frame_param.name = id; ty = ty; pointer_safe = safe} )
+        (fun safe ((id, ty), mode) ->
+          {Frame_param.name = id; ty = ty; mode; pointer_safe = safe} )
         ps params
   in
   {Entry_emission.id = en.enter_id; params = params; body = body}
@@ -556,6 +559,7 @@ module Adopted = struct
     entry_id : Id.t;
         (** The synthetic name {!Adopted.install} routes this entry's calls through *)
     params : (Id.t * ty) list;  (** Parameters, in call-argument order *)
+    modes : Cpp_ir.Param_mode.t list;  (** How each of {!Adopted.params} is passed *)
     ret : ty option;
         (** The body's result type, where its lambda records one.  The entry
             shares the machine's one [_result], so it must be the function's. *)
@@ -633,7 +637,8 @@ let adopt_local_fix ~unit ~stmts ~planned = function
                                                        body;
                                                        return_type;
                                                        fixpoint = lambda_fixpoint;
-                                                       binders; _}) -> (
+                                                       binders;
+                                                       modes; _}) -> (
     match (lambda_fixpoint, fixpoint_self lambda_fixpoint params) with
     | None, _ | _, None -> None
     | Some ({name; _} as fixpoint), Some self_id ->
@@ -712,6 +717,7 @@ let adopt_local_fix ~unit ~stmts ~planned = function
           { Adopted.name = name;
             entry_id = entry_id;
             params = params;
+            modes = param_modes ~what:("the local fixpoint " ^ name) modes params;
             ret = return_type;
             captures = captures;
             binders = binders @ fixpoint.captured;
@@ -1590,10 +1596,10 @@ let make_param_copies ~unit varying_params =
       Bind_variable (id, Declare (stripped, None), f)
   in
   List.map
-    (fun {Frame_param.name = id; ty = ty; pointer_safe} ->
+    (fun {Frame_param.name = id; ty = ty; mode; pointer_safe} ->
       if not pointer_safe then bind_field id ty
       else
-        match borrowed_value_param_pointee unit ty with
+        match borrowed_value_param_pointee unit mode ty with
         | Some t ->
           Bind_variable (id, Declare (Reference (Lvalue, Const t), None),
                  Dereference (Access (Dot, Local (id_f), id)))
@@ -2014,6 +2020,7 @@ let fix_handler_bindings field_names cf_ps handler =
     @param check    Call checker for identifying recursive calls
     @param tparams  Template parameter context of the enclosing function
     @param params   Function parameters [(id, type)]
+    @param modes    How each of [params] is passed, parallel to it
     @param varying  Which of [params] the machine's own entry varies, as its
                     ControlIR says
     @param binders  The Core binder each parameter, or capture, stands for, by
@@ -2026,9 +2033,13 @@ let fix_handler_bindings field_names cf_ps handler =
     @raise Not_linearisable where no machine can be made: the recursion plan
            and the body disagree, the plan has no resume point for a call, or
            a frame would point at a copy its handler took. *)
+(* How an adopted entry is passed a variable it captures, a local of the
+   scope: as the local is declared, its declaration its only record. *)
+let capture_mode ty = Cpp_ir.Param_mode.spelled ty
+
 let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?entered_by
     ?(entered = fun ~resumes:_ _ -> ()) ?(outer_env = []) ?(binders = []) ?(entered_pointers = fun _ -> false) ~parts
-    check tparams params ret_ty body =
+    ~modes check tparams params ret_ty body =
   (* An adopted body becomes a second entry point of this machine rather than
      a machine of its own: two machines cannot unwind each other's stack, so
      loopifying them separately leaves the recursion in place.  The calls that
@@ -2100,10 +2111,10 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
     | None -> body
     | Some (ad, _) -> ad.install body
   in
-  let pointer_safe = pointer_safe_flags unit ~parts params in
+  let pointer_safe = pointer_safe_flags unit ~parts ~modes params in
   (* Loopifying a function on its own gives a machine with one entry: the
      function itself, entered through [_call]. *)
-  let own_entry = machine_entry ~enter_id:id_enter ~params ~varying in
+  let own_entry = machine_entry ~enter_id:id_enter ~params ~modes ~varying in
   let pointer_safe_varying = filter_by_mask varying pointer_safe in
   (* The type environment is lexical: the parameters and what the enclosing
      scope binds (a local fixpoint's frame saves the variables it captures as
@@ -2113,8 +2124,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   let env = params @ outer_env in
   (* A parameter that is a raw pointer already -- a method's receiver,
      [_self] -- takes a pointer at every entry. *)
-  let is_pointer_param (_, ty) = match ty with Pointer _ | Const (Pointer _) -> true | _ -> false in
-  let entry_pointers = List.map2 ( || ) pointer_safe (List.map is_pointer_param params) in
+  let entry_pointers = List.map2 ( || ) pointer_safe (List.map Cpp_ir.Param_mode.is_receiver modes) in
   (* Of the adopted entry's parameters, those its frames hold by pointer:
      its parameters as the plan has them, of a type a pointer can stand for.
      The variables it captures are copied into its frames, but one the scope
@@ -2147,15 +2157,15 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
             | Some _ | None -> false )
           ad.body
       in
-      List.map
-        (fun (id, ty) ->
-          Option.has_some (borrowed_value_param_pointee unit ty)
+      List.map2
+        (fun (id, ty) mode ->
+          Option.has_some (borrowed_value_param_pointee unit mode ty)
           && Option.cata entered_pointers false (List.assoc_opt id ad.binders) )
-        ad.params
+        ad.params ad.modes
       @ List.map
           (fun (id, ty) ->
             List.exists (Id.equal id) !dereferences
-            && Option.has_some (borrowed_value_param_pointee unit ty)
+            && Option.has_some (borrowed_value_param_pointee unit (capture_mode ty) ty)
             && passed_to_pointer id )
           capture_params
   in
@@ -2210,6 +2220,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
           machine_entry
             ~enter_id:(Id.of_string (Base.Generated_name.separate_underscores (Id.to_string id_enter ^ "_" ^ ad.name)))
             ~params
+            ~modes:(ad.modes @ List.map (fun (_, ty) -> capture_mode ty) capture_params)
             ~varying:(List.map (fun _ -> true) params) ) )
       adopted
   in
@@ -2310,7 +2321,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   let entry_fields ee =
     List.map
       (fun p ->
-        match p.Frame_param.pointer_safe, borrowed_value_param_pointee unit p.ty with
+        match p.Frame_param.pointer_safe, borrowed_value_param_pointee unit p.mode p.ty with
         | true, Some t -> (p.name, Pointer (Const t))
         | _ -> (p.name, frame_field_type p.ty) )
       ee.Entry_emission.params

@@ -259,9 +259,10 @@ let check_jumps ~loop (f : func) ~continues ~jumped =
         ++ str (Base.Table.kername_of_global (fst f.path.outer))
         ++ str " takes are not its Continues" )
 
-(* Whether a frame can hold a parameter declared at [ty] by pointer: one
-   borrowed of a value type ({!Tail.borrowed_value_param_pointee}). *)
-let holdable_type ~unit ty = Option.has_some (Tail.borrowed_value_param_pointee unit ty)
+(* Whether a frame can hold a parameter passed as [mode] says, declared at
+   [ty], by pointer: one borrowed of a value type
+   ({!Tail.borrowed_value_param_pointee}). *)
+let holdable_type ~unit mode ty = Option.has_some (Tail.borrowed_value_param_pointee unit mode ty)
 
 (* Whether a frame can hold by pointer the parameter at declared position
    [k] of the callable [r], of Core type [ty], as [r]'s callable plan passes
@@ -269,45 +270,51 @@ let holdable_type ~unit ty = Option.has_some (Tail.borrowed_value_param_pointee 
    [r] passes its parameters. *)
 let planned_holdable ~unit r k ty =
   Option.map
-    (fun passing -> Frame_storage.passed_holdable unit (List.nth_opt passing k) ty)
-    (Option.bind (Core_plan.Callable_abi.lookup unit.callables r) Core_plan.Callable_abi.passing)
+    (fun modes ->
+      Frame_storage.passed_holdable unit
+        (Option.map (fun (m : Cpp_ir.Param_mode.t) -> m.ownership) (List.nth_opt modes k))
+        ty )
+    (Option.bind (Core_plan.Callable_abi.lookup unit.callables r) Core_plan.Callable_abi.modes)
 
-(* [held k cty] for {!storage_at} of the machine of the callable [r], its
-   loop [l], the C++ parameter at [k] declared at [cty] and standing for the
+(* [held k mode cty] for {!storage_at} of the machine of the callable [r], its
+   loop [l], the C++ parameter at [k] passed as [mode] says, declared at [cty] and standing for the
    loop's parameter [positions] gives: as [r]'s plan passes the parameter at
    declared position [declared k] ({!planned_holdable}); where no plan says,
-   or it stands for none of [l]'s, as its declared type does
+   or it stands for none of [l]'s, as its mode does
    ({!holdable_type}).  The two differ only under Reuse with NonAtomicRc,
    where the declared type takes any value it does not recognise as boxed
    -- an enum, or an alias of an erased type -- for a value inductive.  A
    frame spells the pointer from the declared type: one the plan holds by
    pointer that it cannot spell so is held by value, and reported under
    [CRANE_CHECK_IR]. *)
-let planned_held ~unit r (l : Control_ir.Term.loop) positions ~declared k cty =
+let planned_held ~unit r (l : Control_ir.Term.loop) positions ~declared k mode cty =
   match List.nth_opt positions k with
   | Some (Some i) -> (
     match planned_holdable ~unit r (declared k) (snd (List.nth l.parameters i)) with
-    | Some true when not (holdable_type ~unit cty) ->
+    | Some true when not (holdable_type ~unit mode cty) ->
       Base.Probe.violation "frame storage"
         Pp.(
           str "the plan of " ++ str (Base.Table.kername_of_global r) ++ str " lends its parameter " ++ int (declared k)
           ++ str " for a frame to hold by pointer, at a declared type no pointer spells" );
       false
     | Some planned -> planned
-    | None -> holdable_type ~unit cty )
-  | Some None | None -> holdable_type ~unit cty
+    | None -> holdable_type ~unit mode cty )
+  | Some None | None -> holdable_type ~unit mode cty
 
 (* The parameters of every local fixpoint's lambda in [stmts], each by the
-   Core binder translation records it binds, with the type it declares. *)
+   Core binder translation records it binds, with how it is passed and the
+   type it declares. *)
 let fixpoint_parameters stmts =
   let found = ref [] in
   let rec fe e =
     ( match e with
-    | Lambda {fixpoint = Some _; params; binders; _} ->
+    | Lambda {fixpoint = Some f; params; binders; modes; _} ->
       List.iter
         (fun (ty, x) ->
-          match Option.bind x (fun x -> List.assoc_opt x binders) with
-          | Some b -> found := (b, ty) :: !found
+          match Option.bind x (fun x -> Option.map (fun b -> (x, b)) (List.assoc_opt x binders)) with
+          | Some (x, b) ->
+            let mode = List.hd (Analysis.param_modes ~what:("the local fixpoint " ^ Id.to_string f.name) modes [(x, ty)]) in
+            found := (b, mode, ty) :: !found
           | None -> () )
         (List.rev params)
     | _ -> () );
@@ -337,8 +344,8 @@ let lifted_positions (l : Control_ir.Term.loop) params =
    of the loops its entries enter ({!Frame_storage}), as each is
    represented: a parameter of the loop by the C++ parameter of [params]
    standing for it, at its position in [positions] ([None]: it stands for
-   none, and no frame holds it by pointer), held by pointer where [held k ty]
-   of the one at [k] of type [ty]; one of an entered loop, where the machine
+   none, and no frame holds it by pointer), passed as [modes] says, held by
+   pointer where [held k mode ty] of the one at [k] passed as [mode] says, of type [ty]; one of an entered loop, where the machine
    is the function [entering]'s, as the plan of the local fixpoint the loop
    is made from passes it ({!Frame_storage.local_holdable}) -- with no
    [entering], none is held by pointer.  Under [CRANE_CHECK_IR], the
@@ -346,17 +353,20 @@ let lifted_positions (l : Control_ir.Term.loop) params =
    counting from [entering]'s parameters, must be declared at a type a
    pointer spells exactly where the plan holds it so.  The parameters'
    flags, in order, and those of the entered loops' by the Core binder. *)
-let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~held body =
+let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~modes ~held body =
   let lambda_params = lazy (if Option.has_some entering then fixpoint_parameters body else []) in
   let of_entering (b : Core.Binder.t) = Option.cata (fun r -> GlobRef.UserOrd.equal b.origin r) false entering in
   let holdable : Frame_storage.parameter -> bool = function
     | Own i ->
-      List.exists2 (fun p (k, (_, ty)) -> p = Some i && held k ty) positions (List.mapi (fun k p -> (k, p)) params)
+      List.exists2
+        (fun p (k, ((_, ty), mode)) -> p = Some i && held k mode ty)
+        positions
+        (List.mapi (fun k p -> (k, p)) (List.combine params modes))
     | Entered {loop; index; level} ->
       let planned = Option.has_some entering && Frame_storage.local_holdable unit loop index = Some true in
       Frame_storage.check_local index ~planned ~declared:(fun () ->
           List.exists
-            (fun ((b : Core.Binder.t), ty) -> of_entering b && b.level = level && holdable_type ~unit ty)
+            (fun ((b : Core.Binder.t), mode, ty) -> of_entering b && b.level = level && holdable_type ~unit mode ty)
             (Lazy.force lambda_params) );
       planned
   in
@@ -377,6 +387,7 @@ let storage_at ~unit ?entering (l : Control_ir.Term.loop) positions params ~held
    standing for none and no parameter of an entered loop held by pointer, as
    a local machine's ({!Loopify.member_plan}).  [None] otherwise. *)
 let machine_storage ~unit (f : func) params body (l : Control_ir.Term.loop) =
+  let modes = Loopify.function_modes f params in
   match l.loop with
   | Member _ ->
     let r = fst f.path.outer in
@@ -384,7 +395,7 @@ let machine_storage ~unit (f : func) params body (l : Control_ir.Term.loop) =
       Option.map
         (fun positions ->
           let n = List.length params in
-          storage_at ~unit l positions params
+          storage_at ~unit l positions params ~modes
             ~held:(planned_held ~unit r l positions ~declared:(fun k -> n - 1 - k))
             body )
         (lifted_positions l params)
@@ -395,7 +406,7 @@ let machine_storage ~unit (f : func) params body (l : Control_ir.Term.loop) =
     else
       let n = List.length params in
       Some
-        (storage_at ~unit ~entering:r l positions params
+        (storage_at ~unit ~entering:r l positions params ~modes
           ~held:(planned_held ~unit r l positions ~declared:(fun k -> n - 1 - k)) body)
 
 (* The function [f], generated under the template parameters [tparams],
@@ -417,8 +428,10 @@ let rec lower_function ~unit ~tparams (f : func) {loop = l; lowering; varying; p
     let jumps = ref [] in
     let jumped e = jumps := Analysis.made_of e :: !jumps in
     let exposed = Analysis.expose_tail_calls (jump continues) body in
-    match Tail.transform_tail ~unit ~jumped ~moves ~varying ~parts tparams (jump continues) params
-      f.return_type exposed with
+    match
+      Tail.transform_tail ~unit ~jumped ~moves ~varying ~parts ~modes:(Loopify.function_modes f params) tparams
+        (jump continues) params f.return_type exposed
+    with
     | exception Analysis.Not_linearisable why -> Error (Loopify.Declined why)
     | loop -> (
       if Base.Probe.checking () then check_jumps ~loop:"tail loop" f ~continues ~jumped:(List.rev !jumps);
@@ -587,7 +600,8 @@ let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lam
   match ((Core_to_control.Lower_control.loop (Unit_plan.Context.control unit)) member_loop, lowering) with
   | Some (Loop l), Some lowering when Control_ir.Term.continues l.body <> [] -> (
     let params = List.filter_map (fun (ty, x) -> Option.map (fun x -> (x, ty)) x) (List.rev lam.params) in
-    match Loopify.member_plan ~unit ~frames:(lowering = Frames) member params with
+    let modes = Analysis.param_modes ~what:("the local fixpoint " ^ Id.to_string name) lam.modes params in
+    match Loopify.member_plan ~unit ~frames:(lowering = Frames) ~modes member params with
     | None -> unlowered "its lambda takes other parameters than its loop"
     | Some {member_varying = varying; member_parts = parts; member_moves = moves} ->
       let continues = Control_ir.Term.continues l.body in
@@ -599,10 +613,10 @@ let local_loop ~unit ~owner ~function_ ~lifted ~member ~tparams ~name (lam : lam
         match lowering with
         | Tail | Modulo_cons ->
           Some
-            (Tail.transform_tail ~unit ~jumped ~moves ~varying ~parts tparams (jump continues) params ret_ty
+            (Tail.transform_tail ~unit ~jumped ~moves ~varying ~parts ~modes tparams (jump continues) params ret_ty
                exposed)
         | Frames ->
-          Loopify.local_frame_machine ~unit ~member ~name ~binders:(Analysis.lambda_binders lam) ~varying ~parts
+          Loopify.local_frame_machine ~unit ~member ~name ~binders:(Analysis.lambda_binders lam) ~varying ~parts ~modes
             ~tparams (jump continues) params ret_ty exposed
       in
       match body () with
@@ -699,8 +713,11 @@ let lower_method ~unit ~tparams ~self_ty (m : meth) =
       match (lowering, positions) with
       | Frames, Some positions ->
         let params = (Id.of_string "_self", self_ty) :: m.params in
-        let held k ty = k = 0 || planned_held ~unit r l positions ~declared:(fun k -> k - 1) k ty in
-        let own, _ = storage_at ~unit ~entering:r l positions params ~held m.body in
+        let modes =
+          Cpp_ir.Param_mode.receiver :: Analysis.param_modes ~what:("the method " ^ Id.to_string m.name) m.modes m.params
+        in
+        let held k mode ty = k = 0 || planned_held ~unit r l positions ~declared:(fun k -> k - 1) k mode ty in
+        let own, _ = storage_at ~unit ~entering:r l positions params ~modes ~held m.body in
         List.mapi (fun k (part, pointer) -> part || (k > 0 && pointer)) (List.combine parts own)
       | (Frames | Modulo_cons | Tail), _ -> parts
     in

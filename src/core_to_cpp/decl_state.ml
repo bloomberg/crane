@@ -768,6 +768,7 @@ let conversion_to_other_instantiation cx ~leading ~name ~templates ~vars ~fields
         is_noexcept = false;
         is_conversion = true;
         binders = [];
+        modes = [];
         receiver_binder = None;
         loop = None }
     in

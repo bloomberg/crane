@@ -32,9 +32,9 @@ let rec value_inductive ~abbreviations : Core.Type.t -> bool = function
   | Core.Type.Meta {contents = Some t} -> value_inductive ~abbreviations t
   | _ -> false
 
-let passed_holdable u passing ty =
-  match passing with
-  | Some Core_plan.Callable_abi.Borrowed -> value_inductive ~abbreviations:true ty
+let passed_holdable u ownership ty =
+  match ownership with
+  | Some Cpp_ir.Param_mode.Borrowed -> value_inductive ~abbreviations:true ty
   | Some Owned -> Base.Table.reuse_here () && Unit_plan.Context.non_atomic_rc u && value_inductive ~abbreviations:true ty
   | Some Forwarded | None -> false
 
