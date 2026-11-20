@@ -72,11 +72,20 @@ template <class T> struct box : shared_block, pool_detail::pooled<box<T>> {
 // One per held type: what the handle's tag points at.  [inline_] is a value
 // held in the handle and [counted] one that is a counted word; [immortalize]
 // makes the box, or the word, and every block it holds immortal.
+//
+// [held] is the tag of the held type itself: a value boxed as itself and
+// readable at another type too ([erased]) has a tag of its own, and is still
+// read at its own type through [held].  [erased], when set, is the tag of the
+// instantiation code that erased the type's parameters reads the value at
+// (see [obj::viewed_as]), and [to_erased] builds the value at it.
 struct type_tag {
   const std::type_info &info;
   bool inline_;
   bool counted;
   void (*immortalize)(const void *) noexcept;
+  const type_tag *held;
+  const type_tag *erased;
+  void (*to_erased)(const void *, void *);
 };
 template <class T> void immortalize(const void *p) noexcept {
   if constexpr (held_handle<T>) {
@@ -89,7 +98,20 @@ template <class T> void immortalize(const void *p) noexcept {
   }
 }
 template <class T>
-inline constexpr type_tag tag_of{typeid(T), held_in_place<T>, held_handle<T>, &immortalize<T>};
+inline constexpr type_tag tag_of{typeid(T), held_in_place<T>, held_handle<T>, &immortalize<T>, &tag_of<T>,
+                                 nullptr, nullptr};
+
+// The tag of a counted word [S] boxed as itself and read, where code that
+// erased its type's parameters reads it, at [E] -- built by [Conv].
+template <class S, class E, void (*Conv)(const void *, void *)>
+inline constexpr type_tag tag_viewed{typeid(S), true, true, &immortalize<S>, &tag_of<S>, &tag_of<E>, Conv};
+
+// Whether [T] is a generated inductive at the instantiation code that
+// erased its parameters builds and reads it at: every argument [crane::obj].
+template <class T, class O> struct all_obj : std::false_type {};
+template <template <class...> class C, class... A, class O>
+  requires requires { typename C<A...>::variant_t; }
+struct all_obj<C<A...>, O> : std::bool_constant<(sizeof...(A) > 0) && (std::is_same_v<A, O> && ...)> {};
 
 } // namespace obj_detail
 
@@ -140,6 +162,35 @@ public:
       ::new (static_cast<void *>(bytes_)) T(std::forward<V>(v));
     else
       box_ = new obj_detail::box<T>(std::forward<V>(v));
+  }
+
+  // [v], a counted word, boxed as itself, and readable at [E] too: the
+  // instantiation code that erased its type's parameters reads it at.  [Conv]
+  // builds it at [E] -- one level, its fields boxed in turn -- only for a
+  // reader at [E].  Boxing it at [E] up front would rebuild it, and every
+  // value under it, for a reader that, more often than not, reads it back at
+  // the type it had.
+  template <class E, void (*Conv)(const void *, void *)> struct viewed_as {};
+  template <class V, class E, void (*Conv)(const void *, void *), class S = std::decay_t<V>>
+    requires obj_detail::held_handle<S>
+  obj(viewed_as<E, Conv>, V &&v) : tag_(&obj_detail::tag_viewed<S, E, Conv>) {
+    ::new (static_cast<void *>(bytes_)) S(std::forward<V>(v));
+  }
+
+  // The held value at [U], the type it is readable at besides its own (see
+  // [viewed_as]); [std::bad_any_cast] if it is not.
+  template <class U> U read_erased() const {
+    if (!tag_ || tag_->erased != &obj_detail::tag_of<U>)
+      throw std::bad_any_cast();
+    alignas(U) unsigned char buf[sizeof(U)];
+    tag_->to_erased(bytes_, buf);
+    U *p = std::launder(reinterpret_cast<U *>(buf));
+    U r(std::move(*p));
+    p->~U();
+    return r;
+  }
+  template <class U> bool reads_erased_as() const noexcept {
+    return tag_ && tag_->erased == &obj_detail::tag_of<U>;
   }
 
   obj(const obj &o) noexcept : tag_(o.tag_) {
@@ -194,7 +245,7 @@ public:
 // The held value, or null when [o] is empty or holds another type.
 template <class T> const T *any_cast(const obj *o) noexcept {
   using U = std::remove_cv_t<T>;
-  if (!o || o->tag_ != &obj_detail::tag_of<U>)
+  if (!o || !o->tag_ || o->tag_->held != &obj_detail::tag_of<U>)
     return nullptr;
   if constexpr (obj_detail::held_in_place<U>)
     return std::launder(reinterpret_cast<const U *>(o->bytes_));
@@ -205,14 +256,28 @@ template <class T> T *any_cast(obj *o) noexcept {
   return const_cast<T *>(any_cast<T>(static_cast<const obj *>(o)));
 }
 
+namespace obj_detail {
+// A read at the instantiation code that erased a type's parameters reads a
+// counted word at may find another instantiation boxed as itself (see
+// [obj::viewed_as]) and build the value it asks for, so such a read hands
+// out a value: the count bump a reference would have saved.
+template <class U>
+inline constexpr bool read_by_value = held_handle<U> && all_obj<U, obj>::value;
+template <class U> using lvalue_read_t = std::conditional_t<read_by_value<U>, U, const U &>;
+} // namespace obj_detail
+
 // From an lvalue: a reference into the box.
 template <class T>
-const std::remove_cvref_t<T> &any_cast(const obj &o) {
-  if (auto *p = any_cast<std::remove_cvref_t<T>>(&o))
+obj_detail::lvalue_read_t<std::remove_cvref_t<T>> any_cast(const obj &o) {
+  using U = std::remove_cvref_t<T>;
+  if (auto *p = any_cast<U>(&o))
     return *p;
-  throw std::bad_any_cast();
+  if constexpr (obj_detail::read_by_value<U>)
+    return o.template read_erased<U>();
+  else
+    throw std::bad_any_cast();
 }
-template <class T> const std::remove_cvref_t<T> &any_cast(obj &o) {
+template <class T> obj_detail::lvalue_read_t<std::remove_cvref_t<T>> any_cast(obj &o) {
   return any_cast<T>(static_cast<const obj &>(o));
 }
 
@@ -220,8 +285,12 @@ template <class T> const std::remove_cvref_t<T> &any_cast(obj &o) {
 template <class T> std::remove_cvref_t<T> any_cast(obj &&o) {
   using U = std::remove_cvref_t<T>;
   auto *p = any_cast<U>(static_cast<obj *>(&o));
-  if (!p)
-    throw std::bad_any_cast();
+  if (!p) {
+    if constexpr (obj_detail::read_by_value<U>)
+      return o.template read_erased<U>();
+    else
+      throw std::bad_any_cast();
+  }
   if constexpr (obj_detail::held_handle<U>)
     return std::move(*p); // the handle is this one's own
   else if constexpr (!obj_detail::held_inline<U>)
