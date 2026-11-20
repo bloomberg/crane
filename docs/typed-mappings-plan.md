@@ -279,9 +279,28 @@ This milestone fixes the reported bug.
 - **Legacy/new coexistence.** A head mapped both ways is an error (design
   §22.5) unless a migration option allows the new one to win; tests cover it.
 
-## 6. Progress
+## 6. Findings during implementation
 
-- [ ] M1 declarator-correct types
+- **M1.** The assumption that no type reached the printer as `Const (Pointer _)`
+  was wrong: `Const (Reference _)` was used to mean reference-to-const (the
+  `v()`/`lazy_cell()` accessors, erased `std::any` parameters) and
+  `Const (Pointer _)` to mean pointer-to-const (the loopify receiver
+  `_loop_self`). Those producers now build `Reference (Lvalue, Const t)` and
+  `Pointer (Const t)`, and `CRANE_CHECK_IR` rejects `Const (Reference _)`. Once
+  the receiver was typed `Pointer (Const T)`, passes that chose borrowed-shadow
+  rewriting by matching `Pointer _` started rewriting it; they now use
+  `Tail.borrowed_pointer_shadow`, which excludes the receiver *by name*. M5's
+  explicit parameter modes (D4) must replace that name test with data.
+- **M2.** Descriptor field positions count from 0 after the family parameters.
+  `Crane Show Mapping` and `Crane Check Mapping ... Selects | Unmapped | Fails
+  With` are the test hooks; `CRANE_TRACE_MAPPINGS=1` traces discovery.
+- **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
+  existing worktree (stale `_build/census`: dune does not rebuild a sibling
+  `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
+
+## 7. Progress
+
+- [x] M1 declarator-correct types
 - [x] M2 descriptor library and discovery
 - [ ] M3 type mappings in the pipeline
 - [ ] M4 operation mappings
