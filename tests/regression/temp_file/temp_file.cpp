@@ -1,9 +1,8 @@
 #include "temp_file.h"
 
-std::string TempFile::make_temp_file(std::string prefix) {
+std::string TempFile::make_temp_file(const std::string &prefix) {
   return [&]() -> std::string {
-    std::string _n =
-        std::filesystem::path(std::move(prefix)).filename().string();
+    std::string _n = std::filesystem::path(prefix).filename().string();
     if (_n.empty() || _n == "." || _n == "..") _n = "tmp";
     std::filesystem::path _base = std::filesystem::temp_directory_path();
     std::random_device _rng;
@@ -26,10 +25,9 @@ std::string TempFile::make_temp_file(std::string prefix) {
   }();
 }
 
-std::string TempFile::make_temp_dir(std::string prefix) {
+std::string TempFile::make_temp_dir(const std::string &prefix) {
   return [&]() -> std::string {
-    std::string _n =
-        std::filesystem::path(std::move(prefix)).filename().string();
+    std::string _n = std::filesystem::path(prefix).filename().string();
     if (_n.empty() || _n == "." || _n == "..") _n = "tmp";
     std::filesystem::path _dir = std::filesystem::temp_directory_path();
     std::random_device _rng;

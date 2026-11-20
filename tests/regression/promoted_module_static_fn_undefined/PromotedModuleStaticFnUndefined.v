@@ -33,6 +33,6 @@ Module PromotedModuleStaticFnUndefined.
 End PromotedModuleStaticFnUndefined.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Extraction "promoted_module_static_fn_undefined" PromotedModuleStaticFnUndefined.

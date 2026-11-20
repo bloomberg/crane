@@ -31,5 +31,5 @@ Definition t : bool := Nat.eqb (nth 0 (rom_ports (execute_wrr sample)) 0) 1.
 End WrrPreservesOtherPorts.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "wrr_preserves_other_ports" WrrPreservesOtherPorts.

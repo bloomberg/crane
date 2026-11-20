@@ -67,7 +67,7 @@ Definition test_forest_size := NatTree.forest_size NatTree.small_forest.
 Definition test_tree_sum := NatTree.tree_sum NatTree.sample_tree.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatIntStd.
 
 Crane Extraction "mutual_functor" test_tree_size test_forest_size test_tree_sum.

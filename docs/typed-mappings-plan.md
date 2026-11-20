@@ -586,9 +586,126 @@ This milestone fixes the reported bug.
   binding is materialised rather than kept within its owner's proven
   lifetime; view ABIs for first-class functions (12.9, deferred); a string
   literal passed as a view is spelled `std::string_view{std::string("...")}`.
+- **M8 (partial).** Migrated to typed descriptors, each with `Import`
+  added to the tests that reached it by a bare `Require` (D5, 219 files,
+  plus `recursive_library_datatypes/Lib.v`, which reached `option` only
+  through `Src`'s legacy mapping): `StdCore.v` (`option`, `prod`,
+  `fst`/`snd`, `int63`, `float`, `char63` and their primitives), `Std.v`
+  strings (M7's typed `std::string` mapping; `StringView.v` now only
+  re-exports `Std`), `NatIntStd.v`, `NInt.v`, `ZInt.v`, `NatGMP.v`,
+  `NGMP.v`, `ZGMP.v`; their `Crane Extract Numeral`s are numeral
+  descriptors. What the migration needed of the pipeline:
+  - Match templates: a binder whose field is declared at a type parameter
+    is spelled `const %tN&` (as the legacy option template was), a
+    recursive field (`S n`) as the canonical type, a field of another
+    mapped inductive (`Npos p`) as that mapping's closed canonical type,
+    else `auto`; owned projections likewise. A pair or tuple whose single
+    constructor projects `std::get<j>(%scrut)` for every field is matched
+    by a structured binding, so `Foreign_template.structured_binding` still
+    lets an owned scrutinee be taken apart by value (the design's
+    `%scrut.first` would have lost that).
+  - A name several retained binders share identifies none and is read as
+    anonymous: every binder of a primitive (`PrimInt63.add`) is `x`.
+  - `Shared_args`: for a `PureOperation` none of whose computing
+    arguments may have an effect, only the arguments its text repeats are
+    bound ahead (and dropped ones evaluated), as legacy did; the rest stay
+    in place. Binding every computing argument ahead (M4) turned each
+    `a * b + c * d` into named temporaries. Evaluation order is observable
+    only through effects; an argument "may have an effect" only when it
+    calls a non-pure operation mapping. A legacy mapping declares nothing
+    and is taken as pure, as legacy lowering took it: treating it as opaque
+    (22.2) bound every `s.length()` of `External.StringViewStd` ahead of
+    the int63 arithmetic around it (`tokenizer`). `typed_mapping_operations`'
+    effectful legacy `tick` keeps its repeated argument bound and its
+    ignored one as a statement; order across the others is the legacy one.
+  - A match tests constructor views in the order `AlgebraicInterface`
+    lists them, the last untested (documented in `Descriptor.v`): a view's
+    test may assume the earlier ones failed. `positive` lists `xH`, `xI`,
+    `xO` and tests `== 1`, then oddness, as the legacy template did.
+  - A module type's concept spells a typed head through its legacy text,
+    so `M`'s members inside its arguments are `typename M::t` (a `Plain`
+    structured type had lost that).
+  - `is_literal_type`: a typed head is literal as its copy model says
+    (`BitCopy`; `CopyComponents` of literal components); after
+    instantiation `External (s, _)` naming the canonical type of a plan
+    that duplicates or retains (`mpz_class`, `std::string`) is not (it was
+    taken for a literal, giving `static constexpr mpz_class`).
+  - `PeanoNat.Nat.add` &c. are the same constants as `Nat.add` (an
+    `Include`): mapping both is an ambiguity, so only `Nat.*` and
+    `PeanoNat.Nat.eq_dec` are mapped. A test-local legacy override of a
+    now-typed operation is a conflict (22.5); `validated_pump_delivery_trace`
+    dropped its five `PeanoNat` overrides (four identical, `modulo` without
+    Rocq's zero guard).
+  GMP numerals are gmpxx's exact `(n_mpz)` literal (`IntegerToken "("
+  "_mpz)"`): legacy `mpz_class(%n)` could not hold 2^63 or more, which
+  `numeral_wrap_gmp` overrode with a legacy `Crane Extract Numeral`; the
+  override is gone (a legacy numeral on a typed head is silently ignored,
+  `get_numeral_info` asks the typed plan first; it should be refused as a
+  22.5 conflict). `typed_mapping_golden` checks `list nat` as unmapped
+  instead of `nat`.
+  Numerals: `Mapping_plan.numerals` compiles the descriptor;
+  `Table.get_numeral_info` answers from it first (`typed` carries the
+  cases), the format is the emitter's (`IntegerToken p s` is `p%ns`,
+  `DecimalConstructor c` is `c("%n")`), converters are the descriptor's
+  (found per extraction by resolving each head's instance without caching
+  its plan, `Mapping_plan.numeral_converters`), and
+  `Numeral_literal.typed_value` evaluates a constructor term by the
+  actions (`Identity`/`Negate` read the field's own type's descriptor, or a
+  binary `positive` where it has none), with no constructor name known to
+  the plugin. Validation adds 19.7 rules 3-5: a successor/double action's
+  field is of the mapped type, an identity/negate field of another
+  inductive, the emitter's text is a numeric-literal wrapper or a
+  qualified name, converters return the mapped type, one case per
+  constructor.
+  Output changes, reviewed: an optional or pair of by-value components is
+  passed by value (design 15.2; legacy passed `const&`, and a pair holding
+  a legacy custom type such as `Real` is by value too, since a legacy
+  custom type constant reads by value); some functions returning one
+  became `constexpr`; a function that only reads a string takes
+  `std::string_view`, one that keeps or concatenates it `const
+  std::string&` instead of a moved-from copy; `get` is
+  `crane::string_get`; `positive` constructor chains fold into literals (`3u` for
+  `(2u * 1u + 1u)`); option/pair headers are included per extraction.
+  `cat` reads both strings canonically and is spelled `+`: through views
+  (M7) every link of a chain allocated a string of its own and each
+  argument was wrapped in `std::string_view{...}`, where `a + b + c`
+  appends to one temporary; `string_views` changed accordingly. Still
+  worse than legacy: a string literal passed as a view is
+  `std::string_view{std::string("...")}`, and a view of a parameter read by
+  `length` is spelled `(std::string_view{s}).size()`.
+  Compiled interfaces (`Base.Mapping_interface`, design 20): when an
+  extraction finishes, the unit records (a `superglobal` libobject beside
+  `claim_extracted_unit`) every head it compiled a type or operation plan
+  for, with the selected instance and a digest of the compiled plan
+  (canonical type, components, copy, access, value and lifetime model,
+  views, constructor plans, release; an operation's template, argument
+  uses/forms/views, result, facts, purity, headers; references by kernel
+  name). An extraction that includes the unit's header checks each entry
+  before lowering and refuses a different instance, a different ABI, or no
+  typed mapping (`tests/regression/typed_mapping_interface`: `Use` agrees,
+  `Mismatch` is refused unmapped and with the other instance). The check
+  covers every recorded head, not only those the consumer uses.
+  Exact numbers (16): `tests/regression/typed_mapping_exact_numbers` maps
+  `nat` to `boost::multiprecision::cpp_int` (`DuplicateValue`, `const&`
+  parameters, `DecimalConstructor`, a 21-digit literal, 25!); arithmetic
+  results are wrapped in `cpp_int(...)` so no expression template outlives
+  its operands. `scripts/compile-boost.sh` puts Boost on the system
+  include path (stub when absent).
+  Not done, and why no deprecation warning yet: BDE mappings (`BDE.v`,
+  `NatIntBDE.v`, `NIntBDE.v`, `ZIntBDE.v`, `Monads/*BDE*`; BDE is
+  installed here, `~/Library/bde_install`, and its tests run), `Shared.v`
+  (`bool`, `sumbool`, `unit`, `PrimArray`), `Real.v`, `DequeList.v`,
+  `AsciiChar.v`, `External/*`, the monad mappings (IO, STM, threads, ITree
+  events: effectful operations) and every test-local mapping remain
+  legacy, and `Crane Extract Monad/Skip/Void` have no typed counterpart, so
+  a migrated equivalent does not exist for every standard use and the
+  legacy commands are not deprecated.
 - **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
   existing worktree (stale `_build/census`: dune does not rebuild a sibling
   `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
+  Deleting `_build/default/tests` alone leaves dune believing the copied
+  sources exist (coqdep: `z_int/ZIntTest.v: No such file or directory`);
+  delete `_build/.db` and `_build/.digest-db` with it.
 
 ## 7. Progress
 
@@ -600,3 +717,17 @@ This milestone fixes the reported bug.
 - [x] M6 ST arrays and references without views
 - [x] M7 views
 - [ ] M8 standard mappings, interfaces, deprecation
+  - [x] `Std.v`: `StdCore` (option, prod, int63, float, char63) and strings
+  - [x] number mappings: `NatIntStd`, `NInt`, `ZInt`, `NatGMP`, `NGMP`,
+        `ZGMP`, with numeral descriptors
+  - [x] compiled interfaces (`typed_mapping_interface`)
+  - [x] exact-number example (`typed_mapping_exact_numbers`, cpp_int)
+  - [ ] BDE mappings (`BDE.v`, `NatIntBDE`, `NIntBDE`, `ZIntBDE`,
+        `Monads/*BDE*`); BDE is installed here and its tests run
+  - [ ] `Shared.v` (bool, sumbool, unit, PrimArray), `Real.v`,
+        `DequeList.v`, `AsciiChar.v`, `External/*`, monad mappings
+  - [ ] refuse a legacy `Crane Extract Numeral` on a typed head (22.5)
+  - [ ] a string literal passed as a view without `std::string(...)`
+  - [ ] deprecation warnings: blocked on the two items above (no typed
+        equivalent for every standard use; `Crane Extract Monad/Skip/Void`
+        have none)

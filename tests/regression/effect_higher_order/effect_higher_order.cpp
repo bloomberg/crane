@@ -3,8 +3,8 @@
 /// 5. Effectful callback passed as argument
 void EffectHigherOrder::greet_all(const List<std::string> &names) {
   for_each_str(
-      [](std::string name) {
-        std::cout << std::string("Hello, ") + std::move(name) << '\n';
+      [](const std::string &name) {
+        std::cout << std::string("Hello, ") + name << '\n';
         return std::monostate{};
       },
       names);
@@ -12,7 +12,7 @@ void EffectHigherOrder::greet_all(const List<std::string> &names) {
 }
 
 /// 6. Callback with env effect
-std::string EffectHigherOrder::lookup_or_ask(std::string name) {
+std::string EffectHigherOrder::lookup_or_ask(const std::string &name) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -24,7 +24,7 @@ std::string EffectHigherOrder::lookup_or_ask(std::string name) {
     std::cout << std::string("Enter ") + name + std::string(":") << '\n';
     std::string line;
     std::getline(std::cin, line);
-    setenv(std::move(name).c_str(), line.c_str(), 1);
+    setenv(name.c_str(), line.c_str(), 1);
     return line;
   }
 }
@@ -45,8 +45,8 @@ EffectHigherOrder::lookup_all(const List<std::string> &names) {
 
 /// 8. Effect in let-bound function
 std::string EffectHigherOrder::process_input() {
-  crane::fn<std::string(std::string)> format = [](std::string s) {
-    return std::string("[") + std::move(s) + std::string("]");
+  crane::fn<std::string(std::string)> format = [](const std::string &s) {
+    return std::string("[") + s + std::string("]");
   };
   std::string line;
   std::getline(std::cin, line);

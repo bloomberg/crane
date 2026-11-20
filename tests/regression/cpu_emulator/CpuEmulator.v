@@ -199,5 +199,5 @@ Definition jun_pc : nat := ex_pc (execute sample (JUN 1024)).
 End CpuEmulator.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "cpu_emulator" CpuEmulator.

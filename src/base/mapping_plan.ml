@@ -20,6 +20,8 @@ type view = {
   requirement : observation_requirement;
   test : string;
   fields : (int * projection) list;
+  field_types : (int * string) list;
+  field_heads : (int * GlobRef.t) list;
 }
 
 type constructor = { source : Names.constructor; build : string; view : view option }
@@ -43,6 +45,12 @@ type views = {
   read_from_write : string option;
 }
 
+type numerals = {
+  cases : (int * numeral_action) list;
+  emitter : numeral_emitter;
+  converters : GlobRef.t list;
+}
+
 type t = {
   instance : GlobRef.t;
   head : GlobRef.t;
@@ -57,6 +65,7 @@ type t = {
   interface : interface;
   views : views;
   headers : string list;
+  numerals : numerals option;
 }
 
 let is_type_head g = Mapping_discovery.has_type_mapping g
@@ -139,6 +148,43 @@ let parameter_of_field env (d : declaration) n =
     | None -> None )
   | _ -> None
 
+(* The inductive the type of field [n] of the constructor [d] is, when it is
+   another inductive applied to no argument. *)
+let other_inductive_field env (d : declaration) n =
+  match d.reference with
+  | GlobRef.ConstructRef (((mind, _) as ind, _) as k) -> (
+    let mib = Environ.lookup_mind mind env in
+    let ty, _ = Typeops.type_of_global_in_context env (GlobRef.ConstructRef k) in
+    let decls = List.rev (fst (Term.decompose_prod_decls ty)) in
+    match List.nth_opt decls (mib.Declarations.mind_nparams + n) with
+    | Some decl -> (
+      match Constr.kind (Context.Rel.Declaration.get_type decl) with
+      | Constr.Ind (ind', _) when not (Ind.CanOrd.equal ind ind') -> Some (GlobRef.IndRef ind')
+      | _ -> None )
+    | None -> None )
+  | _ -> None
+
+(* Whether field [n] of the constructor [d] is a recursive occurrence of its
+   inductive, applied to the inductive's parameters in order. *)
+let recursive_field env (d : declaration) n =
+  match d.reference with
+  | GlobRef.ConstructRef (((mind, _) as ind, _) as k) -> (
+    let mib = Environ.lookup_mind mind env in
+    let nparams = mib.Declarations.mind_nparams in
+    let ty, _ = Typeops.type_of_global_in_context env (GlobRef.ConstructRef k) in
+    let decls = List.rev (fst (Term.decompose_prod_decls ty)) in
+    let p = nparams + n in
+    match List.nth_opt decls p with
+    | Some decl -> (
+      let head, args = Constr.decompose_app_list (Context.Rel.Declaration.get_type decl) in
+      match Constr.kind head with
+      | Constr.Ind (ind', _) when Ind.CanOrd.equal ind ind' && List.length args = nparams ->
+        List.for_all Fun.id
+          (List.mapi (fun i a -> match Constr.kind a with Constr.Rel j -> p - j = i | _ -> false) args)
+      | _ -> false )
+    | None -> false )
+  | _ -> false
+
 let starts_at text i s =
   let k = String.length s in
   i + k <= String.length text && String.sub text i k = s
@@ -174,6 +220,15 @@ let compile_template ?(renamed = []) ~fail ~stored text =
   in
   go 0;
   Buffer.contents b
+
+(* A type of the plan in the legacy type-template vocabulary. *)
+let rec text_of_type_expr = function
+  | Name s | Verbatim s -> s
+  | Apply (s, args) ->
+    s ^ "<" ^ String.concat ", " (List.map (function Type t -> text_of_type_expr t | Value v -> v) args) ^ ">"
+  | Parameter i -> Printf.sprintf "%%t%d" i
+  | Pointer t -> text_of_type_expr t ^ "*"
+  | Const t -> "const " ^ text_of_type_expr t
 
 let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
   let m = r.type_mapping in
@@ -232,6 +287,7 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     | Cpp.Unsafe_verbatim s -> Verbatim s
   in
   let template = compile_template ~fail ~stored in
+  let canonical_text = text_of_type_expr (type_expr m.type_cpp) in
   (* A view's conversions are term templates of one value argument: the
      canonical value ([%value]) or the view ([%view]) is its [%a0]. *)
   let construction ~hole = function
@@ -287,13 +343,39 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
                              | Owned_projection e -> Owned_projection (template e)
                              | Canonical_borrow_projection e -> Canonical_borrow_projection (template e)
                              | Read_view_projection e -> Read_view_projection (template e) ))
+                         v.case_fields;
+                     field_types =
+                       List.filter_map
+                         (fun (n, _) ->
+                           match parameter_of_field env c.ctor_source n with
+                           | Some i -> Some (n, Printf.sprintf "%%t%d" (position i))
+                           | None -> if recursive_field env c.ctor_source n then Some (n, canonical_text) else None)
+                         v.case_fields;
+                     field_heads =
+                       List.filter_map
+                         (fun (n, _) -> Option.map (fun g -> (n, g)) (other_inductive_field env c.ctor_source n))
                          v.case_fields })
                  c.ctor_view
              in
              {source; build; view})
            ctors)
   in
+  let numerals =
+    Option.map
+      (fun (s : numeral_spec) ->
+        { cases =
+            List.filter_map
+              (fun c ->
+                match c.numeral_constructor.reference with
+                | GlobRef.ConstructRef (_, j) -> Some (j, c.numeral_action)
+                | _ -> None)
+              s.numeral_cases;
+          emitter = s.numeral_emitter;
+          converters = List.map (fun (d : declaration) -> d.reference) s.numeral_converters })
+      m.type_numerals
+  in
   { instance = r.type_instance;
+    numerals;
     head;
     canonical = type_expr m.type_cpp;
     components = List.map (fun (x, i) -> (x, position i)) components;
@@ -324,6 +406,25 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
       else [] }
 
 let plans : t GlobRef.Map.t ref = State.cell State.Extraction GlobRef.Map.empty
+
+let compiled () = GlobRef.Map.fold (fun _ p acc -> p :: acc) !plans []
+
+let duplicates_name s =
+  GlobRef.Map.exists
+    (fun _ p ->
+      (match p.canonical with Name n | Apply (n, _) | Verbatim n -> String.equal n s | _ -> false)
+      && match p.copy with Bit_copy | Copy_components _ -> false | Retain_identity | Duplicate_value | Unknown_copy -> true)
+    !plans
+
+let numeral_converters head =
+  try
+    let env = Global.env () in
+    let sigma = Evd.from_env env in
+    let env, sigma, query, _, _ = generic_query env sigma head in
+    match Mapping_discovery.resolve_type_mapping env sigma query with
+    | Some {type_mapping = {type_numerals = Some s; _}; _} -> List.map (fun (d : declaration) -> d.reference) s.numeral_converters
+    | _ -> []
+  with e when CErrors.noncritical e -> []
 
 let find g =
   let head = match inductive_of g with Some i -> i | None -> g in
@@ -400,16 +501,7 @@ let view_arguments (type p) plan k (ty : p Cpp_ir.Type.t) : p Cpp_ir.Type.t list
       let n = List.fold_left (fun n (i, _) -> max n (i + 1)) 0 found in
       Some (List.init n (fun i -> match List.assoc_opt i found with Some t -> t | None -> Cpp_ir.Type.Any)) )
 
-let type_text plan =
-  let rec go = function
-    | Name s | Verbatim s -> s
-    | Apply (s, args) ->
-      s ^ "<" ^ String.concat ", " (List.map (function Type t -> go t | Value v -> v) args) ^ ">"
-    | Parameter i -> Printf.sprintf "%%t%d" i
-    | Pointer t -> go t ^ "*"
-    | Const t -> "const " ^ go t
-  in
-  go plan.canonical
+let type_text plan = text_of_type_expr plan.canonical
 
 let constructor_count ((mind, i) : inductive) =
   let mib = Global.lookup_mind mind in
@@ -444,6 +536,37 @@ let constructor_template k =
 let constructor_templates ip =
   List.init (constructor_count ip) (fun j -> constructor_template (ip, j + 1))
 
+(* A structured binding of the scrutinee, when that is what the one
+   constructor's view says: the canonical type is a [std::pair] or a
+   [std::tuple] with as many elements as the constructor has fields, and
+   field [j] is borrowed as [std::get<j>(%scrut)] -- what a structured
+   binding of a tuple-like type binds its [j]-th name to.  The binding
+   form lets an owned scrutinee be taken apart by value
+   ({!Cpp_ir.Foreign_template.structured_binding}). *)
+let tuple_binding p ((mind, i) as ip) n =
+  let arity = (Global.lookup_mind mind).Declarations.mind_packets.(i).Declarations.mind_consnrealdecls.(0) in
+  let tuple_like =
+    match p.canonical with
+    | Apply ("std::pair", args) -> List.length args = 2 && arity = 2
+    | Apply ("std::tuple", args) -> List.length args = arity
+    | _ -> false
+  in
+  if n <> 1 || arity = 0 || not tuple_like then None
+  else
+    match (constructor_mapping p (ip, 1)).view with
+    | Some v
+      when List.sort compare (List.map fst v.fields) = List.init arity Fun.id
+           && List.for_all
+                (fun (j, proj) ->
+                  match proj with
+                  | Canonical_borrow_projection e -> String.equal e (Printf.sprintf "std::get<%d>(%%scrut)" j)
+                  | Owned_projection _ | Read_view_projection _ -> false)
+                v.fields ->
+      Some
+        (Printf.sprintf "const auto& [%s] = %%scrut; %%br0"
+           (String.concat ", " (List.init arity (Printf.sprintf "%%b0a%d"))))
+    | _ -> None
+
 let match_template ip =
   let p = find (GlobRef.IndRef ip) in
   ( match p.interface with Abstract -> abstract_use p "match on" | Algebraic _ -> () );
@@ -459,12 +582,22 @@ let match_template ip =
           ++ Printer.pr_global (GlobRef.ConstructRef k)
           ++ spc () ++ strbrk "has no constructor view (ctor_view), but source code matches on it.")
     | Some v ->
+      let binder_type j =
+        match List.assoc_opt j v.field_types with
+        | Some t -> t
+        | None -> (
+          match List.assoc_opt j v.field_heads with
+          | Some g when is_type_head g ->
+            let t = type_text (find g) in
+            if String.contains t '%' then "auto" else t
+          | _ -> "auto" )
+      in
       let binds =
         List.map
           (fun (j, proj) ->
             match proj with
-            | Canonical_borrow_projection e -> Printf.sprintf "const auto& %%b%da%d = %s; " i j e
-            | Owned_projection e -> Printf.sprintf "auto %%b%da%d = %s; " i j e
+            | Canonical_borrow_projection e -> Printf.sprintf "const %s& %%b%da%d = %s; " (binder_type j) i j e
+            | Owned_projection e -> Printf.sprintf "%s %%b%da%d = %s; " (binder_type j) i j e
             | Read_view_projection _ ->
               fail_plan p
                 (Pp.strbrk
@@ -474,7 +607,21 @@ let match_template ip =
       in
       (v.test, String.concat "" binds ^ Printf.sprintf "%%br%d" i)
   in
-  let branches = List.init n branch in
+  match tuple_binding p ip n with
+  | Some t -> t
+  | None ->
+  (* The views are tested in the order the interface lists them, so the
+     mapping decides which test needs no condition: the last. *)
+  let listed =
+    match p.interface with
+    | Algebraic ctors ->
+      List.filter_map
+        (fun (c : constructor) -> if Ind.CanOrd.equal (fst c.source) ip then Some (snd c.source - 1) else None)
+        ctors
+    | Abstract -> []
+  in
+  let order = listed @ List.filter (fun i -> not (List.mem i listed)) (List.init n Fun.id) in
+  let branches = List.map branch order in
   match branches with
   | [] -> ""
   | [(_, body)] -> body

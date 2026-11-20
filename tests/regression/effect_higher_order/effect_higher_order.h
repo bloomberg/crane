@@ -10,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -100,9 +101,9 @@ public:
 struct EffectHigherOrder {
   /// 1. Higher-order function with effectful callback
   template <typename F0>
-    requires std::is_invocable_r_v<void, F0 &, std::string &&>
-  static void apply_effect(F0 &&f, std::string x0_) {
-    f(std::move(x0_));
+    requires std::is_invocable_r_v<void, F0 &, const std::string &>
+  static void apply_effect(F0 &&f, const std::string &x0_) {
+    f(x0_);
     return;
   }
 
@@ -142,7 +143,7 @@ struct EffectHigherOrder {
   /// 5. Effectful callback passed as argument
   static void greet_all(const List<std::string> &names);
   /// 6. Callback with env effect
-  static std::string lookup_or_ask(std::string name);
+  static std::string lookup_or_ask(const std::string &name);
   /// 7. Chain of lookups
   static List<std::string> lookup_all(const List<std::string> &names);
   /// 8. Effect in let-bound function

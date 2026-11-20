@@ -854,12 +854,13 @@ template <typename K, typename V> struct SkipList {
   template <typename T1, typename T2>
   static uint64_t
   length_aux(uint64_t fuel,
-             const std::optional<std::shared_ptr<SkipNode<T1, T2>>> &node,
+             std::optional<std::shared_ptr<SkipNode<T1, T2>>> node,
              uint64_t acc) {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     uint64_t _loop_acc = acc;
-    std::optional<std::shared_ptr<SkipNode<T1, T2>>> _loop_node = node;
+    std::optional<std::shared_ptr<SkipNode<T1, T2>>> _loop_node =
+        std::move(node);
     uint64_t _loop_fuel = fuel;
     while (true) {
       if (_loop_fuel <= 0) {

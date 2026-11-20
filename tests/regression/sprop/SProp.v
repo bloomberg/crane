@@ -49,5 +49,5 @@ Definition test_div : nat := safe_div 10 3 sI.
 End SPropTest.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "sprop" SPropTest.

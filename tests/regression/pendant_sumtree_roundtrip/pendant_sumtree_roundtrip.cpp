@@ -148,8 +148,8 @@ bool PendantSumtreeRoundtripCase::group_sums_validb(
     });
     std::optional<uint64_t> sum_opt =
         pendant_vals.template fold_right<std::optional<uint64_t>>(
-            [](const std::optional<uint64_t> &ov,
-               const std::optional<uint64_t> &acc)
+            [](std::optional<uint64_t> ov,
+               std::optional<uint64_t> acc)
                  -> std::optional<uint64_t> {
               if (ov.has_value()) {
                 const uint64_t &v = *ov;
@@ -277,8 +277,8 @@ std::optional<uint64_t> PendantSumtreeRoundtripCase::sumtree_leaf_total(
           [=](PendantSumtreeRoundtripCase::CertifiedPendant _x0) -> std::optional<
               uint64_t> { return pendant_value(n, _x0); });
   return vals.template fold_right<std::optional<uint64_t>>(
-      [](const std::optional<uint64_t> &ov,
-         const std::optional<uint64_t> &acc)
+      [](std::optional<uint64_t> ov,
+         std::optional<uint64_t> acc)
            -> std::optional<uint64_t> {
         if (ov.has_value()) {
           const uint64_t &v = *ov;
@@ -314,9 +314,8 @@ bool PendantSumtreeRoundtripCase::nat_list_eqb(const List<uint64_t> &xs,
   }
 }
 
-bool
-PendantSumtreeRoundtripCase::option_nat_eqb(const std::optional<uint64_t> &x,
-                                            const std::optional<uint64_t> &y) {
+bool PendantSumtreeRoundtripCase::option_nat_eqb(std::optional<uint64_t> x,
+                                                 std::optional<uint64_t> y) {
   if (x.has_value()) {
     const uint64_t &a = *x;
     if (y.has_value()) {
@@ -335,8 +334,8 @@ PendantSumtreeRoundtripCase::option_nat_eqb(const std::optional<uint64_t> &x,
   }
 }
 
-bool PendantSumtreeRoundtripCase::option_nat_is_some(
-    const std::optional<uint64_t> &x) {
+bool
+PendantSumtreeRoundtripCase::option_nat_is_some(std::optional<uint64_t> x) {
   if (x.has_value()) {
     const uint64_t &_x = *x;
     return true;

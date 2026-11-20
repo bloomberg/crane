@@ -145,7 +145,7 @@ Module Tokenizer_Properties.
 End Tokenizer_Properties.
 
 From Crane Require Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Extraction "tokenizer" ToString Tokenizer.
 

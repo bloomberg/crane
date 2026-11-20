@@ -15328,3 +15328,25 @@
   (alias runtest)
   (deps structural_spans.t.exe)
   (action (run ./structural_spans.t.exe))))
+
+(subdir typed_mapping_interface
+ (rule
+  (targets typed_mapping_interface.t.exe)
+  (deps Lib.vo Use.vo Mismatch.vo typed_mapping_interface.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_interface.t.exe typed_mapping_interface.t.cpp typed_mapping_interface_lib.cpp typed_mapping_interface.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_interface.t.exe)
+  (action (run ./typed_mapping_interface.t.exe))))
+
+(subdir typed_mapping_exact_numbers
+ (rule
+  (targets typed_mapping_exact_numbers.t.exe)
+  (deps TypedMappingExactNumbers.vo typed_mapping_exact_numbers.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-boost.sh %{project_root} typed_mapping_exact_numbers.t.exe typed_mapping_exact_numbers.t.cpp typed_mapping_exact_numbers.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_exact_numbers.t.exe)
+  (action (run ./typed_mapping_exact_numbers.t.exe))))

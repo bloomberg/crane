@@ -161,6 +161,6 @@ Definition suspended_zero : nat :=
 End DoubleOppositeWitnessesCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "double_opposite_witnesses" DoubleOppositeWitnessesCase.

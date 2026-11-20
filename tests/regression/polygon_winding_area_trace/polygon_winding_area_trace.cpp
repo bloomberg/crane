@@ -85,16 +85,12 @@ Real PolygonWindingAreaTraceCase::spherical_cosine_arg(Real ca, Real cb,
                                                        Real cab) {
   Real num = (r_cos(std::move(cab)) - (r_cos(ca) * r_cos(cb)));
   Real denom = (r_sin(std::move(ca)) * r_sin(std::move(cb)));
-  return r_max(
-      Real::from_z(INT64_C(-1)),
-      r_min(
-          Real::from_z(INT64_C(1)),
-          (std::move(num) /
-           r_max(r_abs(std::move(denom)),
-                 (Real::from_z(INT64_C(1)) /
-                  Real::from_z(
-                      Z::pow_pos(INT64_C(10),
-                                 (2u * (2u * (2u * 1u) + 1u)))))))));
+  return r_max(Real::from_z(INT64_C(-1)),
+               r_min(Real::from_z(INT64_C(1)),
+                     (std::move(num) /
+                      r_max(r_abs(std::move(denom)),
+                            (Real::from_z(INT64_C(1)) /
+                             Real::from_z(Z::pow_pos(INT64_C(10), 10u)))))));
 }
 
 Real PolygonWindingAreaTraceCase::law_of_cosines_arg(Real da, Real db,

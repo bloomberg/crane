@@ -337,6 +337,8 @@ let compile g =
 
 let plans : t GlobRef.Map.t ref = State.cell State.Extraction GlobRef.Map.empty
 
+let compiled () = GlobRef.Map.fold (fun _ p acc -> p :: acc) !plans []
+
 let find g =
   match GlobRef.Map.find_opt g !plans with
   | Some p -> p

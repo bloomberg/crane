@@ -9,5 +9,5 @@ Definition foo (n : nat) (b : bool) : nat :=
   in aux n + aux b.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
+Require Import Crane.Mapping.Std.
 Crane Extraction "polymorphic_helper" foo.

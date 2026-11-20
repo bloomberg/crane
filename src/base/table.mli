@@ -1386,6 +1386,12 @@ type numeral_info = {
   ind : GlobRef.t;
     (** The numeral inductive itself, so a rendering site holding only the
         info can still ask what C++ type the literal has to fit in. *)
+  typed : (int * Mapping_descriptor.numeral_action) list option;
+    (** A typed mapping's numeral cases ({!Mapping_plan.numerals}): the
+        action of each numeral constructor by its index from 1, which
+        decide a constructor term's value.  [None] for [Crane Extract
+        Numeral], whose values are read off [zero_ctor] and [succ_ctor] and
+        the registered binary number constructors. *)
 }
 
 (** Check if inductive is numeric. *)

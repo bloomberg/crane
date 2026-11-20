@@ -1,7 +1,7 @@
 #include "ping_pong.h"
 
 /// Check if two strings are equal using PrimString.compare.
-bool PingPong::string_eq(std::string s1, std::string s2) {
+bool PingPong::string_eq(const std::string &s1, const std::string &s2) {
   switch (
       (s1 == s2 ? Comparison::EQ
                 : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
@@ -28,7 +28,7 @@ void PingPong::run_game(uint64_t round) {
       '\n';
       _loop_round = (_loop_round + 1);
     } else {
-      std::cout << std::string("You said '") + std::move(response) +
+      std::cout << std::string("You said '") + response +
                    std::string("' \342\200\224 game over!") <<
       '\n';
       return;

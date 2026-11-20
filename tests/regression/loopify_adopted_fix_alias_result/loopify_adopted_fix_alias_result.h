@@ -352,8 +352,8 @@ struct LoopifyAdoptedFixAliasResult {
     return _result;
   }
 
-  static std::optional<uint64_t> add_opt(const std::optional<uint64_t> &a,
-                                         const std::optional<uint64_t> &b);
+  static std::optional<uint64_t> add_opt(std::optional<uint64_t> a,
+                                         std::optional<uint64_t> b);
   static uint64_t sum(const List<std::pair<uint64_t, uint64_t>> &m);
   /// The keys i * step, ..., (i + n - 1) * step, each bound to its
   /// multiple.

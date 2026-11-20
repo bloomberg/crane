@@ -432,7 +432,7 @@ struct LocalFixCaptureInFoldLambda {
           });
     }
 
-    tree g3(const std::optional<uint64_t> &_x, uint64_t _x0) const {
+    tree g3(std::optional<uint64_t> _x, uint64_t _x0) const {
       const tree *_self = this;
 
       // Explicit stack replaces the non-tail recursion of g3: _call frames are
@@ -462,7 +462,7 @@ struct LocalFixCaptureInFoldLambda {
           auto _f = std::move(std::get<_call>(_popped));
           _stack.pop_back();
           const tree *_self = _f._self;
-          const std::optional<uint64_t> _x = _f._x;
+          std::optional<uint64_t> _x = _f._x;
           uint64_t _x0 = _f._x0;
           tree _self_val = *_self;
           auto &&_sv = *_self;
@@ -503,7 +503,7 @@ struct LocalFixCaptureInFoldLambda {
       return _result;
     }
 
-    tree g2(const std::optional<uint64_t> &, uint64_t) const {
+    tree g2(std::optional<uint64_t>, uint64_t) const {
       tree _self_val = *this;
       return List<List<uint64_t>>::nil().template fold_right<tree>(
           [=, _self_val = std::move(_self_val)](List<uint64_t>, tree) {

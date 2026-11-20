@@ -73,6 +73,10 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+struct PeanoNat {
+  static bool eqb(const Nat &n, const Nat &m);
+};
+
 struct Ident {
   // TYPES
   struct Global {
@@ -106,10 +110,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-};
-
-struct PeanoNat {
-  static bool eqb(const Nat &n, const Nat &m);
 };
 
 struct AstLike {

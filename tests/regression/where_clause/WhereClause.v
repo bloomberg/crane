@@ -74,5 +74,5 @@ Definition test_aeval : nat :=
 End WhereClause.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "where_clause" WhereClause.

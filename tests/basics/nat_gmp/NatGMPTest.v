@@ -3,8 +3,8 @@
 From Stdlib Require Import Nat Lists.List.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatGMP.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatGMP.
 
 Module NatGMPTest.
 

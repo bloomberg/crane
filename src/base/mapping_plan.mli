@@ -34,6 +34,13 @@ type view = {
   requirement : observation_requirement;
   test : string;  (** a match condition over [%scrut] *)
   fields : (int * projection) list;  (** templates compiled *)
+  field_types : (int * string) list;
+      (** a field whose C++ type the plan spells, and its spelling in the
+          legacy vocabulary: [%tN] for a field declared at one of the head's
+          type parameters, the canonical type for a recursive field *)
+  field_heads : (int * Names.GlobRef.t) list;
+      (** a field of another inductive type, applied to no argument:
+          spelled as that type's typed mapping writes it, where it has one *)
 }
 
 type constructor = {
@@ -67,6 +74,14 @@ type views = {
       (** narrows the writable view [%a0] to the read view *)
 }
 
+(** A numeral descriptor compiled (design 8.7, 17): the action of each
+    numeral constructor, by its index from 1. *)
+type numerals = {
+  cases : (int * numeral_action) list;
+  emitter : numeral_emitter;
+  converters : Names.GlobRef.t list;
+}
+
 type t = {
   instance : Names.GlobRef.t;
   head : Names.GlobRef.t;
@@ -85,6 +100,7 @@ type t = {
   interface : interface;
   views : views;
   headers : string list;  (** the views' headers included *)
+  numerals : numerals option;
 }
 
 (** Whether [g] heads a type with a [TypeMapping] instance. *)
@@ -93,6 +109,21 @@ val is_type_head : Names.GlobRef.t -> bool
 (** Whether [g] is a mapped head or a constructor of one: what the legacy
     tables would call custom. *)
 val is_mapped : Names.GlobRef.t -> bool
+
+(** Whether [s] names the canonical type of a compiled plan whose copy
+    model neither copies bits nor copies components ({!copies_cheaply}
+    false at any arguments): an instantiated type ([External (s, _)])
+    no longer names its head, so this is what tells a reader that
+    [mpz_class] or [std::string] is not a literal type. *)
+val duplicates_name : string -> bool
+
+(** Every plan this extraction has compiled. *)
+val compiled : unit -> t list
+
+(** The numeral converters the instance mapping [g] declares, resolved
+    without compiling or caching its plan; none where [g] has no instance
+    that applies uniformly, or it fails to compile. *)
+val numeral_converters : Names.GlobRef.t -> Names.GlobRef.t list
 
 (** The plan of a mapped head (or of a constructor's inductive); a user error
     when no instance applies uniformly to the head's parameters, or the

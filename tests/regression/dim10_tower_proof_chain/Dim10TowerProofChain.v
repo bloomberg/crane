@@ -318,6 +318,6 @@ Definition dim10_dimension_checksum : nat :=
 End Dim10TowerProofChainCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "dim10_tower_proof_chain" Dim10TowerProofChainCase.

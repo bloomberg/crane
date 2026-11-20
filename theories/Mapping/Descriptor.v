@@ -167,6 +167,9 @@ Record ConstructorMapping : Type := {
   ctor_view : option ConstructorView
 }.
 
+(** A match tests the constructor views in the order [AlgebraicInterface]
+    lists them, and the last one listed needs no test: a view's test may
+    assume the views listed before it failed. *)
 Inductive TypeInterface : Type :=
 | AbstractInterface
 | AlgebraicInterface (constructors : list ConstructorMapping).

@@ -31,5 +31,5 @@ Definition t : nat * nat :=
 End InitStateProps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "init_state_props" InitStateProps.

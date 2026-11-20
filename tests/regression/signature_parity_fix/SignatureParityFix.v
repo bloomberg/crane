@@ -19,5 +19,5 @@ Definition t : nat := f 4.
 End SignatureParityFix.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "signature_parity_fix" SignatureParityFix.

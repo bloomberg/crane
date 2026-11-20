@@ -2051,6 +2051,9 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
       let unit_includes =
         List.sort_uniq String.compare (List.filter_map Base.Table.extracted_unit_of foreign)
       in
+      (* The headers included were written against their units' typed
+         mappings: this extraction must resolve the same (design 20). *)
+      Base.Mapping_interface.check unit_includes;
       warns ();
       let filenames = mono_filename f in
       (* Parse doc comments from the source .v file, if available *)
@@ -2061,6 +2064,7 @@ let full_extr_reading cx opaque_access f (refs, mps) read =
           Base.Doc_comments.set_table (Base.Doc_comments.parse_file source)
       | _ -> () );
       ignore (freeze cx core (print_structure_to_file cx ~unit_includes filenames false));
+      Option.iter Base.Mapping_interface.record f;
       read refs )
 
 let full_extr cx opaque_access f refs =

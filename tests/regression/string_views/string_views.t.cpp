@@ -21,14 +21,14 @@ void aSsErT(bool condition, const char *message, int line) {
   }
 }
 
-// A read takes the view; a canonical read (c_str) the string by const
+// A read takes the view; a canonical read (c_str, cat) the string by const
 // reference; a string kept or returned is the string; a string result is
 // always an owning std::string.
 static_assert(std::is_same_v<decltype(&StringViews::size_of),
                              int64_t (*)(std::string_view)>);
 static_assert(
     std::is_same_v<decltype(&StringViews::describe),
-                   std::string (*)(std::string_view, std::string)>);
+                   std::string (*)(const std::string &, std::string)>);
 static_assert(std::is_same_v<decltype(&StringViews::initial),
                              char (*)(std::string_view)>);
 static_assert(std::is_same_v<decltype(&StringViews::c_size),
@@ -40,9 +40,10 @@ static_assert(std::is_same_v<decltype(&StringViews::first_two),
 static_assert(std::is_same_v<decltype(&StringViews::prefix_size),
                              int64_t (*)(std::string_view)>);
 static_assert(std::is_same_v<decltype(&StringViews::joined_prefix_size),
-                             int64_t (*)(std::string_view, std::string_view)>);
+                             int64_t (*)(const std::string &,
+                                         const std::string &)>);
 static_assert(std::is_same_v<decltype(&StringViews::outer),
-                             int64_t (*)(std::string_view)>);
+                             int64_t (*)(const std::string &)>);
 
 } // namespace
 

@@ -15,6 +15,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <template_argument.h>
 #include <utility>
 #include <variant>
@@ -233,7 +234,8 @@ struct StArrays {
       return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
     }
 
-    static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
+    constexpr static std::optional<uint64_t> index(uint64_t fp, uint64_t sp,
+                                                   uint64_t i) {
       if ((fp <= i && i <= sp)) {
         return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
       } else {

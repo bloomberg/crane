@@ -12,6 +12,6 @@ struct TypedMappingCopy {
   static bool cell_flag(std::array<bool, 1> c);
   static uint64_t cell_bag_count(const std::array<std::vector<uint64_t>, 1> &c);
   static std::array<std::vector<uint64_t>, 1> make_cell(uint64_t n);
-  static bool flag_of_option(const std::optional<bool> &o);
-  static std::vector<uint64_t> bag_of_option(const std::optional<uint64_t> &o);
+  static bool flag_of_option(std::optional<bool> o);
+  static std::vector<uint64_t> bag_of_option(std::optional<uint64_t> o);
 };

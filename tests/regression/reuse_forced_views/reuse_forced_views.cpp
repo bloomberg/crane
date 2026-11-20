@@ -439,8 +439,8 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
         _result = x0_.template map<
             std::pair<uint64_t, std::pair<std::optional<uint64_t>,
                                           std::optional<uint64_t>>>>([](
-            const std::pair<uint64_t,
-                            uint64_t> &p) {
+            std::pair<uint64_t,
+                      uint64_t> p) {
           return std::make_pair(
               p.first, std::make_pair(std::optional<uint64_t>(),
                                       std::make_optional<uint64_t>(p.second)));
@@ -465,8 +465,8 @@ ReuseForcedViews::combine(List<std::pair<uint64_t, uint64_t>> m,
         _result = m.template map<
             std::pair<uint64_t, std::pair<std::optional<uint64_t>,
                                           std::optional<uint64_t>>>>([](
-            const std::pair<uint64_t,
-                            uint64_t> &p0) {
+            std::pair<uint64_t,
+                      uint64_t> p0) {
           return std::make_pair(
               p0.first, std::make_pair(std::make_optional<uint64_t>(p0.second),
                                        std::optional<uint64_t>()));

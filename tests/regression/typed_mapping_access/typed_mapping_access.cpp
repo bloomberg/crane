@@ -192,8 +192,9 @@ uint64_t TypedMappingAccess::reseat_sum(access_support::handle &h, uint64_t n) {
       auto _f = std::move(std::get<_after_reseat_sum_in_S>(_popped));
       _stack.pop_back();
       uint64_t n = _f.n;
-      _result = (access_support::get(access_support::reseat(h, n)) +
-                 std::move(_result));
+      auto _once1 = access_support::get(access_support::reseat(h, n));
+      auto _once2 = std::move(_result);
+      _result = (std::move(_once1) + std::move(_once2));
     }
   }
   return _result;

@@ -356,13 +356,21 @@ let operation_context env g =
   let known t =
     Option.map (fun r -> r.type_mapping) (resolve_type_mapping b.binders_env sigma t)
   in
+  let retained = runtime_binders b in
+  (* A name two retained binders share (a primitive's type names every
+     binder [x]) identifies neither, so it is read as no name. *)
+  let shared id =
+    List.length (List.filter (fun (y : operation_binder) -> Name.equal y.binder_name (Name id)) retained) > 1
+  in
   let runtime =
     List.map
       (fun (x : operation_binder) ->
         { Mapping_validate.binder_name =
-            (match x.binder_name with Name id -> Some (Id.to_string id) | Anonymous -> None);
+            (match x.binder_name with
+            | Name id when not (shared id) -> Some (Id.to_string id)
+            | Name _ | Anonymous -> None);
           binder_mapping = lazy (known x.binder_type) })
-      (runtime_binders b)
+      retained
   in
   {Mapping_validate.runtime_binders = Some runtime; result_mapping = known b.result_type}
 

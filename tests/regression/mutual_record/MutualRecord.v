@@ -60,5 +60,5 @@ Definition test_dept_id : nat := dept_id test_dept.
 End MutualRecord.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "mutual_record" MutualRecord.

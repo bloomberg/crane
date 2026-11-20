@@ -9,7 +9,7 @@ static_assert(crane::rc_is_atomic,
               "it chose CRANE_NON_ATOMIC_RC");
 
 struct ParallelTest {
-  static uint64_t ack(const std::pair<uint64_t, uint64_t> &p);
+  static uint64_t ack(std::pair<uint64_t, uint64_t> p);
   static std::pair<uint64_t, uint64_t> fast(uint64_t m, uint64_t n);
   static std::pair<uint64_t, uint64_t> slow(uint64_t m, uint64_t n);
 };

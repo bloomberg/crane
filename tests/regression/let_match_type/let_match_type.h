@@ -5,6 +5,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -14,7 +15,7 @@ struct LetMatchType {
   /// 2. let-bound nat match returning string — TRIGGERS std::any bug
   static std::string let_match_string(uint64_t n);
   /// 3. let-bound option match
-  static uint64_t let_match_option(const std::optional<uint64_t> &o);
+  static uint64_t let_match_option(std::optional<uint64_t> o);
   /// 4. let-bound nested bool match
   static uint64_t let_nested_bool(bool a, bool b);
   /// 5. Multiple let-bound matches

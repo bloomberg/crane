@@ -281,12 +281,11 @@ struct Equations {
                     crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f2,
                 std::type_identity_t<
                     crane::fn<T2(uint64_t, uint64_t, gcd_graph, T1)>> f3,
-                const std::pair<uint64_t, uint64_t> &x0_, uint64_t x1_,
+                std::pair<uint64_t, uint64_t> x0_, uint64_t x1_,
                 const gcd_graph &x2_) {
     auto f4_impl =
-        [&](auto &_self_f4, auto &_self_f5,
-            const std::pair<uint64_t, uint64_t> &, uint64_t,
-            const gcd_graph &g)
+        [&](auto &_self_f4, auto &_self_f5, std::pair<uint64_t, uint64_t>,
+            uint64_t, const gcd_graph &g)
              -> T1 {
           if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
                   g.v())) {
@@ -355,7 +354,7 @@ struct Equations {
           }
         };
     auto f4 =
-        [&](const std::pair<uint64_t, uint64_t> &_x, uint64_t _x0,
+        [&](std::pair<uint64_t, uint64_t> _x, uint64_t _x0,
             const gcd_graph &g)
              -> T1 { return f4_impl(f4_impl, f5_impl, _x, _x0, g); };
     auto f5 =
@@ -374,9 +373,8 @@ struct Equations {
                                    uint64_t x3_,
                                    const gcd_clause_3_graph &x4_) {
     auto f4_impl =
-        [&](auto &_self_f4, auto &_self_f5,
-            const std::pair<uint64_t, uint64_t> &, uint64_t,
-            const gcd_graph &g)
+        [&](auto &_self_f4, auto &_self_f5, std::pair<uint64_t, uint64_t>,
+            uint64_t, const gcd_graph &g)
              -> T1 {
           if (std::holds_alternative<typename gcd_graph::Gcd_graph_equation_1>(
                   g.v())) {
@@ -445,7 +443,7 @@ struct Equations {
           }
         };
     auto f4 =
-        [&](const std::pair<uint64_t, uint64_t> &_x, uint64_t _x0,
+        [&](std::pair<uint64_t, uint64_t> _x, uint64_t _x0,
             const gcd_graph &g)
              -> T1 { return f4_impl(f4_impl, f5_impl, _x, _x0, g); };
     {
@@ -462,8 +460,8 @@ struct Equations {
   template <typename T1, typename T2, typename F0, typename F1, typename F2,
             typename F3, typename F4>
   static T1 gcd_graph_rect(F0 &&x0_, F1 &&x1_, F2 &&x2_, F3 &&x3_, F4 &&x4_,
-                           const std::pair<uint64_t, uint64_t> &x5_,
-                           uint64_t x6_, const gcd_graph &x7_) {
+                           std::pair<uint64_t, uint64_t> x5_, uint64_t x6_,
+                           const gcd_graph &x7_) {
     return gcd_graph_mut<T1, T2>(x0_, x1_, x2_, x3_, x4_, x5_, x6_, x7_);
   }
 

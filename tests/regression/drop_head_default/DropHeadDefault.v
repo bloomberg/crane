@@ -28,5 +28,5 @@ Definition t : nat := head_after_drop [5; 7; 9] 1.
 End DropHeadDefault.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "drop_head_default" DropHeadDefault.

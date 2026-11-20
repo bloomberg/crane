@@ -37,5 +37,5 @@ Definition test_len : nat := length_list [10; 20; 30; 40].
 End LetFixTailLoop.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "let_fix_tail_loop" LetFixTailLoop.

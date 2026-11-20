@@ -69,5 +69,5 @@ Definition overflow_acc : nat := state_acc bad_state_acc_overflow.
 End RamBadState.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "ram_bad_state" RamBadState.

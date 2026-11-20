@@ -4,37 +4,110 @@
 
     Maps [option], [prod], [int63], and [float] to their C++ standard
     library equivalents ([std::optional], [std::pair], [int64_t],
-    [double]).  [Std] adds the legacy [string] mappings, [StringView] the
-    typed ones; import one of them.
+    [double]), and [char63] to [char], as typed mappings
+    (docs/typed-mappings-design.md 15): they activate on [Import].  [Std]
+    adds the [string] mapping.
 
     Sets the stdlib flavor to ["std"]. *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Shared.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
 
 #[export] Set Crane StdLib "std".
 
-Crane Extract Inductive option =>
-  "std::optional<%t0>"
-  [ "std::make_optional<%t0>(%a0)"
-    "std::optional<%t0>()" ]
-  "if (%scrut.has_value()) { const %t0& %b0a0 = *%scrut; %br0 } else { %br1 }"
-  From "optional" "memory".
+(** [option A] is a [std::optional] of its element's C++ type (design
+    15.2), [prod] a [std::pair] (design 15.3).  Both copy at their
+    components' cost and are read by value when their components are. *)
+#[export] Instance std_option_mapping (A : Type) : TypeMapping (option A) :=
+  {| type_headers := ["optional"; "memory"];
+     type_cpp :=
+       Crane.Cpp.Apply "std::optional"
+         [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "element")];
+     type_components :=
+       [{| component_name := "element";
+           component_type := FieldType (Ref (@Some A)) 0 |}];
+     type_copy := CopyComponents ["element"];
+     type_access := ReadOnlyValue (ReadByComponents ["element"]);
+     type_views := NoViews (option A);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@Some A);
+             ctor_build := Expr "std::make_optional<%stored(element)>(%a0)";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "%scrut.has_value()";
+                       case_fields := [(0, CanonicalBorrowProjection "*%scrut")] |} |};
+          {| ctor_source := Ref (@None A);
+             ctor_build := Expr "std::optional<%stored(element)>()";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "!%scrut.has_value()";
+                       case_fields := [] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
 
-Crane Extract Inductive prod =>
-  "std::pair<%t0, %t1>"
-  [ "std::make_pair(%a0, %a1)" ]
-  "const auto& [%b0a0, %b0a1] = %scrut; %br0"
-  From "utility".
+(** The projections are [std::get], so a match binds the pair as a
+    structured binding. *)
+#[export] Instance std_pair_mapping (A B : Type) : TypeMapping (prod A B) :=
+  {| type_headers := ["utility"];
+     type_cpp :=
+       Crane.Cpp.Apply "std::pair"
+         [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "first");
+          Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "second")];
+     type_components :=
+       [{| component_name := "first";
+           component_type := FieldType (Ref (@pair A B)) 0 |};
+        {| component_name := "second";
+           component_type := FieldType (Ref (@pair A B)) 1 |}];
+     type_copy := CopyComponents ["first"; "second"];
+     type_access := ReadOnlyValue (ReadByComponents ["first"; "second"]);
+     type_views := NoViews (prod A B);
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref (@pair A B);
+             ctor_build := Expr "std::make_pair(%a0, %a1)";
+             ctor_view :=
+               Some {| view_requirement := CanonicalObservation;
+                       case_test := "true";
+                       case_fields :=
+                         [(0, CanonicalBorrowProjection "std::get<0>(%scrut)");
+                          (1, CanonicalBorrowProjection "std::get<1>(%scrut)")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
 
-(* [std::pair] and [std::optional] cost nothing to copy beyond what their
-   contents cost, which the mapping template above has no way of saying. *)
-Crane TriviallyCopyable option prod.
+#[export] Instance std_fst_mapping : OperationMapping (Ref (@fst)) :=
+  {| operation_headers := ["utility"];
+     operation_cpp := Expr "%arg(p).first";
+     operation_contract :=
+       PureOperation [{| argument_name := "p"; argument_use := Read |}] ReturnValue [] |}.
 
-Crane Extract Inlined Constant fst => "%a0.first" From "utility".
-Crane Extract Inlined Constant snd => "%a0.second" From "utility".
+#[export] Instance std_snd_mapping : OperationMapping (Ref (@snd)) :=
+  {| operation_headers := ["utility"];
+     operation_cpp := Expr "%arg(p).second";
+     operation_contract :=
+       PureOperation [{| argument_name := "p"; argument_use := Read |}] ReturnValue [] |}.
 
 From Corelib Require Import PrimString.
-Crane Extract Inlined Constant PrimString.char63 => "char".
+#[export] Instance std_char63_mapping : TypeMapping PrimString.char63 :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.Name "char";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews PrimString.char63;
+     type_interface := AbstractInterface;
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
 
 (* int63 primitives - int64_t with 63-bit masking.
    Arithmetic is performed in the unsigned (uint64_t) domain, where overflow is
@@ -49,44 +122,235 @@ Crane Extract Inlined Constant PrimString.char63 => "char".
    The guarded branch also has to be well-defined on its own, not merely
    unreachable: with constant arguments the compiler folds both arms of the
    conditional and diagnoses a literal division or over-wide shift even in the
-   arm the guard excludes. Hence the redundant-looking [| (%a1 == 0)] on the
+   arm the guard excludes. Hence the redundant-looking [| (%arg(y) == 0)] on the
    divisor, which is the divisor itself whenever it is nonzero and 1
    otherwise, and the [& 63] on the shift count, which is the identity
    whenever the guard admits it. *)
 From Corelib Require Import PrimInt63.
-Crane Extract Inlined Constant PrimInt63.int => "int64_t" From "cstdint".
-Crane Extract Inlined Constant PrimInt63.add => "static_cast<int64_t>((static_cast<uint64_t>(%a0) + static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
-Crane Extract Inlined Constant PrimInt63.sub => "static_cast<int64_t>((static_cast<uint64_t>(%a0) - static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
-Crane Extract Inlined Constant PrimInt63.mul => "static_cast<int64_t>((static_cast<uint64_t>(%a0) * static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
-Crane Extract Inlined Constant PrimInt63.div => "(%a1 == 0 ? 0 : %a0 / (%a1 | (%a1 == 0)))".
-Crane Extract Inlined Constant PrimInt63.mod => "(%a1 == 0 ? %a0 : %a0 % (%a1 | (%a1 == 0)))".
-Crane Extract Inlined Constant PrimInt63.eqb => "%a0 == %a1".
-Crane Extract Inlined Constant PrimInt63.ltb => "%a0 < %a1".
-Crane Extract Inlined Constant PrimInt63.leb => "%a0 <= %a1".
-Crane Extract Inlined Constant PrimInt63.land => "(%a0 & %a1)".
-Crane Extract Inlined Constant PrimInt63.lor => "(%a0 | %a1)".
-Crane Extract Inlined Constant PrimInt63.lxor => "(%a0 ^ %a1)".
-Crane Extract Inlined Constant PrimInt63.lsl => "(%a1 >= 63 ? 0 : static_cast<int64_t>((static_cast<uint64_t>(%a0) << (%a1 & 63)) & 0x7FFFFFFFFFFFFFFFULL))".
-Crane Extract Inlined Constant PrimInt63.lsr => "(%a1 >= 63 ? 0 : static_cast<int64_t>(static_cast<uint64_t>(%a0) >> (%a1 & 63)))".
+#[export] Instance std_int63_mapping : TypeMapping PrimInt63.int :=
+  {| type_headers := ["cstdint"];
+     type_cpp := Crane.Cpp.Name "int64_t";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews PrimInt63.int;
+     type_interface := AbstractInterface;
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+#[export] Instance std_int63_add_mapping : OperationMapping (Ref PrimInt63.add) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) + static_cast<uint64_t>(%arg(y))) & 0x7FFFFFFFFFFFFFFFULL)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_sub_mapping : OperationMapping (Ref PrimInt63.sub) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) - static_cast<uint64_t>(%arg(y))) & 0x7FFFFFFFFFFFFFFFULL)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_mul_mapping : OperationMapping (Ref PrimInt63.mul) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) * static_cast<uint64_t>(%arg(y))) & 0x7FFFFFFFFFFFFFFFULL)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_div_mapping : OperationMapping (Ref PrimInt63.div) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(y) == 0 ? 0 : %arg(x) / (%arg(y) | (%arg(y) == 0)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_mod_mapping : OperationMapping (Ref PrimInt63.mod) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(y) == 0 ? %arg(x) : %arg(x) % (%arg(y) | (%arg(y) == 0)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_eqb_mapping : OperationMapping (Ref PrimInt63.eqb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) == %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_ltb_mapping : OperationMapping (Ref PrimInt63.ltb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) < %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_leb_mapping : OperationMapping (Ref PrimInt63.leb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) <= %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_land_mapping : OperationMapping (Ref PrimInt63.land) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) & %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_lor_mapping : OperationMapping (Ref PrimInt63.lor) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) | %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_lxor_mapping : OperationMapping (Ref PrimInt63.lxor) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) ^ %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_lsl_mapping : OperationMapping (Ref PrimInt63.lsl) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(y) >= 63 ? 0 : static_cast<int64_t>((static_cast<uint64_t>(%arg(x)) << (%arg(y) & 63)) & 0x7FFFFFFFFFFFFFFFULL))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_int63_lsr_mapping : OperationMapping (Ref PrimInt63.lsr) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(y) >= 63 ? 0 : static_cast<int64_t>(static_cast<uint64_t>(%arg(x)) >> (%arg(y) & 63)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
 
 (* PrimFloat - IEEE 754 binary64 (C++ double).
    Import PrimFloat AFTER PrimInt63 so the qualified names below resolve
    unambiguously even though both modules export [add], [sub], etc. *)
 From Corelib Require Import PrimFloat.
-Crane Extract Inlined Constant PrimFloat.float => "double".
-Crane Extract Inlined Constant PrimFloat.add => "(%a0 + %a1)".
-Crane Extract Inlined Constant PrimFloat.sub => "(%a0 - %a1)".
-Crane Extract Inlined Constant PrimFloat.mul => "(%a0 * %a1)".
-Crane Extract Inlined Constant PrimFloat.div => "(%a0 / %a1)".
-Crane Extract Inlined Constant PrimFloat.opp => "(-%a0)".
-Crane Extract Inlined Constant PrimFloat.abs => "std::abs(%a0)" From "cmath".
-Crane Extract Inlined Constant PrimFloat.sqrt => "std::sqrt(%a0)" From "cmath".
-Crane Extract Inlined Constant PrimFloat.eqb => "%a0 == %a1".
-Crane Extract Inlined Constant PrimFloat.ltb => "%a0 < %a1".
-Crane Extract Inlined Constant PrimFloat.leb => "%a0 <= %a1".
-Crane Extract Inlined Constant PrimFloat.of_uint63 => "static_cast<double>(%a0)".
+#[export] Instance std_float_mapping : TypeMapping PrimFloat.float :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.Name "double";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews PrimFloat.float;
+     type_interface := AbstractInterface;
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
+#[export] Instance std_float_add_mapping : OperationMapping (Ref PrimFloat.add) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) + %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_sub_mapping : OperationMapping (Ref PrimFloat.sub) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) - %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_mul_mapping : OperationMapping (Ref PrimFloat.mul) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) * %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_div_mapping : OperationMapping (Ref PrimFloat.div) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) / %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_opp_mapping : OperationMapping (Ref PrimFloat.opp) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(-%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_abs_mapping : OperationMapping (Ref PrimFloat.abs) :=
+  {| operation_headers := ["cmath"];
+     operation_cpp := Expr "std::abs(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_sqrt_mapping : OperationMapping (Ref PrimFloat.sqrt) :=
+  {| operation_headers := ["cmath"];
+     operation_cpp := Expr "std::sqrt(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_eqb_mapping : OperationMapping (Ref PrimFloat.eqb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) == %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_ltb_mapping : OperationMapping (Ref PrimFloat.ltb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) < %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_leb_mapping : OperationMapping (Ref PrimFloat.leb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) <= %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_float_of_uint63_mapping : OperationMapping (Ref PrimFloat.of_uint63) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<double>(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
 (* [classify]'s result is the [float_class] enum, whose constructors are
    numbered in declaration order: [PNormal], [NNormal], [PSubn], [NSubn],
    [PZero], [NZero], [PInf], [NInf], [NaN]. *)
-Crane Extract Inlined Constant PrimFloat.classify =>
-  "[](double _x) { const int _c = std::fpclassify(_x); const int _n = std::signbit(_x) ? 1 : 0; return static_cast<%ret>(_c == FP_NAN ? 8 : (_c == FP_INFINITE ? 6 : _c == FP_ZERO ? 4 : _c == FP_SUBNORMAL ? 2 : 0) + _n); }(%a0)" From "cmath".
+#[export] Instance std_float_classify_mapping : OperationMapping (Ref PrimFloat.classify) :=
+  {| operation_headers := ["cmath"];
+     operation_cpp := Expr "[](double _x) { const int _c = std::fpclassify(_x); const int _n = std::signbit(_x) ? 1 : 0; return static_cast<%ret>(_c == FP_NAN ? 8 : (_c == FP_INFINITE ? 6 : _c == FP_ZERO ? 4 : _c == FP_SUBNORMAL ? 2 : 0) + _n); }(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.

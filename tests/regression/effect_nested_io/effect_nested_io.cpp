@@ -11,7 +11,7 @@ std::optional<std::string> EffectNestedIo::read_optional() {
 std::pair<std::string, int64_t> EffectNestedIo::read_pair() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(line.length());
+  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
   return std::make_pair(std::move(line), len);
 }
 
@@ -19,7 +19,7 @@ std::pair<std::string, int64_t> EffectNestedIo::read_pair() {
 std::string EffectNestedIo::read_and_greet() {
   std::string name;
   std::getline(std::cin, name);
-  std::string greeting = std::string("Hello, ") + std::move(name);
+  std::string greeting = std::string("Hello, ") + name;
   return greeting;
 }
 
@@ -48,10 +48,10 @@ std::pair<std::string, int64_t> EffectNestedIo::timed_read() {
 }
 
 /// 6. Block template result stored in env
-std::string EffectNestedIo::read_and_store(std::string key) {
+std::string EffectNestedIo::read_and_store(const std::string &key) {
   std::string line;
   std::getline(std::cin, line);
-  setenv(std::move(key).c_str(), line.c_str(), 1);
+  setenv(key.c_str(), line.c_str(), 1);
   return line;
 }
 
@@ -70,5 +70,5 @@ std::pair<std::string, std::string> EffectNestedIo::multi_read_store() {
 int64_t EffectNestedIo::read_length() {
   std::string line;
   std::getline(std::cin, line);
-  return static_cast<int64_t>(std::move(line).length());
+  return static_cast<int64_t>((std::string_view{line}).size());
 }

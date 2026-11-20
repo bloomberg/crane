@@ -59,5 +59,5 @@ Definition test_hk_tree : Tree nat := hk_map Tree (@tree_map) (fun n => n + 10) 
 End HigherKinded.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "higher_kinded" HigherKinded.

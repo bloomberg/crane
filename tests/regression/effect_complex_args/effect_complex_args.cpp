@@ -1,42 +1,45 @@
 #include "effect_complex_args.h"
 
 /// 1. set_env with concatenated key — complex expr as first arg
-void EffectComplexArgs::set_prefixed(std::string prefix, std::string suffix,
-                                     std::string value) {
-  setenv((std::move(prefix) + std::move(suffix)).c_str(),
-         std::move(value).c_str(), 1);
+void EffectComplexArgs::set_prefixed(const std::string &prefix,
+                                     const std::string &suffix,
+                                     const std::string &value) {
+  setenv((prefix + suffix).c_str(), value.c_str(), 1);
   return;
 }
 
 /// 2. set_env with concatenated value — complex expr as second arg
-void EffectComplexArgs::set_with_value(std::string key, std::string prefix,
-                                       std::string suffix) {
-  setenv(std::move(key).c_str(),
-         (std::move(prefix) + std::move(suffix)).c_str(), 1);
+void EffectComplexArgs::set_with_value(const std::string &key,
+                                       const std::string &prefix,
+                                       const std::string &suffix) {
+  setenv(key.c_str(), (prefix + suffix).c_str(), 1);
   return;
 }
 
 /// 3. get_env with concatenated name
-std::optional<std::string> EffectComplexArgs::get_prefixed(std::string prefix,
-                                                           std::string suffix) {
+std::optional<std::string>
+EffectComplexArgs::get_prefixed(const std::string &prefix,
+                                const std::string &suffix) {
   return [&]() -> std::optional<std::string> {
-    auto *v = std::getenv((std::move(prefix) + std::move(suffix)).c_str());
+    auto *v = std::getenv((prefix + suffix).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
 }
 
 /// 4. print_endline with concatenated string
-void EffectComplexArgs::print_concat(std::string a, std::string b) {
-  std::cout << std::move(a) + std::move(b) << '\n';
+void EffectComplexArgs::print_concat(const std::string &a,
+                                     const std::string &b) {
+  std::cout << a + b << '\n';
   return;
 }
 
 /// 5. Chained: build key, set env, then get env
 std::optional<std::string>
-EffectComplexArgs::round_trip(std::string prefix, std::string suffix,
-                              std::string value) {
-  std::string key = std::move(prefix) + std::move(suffix);
-  setenv(key.c_str(), std::move(value).c_str(), 1);
+EffectComplexArgs::round_trip(const std::string &prefix,
+                              const std::string &suffix,
+                              const std::string &value) {
+  std::string key = prefix + suffix;
+  setenv(key.c_str(), value.c_str(), 1);
   return [&]() -> std::optional<std::string> {
     auto *v = std::getenv(std::move(key).c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -44,22 +47,21 @@ EffectComplexArgs::round_trip(std::string prefix, std::string suffix,
 }
 
 /// 6. Nested concatenation as argument
-void EffectComplexArgs::deep_concat(std::string a, std::string b,
-                                    std::string c) {
-  setenv((std::move(a) + std::move(b) + std::move(c)).c_str(),
-         std::string("value").c_str(), 1);
+void EffectComplexArgs::deep_concat(const std::string &a, const std::string &b,
+                                    const std::string &c) {
+  setenv((a + b + c).c_str(), std::string("value").c_str(), 1);
   return;
 }
 
 /// 7. Effect result used in concatenation for another effect
-void EffectComplexArgs::chain_with_concat(std::string name) {
+void EffectComplexArgs::chain_with_concat(const std::string &name) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (r.has_value()) {
     const std::string &v = *r;
-    setenv((std::string("COPY_") + std::move(name)).c_str(), v.c_str(), 1);
+    setenv((std::string("COPY_") + name).c_str(), v.c_str(), 1);
     return;
   } else {
     return;
@@ -67,7 +69,8 @@ void EffectComplexArgs::chain_with_concat(std::string name) {
 }
 
 /// 8. unset_env with concatenated key
-void EffectComplexArgs::unset_prefixed(std::string prefix, std::string suffix) {
-  unsetenv((std::move(prefix) + std::move(suffix)).c_str());
+void EffectComplexArgs::unset_prefixed(const std::string &prefix,
+                                       const std::string &suffix) {
+  unsetenv((prefix + suffix).c_str());
   return;
 }

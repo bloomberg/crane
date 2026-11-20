@@ -557,7 +557,8 @@ struct FrameBinderLocalFixAcc {
     requires Sz<_tcI0, T1> && Sz<_tcI1, T2>
   struct sz_pair {
     static uint64_t sz(std::pair<T1, T2> p) {
-      auto _once1 = ((_tcI0::sz(p.first) * UINT64_C(3)) + _tcI1::sz(p.second));
+      auto _once1 = ((_tcI0::sz(std::move(p).first) * UINT64_C(3)) +
+                     _tcI1::sz(std::move(p).second));
       return (UINT64_C(10007) ? _once1 % UINT64_C(10007) : _once1);
     }
   };

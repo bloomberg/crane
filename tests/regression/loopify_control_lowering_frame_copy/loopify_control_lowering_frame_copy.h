@@ -631,6 +631,6 @@ struct LoopifyControlLoweringFrameCopy {
   static std::pair<tree, bool> g3(const List<List<bool>> &l38, uint64_t _x,
                                   uint64_t _x0);
   static ptree<int64_t> g1(const tree &t,
-                           const std::pair<bool, std::pair<bool, uint64_t>> &_x,
-                           const std::pair<uint64_t, uint64_t> &_x0);
+                           std::pair<bool, std::pair<bool, uint64_t>> _x,
+                           std::pair<uint64_t, uint64_t> _x0);
 };

@@ -9,7 +9,9 @@
     - [combine] splices its second argument twice and its first after it;
       [ignore_first] ignores its first argument.  Called on [tick]s (a
       legacy inline constant with an effect), each argument is evaluated
-      once, in source order, before the template (design 11.9).
+      once (design 11.9): the repeated one is bound ahead and the ignored
+      one evaluated as a statement; the others stay in place, since both
+      operations are pure and a legacy mapping declares no effect.
     - [Buffer], mapped to a copy-counting C++ type passed by [const&]:
       [buffer_push] takes its buffer ([Take]), so a function passing its
       parameter there owns it, moves it at its last use and copies it where

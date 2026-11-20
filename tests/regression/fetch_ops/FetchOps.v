@@ -71,5 +71,5 @@ Definition t : nat * nat * nat * nat :=
 End FetchOps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "fetch_ops" FetchOps.

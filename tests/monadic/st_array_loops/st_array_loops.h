@@ -13,6 +13,7 @@
 #include <span>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <template_argument.h>
 #include <utility>
 #include <variant>

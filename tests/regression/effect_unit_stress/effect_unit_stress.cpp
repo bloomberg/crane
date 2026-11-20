@@ -73,7 +73,7 @@ std::string EffectUnitStress::nat_dispatch(uint64_t n) {
 int64_t EffectUnitStress::let_pure_in_monadic() {
   std::string s;
   std::getline(std::cin, s);
-  int64_t n = static_cast<int64_t>(std::move(s).length());
+  int64_t n = static_cast<int64_t>((std::string_view{s}).size());
   int64_t m = static_cast<int64_t>(
       (static_cast<uint64_t>(n) + static_cast<uint64_t>(INT64_C(1))) &
       0x7FFFFFFFFFFFFFFFULL);

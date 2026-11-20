@@ -142,8 +142,8 @@ LoopifyControlLoweringFrameCopy::g3(const List<List<bool>> &l38, uint64_t _x,
 LoopifyControlLoweringFrameCopy::ptree<int64_t>
 LoopifyControlLoweringFrameCopy::g1(
     const LoopifyControlLoweringFrameCopy::tree &t,
-    const std::pair<bool, std::pair<bool, uint64_t>> &_x,
-    const std::pair<uint64_t, uint64_t> &_x0) {
+    std::pair<bool, std::pair<bool, uint64_t>> _x,
+    std::pair<uint64_t, uint64_t> _x0) {
   // Explicit stack replaces the non-tail recursion of g1: _call frames are
   // pending calls, _after frames resume a caller.
   struct _call {
@@ -172,8 +172,8 @@ LoopifyControlLoweringFrameCopy::g1(
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const std::pair<uint64_t, uint64_t> _x0 = _f._x0;
-      const std::pair<bool, std::pair<bool, uint64_t>> _x = _f._x;
+      std::pair<uint64_t, uint64_t> _x0 = _f._x0;
+      std::pair<bool, std::pair<bool, uint64_t>> _x = _f._x;
       const LoopifyControlLoweringFrameCopy::tree &t = *_f.t;
       if (std::holds_alternative<
               typename LoopifyControlLoweringFrameCopy::tree::Leaf>(t.v())) {

@@ -83,5 +83,5 @@ Definition t : nat * bool * nat :=
 End JcnOps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "jcn_ops" JcnOps.

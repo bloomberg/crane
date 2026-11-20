@@ -571,7 +571,7 @@ struct MemSafetyProbe3 {
         std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>>,
         uint64_t> p = t.nested_pair();
     return (((p.first).first(UINT64_C(10)) + (p.first).second(UINT64_C(10))) +
-            std::move(p).second);
+            p.second);
   }();
   static inline const uint64_t test_map_with_captured = []() {
     return []() {

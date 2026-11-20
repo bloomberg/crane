@@ -3,11 +3,13 @@
 
 (** Strings as a typed mapping with a [std::string_view] read view
     (docs/typed-mappings-design.md 14.1-14.5, 24.4), from
-    [Mapping.StringView]:
+    [Mapping.Std] (imported here through [Mapping.StringView], which
+    re-exports it):
 
     - [size_of] only calls [length]: [std::string_view].
-    - [describe] passes its strings to several view-compatible operations
-      ([length], [cat], [get], [sub]): [std::string_view] each.
+    - [describe] passes [name] to [length], [sub] and [cat]: [cat] reads
+      canonically (it is [+]), so [name] is [const std::string&] and is
+      viewed where [length] and [sub] read it; [greeting] is kept.
     - [c_size] passes its string to [c_length], a test-only operation that
       needs a NUL-terminated string ([ReadCanonical], [c_str()]):
       [const std::string&].
@@ -21,9 +23,10 @@
       copy; nor does [joined_prefix_size], whose view is borrowed from a
       temporary [cat] result, which lives to the end of the full
       expression that reads the view.
-    - [outer -> size_of]: a read reaches [outer] through [size_of], and a
-      temporary [cat] result is passed to [size_of] as a view of the
-      temporary, which lives to the end of the call's full expression.
+    - [outer -> size_of]: a temporary [cat] result is passed to [size_of]
+      as a view of the temporary, which lives to the end of the call's
+      full expression; [outer] itself passes [s] to [cat], so it takes the
+      canonical string and views it for [size_of].
     - A string declared [Write] by an operation mapping is refused: a Rocq
       string is a read-only value. *)
 

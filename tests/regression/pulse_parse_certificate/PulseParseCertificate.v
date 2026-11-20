@@ -137,6 +137,6 @@ Definition sample_certificate_class_count : nat :=
 End PulseParseCertificateCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "pulse_parse_certificate" PulseParseCertificateCase.

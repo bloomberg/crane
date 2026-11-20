@@ -2,9 +2,9 @@
 
 /// 1. Pure let binding with option match — Some returns variable,
 /// None returns string literal
-std::string EffectOptionString::let_option_match(std::string name) {
+std::string EffectOptionString::let_option_match(const std::string &name) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(name).c_str());
+    auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   std::string s;
@@ -19,9 +19,9 @@ std::string EffectOptionString::let_option_match(std::string name) {
 
 /// 2. Option match as bind action — Some returns Ret of variable,
 /// None returns Ret of string literal
-std::string EffectOptionString::bind_option_match(std::string name) {
+std::string EffectOptionString::bind_option_match(const std::string &name) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(name).c_str());
+    auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   return [&]() -> std::string {
@@ -35,9 +35,10 @@ std::string EffectOptionString::bind_option_match(std::string name) {
 }
 
 /// 3. Option match where Some arm has an effect and None arm returns literal
-std::string EffectOptionString::option_effect_or_literal(std::string name) {
+std::string
+EffectOptionString::option_effect_or_literal(const std::string &name) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(name).c_str());
+    auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (r.has_value()) {
@@ -54,15 +55,16 @@ std::string EffectOptionString::option_effect_or_literal(std::string name) {
 
 /// 4. Nested option matches: match on option, inside Some branch
 /// do another get_env and match
-std::string EffectOptionString::nested_option(std::string n1, std::string n2) {
+std::string EffectOptionString::nested_option(const std::string &n1,
+                                              const std::string &n2) {
   std::optional<std::string> r1 = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(n1).c_str());
+    auto *v = std::getenv(n1.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (r1.has_value()) {
     const std::string &v1 = *r1;
     std::optional<std::string> r2 = [&]() -> std::optional<std::string> {
-      auto *v = std::getenv(std::move(n2).c_str());
+      auto *v = std::getenv(n2.c_str());
       return v ? std::optional<std::string>(v) : std::optional<std::string>();
     }();
     if (r2.has_value()) {
@@ -77,9 +79,9 @@ std::string EffectOptionString::nested_option(std::string n1, std::string n2) {
 }
 
 /// 5. Option match result fed directly to an effect
-void EffectOptionString::option_then_effect(std::string name) {
+void EffectOptionString::option_then_effect(const std::string &name) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(name).c_str());
+    auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   std::string msg;
@@ -94,15 +96,15 @@ void EffectOptionString::option_then_effect(std::string name) {
 }
 
 /// 6. Option match with int result
-int64_t EffectOptionString::option_int(std::string name) {
+int64_t EffectOptionString::option_int(const std::string &name) {
   std::optional<std::string> r = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(name).c_str());
+    auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   int64_t len;
   if (r.has_value()) {
     const std::string &v = *r;
-    len = static_cast<int64_t>(v.length());
+    len = static_cast<int64_t>((std::string_view{v}).size());
   } else {
     len = INT64_C(0);
   }

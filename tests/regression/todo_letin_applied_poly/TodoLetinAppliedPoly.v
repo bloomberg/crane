@@ -18,6 +18,6 @@ Definition test_value : nat :=
 End TodoLetinAppliedPoly.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "todo_letin_applied_poly" TodoLetinAppliedPoly.

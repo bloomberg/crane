@@ -2,7 +2,7 @@
 // Distributed under the terms of the GNU LGPL v2.1 license.
 //
 // The string operations of the typed string mapping
-// (theories/Mapping/StringView.v): a Rocq PrimString.string is a
+// (theories/Mapping/Std.v): a Rocq PrimString.string is a
 // std::string, read through a std::string_view.  Each operation reads its
 // strings through views and returns an owning std::string or a value, with
 // Rocq's total semantics.

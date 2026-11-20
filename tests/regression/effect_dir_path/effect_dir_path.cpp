@@ -1,13 +1,12 @@
 #include "effect_dir_path.h"
 
 /// 1. list_directory result matched — exercises IIFE + list match
-std::optional<std::string> EffectDirPath::first_file(std::string path) {
+std::optional<std::string> EffectDirPath::first_file(const std::string &path) {
   List<std::string> files = [&]() -> List<std::string> {
     auto result = List<std::string>::nil();
     std::error_code _ec;
     std::size_t _count = 0;
-    std::filesystem::directory_iterator _it(
-        std::filesystem::path(std::move(path)), _ec),
+    std::filesystem::directory_iterator _it(std::filesystem::path(path), _ec),
     _end;
     for (; !_ec && _it != _end && _count < 65536; _it.increment(_ec),
          ++_count) {
@@ -36,24 +35,24 @@ void EffectDirPath::save_cwd() {
 }
 
 /// 3. is_directory bool result used in conditional with effects in arms
-std::optional<std::string> EffectDirPath::check_and_list(std::string path) {
+std::optional<std::string>
+EffectDirPath::check_and_list(const std::string &path) {
   bool isdir = [&]() -> bool {
     std::error_code _ec;
     return std::filesystem::is_directory(std::filesystem::path(path), _ec);
   }();
   if (isdir) {
-    return first_file(std::move(path));
+    return first_file(path);
   } else {
     return std::optional<std::string>();
   }
 }
 
 /// 4. Path effect result chained to print
-void EffectDirPath::show_absolute(std::string path) {
+void EffectDirPath::show_absolute(const std::string &path) {
   std::string abs = [&]() -> std::string {
     std::error_code _ec;
-    auto _r =
-        std::filesystem::absolute(std::filesystem::path(std::move(path)), _ec);
+    auto _r = std::filesystem::absolute(std::filesystem::path(path), _ec);
     return _ec ? std::string{} : _r.string();
   }();
   std::cout << std::move(abs) << '\n';
@@ -61,15 +60,14 @@ void EffectDirPath::show_absolute(std::string path) {
 }
 
 /// 5. Multiple bool effects composed
-std::string EffectDirPath::classify_path(std::string path) {
+std::string EffectDirPath::classify_path(const std::string &path) {
   bool isdir = [&]() -> bool {
     std::error_code _ec;
     return std::filesystem::is_directory(std::filesystem::path(path), _ec);
   }();
   bool isfile = [&]() -> bool {
     std::error_code _ec;
-    return std::filesystem::is_regular_file(
-        std::filesystem::path(std::move(path)), _ec);
+    return std::filesystem::is_regular_file(std::filesystem::path(path), _ec);
   }();
   if (isdir) {
     return "directory";
@@ -83,11 +81,10 @@ std::string EffectDirPath::classify_path(std::string path) {
 }
 
 /// 6. create_directory bool result explicitly bound and used
-std::string EffectDirPath::create_and_report(std::string path) {
+std::string EffectDirPath::create_and_report(const std::string &path) {
   bool ok = [&]() -> bool {
     std::error_code _ec;
-    std::filesystem::create_directories(std::filesystem::path(std::move(path)),
-                                        _ec);
+    std::filesystem::create_directories(std::filesystem::path(path), _ec);
     return !_ec;
   }();
   if (ok) {
@@ -125,10 +122,10 @@ uint64_t EffectDirPath::count_entries(const List<std::string> &dirs,
 }
 
 /// 8. remove_directory (returns bool but treated as unit in bind)
-void EffectDirPath::cleanup(std::string path) {
+void EffectDirPath::cleanup(const std::string &path) {
   bool _x = [&]() -> bool {
     std::error_code _ec;
-    std::filesystem::remove_all(std::filesystem::path(std::move(path)), _ec);
+    std::filesystem::remove_all(std::filesystem::path(path), _ec);
     return !_ec;
   }();
   std::cout << std::string("cleaned up") << '\n';

@@ -29,8 +29,8 @@ Itree<LoopifyInnerInstanceCall::Ev, bool> LoopifyInnerInstanceCall::check() {
   return Monad_itree<LoopifyInnerInstanceCall::Ev>::template bind<
       std::pair<uint64_t, uint64_t>, bool>(
       bumped(),
-      [](const std::pair<uint64_t,
-                         uint64_t> &p) {
+      [](std::pair<uint64_t,
+                   uint64_t> p) {
         return Monad_itree<LoopifyInnerInstanceCall::Ev>::template ret<bool>(
             (p.first == UINT64_C(5) && p.second == UINT64_C(42)));
       });

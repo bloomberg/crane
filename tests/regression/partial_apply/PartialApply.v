@@ -44,5 +44,5 @@ Definition test_sum : nat := sum_with_init 100 [1; 2; 3].
 End PartialApply.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "partial_apply" PartialApply.

@@ -123,5 +123,5 @@ Definition init_read : nat := ram_read_main init_state.
 End RamAccessor.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "ram_accessor" RamAccessor.

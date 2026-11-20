@@ -13,6 +13,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -196,7 +197,8 @@ struct GlobalStateTests {
       return ListDef::seq(fp, (((_once1 - fp) > _once1 ? 0 : (_once1 - fp))));
     }
 
-    static std::optional<uint64_t> index(uint64_t fp, uint64_t sp, uint64_t i) {
+    constexpr static std::optional<uint64_t> index(uint64_t fp, uint64_t sp,
+                                                   uint64_t i) {
       if ((fp <= i && i <= sp)) {
         return std::make_optional<uint64_t>((((i - fp) > i ? 0 : (i - fp))));
       } else {
@@ -285,7 +287,7 @@ struct GlobalStateTests {
   static uint64_t fib_fun(uint64_t n);
   static uint64_t counter();
   static uint64_t counter_next_mine(uint64_t ctr);
-  static std::string gensym(uint64_t counter0, std::string prefix);
+  static std::string gensym(uint64_t counter0, const std::string &prefix);
 };
 
 template <typename _tcI0, typename T1>

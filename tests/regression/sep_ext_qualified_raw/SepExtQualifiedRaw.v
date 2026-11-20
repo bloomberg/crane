@@ -23,6 +23,6 @@ Module Make (X : OrderedType).
 End Make.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Separate Extraction Make.

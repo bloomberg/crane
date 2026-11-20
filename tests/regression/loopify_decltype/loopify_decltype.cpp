@@ -74,8 +74,8 @@ uint64_t LoopifyDecltype::sum_flagged(const List<LoopifyDecltype::item> &xs) {
       auto _f = std::move(std::get<_after_sum_flagged_in_Cons>(_popped));
       _stack.pop_back();
       LoopifyDecltype::item a0 = std::move(_f.a0);
-      _result = ((a0.item_flag ? std::move(a0).item_val : UINT64_C(0)) +
-                 std::move(_result));
+      _result =
+          ((a0.item_flag ? a0.item_val : UINT64_C(0)) + std::move(_result));
     }
   }
   return _result;

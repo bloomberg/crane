@@ -33,7 +33,7 @@ bool JumpTargets::in_layout(const JumpTargets::layout &l,
   }
 }
 
-uint64_t JumpTargets::option_nat_or_zero(const std::optional<uint64_t> &o) {
+uint64_t JumpTargets::option_nat_or_zero(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
     return n;
@@ -42,6 +42,6 @@ uint64_t JumpTargets::option_nat_or_zero(const std::optional<uint64_t> &o) {
   }
 }
 
-uint64_t JumpTargets::target_default(const std::optional<uint64_t> &o) {
+uint64_t JumpTargets::target_default(std::optional<uint64_t> o) {
   return option_nat_or_zero(o);
 }

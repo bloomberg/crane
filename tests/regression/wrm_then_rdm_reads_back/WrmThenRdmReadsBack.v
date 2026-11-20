@@ -42,5 +42,5 @@ Definition t : bool := Nat.eqb (acc roundtrip) 12.
 End WrmThenRdmReadsBack.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "wrm_then_rdm_reads_back" WrmThenRdmReadsBack.

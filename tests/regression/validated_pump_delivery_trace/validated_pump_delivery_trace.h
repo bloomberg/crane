@@ -707,8 +707,7 @@ struct ValidatedPumpDeliveryTraceCase {
 
   static bool pump_can_deliver(const PumpState &state, uint64_t dose);
   static uint64_t reservoir_after_bolus(const PumpState &state, uint64_t dose);
-  static uint64_t option_nat_default(const std::optional<uint64_t> &x,
-                                     uint64_t d);
+  static uint64_t option_nat_default(std::optional<uint64_t> x, uint64_t d);
   static bool pump_accepts_result(const PumpState &pump, RoundingMode mode,
                                   const PrecisionResult &r);
   static uint64_t

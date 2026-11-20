@@ -439,8 +439,7 @@ struct MemSafetyProbe10 {
   }();
   /// TEST 4: Closure returned from nested match.
   /// Tests return_captures_by_value through Sif branches.
-  static uint64_t choose_fn(const std::optional<bool> &o, uint64_t v,
-                            uint64_t n);
+  static uint64_t choose_fn(std::optional<bool> o, uint64_t v, uint64_t n);
   static inline const uint64_t test_choose = []() {
     crane::fn<uint64_t(uint64_t)> f1 =
         [](uint64_t _x0) -> uint64_t {

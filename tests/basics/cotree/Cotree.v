@@ -134,5 +134,5 @@ Definition test_approx_size : nat := tree_size test_approx.
 End Cotree.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "cotree" Cotree.

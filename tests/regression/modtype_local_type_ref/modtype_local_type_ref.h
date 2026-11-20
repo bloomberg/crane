@@ -14,7 +14,7 @@ struct ModtypeLocalTypeRef {
   };
 
   struct S {
-    static uint64_t lookup(const std::pair<uint64_t, uint64_t> &e, uint64_t k);
+    static uint64_t lookup(std::pair<uint64_t, uint64_t> e, uint64_t k);
   };
 
   struct T {

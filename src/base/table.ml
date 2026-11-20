@@ -4109,6 +4109,8 @@ type numeral_info = {
   ind : GlobRef.t;
     (* The numeral inductive itself, so a rendering site holding only the
        info can still ask what C++ type the literal has to fit in. *)
+  typed : (int * Mapping_descriptor.numeral_action) list option;
+    (* A typed mapping's numeral cases; see [table.mli]. *)
 }
 
 let numeral_table = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrNumeral"
@@ -4122,13 +4124,57 @@ let add_numeral_inductive r info =
     (fun conv -> converter_table := Core.Ref.Can.Map.add conv r !converter_table)
     info.converters
 
-let is_numeral_inductive r = Core.Ref.Can.Map.mem r !numeral_table
+(* The numeral information of a typed mapping's numeral descriptor
+   (design 8.7, 17): the literal format is its emitter's, with the
+   validated decimal digits (and sign) at [%n]. *)
+let typed_numeral_info r =
+  if not (Mapping_plan.is_type_head r) then None
+  else
+    match (Mapping_plan.find r).numerals with
+    | None -> None
+    | Some n ->
+      let index p = match List.find_opt (fun (_, a) -> p a) n.cases with Some (j, _) -> j | None -> -1 in
+      let fmt =
+        match n.emitter with
+        | Mapping_descriptor.Integer_token (prefix, suffix) -> prefix ^ "%n" ^ suffix
+        | Mapping_descriptor.Decimal_constructor callee -> callee ^ "(\"%n\")"
+      in
+      Some
+        { zero_ctor = index (function Mapping_descriptor.Numeral_zero -> true | _ -> false);
+          succ_ctor = index (function Mapping_descriptor.Numeral_successor _ -> true | _ -> false);
+          fmt;
+          converters = n.converters;
+          ind = r;
+          typed = Some n.cases }
 
-let get_numeral_info r = Core.Ref.Can.Map.find_opt r !numeral_table
+(* The converters of every typed numeral descriptor, by the type they
+   build: resolved once per extraction, the first time one is asked for. *)
+let typed_converters : GlobRef.t Core.Ref.Can.Map.t option ref = State.cell State.Extraction None
 
-let is_numeral_converter r = Core.Ref.Can.Map.mem r !converter_table
+let typed_converter_table () =
+  match !typed_converters with
+  | Some m -> m
+  | None ->
+    let m =
+      List.fold_left
+        (fun m (head, _) ->
+          List.fold_left (fun m c -> Core.Ref.Can.Map.add c head m) m (Mapping_plan.numeral_converters head))
+        Core.Ref.Can.Map.empty (Mapping_discovery.type_mapping_heads ())
+    in
+    typed_converters := Some m;
+    m
 
-let numeral_ind_of_converter r = Core.Ref.Can.Map.find_opt r !converter_table
+let get_numeral_info r =
+  match typed_numeral_info r with Some _ as i -> i | None -> Core.Ref.Can.Map.find_opt r !numeral_table
+
+let is_numeral_inductive r = Option.has_some (get_numeral_info r)
+
+let numeral_ind_of_converter r =
+  match Core.Ref.Can.Map.find_opt r (typed_converter_table ()) with
+  | Some _ as g -> g
+  | None -> Core.Ref.Can.Map.find_opt r !converter_table
+
+let is_numeral_converter r = Option.has_some (numeral_ind_of_converter r)
 
 let in_numeral : GlobRef.t * numeral_info -> obj =
   declare_object
@@ -4256,7 +4302,7 @@ let extract_numeral r fmt =
     in
     let info =
       { zero_ctor = !zero_idx; succ_ctor = !succ_idx;
-        fmt = fmt; converters = converters; ind = g }
+        fmt = fmt; converters = converters; ind = g; typed = None }
     in
     Lib.add_leaf (in_numeral (g, info))
   | _ ->

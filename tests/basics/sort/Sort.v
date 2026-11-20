@@ -445,6 +445,6 @@ End QSort.
 End Sort.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extract Inlined Constant Compare_dec.le_lt_dec => "%a0 <= %a1".
 Crane Extraction "sort" Sort.

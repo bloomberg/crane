@@ -3,7 +3,7 @@
 From Stdlib Require Import BinNat BinPos.
 
 Require Crane.Extraction.
-Require Crane.Mapping.NInt.
+Require Import Crane.Mapping.NInt.
 
 Module NIntTest.
 

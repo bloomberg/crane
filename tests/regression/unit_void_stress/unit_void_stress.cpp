@@ -123,7 +123,7 @@ void UnitVoidStress::odd_void(uint64_t n) {
   }
 }
 
-void UnitVoidStress::match_opt_void(const std::optional<uint64_t> &o) {
+void UnitVoidStress::match_opt_void(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
     consume(n);

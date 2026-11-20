@@ -24,7 +24,7 @@ std::string LetMatchType::let_match_string(uint64_t n) {
 }
 
 /// 3. let-bound option match
-uint64_t LetMatchType::let_match_option(const std::optional<uint64_t> &o) {
+uint64_t LetMatchType::let_match_option(std::optional<uint64_t> o) {
   uint64_t x;
   if (o.has_value()) {
     const uint64_t &n = *o;

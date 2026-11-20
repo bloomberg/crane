@@ -27,5 +27,5 @@ Definition t : nat := nth 2 (update_region [0; 0; 0; 0] 1 [7; 8]) 0.
 End RegionPatchWrite.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "region_patch_write" RegionPatchWrite.

@@ -25,7 +25,7 @@ std::string MatchMonadic::conditional_read(bool b) {
   if (b) {
     std::string line;
     std::getline(std::cin, line);
-    return std::string("got: ") + std::move(line);
+    return std::string("got: ") + line;
   } else {
     return "skipped";
   }
@@ -54,7 +54,7 @@ std::string MatchMonadic::nested_match(uint64_t n, bool b) {
 }
 
 /// 4. Match on option in monadic context
-uint64_t MatchMonadic::handle_option(const std::optional<uint64_t> &o) {
+uint64_t MatchMonadic::handle_option(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
     std::cout << std::string("found") << '\n';
@@ -89,14 +89,14 @@ std::string MatchMonadic::match_then_bind(uint64_t n) {
   }
   std::string line;
   std::getline(std::cin, line);
-  return std::move(tag) + std::move(line);
+  return tag + line;
 }
 
 /// 7. Match inside a bind continuation
 int64_t MatchMonadic::bind_then_match() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(std::move(line).length());
+  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
   if (len == INT64_C(0)) {
     std::cout << std::string("empty") << '\n';
     return INT64_C(0);
@@ -120,5 +120,5 @@ std::string MatchMonadic::multi_match(bool a, bool b) {
     y = "b";
   }
   std::cout << x + y << '\n';
-  return std::move(x) + std::move(y);
+  return x + y;
 }

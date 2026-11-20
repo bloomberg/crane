@@ -24,6 +24,6 @@ End Use.
 End TodoNestedModuleTypeFunctor.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Extraction "todo_nested_module_type_functor" TodoNestedModuleTypeFunctor.

@@ -8,6 +8,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <system_error>
 #include <utility>
 #include <variant>
@@ -96,8 +97,8 @@ public:
 };
 
 struct Dir {
-  static bool make_dir(std::string path);
-  static bool remove_dir(std::string path);
+  static bool make_dir(const std::string &path);
+  static bool remove_dir(const std::string &path);
   static std::string get_cwd();
-  static List<std::string> list_dir(std::string path);
+  static List<std::string> list_dir(const std::string &path);
 };

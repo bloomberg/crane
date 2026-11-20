@@ -22,11 +22,11 @@ struct AssocTypeAnyCast {
   struct PairWrap {
     using W = std::pair<uint64_t, uint64_t>;
 
-    static std::pair<uint64_t, uint64_t> wrap(uint64_t n) {
+    constexpr static std::pair<uint64_t, uint64_t> wrap(uint64_t n) {
       return std::make_pair(n, n);
     }
 
-    static uint64_t unwrap(std::pair<uint64_t, uint64_t> p) {
+    constexpr static uint64_t unwrap(std::pair<uint64_t, uint64_t> p) {
       return (p.first + p.second);
     }
   };

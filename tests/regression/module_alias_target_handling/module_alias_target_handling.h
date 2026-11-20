@@ -1207,7 +1207,7 @@ struct Pos {
         return std::make_pair((2u * s), mask::ispos(r_));
       }
     } else {
-      return std::make_pair((2u * s), sub_mask(g(f0(1u)), (2u * (2u * 1u))));
+      return std::make_pair((2u * s), sub_mask(g(f0(1u)), 4u));
     }
   }
 

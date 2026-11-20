@@ -29,5 +29,5 @@ Definition test_abs_neg : int := i_abs (sub 0 42).
 End Int63Arith.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 Crane Extraction "int63_arith" Int63Arith.

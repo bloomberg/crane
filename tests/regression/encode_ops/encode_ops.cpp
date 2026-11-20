@@ -1,6 +1,6 @@
 #include "encode_ops.h"
 
-bool EncodeOps::pair_in_range(const std::pair<uint64_t, uint64_t> &p) {
+bool EncodeOps::pair_in_range(std::pair<uint64_t, uint64_t> p) {
   const auto &[b1, b2] = p;
   return (b1 < UINT64_C(256) && b2 < UINT64_C(256));
 }

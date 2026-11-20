@@ -1,14 +1,14 @@
 (* Copyright 2026 Bloomberg Finance L.P. *)
 (* Distributed under the terms of the GNU LGPL v2.1 license. *)
-(** A [Crane Extract Numeral] literal of 2^63 or more keeps its value instead
+(** A numeral literal of 2^63 or more keeps its value instead
     of wrapping in 64-bit signed arithmetic. *)
 From Stdlib Require Import ZArith.
 From Crane Require Import Extraction.
 From Crane Require Import Mapping.Std Mapping.ZGMP.
 
-(** [Mapping.ZGMP] writes [mpz_class(%n)], a C++ integer literal, which
-    cannot hold these; gmpxx's own literal suffix reads the digits. *)
-Crane Extract Numeral Z => "(%n_mpz)".
+(* [Mapping.ZGMP]'s numeral descriptor writes gmpxx's own literal suffix,
+   [(%n_mpz)], which reads the digits exactly; a C++ integer literal
+   ([mpz_class(%n)]) cannot hold these. *)
 
 Module NumeralWrapGmp.
 Local Open Scope Z_scope.

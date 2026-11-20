@@ -12,14 +12,12 @@ std::int64_t TypedMappingOperations::doubled(std::int64_t c) {
 
 uint64_t TypedMappingOperations::ordered(uint64_t x, uint64_t y) {
   auto _once1 = ops_support::tick(x);
-  auto _once2 = ops_support::tick(y);
-  return ops_support::combine(std::move(_once2), _once1, _once1);
+  return ops_support::combine(ops_support::tick(y), _once1, _once1);
 }
 
 uint64_t TypedMappingOperations::skipped(uint64_t x, uint64_t y) {
   ops_support::tick(x);
-  auto _once1 = ops_support::tick(y);
-  return (std::move(_once1) + 1);
+  return (ops_support::tick(y) + 1);
 }
 
 uint64_t TypedMappingOperations::skipped_pure(uint64_t, uint64_t y) {

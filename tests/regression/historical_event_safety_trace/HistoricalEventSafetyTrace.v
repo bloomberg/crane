@@ -353,6 +353,6 @@ Definition sample_all_tests_pass : bool :=
 End HistoricalEventSafetyTraceCase.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "historical_event_safety_trace" HistoricalEventSafetyTraceCase.

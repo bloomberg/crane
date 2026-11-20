@@ -24,6 +24,6 @@ Definition test_value : nat :=
 End TodoDependentFieldAlias.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "todo_dependent_field_alias" TodoDependentFieldAlias.

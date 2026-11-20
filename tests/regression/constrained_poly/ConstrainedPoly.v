@@ -59,5 +59,5 @@ Definition test_umap : UOption nat :=
 End ConstrainedPoly.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "constrained_poly" ConstrainedPoly.

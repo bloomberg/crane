@@ -3,7 +3,7 @@
 mpz_class Pos::add_carry(const mpz_class &x, const mpz_class &y) {
   if (x == 1) {
     if (y == 1) {
-      return (2 * mpz_class(1) + 1);
+      return (3_mpz);
     } else if (y % 2 != 0) {
       mpz_class q = (y - 1) / 2;
       return (2 * (q + 1) + 1);

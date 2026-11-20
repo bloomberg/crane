@@ -1,7 +1,7 @@
 #include "loopify_conditional_recursion.h"
 
 std::pair<uint64_t, uint64_t>
-LoopifyConditionalRecursion::cached_sum(const std::optional<uint64_t> &cache,
+LoopifyConditionalRecursion::cached_sum(std::optional<uint64_t> cache,
                                         const List<uint64_t> &l) {
   // Explicit stack replaces the non-tail recursion of cached_sum: _call frames
   // are pending calls, _after frames resume a caller.
@@ -24,7 +24,7 @@ LoopifyConditionalRecursion::cached_sum(const std::optional<uint64_t> &cache,
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
-      const std::optional<uint64_t> cache = _f.cache;
+      std::optional<uint64_t> cache = _f.cache;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result = std::make_pair(UINT64_C(0), UINT64_C(0));
       } else {
@@ -82,7 +82,7 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
         if (a0 == target) {
           sub = std::make_pair(a0, *a1);
           {
-            _result = std::make_pair((std::move(sub).first + UINT64_C(1)),
+            _result = std::make_pair((sub.first + UINT64_C(1)),
                                      std::move(sub).second);
           }
         } else {
@@ -94,8 +94,8 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
       auto _f = std::move(std::get<_after_find_or_recurse_in_false>(_popped));
       _stack.pop_back();
       auto sub = std::move(_result);
-      _result = std::make_pair((std::move(sub).first + UINT64_C(1)),
-                               std::move(sub).second);
+      _result =
+          std::make_pair((sub.first + UINT64_C(1)), std::move(sub).second);
     }
   }
   return _result;
@@ -164,7 +164,7 @@ LoopifyConditionalRecursion::nested_cond(uint64_t threshold, uint64_t lo,
 
 std::pair<uint64_t, std::optional<std::pair<uint64_t, uint64_t>>>
 LoopifyConditionalRecursion::multi_return(
-    const std::optional<std::pair<uint64_t, uint64_t>> &memo,
+    std::optional<std::pair<uint64_t, uint64_t>> memo,
     const List<uint64_t> &l) {
   // Explicit stack replaces the non-tail recursion of multi_return: _call
   // frames are pending calls, _after frames resume a caller.
@@ -187,7 +187,7 @@ LoopifyConditionalRecursion::multi_return(
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
       const List<uint64_t> &l = *_f.l;
-      const std::optional<std::pair<uint64_t, uint64_t>> memo = _f.memo;
+      std::optional<std::pair<uint64_t, uint64_t>> memo = _f.memo;
       if (std::holds_alternative<typename List<uint64_t>::Nil>(l.v())) {
         _result =
             std::make_pair(UINT64_C(0),
