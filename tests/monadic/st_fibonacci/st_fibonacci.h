@@ -232,13 +232,12 @@ struct StFibonacci {
     if (n < UINT64_C(2)) {
       return n;
     } else {
-      std::shared_ptr<uint64_t> x;
-      x = std::make_shared<decltype(UINT64_C(0))>(UINT64_C(0));
-      std::shared_ptr<uint64_t> y;
-      y = std::make_shared<decltype(UINT64_C(1))>(UINT64_C(1));
+      std::shared_ptr<uint64_t> x = std::make_shared<uint64_t>(UINT64_C(0));
+      std::shared_ptr<uint64_t> y = std::make_shared<uint64_t>(UINT64_C(1));
       auto fib_loop =
-          [](uint64_t k, std::shared_ptr<uint64_t> x0,
-             std::shared_ptr<uint64_t> y0, uint64_t, uint64_t)
+          [](uint64_t k, const std::shared_ptr<uint64_t> &x0,
+             const std::shared_ptr<uint64_t> &y0, uint64_t,
+             uint64_t)
                -> uint64_t {
             // Loop replaces the tail recursion: each recursive call updates the
             // loop variables.

@@ -110,9 +110,12 @@ Module StQuicksort.
 
   Transparent quicksort_fun.
   Definition quicksort_fun := Eval unfold quicksort_fun in (@quicksort_fun).
+  (** [partition] and [swapArray] stay functions of their own, taking the
+      array as a [const std::shared_ptr<std::vector<uint64_t>>&].  The body
+      of the recursion is unfolded into [quicksort_ST]: its [call] events
+      push onto the stack of the loop [rec] is mapped to. *)
   Definition quicksort_ST_mine :=
-    Eval unfold quicksort_ST_list, quicksort_ST, quicksort_ST_body, partition,
-                swapArray, for_each_with in
+    Eval unfold quicksort_ST_list, quicksort_ST, quicksort_ST_body in
       (@quicksort_ST_list nat unit Nat.le nat_idx nat_stref).
 
   Definition nth := Eval unfold List.nth in (@List.nth nat).

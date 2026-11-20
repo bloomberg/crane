@@ -318,7 +318,6 @@ Definition runST {A : Type}
 
 (* CPP Bindings *)
 
-Crane Extraction Implicit newSTRef[1].
 Crane Extract Skip Ix_Correct.
 Crane Extract Skip CmpDec_Correct.
 Crane Extract Skip STEvent.
@@ -329,22 +328,153 @@ Crane Extract Skip STRefToIx.
 (* NOTE: skipping STRefClass seems to drop too much typing information,
  and the value types within references are not inferred. *)
 (* Crane Extract Skip STRefClass. *)
-Crane Extract Inlined Constant STRef => "std::shared_ptr<%t2>" From "memory".
-Crane Extract Inlined Constant newSTRef => "%result = std::make_shared<decltype(%a1)>(%a1)".
-Crane Extract Inlined Constant readSTRef => "*%a1".
-Crane Extract Inlined Constant writeSTRef => "*%a1 = %a2".
-(* array extraction *)
+(** References and arrays are typed mappings (docs/typed-mappings-design.md
+    13): a reference is a [std::shared_ptr<A>] and an array a
+    [std::shared_ptr<std::vector<A>>], each a mutable handle passed by const
+    reference, owned by the shared pointer ([NativeRAII]), with no views.  A
+    generated function that reads or writes an array or a reference takes
+    it as [const std::shared_ptr<...>&]; one that keeps it takes it by value.
+    Shared pointers do not collect cycles of references. *)
 
-Crane Extract Inductive STArray => "std::vector<%t2> *" [ "" ] From "vector".
-Crane Extract Inlined Constant newArray =>
-"%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1, %a3)" From "type_traits".
-Crane Extract Inlined Constant readArray => "(*%a1)[%a2]".
-Crane Extract Inlined Constant writeArray => "(*%a1)[%a2] = %a3".
+From Crane Require Import Mapping.Descriptor.
 
-Crane Extract Inlined Constant newListArray =>
-  "%result = new std::remove_pointer_t<decltype(%result)>(%a2 - %a1 + 1); { auto _xs = %a3; for (size_t _i = 0; _i < %result->size(); _i++) { if (holds_alternative<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v())) { const auto& [_a, _l] = get<typename std::remove_cvref_t<decltype(_xs)>::Cons>(_xs.v()); (*%result)[_i] = _a; if (_l) _xs = *_l; } } }" From "type_traits".
-Crane Extract Inlined Constant getElems =>
-  "[&]() { using _E = typename std::remove_pointer_t<std::remove_cvref_t<decltype(%a1)>>::value_type; List<_E> _r = List<_E>::nil(); for (size_t _i = %a1->size(); _i > 0; _i--) { _r = List<_E>::cons((*%a1)[_i - 1], std::move(_r)); } return _r; }()" From "type_traits" "utility".
+(** The index [idx] of an operation only selects the element type [V idx]:
+    no operation reads it at run time. *)
+Crane Extraction Implicit newSTRef [idx].
+Crane Extraction Implicit readSTRef [idx].
+Crane Extraction Implicit writeSTRef [idx].
+Crane Extraction Implicit newArray [idx].
+Crane Extraction Implicit newListArray [idx].
+Crane Extraction Implicit readArray [idx].
+Crane Extraction Implicit writeArray [idx].
+Crane Extraction Implicit getElems [idx].
+
+#[export] Instance st_ref_mapping (T : Type) (H : STRefClass T) (S A : Type)
+  : TypeMapping (@STRef T H S A) :=
+  {| type_headers := ["memory"%pstring];
+     type_cpp := Crane.Cpp.Apply "std::shared_ptr"
+                   [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")];
+     type_components :=
+       [{| component_name := "contents"; component_type := KnownType A |}];
+     type_copy := RetainIdentity;
+     type_access := MutableHandle HandleByConstReference;
+     type_views := NoViews (@STRef T H S A);
+     type_interface := AbstractInterface;
+     type_model := Identity;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}%pstring.
+
+#[export] Instance new_st_ref_mapping : OperationMapping (Ref (@newSTRef)) :=
+  {| operation_headers := ["memory"];
+     operation_cpp := Expr "std::make_shared<%stored(contents)>(%arg(v))";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "v"; argument_use := Take |}]
+         (ReturnFreshIdentity
+            [{| initial_component := "contents";
+                initial_source_argument := Some "v";
+                initial_multiplicity := InitialiseOnce |}])
+         [] |}%pstring.
+
+#[export] Instance read_st_ref_mapping : OperationMapping (Ref (@readSTRef)) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "*%arg(ref)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "ref"; argument_use := Read |}]
+         ReturnValue
+         [ReadsComponent {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
+
+#[export] Instance write_st_ref_mapping : OperationMapping (Ref (@writeSTRef)) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "*%arg(ref) = %arg(a)";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "ref"; argument_use := Write |};
+          {| argument_name := "a"; argument_use := Take |}]
+         ReturnValue
+         [WritesComponent {| path_argument := "ref"; path_components := ["contents"] |} (Some "a");
+          InvalidatesElementBorrows {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
+
+#[export] Instance st_array_mapping (T S A : Type) : TypeMapping (STArray T S A) :=
+  {| type_headers := ["memory"; "vector"];
+     type_cpp :=
+       Crane.Cpp.Apply "std::shared_ptr"
+         [Crane.Cpp.TypeArg
+            (Crane.Cpp.Apply "std::vector"
+               [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")])];
+     type_components :=
+       [{| component_name := "contents"; component_type := KnownType A |}];
+     type_copy := RetainIdentity;
+     type_access := MutableHandle HandleByConstReference;
+     type_views := NoViews (STArray T S A);
+     type_interface := AbstractInterface;
+     type_model := Identity;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}%pstring.
+
+#[export] Instance new_array_mapping : OperationMapping (Ref (@newArray)) :=
+  {| operation_headers := ["crane_st.h"; "memory"; "vector"];
+     operation_cpp :=
+       Expr "std::make_shared<std::vector<%stored(contents)>>(crane::st::extent(%arg(lo), %arg(hi)), %arg(def))";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "lo"; argument_use := Read |};
+          {| argument_name := "hi"; argument_use := Read |};
+          {| argument_name := "def"; argument_use := Take |}]
+         (ReturnFreshIdentity
+            [{| initial_component := "contents";
+                initial_source_argument := Some "def";
+                initial_multiplicity := InitialiseMany |}])
+         [] |}%pstring.
+
+#[export] Instance new_list_array_mapping : OperationMapping (Ref (@newListArray)) :=
+  {| operation_headers := ["crane_st.h"];
+     operation_cpp :=
+       Expr "crane::st::new_list_array<%stored(contents)>(crane::st::extent(%arg(lo), %arg(hi)), %arg(elems))";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "lo"; argument_use := Read |};
+          {| argument_name := "hi"; argument_use := Read |};
+          {| argument_name := "elems"; argument_use := Read |}]
+         (ReturnFreshIdentity
+            [{| initial_component := "contents";
+                initial_source_argument := Some "elems";
+                initial_multiplicity := InitialiseMany |}])
+         [] |}%pstring.
+
+#[export] Instance read_array_mapping : OperationMapping (Ref (@readArray)) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(*%arg(arr))[%arg(i)]";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "arr"; argument_use := Read |};
+          {| argument_name := "i"; argument_use := Read |}]
+         ReturnValue
+         [ReadsComponent {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
+
+#[export] Instance write_array_mapping : OperationMapping (Ref (@writeArray)) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(*%arg(arr))[%arg(i)] = %arg(v)";
+     operation_contract :=
+       EffectfulOperation
+         [{| argument_name := "arr"; argument_use := Write |};
+          {| argument_name := "i"; argument_use := Read |};
+          {| argument_name := "v"; argument_use := Take |}]
+         ReturnValue
+         [WritesComponent {| path_argument := "arr"; path_components := ["contents"] |} (Some "v");
+          InvalidatesElementBorrows {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
+
+#[export] Instance get_elems_mapping : OperationMapping (Ref (@getElems)) :=
+  {| operation_headers := ["crane_st.h"];
+     operation_cpp := Expr "crane::st::elems<List<%stored(contents)>>(%arg(arr))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "arr"; argument_use := Read |}]
+         ReturnValue
+         [ReadsComponent {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
 
 (* Recursion is mapped to a while loop that models the stack explicitly. *)
 (* NOTE: should this go in ITree base as part of the erased translation? *)
