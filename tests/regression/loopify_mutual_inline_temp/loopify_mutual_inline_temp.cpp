@@ -89,7 +89,7 @@ uint64_t LoopifyMutualInlineTemp::even_step(
                     l0.v_mut());
             _loop_s = (s0 + hd(*a1));
             _loop_keep = LoopifyMutualInlineTemp::lst(*a10);
-            _loop_l = lst::cons((std::move(a00) + UINT64_C(1)), lst::nil());
+            _loop_l = lst::cons((a00 + UINT64_C(1)), lst::nil());
             _loop_n = m0;
           }
         }

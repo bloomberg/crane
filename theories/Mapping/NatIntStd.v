@@ -25,57 +25,182 @@
 *)
 From Crane Require Extraction.
 From Crane Require Export Mapping.Std.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
 
-Crane Extract Inductive nat =>
-  "uint64_t"
-  [ "0" "(%a0 + 1)" ]
-  "if (%scrut <= 0) { %br0 } else { uint64_t %b1a0 = %scrut - 1; %br1 }"
-  From "cstdint".
+(** [nat] is a [uint64_t]: [O] is [0], [S n] is [n + 1], a match tests
+    [n <= 0] and reads the predecessor as [n - 1], and a numeral is a
+    [UINT64_C] literal. *)
+#[export] Instance std_nat_mapping : TypeMapping nat :=
+  {| type_headers := ["cstdint"];
+     type_cpp := Crane.Cpp.Name "uint64_t";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews nat;
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref O;
+             ctor_build := Expr "0";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut <= 0";
+                       case_fields := [] |} |};
+          {| ctor_source := Ref S;
+             ctor_build := Expr "(%a0 + 1)";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut > 0";
+                       case_fields := [(0, OwnedProjection "%scrut - 1")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals :=
+       Some {| numeral_cases :=
+                 [{| numeral_constructor := Ref O; numeral_action := NumeralZero |};
+                  {| numeral_constructor := Ref S; numeral_action := NumeralSuccessor 0 |}];
+               numeral_emitter := IntegerToken "UINT64_C(" ")";
+               numeral_converters := [Ref Nat.of_num_uint] |} |}.
 
-Crane Extract Numeral nat => "UINT64_C(%n)".
+#[export] Instance std_nat_add_mapping : OperationMapping (Ref Nat.add) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) + %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_mul_mapping : OperationMapping (Ref Nat.mul) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) * %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_div_mapping : OperationMapping (Ref Nat.div) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(y) ? %arg(x) / %arg(y) : 0)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_modulo_mapping : OperationMapping (Ref Nat.modulo) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(y) ? %arg(x) % %arg(y) : %arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_double_mapping : OperationMapping (Ref Nat.double) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) + %arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_pred_mapping : OperationMapping (Ref Nat.pred) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) ? %arg(n) - 1 : %arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_sub_mapping : OperationMapping (Ref Nat.sub) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(((%arg(n) - %arg(m)) > %arg(n) ? 0 : (%arg(n) - %arg(m))))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_max_mapping : OperationMapping (Ref Nat.max) :=
+  {| operation_headers := ["algorithm"];
+     operation_cpp := Expr "std::max(%arg(n), %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_min_mapping : OperationMapping (Ref Nat.min) :=
+  {| operation_headers := ["algorithm"];
+     operation_cpp := Expr "std::min(%arg(n), %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_eqb_mapping : OperationMapping (Ref Nat.eqb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(n) == %arg(m)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_ltb_mapping : OperationMapping (Ref Nat.ltb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(n) < %arg(m)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_leb_mapping : OperationMapping (Ref Nat.leb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(n) <= %arg(m)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance std_nat_compare_mapping : OperationMapping (Ref Nat.compare) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) < %arg(m) ? %ret::LT : (%arg(m) < %arg(n) ? %ret::GT : %ret::EQ))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
 
-Crane Extract Inlined Constant Nat.add => "(%a0 + %a1)".
-Crane Extract Inlined Constant Nat.mul => "(%a0 * %a1)".
-Crane Extract Inlined Constant Nat.div => "(%a1 ? %a0 / %a1 : 0)".
-Crane Extract Inlined Constant Nat.modulo => "(%a1 ? %a0 % %a1 : %a0)".
-Crane Extract Inlined Constant Nat.double => "(%a0 + %a0)".
-Crane Extract Inlined Constant Nat.pred => "(%a0 ? %a0 - 1 : %a0)".
-Crane Extract Inlined Constant Nat.sub => "(((%a0 - %a1) > %a0 ? 0 : (%a0 - %a1)))".
-Crane Extract Inlined Constant Nat.max => "std::max(%a0, %a1)" From "algorithm".
-Crane Extract Inlined Constant Nat.min => "std::min(%a0, %a1)" From "algorithm".
-Crane Extract Inlined Constant Nat.eqb => "%a0 == %a1".
-Crane Extract Inlined Constant Nat.ltb => "%a0 < %a1".
-Crane Extract Inlined Constant Nat.leb => "%a0 <= %a1".
-Crane Extract Inlined Constant Nat.compare =>
-  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
+#[export] Instance std_nat_iter_mapping : OperationMapping (Ref Nat.iter) :=
+  {| operation_headers := ["type_traits"; "utility"];
+     operation_cpp := Expr "[](uint64_t _crane_n, auto _crane_f, auto _crane_seed) { %ret _crane_acc = std::move(_crane_seed); for (uint64_t _crane_i = 0; _crane_i < _crane_n; _crane_i++) { _crane_acc = _crane_f(std::move(_crane_acc)); } return _crane_acc; }(%arg(n), %arg(f), %arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "f"; argument_use := Read |};
+          {| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
 
-Crane Extract Inlined Constant Nat.iter =>
-  "[](uint64_t _crane_n, auto _crane_f, auto _crane_seed) { %ret _crane_acc = std::move(_crane_seed); for (uint64_t _crane_i = 0; _crane_i < _crane_n; _crane_i++) { _crane_acc = _crane_f(std::move(_crane_acc)); } return _crane_acc; }(%a0, %a1, %a2)" From "type_traits" "utility".
-
+(* [PeanoNat.Nat] includes [Nat]: its [add], [mul], ... are the same
+   constants, mapped above; only [eq_dec] is its own. *)
 From Stdlib Require PeanoNat.
 
-Crane Extract Inlined Constant PeanoNat.Nat.add => "(%a0 + %a1)".
-Crane Extract Inlined Constant PeanoNat.Nat.mul => "(%a0 * %a1)".
-Crane Extract Inlined Constant PeanoNat.Nat.div => "(%a1 ? %a0 / %a1 : 0)".
-Crane Extract Inlined Constant PeanoNat.Nat.modulo => "(%a1 ? %a0 % %a1 : %a0)".
-Crane Extract Inlined Constant PeanoNat.Nat.double => "(%a0 + %a0)".
-Crane Extract Inlined Constant PeanoNat.Nat.pred => "(%a0 ? %a0 - 1 : %a0)".
-Crane Extract Inlined Constant PeanoNat.Nat.sub => "(((%a0 - %a1) > %a0 ? 0 : (%a0 - %a1)))".
-Crane Extract Inlined Constant PeanoNat.Nat.max => "std::max(%a0, %a1)" From "algorithm".
-Crane Extract Inlined Constant PeanoNat.Nat.min => "std::min(%a0, %a1)" From "algorithm".
-Crane Extract Inlined Constant PeanoNat.Nat.eqb => "%a0 == %a1".
-Crane Extract Inlined Constant PeanoNat.Nat.ltb => "%a0 < %a1".
-Crane Extract Inlined Constant PeanoNat.Nat.leb => "%a0 <= %a1".
-Crane Extract Inlined Constant PeanoNat.Nat.compare =>
-  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
-Crane Extract Inlined Constant PeanoNat.Nat.eq_dec => "%a0 == %a1".
+#[export] Instance std_peano_nat_eq_dec_mapping : OperationMapping (Ref PeanoNat.Nat.eq_dec) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(n) == %arg(m)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
 
-Crane Extract Inlined Constant PeanoNat.Nat.iter =>
-  "[](uint64_t _crane_n, auto _crane_f, auto _crane_seed) { %ret _crane_acc = std::move(_crane_seed); for (uint64_t _crane_i = 0; _crane_i < _crane_n; _crane_i++) { _crane_acc = _crane_f(std::move(_crane_acc)); } return _crane_acc; }(%a0, %a1, %a2)" From "type_traits" "utility".
 
 From Corelib Require Import PrimInt63.
 Axiom nat_of_int : int -> nat.
-Crane Extract Inlined Constant nat_of_int => "static_cast<uint64_t>(%a0)".
+#[export] Instance std_nat_of_int_mapping : OperationMapping (Ref nat_of_int) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<uint64_t>(%arg(x0))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x0"; argument_use := Read |}]
+         ReturnValue [] |}.
 
 Axiom nat_of_int_0 : nat_of_int 0 = 0%nat.
 Axiom nat_of_int_pos : forall n, eqb n 0 = false -> exists m, nat_of_int n = S m.
@@ -85,4 +210,10 @@ Axiom nat_of_int_gt1 : forall n, ltb 1 n = true -> exists m, nat_of_int n = S (S
 
 From Corelib Require Import PrimString.
 Axiom string_of_nat : nat -> string.
-Crane Extract Inlined Constant string_of_nat => "std::to_string(%a0)".
+#[export] Instance std_string_of_nat_mapping : OperationMapping (Ref string_of_nat) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "std::to_string(%arg(x0))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x0"; argument_use := Read |}]
+         ReturnValue [] |}.

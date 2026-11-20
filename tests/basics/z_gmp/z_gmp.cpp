@@ -30,12 +30,12 @@ bool ZGMPTest::leb_test(const mpz_class &x0_, const mpz_class &x1_) {
 
 mpz_class ZGMPTest::z_sign(const mpz_class &z) {
   if (z == 0) {
-    return mpz_class(0);
+    return (0_mpz);
   } else if (z > 0) {
     mpz_class _x = z;
-    return mpz_class(1);
+    return (1_mpz);
   } else {
     mpz_class _x = -z;
-    return mpz_class(-1);
+    return (-1_mpz);
   }
 }

@@ -50,7 +50,7 @@ struct NatOrd {
 static_assert(Ord<NatOrd, uint64_t>);
 
 struct NatShow {
-  constexpr static std::string show(uint64_t) { return "<nat>"; }
+  static std::string show(uint64_t) { return "<nat>"; }
 };
 
 static_assert(Show<NatShow, uint64_t>);

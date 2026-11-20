@@ -82,7 +82,7 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
         if (a0 == target) {
           sub = std::make_pair(a0, *a1);
           {
-            _result = std::make_pair((std::move(sub).first + UINT64_C(1)),
+            _result = std::make_pair((sub.first + UINT64_C(1)),
                                      std::move(sub).second);
           }
         } else {
@@ -94,8 +94,8 @@ LoopifyConditionalRecursion::find_or_recurse(uint64_t target,
       auto _f = std::move(std::get<_after_find_or_recurse_in_false>(_popped));
       _stack.pop_back();
       auto sub = std::move(_result);
-      _result = std::make_pair((std::move(sub).first + UINT64_C(1)),
-                               std::move(sub).second);
+      _result =
+          std::make_pair((sub.first + UINT64_C(1)), std::move(sub).second);
     }
   }
   return _result;

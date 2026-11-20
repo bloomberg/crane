@@ -296,7 +296,7 @@ std::pair<unsigned int, Pos::mask> Pos::sqrtrem(unsigned int p) {
   } else if (p % 2u != 0u) {
     unsigned int p0 = (p - 1u) / 2u;
     if (p0 == 1u) {
-      return std::make_pair(1u, mask::ispos((2u * 1u)));
+      return std::make_pair(1u, mask::ispos(2u));
     } else if (p0 % 2u != 0u) {
       unsigned int p1 = (p0 - 1u) / 2u;
       return sqrtrem_step([](unsigned int x) { return (2u * x + 1u); },
@@ -491,7 +491,7 @@ unsigned int Pos::lxor(unsigned int p, unsigned int q) {
 unsigned int Coq_Pos::add_carry(unsigned int x, unsigned int y) {
   if (x == 1u) {
     if (y == 1u) {
-      return (2u * 1u + 1u);
+      return 3u;
     } else if (y % 2u != 0u) {
       unsigned int q = (y - 1u) / 2u;
       return (2u * (q + 1u) + 1u);
@@ -770,41 +770,34 @@ unsigned int Coq_Pos::of_uint_acc(const Uint &d, unsigned int acc) {
     return acc;
   } else if (std::holds_alternative<typename Uint::D0>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D0>(d.v());
-    return of_uint_acc(*a0, ((2u * (2u * (2u * 1u) + 1u)) * acc));
+    return of_uint_acc(*a0, (10u * acc));
   } else if (std::holds_alternative<typename Uint::D1>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D1>(d.v());
-    return of_uint_acc(*a0, (1u + ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (1u + (10u * acc)));
   } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D2>(d.v());
-    return of_uint_acc(*a0, ((2u * 1u) + ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (2u + (10u * acc)));
   } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D3>(d.v());
-    return of_uint_acc(*a0,
-                       ((2u * 1u + 1u) + ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (3u + (10u * acc)));
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D4>(d.v());
-    return of_uint_acc(
-        *a0, ((2u * (2u * 1u)) + ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (4u + (10u * acc)));
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D5>(d.v());
-    return of_uint_acc(
-        *a0, ((2u * (2u * 1u) + 1u) + ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (5u + (10u * acc)));
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D6>(d.v());
-    return of_uint_acc(
-        *a0, ((2u * (2u * 1u + 1u)) + ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (6u + (10u * acc)));
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D7>(d.v());
-    return of_uint_acc(*a0, ((2u * (2u * 1u + 1u) + 1u) +
-                             ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (7u + (10u * acc)));
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D8>(d.v());
-    return of_uint_acc(
-        *a0, ((2u * (2u * (2u * 1u))) + ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (8u + (10u * acc)));
   } else {
     const auto &[a0] = std::get<typename Uint::D9>(d.v());
-    return of_uint_acc(*a0, ((2u * (2u * (2u * 1u)) + 1u) +
-                             ((2u * (2u * (2u * 1u) + 1u)) * acc)));
+    return of_uint_acc(*a0, (9u + (10u * acc)));
   }
 }
 
@@ -819,28 +812,28 @@ unsigned int Coq_Pos::of_uint(const Uint &d) {
     return of_uint_acc(*a0, 1u);
   } else if (std::holds_alternative<typename Uint::D2>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D2>(d.v());
-    return of_uint_acc(*a0, (2u * 1u));
+    return of_uint_acc(*a0, 2u);
   } else if (std::holds_alternative<typename Uint::D3>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D3>(d.v());
-    return of_uint_acc(*a0, (2u * 1u + 1u));
+    return of_uint_acc(*a0, 3u);
   } else if (std::holds_alternative<typename Uint::D4>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D4>(d.v());
-    return of_uint_acc(*a0, (2u * (2u * 1u)));
+    return of_uint_acc(*a0, 4u);
   } else if (std::holds_alternative<typename Uint::D5>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D5>(d.v());
-    return of_uint_acc(*a0, (2u * (2u * 1u) + 1u));
+    return of_uint_acc(*a0, 5u);
   } else if (std::holds_alternative<typename Uint::D6>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D6>(d.v());
-    return of_uint_acc(*a0, (2u * (2u * 1u + 1u)));
+    return of_uint_acc(*a0, 6u);
   } else if (std::holds_alternative<typename Uint::D7>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D7>(d.v());
-    return of_uint_acc(*a0, (2u * (2u * 1u + 1u) + 1u));
+    return of_uint_acc(*a0, 7u);
   } else if (std::holds_alternative<typename Uint::D8>(d.v())) {
     const auto &[a0] = std::get<typename Uint::D8>(d.v());
-    return of_uint_acc(*a0, (2u * (2u * (2u * 1u))));
+    return of_uint_acc(*a0, 8u);
   } else {
     const auto &[a0] = std::get<typename Uint::D9>(d.v());
-    return of_uint_acc(*a0, (2u * (2u * (2u * 1u)) + 1u));
+    return of_uint_acc(*a0, 9u);
   }
 }
 
@@ -849,68 +842,52 @@ unsigned int Coq_Pos::of_hex_uint_acc(const Uint0 &d, unsigned int acc) {
     return acc;
   } else if (std::holds_alternative<typename Uint0::D10>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D10>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * (2u * 1u)))) * acc));
+    return of_hex_uint_acc(*a0, (16u * acc));
   } else if (std::holds_alternative<typename Uint0::D11>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D11>(d.v());
-    return of_hex_uint_acc(*a0, (1u + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (1u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return of_hex_uint_acc(*a0,
-                           ((2u * 1u) +
-                            ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (2u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
-    return of_hex_uint_acc(
-        *a0, ((2u * 1u + 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (3u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return of_hex_uint_acc(
-        *a0, ((2u * (2u * 1u)) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (4u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return of_hex_uint_acc(
-        *a0, ((2u * (2u * 1u) + 1u) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (5u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
-    return of_hex_uint_acc(
-        *a0, ((2u * (2u * 1u + 1u)) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (6u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * 1u + 1u) + 1u) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (7u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return of_hex_uint_acc(
-        *a0,
-        ((2u * (2u * (2u * 1u))) + ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (8u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u)) + 1u) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (9u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u) + 1u)) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (10u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u) + 1u) + 1u) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (11u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u + 1u))) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (12u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u + 1u)) + 1u) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (13u + (16u * acc)));
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::De>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u + 1u) + 1u)) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (14u + (16u * acc)));
   } else {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
-    return of_hex_uint_acc(*a0, ((2u * (2u * (2u * 1u + 1u) + 1u) + 1u) +
-                                 ((2u * (2u * (2u * (2u * 1u)))) * acc)));
+    return of_hex_uint_acc(*a0, (15u + (16u * acc)));
   }
 }
 
@@ -925,46 +902,46 @@ unsigned int Coq_Pos::of_hex_uint(const Uint0 &d) {
     return of_hex_uint_acc(*a0, 1u);
   } else if (std::holds_alternative<typename Uint0::D12>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D12>(d.v());
-    return of_hex_uint_acc(*a0, (2u * 1u));
+    return of_hex_uint_acc(*a0, 2u);
   } else if (std::holds_alternative<typename Uint0::D13>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D13>(d.v());
-    return of_hex_uint_acc(*a0, (2u * 1u + 1u));
+    return of_hex_uint_acc(*a0, 3u);
   } else if (std::holds_alternative<typename Uint0::D14>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D14>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * 1u)));
+    return of_hex_uint_acc(*a0, 4u);
   } else if (std::holds_alternative<typename Uint0::D15>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D15>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * 1u) + 1u));
+    return of_hex_uint_acc(*a0, 5u);
   } else if (std::holds_alternative<typename Uint0::D16>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D16>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * 1u + 1u)));
+    return of_hex_uint_acc(*a0, 6u);
   } else if (std::holds_alternative<typename Uint0::D17>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D17>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * 1u + 1u) + 1u));
+    return of_hex_uint_acc(*a0, 7u);
   } else if (std::holds_alternative<typename Uint0::D18>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D18>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u))));
+    return of_hex_uint_acc(*a0, 8u);
   } else if (std::holds_alternative<typename Uint0::D19>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::D19>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u)) + 1u));
+    return of_hex_uint_acc(*a0, 9u);
   } else if (std::holds_alternative<typename Uint0::Da>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Da>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u) + 1u)));
+    return of_hex_uint_acc(*a0, 10u);
   } else if (std::holds_alternative<typename Uint0::Db>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Db>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u) + 1u) + 1u));
+    return of_hex_uint_acc(*a0, 11u);
   } else if (std::holds_alternative<typename Uint0::Dc>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dc>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u + 1u))));
+    return of_hex_uint_acc(*a0, 12u);
   } else if (std::holds_alternative<typename Uint0::Dd>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::Dd>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u + 1u)) + 1u));
+    return of_hex_uint_acc(*a0, 13u);
   } else if (std::holds_alternative<typename Uint0::De>(d.v())) {
     const auto &[a0] = std::get<typename Uint0::De>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u + 1u) + 1u)));
+    return of_hex_uint_acc(*a0, 14u);
   } else {
     const auto &[a0] = std::get<typename Uint0::Df>(d.v());
-    return of_hex_uint_acc(*a0, (2u * (2u * (2u * 1u + 1u) + 1u) + 1u));
+    return of_hex_uint_acc(*a0, 15u);
   }
 }
 

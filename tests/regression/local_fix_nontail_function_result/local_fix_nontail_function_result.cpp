@@ -136,7 +136,7 @@ List<LocalFixNontailFunctionResult::pt> LocalFixNontailFunctionResult::k1(
                   return go2(List<uint64_t>::cons(a0, List<uint64_t>::nil()),
                              std::move(acc), _pa0);
                 };
-            if (std::move(a0) == UINT64_C(7)) {
+            if (a0 == UINT64_C(7)) {
               return List<LocalFixNontailFunctionResult::pt>::nil();
             } else {
               return rv(std::move(x0_0));

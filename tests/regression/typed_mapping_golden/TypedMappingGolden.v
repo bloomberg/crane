@@ -156,7 +156,7 @@ Crane Check Mapping (Buffer bool) Selects buffer_mapping.
 Crane Check Mapping Handle Selects handle_mapping.
 Crane Check Mapping (@buffer_set nat) Selects buffer_set_mapping.
 Crane Check Mapping (@buffer_length bool) Selects buffer_length_mapping.
-Crane Check Mapping nat Unmapped.
+Crane Check Mapping (list nat) Unmapped.
 
 (* The decoded descriptors keep [Ref (@mk_buffer nat)] and [Ref handle_pool]
    as references. *)

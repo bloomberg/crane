@@ -11,7 +11,7 @@ struct NatGMPTest {
   static bool leb_test(const mpz_class &x0_, const mpz_class &x1_);
   static mpz_class pred_test(const mpz_class &x0_);
   static mpz_class match_test(const mpz_class &n);
-  static inline const mpz_class big_num = mpz_class(200);
-  static inline const mpz_class another_big = mpz_class(1000);
+  static inline const mpz_class big_num = (200_mpz);
+  static inline const mpz_class another_big = (1000_mpz);
   static mpz_class add_big(const mpz_class &n);
 };

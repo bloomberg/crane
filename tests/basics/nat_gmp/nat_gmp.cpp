@@ -30,13 +30,11 @@ mpz_class NatGMPTest::pred_test(const mpz_class &x0_) {
 
 mpz_class NatGMPTest::match_test(const mpz_class &n) {
   if (n <= 0) {
-    return mpz_class(42);
+    return (42_mpz);
   } else {
     mpz_class m = n - 1;
     return m;
   }
 }
 
-mpz_class NatGMPTest::add_big(const mpz_class &n) {
-  return (n + mpz_class(200));
-}
+mpz_class NatGMPTest::add_big(const mpz_class &n) { return (n + (200_mpz)); }

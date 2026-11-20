@@ -474,7 +474,7 @@ ValidatedPumpDeliveryTraceCase::calculate_precision_bolus(
   ValidatedPumpDeliveryTraceCase::Insulin_twentieth iob =
       total_bilinear_iob(input.pi_now, input.pi_bolus_history, params.prec_dia,
                          params.prec_insulin_type);
-  uint64_t raw = (std::move(carb_adj) + std::move(corr));
+  uint64_t raw = (carb_adj + corr);
   if (raw <= iob) {
     return UINT64_C(0);
   } else {
@@ -639,7 +639,7 @@ ValidatedPumpDeliveryTraceCase::validated_precision_bolus(
                       } else {
                         capped = std::move(adult_capped);
                       }
-                      bool was_modified = !(std::move(raw) == capped);
+                      bool was_modified = !(raw == capped);
                       return PrecisionResult::precok(std::move(capped),
                                                      was_modified);
                     }
