@@ -11,7 +11,7 @@ StackOps::pop_stack(const StackOps::state_basic &s) {
   }
 }
 
-bool StackOps::is_none(const std::optional<uint64_t> &o) {
+bool StackOps::is_none(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &_x = *o;
     return false;
@@ -20,7 +20,7 @@ bool StackOps::is_none(const std::optional<uint64_t> &o) {
   }
 }
 
-uint64_t StackOps::option_or_zero(const std::optional<uint64_t> &o) {
+uint64_t StackOps::option_or_zero(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
     return n;

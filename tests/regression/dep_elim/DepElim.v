@@ -77,5 +77,5 @@ Definition test_present : nat := get_present (present 42).
 End DepElim.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "dep_elim" DepElim.

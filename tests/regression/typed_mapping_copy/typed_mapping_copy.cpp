@@ -12,19 +12,19 @@ uint64_t TypedMappingCopy::bag_count(const std::vector<uint64_t> &b) {
   if (b.empty()) {
     return UINT64_C(0);
   } else {
-    const auto &x = b.front();
+    const uint64_t &x = b.front();
     return x;
   }
 }
 
 bool TypedMappingCopy::cell_flag(std::array<bool, 1> c) {
-  const auto &f = c[0];
+  const bool &f = c[0];
   return f;
 }
 
 uint64_t TypedMappingCopy::cell_bag_count(
     const std::array<std::vector<uint64_t>, 1> &c) {
-  const auto &b = c[0];
+  const std::vector<uint64_t> &b = c[0];
   return bag_count(b);
 }
 
@@ -32,7 +32,7 @@ std::array<std::vector<uint64_t>, 1> TypedMappingCopy::make_cell(uint64_t n) {
   return std::array<std::vector<uint64_t>, 1>{std::vector<uint64_t>{n}};
 }
 
-bool TypedMappingCopy::flag_of_option(const std::optional<bool> &o) {
+bool TypedMappingCopy::flag_of_option(std::optional<bool> o) {
   if (o.has_value()) {
     const bool &f = *o;
     return f;
@@ -42,7 +42,7 @@ bool TypedMappingCopy::flag_of_option(const std::optional<bool> &o) {
 }
 
 std::vector<uint64_t>
-TypedMappingCopy::bag_of_option(const std::optional<uint64_t> &o) {
+TypedMappingCopy::bag_of_option(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
     return std::vector<uint64_t>{n};

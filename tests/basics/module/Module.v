@@ -90,7 +90,7 @@ Compute NatMap.find 2 mymap.   (* Should output Some 20 *)
 Compute NatMap.find 4 mymap.   (* Should output None *)
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatIntStd.
 
 Crane Extraction "module" mymap.

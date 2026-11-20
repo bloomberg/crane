@@ -67,5 +67,5 @@ Definition test_sort : list nat := isort_dec [5; 1; 4; 2; 3].
 End ComputationalProof.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "computational_proof" ComputationalProof.

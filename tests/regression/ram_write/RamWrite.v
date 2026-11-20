@@ -117,5 +117,5 @@ Definition write_bank_count : nat := length (ram_write_main_sys init_state 12).
 End RamWrite.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "ram_write" RamWrite.

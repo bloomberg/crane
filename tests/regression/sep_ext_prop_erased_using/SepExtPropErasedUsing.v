@@ -21,6 +21,6 @@ Module FMapList (X : OrderedType).
 End FMapList.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Separate Extraction FMapList.

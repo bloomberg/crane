@@ -393,7 +393,7 @@ struct JumpTargets {
     }
   };
 
-  static uint64_t option_nat_or_zero(const std::optional<uint64_t> &o);
+  static uint64_t option_nat_or_zero(std::optional<uint64_t> o);
   static inline const uint64_t test_jms =
       option_nat_or_zero(instr_jms::jms_jms(UINT64_C(144)).jump_target_jms());
 
@@ -470,7 +470,7 @@ struct JumpTargets {
     }
   };
 
-  static uint64_t target_default(const std::optional<uint64_t> &o);
+  static uint64_t target_default(std::optional<uint64_t> o);
   static inline const uint64_t test_jun =
       target_default(instr_jun::jun_jun(UINT64_C(511)).jump_target_jun());
   static inline const std::pair<std::pair<std::pair<uint64_t, bool>, uint64_t>,

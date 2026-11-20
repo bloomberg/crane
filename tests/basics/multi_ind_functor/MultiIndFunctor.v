@@ -70,7 +70,7 @@ Definition test_list_len := NatContainer.mlist_length NatContainer.sample_list.
 Definition test_tree_size := NatContainer.tree_size NatContainer.sample_tree.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatIntStd.
 
 Crane Extraction "multi_ind_functor" test_is_nothing test_list_len test_tree_size.

@@ -22,5 +22,5 @@ Definition t : nat :=
 End MatchFallbackNat.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "match_fallback_nat" MatchFallbackNat.

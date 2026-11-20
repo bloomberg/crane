@@ -6,7 +6,7 @@
 /// the elimination is supposed to produce.
 uint64_t EmptyInductiveElim::absurd() { throw std::logic_error("absurd case"); }
 
-uint64_t EmptyInductiveElim::g(const std::optional<crane::obj> &o) {
+uint64_t EmptyInductiveElim::g(std::optional<crane::obj> o) {
   if (o.has_value()) {
     const crane::obj &_x = *o;
     return absurd();

@@ -759,8 +759,9 @@ uint64_t ValidatedPumpDeliveryTraceCase::reservoir_after_bolus(
   }
 }
 
-uint64_t ValidatedPumpDeliveryTraceCase::option_nat_default(
-    const std::optional<uint64_t> &x, uint64_t d) {
+uint64_t
+ValidatedPumpDeliveryTraceCase::option_nat_default(std::optional<uint64_t> x,
+                                                   uint64_t d) {
   if (x.has_value()) {
     const uint64_t &v = *x;
     return v;

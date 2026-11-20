@@ -41,5 +41,5 @@ Definition test_zip : nat := zip_sum [1; 2; 3] [10; 20; 30].
 End LetFixIntermediateRef.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "let_fix_intermediate_ref" LetFixIntermediateRef.

@@ -9,8 +9,7 @@
 /// loop it emitted named an undeclared _self_f.  A local machine does not
 /// adopt an inner fixpoint as a second entry, so f is left recursing
 /// natively.
-uint64_t
-LoopifyLocalFixInnerCallback::ack(const std::pair<uint64_t, uint64_t> &p) {
+uint64_t LoopifyLocalFixInnerCallback::ack(std::pair<uint64_t, uint64_t> p) {
   auto f_impl = [&](auto &_self_f, uint64_t m, uint64_t n) -> uint64_t {
     auto ack_m = [&](uint64_t n0) -> uint64_t {
       // Explicit stack replaces the non-tail recursion of ack_m: _call frames

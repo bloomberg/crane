@@ -38,5 +38,5 @@ Crane Extract Inlined Constant zero => "0".
 Crane Extract Inlined Constant one => "1".
 Crane Extract Inlined Constant iplus => "%a0 + %a1".
 
-Require Crane.Mapping.Std.
+Require Import Crane.Mapping.Std.
 Crane Extraction "pstring" PString.

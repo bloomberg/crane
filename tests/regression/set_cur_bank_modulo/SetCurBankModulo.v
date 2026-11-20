@@ -22,5 +22,5 @@ Definition t : nat :=
 End SetCurBankModulo.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "set_cur_bank_modulo" SetCurBankModulo.

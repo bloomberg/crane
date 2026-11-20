@@ -7,9 +7,9 @@ Monads::template stateT<uint64_t, itree_tc_609e8855cd7ad294, uint64_t>
 StateTAliasReified::twice(std::type_identity_t<
     Monads::template stateT<uint64_t, itree_tc_609e8855cd7ad294, uint64_t>> c) {
   return [=, c = std::move(c)](uint64_t s) {
-    return itree_bind(c(s), [=, c = c](const std::pair<uint64_t, uint64_t> &p) {
-      return itree_bind(c(p.first), [=](const std::pair<uint64_t,
-                                                        uint64_t> &q) {
+    return itree_bind(c(s), [=, c = c](std::pair<uint64_t, uint64_t> p) {
+      return itree_bind(c(p.first), [=](std::pair<uint64_t,
+                                                  uint64_t> q) {
                                       return itree_ret(std::make_pair(
                                           q.first, (p.second + q.second)));
                                     });

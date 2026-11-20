@@ -223,5 +223,5 @@ Definition t : Prop :=
 End GetPairBoundProp.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "get_pair_bound_prop" GetPairBoundProp.

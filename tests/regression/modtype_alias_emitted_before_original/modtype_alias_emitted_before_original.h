@@ -65,10 +65,6 @@ public:
   const variant_t &v() const { return v_; }
 };
 
-struct PeanoNat {
-  static bool eq_dec(const Nat &n, const Nat &m);
-};
-
 template <typename M>
 concept DecOrig = requires {
   typename M::t;
@@ -78,6 +74,11 @@ concept DecOrig = requires {
 };
 const Nat tag =
     Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))));
+
+struct PeanoNat {
+  static bool eq_dec(const Nat &n, const Nat &m);
+};
+
 template <typename M>
 concept Dec = DecOrig<M>;
 

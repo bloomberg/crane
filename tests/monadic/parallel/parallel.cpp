@@ -1,6 +1,6 @@
 #include "parallel.h"
 
-uint64_t ParallelTest::ack(const std::pair<uint64_t, uint64_t> &p) {
+uint64_t ParallelTest::ack(std::pair<uint64_t, uint64_t> p) {
   auto f_impl = [](auto &_self_f, uint64_t m, uint64_t n) -> uint64_t {
     auto ack_m_impl = [&](auto &_self_ack_m, uint64_t n0) -> uint64_t {
       if (m <= 0) {

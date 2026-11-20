@@ -35,12 +35,35 @@ let rec names_storage : expr -> bool = function
   | Dereference e | Move e | Member (e, _) | Project (e, _, _) | Access (_, e, _) -> names_storage e
   | _ -> false
 
-(* The text of an operation mapping ({!Base.Mapping_operation}), and the
-   positions of the arguments it writes or replaces in place. *)
-let operation_text : expr -> (string * int list) option = function
+(* What a call to an operation mapping ({!Base.Mapping_operation}) needs to
+   know of it: its text, the positions of the arguments it writes or
+   replaces in place, and whether it is a [PureOperation]. *)
+type operation = {text : string; in_place : int list; pure : bool}
+
+let operation_text : expr -> operation option = function
   | Entity (r, _, Some {inline = Some {text; _}; _}) when Base.Table.is_mapped_operation r ->
-    Some (text, Base.Mapping_operation.in_place_positions (Base.Mapping_operation.find r))
+    let op = Base.Mapping_operation.find r in
+    Some
+      { text;
+        in_place = Base.Mapping_operation.in_place_positions op;
+        pure = op.Base.Mapping_operation.purity = Base.Mapping_operation.Pure }
   | _ -> None
+
+(* Whether evaluating [e] may do something an evaluation order could
+   reveal: it calls an operation mapping that is not pure, or holds a
+   statement (a lambda's body is not evaluated, but nothing here looks
+   inside one).  The rest of what Crane generates is the value of a Rocq
+   term, which has no effect to order: the monads sequence theirs by
+   statements. *)
+let rec may_have_effect (e : expr) : bool =
+  match e with
+  | Entity (r, _, _) when Base.Table.is_mapped_operation r ->
+    (Base.Mapping_operation.find r).Base.Mapping_operation.purity <> Base.Mapping_operation.Pure
+  | Lambda _ -> false
+  | e ->
+    let found = ref false in
+    Cpp_ir.Subterms.expr ~expr:(fun e -> if (not !found) && may_have_effect e then found := true) ~stmts:(fun _ -> ()) e;
+    !found
 
 (* How many times the text splices argument [i]. *)
 let splices text i =
@@ -49,18 +72,24 @@ let splices text i =
 
 (* An operation mapping's arguments, evaluated once each, in source order,
    before its text (design 11.9): unless at most one of them computes
-   anything and the text splices that one once, each argument that is not
+   anything and the text splices that one once, or the operation is pure
+   and splices each computing argument, none with an effect, once, each argument that is not
    free to repeat is bound ahead of the call, in order -- or, where the text
    does not splice it (an [Ignore] argument), evaluated as a statement and
    discarded.  An argument bound by value and spliced once is moved from its
    temporary, so that a [Take] still receives an rvalue -- unless the text
    writes or replaces it in place ([in_place]), which takes the temporary as
    the lvalue it is. *)
-let prepare_operation_args fresh bind discard (text, in_place) (args : expr list) : expr list =
+let prepare_operation_args fresh bind discard {text; in_place; pure} (args : expr list) : expr list =
   let computing = List.filter (fun (_, a) -> not (free_to_repeat a)) (List.mapi (fun i a -> (i, a)) args) in
   match computing with
   | [] -> args
   | [(i, _)] when splices text i = 1 -> args
+  | _ when pure && List.for_all (fun (i, a) -> splices text i = 1 && not (may_have_effect a)) computing ->
+    (* A pure operation splicing each computing argument once, none of which
+       has an effect: evaluating them where the text places them evaluates
+       each once, and their order is not observable (design 11.9). *)
+    args
   | _ ->
     List.mapi
       (fun i (a : expr) ->

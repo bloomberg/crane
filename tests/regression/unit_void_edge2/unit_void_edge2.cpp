@@ -78,8 +78,7 @@ std::optional<std::monostate> UnitVoidEdge2::make_some_unit(bool b) {
   }
 }
 
-uint64_t
-UnitVoidEdge2::use_option_unit(const std::optional<std::monostate> &o) {
+uint64_t UnitVoidEdge2::use_option_unit(std::optional<std::monostate> o) {
   if (o.has_value()) {
     const std::monostate &u = *o;
     return take_unit();

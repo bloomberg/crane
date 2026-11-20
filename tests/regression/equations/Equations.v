@@ -32,5 +32,5 @@ Definition test_collatz : nat := collatz_steps 6.
 End Equations.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "equations" Equations.

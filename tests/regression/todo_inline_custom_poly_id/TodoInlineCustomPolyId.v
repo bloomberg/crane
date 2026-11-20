@@ -17,7 +17,7 @@ Definition test_value : nat :=
 End TodoInlineCustomPolyId.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extract Inlined Constant TodoInlineCustomPolyId.foreign_id => "inline_id_impl" From "todo_inline_custom_poly_id_support.h".
 Crane Extraction "todo_inline_custom_poly_id" TodoInlineCustomPolyId.

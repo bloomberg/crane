@@ -29,5 +29,5 @@ Definition branch_example : nat := branch_target 100 42.
 End PageAddress.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "page_address" PageAddress.

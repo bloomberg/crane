@@ -26,6 +26,6 @@ Module MakeOps (Raw : RawSig).
 End MakeOps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Separate Extraction MakeOps.

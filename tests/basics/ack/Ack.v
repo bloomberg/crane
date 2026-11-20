@@ -16,8 +16,8 @@ Fixpoint ack (m : nat) (n : nat) : nat :=
 End Ack.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
-Require Crane.Mapping.NatIntStd.
+Require Import Crane.Mapping.Std.
+Require Import Crane.Mapping.NatIntStd.
 Crane Extraction "ack" Ack.
 
 (* Require Extraction. *)

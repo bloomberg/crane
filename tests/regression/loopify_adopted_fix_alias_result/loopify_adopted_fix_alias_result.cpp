@@ -10,8 +10,8 @@
 /// them apart by that spelling, dropped the adoption the plan had made,
 /// and left map2 the recursion it is.
 std::optional<uint64_t>
-LoopifyAdoptedFixAliasResult::add_opt(const std::optional<uint64_t> &a,
-                                      const std::optional<uint64_t> &b) {
+LoopifyAdoptedFixAliasResult::add_opt(std::optional<uint64_t> a,
+                                      std::optional<uint64_t> b) {
   if (a.has_value()) {
     const uint64_t &x = *a;
     if (b.has_value()) {
@@ -34,7 +34,7 @@ uint64_t LoopifyAdoptedFixAliasResult::sum(
     const List<std::pair<uint64_t, uint64_t>> &m) {
   return m.template fold_left<uint64_t>(
       [](uint64_t acc,
-         const std::pair<uint64_t, uint64_t> &p) { return (acc + p.second); },
+         std::pair<uint64_t, uint64_t> p) { return (acc + p.second); },
       UINT64_C(0));
 }
 

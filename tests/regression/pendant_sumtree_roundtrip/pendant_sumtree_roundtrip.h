@@ -736,9 +736,9 @@ struct PendantSumtreeRoundtripCase {
   static std::optional<uint64_t> sumtree_leaf_total(uint64_t n,
                                                     const SumTree &st);
   static bool nat_list_eqb(const List<uint64_t> &xs, const List<uint64_t> &ys);
-  static bool option_nat_eqb(const std::optional<uint64_t> &x,
-                             const std::optional<uint64_t> &y);
-  static bool option_nat_is_some(const std::optional<uint64_t> &x);
+  static bool option_nat_eqb(std::optional<uint64_t> x,
+                             std::optional<uint64_t> y);
+  static bool option_nat_is_some(std::optional<uint64_t> x);
   static T0<digit> digit_vec1(const T &a);
   static T0<digit> digit_vec3(const T &a, const T &b, const T &c);
   static inline const CordMeta sample_meta_a =

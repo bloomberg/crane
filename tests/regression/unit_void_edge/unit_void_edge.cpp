@@ -19,8 +19,7 @@ void UnitVoidEdge::id_unit_fn(uint64_t) {
   }
 }
 
-uint64_t
-UnitVoidEdge::match_option_unit(const std::optional<std::monostate> &o) {
+uint64_t UnitVoidEdge::match_option_unit(std::optional<std::monostate> o) {
   if (o.has_value()) {
     const std::monostate &_x = *o;
     return UINT64_C(1);

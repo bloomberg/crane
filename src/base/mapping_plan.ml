@@ -20,6 +20,7 @@ type view = {
   requirement : observation_requirement;
   test : string;
   fields : (int * projection) list;
+  field_types : (int * int) list;
 }
 
 type constructor = { source : Names.constructor; build : string; view : view option }
@@ -287,6 +288,10 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
                              | Owned_projection e -> Owned_projection (template e)
                              | Canonical_borrow_projection e -> Canonical_borrow_projection (template e)
                              | Read_view_projection e -> Read_view_projection (template e) ))
+                         v.case_fields;
+                     field_types =
+                       List.filter_map
+                         (fun (n, _) -> Option.map (fun i -> (n, position i)) (parameter_of_field env c.ctor_source n))
                          v.case_fields })
                  c.ctor_view
              in
@@ -444,6 +449,37 @@ let constructor_template k =
 let constructor_templates ip =
   List.init (constructor_count ip) (fun j -> constructor_template (ip, j + 1))
 
+(* A structured binding of the scrutinee, when that is what the one
+   constructor's view says: the canonical type is a [std::pair] or a
+   [std::tuple] with as many elements as the constructor has fields, and
+   field [j] is borrowed as [std::get<j>(%scrut)] -- what a structured
+   binding of a tuple-like type binds its [j]-th name to.  The binding
+   form lets an owned scrutinee be taken apart by value
+   ({!Cpp_ir.Foreign_template.structured_binding}). *)
+let tuple_binding p ((mind, i) as ip) n =
+  let arity = (Global.lookup_mind mind).Declarations.mind_packets.(i).Declarations.mind_consnrealdecls.(0) in
+  let tuple_like =
+    match p.canonical with
+    | Apply ("std::pair", args) -> List.length args = 2 && arity = 2
+    | Apply ("std::tuple", args) -> List.length args = arity
+    | _ -> false
+  in
+  if n <> 1 || arity = 0 || not tuple_like then None
+  else
+    match (constructor_mapping p (ip, 1)).view with
+    | Some v
+      when List.sort compare (List.map fst v.fields) = List.init arity Fun.id
+           && List.for_all
+                (fun (j, proj) ->
+                  match proj with
+                  | Canonical_borrow_projection e -> String.equal e (Printf.sprintf "std::get<%d>(%%scrut)" j)
+                  | Owned_projection _ | Read_view_projection _ -> false)
+                v.fields ->
+      Some
+        (Printf.sprintf "const auto& [%s] = %%scrut; %%br0"
+           (String.concat ", " (List.init arity (Printf.sprintf "%%b0a%d"))))
+    | _ -> None
+
 let match_template ip =
   let p = find (GlobRef.IndRef ip) in
   ( match p.interface with Abstract -> abstract_use p "match on" | Algebraic _ -> () );
@@ -459,11 +495,14 @@ let match_template ip =
           ++ Printer.pr_global (GlobRef.ConstructRef k)
           ++ spc () ++ strbrk "has no constructor view (ctor_view), but source code matches on it.")
     | Some v ->
+      let binder_type j =
+        match List.assoc_opt j v.field_types with Some t -> Printf.sprintf "%%t%d" t | None -> "auto"
+      in
       let binds =
         List.map
           (fun (j, proj) ->
             match proj with
-            | Canonical_borrow_projection e -> Printf.sprintf "const auto& %%b%da%d = %s; " i j e
+            | Canonical_borrow_projection e -> Printf.sprintf "const %s& %%b%da%d = %s; " (binder_type j) i j e
             | Owned_projection e -> Printf.sprintf "auto %%b%da%d = %s; " i j e
             | Read_view_projection _ ->
               fail_plan p
@@ -474,6 +513,9 @@ let match_template ip =
       in
       (v.test, String.concat "" binds ^ Printf.sprintf "%%br%d" i)
   in
+  match tuple_binding p ip n with
+  | Some t -> t
+  | None ->
   let branches = List.init n branch in
   match branches with
   | [] -> ""

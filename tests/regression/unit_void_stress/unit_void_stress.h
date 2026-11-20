@@ -203,7 +203,7 @@ struct UnitVoidStress {
     even_void(UINT64_C(10));
     return std::monostate{};
   }();
-  static void match_opt_void(const std::optional<uint64_t> &o);
+  static void match_opt_void(std::optional<uint64_t> o);
   static inline const std::monostate test_match_opt_void = []() {
     match_opt_void(std::make_optional<uint64_t>(UINT64_C(3)));
     return std::monostate{};

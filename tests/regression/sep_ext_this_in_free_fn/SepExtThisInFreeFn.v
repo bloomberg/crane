@@ -18,6 +18,6 @@ Module FreeFn (X : S).
 End FreeFn.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Separate Extraction FreeFn.

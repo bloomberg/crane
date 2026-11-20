@@ -61,5 +61,5 @@ Definition test_gcd_3 : nat := gcd_wf 0 5.
 End WellFoundedRec.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "well_founded_rec" WellFoundedRec.

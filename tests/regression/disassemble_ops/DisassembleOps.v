@@ -136,5 +136,5 @@ Definition t : nat * nat * bool * nat * nat * nat * nat :=
 End DisassembleOps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "disassemble_ops" DisassembleOps.

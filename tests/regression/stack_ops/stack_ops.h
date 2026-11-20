@@ -144,8 +144,8 @@ struct StackOps {
 
   static std::pair<std::optional<uint64_t>, state_basic>
   pop_stack(const state_basic &s);
-  static bool is_none(const std::optional<uint64_t> &o);
-  static uint64_t option_or_zero(const std::optional<uint64_t> &o);
+  static bool is_none(std::optional<uint64_t> o);
+  static uint64_t option_or_zero(std::optional<uint64_t> o);
   static inline const bool empty_is_none =
       is_none(pop_stack(state_basic{List<uint64_t>::nil()}).first);
   static inline const uint64_t some_addr =

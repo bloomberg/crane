@@ -135,9 +135,10 @@ public:
 
 struct DeepPatterns {
   static uint64_t
-  deep_option(const std::optional<std::optional<std::optional<uint64_t>>> &x);
-  static uint64_t deep_pair(const std::pair<std::pair<uint64_t, uint64_t>,
-                                            std::pair<uint64_t, uint64_t>> &p);
+  deep_option(std::optional<std::optional<std::optional<uint64_t>>> x);
+  static uint64_t deep_pair(
+      std::pair<std::pair<uint64_t, uint64_t>,
+                std::pair<uint64_t, uint64_t>> p);
   static uint64_t list_shape(const List<uint64_t> &l);
   struct outer;
   struct inner;
@@ -287,7 +288,7 @@ struct DeepPatterns {
   static uint64_t deep_sum(const outer &o);
   static uint64_t
   complex_match(const std::optional<std::pair<uint64_t, List<uint64_t>>> &x);
-  static uint64_t guarded_match(const std::pair<uint64_t, uint64_t> &p);
+  static uint64_t guarded_match(std::pair<uint64_t, uint64_t> p);
 
   template <typename A, typename B> struct pair {
     // DATA

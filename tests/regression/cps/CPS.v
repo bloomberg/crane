@@ -73,5 +73,5 @@ Definition test_evens : nat := count_evens [1; 2; 3; 4; 5; 6].
 End CPS.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "cps" CPS.

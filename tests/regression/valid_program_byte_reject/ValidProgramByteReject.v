@@ -15,5 +15,5 @@ Definition t : bool := valid_program [0; 256].
 End ValidProgramByteReject.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "valid_program_byte_reject" ValidProgramByteReject.

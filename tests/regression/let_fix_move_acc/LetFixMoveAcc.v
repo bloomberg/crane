@@ -41,5 +41,5 @@ Definition test_snoc : list nat := snoc [10; 20] 30.
 End LetFixMoveAcc.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "let_fix_move_acc" LetFixMoveAcc.

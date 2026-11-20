@@ -32,7 +32,7 @@ void EffectMatchArg::set_bool_key(bool flag, std::string value) {
 
 /// 3. Option match result as argument to set_env
 void EffectMatchArg::set_option_value(std::string key,
-                                      const std::optional<std::string> &r) {
+                                      std::optional<std::string> r) {
   setenv(
       std::move(key).c_str(),
       [&]() -> std::string {

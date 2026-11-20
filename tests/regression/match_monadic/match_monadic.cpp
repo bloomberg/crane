@@ -54,7 +54,7 @@ std::string MatchMonadic::nested_match(uint64_t n, bool b) {
 }
 
 /// 4. Match on option in monadic context
-uint64_t MatchMonadic::handle_option(const std::optional<uint64_t> &o) {
+uint64_t MatchMonadic::handle_option(std::optional<uint64_t> o) {
   if (o.has_value()) {
     const uint64_t &n = *o;
     std::cout << std::string("found") << '\n';

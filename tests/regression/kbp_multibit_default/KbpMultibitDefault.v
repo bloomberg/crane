@@ -28,5 +28,5 @@ Definition t : bool := Nat.eqb (acc (execute_kbp sample)) 15.
 End KbpMultibitDefault.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "kbp_multibit_default" KbpMultibitDefault.

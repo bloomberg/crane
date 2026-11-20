@@ -295,7 +295,7 @@ struct SharedVariantParamField {
     }
   }
 
-  static uint64_t pair_sum(const std::pair<uint64_t, uint64_t> &p);
+  static uint64_t pair_sum(std::pair<uint64_t, uint64_t> p);
   static inline const List<step<std::pair<uint64_t, uint64_t>,
                                 List<uint64_t>>> steps =
       List<step<std::pair<uint64_t, uint64_t>, List<uint64_t>>>::cons(

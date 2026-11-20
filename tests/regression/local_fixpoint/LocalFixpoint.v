@@ -38,5 +38,5 @@ Definition foo : bool :=
 End Monadic.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 Crane Extraction "local_fixpoint" Monadic.foo.

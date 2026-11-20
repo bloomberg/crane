@@ -39,5 +39,5 @@ Definition t : bool := Nat.eqb (nth 2 (rom_ports after) 0) 13.
 End SrcWrrUpdatesRomPort.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "src_wrr_updates_rom_port" SrcWrrUpdatesRomPort.

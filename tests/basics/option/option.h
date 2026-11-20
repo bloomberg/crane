@@ -10,16 +10,15 @@ struct Option {
       std::make_optional<uint64_t>(UINT64_C(5));
   static inline const std::optional<uint64_t> none_val =
       std::optional<uint64_t>();
-  static uint64_t get_or_default(const std::optional<uint64_t> &o,
-                                 uint64_t default0);
+  static uint64_t get_or_default(std::optional<uint64_t> o, uint64_t default0);
   static inline const std::optional<std::optional<uint64_t>> nested_some =
       std::make_optional<std::optional<uint64_t>>(
           std::make_optional<uint64_t>(UINT64_C(3)));
   static inline const std::optional<std::optional<uint64_t>> nested_none =
       std::make_optional<std::optional<uint64_t>>(std::optional<uint64_t>());
   static std::optional<uint64_t> safe_pred(uint64_t n);
-  static std::optional<uint64_t>
-  chain_options(const std::optional<uint64_t> &o1, std::optional<uint64_t> o2);
+  static std::optional<uint64_t> chain_options(std::optional<uint64_t> o1,
+                                               std::optional<uint64_t> o2);
 
   template <typename T1, typename T2>
   static std::optional<T2>

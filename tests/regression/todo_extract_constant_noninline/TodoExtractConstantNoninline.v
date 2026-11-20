@@ -17,7 +17,7 @@ Definition twice_value : nat :=
 End TodoExtractConstantNoninline.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extract Constant TodoExtractConstantNoninline.foreign_inc => "foreign_inc_impl" From "todo_extract_constant_noninline_support.h".
 Crane Extraction "todo_extract_constant_noninline" TodoExtractConstantNoninline.

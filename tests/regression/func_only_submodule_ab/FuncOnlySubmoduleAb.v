@@ -20,5 +20,5 @@ Definition t : nat := Root.A.inc (Root.B.dec 3).
 End FuncOnlySubmoduleAb.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "func_only_submodule_ab" FuncOnlySubmoduleAb.

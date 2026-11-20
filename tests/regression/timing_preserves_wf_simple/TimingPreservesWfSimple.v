@@ -51,5 +51,5 @@ Definition t : bool :=
 End TimingPreservesWfSimple.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "timing_preserves_wf_simple" TimingPreservesWfSimple.

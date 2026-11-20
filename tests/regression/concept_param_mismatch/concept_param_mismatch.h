@@ -104,7 +104,7 @@ concept C = requires {
 
 struct ConceptParamMismatch {
   struct cNat {
-    static uint64_t f(std::pair<uint64_t, uint64_t> p) {
+    constexpr static uint64_t f(std::pair<uint64_t, uint64_t> p) {
       return (p.first + p.second);
     }
 

@@ -70,5 +70,5 @@ Definition test_length : nat := local_length [10; 20; 30; 40].
 End LetFix.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "let_fix" LetFix.

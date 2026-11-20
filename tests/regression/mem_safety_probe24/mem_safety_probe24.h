@@ -648,8 +648,7 @@ struct MemSafetyProbe24 {
                    UINT64_C(20),
                    tree::node(tree::leaf(), UINT64_C(30), tree::leaf())));
     crane::fn<uint64_t(std::pair<uint64_t, uint64_t>)> add_pair =
-        [](const std::pair<uint64_t,
-                           uint64_t> &p) { return (p.first + p.second); };
+        [](std::pair<uint64_t, uint64_t> p) { return (p.first + p.second); };
     if (std::holds_alternative<
             typename mylist<std::pair<uint64_t, uint64_t>>::Mynil>(
             pairs.v_mut())) {

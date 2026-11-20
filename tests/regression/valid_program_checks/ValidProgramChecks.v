@@ -17,5 +17,5 @@ Definition t : nat :=
 End ValidProgramChecks.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "valid_program_checks" ValidProgramChecks.

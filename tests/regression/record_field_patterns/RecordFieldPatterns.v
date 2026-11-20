@@ -21,7 +21,7 @@
 *)
 From Stdlib Require Import List Bool.
 Import ListNotations.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Require Crane.Extraction.
 
 Module RecordFieldPatterns.

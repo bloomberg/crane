@@ -37,5 +37,5 @@ Definition t : nat := length empty_sys.
 End EmptySystemBankCount.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "empty_system_bank_count" EmptySystemBankCount.

@@ -19,6 +19,6 @@ End ShadowedPrimInt.
 Axiom int : Type.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 Crane Extract Inlined Constant int => "int8_t" From "cstdint".
 Crane Extraction "shadowed_prim_int" ShadowedPrimInt.

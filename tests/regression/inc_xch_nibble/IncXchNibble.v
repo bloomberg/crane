@@ -91,5 +91,5 @@ Definition t : bool :=
 End IncXchNibble.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "inc_xch_nibble" IncXchNibble.

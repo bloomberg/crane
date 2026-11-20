@@ -42,6 +42,6 @@ Definition test_twice : nat :=
 End TodoWithModuleConstraint.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 
 Crane Extraction "todo_with_module_constraint" TodoWithModuleConstraint.

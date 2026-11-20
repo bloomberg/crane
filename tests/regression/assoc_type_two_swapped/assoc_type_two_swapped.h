@@ -136,7 +136,7 @@ struct AssocTypeTwoSwapped {
     using X = std::pair<uint64_t, uint64_t>;
     using Y = List<uint64_t>;
 
-    static std::pair<uint64_t, uint64_t> mkx(uint64_t n) {
+    constexpr static std::pair<uint64_t, uint64_t> mkx(uint64_t n) {
       return std::make_pair(n, n);
     }
 

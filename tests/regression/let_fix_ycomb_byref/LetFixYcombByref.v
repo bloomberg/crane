@@ -43,5 +43,5 @@ Definition test_countdown : list nat := countdown 3.
 End LetFixYcombByref.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "let_fix_ycomb_byref" LetFixYcombByref.

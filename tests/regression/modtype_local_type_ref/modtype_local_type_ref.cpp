@@ -1,6 +1,6 @@
 #include "modtype_local_type_ref.h"
 
-uint64_t ModtypeLocalTypeRef::S::lookup(const std::pair<uint64_t, uint64_t> &e,
+uint64_t ModtypeLocalTypeRef::S::lookup(std::pair<uint64_t, uint64_t> e,
                                         uint64_t k) {
   if (e.first == k) {
     return e.second;

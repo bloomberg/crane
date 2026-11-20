@@ -114,5 +114,5 @@ Definition t : nat * bool * nat * nat :=
 End JumpTargets.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "jump_targets" JumpTargets.

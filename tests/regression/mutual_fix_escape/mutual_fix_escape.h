@@ -36,6 +36,6 @@ struct MutualFixEscape {
   static inline const uint64_t test4 = []() {
     std::pair<crane::fn<uint64_t(uint64_t)>, crane::fn<uint64_t(uint64_t)>> p =
         make_count_pair(UINT64_C(5));
-    return std::move(p).second(UINT64_C(1));
+    return p.second(UINT64_C(1));
   }();
 };

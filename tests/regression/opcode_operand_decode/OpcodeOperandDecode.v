@@ -41,5 +41,5 @@ Definition t : nat :=
 End OpcodeOperandDecode.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "opcode_operand_decode" OpcodeOperandDecode.

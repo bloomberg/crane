@@ -22,5 +22,5 @@ Definition t : nat :=
 End RegionMembershipBounds.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "region_membership_bounds" RegionMembershipBounds.

@@ -123,7 +123,7 @@ struct TypedMappingAlgebraic {
     if (!m.has_value()) {
       return d;
     } else {
-      const auto &x = *m;
+      const T1 &x = *m;
       return x;
     }
   }
@@ -133,7 +133,7 @@ struct TypedMappingAlgebraic {
     if (!m.has_value()) {
       return std::optional<T2>{};
     } else {
-      const auto &x = *m;
+      const T1 &x = *m;
       return std::optional<T2>{f(x)};
     }
   }

@@ -166,5 +166,5 @@ Definition t : bool * bool * bool * nat * bool * bool :=
 End WpmOps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "wpm_ops" WpmOps.

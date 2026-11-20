@@ -25,5 +25,5 @@ Definition test_cat : string := cat "foo" "bar".
 End StringMatch.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 Crane Extraction "string_match" StringMatch.

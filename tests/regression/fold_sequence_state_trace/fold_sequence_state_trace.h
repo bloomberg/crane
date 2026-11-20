@@ -183,16 +183,12 @@ struct FoldSequenceStateTraceCase {
       std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(0)));
   static inline const Point point_diag =
       std::make_pair(Real::from_z(INT64_C(1)), Real::from_z(INT64_C(1)));
-  static Line line_through(const std::pair<Real, Real> &p1,
-                           const std::pair<Real, Real> &p2);
-  static Line perp_bisector(const std::pair<Real, Real> &p1,
-                            const std::pair<Real, Real> &p2);
-  static Line perp_through(const std::pair<Real, Real> &p, const Line &l);
-  static Fold fold_O1(const std::pair<Real, Real> &p1,
-                      const std::pair<Real, Real> &p2);
-  static Fold fold_O2(const std::pair<Real, Real> &p1,
-                      const std::pair<Real, Real> &p2);
-  static Fold fold_O4(const std::pair<Real, Real> &p, const Line &l);
+  static Line line_through(std::pair<Real, Real> p1, std::pair<Real, Real> p2);
+  static Line perp_bisector(std::pair<Real, Real> p1, std::pair<Real, Real> p2);
+  static Line perp_through(std::pair<Real, Real> p, const Line &l);
+  static Fold fold_O1(std::pair<Real, Real> p1, std::pair<Real, Real> p2);
+  static Fold fold_O2(std::pair<Real, Real> p1, std::pair<Real, Real> p2);
+  static Fold fold_O4(std::pair<Real, Real> p, const Line &l);
 
   struct FoldStep {
     // TYPES

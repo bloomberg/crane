@@ -127,7 +127,7 @@ struct UnitVoidEdge {
       std::make_optional<std::monostate>(std::monostate{});
   static inline const std::optional<std::monostate> unit_none =
       std::optional<std::monostate>();
-  static uint64_t match_option_unit(const std::optional<std::monostate> &o);
+  static uint64_t match_option_unit(std::optional<std::monostate> o);
   static std::optional<std::monostate> return_some_tt(uint64_t n);
   static void unit_chain();
   static void helper_void(uint64_t _x);

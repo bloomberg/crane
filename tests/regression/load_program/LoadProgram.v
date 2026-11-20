@@ -142,5 +142,5 @@ Definition t : (bool * bool * bool * bool * bool * bool * nat) :=
 End LoadProgram.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "load_program" LoadProgram.

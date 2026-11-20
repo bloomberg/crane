@@ -13,6 +13,6 @@ Inductive Forest (A : Type) : Type :=
   | Node : A -> list (Forest A) -> Forest A.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std.
+From Crane Require Import Mapping.Std.
 
 Crane Separate Extraction Forest.

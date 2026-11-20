@@ -42,11 +42,12 @@ let rec concept_type cx signature (ty : Cpp_ir.Lowered.Type.t) =
   | Entity_application (r, tys, _) when (not (Base.Table.is_custom r)) && is_member_ref signature r ->
     Member {member = r; enum = Unit_plan.Cpp_names.is_enum_cached (Lowering_state.unit_context cx) r; arguments = args tys}
   | Entity_application (r, [], _) when (not (Base.Table.is_custom r)) && is_functor_param_ref r -> Parameter (ir_type ty)
-  (* A typed-mapped type is its structured canonical type. *)
-  | Entity_application (r, tys, _) when Base.Mapping_plan.is_type_head r ->
-    Base.Mapping_plan.note_instantiated r;
-    Plain (ir_type (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find r) tys))
   | Entity_application (r, tys, _) -> (
+    (* A typed-mapped type is written from its canonical type in the
+       legacy spelling ({!Base.Mapping_plan.type_text}), so that its type
+       arguments are spelled as the concept spells them: a member of [M]
+       is [typename M::t]. *)
+    if Base.Mapping_plan.is_type_head r then Base.Mapping_plan.note_instantiated r;
     match Base.Table.find_custom_opt r with
     | Some text ->
       let pieces = Cpp_passes.Erasure.type_pieces r text tys in

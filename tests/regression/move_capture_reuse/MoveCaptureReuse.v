@@ -22,5 +22,5 @@ Definition len_sum : nat :=
 End MoveCaptureReuse.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "move_capture_reuse" MoveCaptureReuse.

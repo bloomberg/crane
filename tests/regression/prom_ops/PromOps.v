@@ -264,5 +264,5 @@ Definition t : nat * nat * nat * nat * nat * bool * bool * bool * bool * bool * 
 End PromOps.
 
 Require Crane.Extraction.
-From Crane Require Mapping.Std Mapping.NatIntStd.
+From Crane Require Import Mapping.Std Mapping.NatIntStd.
 Crane Extraction "prom_ops" PromOps.

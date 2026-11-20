@@ -526,8 +526,8 @@ struct ReuseListShapes {
   static frames add_to_frame_(const mem &m, uint64_t k);
   static inline const uint64_t result = (((((((zipped.template fold_left<uint64_t>(
                                                    [](uint64_t acc,
-                                                      const std::pair<uint64_t,
-                                                                      uint64_t> &pat) {
+                                                      std::pair<uint64_t,
+                                                                uint64_t> pat) {
                                                      const auto &[a, b] = pat;
                                                      return ((acc + a) + b);
                                                    },

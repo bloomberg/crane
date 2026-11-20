@@ -434,7 +434,7 @@ Module Matcher.
 End Matcher.
 
 Require Crane.Extraction.
-Require Crane.Mapping.Std.
+Require Import Crane.Mapping.Std.
 Crane Extraction "regexp" Matcher.
 (** Exercises:
 

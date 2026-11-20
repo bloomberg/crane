@@ -34,6 +34,9 @@ type view = {
   requirement : observation_requirement;
   test : string;  (** a match condition over [%scrut] *)
   fields : (int * projection) list;  (** templates compiled *)
+  field_types : (int * int) list;
+      (** a field declared at one of the head's type parameters, and that
+          parameter's position among the type arguments of a use *)
 }
 
 type constructor = {
