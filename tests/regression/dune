@@ -15196,3 +15196,36 @@
   (alias runtest)
   (deps module_alias_shadows_global.t.exe)
   (action (run ./module_alias_shadows_global.t.exe))))
+
+(subdir typed_mapping_golden
+ (rule
+  (targets typed_mapping_golden.t.exe)
+  (deps TypedMappingGolden.vo typed_mapping_golden.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_golden.t.exe typed_mapping_golden.t.cpp typed_mapping_golden.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_golden.t.exe)
+  (action (run ./typed_mapping_golden.t.exe))))
+
+(subdir typed_mapping_invalid
+ (rule
+  (targets typed_mapping_invalid.t.exe)
+  (deps TypedMappingInvalid.vo typed_mapping_invalid.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_invalid.t.exe typed_mapping_invalid.t.cpp typed_mapping_invalid.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_invalid.t.exe)
+  (action (run ./typed_mapping_invalid.t.exe))))
+
+(subdir typed_mapping_selection
+ (rule
+  (targets typed_mapping_selection.t.exe)
+  (deps TypedMappingSelection.vo typed_mapping_selection.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_selection.t.exe typed_mapping_selection.t.cpp typed_mapping_selection.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_selection.t.exe)
+  (action (run ./typed_mapping_selection.t.exe))))

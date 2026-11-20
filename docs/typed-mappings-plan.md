@@ -282,7 +282,7 @@ This milestone fixes the reported bug.
 ## 6. Progress
 
 - [ ] M1 declarator-correct types
-- [ ] M2 descriptor library and discovery
+- [x] M2 descriptor library and discovery
 - [ ] M3 type mappings in the pipeline
 - [ ] M4 operation mappings
 - [ ] M5 explicit parameter modes and access fixed point
