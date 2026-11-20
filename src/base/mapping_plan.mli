@@ -23,7 +23,7 @@ open Mapping_descriptor
 type type_expr =
   | Name of string
   | Apply of string * argument list
-  | Parameter of int  (** the head's type argument [i], from 0 *)
+  | Parameter of int  (** the head's type argument [i], from 0, counting type parameters only *)
   | Pointer of type_expr
   | Const of type_expr
   | Verbatim of string  (** [UnsafeVerbatim] *)
@@ -48,7 +48,12 @@ type t = {
   instance : Names.GlobRef.t;
   head : Names.GlobRef.t;
   canonical : type_expr;
-  components : (string * int) list;  (** name, parameter *)
+  components : (string * int) list;
+      (** name, and the position of its parameter among the type arguments
+          of a use (an instance or a value parameter takes none) *)
+  component_binders : (string * int) list;
+      (** name, and the position of its parameter among all the binders of
+          the head, as the Rocq type applies them *)
   copy : copy_model;
   access : access_model;
   value_model : value_model;

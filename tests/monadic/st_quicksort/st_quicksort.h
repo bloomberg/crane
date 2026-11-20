@@ -1,13 +1,13 @@
 #pragma once
 
 #include "crane_fn.h"
-#include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
+#include <crane_st.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -276,6 +276,42 @@ struct STRefNat {
   uint64_t STRefToIxNat() const;
 };
 
+struct STMonad {
+  template <typename _tcI0, typename T1 = void, typename T2, typename T3 = void,
+            typename T4>
+    requires STRefClass<_tcI0, T2>
+  static void swapArray(const T2 &_x,
+                        const std::shared_ptr<std::vector<T4>> &arr,
+                        const T2 &i, const T2 &j);
+  template <typename T1 = void, typename T2, typename T3, typename F2>
+  static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
+};
+
+template <typename _tcI0, typename _tcI1, typename T1, typename T2 = void,
+          typename T3 = void>
+  requires STRefClass<_tcI0, T1> && Ix<_tcI1, T1>
+T1 partition(std::shared_ptr<std::vector<uint64_t>> arr, T1 arr_idx,
+             const T1 &left, const T1 &right, const T1 &pivotIndex) {
+  uint64_t pivotValue = (*arr)[pivotIndex];
+  STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(arr_idx, arr,
+                                                           pivotIndex, right);
+  T1 storeIndex = STMonad::template for_each_with<T3, T1, T1>(
+      _tcI1::range(left, _tcI1::sub(right, _tcI1::suc(_tcI1::zero()))), left,
+      [=](const T1 &storeIndex, const T1 &i) {
+        uint64_t val = (*arr)[i];
+        if (val <= pivotValue) {
+          STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
+              arr_idx, arr, i, storeIndex);
+          return _tcI1::suc(storeIndex);
+        } else {
+          return storeIndex;
+        }
+      });
+  STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
+      std::move(arr_idx), std::move(arr), storeIndex, right);
+  return storeIndex;
+}
+
 template <typename F1>
   requires std::is_invocable_r_v<List<uint64_t>, F1 &, List<uint64_t>>
 List<uint64_t> quicksort_fun_functional(const List<uint64_t> &l,
@@ -372,6 +408,35 @@ struct StQuicksort {
   static std::string test_quicksort_ST();
   static std::string test_quicksort_fun();
 };
+
+template <typename _tcI0, typename T1, typename T2, typename T3, typename T4>
+  requires STRefClass<_tcI0, T2>
+void STMonad::swapArray(const T2 &, const std::shared_ptr<std::vector<T4>> &arr,
+                        const T2 &i, const T2 &j) {
+  T4 vi = (*arr)[i];
+  T4 vj = (*arr)[j];
+  (*arr)[i] = std::move(vj);
+  (*arr)[j] = std::move(vi);
+  return;
+}
+
+template <typename T1, typename T2, typename T3, typename F2>
+T3 STMonad::for_each_with(const List<T2> &xs, const T3 &v, F2 &&f) {
+  // Loop replaces the tail recursion: each recursive call updates the loop
+  // variables.
+  T3 _loop_v = v;
+  const List<T2> *_loop_xs = &xs;
+  while (true) {
+    if (std::holds_alternative<typename List<T2>::Nil>(_loop_xs->v())) {
+      return _loop_v;
+    } else {
+      const auto &[a0, a1] = std::get<typename List<T2>::Cons>(_loop_xs->v());
+      T3 v_ = f(_loop_v, a0);
+      _loop_v = std::move(v_);
+      _loop_xs = crane_raw(a1);
+    }
+  }
+}
 
 inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;

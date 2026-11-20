@@ -1,8 +1,7 @@
 #include "object_model.h"
 
 std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext() {
-  std::shared_ptr<int64_t> _lc1_ref;
-  _lc1_ref = std::make_shared<decltype(INT64_C(1))>(INT64_C(1));
+  std::shared_ptr<int64_t> _lc1_ref = std::make_shared<int64_t>(INT64_C(1));
   int64_t a = *_lc1_ref;
   int64_t _lc2_move_amt = INT64_C(2);
   int64_t _lc2_i = *_lc1_ref;
@@ -17,10 +16,8 @@ std::pair<std::pair<int64_t, int64_t>, int64_t> testtoST1_ext() {
 
 std::pair<std::pair<std::pair<int64_t, int64_t>, int64_t>, int64_t>
 testtoST2_ext() {
-  std::shared_ptr<int64_t> _lc1_ref;
-  _lc1_ref = std::make_shared<decltype(INT64_C(1))>(INT64_C(1));
-  std::shared_ptr<int64_t> _lc2_ref;
-  _lc2_ref = std::make_shared<decltype(INT64_C(10))>(INT64_C(10));
+  std::shared_ptr<int64_t> _lc1_ref = std::make_shared<int64_t>(INT64_C(1));
+  std::shared_ptr<int64_t> _lc2_ref = std::make_shared<int64_t>(INT64_C(10));
   int64_t a = *_lc1_ref;
   int64_t b = *_lc2_ref;
   int64_t v1 = *_lc1_ref;
@@ -35,8 +32,8 @@ testtoST2_ext() {
 
 std::pair<std::pair<std::pair<int64_t, int64_t>, bool>, int64_t>
 acc_test1_ext() {
-  std::shared_ptr<int64_t> _lc1_bal_ref;
-  _lc1_bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
+  std::shared_ptr<int64_t> _lc1_bal_ref =
+      std::make_shared<int64_t>(INT64_C(100));
   Account<std::monostate> acc = Account<std::monostate>{
       [=](std::monostate) { return *_lc1_bal_ref; },
       [=](uint64_t amt) {
@@ -79,8 +76,8 @@ acc_test1_ext() {
 
 std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 acc_test2_ext() {
-  std::shared_ptr<int64_t> _lc1_bal_ref;
-  _lc1_bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
+  std::shared_ptr<int64_t> _lc1_bal_ref =
+      std::make_shared<int64_t>(INT64_C(100));
   Account<std::monostate> acc1 = Account<std::monostate>{
       [=](std::monostate) { return *_lc1_bal_ref; },
       [=](uint64_t amt) {
@@ -105,8 +102,8 @@ acc_test2_ext() {
               static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
         }
       }};
-  std::shared_ptr<int64_t> _lc2_bal_ref;
-  _lc2_bal_ref = std::make_shared<decltype(INT64_C(150))>(INT64_C(150));
+  std::shared_ptr<int64_t> _lc2_bal_ref =
+      std::make_shared<int64_t>(INT64_C(150));
   Account<std::monostate> acc2 = Account<std::monostate>{
       [=](std::monostate) { return *_lc2_bal_ref; },
       [=](uint64_t amt) {
@@ -159,8 +156,8 @@ acc_test2_ext() {
 
 std::pair<std::pair<std::pair<int64_t, bool>, int64_t>, int64_t>
 bankacc_test1_ext() {
-  std::shared_ptr<int64_t> _lc2_bal_ref;
-  _lc2_bal_ref = std::make_shared<decltype(INT64_C(100))>(INT64_C(100));
+  std::shared_ptr<int64_t> _lc2_bal_ref =
+      std::make_shared<int64_t>(INT64_C(100));
   Account<std::monostate> _lc1_checking_ = Account<std::monostate>{
       [=](std::monostate) { return *_lc2_bal_ref; },
       [=](uint64_t amt) {
@@ -185,8 +182,8 @@ bankacc_test1_ext() {
               static_cast<uint64_t>(bal) - static_cast<uint64_t>(amt)));
         }
       }};
-  std::shared_ptr<int64_t> _lc3_bal_ref;
-  _lc3_bal_ref = std::make_shared<decltype(INT64_C(150))>(INT64_C(150));
+  std::shared_ptr<int64_t> _lc3_bal_ref =
+      std::make_shared<int64_t>(INT64_C(150));
   Account<std::monostate> _lc1_saving_ = Account<std::monostate>{
       [=](std::monostate) { return *_lc3_bal_ref; },
       [=](uint64_t amt) {
@@ -237,14 +234,5 @@ bankacc_test1_ext() {
     int64_t b = acc.checking.getBalance(std::monostate{});
     int64_t c = std::move(acc).saving.getBalance(std::monostate{});
     return std::make_pair(std::make_pair(std::make_pair(a, false), b), c);
-  }
-}
-
-List<uint64_t> ListDef::seq(uint64_t start, uint64_t len) {
-  if (len <= 0) {
-    return List<uint64_t>::nil();
-  } else {
-    uint64_t len0 = len - 1;
-    return List<uint64_t>::cons(start, ListDef::seq((start + 1), len0));
   }
 }

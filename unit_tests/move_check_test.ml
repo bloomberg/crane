@@ -214,7 +214,8 @@ let () =
   agree "const value" M.const_copied (Const tree) true;
   agree "forwarded at F &&" M.forwarded (Reference (Forwarding, tree)) true;
   agree "receiver at a pointer" M.receiver (Pointer (Const tree)) true;
-  agree "value at a pointer" M.copied (Pointer (Const tree)) false;
+  (* A raw-pointer typed mapping's canonical type is a pointer value. *)
+  agree "value at a pointer" M.copied (Pointer tree) true;
   agree "receiver by value" M.receiver tree false;
   if M.value_type M.lent cref <> tree || M.value_type M.const_copied (Const tree) <> tree then (
     prerr_endline "move_check: a mode's value type keeps its declarator";

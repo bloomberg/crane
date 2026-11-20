@@ -61,8 +61,10 @@ Module StArrays.
 
   Definition array_simp_fixed_init := Eval unfold array_simp_fixed_init in (@array_simp_fixed_init nat unit Nat.le nat_idx nat_stref).
   Definition array_simp_list := Eval unfold array_simp_list in (@array_simp_list nat unit Nat.le nat_idx nat_stref).
+  (** [swapArray] is called, not unfolded: it takes the array as a
+      [const std::shared_ptr<std::vector<uint64_t>>&]. *)
   Definition swap_first_and_last_list :=
-    Eval unfold swap_first_and_last_list, swapArray in
+    Eval unfold swap_first_and_last_list in
       (@swap_first_and_last_list nat unit Nat.le nat_idx nat_stref).
 
   Definition nth := Eval unfold List.nth in (@List.nth nat).

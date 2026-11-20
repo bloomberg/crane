@@ -7,12 +7,12 @@
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
+#include <crane_st.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <type_traits>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -216,6 +216,15 @@ struct STRefNat {
   uint64_t STRefToIxNat() const;
 };
 
+struct STMonad {
+  template <typename _tcI0, typename T1 = void, typename T2, typename T3 = void,
+            typename T4>
+    requires STRefClass<_tcI0, T2>
+  static void swapArray(const T2 &_x,
+                        const std::shared_ptr<std::vector<T4>> &arr,
+                        const T2 &i, const T2 &j);
+};
+
 struct StArrays {
   struct nat_idx {
     static List<uint64_t> range(uint64_t fp, uint64_t sp) {
@@ -271,6 +280,17 @@ struct StArrays {
   static List<uint64_t> swap_first_and_last_list(const List<uint64_t> &xs);
   static uint64_t nth(uint64_t n, const List<uint64_t> &l, uint64_t default0);
 };
+
+template <typename _tcI0, typename T1, typename T2, typename T3, typename T4>
+  requires STRefClass<_tcI0, T2>
+void STMonad::swapArray(const T2 &, const std::shared_ptr<std::vector<T4>> &arr,
+                        const T2 &i, const T2 &j) {
+  T4 vi = (*arr)[i];
+  T4 vj = (*arr)[j];
+  (*arr)[i] = std::move(vj);
+  (*arr)[j] = std::move(vi);
+  return;
+}
 
 inline uint64_t STRefNat::STRefToIxNat() const {
   const auto &[s] = *this;

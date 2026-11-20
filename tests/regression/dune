@@ -15285,6 +15285,17 @@
   (deps typed_mapping_operations.t.exe)
   (action (run ./typed_mapping_operations.t.exe))))
 
+(subdir typed_mapping_raw_array
+ (rule
+  (targets typed_mapping_raw_array.t.exe)
+  (deps TypedMappingRawArray.vo typed_mapping_raw_array.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_raw_array.t.exe typed_mapping_raw_array.t.cpp typed_mapping_raw_array.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_raw_array.t.exe)
+  (action (run ./typed_mapping_raw_array.t.exe))))
+
 (subdir typed_mapping_selection
  (rule
   (targets typed_mapping_selection.t.exe)

@@ -7,6 +7,7 @@
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
+#include <crane_st.h>
 #include <cstdint>
 #include <memory>
 #include <optional>
@@ -3063,6 +3064,173 @@ public:
   const variant_t &v() const { return v_; }
 };
 
+template <typename T1 = void>
+std::shared_ptr<std::vector<node>> make_ST(uint64_t n) {
+  auto _once1 = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
+  auto _once2 = std::make_pair(UINT64_C(0), UINT64_C(0));
+  std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> a =
+      std::make_shared<std::vector<node>>(
+          crane::st::extent(UINT64_C(0), std::move(_once1)), std::move(_once2));
+  STMonad::template for_each_with<void, uint64_t, std::monostate>(
+      ListDef::seq(UINT64_C(0), n), std::monostate{},
+      [=](std::monostate, uint64_t i) {
+        (*a)[i] = std::make_pair(i, UINT64_C(0));
+        return std::monostate{};
+      });
+  return a;
+}
+
+template <typename T1 = void>
+uint64_t
+find_ST(const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
+        uint64_t fuel, uint64_t x) {
+  // Explicit stack replaces the non-tail recursion of find_ST: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
+    uint64_t x;
+    uint64_t fuel;
+  };
+
+  struct _after_find_ST_in_false {
+    uint64_t x;
+    uint64_t k;
+  };
+
+  using _frame = std::variant<_call, _after_find_ST_in_false>;
+  uint64_t _result{};
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{x, fuel});
+  while (!_stack.empty()) {
+    _frame &_popped = _stack.back();
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
+      uint64_t x = _f.x;
+      uint64_t fuel = _f.fuel;
+      if (fuel <= 0) {
+        _result = std::move(x);
+      } else {
+        uint64_t fuel_ = fuel - 1;
+        std::pair<uint64_t, uint64_t> x_ = (*a)[x];
+        const auto &[p, k] = x_;
+        if (p == x) {
+          _result = std::move(x);
+        } else {
+          _stack.emplace_back(_after_find_ST_in_false{x, k});
+          _stack.emplace_back(_call{p, fuel_});
+        }
+      }
+    } else {
+      auto _f = std::move(std::get<_after_find_ST_in_false>(_popped));
+      _stack.pop_back();
+      uint64_t x = _f.x;
+      uint64_t k = _f.k;
+      uint64_t r = std::move(_result);
+      (*a)[x] = std::make_pair(r, k);
+      _result = std::move(r);
+    }
+  }
+  return _result;
+}
+
+template <typename T1 = void>
+void
+union_ST(uint64_t n,
+         const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
+         uint64_t x, uint64_t y) {
+  uint64_t rx = find_ST<crane::obj>(a, n, x);
+  uint64_t ry = find_ST<crane::obj>(a, n, y);
+  if (rx == ry) {
+    return;
+  } else {
+    std::pair<uint64_t, uint64_t> x_ = (*a)[rx];
+    const auto &[_x, kx] = x_;
+    std::pair<uint64_t, uint64_t> x_0 = (*a)[ry];
+    const auto &[_x0, ky] = x_0;
+    if (kx < ky) {
+      (*a)[rx] = std::make_pair(ry, kx);
+      return;
+    } else {
+      if (ky < kx) {
+        (*a)[ry] = std::make_pair(rx, ky);
+        return;
+      } else {
+        (*a)[ry] = std::make_pair(rx, ky);
+        (*a)[rx] = std::make_pair(rx, (kx + 1));
+        return;
+      }
+    }
+  }
+}
+
+template <typename T1 = void>
+bool
+same_ST(uint64_t n,
+        const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
+        uint64_t x, uint64_t y) {
+  uint64_t rx = find_ST<crane::obj>(a, n, x);
+  uint64_t ry = find_ST<crane::obj>(a, n, y);
+  return rx == ry;
+}
+
+template <typename T1 = void>
+List<bool>
+run_ST(uint64_t n,
+       const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
+       const List<Op> &ops) {
+  // Explicit stack replaces the non-tail recursion of run_ST: _call frames are
+  // pending calls, _after frames resume a caller.
+  struct _call {
+    const List<Op> *ops;
+  };
+
+  struct _after_run_ST_in_Same {
+    bool b;
+  };
+
+  using _frame = std::variant<_call, _after_run_ST_in_Same>;
+  List<bool> _result{};
+  crane::small_vector<_frame> _stack;
+  _stack.emplace_back(_call{&ops});
+  while (!_stack.empty()) {
+    _frame &_popped = _stack.back();
+    if (std::holds_alternative<_call>(_popped)) {
+      auto _f = std::move(std::get<_call>(_popped));
+      _stack.pop_back();
+      const List<Op> &ops = *_f.ops;
+      if (std::holds_alternative<typename List<Op>::Nil>(ops.v())) {
+        _result = List<bool>::nil();
+      } else {
+        const auto &[a0, a1] = std::get<typename List<Op>::Cons>(ops.v());
+        if (std::holds_alternative<typename Op::Union>(a0.v())) {
+          const auto &[x0, y0] = std::get<typename Op::Union>(a0.v());
+          union_ST<crane::obj>(n, a, x0, y0);
+          _stack.emplace_back(_call{crane_raw(a1)});
+        } else {
+          const auto &[x0, y0] = std::get<typename Op::Same>(a0.v());
+          bool b = same_ST<crane::obj>(n, a, x0, y0);
+          _stack.emplace_back(_after_run_ST_in_Same{b});
+          _stack.emplace_back(_call{crane_raw(a1)});
+        }
+      }
+    } else {
+      auto _f = std::move(std::get<_after_run_ST_in_Same>(_popped));
+      _stack.pop_back();
+      bool b = _f.b;
+      List<bool> bs = std::move(_result);
+      _result = List<bool>::cons(b, std::move(bs));
+    }
+  }
+  return _result;
+}
+
+template <typename T1 = void>
+List<bool> union_find_ST(uint64_t n, const List<Op> &ops) {
+  std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> a =
+      make_ST<crane::obj>(n);
+  return run_ST<crane::obj>(n, std::move(a), ops);
+}
+
 using NatMap = Make<Nat_as_OT>;
 using uf = NatMap::template t<node>;
 [[gnu::used]] inline const uf empty_uf = NatMap::template empty<node>();
@@ -3084,7 +3252,7 @@ List<bool> run_fun(uint64_t n,
                    const List<Op> &ops);
 
 struct UnionFind {
-  static List<bool> union_find_ST(uint64_t n, const List<Op> &ops);
+  static List<bool> union_find_ST(uint64_t x0_, const List<Op> &x1_);
   static List<bool> union_find_fun(uint64_t n, const List<Op> &ops);
 };
 

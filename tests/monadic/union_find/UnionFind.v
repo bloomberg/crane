@@ -10,7 +10,8 @@
     root of larger rank, bumping the rank on a tie (union by rank).
 
     - [find_ST], [union_ST], [same_ST] work in place on an ST array of
-      [(parent, rank)] nodes, extracted to a [std::vector]. A read or write is
+      [(parent, rank)] nodes, extracted to a [std::vector]; each is a C++
+      function of its own taking the array. A read or write is
       O(1), so a sequence of [m] operations on [n] elements costs
       O(m α(n)), α the inverse Ackermann function, plus O(n) for [make_ST].
     - [find_fun], [union_fun], [same_fun] are the same algorithm on a
@@ -179,13 +180,11 @@ Definition union_find_fun (n : nat) (ops : list op) : list bool :=
 
 Module UnionFind.
 
-  (** The ST side is extracted as one function, with the array a local
-      variable that the recursive helpers capture. Crane passes an [STArray]
-      argument as [const std::vector<T> *&], a pointer to a const vector,
-      through which the writes do not compile. *)
-  Definition union_find_ST :=
-    Eval unfold union_find_ST, make_ST, run_ST, union_ST, same_ST, find_ST in
-      @union_find_ST unit.
+  (** The ST side is extracted one function per operation: [find_ST],
+      [union_ST], [same_ST] and [run_ST] take the array, a
+      [std::shared_ptr<std::vector<node>>], by const reference, and write
+      its elements through it. *)
+  Definition union_find_ST := @union_find_ST unit.
 
   Definition union_find_fun := Eval unfold union_find_fun in union_find_fun.
 

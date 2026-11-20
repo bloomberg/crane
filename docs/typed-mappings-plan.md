@@ -433,6 +433,75 @@ This milestone fixes the reported bug.
   same self-recursive `Replace` differ in which reseats reach the caller's
   slot (the loop's do, a recursion's inner calls write temporaries); both
   are within the contract ("may replace").
+- **M6.** `STArray` and `STRef` are typed mappings in `STMonad.v`
+  (`std::shared_ptr<std::vector<A>>` and `std::shared_ptr<A>`,
+  `MutableHandle HandleByConstReference`, `NoViews`, `NativeRAII`); the
+  legacy `Crane Extract Inductive STArray` and the `Inlined Constant`s of
+  the eight operations are gone. `newListArray` and `getElems` call
+  `theories/cpp/crane_st.h` (`crane::st::new_list_array`, `elems`, and
+  `extent` for `hi - lo + 1`), templated on the list type so the header
+  does not name a unit's `List`. What the ST operations needed of M3/M4:
+  - A definitional class (ITree's `ReSum`, behind `-<`) unfolds to its
+    method's type, so `whd_all` hid it and the instance binder was taken
+    for a runtime argument; `is_class_type` now reads the head before
+    reducing too.
+  - `%stored(c)` at a type family parameter applied to terms (`V idx`)
+    is the type variable `V` (extraction drops its term arguments).
+  - A call's `%tN` are the kept dictionaries' type arguments first, then
+    the type parameters, so `%stored` is offset by the instance binders
+    whose class Crane does not skip (`Mapping_discovery.is_kept_instance`,
+    told the skipped classes by `Table` through `skipped_class`);
+    `STRefClass T` counts, `ReSum` does not.
+  - A type mapping's `Parameter i` counted every binder of the head, but
+    a use's C++ type arguments are its type parameters only: `STRef` is a
+    class projection (`T`, the `STRefClass T` instance, `S`, `A`), so
+    `A` is type argument 2, not 3. `Mapping_plan.components` is now the
+    type-argument position; `component_binders` keeps the binder position,
+    which `Mapping_operation` uses to find the component in a Rocq type.
+  - The index `idx` of each operation is `Crane Extraction Implicit`:
+    it only selects `V idx`, and passing it as an `Ignore` argument
+    evaluated it as a discarded statement (`nat_idx::zero();`).
+    `check_for_remaining_implicits` now skips a mapped operation's own
+    body and its own implicit positions at a call to it (the lowering
+    already drops them).
+  - `Param_mode.disagreement` refused a pointer-declared parameter that
+    is not the receiver; a raw-pointer mapping's canonical type is one,
+    so only "a receiver must be a pointer" remains.
+  Results: a helper that reads and writes a cell, `swapArray` (no longer
+  unfolded in `st_arrays`), and every link of an `outer -> middle ->
+  writeArray` chain take `const std::shared_ptr<std::vector<T>>&`;
+  `regrow` (a test-local `Replace`) gives `std::shared_ptr<...>&`; a
+  helper that returns an array, or passes it to one that does, takes it
+  by value (`tests/monadic/st_array_helpers`). Known limit: returning an
+  array through `Ret` keeps it `const&` and copies at the return, because
+  `Ret` is a legacy mapping whose argument is only read, and a tuple
+  construction is a read by design (`Escape`); making a pass-through
+  legacy template transparent to escape would change unrelated outputs.
+  `vector<bool>`: with no views a `bool` array is a `std::vector<bool>`
+  read and written through the handle (proxy references convert), which
+  is correct; the addressable-storage decision stays with M7's spans.
+  The raw-pointer alternative (`tests/regression/typed_mapping_raw_array`,
+  a `RawArray` axiom, `RegionOwned`): read and write take `std::vector<T>*`
+  by value at every level, `Replace` takes `std::vector<T>*&`;
+  `ExternallyOwned` and `ManualShared` are accepted, `NativeRAII` refused.
+  `st_quicksort` keeps `partition` and `swapArray` as functions (only the
+  `rec` body is unfolded: its `call` pushes onto the stack `rec`'s mapping
+  declares), `union_find` extracts `make_ST`, `find_ST`, `union_ST`,
+  `same_ST`, `run_ST` separately; their proofs are about the section
+  definitions and were unaffected. No test reached `STMonad` by a bare
+  `Require` (D5): every user imports it. Leaks: LSan and `leaks` both hang
+  on this macOS machine, so the check is an allocation counter (global
+  `operator new`/`delete`) around a second run of each test's `main`:
+  the committed outputs before M6 leave 6 (`st_arrays`), 4
+  (`st_quicksort`), 8 (`union_find`) allocations live per run, 0 now for
+  `st_arrays`, `st_refs`, `st_fibonacci`, `st_quicksort`, `union_find`,
+  `st_array_helpers`. `shared_ptr` does not collect cycles; the ST API's
+  element types (`V idx`, no recursive types) cannot build one, so no
+  cycle test exists. A type alias whose body is an event type applied to
+  a type-level lambda (`Definition E := STEvent nat unit (fun _ => nat)
+  +' ...`) crashes alias planning (`method_registry not initialized`,
+  `Entities.alias_template_kinds`); pre-existing, the test uses
+  `Notation` instead.
 - **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
   existing worktree (stale `_build/census`: dune does not rebuild a sibling
   `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
@@ -444,6 +513,6 @@ This milestone fixes the reported bug.
 - [x] M3 type mappings in the pipeline
 - [x] M4 operation mappings
 - [x] M5 explicit parameter modes and access fixed point
-- [ ] M6 ST arrays and references without views
+- [x] M6 ST arrays and references without views
 - [ ] M7 views
 - [ ] M8 standard mappings, interfaces, deprecation

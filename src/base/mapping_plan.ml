@@ -31,6 +31,7 @@ type t = {
   head : GlobRef.t;
   canonical : type_expr;
   components : (string * int) list;
+  component_binders : (string * int) list;
   copy : copy_model;
   access : access_model;
   value_model : value_model;
@@ -68,18 +69,32 @@ let parameter_id k = Id.of_string (Printf.sprintf "crane_mapped_parameter_%d" k)
 
 (* The head applied to one fresh variable per binder of its arity, in an
    environment declaring them. *)
-let generic_query env sigma g =
+let rec generic_query env sigma g =
   let sigma, head = Evd.fresh_global env sigma g in
   let rec go env k ids ty =
     match EConstr.kind sigma (Reductionops.whd_all env sigma ty) with
     | Constr.Prod (na, dom, codom) ->
       let id = parameter_id k in
       let decl = Context.Named.Declaration.LocalAssum (Context.make_annot id na.Context.binder_relevance, dom) in
-      go (EConstr.push_named decl env) (k + 1) (id :: ids) (EConstr.Vars.subst1 (EConstr.mkVar id) codom)
+      go (EConstr.push_named decl env) (k + 1) ((id, is_arity env sigma dom) :: ids)
+        (EConstr.Vars.subst1 (EConstr.mkVar id) codom)
     | _ -> (env, List.rev ids)
   in
-  let env, ids = go env 0 [] (Retyping.get_type_of env sigma head) in
-  (env, sigma, EConstr.mkApp (head, Array.of_list (List.map EConstr.mkVar ids)), ids)
+  let env, binders = go env 0 [] (Retyping.get_type_of env sigma head) in
+  let ids = List.map fst binders in
+  (env, sigma, EConstr.mkApp (head, Array.of_list (List.map EConstr.mkVar ids)), ids, List.map snd binders)
+
+(* Whether a binder of type [t] is a type (or type family) parameter: a
+   use's C++ type arguments are those of its type parameters only, an
+   instance or a value parameter taking no position among them. *)
+and is_arity env sigma t =
+  let rec go env t =
+    match EConstr.kind sigma (Reductionops.whd_all env sigma t) with
+    | Constr.Prod (x, a, c) -> go (EConstr.push_rel (Context.Rel.Declaration.LocalAssum (x, a)) env) c
+    | Constr.Sort _ -> true
+    | _ -> false
+  in
+  go env t
 
 let index_of id ids =
   let rec go k = function [] -> None | x :: r -> if Id.equal x id then Some k else go (k + 1) r in
@@ -135,8 +150,10 @@ let compile_template ~fail ~stored text =
   go 0;
   Buffer.contents b
 
-let compile env (r : Mapping_discovery.resolved_type_mapping) head ids =
+let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
   let m = r.type_mapping in
+  (* The position of binder [i] among the type arguments of a use. *)
+  let position i = List.length (List.filter Fun.id (List.filteri (fun j _ -> j < i) kinds)) in
   let fail detail = fail_head head Pp.(str "the instance" ++ spc () ++ Printer.pr_global r.type_instance ++ spc () ++ detail) in
   let unsupported what c =
     fail
@@ -173,7 +190,7 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids =
   in
   let stored x =
     match List.assoc_opt x components with
-    | Some i -> i
+    | Some i -> position i
     | None -> fail (Pp.strbrk (Printf.sprintf "names the undeclared component \"%s\"." x))
   in
   let rec type_expr = function
@@ -181,7 +198,9 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids =
     | Cpp.Apply (s, args) ->
       Apply (s, List.map (function Cpp.Type_arg t -> Type (type_expr t) | Cpp.Value_arg v -> Value v) args)
     | Cpp.Source_type t -> (
-      match parameter_of_type ids t with Some i -> Parameter i | None -> unsupported "names the source type" t )
+      match parameter_of_type ids t with
+      | Some i -> Parameter (position i)
+      | None -> unsupported "names the source type" t )
     | Cpp.Stored_component x -> Parameter (stored x)
     | Cpp.Pointer t -> Pointer (type_expr t)
     | Cpp.Const t -> Const (type_expr t)
@@ -227,7 +246,8 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids =
   { instance = r.type_instance;
     head;
     canonical = type_expr m.type_cpp;
-    components;
+    components = List.map (fun (x, i) -> (x, position i)) components;
+    component_binders = components;
     copy = m.type_copy;
     access = m.type_access;
     value_model = m.type_model;
@@ -245,10 +265,10 @@ let find g =
   | None ->
     let env = Global.env () in
     let sigma = Evd.from_env env in
-    let env, sigma, query, ids = generic_query env sigma head in
+    let env, sigma, query, ids, kinds = generic_query env sigma head in
     let p =
       match Mapping_discovery.resolve_type_mapping env sigma query with
-      | Some r -> compile env r head ids
+      | Some r -> compile env r head ids kinds
       | None ->
         fail_head head
           (Pp.strbrk
