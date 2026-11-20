@@ -1075,6 +1075,15 @@ val is_inline_custom : GlobRef.t -> bool
     rather than to write it ({!written_custom_text}). *)
 val inline_custom_text : GlobRef.t -> string option
 
+(** The number of arguments a call to the inline custom [r] supplies: one
+    per retained runtime binder of an operation mapping
+    ({!Mapping_operation}), one past the largest [%aN] of a legacy text;
+    [None] when [r] is not an inline custom. *)
+val inline_custom_arity : GlobRef.t -> int option
+
+(** Whether an [OperationMapping] instance maps [r] (design 11). *)
+val is_mapped_operation : GlobRef.t -> bool
+
 (** Check if reference has foreign custom extraction. *)
 val is_foreign_custom : GlobRef.t -> bool
 

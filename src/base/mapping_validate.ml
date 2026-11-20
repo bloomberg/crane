@@ -337,12 +337,20 @@ let type_mapping env sigma ~instance ~source (m : type_mapping) =
 
 (** {1 Operation mappings} *)
 
+type runtime_binder = {
+  binder_name : string option;
+  binder_mapping : type_mapping option Lazy.t;
+}
+
 type operation_context = {
-  argument_mapping : string -> type_mapping option;
+  runtime_binders : runtime_binder list option;
   result_mapping : type_mapping option;
 }
 
-let no_context = {argument_mapping = (fun _ -> None); result_mapping = None}
+let no_context = {runtime_binders = None; result_mapping = None}
+
+let pr_binders binders =
+  String.concat ", " (List.map (fun b -> match b.binder_name with Some x -> x | None -> "_") binders)
 
 let read_only = function
   | Read_only_value _ | Read_only_handle _ -> true
@@ -374,6 +382,35 @@ let operation_mapping env ~instance ~(source : declaration) cx (m : operation_ma
     (match duplicates names with
     | Some x -> failf "argument %s is declared more than once" (quote x)
     | None -> ());
+    (* Rule 19.6.2: one argument per retained runtime binder, in order. *)
+    let bound =
+      match cx.runtime_binders with
+      | None -> []
+      | Some binders ->
+        let n = List.length binders and k = List.length args in
+        if n <> k then
+          failf
+            "the contract declares %d argument%s (%s), but the operation has %d \
+             retained runtime binder%s (%s) after Crane erases its type, proof, \
+             type-class and Extraction Implicit parameters; declare one \
+             argument per binder, in source order"
+            k (if k = 1 then "" else "s") (String.concat ", " names) n
+            (if n = 1 then "" else "s") (pr_binders binders);
+        List.iter2
+          (fun a b ->
+            match b.binder_name with
+            | Some x when x <> a.argument_name ->
+              failf
+                "argument %s is bound to the runtime binder %s; the arguments \
+                 must name the retained runtime binders in source order (%s)"
+                (quote a.argument_name) (quote x) (pr_binders binders)
+            | _ -> ())
+          args binders;
+        List.combine names binders
+    in
+    let argument_mapping x =
+      match List.assoc_opt x bound with Some b -> Lazy.force b.binder_mapping | None -> None
+    in
     let use_of x = (List.find (fun a -> a.argument_name = x) args).argument_use in
     let declared where x =
       if not (List.mem x names) then
@@ -392,7 +429,7 @@ let operation_mapping env ~instance ~(source : declaration) cx (m : operation_ma
     let path where p =
       if p.path_argument = "" then failf "%s has no owner argument" where;
       declared where p.path_argument;
-      match cx.argument_mapping p.path_argument with
+      match argument_mapping p.path_argument with
       | Some tm ->
         let comps = List.map (fun c -> c.component_name) tm.type_components in
         List.iter
@@ -406,7 +443,7 @@ let operation_mapping env ~instance ~(source : declaration) cx (m : operation_ma
     List.iter
       (fun a ->
         let x = quote a.argument_name in
-        let tm = cx.argument_mapping a.argument_name in
+        let tm = argument_mapping a.argument_name in
         match a.argument_use with
         | Write | Write_canonical ->
           impure ("write argument " ^ x);

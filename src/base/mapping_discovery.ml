@@ -145,6 +145,10 @@ let has_type_mapping g = GlobRef.Map.mem g !type_heads
 
 let type_mapping_heads () = GlobRef.Map.bindings !type_heads
 
+let has_operation_mapping g = GlobRef.Map.mem g !operation_heads
+
+let operation_mapping_heads () = GlobRef.Map.bindings !operation_heads
+
 (** {1 Resolution} *)
 
 (* The instance applied to a fresh evar for each of its binders, and the
@@ -256,26 +260,97 @@ let resolve_type_mapping env sigma ty =
                 type_source = EConstr.to_constr sigma source;
                 type_mapping = mapping } ) )
 
-(* The arguments of an operation's type by binder name, and its result. *)
-let operation_context env sigma d =
-  let ty = Retyping.get_type_of env sigma d in
-  let binders, concl = EConstr.decompose_prod sigma ty in
+(** {1 Operation binders} *)
+
+type binder_role = Type_parameter of int | Runtime of int | Instance | Erased
+
+type operation_binder = {
+  binder_id : Id.t;
+  binder_name : Name.t;
+  binder_type : EConstr.types;
+  role : binder_role;
+}
+
+type operation_binders = {
+  binders_env : Environ.env;
+  binders : operation_binder list;
+  result_type : EConstr.types;
+  generic_use : EConstr.t;
+}
+
+let implicit_positions : (GlobRef.t -> Int.Set.t) ref = ref (fun _ -> Int.Set.empty)
+
+(* As [Extraction.flag_of_type]: whether a term of type [t] is logical, and
+   whether it is a type scheme. *)
+let logical_quality = function
+  | UnivGen.QualityOrSet.Qual (QConstant (QSProp | QProp)) -> true
+  | Set | Qual (QConstant QType | QVar _) -> false
+
+let rec flag_of_type env sigma t =
+  let t = Reductionops.whd_all env sigma t in
+  match EConstr.kind sigma t with
+  | Constr.Prod (x, a, c) -> flag_of_type (EConstr.push_rel (Context.Rel.Declaration.LocalAssum (x, a)) env) sigma c
+  | Constr.Sort s -> (logical_quality (UnivGen.QualityOrSet.of_sort (EConstr.ESorts.kind sigma s)), true)
+  | _ ->
+    let logical =
+      try logical_quality (Retyping.get_sort_quality_of ~polyprop:false env sigma t)
+      with e when CErrors.noncritical e -> false
+    in
+    (logical, false)
+
+let is_class_type env sigma t =
+  let t = Reductionops.whd_all env sigma t in
+  match head_of sigma (snd (EConstr.decompose_prod sigma t)) with
+  | Some g -> Typeclasses.is_class g
+  | None -> false
+
+let binder_id k = Id.of_string (Printf.sprintf "crane_operation_binder_%d" k)
+
+let operation_binders env sigma g =
+  let sigma, head = Evd.fresh_global env sigma g in
+  let implicits = !implicit_positions g in
+  let rec go env k ntypes nruntime acc ty =
+    match EConstr.kind sigma (Reductionops.whd_all env sigma ty) with
+    | Constr.Prod (na, dom, codom) ->
+      let id = binder_id k in
+      let role, ntypes, nruntime =
+        match flag_of_type env sigma dom with
+        | true, _ -> (Erased, ntypes, nruntime)
+        | false, true -> (Type_parameter ntypes, ntypes + 1, nruntime)
+        | false, false ->
+          if Int.Set.mem (k + 1) implicits then (Erased, ntypes, nruntime)
+          else if is_class_type env sigma dom then (Instance, ntypes, nruntime)
+          else (Runtime nruntime, ntypes, nruntime + 1)
+      in
+      let b = {binder_id = id; binder_name = na.Context.binder_name; binder_type = dom; role} in
+      let decl = Context.Named.Declaration.LocalAssum (Context.make_annot id na.Context.binder_relevance, dom) in
+      go (EConstr.push_named decl env) (k + 1) ntypes nruntime (b :: acc)
+        (EConstr.Vars.subst1 (EConstr.mkVar id) codom)
+    | _ -> (env, List.rev acc, ty)
+  in
+  let binders_env, binders, result_type = go env 0 0 0 [] (Retyping.get_type_of env sigma head) in
+  let generic_use = EConstr.mkApp (head, Array.of_list (List.map (fun b -> EConstr.mkVar b.binder_id) binders)) in
+  {binders_env; binders; result_type; generic_use}
+
+let runtime_binders b = List.filter (fun b -> match b.role with Runtime _ -> true | _ -> false) b.binders
+
+(* The retained runtime binders of the operation [g] and the type mappings
+   of their types and of its result, where those are mapped. *)
+let operation_context env g =
+  let sigma = Evd.from_env env in
+  let b = operation_binders env sigma g in
   let known t =
-    if EConstr.Vars.closed0 sigma t then
-      Option.map (fun r -> r.type_mapping) (resolve_type_mapping env sigma t)
-    else None
+    Option.map (fun r -> r.type_mapping) (resolve_type_mapping b.binders_env sigma t)
   in
-  let argument_mapping x =
-    match
-      List.find_opt
-        (fun (na, _) ->
-          match na.Context.binder_name with Name id -> Id.to_string id = x | Anonymous -> false)
-        binders
-    with
-    | Some (_, t) -> known t
-    | None -> None
+  let runtime =
+    List.map
+      (fun (x : operation_binder) ->
+        { Mapping_validate.binder_name =
+            (match x.binder_name with Name id -> Some (Id.to_string id) | Anonymous -> None);
+          binder_mapping = lazy (known x.binder_type) })
+      (runtime_binders b)
   in
-  {Mapping_validate.argument_mapping; result_mapping = known concl}
+  {Mapping_validate.runtime_binders = Some runtime; result_mapping = known b.result_type}
 
 let resolve_operation_mapping env sigma term =
   let term = Evarutil.nf_evar sigma term in
@@ -315,7 +390,7 @@ let resolve_operation_mapping env sigma term =
             in
             let mapping = Mapping_decode.operation_mapping env sigma dict in
             Mapping_validate.operation_mapping env ~instance:gr ~source
-              (operation_context env sigma d) mapping;
+              (operation_context (Global.env ()) h) mapping;
             trace
               Pp.(
                 v 0

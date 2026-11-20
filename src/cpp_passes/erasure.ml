@@ -741,7 +741,10 @@ and instantiated_expr ~boxing (e : expr) : expr =
     let tokens = Cpp_ir.Foreign_template.term_template tmpl.text in
     (* An argument past the last one the text names is not its own: the
        call's result is applied to it. *)
-    let named = List.fold_left (fun n -> function Cpp_ir.Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens in
+    let named =
+      if Base.Table.is_mapped_operation n then Option.get (Base.Table.inline_custom_arity n)
+      else List.fold_left (fun n -> function Cpp_ir.Foreign_template.Arg i -> max n (i + 1) | _ -> n) 0 tokens
+    in
     let yields = match res.yields with Yields t -> Some t | Untyped -> None in
     Foreign (Call, instantiated_foreign ~boxing n tokens tys (CList.firstn (min named (List.length args)) args) yields)
   | Entity (x, tys, Some {inline = Some {form = Block; text; _}; custom_yields}) ->
