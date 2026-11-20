@@ -294,6 +294,31 @@ This milestone fixes the reported bug.
 - **M2.** Descriptor field positions count from 0 after the family parameters.
   `Crane Show Mapping` and `Crane Check Mapping ... Selects | Unmapped | Fails
   With` are the test hooks; `CRANE_TRACE_MAPPINGS=1` traces discovery.
+- **M3.** A plan is compiled once per mapped head (`Base.Mapping_plan`),
+  from the instance resolved at the head applied to fresh named variables,
+  one per binder of its arity; a type argument of a use stands for the
+  variable it instantiates. So a component's logical type must be one of the
+  head's parameters (`KnownType A`, `SourceType A`, or a `FieldType` declared
+  at one): a closed component type (`KnownType nat`) and an instance for one
+  particular instantiation (`TypeMapping (T nat)`) are refused with a
+  diagnostic for now. `is_custom`/`to_inline` answer true for a mapped head
+  and its constructors, so the ~300 legacy call sites, body skipping and kind
+  inference need no edit; the content readers in `Table` (`find_custom*`,
+  `inline_custom_text`, `find_custom_match`, `find_custom_ctor_templates`,
+  `imports_of`) consult the plan first. Constructor and match templates are
+  compiled into the legacy hole vocabulary (`%stored(x)` becomes `%tN`, the
+  views become one `if (test) { binders %brI } else ...` template), so
+  construction and match lowering are unchanged; `%tmpN` is refused there.
+  For the text-reasoning heuristics, a head's `find_custom` is its canonical
+  type in legacy spelling; the type itself is structured in
+  `Erasure.instantiated_type`. A structured type no longer names its head,
+  so instantiation records the head (`note_instantiated`) and its headers are
+  added to the unit's imports (per extraction, not per unit). The
+  `constexpr` fixed-point check re-runs the pass after instantiation, so
+  `is_literal_type` must read a mapped head as its structured type before
+  instantiation too. Release plans (`DrainWith`) and value/lifetime models
+  are compiled but not yet consumed; `WithBody` builds compile to a legacy
+  block template (`%result = init; body`) and are untested.
 - **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
   existing worktree (stale `_build/census`: dune does not rebuild a sibling
   `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
@@ -302,7 +327,7 @@ This milestone fixes the reported bug.
 
 - [x] M1 declarator-correct types
 - [x] M2 descriptor library and discovery
-- [ ] M3 type mappings in the pipeline
+- [x] M3 type mappings in the pipeline
 - [ ] M4 operation mappings
 - [ ] M5 explicit parameter modes and access fixed point
 - [ ] M6 ST arrays and references without views
