@@ -340,6 +340,10 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
      borrowed (const method). *)
   let n_method_params = List.length ids_with_types in
   let method_owned_flags = Core_plan.Ownership.read_off ~settled:(settled_ownership cx) ids_with_types inner_body in
+  (* What the body does with each parameter ({!Core_plan.Access}), by de
+     Bruijn index; a method keeps canonical forms, as a function named as a
+     value does. *)
+  let method_access = Ownership.infer_access cx ~owner:func_ref inner_body ids_with_types in
 
   (* Extract 'this' argument at this_pos - use renamed ids for consistency with
      body *)
@@ -454,7 +458,9 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
           | Function _ when generalised ->
             ( (Reference (Forwarding, Variable (Named (fun_tparam_id i))) : Cpp_ir.Lowered.Type.t),
               Cpp_ir.Param_mode.forwarded )
-          | _ -> Ownership.wrap_param_by_ownership cx ~is_owned:owned ~core cpp_ty
+          | _ ->
+            let access = List.nth_opt method_access (n_method_params - 1 - i) in
+            Ownership.wrap_param_by_ownership cx ~is_owned:owned ?access ~reference_allowed:false ~core cpp_ty
         in
         ((id, wrapped), mode) )
       params_with_idx param_ids_with_pos

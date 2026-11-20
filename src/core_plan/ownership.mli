@@ -41,3 +41,8 @@ val summarize :
     others' scrutinees are owned for reuse only where a loop's cursor may
     recycle them. *)
 val reusing_matches : Core.Program.t -> Core.Ref.User.Set.t
+
+(** Every function [struc] defines, in a functor or not: a constant with a
+    parameter, and each member of a recursive group, with its body, its
+    type, and whether it is a constant.  A custom constant is not one. *)
+val functions : Core.Program.t -> (Names.GlobRef.t * Core.Expr.t * Core.Type.t * bool) list

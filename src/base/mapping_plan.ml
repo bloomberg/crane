@@ -379,6 +379,26 @@ let read_by_value p ~argument =
   | Read_only_handle h | Mutable_handle h -> h = Handle_by_value
   | Explicit_access {explicit_read; _} -> explicit_read = Canonical_by_value
 
+type physical = As_read | Physical_value | Physical_const_reference | Physical_mutable_reference
+
+let explicit_form = function
+  | Some Canonical_by_value -> Physical_value
+  | Some Canonical_by_const_reference -> Physical_const_reference
+  | Some Canonical_by_mutable_reference -> Physical_mutable_reference
+  | Some (Exact_parameter _) | None -> As_read
+
+let write_through p =
+  match p.access with
+  | Mutable_value _ -> Physical_mutable_reference
+  | Mutable_handle _ | Read_only_value _ | Read_only_handle _ -> As_read
+  | Explicit_access {explicit_write; _} -> explicit_form explicit_write
+
+let replace_form p =
+  match p.access with
+  | Mutable_value _ | Mutable_handle _ | Read_only_value _ | Read_only_handle _ -> Physical_mutable_reference
+  | Explicit_access {explicit_replace = None; _} -> Physical_mutable_reference
+  | Explicit_access {explicit_replace; _} -> explicit_form explicit_replace
+
 let headers g = if is_mapped g then (find g).headers else []
 
 let instantiated : GlobRef.Set.t ref = State.cell State.Extraction GlobRef.Set.empty

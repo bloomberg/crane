@@ -101,6 +101,20 @@ val copies_cheaply : t -> argument:(int -> bool) -> bool
     is read by value, the reference forms do not. *)
 val read_by_value : t -> argument:(int -> bool) -> bool
 
+(** A physical parameter form the access model asks for (design 6.6), when
+    it is not the canonical read form ([As_read]). *)
+type physical = As_read | Physical_value | Physical_const_reference | Physical_mutable_reference
+
+(** The canonical write-through form of [p] (design 6.6): [T&] for a
+    mutable value, the read form for a handle (writing through a handle
+    does not need to reseat it), and [explicit_write] for [ExplicitAccess]
+    ([ExactParameter] is not supported and falls back to the read form). *)
+val write_through : t -> physical
+
+(** The form a parameter of [p] whose representation may be replaced takes:
+    [T&], or [explicit_replace] for [ExplicitAccess]. *)
+val replace_form : t -> physical
+
 (** The headers of the mapped head [g], or of the inductive of the mapped
     constructor [g]. *)
 val headers : Names.GlobRef.t -> string list

@@ -156,14 +156,19 @@ let tail_shadow_type u ~tparams ~pointer_safe mode ty =
 
 (** A shadow variable: its name, the type it is declared at, and how it
     holds the parameter it shadows ([hold]): as a value of its own; through
-    a pointer to the value the caller lent ({!tail_shadow_type}); or, the
+    a pointer to the value the caller lent ({!tail_shadow_type}); the
     receiver's, [_loop_self], as the pointer the receiver is, which is no
-    value borrowed through it. *)
+    value borrowed through it; or, a parameter the caller lends by mutable
+    reference ({!Cpp_ir.Param_mode} [By_reference], a typed mapping's write
+    or replace in place), as that reference: the loop rebinds the caller's
+    object, as the recursive call would have been let to, and copies
+    nothing into a value of its own. *)
 module Shadow = struct
   type hold =
     | Value
     | Through_pointer
     | Receiver
+    | In_place
 
   type t = {
     name : Id.t;
@@ -185,6 +190,7 @@ let make_shadow u ~tparams ~pointer_safe name mode ty =
   let hold : Shadow.hold =
     if pointer_safe && Option.has_some (borrowed_value_param_pointee u mode ty) then Through_pointer
     else if Cpp_ir.Param_mode.is_receiver mode then Receiver
+    else if mode.form = By_reference then In_place
     else Value
   in
   {Shadow.name; ty = shadow_ty; hold}
@@ -203,6 +209,7 @@ let borrowed_pointer_shadow (s : Shadow.t) = s.hold = Through_pointer
     - Otherwise: plain copy *)
 let tail_shadow_init orig_id (shadow : Shadow.t) mode ty =
   if borrowed_pointer_shadow shadow then Unary (Address_of, Local orig_id)
+  else if shadow.hold = In_place then Local orig_id
   else if is_moveable_param_type mode ty then Move (Local orig_id)
   else Local orig_id
 
@@ -1140,7 +1147,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~v
         in
         Bind_variable
           ( shadow.name,
-            Declare (strip_ref_and_const_type shadow.ty, None),
+            Declare ((if shadow.hold = In_place then shadow.ty else strip_ref_and_const_type shadow.ty), None),
             init_expr ) )
       (List.combine varying_params varying_modes)
       shadow_params

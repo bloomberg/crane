@@ -145,6 +145,8 @@ val field : string
 
 val field_header : string  (** [field.h] -- {!field} and [crane::unbox]. *)
 
+val writable_header : string  (** [writable.h] -- [crane::writable]. *)
+
 val fn_header : string
 (** [fn.h], the header declaring {!fn}; demanded by the type printer. *)
 
@@ -190,6 +192,11 @@ type helper =
   | Immortal
       (** [crane::immortal(v)] -- [v], its blocks made immortal
           ({!shared_variant_header}). *)
+  | Writable
+      (** [crane::writable(v)] -- a temporary holding [v], whose [ref()] is
+          a mutable lvalue live to the end of the full expression: an
+          argument a callee writes or replaces in place, when it is not a
+          variable the caller may write ({!writable_header}). *)
 
 (** [crane_raw], in {!erasure_header}. *)
 val raw : string

@@ -35,9 +35,11 @@ let rec names_storage : expr -> bool = function
   | Dereference e | Move e | Member (e, _) | Project (e, _, _) | Access (_, e, _) -> names_storage e
   | _ -> false
 
-(* The text of an operation mapping ({!Base.Mapping_operation}). *)
-let operation_text : expr -> string option = function
-  | Entity (r, _, Some {inline = Some {text; _}; _}) when Base.Table.is_mapped_operation r -> Some text
+(* The text of an operation mapping ({!Base.Mapping_operation}), and the
+   positions of the arguments it writes or replaces in place. *)
+let operation_text : expr -> (string * int list) option = function
+  | Entity (r, _, Some {inline = Some {text; _}; _}) when Base.Table.is_mapped_operation r ->
+    Some (text, Base.Mapping_operation.in_place_positions (Base.Mapping_operation.find r))
   | _ -> None
 
 (* How many times the text splices argument [i]. *)
@@ -51,8 +53,10 @@ let splices text i =
    free to repeat is bound ahead of the call, in order -- or, where the text
    does not splice it (an [Ignore] argument), evaluated as a statement and
    discarded.  An argument bound by value and spliced once is moved from its
-   temporary, so that a [Take] still receives an rvalue. *)
-let prepare_operation_args fresh bind discard text (args : expr list) : expr list =
+   temporary, so that a [Take] still receives an rvalue -- unless the text
+   writes or replaces it in place ([in_place]), which takes the temporary as
+   the lvalue it is. *)
+let prepare_operation_args fresh bind discard (text, in_place) (args : expr list) : expr list =
   let computing = List.filter (fun (_, a) -> not (free_to_repeat a)) (List.mapi (fun i a -> (i, a)) args) in
   match computing with
   | [] -> args
@@ -70,7 +74,7 @@ let prepare_operation_args fresh bind discard text (args : expr list) : expr lis
             let x = fresh () in
             let by_value = match a with Move _ -> true | a -> not (names_storage a) in
             bind ~by_value x a;
-            if by_value && n = 1 then (Move (Local x) : expr) else (Local x : expr))
+            if by_value && n = 1 && not (List.mem i in_place) then (Move (Local x) : expr) else (Local x : expr))
       args
 
 (* [e] with each argument it must evaluate once named, at every position [e]

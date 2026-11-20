@@ -841,6 +841,15 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
   let all_ids_with_owned =
     List.map2 (fun (id, ty) owned -> (id, ty, owned)) all_ids owned_flags
   in
+  (* What the body does with each parameter, by binder
+     ({!Core_plan.Access}); a function named as a value keeps canonical
+     forms. *)
+  let access_of =
+    let reqs = Ownership.infer_access cx ~owner:n b all_ids in
+    let by_id = List.combine (List.map fst all_ids) reqs in
+    fun x -> List.assoc_opt x by_id
+  in
+  let reference_allowed = not (is_pinned cx n) in
   (* The callables kept as [crane::fn], by binder: decided here, where every
      binder is still at its source position -- [all_ids] is innermost first,
      so the [p]th is source parameter [n_params - 1 - p] -- and read by name
@@ -879,7 +888,9 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
         in
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = Monadic.reify_monadic_param_type cx ty cpp_ty in
-        let wrapped, mode = Ownership.wrap_param_by_ownership cx ~is_owned:owned ~core:ty cpp_ty in
+        let wrapped, mode =
+          Ownership.wrap_param_by_ownership cx ~is_owned:owned ?access:(access_of x) ~reference_allowed ~core:ty cpp_ty
+        in
         ((x, wrapped), (x, mode)) )
       ids_with_owned
   in

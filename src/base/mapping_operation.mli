@@ -37,6 +37,10 @@ type argument = {
   use : input_use;
   position : int;  (** among the retained runtime binders: its [%aN] *)
   binder : int;  (** among all the binders of the operation's type *)
+  in_place : bool;
+      (** the template receives it as a mutable lvalue: a [Replace] of a
+          mapped type, or a write of one whose write-through form is [T&]
+          ({!Mapping_plan.write_through}) *)
 }
 
 type t = {
@@ -79,3 +83,12 @@ val owned_call_arguments : t -> bool list
 
 (** The headers of the operation [g], if it is mapped. *)
 val headers : Names.GlobRef.t -> string list
+
+(** One entry per argument of a call in Core ([call_binders]), in order:
+    the use the contract declares for the argument passed there, [None]
+    for a type-class instance. *)
+val call_argument_uses : t -> input_use option list
+
+(** The positions ([%aN]) of the arguments the template receives as
+    mutable lvalues ([in_place]). *)
+val in_place_positions : t -> int list

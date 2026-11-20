@@ -920,7 +920,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
            parameter's own type cannot hold what the loop will put here.  A
            pointer shadow is a pointer to const. *)
         let decl_ty = match shadow.hold with
-          | Through_pointer | Receiver -> shadow.ty
+          | Through_pointer | Receiver | In_place -> shadow.ty
           | Value ->
             if has_custom_init then strip_ref_type shadow.ty
             else strip_ref_and_const_type shadow.ty
