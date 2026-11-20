@@ -112,7 +112,7 @@ and abbreviates_closure kn =
     of the call a release.  Borrowed, they too are passed by const
     reference -- a closure named through an abbreviation too
     ({!abbreviates_closure}). *)
-let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
+let rec cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
   let rec shared_block (t : Cpp_ir.Lowered.Type.t) =
     match t with
     | Function _ -> true
@@ -123,6 +123,13 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
     | _ -> false
   in
   match cpp_ty with
+  (* A typed-mapped type is lent as its canonical read style says
+     ({!Base.Mapping_plan.read_by_value}). *)
+  | Entity_application (r, ts, _) | In_namespace (_, Entity_application (r, ts, _))
+    when Base.Mapping_plan.is_type_head r ->
+    not
+      (Base.Mapping_plan.read_by_value (Base.Mapping_plan.find r) ~argument:(fun i ->
+           match List.nth_opt ts i with Some t -> not (cpp_lent_by_reference t) | None -> false))
   | Shared_pointer _ -> true
   | _ when shared_block cpp_ty -> true
   | _ when names_value_inductive cpp_ty -> true
@@ -140,6 +147,19 @@ let cpp_lent_by_reference (cpp_ty : Cpp_ir.Lowered.Type.t) =
 let rec core_lent_by_reference cx ty =
   match resolve_meta ty with
   | ty when is_monadic_core_type ty && cx.ctx.input.itree_mode = Reified -> Some true
+  (* A typed-mapped type: its canonical read style, where the Core type of
+     each argument it depends on says how that argument is read. *)
+  | Core.Type.Global_app {head = r; type_arguments = args; _} when Base.Mapping_plan.is_type_head r -> (
+    let undetermined = ref false in
+    let argument i =
+      match Option.bind (List.nth_opt args i) (core_lent_by_reference cx) with
+      | Some lent -> not lent
+      | None ->
+        undetermined := true;
+        false
+    in
+    let by_value = Base.Mapping_plan.read_by_value (Base.Mapping_plan.find r) ~argument in
+    if !undetermined then None else Some (not by_value) )
   | Core.Type.Global_app {head = (GlobRef.IndRef _ as r); _} ->
     Some ((not (Base.Table.is_enum_inductive r)) && not (Base.Table.is_custom_scalar_ref r))
   | Core.Type.Global_app {head = (GlobRef.ConstRef kn as r); type_arguments = args; _}

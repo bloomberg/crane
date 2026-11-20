@@ -152,6 +152,13 @@ let closure_reads d t =
   go d [] t
 
 let worth_moving_ref worth r args =
+  if Base.Mapping_plan.is_type_head r then
+    (* A typed-mapped type is worth a move unless its copy model makes a copy
+       cheap ({!Base.Mapping_plan.copies_cheaply}). *)
+    not
+      (Base.Mapping_plan.copies_cheaply (Base.Mapping_plan.find r) ~argument:(fun i ->
+           match List.nth_opt args i with Some t -> not (worth t) | None -> false))
+  else
   (not (Base.Table.is_enum_inductive r))
   && (not (Base.Table.is_coinductive r))
   && ( (not (Base.Table.is_custom r))
@@ -186,6 +193,11 @@ let rec worth_moving_cpp : type p. p Cpp_ir.Type.t -> bool = function
    coinductive's node, a shared variant's alternative. *)
 let shares_ref r = Base.Table.is_coinductive r || Base.Table.is_shared_variant r
 
+(* A typed-mapped type whose copy retains one identity ([RetainIdentity]). *)
+let retains_identity r =
+  Base.Mapping_plan.is_type_head r
+  && (Base.Mapping_plan.find r).copy = Base.Mapping_descriptor.Retain_identity
+
 (* What a copy of a value of the Core type [ty] is: a retain of a block a
    closure or a handle points at, its bits where moving it gains nothing
    ({!worth_moving}) or there is none (an erased value), else a semantic
@@ -207,7 +219,7 @@ let rec copy_of_type ty =
     match Base.Table.lookup_typedef_unchecked kn with
     | Some body -> copy_of_type (Base.Core_util.type_subst_list args body)
     | None -> Some Duplicate )
-  | Core.Type.Global_app {head = r; _} when shares_ref r -> Some Retain
+  | Core.Type.Global_app {head = r; _} when shares_ref r || retains_identity r -> Some Retain
   (* A mapped type's copy copies its arguments: it is its bits only where
      theirs are. *)
   | Core.Type.Global_app {head = r; type_arguments = args; _} ->
@@ -230,7 +242,7 @@ let rec copy_of_cpp : type p. p Cpp_ir.Type.t -> copy =
  fun ty ->
   match ty with
   | Shared_pointer _ | Function _ -> Retain
-  | Entity_application (r, _, _) when shares_ref r -> Retain
+  | Entity_application (r, _, _) when shares_ref r || retains_identity r -> Retain
   | Entity_application ((Names.GlobRef.ConstRef kn as r), args, _)
     when (not (Base.Table.is_custom r))
          && (not (Base.Table.is_promoted_type_var r || Base.Table.is_erased_type_const r))

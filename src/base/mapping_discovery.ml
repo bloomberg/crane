@@ -141,6 +141,10 @@ let discover () =
 let has_new_style_mapping g =
   GlobRef.Map.mem g !type_heads || GlobRef.Map.mem g !operation_heads
 
+let has_type_mapping g = GlobRef.Map.mem g !type_heads
+
+let type_mapping_heads () = GlobRef.Map.bindings !type_heads
+
 (** {1 Resolution} *)
 
 (* The instance applied to a fresh evar for each of its binders, and the

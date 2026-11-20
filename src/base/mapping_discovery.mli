@@ -40,6 +40,12 @@ val discover : unit -> unit
     this head. *)
 val has_new_style_mapping : Names.GlobRef.t -> bool
 
+(** Whether a [TypeMapping] instance is recorded for this head. *)
+val has_type_mapping : Names.GlobRef.t -> bool
+
+(** Every head with a recorded [TypeMapping] instance, with its instances. *)
+val type_mapping_heads : unit -> (Names.GlobRef.t * Names.GlobRef.t list) list
+
 (** The mapping of a concrete source type, if one applies. *)
 val resolve_type_mapping :
   Environ.env -> Evd.evar_map -> EConstr.types -> resolved_type_mapping option

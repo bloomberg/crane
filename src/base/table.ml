@@ -415,7 +415,7 @@ let customs = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrCustom"
     class. *)
 let singleton_class_method r =
   match r with
-  | GlobRef.ConstRef _ when not (Core.Ref.Can.Map.mem r !customs) -> (
+  | GlobRef.ConstRef _ when not (Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r) -> (
     let closed_arity decl =
       let t = Context.Rel.Declaration.get_type decl in
       Term.isArity t && Vars.closed0 t
@@ -2659,7 +2659,9 @@ let empty_inline_table = (Core.Ref.Can.Set.empty, Core.Ref.Can.Set.empty)
 
 let inline_table = Summary.ref empty_inline_table ~name:"CraneExtrInline"
 
-let to_inline r = Core.Ref.Can.Set.mem r (fst !inline_table)
+(* A typed-mapped type and its constructors are inline as a legacy
+   [Crane Extract Inductive] makes them ({!Mapping_plan}). *)
+let to_inline r = Core.Ref.Can.Set.mem r (fst !inline_table) || Mapping_plan.is_mapped r
 
 (* Foreign function call extraction: constants called through a C++ function
    of the given name ([Crane Extract Foreign Constant]). *)
@@ -3010,7 +3012,37 @@ let same_mutual_block r1 r2 =
   | GlobRef.IndRef (m1, _), GlobRef.IndRef (m2, _) -> MutInd.CanOrd.equal m1 m2
   | _ -> false
 
-let is_custom r = Core.Ref.Can.Map.mem r !customs
+(* Custom: a legacy mapping, or a typed one ([TypeMapping], plan D3): the
+   head of a mapped type or a constructor of one.  Where the content of the
+   mapping is read, the typed plan answers first ({!custom_text}). *)
+let is_custom r = Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r
+
+(* The text a typed-mapped global stands for: a constructor's build
+   template, or the canonical type in the legacy type vocabulary for the
+   readers that reason about a type's text (the type itself is built
+   structurally, {!Cpp_passes.Erasure}). *)
+let typed_custom_text r =
+  if not (Mapping_plan.is_mapped r) then None
+  else
+    match r with
+    | GlobRef.ConstructRef k -> Some (Mapping_plan.constructor_template k)
+    | _ -> Some (Mapping_plan.type_text (Mapping_plan.find r))
+
+(** The typed mappings whose head also has a legacy mapping: an error (design
+    22.5), raised once mappings are discovered. *)
+let check_typed_mapping_conflicts () =
+  List.iter
+    (fun (head, instances) ->
+      if Core.Ref.Can.Map.mem head !customs then
+        CErrors.user_err
+          Pp.(
+            hov 0
+              ( str "Crane: " ++ Printer.pr_global head ++ str " is mapped twice:" ++ spc ()
+              ++ str "by the typed mapping" ++ spc ()
+              ++ prlist_with_sep (fun () -> str "," ++ spc ()) Printer.pr_global instances
+              ++ spc () ++ strbrk "and by a legacy Crane Extract command." ++ spc ()
+              ++ strbrk "Remove one of them: a type is mapped either by a TypeMapping instance or by Crane Extract Inductive/Constant, never both." )))
+    (Mapping_discovery.type_mapping_heads ())
 
 (** Whether an inductive packet is generated as a flat struct -- its one
     constructor's fields directly, with no variant: an ordinary inductive
@@ -3095,15 +3127,22 @@ let is_inline_custom r = is_custom r && to_inline r
 (** The replacement text of the inline custom [r], read to reason about it
     rather than to write it ({!written_custom_text}). *)
 let inline_custom_text r =
-  if to_inline r then Option.map snd (Core.Ref.Can.Map.find_opt r !customs) else None
+  if not (to_inline r) then None
+  else
+    match typed_custom_text r with
+    | Some _ as t -> t
+    | None -> Option.map snd (Core.Ref.Can.Map.find_opt r !customs)
 
 let is_foreign_custom r = is_custom r && to_foreign r
 
 let find_callback r = Core.Ref.User.Map.find r !callback_map
 
-let find_custom r = snd (Core.Ref.Can.Map.find r !customs)
+let find_custom_opt r =
+  match typed_custom_text r with
+  | Some _ as t -> t
+  | None -> Option.map snd (Core.Ref.Can.Map.find_opt r !customs)
 
-let find_custom_opt r = Option.map snd (Core.Ref.Can.Map.find_opt r !customs)
+let find_custom r = match find_custom_opt r with Some s -> s | None -> raise Not_found
 
 let check_written_custom r =
   match !written_refs with
@@ -3237,6 +3276,11 @@ let extraction_trivially_copyable (l : qualid list) =
     is a trivially-copyable scalar (e.g. [nat] extracted to [unsigned int]).
     Such types should be passed by value, not by [const T &]. *)
 let is_custom_scalar_ref (r : GlobRef.t) : bool =
+  if Mapping_plan.is_type_head r then
+    (* Cheap whatever the type arguments; the readers with arguments ask
+       {!Mapping_plan.copies_cheaply} themselves. *)
+    Mapping_plan.copies_cheaply (Mapping_plan.find r) ~argument:(fun _ -> false)
+  else
   match find_custom_opt r with
   | Some s -> is_trivially_copyable_cpp_name s
   | None -> false
@@ -3247,7 +3291,10 @@ let reserved_global_cpp_names =
 let escape_reserved_struct_name s =
   if List.mem s reserved_global_cpp_names then s ^ "_" else s
 
-let find_type_custom r = Core.Ref.Can.Map.find r !customs
+let find_type_custom r =
+  match typed_custom_text r with
+  | Some s -> ([], s)
+  | None -> Core.Ref.Can.Map.find r !customs
 
 (* The rest of a mapping -- its match template, its element wrapping and
    drain, its includes, its numeral and void forms, whether it is trivially
@@ -3314,14 +3361,25 @@ let indref_of_match pv =
   | Core.Pattern.Constructor {constructor = GlobRef.ConstructRef (ip, _); _} -> GlobRef.IndRef ip
   | _ -> raise Not_found
 
+(* A match on a typed-mapped inductive is custom: its template comes from
+   the constructor views, and asking compiles it, so that a match on an
+   abstract type, or on a constructor without a view, is refused here. *)
 let is_custom_match pv =
   match indref_of_match pv with
+  | GlobRef.IndRef ip as r when Mapping_plan.is_type_head r ->
+    ignore (Mapping_plan.match_template ip);
+    true
   | r -> Core.Ref.Can.Map.mem r !custom_matchs
   | exception Not_found -> false
 
-let find_custom_match pv = Core.Ref.Can.Map.find (indref_of_match pv) !custom_matchs
+let find_custom_match pv =
+  match indref_of_match pv with
+  | GlobRef.IndRef ip as r when Mapping_plan.is_type_head r -> Mapping_plan.match_template ip
+  | r -> Core.Ref.Can.Map.find r !custom_matchs
 
 let find_custom_ctor_templates (ip : Names.inductive) =
+  if Mapping_plan.is_type_head (GlobRef.IndRef ip) then Mapping_plan.constructor_templates ip
+  else
   let mib = Global.lookup_mind (fst ip) in
   let n = Array.length mib.mind_packets.(snd ip).mind_consnames in
   List.init n (fun j ->
@@ -3433,18 +3491,23 @@ let ref_imports_object : GlobRef.t * string -> obj =
 let get_ref_import_list r =
   match Core.Ref.Can.Map.find_opt r !ref_imports with
   | Some imports -> StringSet.elements imports
-  | None -> []
+  | None -> Mapping_plan.headers r
 
 let imports_of refs =
   Core.Ref.User.Set.fold
     (fun r acc ->
+      let acc = List.fold_right StringSet.add (Mapping_plan.headers r) acc in
       match Core.Ref.Can.Map.find_opt r !ref_imports with
       | Some imports -> StringSet.union imports acc
       | None -> acc )
     refs StringSet.empty
 
-(* The imports of the customs the unit's files write. *)
-let get_custom_imports () = StringSet.elements (imports_of (written_customs ()))
+(* The imports of the customs the unit's files write, and the headers of
+   the typed-mapped types written (a structured type no longer names its
+   head). *)
+let get_custom_imports () =
+  StringSet.elements
+    (List.fold_right StringSet.add (Mapping_plan.instantiated_headers ()) (imports_of (written_customs ())))
 
 (* The headers whose mappings put the program's values on several threads:
    [std::thread] and [std::async] and Crane's [crane::thread] over the

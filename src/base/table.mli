@@ -1084,6 +1084,10 @@ val find_callback : GlobRef.t -> string option
 (** Find custom extraction code for reference. *)
 val find_custom : GlobRef.t -> string
 
+(** Refuse a type mapped both by a [TypeMapping] instance and by a legacy
+    command (design 22.5).  Run once the typed mappings are discovered. *)
+val check_typed_mapping_conflicts : unit -> unit
+
 (** Find custom extraction code if exists. *)
 val find_custom_opt : GlobRef.t -> string option
 

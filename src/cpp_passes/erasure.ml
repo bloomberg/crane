@@ -673,6 +673,12 @@ let rec instantiated_type ~boxing (t : ty) : ty =
          argument is the whole of what there is to write. *)
       | Apply (Entity_application (r, _, _), [arg]) when Base.Type_util.ref_has_no_cpp_name r ->
         Some (instantiated_type ~boxing arg)
+      (* A typed-mapped type is built from its compiled plan, structured:
+         never text ({!Base.Mapping_plan.cpp_type}). *)
+      | (Entity_application (r, tys, _) | In_namespace (_, Entity_application (r, tys, _)))
+        when Base.Mapping_plan.is_type_head r ->
+        Base.Mapping_plan.note_instantiated r;
+        Some (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find r) (List.map (instantiated_type ~boxing) tys))
       (* Written through the inductive's own head. *)
       | In_namespace ((GlobRef.IndRef _ as r), Entity_application (r', tys, args)) when Base.Common.globref_equal r r' ->
         let args = List.map (instantiated_expr ~boxing) args in
@@ -1543,6 +1549,10 @@ let rec is_literal_type (ty : ty) =
   | Function _ | Decay _ -> false
   (* A mapping asks what the application it instantiates asks. *)
   | Foreign fr -> is_literal_type (Entity_application (fr.custom, fr.types, fr.values))
+  (* A typed-mapped type asks what its structured type asks, before
+     instantiation as after ({!instantiated_type}). *)
+  | Entity_application (r, tys, _) when Base.Mapping_plan.is_type_head r ->
+    is_literal_type (Base.Mapping_plan.cpp_type (Base.Mapping_plan.find r) tys)
   | Entity_application (r, _, _) when is_axiom_type_ref r -> false
   | Entity_application (r, [], _) when Base.Table.is_custom_scalar_ref r -> true
   (* A generated inductive other than an enum has user-provided constructors

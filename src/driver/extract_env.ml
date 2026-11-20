@@ -1895,7 +1895,8 @@ let init ?(compute = false) ?(inner = false) modular library =
   reset ();
   (* Typed mappings: which heads have an active instance.  Mappings are
      consulted while the environment is collected, so this comes first. *)
-  Base.Mapping_discovery.discover ()
+  Base.Mapping_discovery.discover ();
+  Base.Table.check_typed_mapping_conflicts ()
 
 (** Emits warnings about opaque constants and axioms encountered during
     extraction. *)

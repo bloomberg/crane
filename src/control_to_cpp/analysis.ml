@@ -293,6 +293,9 @@ let rec is_trivially_copyable_type = function
   | Variable _ -> true
   | Named (id, ts) -> is_trivially_copyable_named (Id.to_string id) ts
   | External (s, ts) -> is_trivially_copyable_named s ts
+  | Entity_application (r, ts, _) when Base.Mapping_plan.is_type_head r ->
+    Base.Mapping_plan.copies_cheaply (Base.Mapping_plan.find r) ~argument:(fun i ->
+        match List.nth_opt ts i with Some t -> is_trivially_copyable_type t | None -> false)
   | Entity_application (r, ts, _) ->
     Base.Table.is_enum_inductive r || Base.Table.is_custom_scalar_ref r
     || Base.Table.is_trivially_copyable_ref r
