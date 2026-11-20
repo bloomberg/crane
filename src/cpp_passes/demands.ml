@@ -134,6 +134,7 @@ module Ir = struct
         | Cpp_ir.Crane_rt.Unbox_field -> rt Cpp_ir.Crane_rt.field_header
         | Cpp_ir.Crane_rt.Apply2 -> rt Cpp_ir.Crane_rt.fn_header
         | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal -> rt Cpp_ir.Crane_rt.shared_block_header
+        | Cpp_ir.Crane_rt.Writable -> rt Cpp_ir.Crane_rt.writable_header
         | Cpp_ir.Crane_rt.Make_rc_reusing_unchecked | Cpp_ir.Crane_rt.Reuse_step | Cpp_ir.Crane_rt.Share_child -> () )
       | Unbox (To _, _) | Any_cast _ -> obj ()
       | Unbox (Or_keep _, _) -> std "type_traits"

@@ -1150,6 +1150,7 @@ and pp_cpp_expr ctx env args (t : expr) =
      | Cpp_ir.Crane_rt.Apply2 -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.fn_header)
      | Cpp_ir.Crane_rt.Constant _ | Cpp_ir.Crane_rt.Immortal ->
        writes (Base.Table.Runtime Cpp_ir.Crane_rt.shared_block_header)
+     | Cpp_ir.Crane_rt.Writable -> writes (Base.Table.Runtime Cpp_ir.Crane_rt.writable_header)
      | Cpp_ir.Crane_rt.Make_rc_reusing_unchecked | Cpp_ir.Crane_rt.Reuse_step
      | Cpp_ir.Crane_rt.Share_child -> ());
     str (Cpp_ir.Crane_rt.name h)

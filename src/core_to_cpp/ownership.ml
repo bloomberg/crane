@@ -43,6 +43,28 @@ let infer_owned_flags cx ?owner body params =
     settled
   | _ -> read_off_body ()
 
+(** What the function whose [body] stands under [params], innermost first,
+    does with each of them ({!Core_plan.Access}): what {!Core_plan.Access}
+    settled for the global [owner] where it covers [params], and otherwise
+    -- a lambda, a local function -- what its own body reads. *)
+let infer_access cx ?owner body params =
+  match Option.bind owner (own_access cx) with
+  | Some settled when List.length settled = List.length params -> settled
+  | _ -> Core_plan.Access.read_off ~settled:(settled_access cx) (List.length params) body
+
+(** The typed mapping of the parameter type [core] or [cpp_ty], if it is a
+    typed-mapped type. *)
+let mapped_plan ?core (cpp_ty : Cpp_ir.Lowered.Type.t) =
+  match Option.map resolve_meta core with
+  | Some (Core.Type.Global_app {head = r; _}) when Base.Mapping_plan.is_type_head r -> Some (Base.Mapping_plan.find r)
+  | Some _ -> None
+  | None -> (
+    match cpp_ty with
+    | Entity_application (r, _, _) | In_namespace (_, Entity_application (r, _, _))
+      when Base.Mapping_plan.is_type_head r ->
+      Some (Base.Mapping_plan.find r)
+    | _ -> None )
+
 (** Whether the C++ type [cpp_ty] names a value inductive
     (an inductive neither enum, coinductive nor custom scalar), as itself or through a type
     abbreviation: [Definition t elt := list (key * elt)] declares [t<T2>] an
@@ -188,9 +210,33 @@ let rec core_lent_by_reference cx ty =
     lent by reference ({!core_lent_by_reference} of its Core type [core]
     where that says, {!cpp_lent_by_reference} otherwise), and by value
     otherwise.  Under [CRANE_CHECK_IR] the two readings are checked against
-    each other. *)
-let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) :
-    Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
+    each other.
+
+    A borrowed parameter of a typed-mapped type whose [access]
+    ({!Core_plan.Access}) asks for more than a read takes the form its
+    access model gives that access (design 6.6, 12.5): [T&] to replace it or
+    to write a mutable value in place, the model's write-through form to
+    write through a handle.  Where [reference_allowed] is false -- a
+    function named as a value, a method -- a mutable reference is a copy by
+    value instead. *)
+let rec wrap_param_by_ownership cx ?(is_owned = false) ?access ?(reference_allowed = false) ?core
+    (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
+  (* A borrowed parameter of a typed-mapped type takes the form its access
+     requires (design 12.5), where that is not the canonical read form. *)
+  let physical =
+    match (is_owned, access, mapped_plan ?core cpp_ty) with
+    | false, Some r, Some p -> Core_plan.Access.physical ~reference_allowed p r
+    | _ -> Base.Mapping_plan.As_read
+  in
+  match physical with
+  | Base.Mapping_plan.Physical_value -> (cpp_ty, Cpp_ir.Param_mode.copied)
+  | Base.Mapping_plan.Physical_const_reference ->
+    (Cpp_ir.Param_mode.declare By_const_reference cpp_ty, Cpp_ir.Param_mode.lent)
+  | Base.Mapping_plan.Physical_mutable_reference ->
+    (Cpp_ir.Param_mode.declare By_reference cpp_ty, Cpp_ir.Param_mode.make Borrowed By_reference)
+  | Base.Mapping_plan.As_read -> wrap_canonical cx ~is_owned ?core cpp_ty
+
+and wrap_canonical cx ~is_owned ?core (cpp_ty : Cpp_ir.Lowered.Type.t) =
   let by_cpp = cpp_lent_by_reference cpp_ty in
   let lent =
     match Option.bind core (core_lent_by_reference cx) with

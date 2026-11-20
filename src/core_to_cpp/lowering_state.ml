@@ -110,6 +110,12 @@ type program_facts = {
   parameter_ownership : bool list Core.Ref.User.Map.t;
   partner_closure_params : int list Core.Ref.User.Map.t;
   reusing_matches : Core.Ref.User.Set.t;
+  parameter_access : Core_plan.Access.requirement list Core.Ref.User.Map.t;
+      (** what each function does with its parameters, innermost first,
+          settled across calls ({!Core_plan.Access.summarize}) *)
+  pinned : Core.Ref.User.Set.t;
+      (** the functions named as values, whose parameters keep canonical
+          forms ({!Core_plan.Access}) *)
 }
 
 (** The facts of a program nothing was analysed for: lowering outside an
@@ -118,7 +124,9 @@ let no_program_facts =
   { throwing_values = Core.Ref.Can.Set.empty;
     parameter_ownership = Core.Ref.User.Map.empty;
     partner_closure_params = Core.Ref.User.Map.empty;
-    reusing_matches = Core.Ref.User.Set.empty }
+    reusing_matches = Core.Ref.User.Set.empty;
+    parameter_access = Core.Ref.User.Map.empty;
+    pinned = Core.Ref.User.Set.empty }
 
 (** What analysing and planning the unit being extracted decided that
     lowering reads, set for the extent of the unit
@@ -620,6 +628,21 @@ let matches_reuse cx =
     across calls ({!program_facts}): [None] for one the analysis did not
     settle. *)
 let settled_ownership cx r = Core.Ref.User.Map.find_opt r cx.ctx.input.program.parameter_ownership
+
+(** The access summary of the function [r], as its callers read it
+    ({!Core_plan.Access.exported}). *)
+let settled_access cx r =
+  Option.map
+    (Core_plan.Access.exported ~pinned:cx.ctx.input.program.pinned r)
+    (Core.Ref.User.Map.find_opt r cx.ctx.input.program.parameter_access)
+
+(** The access summary of the function [r], as its own parameters are
+    planned from it: not capped where [r] is pinned. *)
+let own_access cx r = Core.Ref.User.Map.find_opt r cx.ctx.input.program.parameter_access
+
+(** Whether the function [r] is named as a value, so its parameters keep
+    canonical forms. *)
+let is_pinned cx r = Core.Ref.User.Set.mem r cx.ctx.input.program.pinned
 
 (** [generating_at site f] runs [f] with generation at [site]
     ({!input.generating}); the entries below are the only callers. *)

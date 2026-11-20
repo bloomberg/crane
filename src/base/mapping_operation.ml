@@ -8,7 +8,7 @@ open Mapping_descriptor
 
 type purity = Pure | Effectful | Opaque
 
-type argument = { name : string; use : input_use; position : int; binder : int }
+type argument = { name : string; use : input_use; position : int; binder : int; in_place : bool }
 
 type t = {
   instance : GlobRef.t;
@@ -148,18 +148,43 @@ let compile g =
     | Effectful_operation (a, r, f) -> (Effectful, Some a, r, f)
     | Opaque_operation -> (Opaque, None, Return_opaque, [])
   in
+  (* Whether an argument used as [use] at a binder of type [t] is passed to
+     the template as a mutable lvalue: a [Replace] of a mapped type, or a
+     write of one whose write-through form is [T&] (design 6.6). *)
+  let in_place use t =
+    let head, _ = EConstr.decompose_app_list sigma t in
+    let g =
+      match EConstr.kind sigma head with
+      | Constr.Ind (i, _) -> Some (GlobRef.IndRef i)
+      | Constr.Const (k, _) -> Some (GlobRef.ConstRef k)
+      | _ -> None
+    in
+    match g with
+    | Some g when Mapping_plan.is_type_head g -> (
+      let p = Mapping_plan.find g in
+      match use with
+      | Replace -> Mapping_plan.replace_form p = Mapping_plan.Physical_mutable_reference
+      | Write | Write_canonical -> Mapping_plan.write_through p = Mapping_plan.Physical_mutable_reference
+      | Ignore | Read | Read_canonical | Take | Opaque_use -> false )
+    | _ -> false
+  in
   let arguments =
     match specs with
     | Some specs ->
       (* Validated one to one when the mapping was resolved. *)
       List.map2
-        (fun s (_, k, pos) -> {name = s.argument_name; use = s.argument_use; position = pos; binder = k})
+        (fun s ((b : Mapping_discovery.operation_binder), k, pos) ->
+          { name = s.argument_name;
+            use = s.argument_use;
+            position = pos;
+            binder = k;
+            in_place = in_place s.argument_use b.binder_type })
         specs runtime
     | None ->
       List.map
         (fun ((b : Mapping_discovery.operation_binder), k, pos) ->
           let name = match b.binder_name with Name id -> Id.to_string id | Anonymous -> "" in
-          {name; use = Opaque_use; position = pos; binder = k})
+          {name; use = Opaque_use; position = pos; binder = k; in_place = false})
         runtime
   in
   let arg x =
@@ -221,3 +246,10 @@ let owned_call_arguments p =
     p.call_binders
 
 let headers g = if is_operation_head g then (find g).headers else []
+
+let call_argument_uses p =
+  List.map
+    (fun k -> Option.map (fun a -> a.use) (List.find_opt (fun a -> a.binder = k) p.arguments))
+    p.call_binders
+
+let in_place_positions p = List.filter_map (fun a -> if a.in_place then Some a.position else None) p.arguments

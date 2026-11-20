@@ -128,6 +128,10 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
        named once -- after the temporaries went back, so that none of them is
        put back into the text that repeats it. *)
     on_decl "shared_args" Shared_args.transform_decl;
+    (* An argument its callee writes or replaces in place binds a mutable
+       lvalue: one that is not a variable the caller may write is
+       materialised for the call. *)
+    on_decl "in_place_args" (In_place_args.transform_decl u);
     (* Small local simplifications, each removing something. *)
     on_decl "simplify" Simplify.transform_decl;
     (* An initialiser nested deeper than a compiler will parse becomes a run of
