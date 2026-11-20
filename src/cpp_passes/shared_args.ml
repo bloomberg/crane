@@ -35,14 +35,54 @@ let rec names_storage : expr -> bool = function
   | Dereference e | Move e | Member (e, _) | Project (e, _, _) | Access (_, e, _) -> names_storage e
   | _ -> false
 
+(* The text of an operation mapping ({!Base.Mapping_operation}). *)
+let operation_text : expr -> string option = function
+  | Entity (r, _, Some {inline = Some {text; _}; _}) when Base.Table.is_mapped_operation r -> Some text
+  | _ -> None
+
+(* How many times the text splices argument [i]. *)
+let splices text i =
+  List.length
+    (List.filter (function Cpp_ir.Foreign_template.Arg j -> j = i | _ -> false) (Cpp_ir.Foreign_template.term_template text))
+
+(* An operation mapping's arguments, evaluated once each, in source order,
+   before its text (design 11.9): unless at most one of them computes
+   anything and the text splices that one once, each argument that is not
+   free to repeat is bound ahead of the call, in order -- or, where the text
+   does not splice it (an [Ignore] argument), evaluated as a statement and
+   discarded.  An argument bound by value and spliced once is moved from its
+   temporary, so that a [Take] still receives an rvalue. *)
+let prepare_operation_args fresh bind discard text (args : expr list) : expr list =
+  let computing = List.filter (fun (_, a) -> not (free_to_repeat a)) (List.mapi (fun i a -> (i, a)) args) in
+  match computing with
+  | [] -> args
+  | [(i, _)] when splices text i = 1 -> args
+  | _ ->
+    List.mapi
+      (fun i (a : expr) ->
+        if free_to_repeat a then a
+        else
+          match splices text i with
+          | 0 ->
+            discard a;
+            a
+          | n ->
+            let x = fresh () in
+            let by_value = match a with Move _ -> true | a -> not (names_storage a) in
+            bind ~by_value x a;
+            if by_value && n = 1 then (Move (Local x) : expr) else (Local x : expr))
+      args
+
 (* [e] with each argument it must evaluate once named, at every position [e]
    evaluates unconditionally; [bind x a] binds [x] to [a] ahead of [e], in
    evaluation order. *)
-let rec name_args fresh bind (e : expr) : expr =
+let rec name_args fresh bind discard (e : expr) : expr =
   if not (evaluates_operands e) then e
   else
-    let e = Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:(name_args fresh bind) ~stmt:Fun.id ~type_:Fun.id ()) e in
+    let e = Cpp_ir.Map.expr (Cpp_ir.Map.make ~expr:(name_args fresh bind discard) ~stmt:Fun.id ~type_:Fun.id ()) e in
     match e with
+    | Call (sg, f, args) when Option.has_some (operation_text f) ->
+      Call (sg, f, prepare_operation_args fresh bind discard (Option.get (operation_text f)) args)
     | Call (sg, f, args) -> (
       match repeating_text f with
       | Some text ->
@@ -51,7 +91,7 @@ let rec name_args fresh bind (e : expr) : expr =
             (fun i a ->
               if Cpp_ir.Foreign_template.arg_mentions text i > 1 && not (free_to_repeat a) then (
                 let x = fresh () in
-                bind x a;
+                bind ~by_value:(not (names_storage a)) x a;
                 (Local x : expr) )
               else a )
             args
@@ -64,11 +104,12 @@ let rec name_args fresh bind (e : expr) : expr =
    where [s] evaluates its expression once, as its first act. *)
 let in_stmt fresh (s : stmt) : stmt list =
   let bound = ref [] in
-  let bind x a =
-    let ty : Cpp_ir.Lowered.Type.t = if names_storage a then Reference (Forwarding, Auto) else Auto in
+  let bind ~by_value x a =
+    let ty : Cpp_ir.Lowered.Type.t = if by_value then Auto else Reference (Forwarding, Auto) in
     bound := (Bind_variable (x, Declare (ty, None), a) : stmt) :: !bound
   in
-  let e' e = name_args fresh bind e in
+  let discard a = bound := (Expression a : stmt) :: !bound in
+  let e' e = name_args fresh bind discard e in
   let s : stmt =
     match s with
     | Return (Some e) -> Return (Some (e' e))

@@ -467,11 +467,24 @@ let scrutinee_consumed ty scrut branches =
       branches
 
 (* How many times an argument of [r] is evaluated: an inline custom splices
-   it as often as its template names it. *)
+   it as often as its template names it, and an operation mapping evaluates
+   each argument once, into a slot its template reads
+   ({!Cpp_passes.Shared_args}). *)
 let evaluations r =
+  if Base.Table.is_mapped_operation r then fun _ -> 1
+  else
   match Base.Table.inline_custom_text r with
   | Some s when Base.Table.is_inline_custom r -> Cpp_ir.Foreign_template.arg_mentions s
   | _ -> fun _ -> 1
+
+(* Whether argument [k] of [r] is only borrowed for the call: an operation
+   mapping's argument it does not own ({!Base.Mapping_operation.owns}) --
+   read, written in place or ignored -- is never moved into it. *)
+let borrowed_by r =
+  if Base.Table.is_mapped_operation r then
+    let owned = Base.Mapping_operation.owned_call_arguments (Base.Mapping_operation.find r) in
+    fun k -> not (Option.default true (List.nth_opt owned k))
+  else fun _ -> false
 
 let sequential_bind effects use = Core_plan.Effects.lookup effects use = Some {operation = Bind; mode = Sequential}
 
@@ -686,7 +699,7 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
         walk ?tail:(saved_at d action use.occurrence ~outside:(Levels.union live pinned)) ~pinned parents d
           (leave parents' d live_body) action )
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = r; _}; arguments = args} when Base.Table.is_inline_custom r ->
-      unsequenced ~evaluated:(evaluations r) ~pinned parents d live args
+      unsequenced ~evaluated:(evaluations r) ~inspected:(borrowed_by r) ~pinned parents d live args
     (* A local fixpoint applied where it is written binds its parameters to
        its arguments in order: each is followed by the later ones alone, and
        by what the fixpoint reads, which it reads as it runs, after them all.
