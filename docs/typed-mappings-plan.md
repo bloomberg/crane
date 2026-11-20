@@ -502,6 +502,90 @@ This milestone fixes the reported bug.
   +' ...`) crashes alias planning (`method_registry not initialized`,
   `Entities.alias_template_kinds`); pre-existing, the test uses
   `Notation` instead.
+- **M7.** Views are compiled into the plan (`Mapping_plan.views`: view
+  type, `from_canonical` with `%value` as `%a0`, `read_from_write` and the
+  `MaterialiseView` construction with `%view` as `%a0`). Physical
+  selection (`Access.physical ~view_allowed`) gives a borrowed,
+  `Preferred` read the read view and a `Preferred` write the writable
+  view; `view_allowed` is true only for generated functions that are not
+  pinned (lambdas, local functions and methods keep canonical forms). The
+  mode is `Param_mode.By_view (kind, head)`, declared at the view type
+  (spelled `By_value`); `Param_mode.invalidates_views` records whether the
+  callee may invalidate a view of its argument. An operation argument
+  declared `Read`/`Write` of a type with the matching view is given the
+  view: `Mapping_operation.argument.view` carries the conversions compiled
+  into the operation's own vocabulary (`%tN` of the call), and such an
+  argument is never `in_place`.
+  Call sites: a lowered pass `view_args` (after `in_place_args`, before
+  `foreign`) reads the callee's planned modes or the operation's argument
+  views and converts with the declared conversions only (12.7): canonical
+  -> `view_from_canonical`, same view -> as is, writable -> read via
+  `read_from_write`; widening a read view is an error. A conversion over a
+  generated callee needs the argument's component types: from the
+  variable's declared type, a call's `yields`, or, where neither is known
+  (a structured binding), read back from the value with
+  `crane::template_argument_t<decltype(e), j>` (`template_argument.h`,
+  included by a mapping whose view conversions name a component). A
+  template that places `%a0` twice is given a variable: a non-free value is
+  bound ahead of the statement (`_viewN`), except in a `while` condition.
+  View results (12.8): a borrowed-view result passed straight to a view
+  position stays a view (its temporaries live to the end of the full
+  expression); bound by `shared_args` as `auto _onceN` it stays a view and
+  any temporary it was taken of is bound ahead too; anywhere else it is
+  materialised, or refused when `BorrowOnly`. Invalidation (7.8): the
+  access requirement gains `invalidates` (an `InvalidatesViews` fact,
+  `Replace`, `OpaqueUse`, joined across calls); a variable passed as a view
+  beside an argument that may invalidate it is passed as a view of a copy
+  bound ahead of the statement (read view, materialisable) or refused.
+  Validation refuses `InvalidatesViews` on an argument given as a view (a
+  resize must be `WriteCanonical`/`Replace`, 13.8).
+  `InvalidatesElementBorrows` is recorded and distinguished but has no
+  consumer: no canonical-borrow result outlives its full expression (an
+  operation's result is bound by value), so no element borrow can be held
+  across a write.
+  Access changes needed by views: a use under a closure is now `Canonical`
+  as well as capped (a closure may outlive the call, and a capped write
+  through a handle would otherwise pass as a read view); the continuation
+  of a bind in a sequential monad (`Effects.declaration_mode`) is not a
+  closure, so ST helpers written with `;;` keep views; summaries start at
+  the least requirement (a recursive call met before its callee's summary
+  used to count as a canonical read, which made every recursive helper
+  canonical); a body that is one fixpoint applied to the parameters (a
+  section `Fixpoint`) is walked as the function itself, its free uses of
+  the parameters not closure captures (`union_find`'s `find_ST`).
+  `vector<bool>`: option 1. `crane::array_storage<T>`
+  (`theories/cpp/array_storage.h`) is a fixed-size, non-copyable array of
+  addressable `T`, `bool` included; `STArray` is
+  `std::shared_ptr<crane::array_storage<A>>` with `std::span<const A>` /
+  `std::span<A>` views, both `BorrowOnly`; `crane_st.h`'s `elems` takes a
+  read span. Results: `swapArray` takes `std::span<T>`; `bump`,
+  `middle`/`outer`, `flip` (bool) `std::span<T>`; `peek`, `sum_from`
+  `std::span<const T>`; `write_and_refill` (Write + `WriteCanonical`)
+  `const std::shared_ptr<...>&`; `pick`/`write_then_pick` by value,
+  `regrow_then_write` `&`; loopified tail and non-tail recursion keep the
+  view out of loop variables and frames (`st_array_loops`). `partition`
+  (`st_quicksort`) stays by value: its array is captured by a real
+  closure (`for_each_with`'s callback).
+  Strings: `Std.v` is split into `StdCore.v` (everything but strings) and
+  the legacy string block; `StringView.v` exports `StdCore` and maps
+  `PrimString.string` as a typed `std::string` with a `std::string_view`
+  read view (`MaterialiseView std::string{%view}`), with `length`, `cat`,
+  `get`, `sub` (`crane_string.h`, total as in Rocq; `sub` returns an
+  owner). A typed and a legacy mapping of one head cannot coexist (22.5),
+  so the standard `Std.v` string mapping is untouched and migrates with
+  M8; no existing test imports `StringView`, so no existing output
+  changed except the ST users (`st_arrays`, `st_array_helpers`,
+  `st_quicksort`, `union_find`, `unit_accum_local_fix`: canonical type
+  `array_storage`, reads/writes through spans, helpers taking spans).
+  Memory safety: ASan (use-after-free detection works; a report hangs the
+  process at exit on this machine, so runs use `symbolize=0`; leaks not
+  checked) is clean on `string_views`, `structural_spans`,
+  `st_array_helpers`, `st_array_loops`, `st_arrays`, `st_quicksort`,
+  `st_refs`, `st_fibonacci`, `union_find`.
+  Not done: a borrowed view held in a variable other than a `shared_args`
+  binding is materialised rather than kept within its owner's proven
+  lifetime; view ABIs for first-class functions (12.9, deferred); a string
+  literal passed as a view is spelled `std::string_view{std::string("...")}`.
 - **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
   existing worktree (stale `_build/census`: dune does not rebuild a sibling
   `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
@@ -514,5 +598,5 @@ This milestone fixes the reported bug.
 - [x] M4 operation mappings
 - [x] M5 explicit parameter modes and access fixed point
 - [x] M6 ST arrays and references without views
-- [ ] M7 views
+- [x] M7 views
 - [ ] M8 standard mappings, interfaces, deprecation
