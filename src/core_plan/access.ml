@@ -12,37 +12,40 @@ type representation = Preferred | Canonical
 type requirement = {
   access : access;
   representation : representation;
+  invalidates : bool;
 }
 
-let least = {access = Unused; representation = Preferred}
+let least = {access = Unused; representation = Preferred; invalidates = false}
 
 let rank = function Unused -> 0 | Read_access -> 1 | Write_access -> 2 | Replace_access -> 3
 
 let join a b =
   { access = (if rank a.access >= rank b.access then a.access else b.access);
-    representation = (if a.representation = Canonical || b.representation = Canonical then Canonical else Preferred) }
+    representation = (if a.representation = Canonical || b.representation = Canonical then Canonical else Preferred);
+    invalidates = a.invalidates || b.invalidates }
 
 let equal (a : requirement) b = a = b
 
-let canonical_read = {access = Read_access; representation = Canonical}
+let canonical_read = {least with access = Read_access; representation = Canonical}
 
 let rank_cap r = if rank r.access > rank Read_access then {r with access = Read_access} else r
 
 let of_use ?(facts = []) ?name use =
-  match use with
-  | Ignore -> least
-  | Read -> {access = Read_access; representation = Preferred}
-  | Read_canonical -> canonical_read
-  | Write -> {access = Write_access; representation = Preferred}
-  | Write_canonical -> {access = Write_access; representation = Canonical}
-  | Take ->
-    let written =
-      List.exists
-        (function Writes_component (p, _) -> Some p.path_argument = name | _ -> false)
-        facts
-    in
-    {access = (if written then Write_access else Read_access); representation = Canonical}
-  | Replace | Opaque_use -> {access = Replace_access; representation = Canonical}
+  let names p = Some p.path_argument = name in
+  let invalidated = List.exists (function Invalidates_views p -> names p | _ -> false) facts in
+  let r =
+    match use with
+    | Ignore -> least
+    | Read -> {least with access = Read_access}
+    | Read_canonical -> canonical_read
+    | Write -> {least with access = Write_access}
+    | Write_canonical -> {least with access = Write_access; representation = Canonical}
+    | Take ->
+      let written = List.exists (function Writes_component (p, _) -> names p | _ -> false) facts in
+      {least with access = (if written then Write_access else Read_access); representation = Canonical}
+    | Replace | Opaque_use -> {access = Replace_access; representation = Canonical; invalidates = true}
+  in
+  if invalidated then {r with invalidates = true} else r
 
 (* The variable [a] is, through the wrappers that do not change the value. *)
 let rec direct = function
@@ -52,14 +55,16 @@ let rec direct = function
     direct a
   | _ -> None
 
-let read_off ~settled n body =
+let read_off ?(sequential = false) ~settled n body =
   let reqs = Array.make n least in
   (* Under a closure -- a lambda, a local fixpoint -- a parameter is a copy
      the closure holds, which a write or a replacement there does not
-     reach: the closure's use of it is at most a read. *)
+     reach: the closure's use of it is at most a read.  A closure may
+     outlive the call, so what it holds is canonical: a view would not keep
+     its owner alive. *)
   let closure = ref false in
   let note p r =
-    let r = if !closure then rank_cap r else r in
+    let r = if !closure then {(rank_cap r) with representation = Canonical} else r in
     match p with Some k when k >= 1 && k <= n -> reqs.(k - 1) <- join reqs.(k - 1) r | _ -> ()
   in
   let under_closure f =
@@ -99,6 +104,13 @@ let read_off ~settled n body =
           | Some i, Some (Some use) ->
             note (param_of env i) (of_use ~facts:op.facts ?name:(Option.bind (List.nth_opt names j) Fun.id) use)
           | _ -> walk env a )
+        args
+    (* In a sequential monad a bind's continuation is the rest of the
+       statements, run in place: no closure holds what it names. *)
+    | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _}; arguments = args}
+      when sequential && Base.Table.is_bind g ->
+      List.iter
+        (function Core.Expr.Lambda {body = b; _} -> walk (None :: env) b | a -> walk env a)
         args
     | Core.Expr.Apply {callee = Core.Expr.Global {callee = g; _} as head; arguments = args}
       when (not (Escape.is_partial_app head args)) && Option.has_some (settled g) ->
@@ -140,7 +152,27 @@ let read_off ~settled n body =
      |Core.Expr.UInt63 _ | Core.Expr.Numeral _ | Core.Expr.Float64 _ | Core.Expr.String _ ->
       ()
   in
-  walk [] body;
+  (* A body that is one fixpoint applied to the parameters as they are --
+     a [Fixpoint] in a section, whose section variables it reads -- is the
+     function itself, its recursive calls calls of it: what it names of
+     the enclosing parameters is not held by a closure.  Its own
+     parameters stand for the arguments it is applied to. *)
+  let rec peel k (e : Core.Expr.t) =
+    match e with
+    | Core.Expr.Lambda {body = b; _} when k > 0 -> peel (k - 1) b
+    | e -> if k = 0 then Some e else None
+  in
+  ( match body with
+  | Core.Expr.Apply {callee = Core.Expr.Fixpoint g; arguments = args}
+    when Array.length (Core.Recursion.Group.bodies g) = 1 && List.for_all (fun a -> Option.has_some (direct a)) args
+    -> (
+      let m = List.length args in
+      match peel m (Core.Recursion.Group.bodies g).(0) with
+      | Some inner ->
+        let own = List.rev_map (fun a -> param_of [] (Option.get (direct a))) args in
+        walk (own @ [None]) inner
+      | None -> walk [] body )
+  | _ -> walk [] body );
   Array.to_list reqs
 
 type t = {
@@ -168,7 +200,9 @@ let named_as_values struc =
     struc;
   !found
 
-let exported ~pinned g reqs = if Core.Ref.User.Set.mem g pinned then List.map rank_cap reqs else reqs
+let exported ~pinned g reqs =
+  if Core.Ref.User.Set.mem g pinned then List.map (fun r -> {(rank_cap r) with representation = Canonical}) reqs
+  else reqs
 
 let summarize ?(receiver = fun _ -> None) struc =
   let fns = Ownership.functions struc in
@@ -177,7 +211,17 @@ let summarize ?(receiver = fun _ -> None) struc =
       (fun s (r, _, _, _) -> if Option.has_some (receiver r) then Core.Ref.User.Set.add r s else s)
       (named_as_values struc) fns
   in
-  let summaries = ref Core.Ref.User.Map.empty in
+  (* Every summary starts at the least requirement, so that a call met
+     before its callee is summarized -- a recursive one -- reads that, not
+     the canonical read of an unknown callee: the least fixed point. *)
+  let summaries =
+    ref
+      (List.fold_left
+         (fun m (r, b, ty, _) ->
+           let params, _ = Base.Type_util.declared_parameters ty b in
+           Core.Ref.User.Map.add r (List.map (fun _ -> least) params) m)
+         Core.Ref.User.Map.empty fns)
+  in
   let settled g = Option.map (exported ~pinned g) (Core.Ref.User.Map.find_opt g !summaries) in
   (* Each round can only raise requirements in a finite lattice, so it
      stops. *)
@@ -186,7 +230,8 @@ let summarize ?(receiver = fun _ -> None) struc =
     List.iter
       (fun (r, b, ty, _) ->
         let params, body = Base.Type_util.declared_parameters ty b in
-        let reqs = Base.Table.with_decl_ref r (fun () -> read_off ~settled (List.length params) body) in
+        let sequential = Effects.declaration_mode ty = Effects.Sequential in
+        let reqs = Base.Table.with_decl_ref r (fun () -> read_off ~sequential ~settled (List.length params) body) in
         if not (Option.equal (List.equal equal) (Core.Ref.User.Map.find_opt r !summaries) (Some reqs)) then (
           changed := true;
           summaries := Core.Ref.User.Map.add r reqs !summaries ) )
@@ -203,7 +248,9 @@ let summarize ?(receiver = fun _ -> None) struc =
           | Write_access -> "write"
           | Replace_access -> "replace"
         in
-        let show q = access q.access ^ if q.representation = Canonical then "!" else "" in
+        let show q =
+          access q.access ^ (if q.representation = Canonical then "!" else "") ^ if q.invalidates then "~" else ""
+        in
         Printf.eprintf "access %s%s: %s\n%!"
           (Pp.string_of_ppcmds (Base.Table.safe_pr_global r))
           (if Core.Ref.User.Set.mem r pinned then " (pinned)" else "")
@@ -211,11 +258,14 @@ let summarize ?(receiver = fun _ -> None) struc =
       !summaries;
   {summaries = Core.Ref.User.Map.bindings !summaries; pinned}
 
-let physical ~reference_allowed (p : Base.Mapping_plan.t) r =
+let physical ~reference_allowed ?(view_allowed = false) (p : Base.Mapping_plan.t) r =
+  let view k = view_allowed && r.representation = Preferred && Base.Mapping_plan.has_view p k in
   let form =
     match r.access with
     | Replace_access -> Base.Mapping_plan.replace_form p
+    | Write_access when view Base.Mapping_plan.Write_view -> Base.Mapping_plan.Physical_view Write_view
     | Write_access -> Base.Mapping_plan.write_through p
+    | Read_access when view Base.Mapping_plan.Read_view -> Base.Mapping_plan.Physical_view Read_view
     | Read_access | Unused -> Base.Mapping_plan.As_read
   in
   match form with

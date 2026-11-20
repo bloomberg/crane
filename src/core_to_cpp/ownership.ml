@@ -218,23 +218,50 @@ let rec core_lent_by_reference cx ty =
     to write a mutable value in place, the model's write-through form to
     write through a handle.  Where [reference_allowed] is false -- a
     function named as a value, a method -- a mutable reference is a copy by
-    value instead. *)
-let rec wrap_param_by_ownership cx ?(is_owned = false) ?access ?(reference_allowed = false) ?core
-    (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
+    value instead.  Where [view_allowed], a [Preferred] read or write takes
+    the mapping's read or writable view (design 12.5), declared at the view
+    type. *)
+let rec wrap_param_by_ownership cx ?(is_owned = false) ?access ?(reference_allowed = false) ?(view_allowed = false)
+    ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
   (* A borrowed parameter of a typed-mapped type takes the form its access
      requires (design 12.5), where that is not the canonical read form. *)
+  let plan = mapped_plan ?core cpp_ty in
   let physical =
-    match (is_owned, access, mapped_plan ?core cpp_ty) with
-    | false, Some r, Some p -> Core_plan.Access.physical ~reference_allowed p r
+    match (is_owned, access, plan) with
+    | false, Some r, Some p -> Core_plan.Access.physical ~reference_allowed ~view_allowed p r
     | _ -> Base.Mapping_plan.As_read
   in
+  (* A view is declared at the view type, at the mapped type's arguments. *)
+  let mapped_arguments =
+    match cpp_ty with
+    | Entity_application (r, tys, _) | In_namespace (_, Entity_application (r, tys, _))
+      when Base.Mapping_plan.is_type_head r ->
+      Some tys
+    | _ -> None
+  in
+  let physical =
+    match (physical, mapped_arguments) with
+    | Base.Mapping_plan.Physical_view _, None -> Base.Mapping_plan.As_read
+    | physical, _ -> physical
+  in
+  let invalidates = match access with Some (r : Core_plan.Access.requirement) -> r.invalidates | None -> false in
+  let ty, mode =
   match physical with
+  | Base.Mapping_plan.Physical_view k ->
+    let view : Cpp_ir.Param_mode.view =
+      match k with Base.Mapping_plan.Read_view -> Read_view | Base.Mapping_plan.Write_view -> Write_view
+    in
+    let plan = Option.get plan in
+    ( Base.Mapping_plan.view_type plan k (Option.get mapped_arguments),
+      Cpp_ir.Param_mode.make Borrowed (By_view (view, plan.head)) )
   | Base.Mapping_plan.Physical_value -> (cpp_ty, Cpp_ir.Param_mode.copied)
   | Base.Mapping_plan.Physical_const_reference ->
     (Cpp_ir.Param_mode.declare By_const_reference cpp_ty, Cpp_ir.Param_mode.lent)
   | Base.Mapping_plan.Physical_mutable_reference ->
     (Cpp_ir.Param_mode.declare By_reference cpp_ty, Cpp_ir.Param_mode.make Borrowed By_reference)
   | Base.Mapping_plan.As_read -> wrap_canonical cx ~is_owned ?core cpp_ty
+  in
+  (ty, if invalidates then {mode with Cpp_ir.Param_mode.invalidates_views = true} else mode)
 
 and wrap_canonical cx ~is_owned ?core (cpp_ty : Cpp_ir.Lowered.Type.t) =
   let by_cpp = cpp_lent_by_reference cpp_ty in

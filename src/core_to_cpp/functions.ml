@@ -889,7 +889,8 @@ let dfun_body_scope cx ~minted n b (cty : Cpp_ir.Lowered.Type.t) ty (temps : hea
         (* Reify monadic parameter types: itree E R → shared_ptr<ITree<R>> *)
         let cpp_ty = Monadic.reify_monadic_param_type cx ty cpp_ty in
         let wrapped, mode =
-          Ownership.wrap_param_by_ownership cx ~is_owned:owned ?access:(access_of x) ~reference_allowed ~core:ty cpp_ty
+          Ownership.wrap_param_by_ownership cx ~is_owned:owned ?access:(access_of x) ~reference_allowed
+            ~view_allowed:reference_allowed ~core:ty cpp_ty
         in
         ((x, wrapped), (x, mode)) )
       ids_with_owned

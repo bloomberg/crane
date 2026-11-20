@@ -107,7 +107,7 @@ let borrowed_value_param_pointee u (mode : Cpp_ir.Param_mode.t) ty =
   | By_value
     when mode.role = Value && Base.Table.reuse_here () && Unit_plan.Context.non_atomic_rc u && is_value_type_ret ty ->
     Some ty
-  | By_value | By_forwarding_reference | By_reference -> None
+  | By_value | By_forwarding_reference | By_reference | By_view _ -> None
 
 (** Extract the underlying type variable id from a forwarding-reference type.
     [Reference (Forwarding, Variable (Index (_, Some id) | Named id))] gives

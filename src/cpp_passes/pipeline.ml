@@ -132,6 +132,10 @@ let lowered_passes ~check_control u : Cpp_ir.Lowered.Decl.t Base.Pipeline_trace.
        lvalue: one that is not a variable the caller may write is
        materialised for the call. *)
     on_decl "in_place_args" (In_place_args.transform_decl u);
+    (* An argument taken as a typed mapping's view is converted by the
+       mapping's declared conversions; a borrowed view escaping its owner is
+       materialised. *)
+    on_decl "view_args" (View_args.transform_decl u);
     (* Small local simplifications, each removing something. *)
     on_decl "simplify" Simplify.transform_decl;
     (* An initialiser nested deeper than a compiler will parse becomes a run of
