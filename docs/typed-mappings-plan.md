@@ -340,6 +340,46 @@ This milestone fixes the reported bug.
   instantiation too. Release plans (`DrainWith`) and value/lifetime models
   are compiled but not yet consumed; `WithBody` builds compile to a legacy
   block template (`%result = init; body`) and are untested.
+- **M4.** The binders of an operation's type are classified as
+  `Extraction.flag_of_type` classifies them
+  (`Mapping_discovery.operation_binders`): logical binders and `Crane
+  Extraction Implicit` positions are erased, informative type schemes are
+  type parameters (their order is the `%tN` numbering), class-typed binders
+  are instances (passed apart from the runtime arguments, so not `%aN`), and
+  the rest are the retained runtime binders (`%aN`). The contract binds its
+  arguments to those one to one; a named Rocq binder must carry the
+  argument's name (an anonymous one accepts any), which catches a swapped
+  list. Core's call arguments are not the Rocq binders: type parameters
+  *and proofs* are gone, instances stay, so the callee flags fed to
+  `Escape.passed_to_owned` are indexed by `call_binders` (an index over all
+  binders gave the `Take` to the wrong argument). Like M3, the plan
+  (`Base.Mapping_operation`) is compiled into the legacy vocabulary:
+  `%arg(x)` is the `%aN` of `x`'s binder, `%stored(c)` the `%tN` of the type
+  parameter `c` is stored at in the first argument type (source order), then
+  the result type (searched inside, so a monadic result counts), declaring
+  `c`; a component whose type argument there is not a type parameter of the
+  operation is refused, and so are `%tmpN` and an instance for one
+  instantiation. Legacy lowering took a call's arity to be one past the
+  last `%aN`, so a trailing `Ignore` argument would have been applied to the
+  result: `Table.inline_custom_arity` gives the retained count. Single
+  evaluation is in `Shared_args`: each argument that is not free to repeat
+  is bound ahead of the call in order (an unspliced one is evaluated as a
+  statement), and one bound by value and spliced once is passed as
+  `std::move` of its temporary so a `Take` still gets an rvalue. "Pure" for
+  an `Ignore` argument is `free_to_repeat` (a local, literal or field):
+  any other computation is evaluated and discarded. `Region` counted an
+  unspliced argument as evaluated zero times, which `CRANE_CHECK_IR`
+  rejects as an unplanned read; it now counts one per argument and passes
+  the borrowed ones as `inspected`, so `Read`/`Write`/`Ignore` arguments are
+  never moved. Deferred: result specs and facts other than
+  `RetainsArgument` are compiled but not consumed (borrow provenance, fresh
+  identity, invalidation); `Replace` is treated as borrowed (its `T&` mode is
+  M5); single evaluation covers only calls a statement evaluates
+  unconditionally, the same limit as the legacy pass (a call under a
+  conditional or short-circuit is left as written); the alignment of
+  `Extraction Implicit` binders with Core's arguments is assumed (dropped,
+  like proofs) and untested; holes inside C++ string literals are still
+  substituted when compiling (validation skips them).
 - **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
   existing worktree (stale `_build/census`: dune does not rebuild a sibling
   `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
@@ -349,7 +389,7 @@ This milestone fixes the reported bug.
 - [x] M1 declarator-correct types
 - [x] M2 descriptor library and discovery
 - [x] M3 type mappings in the pipeline
-- [ ] M4 operation mappings
+- [x] M4 operation mappings
 - [ ] M5 explicit parameter modes and access fixed point
 - [ ] M6 ST arrays and references without views
 - [ ] M7 views
