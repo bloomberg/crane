@@ -20,6 +20,7 @@ let dfun r body : Cpp_ir.Lowered.Decl.t =
       constexpr = Undecided;
       shape = Definition ([], body);
       binders = [];
+      modes = [];
       loop = None }
 
 let check name cond =

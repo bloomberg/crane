@@ -336,7 +336,10 @@ let spell_type t =
 (* Under [CRANE_CHECK_IR] the obligations are checked in two halves around
    the instantiation passes ({!checked_before_instantiation}), and the
    instantiated declaration is checked for what it borrows and moves
-   ({!Borrow_projection.check_decl}, {!Ownership_ir.Move_check.check_decl}). *)
+   ({!Borrow_projection.check_decl}, {!Ownership_ir.Move_check.check_decl}).
+   The parameter modes the declaration records are checked against its
+   declared types as lowering leaves it and as the printer is handed it
+   ({!Ownership_ir.Move_check.check_modes}). *)
 let finish ~check_control u decl =
   let trace = traced decl in
   let steps = ref [] in
@@ -356,17 +359,19 @@ let finish ~check_control u decl =
         d' )
       d passes
   in
+  let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
+  if checking then Ownership_ir.Move_check.check_modes decl;
   let decl = run Fun.id (lowered_passes ~check_control u) decl in
   let settled = Erasure.materialise decl in
   let inj (d : Erasure.settled) = (d :> Cpp_ir.Lowered.Decl.t) in
   note seam decl (inj settled);
-  let checking = Sys.getenv_opt "CRANE_CHECK_IR" <> None in
   let decl = run inj (settled_passes u) settled in
   let early, late = List.partition checked_before_instantiation obligations in
   if checking then check_settled u early decl;
   let decl = run inj (instantiation_passes u) decl in
   if checking then begin
     Borrow_projection.check_decl (inj decl);
+    Ownership_ir.Move_check.check_modes (inj decl);
     Ownership_ir.Move_check.check_decl u (inj decl);
     check_settled u late decl
   end;

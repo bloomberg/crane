@@ -1511,7 +1511,7 @@ let eta_captures p ts =
   List.map (fun i -> (i, mode_of moved i)) (read_indices ts)
 
 module Local_passing = struct
-  type t = Core_plan.Callable_abi.passing option list
+  type t = Cpp_ir.Param_mode.ownership option list
 
   let recorded : ((Core.Occurrence.t * int) * t) list ref = Base.State.cell Base.State.Extraction []
 

@@ -117,7 +117,7 @@ let local_passing cx ~closures funs =
       (List.mapi
          (fun i (_, ty) ->
            if void_binder ty then None
-           else Some (if closures || List.nth flags i then Core_plan.Callable_abi.Owned else Core_plan.Callable_abi.Borrowed) )
+           else Some (if closures || List.nth flags i then Cpp_ir.Param_mode.Owned else Cpp_ir.Param_mode.Borrowed) )
          lam_ids )
   in
   Array.to_list (Array.map member funs)
@@ -207,6 +207,7 @@ let gen_local_fix_ycomb cx env ~binders ~passing ~captures renamed_ids funs_with
               { type_params = [];
                 fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
                 binders = fixpoint_parameters binder;
+                modes = List.map (fun (id, _) -> (id, Cpp_ir.Param_mode.owned)) args;
                 moved = [];
                 params = List.rev (orig_params @ self_params);
                 return_type = ret_ty fty;
@@ -276,6 +277,7 @@ let gen_local_fix_ycomb cx env ~binders ~passing ~captures renamed_ids funs_with
               type_params = [];
               fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
               binders = fixpoint_parameters binder;
+              modes = List.map (fun (id, _) -> (id, Cpp_ir.Param_mode.owned)) args;
               moved = [];
                 return_type = rty;
                 body = wrapper_body;
@@ -348,15 +350,13 @@ let gen_local_fix_by_ref cx env ~binders ~passing ~captures renamed_ids funs_wit
         let self_params : (Cpp_ir.Lowered.Type.t * Id.t option) list =
           List.rev_map (fun sid -> ((Reference (Lvalue, Auto) : Cpp_ir.Lowered.Type.t), Some sid)) self_ids
         in
-        let orig_params =
-          List.map2
-            (fun (id, ty) owned ->
-              let cpp_ty =
-                Types.cpp_of_core cx env ty
-              in
-              ( Ownership.wrap_param_by_ownership cx ~is_owned:owned cpp_ty,
-                Some id ))
-            args owned_flags
+        let orig_params, modes =
+          List.split
+            (List.map2
+               (fun (id, ty) owned ->
+                 let cpp_ty, mode = Ownership.wrap_param_by_ownership cx ~is_owned:owned (Types.cpp_of_core cx env ty) in
+                 ((cpp_ty, Some id), (id, mode)) )
+               args owned_flags )
         in
         Bind_variable
           ( impl_id,
@@ -366,6 +366,7 @@ let gen_local_fix_by_ref cx env ~binders ~passing ~captures renamed_ids funs_wit
               type_params = [];
               fixpoint = local_fixpoint ~name:fix_id ~encoding:(Self_passing self_ids) binder;
               binders = fixpoint_parameters binder;
+              modes;
               moved = [];
                 return_type = ret_ty fty;
                 body = List.map rewrite_stmt body;
@@ -377,21 +378,18 @@ let gen_local_fix_by_ref cx env ~binders ~passing ~captures renamed_ids funs_wit
   let wrapper_stmts =
     List.map2
       (fun ((((fix_id, fty), _impl_id), binder), owned_flags) (args, _body) : Cpp_ir.Lowered.Stmt.t ->
-        let orig_params =
-          List.map2
-            (fun (id, ty) owned ->
-              let cpp_ty =
-                Types.cpp_of_core cx env ty
-              in
-              ( Ownership.wrap_param_by_ownership cx ~is_owned:owned cpp_ty,
-                Some id ))
-            args owned_flags
+        let orig_params, modes =
+          List.split
+            (List.map2
+               (fun (id, ty) owned ->
+                 let cpp_ty, mode = Ownership.wrap_param_by_ownership cx ~is_owned:owned (Types.cpp_of_core cx env ty) in
+                 ((cpp_ty, Some id), (id, mode)) )
+               args owned_flags )
         in
         let fwd_args =
           List.map2
-            (fun (id, ty) (param_ty, _) ->
-              forwarded ~by_value:(not (Ownership.declared_by_reference param_ty)) ty (Local id) )
-            args orig_params
+            (fun (id, ty) (_, mode) -> forwarded ~by_value:(Cpp_ir.Param_mode.holds_own_value mode) ty (Local id))
+            args modes
           @ impl_vars_rev
         in
         let rty = ret_ty fty in
@@ -410,6 +408,7 @@ let gen_local_fix_by_ref cx env ~binders ~passing ~captures renamed_ids funs_wit
               type_params = [];
               fixpoint = local_fixpoint ~name:fix_id ~encoding:Knot binder;
               binders = fixpoint_parameters binder;
+              modes;
               moved = [];
                 return_type = rty;
                 body = wrapper_body;
@@ -464,9 +463,10 @@ let check_fixpoint_escape name ~closures generated_escapes =
 (** The helper [r] lifted out of a body: the function returning [ret] that
 
    takes [params], last first as {!Lifting.build_lifted_cpp_params} gives them,
+   passed as [modes] says,
    standing for the Core binders [binders], with body [body], under the
    template parameters [tparams]. *)
-let lifted_definition ~binders ~ret r params body tparams : Cpp_ir.Lowered.Decl.t =
+let lifted_definition ~binders ~modes ~ret r params body tparams : Cpp_ir.Lowered.Decl.t =
   Template
     ( tparams,
       None,
@@ -477,6 +477,7 @@ let lifted_definition ~binders ~ret r params body tparams : Cpp_ir.Lowered.Decl.
           constexpr = Undecided;
           shape = Definition (List.rev params, body);
           binders;
+          modes;
           loop = None } )
 
 (** Lower the body of member [fix_idx] of a fixpoint group, the member
@@ -663,7 +664,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
         (* The callables a recursive call would instantiate the helper at
            without end take a [crane::fn]. *)
         let non_fwd_source_indices = ungeneralised.(i) in
-        let cpp_params, all_temps_with_funs =
+        let cpp_params, modes, all_temps_with_funs =
           Lifting.build_lifted_cpp_params
             ~non_fwd_source_indices
             (Types.cpp_ir_of_core_type cx env all_tvar_names)
@@ -682,7 +683,7 @@ let gen_let_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stmt.t
           parameter_binders cx env (List.map (fun (n, t, _) -> (n, t)) free_vars) @ param_binders
         in
         let lifted_decl =
-          lifted_definition ~binders ~ret:cod member_refs.(i) cpp_params body (class_temps @ all_temps_with_funs)
+          lifted_definition ~binders ~modes ~ret:cod member_refs.(i) cpp_params body (class_temps @ all_temps_with_funs)
         in
         add_lifted_decl cx (Control_to_cpp.Lower.lower_lifted ~unit:(Lowering_state.unit_context cx) lifted_decl) )
       funs_compiled;
@@ -1029,6 +1030,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
             { params = List.rev wrapper_params;
               type_params = [];
               binders = [];
+              modes = [];
               fixpoint = None;
               moved = [];
               return_type = None;
@@ -1142,7 +1144,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
           (fun (_, ty) -> is_runtime_binder_type ty)
           lam_param_ids
     in
-    let cpp_params, all_temps_with_funs =
+    let cpp_params, modes, all_temps_with_funs =
       Lifting.build_lifted_cpp_params
         (Types.cpp_ir_of_core_type cx lam_env extended_tvar_names)
         all_temps all_lifted_params
@@ -1187,7 +1189,7 @@ let gen_let_lambda cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Stm
       Lifting.generalize_lambda_only_tparams ~class_temps all_temps_with_funs cpp_params cod compiled_body
     in
     let lifted_decl =
-      lifted_definition ~binders:[] ~ret:cod lifted_ref cpp_params compiled_body (class_temps @ all_temps_with_funs)
+      lifted_definition ~binders:[] ~modes ~ret:cod lifted_ref cpp_params compiled_body (class_temps @ all_temps_with_funs)
     in
     add_lifted_decl cx lifted_decl;
 
@@ -1317,7 +1319,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
           let cpp_ty = Types.cpp_ir_of_core_type cx env extended_tvar_names fix_ty in
           let cod = match cpp_ty with Function (_, cod) -> cod | _ -> cpp_ty in
           let non_fwd_source_indices = ungeneralised.(i) in
-          let cpp_params, all_temps_with_funs =
+          let cpp_params, modes, all_temps_with_funs =
             Lifting.build_lifted_cpp_params
               ~non_fwd_source_indices
               (Types.cpp_ir_of_core_type cx env extended_tvar_names)
@@ -1332,7 +1334,7 @@ let gen_applied_fix cx ~slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.St
               body
           in
           let lifted_decl =
-            lifted_definition ~binders:param_binders ~ret:cod member_refs.(i) cpp_params body
+            lifted_definition ~binders:param_binders ~modes ~ret:cod member_refs.(i) cpp_params body
               (class_temps @ all_temps_with_funs)
           in
           add_lifted_decl cx (Control_to_cpp.Lower.lower_lifted ~unit:(Lowering_state.unit_context cx) lifted_decl) )

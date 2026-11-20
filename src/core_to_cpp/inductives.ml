@@ -240,7 +240,7 @@ type method_scope = {
   params : (Id.t * Cpp_ir.Lowered.Type.t) list;
       (** The C++ parameters: the runtime ones other than the receiver, each
           wrapped by ownership, a callable as an [F &&]. *)
-  passing : Core_plan.Callable_abi.passing list;
+  modes : Cpp_ir.Param_mode.t list;
       (** How each of {!method_scope.params} is passed. *)
   fun_params : (Id.t * Core_plan.Callable_abi.kind * Id.t) list;
       (** The callable parameters generalised to a template parameter: the
@@ -449,17 +449,17 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
   let params =
     List.map2
       (fun (id, (cpp_ty : Cpp_ir.Lowered.Type.t), i, owned, generalised) (_, core, _) ->
-        let wrapped : Cpp_ir.Lowered.Type.t =
+        let wrapped, mode =
           match cpp_ty with
-          | Function _ when generalised -> Reference (Forwarding, Variable (Named (fun_tparam_id i)))
+          | Function _ when generalised ->
+            ( (Reference (Forwarding, Variable (Named (fun_tparam_id i))) : Cpp_ir.Lowered.Type.t),
+              Cpp_ir.Param_mode.forwarded )
           | _ -> Ownership.wrap_param_by_ownership cx ~is_owned:owned ~core cpp_ty
         in
-        (id, wrapped) )
+        ((id, wrapped), mode) )
       params_with_idx param_ids_with_pos
   in
-  let passing =
-    List.map2 (fun (_, ty) (_, _, _, owned, _) -> Ownership.param_passing ~owned ty) params params_with_idx
-  in
+  let params, modes = List.split params in
 
   {
     ty = ty;
@@ -479,7 +479,7 @@ let method_scope cx name vars (func_ref, body, ty, this_pos) =
     method_owned_flags = method_owned_flags;
     this_arg_id = this_arg_id;
     params = params;
-    passing = passing;
+    modes = modes;
     fun_params = fun_params;
     template_params = template_params;
     minted =
@@ -637,7 +637,7 @@ let method_plan func_ref s h =
   let scheme = Base.Core_util.reference_scheme func_ref in
   Core_plan.Callable_abi.of_head ~minted:s.minted
     ~omitted:(Tvars.type_arg_omission func_ref)
-    ~deduced_callables:s.deduced_callables ~passing:s.passing
+    ~deduced_callables:s.deduced_callables ~modes:s.modes
     ~receiver:
       { dropped =
           List.filter_map (fun (i, _) -> Option.bind scheme (fun sc -> Core.Scheme.Var.of_tvar sc i)) h.dropped;
@@ -694,8 +694,10 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
     method_owned_flags = method_owned_flags;
     this_arg_id = this_arg_id;
     params = params;
+    modes = modes;
     _
   } = s in
+  let modes = List.map2 (fun (x, _) m -> (x, m)) params modes in
   (* Suspended at its constructors, and whole only where it calls itself
      outside all of them: see [cofix_wrap] in [gen_dfun]. *)
   let is_cofix_method =
@@ -733,8 +735,8 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
            first, [i] innermost first. *)
         (not (this_arg_id <> None && i = method_n_params - 1 - this_pos))
         &&
-        match List.assoc_opt (Base.Common.get_db_name (i + 1) env) params with
-        | Some ty -> not (Ownership.declared_by_reference ty)
+        match List.assoc_opt (Base.Common.get_db_name (i + 1) env) modes with
+        | Some mode -> Cpp_ir.Param_mode.holds_own_value mode
         | None -> List.nth method_owned_flags i )
       ~declared:(fun i -> List.assoc_opt (Base.Common.get_db_name (i + 1) env) params)
       ~ty:(fun i -> snd (List.nth ids_with_types i))
@@ -942,6 +944,7 @@ let generate_method cx name vars ((func_ref, _, ty, this_pos) as candidate) =
           is_noexcept = false;
           is_conversion = false;
           binders = parameter_binders cx env params;
+          modes;
           receiver_binder = Option.bind this_arg_id (local_binder cx env);
           loop = None },
       Public,
@@ -1210,6 +1213,7 @@ let static_method ~name ~ret ~params ~body : Cpp_ir.Lowered.phase F.Method.t =
     is_noexcept = false;
     is_conversion = false;
     binders = [];
+    modes = [];
     receiver_binder = None;
     loop = None }
 
@@ -1233,6 +1237,7 @@ let accessor ?(is_const = true) ?(is_inline = false) ?(section = F.Section.Acces
         is_noexcept = false;
         is_conversion = false;
         binders = [];
+        modes = [];
         receiver_binder = None;
         loop = None },
     Public,
@@ -1278,7 +1283,7 @@ let lambda params ret body ~(capture : Cpp_ir.Lowered.phase E.Capture.t) : Cpp_i
   let return_type = match ret with Some (T.Const t) -> Some t | r -> r in
   match (params, body) with
   | [], [S.Throw msg] -> E.Abort (msg, match return_type with Some t -> t | None -> T.Any)
-  | _ -> E.Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; fixpoint = None}
+  | _ -> E.Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; modes = []; fixpoint = None}
 
 (** Generate the C++ declaration of an inductive type: an encapsulated struct
     with its methods.

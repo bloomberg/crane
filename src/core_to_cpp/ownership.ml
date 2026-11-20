@@ -11,13 +11,6 @@ open Util
 open Lowering_state
 open Base.Type_util
 
-(** Whether a parameter declared
-    at [ty] is a reference the body does not own. *)
-let rec declared_by_reference : Cpp_ir.Lowered.Type.t -> bool = function
-  | Reference _ | Const _ -> true
-  | In_namespace (_, t) -> declared_by_reference t
-  | _ -> false
-
 (** The de Bruijn indices of the [n] innermost parameters a body owns: those
     [owned] says are passed by value, of a type worth moving.  That is one
     {!Ownership_ir.Region.worth_moving} accepts as reading [ty]; but an erased Core
@@ -189,13 +182,15 @@ let rec core_lent_by_reference cx ty =
   | Core.Type.Arrow _ | Core.Type.Variable _ -> Some true
   | _ -> None
 
-(** Wraps a C++ parameter type with const/ref based on ownership semantics.
-    An owned parameter is passed by value (the caller moves it in); a
-    borrowed one by const reference where it is lent by reference
-    ({!core_lent_by_reference} of its Core type [core] where that says,
-    {!cpp_lent_by_reference} otherwise), and by value otherwise.  Under
-    [CRANE_CHECK_IR] the two readings are checked against each other. *)
-let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) : Cpp_ir.Lowered.Type.t =
+(** How a parameter of C++ type [cpp_ty] is passed ({!Cpp_ir.Param_mode}),
+    and the type it is declared at.  An owned parameter is passed by value
+    (the caller moves it in); a borrowed one by const reference where it is
+    lent by reference ({!core_lent_by_reference} of its Core type [core]
+    where that says, {!cpp_lent_by_reference} otherwise), and by value
+    otherwise.  Under [CRANE_CHECK_IR] the two readings are checked against
+    each other. *)
+let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowered.Type.t) :
+    Cpp_ir.Lowered.Type.t * Cpp_ir.Param_mode.t =
   let by_cpp = cpp_lent_by_reference cpp_ty in
   let lent =
     match Option.bind core (core_lent_by_reference cx) with
@@ -209,12 +204,5 @@ let wrap_param_by_ownership cx ?(is_owned = false) ?core (cpp_ty : Cpp_ir.Lowere
       by_core
     | None -> by_cpp
   in
-  if lent && not is_owned then Reference (Lvalue, Const cpp_ty) else cpp_ty
-
-(** How a parameter declared at [t] -- after {!wrap_param_by_ownership},
-    or as the [F &&] a deduced callable is -- with ownership [owned], is
-    passed. *)
-let param_passing ~owned (t : Cpp_ir.Lowered.Type.t) =
-  match t with
-  | Reference (Forwarding, _) -> Core_plan.Callable_abi.Forwarded
-  | _ -> if owned then Core_plan.Callable_abi.Owned else Core_plan.Callable_abi.Borrowed
+  let mode = if is_owned then Cpp_ir.Param_mode.owned else if lent then Cpp_ir.Param_mode.lent else Cpp_ir.Param_mode.copied in
+  (Cpp_ir.Param_mode.declare mode.form cpp_ty, mode)

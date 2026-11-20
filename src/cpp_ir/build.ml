@@ -43,7 +43,7 @@ let lambda params (ret : 'p Type.t option) body ~(capture : 'p Capture.t) : 'p E
   match (params, body) with
   | [], [Stmt.Throw msg] -> Abort (msg, Option.default Type.Any return_type)
   | _ ->
-    Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; fixpoint = None}
+    Lambda {params; type_params = []; return_type; body; capture; moved = []; binders = []; modes = []; fixpoint = None}
 
 (** [iife ret body] evaluates [body] in place: a nullary lambda capturing by
     reference, invoked immediately.  A body that only throws is the [Abort]

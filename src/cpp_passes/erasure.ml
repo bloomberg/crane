@@ -1343,6 +1343,7 @@ let invoke_capturing_initialisers (d : settled) : settled =
             capture = Written Nothing;
             moved = [];
             binders = [];
+            modes = [];
             fixpoint = None }
       in
       Variable {a with init = call returning []}

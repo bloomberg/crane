@@ -428,7 +428,7 @@ let build_cell_call ~unit ?token ?(rec_arg = Literal Null_pointer) ?(allocate = 
 let borrow_cursor_matches shadow_params stmts =
   Cpp_passes.Simplify.borrow_matches_on
     (List.filter_map
-       (fun ((id, _) as s) -> if borrowed_pointer_shadow s then Some id else None)
+       (fun (s : Shadow.t) -> if borrowed_pointer_shadow s then Some s.name else None)
        shadow_params)
     stmts
 
@@ -636,7 +636,7 @@ let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call ar
       | Some _ | None -> None
     in
     match (List.nth_opt varying cursor.parameter, shadow, field (List.nth_opt args cursor.parameter)) with
-    | Some true, Some ((cursor_id, _) as s), Some field when borrowed_pointer_shadow s -> Some (step, cursor_id, field)
+    | Some true, Some s, Some field when borrowed_pointer_shadow s -> Some (step, s.Shadow.name, field)
     | _ ->
       Base.Probe.violation "reuse cursor"
         Pp.(str "a turn the cursor steps at does not walk a pointer shadow on to a field of its cell");
@@ -889,16 +889,17 @@ let rewrite_tmc_visit_stmt ~unit ?(cursor_used = ref false) ?cursor ~jumped ~sto
     @param tparams the function's template parameters
     @param check Call checker for identifying recursive calls
     @param params Function parameters
+    @param modes How each of [params] is passed, parallel to it
     @param ret_ty Return type
     @param body Function body
     @return Transformed body with TMC while loop *)
-let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying ~parts ~shapes tparams
+let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying ~parts ~modes ~shapes tparams
   check params ret_ty body =
   let branch = branch_along ~unit shapes check in
   let planned = planned_result shapes ret_ty in
-  let { Tail.Shadow_setup.varying = varying; varying_params = varying_params;
+  let { Tail.Shadow_setup.varying = varying; varying_params = varying_params; varying_modes;
         shadow_params = shadow_params; subs = subs } =
-    build_shadow_setup ~unit ~varying ~parts tparams params
+    build_shadow_setup ~unit ~varying ~parts ~modes tparams params
   in
   (* Shadow variable declarations.
      For pointer params with custom inits (e.g., _self = this in methods), only
@@ -907,24 +908,25 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
      so the shadow variable becomes a mutable shared_ptr<T>. *)
   let shadow_decls =
     List.map2
-      (fun (orig_id, ty) (shadow_id, shadow_ty) ->
+      (fun ((orig_id, ty), mode) (shadow : Shadow.t) ->
         let has_custom_init = List.mem_assoc orig_id param_inits in
         let init_expr =
           match List.assoc_opt orig_id param_inits with
           | Some custom -> custom
-          | None -> tail_shadow_init unit orig_id shadow_ty ty
+          | None -> tail_shadow_init orig_id shadow mode ty
         in
         (* Declare the shadow at the shadow's type, not the parameter's: where
            {!tail_shadow_type} chose something else, it chose it because the
-           parameter's own type cannot hold what the loop will put here. *)
-        let decl_ty = match shadow_ty with
-          | Pointer _ -> shadow_ty
-          | _ ->
-            if has_custom_init then strip_ref_type shadow_ty
-            else strip_ref_and_const_type shadow_ty
+           parameter's own type cannot hold what the loop will put here.  A
+           pointer shadow is a pointer to const. *)
+        let decl_ty = match shadow.hold with
+          | Through_pointer | Receiver -> shadow.ty
+          | Value ->
+            if has_custom_init then strip_ref_type shadow.ty
+            else strip_ref_and_const_type shadow.ty
         in
-        Bind_variable (shadow_id, Declare (decl_ty, None), init_expr) )
-      varying_params
+        Bind_variable (shadow.name, Declare (decl_ty, None), init_expr) )
+      (List.combine varying_params varying_modes)
       shadow_params
   in
   (* Substitute param references in body *)
@@ -936,8 +938,8 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
   let cursor =
     match cursor with
     | Some (c : Reuse_cursor.t) when recyclable_result unit planned -> (
-      match List.nth_opt params c.parameter with
-      | Some (id, ty) when (not (List.mem_assoc id param_inits)) && not (declared_by_reference ty) -> Some c
+      match List.nth_opt modes c.parameter with
+      | Some mode when Cpp_ir.Param_mode.holds_own_value mode -> Some c
       | Some _ | None -> None )
     | Some _ | None -> None
   in

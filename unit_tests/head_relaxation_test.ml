@@ -26,6 +26,7 @@ let fn ret params body : Cpp_ir.Lowered.Decl.t =
       constexpr = Undecided;
       shape = Definition (params, body);
       binders = [];
+      modes = [];
       loop = None }
 
 let () =

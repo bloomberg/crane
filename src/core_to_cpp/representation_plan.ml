@@ -95,7 +95,7 @@ let push_parameters cx ?slot_ty ~ns ~tvars ~reified ~body ids scope =
               ~slot_dom
               (Base.Core_util.id_of_binder_name x, ty, false)
           with
-          | decl, _ -> (
+          | decl, _, _ -> (
             match
               Binders.strip_param_wrappers
                 (Lambda_params.lambda_param_assigned ~slot_dom ty decl)
