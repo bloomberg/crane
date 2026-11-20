@@ -21,8 +21,8 @@ std::optional<std::string> EffectComplexReturn::maybe_read(bool do_read) {
 }
 
 /// 3. Void effect followed by value effect
-std::string EffectComplexReturn::print_then_read(std::string prompt) {
-  std::cout << std::move(prompt) << '\n';
+std::string EffectComplexReturn::print_then_read(const std::string &prompt) {
+  std::cout << prompt << '\n';
   return []() -> std::string {
     std::string _r;
     std::getline(std::cin, _r);
@@ -32,13 +32,13 @@ std::string EffectComplexReturn::print_then_read(std::string prompt) {
 
 /// 4. Multiple effects with different return types
 std::pair<int64_t, std::string>
-EffectComplexReturn::mixed_effects(std::string name) {
+EffectComplexReturn::mixed_effects(const std::string &name) {
   int64_t t = static_cast<int64_t>(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           std::chrono::system_clock::now().time_since_epoch())
           .count());
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
-    auto *v = std::getenv(std::move(name).c_str());
+    auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
   }();
   if (mv.has_value()) {
@@ -96,7 +96,7 @@ List<std::string> EffectComplexReturn::read_n(uint64_t n) {
 }
 
 /// 7. Env effect result used in conditional
-std::string EffectComplexReturn::env_or_prompt(std::string name) {
+std::string EffectComplexReturn::env_or_prompt(const std::string &name) {
   std::optional<std::string> mv = [&]() -> std::optional<std::string> {
     auto *v = std::getenv(name.c_str());
     return v ? std::optional<std::string>(v) : std::optional<std::string>();
@@ -105,8 +105,7 @@ std::string EffectComplexReturn::env_or_prompt(std::string name) {
     const std::string &v = *mv;
     return v;
   } else {
-    std::cout << std::string("Enter ") + std::move(name) + std::string(":") <<
-    '\n';
+    std::cout << std::string("Enter ") + name + std::string(":") << '\n';
     return []() -> std::string {
       std::string _r;
       std::getline(std::cin, _r);

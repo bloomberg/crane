@@ -10,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -386,14 +387,15 @@ struct ToString {
 
   template <typename T1, typename F0>
     requires std::is_invocable_r_v<std::string, F0 &, const T1 &>
-  static std::string intersperse(F0 &&p, std::string sep, const List<T1> &l) {
+  static std::string intersperse(F0 &&p, const std::string &sep,
+                                 const List<T1> &l) {
     if (std::holds_alternative<typename List<T1>::Nil>(l.v())) {
       return "";
     } else {
       const auto &[a0, a1] = std::get<typename List<T1>::Cons>(l.v());
       auto &&_sv = *a1;
       if (std::holds_alternative<typename List<T1>::Nil>(_sv.v())) {
-        return std::move(sep) + p(a0);
+        return sep + p(a0);
       } else {
         return sep + p(a0) + intersperse<T1>(p, sep, *a1);
       }

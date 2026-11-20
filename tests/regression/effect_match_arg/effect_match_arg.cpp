@@ -1,9 +1,9 @@
 #include "effect_match_arg.h"
 
 /// 1. Bool match as value argument to set_env
-void EffectMatchArg::set_bool_value(bool flag, std::string key) {
+void EffectMatchArg::set_bool_value(bool flag, const std::string &key) {
   setenv(
-      std::move(key).c_str(),
+      key.c_str(),
       [&]() -> std::string {
         if (flag) {
           return "yes";
@@ -16,7 +16,7 @@ void EffectMatchArg::set_bool_value(bool flag, std::string key) {
 }
 
 /// 2. Bool match as key argument to set_env
-void EffectMatchArg::set_bool_key(bool flag, std::string value) {
+void EffectMatchArg::set_bool_key(bool flag, const std::string &value) {
   setenv(
       [&]() -> std::string {
         if (flag) {
@@ -25,16 +25,16 @@ void EffectMatchArg::set_bool_key(bool flag, std::string value) {
           return "KEY_B";
         }
       }().c_str(),
-      std::move(value).c_str(),
+      value.c_str(),
       1);
   return;
 }
 
 /// 3. Option match result as argument to set_env
-void EffectMatchArg::set_option_value(std::string key,
-                                      std::optional<std::string> r) {
+void EffectMatchArg::set_option_value(const std::string &key,
+                                      const std::optional<std::string> &r) {
   setenv(
-      std::move(key).c_str(),
+      key.c_str(),
       [&]() -> std::string {
         if (r.has_value()) {
           const std::string &v = *r;

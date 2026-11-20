@@ -63,7 +63,7 @@ void EffectGetlineStress::read_and_echo() {
 int64_t EffectGetlineStress::get_line_length() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(std::move(line).length());
+  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
   return len;
 }
 
@@ -73,14 +73,14 @@ std::string EffectGetlineStress::concat_two_lines() {
   std::getline(std::cin, a);
   std::string b;
   std::getline(std::cin, b);
-  return std::move(a) + std::move(b);
+  return a + b;
 }
 
 /// 7. get_line inside a monadic map
 std::pair<std::string, int64_t> EffectGetlineStress::get_and_measure() {
   std::string line;
   std::getline(std::cin, line);
-  int64_t len = static_cast<int64_t>(line.length());
+  int64_t len = static_cast<int64_t>((std::string_view{line}).size());
   return std::make_pair(std::move(line), len);
 }
 

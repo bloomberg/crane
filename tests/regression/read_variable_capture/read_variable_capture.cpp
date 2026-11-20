@@ -14,12 +14,11 @@ std::string ReadVariableCapture::read_literal() {
 }
 
 /// Bug: variable argument — path not captured by []() { ... path ... }()
-std::string ReadVariableCapture::read_variable(std::string path) {
-  auto &&_once1 = std::move(path);
+std::string ReadVariableCapture::read_variable(const std::string &path) {
   return [&]() -> std::string {
-    std::ifstream file(_once1);
+    std::ifstream file(path);
     if (!file) {
-      std::cerr << "Failed to open file " << _once1 << '\n';
+      std::cerr << "Failed to open file " << path << '\n';
       return std::string{};
     }
     return std::string(std::istreambuf_iterator<char>(file),
@@ -30,17 +29,16 @@ std::string ReadVariableCapture::read_variable(std::string path) {
 /// Bug: same issue with file_exists which is std::filesystem::exists(...),
 /// but that's a plain expression, not a lambda, so it works.
 /// This test is for read specifically.
-std::string ReadVariableCapture::read_and_check(std::string path) {
+std::string ReadVariableCapture::read_and_check(const std::string &path) {
   bool ok = [&]() -> bool {
     std::error_code _ec;
     return std::filesystem::exists(std::filesystem::path(path), _ec);
   }();
   if (ok) {
-    auto &&_once1 = std::move(path);
     return [&]() -> std::string {
-      std::ifstream file(_once1);
+      std::ifstream file(path);
       if (!file) {
-        std::cerr << "Failed to open file " << _once1 << '\n';
+        std::cerr << "Failed to open file " << path << '\n';
         return std::string{};
       }
       return std::string(std::istreambuf_iterator<char>(file),

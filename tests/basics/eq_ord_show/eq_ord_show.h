@@ -3,6 +3,7 @@
 #include <concepts>
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <utility>
 
 struct NatEq;
@@ -49,7 +50,7 @@ struct NatOrd {
 static_assert(Ord<NatOrd, uint64_t>);
 
 struct NatShow {
-  static std::string show(uint64_t) { return "<nat>"; }
+  constexpr static std::string show(uint64_t) { return "<nat>"; }
 };
 
 static_assert(Show<NatShow, uint64_t>);

@@ -6,11 +6,11 @@
 #include <random>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <sys/stat.h>
 #include <unistd.h>
-#include <utility>
 
 struct TempFile {
-  static std::string make_temp_file(std::string prefix);
-  static std::string make_temp_dir(std::string prefix);
+  static std::string make_temp_file(const std::string &prefix);
+  static std::string make_temp_dir(const std::string &prefix);
 };

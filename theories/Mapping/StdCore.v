@@ -6,8 +6,7 @@
     library equivalents ([std::optional], [std::pair], [int64_t],
     [double]), and [char63] to [char], as typed mappings
     (docs/typed-mappings-design.md 15): they activate on [Import].  [Std]
-    adds the legacy [string] mappings, [StringView] the typed ones; import
-    one of them.
+    adds the [string] mapping.
 
     Sets the stdlib flavor to ["std"]. *)
 From Crane Require Extraction.

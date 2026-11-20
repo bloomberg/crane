@@ -2,7 +2,7 @@
 
 #include <cstdint>
 #include <string>
-#include <utility>
+#include <string_view>
 
 struct StringMatch {
   static inline const std::string str_empty = "";
@@ -11,10 +11,10 @@ struct StringMatch {
   static inline const std::string str_cat =
       std::string("hello ") + std::string("world");
   static inline const int64_t str_len_empty =
-      static_cast<int64_t>(std::string("").length());
+      static_cast<int64_t>(std::string("").size());
   static inline const int64_t str_len_hello =
-      static_cast<int64_t>(std::string("hello").length());
-  static bool is_empty(std::string s);
+      static_cast<int64_t>(std::string("hello").size());
+  static bool is_empty(std::string_view s);
   static inline const bool test_empty_true = is_empty("");
   static inline const bool test_empty_false = is_empty("x");
   static inline const std::string test_cat =

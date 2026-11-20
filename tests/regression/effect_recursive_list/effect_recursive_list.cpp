@@ -15,18 +15,19 @@ List<std::string> EffectRecursiveList::read_n_lines(uint64_t n) {
 
 /// 3. Fold a list with effects, accumulating a result
 std::string EffectRecursiveList::fold_effect(const List<std::string> &xs,
-                                             std::string acc) {
+                                             const std::string &acc) {
   if (std::holds_alternative<typename List<std::string>::Nil>(xs.v())) {
     return acc;
   } else {
     const auto &[a0, a1] = std::get<typename List<std::string>::Cons>(xs.v());
     std::cout << a0 << '\n';
-    return fold_effect(*a1, std::move(acc) + std::string(" ") + a0);
+    return fold_effect(*a1, acc + std::string(" ") + a0);
   }
 }
 
 /// 4. Read lines and store each in env with index
-uint64_t EffectRecursiveList::store_lines(std::string prefix, uint64_t n) {
+uint64_t EffectRecursiveList::store_lines(const std::string &prefix,
+                                          uint64_t n) {
   if (n <= 0) {
     return UINT64_C(0);
   } else {
@@ -34,7 +35,7 @@ uint64_t EffectRecursiveList::store_lines(std::string prefix, uint64_t n) {
     std::string line;
     std::getline(std::cin, line);
     setenv(prefix.c_str(), std::move(line).c_str(), 1);
-    uint64_t rest = store_lines(std::move(prefix), n_);
+    uint64_t rest = store_lines(prefix, n_);
     return (rest + 1);
   }
 }

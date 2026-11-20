@@ -41,7 +41,7 @@ std::string BlockTemplateTypes::test_mixed() {
   std::cin >> n;
   bool b;
   b = (n > 0u);
-  return std::move(name) + [&]() -> std::string {
+  return name + [&]() -> std::string {
     if (b) {
       return " wins";
     } else {

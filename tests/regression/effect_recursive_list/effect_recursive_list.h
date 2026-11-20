@@ -10,6 +10,7 @@
 #include <optional>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <type_traits>
 #include <utility>
 #include <variant>
@@ -116,9 +117,10 @@ struct EffectRecursiveList {
   }
 
   /// 3. Fold a list with effects, accumulating a result
-  static std::string fold_effect(const List<std::string> &xs, std::string acc);
+  static std::string fold_effect(const List<std::string> &xs,
+                                 const std::string &acc);
   /// 4. Read lines and store each in env with index
-  static uint64_t store_lines(std::string prefix, uint64_t n);
+  static uint64_t store_lines(const std::string &prefix, uint64_t n);
   /// 5. Collect env values into a list
   static List<std::optional<std::string>>
   collect_envs(const List<std::string> &names);

@@ -9,6 +9,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
@@ -98,7 +99,7 @@ public:
 struct EffectCrossModule {
   /// Inner module defines a helper that returns a value
   struct Inner {
-    static void greet(std::string name);
+    static void greet(const std::string &name);
     static std::string ask_name();
 
     /// Function taking a callback

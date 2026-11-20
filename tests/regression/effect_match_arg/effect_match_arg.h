@@ -5,16 +5,18 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <variant>
 
 struct EffectMatchArg {
   /// 1. Bool match as value argument to set_env
-  static void set_bool_value(bool flag, std::string key);
+  static void set_bool_value(bool flag, const std::string &key);
   /// 2. Bool match as key argument to set_env
-  static void set_bool_key(bool flag, std::string value);
+  static void set_bool_key(bool flag, const std::string &value);
   /// 3. Option match result as argument to set_env
-  static void set_option_value(std::string key, std::optional<std::string> r);
+  static void set_option_value(const std::string &key,
+                               const std::optional<std::string> &r);
   /// 4. Bool match as argument to print_endline — exercises << precedence
   static void print_conditional(bool flag);
   /// 5. Bool match as argument to get_env
