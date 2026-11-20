@@ -472,7 +472,7 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       writes_obj ();
       cpp_angle Cpp_ir.Crane_rt.rebind (pp_list (pp_rec false) [ h; x ])
     | Carrier_parameter -> str ctor_alias_tvar
-    | Reference (Forwarding, t) -> pp_rec false t ++ str "&&"
+    | (Reference _ | Pointer _ | Const _) as t -> pp_declarator t (mt ())
     | Type_of e -> str "decltype(" ++ pp_cpp_expr ctx ([], Id.Set.empty) [] e ++ str ")"
     | Decltype_auto -> str "decltype(auto)"
     | External (id_s, args) ->
@@ -521,9 +521,6 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
       cpp_angle
         Cpp_ir.Crane_rt.fn
         (pp_rec false c ++ pp_par true (pp_list (pp_rec false) d))
-    | Reference (Lvalue, t) -> pp_rec false t ++ str "&"
-    | Pointer t -> pp_rec false t ++ str "*"
-    | Const t -> str "const " ++ pp_rec false t
     | In_namespace (r, t) ->
       ( match (r, t) with
       | GlobRef.IndRef _, Entity_application (r', args, _)
@@ -628,6 +625,26 @@ let rec pp_cpp_type ?(lead = true) ctx par vl (t : ty) =
     | Decay t ->
       writes_standard "type_traits";
       cpp_angle "std::decay_t" (pp_rec false t)
+  (* A compound type around a declarator hole [hole]: a pointer or reference
+     wraps the hole and leaves the declarator to its referent, and a [const]
+     on a pointer or reference qualifies the declarator ([T* const]), while
+     one on any other type stays in front of it ([const T&]).  So
+     [Const (Pointer t)] is [t* const] and [Pointer (Const t)] [const t*]. *)
+  and pp_declarator (t : ty) hole =
+    match t with
+    | Pointer t -> pp_declarator t (str "*" ++ hole)
+    | Reference (Lvalue, t) -> pp_declarator t (str "&" ++ hole)
+    | Reference (Forwarding, t) -> pp_declarator t (str "&&" ++ hole)
+    | Const ((Pointer _ | Reference _) as t) ->
+      (* A reference is never const: a reference to const is
+         [Reference (_, Const t)]. *)
+      ( match t with
+      | Reference _ when Base.Probe.checking () ->
+        CErrors.anomaly (Pp.str "pp_cpp_type: a const reference, not a reference to const")
+      | _ -> () );
+      pp_declarator t (str " const" ++ hole)
+    | Const t -> str "const " ++ pp_rec false t ++ hole
+    | t -> pp_rec false t ++ hole
   (* A type constructor written as a template template argument, and
      whether it is written as a member of a dependent qualifier -- a
      higher-kinded carrier's [_tcI0::template M], or a holder's
@@ -775,10 +792,9 @@ and pp_cpp_expr ctx env args (t : expr) =
       | [_] -> ["_x"]
       | ps -> List.mapi (fun i _ -> "_x" ^ string_of_int i) ps
     in
-    let param name = function
-      | Some ty ->
-        Pp.string_of_ppcmds (str "const " ++ pp_cpp_type ctx false [] ty ++ str (" &" ^ name))
-      | None -> "const auto &" ^ name
+    let param name ty =
+      let ty : ty = Reference (Lvalue, Const (Option.default I.Type.Auto ty)) in
+      Pp.string_of_ppcmds (pp_cpp_type ctx false [] ty ++ str (" " ^ name))
     in
     let params_s = String.concat ", " (List.map2 param names params) in
     let call_args = String.concat ", " (List.filteri (fun i _ -> i <> receiver) names) in
@@ -1900,20 +1916,21 @@ let pp_requires_of_tparams ctx tparams =
            printing: see {!Cpp_passes.Constraints.settle}. *)
         | Invocable (invs, cod) ->
           writes_standard "type_traits";
-          let operand (cat : I.Template.Value_category.t) ty =
-            match cat with
-            | Mutable_lvalue -> ty ++ str " &"
-            | Const_lvalue -> str "const " ++ ty ++ str " &"
-            | Xvalue -> ty ++ str " &&"
-            | Prvalue -> ty
+          let operand (cat : I.Template.Value_category.t) (ty : ty) =
+            pp_type ctx
+              ( match cat with
+              | Mutable_lvalue -> Reference (Lvalue, ty)
+              | Const_lvalue -> Reference (Lvalue, Const ty)
+              | Xvalue -> Reference (Forwarding, ty)
+              | Prvalue -> ty )
           in
           let clause (inv : _ I.Template.Invocation.t) =
             str invocable_r ++ str "<"
             ++ pp_type ctx cod
             ++ str ", "
-            ++ operand inv.callable (Id.print id)
+            ++ operand inv.callable (Variable (Named id))
             ++ List.fold_left
-                 (fun acc (cat, ty) -> acc ++ str ", " ++ operand cat (pp_type ctx ty))
+                 (fun acc (cat, ty) -> acc ++ str ", " ++ operand cat ty)
                  (mt ()) inv.args
             ++ str ">"
           in
