@@ -229,10 +229,17 @@ let operand_keywords =
   ["return"; "throw"; "co_return"; "co_yield"; "co_await"; "case"; "delete"; "new"; "operator"; "sizeof"]
 
 (** The output spacing, from the input's: [template <], and a reference or
-    pointer declarator next to its name ([T &x], [auto *p], [const A &>])
-    rather than its type. *)
+    pointer declarator next to its name ([T &x], [auto *p], [const A &>],
+    [T *&x], [T *const &x]) rather than its type. *)
 let normalise_spacing (toks : token array) =
   let n = Array.length toks in
+  (* Whether the token at an index is a pointer or reference declarator. *)
+  let declarator = Array.make n false in
+  let attach_next next =
+    match next with
+    | Some x when x.space && (x.kind = Word || is_punct x "[" || is_punct x "...") -> x.gap <- false
+    | _ -> ()
+  in
   for k = 0 to n - 1 do
     let t = toks.(k) in
     let prev = if k > 0 then Some toks.(k - 1) else None in
@@ -245,9 +252,12 @@ let normalise_spacing (toks : token array) =
       | Some p
         when (p.kind = Word && not (one_of p.text operand_keywords)) || is_punct p ">" ->
         t.gap <- true;
-        ( match next with
-        | Some x when x.space && (x.kind = Word || is_punct x "[" || is_punct x "...") -> x.gap <- false
-        | _ -> () )
+        declarator.(k) <- true;
+        attach_next next
+      | Some _ when declarator.(k - 1) ->
+        (* The next declarator of a compound one, [*&], bound to the first. *)
+        declarator.(k) <- true;
+        attach_next next
       | _ -> ()
   done
 

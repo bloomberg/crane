@@ -733,7 +733,7 @@ let lower_method ~unit ~tparams ~self_ty (m : meth) =
 
 let lower_struct_methods ~unit ~merged inductive vars fields =
   let tparams = List.map (fun v -> ((Typename, v) : Analysis.param_kind * Id.t)) vars in
-  let self_ty : ty = Const (Pointer (Entity_application (inductive, List.map Analysis.named_tvar vars, []))) in
+  let self_ty : ty = Pointer (Const (Entity_application (inductive, List.map Analysis.named_tvar vars, []))) in
   let loopified r =
     (if merged then Base.Table.loopify () else Base.Table.loopifies_methods_of inductive) && Base.Table.loopifies_method r
   in

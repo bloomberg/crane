@@ -876,7 +876,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               let n_params = List.length params in
               let new_params = List.map (fun (orig_ty, orig_id) ->
                 let bare = strip_cpp_ref_const orig_ty in
-                if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Const (Reference (Lvalue, Cpp_ir.Type.Any)), orig_id)
+                if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Reference (Lvalue, Const Cpp_ir.Type.Any), orig_id)
                 else (orig_ty, orig_id)
               ) params in
               let core_concrete_param_tys =
@@ -1057,7 +1057,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
               let new_params = List.mapi (fun j (orig_ty, orig_id) ->
                 if j < List.length param_tys && List.nth param_tys j = Cpp_ir.Type.Any then
                   let bare = strip_cpp_ref_const orig_ty in
-                  if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Const (Reference (Lvalue, Cpp_ir.Type.Any)), orig_id)
+                  if bare <> Cpp_ir.Type.Any then (Cpp_ir.Type.Reference (Lvalue, Const Cpp_ir.Type.Any), orig_id)
                   else (orig_ty, orig_id)
                 else (orig_ty, orig_id)
               ) params in
@@ -1266,7 +1266,7 @@ let gen_construction cx ~expected_ty ~slot env ~ty ~r ~ts (construction : Core.E
                  && strip_cpp_ref_const orig_ty <> Cpp_ir.Type.Any
               then
                 (* Replace concrete type with std::any, preserving const ref *)
-                Cpp_ir.Type.Const (Reference (Lvalue, Cpp_ir.Type.Any))
+                Cpp_ir.Type.Reference (Lvalue, Const Cpp_ir.Type.Any)
               else orig_ty
             in
             (erased_ty, orig_id)
