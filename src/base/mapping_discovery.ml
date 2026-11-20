@@ -298,11 +298,25 @@ let rec flag_of_type env sigma t =
     in
     (logical, false)
 
+(* A definitional class ([Class C := m : ty], such as ITree's [ReSum]) is a
+   constant that unfolds to its method's type, so the head is read before
+   reducing, and again after (for an alias of a class). *)
 let is_class_type env sigma t =
-  let t = Reductionops.whd_all env sigma t in
-  match head_of sigma (snd (EConstr.decompose_prod sigma t)) with
-  | Some g -> Typeclasses.is_class g
-  | None -> false
+  let class_head t =
+    match head_of sigma (snd (EConstr.decompose_prod sigma t)) with
+    | Some g -> Typeclasses.is_class g
+    | None -> false
+  in
+  class_head t || class_head (Reductionops.whd_all env sigma t)
+
+let skipped_class : (GlobRef.t -> bool) ref = ref (fun _ -> false)
+
+let is_kept_instance env sigma t =
+  let class_head t = head_of sigma (snd (EConstr.decompose_prod sigma t)) in
+  let kept g = Typeclasses.is_class g && not (!skipped_class g) in
+  match class_head t with
+  | Some g when Typeclasses.is_class g -> kept g
+  | _ -> ( match class_head (Reductionops.whd_all env sigma t) with Some g -> kept g | None -> false )
 
 let binder_id k = Id.of_string (Printf.sprintf "crane_operation_binder_%d" k)
 

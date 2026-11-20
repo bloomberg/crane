@@ -91,8 +91,7 @@ let rec value_type m (t : 'p Type.t) : 'p Type.t =
 
 (** What is wrong of the mode [m] recorded of a parameter declared at [t],
     if anything: a form the type does not spell, an ownership the form
-    cannot have, a receiver not declared as a pointer, or a pointer that
-    is not the receiver. *)
+    cannot have, or a receiver not declared as a pointer. *)
 let disagreement m (t : 'p Type.t) =
   let name = function
     | By_value -> "by value"
@@ -114,5 +113,6 @@ let disagreement m (t : 'p Type.t) =
       match (m.role, t) with
       | Receiver, Pointer _ -> None
       | Receiver, _ -> Some "recorded the receiver, declared other than a pointer"
-      | Value, Pointer _ -> Some "declared a pointer, recorded a value rather than the receiver"
+      (* A value may be a pointer: a typed mapping's canonical type can be
+         one (a raw-pointer handle). *)
       | Value, _ -> None )

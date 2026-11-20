@@ -83,7 +83,7 @@ let stored_parameter ~fail sigma (binders : Mapping_discovery.operation_binders)
     in
     match g with
     | Some g when Mapping_plan.is_type_head g -> (
-      match List.assoc_opt c (Mapping_plan.find g).components with
+      match List.assoc_opt c (Mapping_plan.find g).component_binders with
       | Some p -> Some (g, List.nth_opt args p)
       | None -> None )
     | _ -> None
@@ -106,7 +106,10 @@ let stored_parameter ~fail sigma (binders : Mapping_discovery.operation_binders)
              component \"%s\"."
             c c))
   | Some (g, arg) -> (
-    match Option.map (EConstr.kind sigma) arg with
+    (* A type family parameter applied to terms ([V idx]) is the type
+       variable [V]: extraction drops a type variable's term arguments. *)
+    let head = Option.map (fun a -> EConstr.kind sigma (fst (EConstr.decompose_app sigma a))) arg in
+    match head with
     | Some (Constr.Var id) when Option.has_some (parameter_of id) -> Option.get (parameter_of id)
     | _ ->
       fail
@@ -199,7 +202,16 @@ let compile g =
     List.map (fun ((b : Mapping_discovery.operation_binder), _, _) -> (true, b.binder_type)) runtime
     @ [(false, binders.result_type)]
   in
-  let stored c = stored_parameter ~fail sigma binders candidates c in
+  (* A call's type arguments are its kept dictionaries' first, then the
+     type parameters ({!Core_to_cpp.Calls.call_type_args}). *)
+  let dictionaries =
+    List.length
+      (List.filter
+         (fun (b : Mapping_discovery.operation_binder) ->
+           b.role = Instance && Mapping_discovery.is_kept_instance binders.binders_env sigma b.binder_type)
+         binders.binders)
+  in
+  let stored c = dictionaries + stored_parameter ~fail sigma binders candidates c in
   let template t = compile_template ~fail ~arg ~stored t in
   let text =
     match m.operation_cpp with

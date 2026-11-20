@@ -4294,3 +4294,9 @@ let erased_fix_groups = State.cell State.Extraction ([] : Core.Occurrence.t list
 let add_erased_fix_group occ = erased_fix_groups := occ :: !erased_fix_groups
 
 let is_erased_fix_group occ = List.exists (Core.Occurrence.equal occ) !erased_fix_groups
+
+(* A skipped class ([Crane Extract Skip ReSum]) passes its instances at no
+   template parameter, so an operation mapping's [%tN] does not count them. *)
+let () =
+  Mapping_discovery.skipped_class :=
+    fun g -> is_inline_custom g && match find_custom_opt g with Some s -> String.equal s "" | None -> false
