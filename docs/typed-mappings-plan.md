@@ -291,6 +291,27 @@ This milestone fixes the reported bug.
   rewriting by matching `Pointer _` started rewriting it; they now use
   `Tail.borrowed_pointer_shadow`, which excludes the receiver *by name*. M5's
   explicit parameter modes (D4) must replace that name test with data.
+- **M5 (first part, D4).** The mode is `Cpp_ir.Param_mode.t`
+  (`src/cpp_ir/param_mode.ml`, type in `grammar.ml`): ownership
+  (`Owned | Borrowed | Forwarded`), form (`By_value | By_const_value |
+  By_const_reference | By_forwarding_reference | By_reference`) and role
+  (`Value | Receiver`). `By_reference` exists only so that reading a
+  declaration back (`Param_mode.spelled`) is total; no producer plans it.
+  It is recorded in `Callable_abi.modes` (replacing `passing`) and, by
+  parameter name, in a `modes` field of `Function`, `Method` and `Lambda`
+  (local fixpoints; closures record none). `Region.Local_passing` keeps
+  only ownership, because it is decided before the lambda's form is.
+  Loopify's receiver gets `Param_mode.receiver`, and Tail's shadows are a
+  `Tail.Shadow.t` whose `hold` (`Value | Through_pointer | Receiver`)
+  replaces the name test. `Move_check.check_modes` checks recorded modes
+  against declared types, both after lowering and before printing, and
+  `param_modes` reports a parameter with no recorded mode where one is
+  read. Two listed sites are not parameter-mode readers: `return_moves.ml`
+  reads only local declarations, and `constraints.ml` derives the C++ value
+  category of a name, a property of its declared type. Constraints now
+  reads a parameter's mode where one is recorded; locals, constructors and
+  closures still use their declarations. Frame captures are locals, so
+  their mode is `spelled` from the declaration.
 - **M2.** Descriptor field positions count from 0 after the family parameters.
   `Crane Show Mapping` and `Crane Check Mapping ... Selects | Unmapped | Fails
   With` are the test hooks; `CRANE_TRACE_MAPPINGS=1` traces discovery.
