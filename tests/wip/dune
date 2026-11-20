@@ -228,3 +228,14 @@
   (deps poly_sum_payload_obj.t.exe)
   (action (run ./poly_sum_payload_obj.t.exe))))
 
+
+(subdir shared_event_subevent
+ (rule
+  (targets shared_event_subevent.t.exe)
+  (deps SharedEventSubevent.vo shared_event_subevent.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} shared_event_subevent.t.exe shared_event_subevent.t.cpp shared_event_subevent.cpp)))
+ (rule
+  (alias runtest)
+  (deps shared_event_subevent.t.exe)
+  (action (run ./shared_event_subevent.t.exe))))
