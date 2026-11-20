@@ -26,55 +26,245 @@ From Stdlib Require Import Reals Rtrigo Ratan Rsqrt_def.
     infrastructure (ConstructiveCauchyReals, ClassicalDedekindReals, etc.) by
     mapping R and its operations directly to concrete C++. *)
 
-(* --- R type --- *)
-Crane Extract Inlined Constant R => "Real" From "crane_real.h".
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
 
-(* --- Core field operations --- *)
-Crane Extract Inlined Constant R0 => "Real(0.0L)" From "crane_real.h".
-Crane Extract Inlined Constant R1 => "Real(1.0L)" From "crane_real.h".
-Crane Extract Inlined Constant Rplus => "(%a0 + %a1)".
-Crane Extract Inlined Constant Rmult => "(%a0 * %a1)".
-Crane Extract Inlined Constant Ropp => "(-%a0)".
-Crane Extract Inlined Constant Rinv => "r_inv(%a0)".
-Crane Extract Inlined Constant Rminus => "(%a0 - %a1)".
-Crane Extract Inlined Constant Rdiv => "(%a0 / %a1)".
+(** [R] is the [Real] class, a [long double] (BitCopy, read by value), and
+    its operations are pure operation mappings (typed mappings,
+    docs/typed-mappings-design.md: they activate on [Import]).  [R0], [R1]
+    and [PI] are operations of no argument.  The decision procedures
+    return the [bool] a [sumbool] is.  [Rabst] and [Rrepr] are the
+    identity, short-circuiting the constructive real infrastructure. *)
+#[export] Instance real_mapping : TypeMapping R :=
+  {| type_headers := ["crane_real.h"];
+     type_cpp := Crane.Cpp.Name "Real";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews R;
+     type_interface := AbstractInterface;
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals := None |}.
 
-(* --- Utility functions --- *)
-Crane Extract Inlined Constant Rabs => "r_abs(%a0)".
-Crane Extract Inlined Constant Rsqr => "r_sqr(%a0)".
-Crane Extract Inlined Constant Rmax => "r_max(%a0, %a1)".
-Crane Extract Inlined Constant Rmin => "r_min(%a0, %a1)".
-
-(* --- Power / sqrt --- *)
-Crane Extract Inlined Constant pow => "r_pow(%a0, %a1)".
-Crane Extract Inlined Constant sqrt => "r_sqrt(%a0)".
-
-(* --- Trigonometry --- *)
-Crane Extract Inlined Constant sin => "r_sin(%a0)".
-Crane Extract Inlined Constant cos => "r_cos(%a0)".
-Crane Extract Inlined Constant tan => "r_tan(%a0)".
-Crane Extract Inlined Constant asin => "r_asin(%a0)".
-Crane Extract Inlined Constant acos => "r_acos(%a0)".
-Crane Extract Inlined Constant atan => "r_atan(%a0)".
-Crane Extract Inlined Constant PI => "Real::pi()".
-
-(* --- Decision procedures (return sumbool -> bool) --- *)
-Crane Extract Inlined Constant Rle_dec => "(%a0 <= %a1)".
-Crane Extract Inlined Constant Rlt_dec => "(%a0 < %a1)".
-Crane Extract Inlined Constant Req_EM_T => "(%a0 == %a1)".
-
-(* --- Coercions --- *)
-Crane Extract Inlined Constant INR => "Real::from_nat(%a0)".
-Crane Extract Inlined Constant IZR => "Real::from_z(%a0)".
-Crane Extract Inlined Constant IPR => "Real::from_pos(%a0)".
-(* [IPR_2 p = 2 * IPR p]; double in real arithmetic rather than doing [2 * p] in
-   the integer domain, so this stays independent of the integer representation
-   (e.g. avoids relying on [unsigned]-typed multiplication). *)
-Crane Extract Inlined Constant IPR_2 => "(Real::from_pos(%a0) + Real::from_pos(%a0))".
-
-(* --- Short-circuit constructive real infrastructure --- *)
-Crane Extract Inlined Constant Rabst => "%a0".
-Crane Extract Inlined Constant Rrepr => "%a0".
+#[export] Instance real_r0_mapping : OperationMapping (Ref R0) :=
+  {| operation_headers := ["crane_real.h"];
+     operation_cpp := Expr "Real(0.0L)";
+     operation_contract :=
+       PureOperation [] ReturnValue [] |}.
+#[export] Instance real_r1_mapping : OperationMapping (Ref R1) :=
+  {| operation_headers := ["crane_real.h"];
+     operation_cpp := Expr "Real(1.0L)";
+     operation_contract :=
+       PureOperation [] ReturnValue [] |}.
+#[export] Instance real_rplus_mapping : OperationMapping (Ref Rplus) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(r1) + %arg(r2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r1"; argument_use := Read |};
+          {| argument_name := "r2"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rmult_mapping : OperationMapping (Ref Rmult) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(r1) * %arg(r2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r1"; argument_use := Read |};
+          {| argument_name := "r2"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_ropp_mapping : OperationMapping (Ref Ropp) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(-%arg(r))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rinv_mapping : OperationMapping (Ref Rinv) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_inv(%arg(r))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rminus_mapping : OperationMapping (Ref Rminus) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(r1) - %arg(r2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r1"; argument_use := Read |};
+          {| argument_name := "r2"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rdiv_mapping : OperationMapping (Ref Rdiv) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(r1) / %arg(r2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r1"; argument_use := Read |};
+          {| argument_name := "r2"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rabs_mapping : OperationMapping (Ref Rabs) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_abs(%arg(r))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rsqr_mapping : OperationMapping (Ref Rsqr) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_sqr(%arg(r))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rmax_mapping : OperationMapping (Ref Rmax) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_max(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rmin_mapping : OperationMapping (Ref Rmin) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_min(%arg(x), %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_pow_mapping : OperationMapping (Ref pow) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_pow(%arg(r), %arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r"; argument_use := Read |};
+          {| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_sqrt_mapping : OperationMapping (Ref sqrt) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_sqrt(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_sin_mapping : OperationMapping (Ref sin) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_sin(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_cos_mapping : OperationMapping (Ref cos) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_cos(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_tan_mapping : OperationMapping (Ref tan) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_tan(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_asin_mapping : OperationMapping (Ref asin) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_asin(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_acos_mapping : OperationMapping (Ref acos) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_acos(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_atan_mapping : OperationMapping (Ref atan) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "r_atan(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_pi_mapping : OperationMapping (Ref PI) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "Real::pi()";
+     operation_contract :=
+       PureOperation [] ReturnValue [] |}.
+#[export] Instance real_rle_dec_mapping : OperationMapping (Ref Rle_dec) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(r1) <= %arg(r2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r1"; argument_use := Read |};
+          {| argument_name := "r2"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rlt_dec_mapping : OperationMapping (Ref Rlt_dec) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(r1) < %arg(r2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r1"; argument_use := Read |};
+          {| argument_name := "r2"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_req_em_t_mapping : OperationMapping (Ref Req_EM_T) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(r1) == %arg(r2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "r1"; argument_use := Read |};
+          {| argument_name := "r2"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_inr_mapping : OperationMapping (Ref INR) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "Real::from_nat(%arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_izr_mapping : OperationMapping (Ref IZR) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "Real::from_z(%arg(z))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "z"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_ipr_mapping : OperationMapping (Ref IPR) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "Real::from_pos(%arg(p))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "p"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_ipr_2_mapping : OperationMapping (Ref IPR_2) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(Real::from_pos(%arg(p)) + Real::from_pos(%arg(p)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "p"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rabst_mapping : OperationMapping (Ref Rabst) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance real_rrepr_mapping : OperationMapping (Ref Rrepr) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
 
 (* --- Skip R implementation modules ---
    RbaseSymbolsImpl and RinvImpl define R via constructive reals.
