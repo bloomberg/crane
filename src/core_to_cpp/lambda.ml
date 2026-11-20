@@ -37,7 +37,7 @@ let forwarded ~by_value ty (v : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Lowered.Expr.t =
 
 (** Whether a lambda generated as [passing] says owns each parameter it
    takes, innermost first, as its parameters are listed. *)
-let owned_flags passing = List.rev_map (fun p -> p = Core_plan.Callable_abi.Owned) (List.filter_map Fun.id passing)
+let owned_flags passing = List.rev_map (fun p -> p = Cpp_ir.Param_mode.Owned) (List.filter_map Fun.id passing)
 
 (** The lambda [a] as a C++ closure, written against [expected_ty] where the
     position states a function type: its binders split where the expected
@@ -349,15 +349,16 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
               | Some i -> not (Base.Core_util.ast_occurs (i + 1) a)
               | None -> false
             in
-            let param_cpp_ty, body_subst =
+            let param_cpp_ty, mode, body_subst =
               Lambda_params.lambda_param_cpp_type cx env ~ns:cx.ctx.input.method_self_ns ~tvars
                 ~rank2_carrier
                 ~reified:(cx.ctx.input.itree_mode = Reified) ~n_params:n_all_params ~body:a ~unused
                 ~slot_dom:(slot_dom_cpp_ty j) arg
             in
-            (param_cpp_ty, Some id, body_subst) )
+            ((param_cpp_ty, Some id, body_subst), mode) )
           filtered_args_with_owned
       in
+      let cpp_arg_info, cpp_arg_modes = List.split cpp_arg_info in
       (* A binder the body never uses is a parameter with no name: named,
          it would be unused -- a [trigger Inc ;; k] continuation's [unit] --
          and could shadow a name the body introduces.  One kept only for the
@@ -377,17 +378,19 @@ let gen_lambda cx ~expected_ty ~slot env (a : Core.Expr.t) : Cpp_ir.Lowered.Expr
       (* The body owns the parameters the lambda declares by value, as a
          function's does. *)
       let lambda_owned =
+        let rec position i j = function
+          | [] -> None
+          | i' :: rest -> if i' = i then Some j else position i (j + 1) rest
+        in
         let declared i =
-          let rec position j = function
-            | [] -> None
-            | i' :: rest -> if i' = i then Some j else position (j + 1) rest
-          in
           Option.map (fun j -> let ty, _, _ = List.nth cpp_arg_info j in ty)
-            (position 0 emitted_binder_indices)
+            (position i 0 emitted_binder_indices)
         in
         Ownership.owned_parameters (List.length args_with_owned)
           ~owned:(fun i ->
-            match declared i with Some ty -> not (Ownership.declared_by_reference ty) | None -> false )
+            match position i 0 emitted_binder_indices with
+            | Some j -> Cpp_ir.Param_mode.holds_own_value (List.nth cpp_arg_modes j)
+            | None -> false )
           ~declared
           ~ty:(fun i -> let _, ty, _ = List.nth args_with_owned i in ty)
       in

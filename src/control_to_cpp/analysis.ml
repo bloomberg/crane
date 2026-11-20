@@ -107,12 +107,21 @@ let rec is_reference_type : ty -> bool = function
   | Const t -> is_reference_type t
   | _ -> false
 
-(** Whether a parameter declared at [ty] is a reference the body does not
-    own: a [const T &], or the [F &&] a deduced callable is. *)
-let rec declared_by_reference : ty -> bool = function
-  | Reference _ | Const _ -> true
-  | In_namespace (_, t) -> declared_by_reference t
-  | _ -> false
+(** How each of the parameters [params] of [what] is passed, as the
+    declaration records it by name in [recorded] ({!Cpp_ir.Param_mode}),
+    parallel to [params].  One recorded nowhere is a producer that declared
+    the parameter without deciding its mode: under [CRANE_CHECK_IR] a
+    violation, and otherwise read off its declared type. *)
+let param_modes ~what (recorded : (Id.t * Cpp_ir.Param_mode.t) list) (params : (Id.t * ty) list) =
+  List.map
+    (fun (x, ty) ->
+      match List.assoc_opt x recorded with
+      | Some m -> m
+      | None ->
+        Base.Probe.violation "parameter mode"
+          Pp.(str "the parameter " ++ Id.print x ++ str " of " ++ str what ++ str " records no mode");
+        Cpp_ir.Param_mode.spelled ty )
+    params
 
 (** Whether [ty] mentions a [std::shared_ptr] anywhere. *)
 let contains_shared_ptr (t : ty) = Cpp_ir.Children.exists_type (function Shared_pointer _ -> true | _ -> false) t

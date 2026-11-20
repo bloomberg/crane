@@ -94,6 +94,7 @@ and lambda (l : l Lambda.t) : r Lambda.t =
     capture = capture l.capture;
     moved = l.moved;
     binders = l.binders;
+    modes = l.modes;
     fixpoint = l.fixpoint }
 
 (** [aggregate a] is the aggregate initialisation [a] at the resolved
@@ -306,6 +307,7 @@ let method_ (m : l Method.t) : r Method.t =
     is_noexcept = m.is_noexcept;
     is_conversion = m.is_conversion;
     binders = m.binders;
+    modes = m.modes;
     receiver_binder = m.receiver_binder;
     loop = m.loop }
 
@@ -363,6 +365,7 @@ let function_ (f : l Function.t) : r Function.t =
       | Definition (ps, body) -> Definition (typed ps, stmts body)
       | Declaration ps -> Declaration (list (fun (x, t) -> (x, type_ t)) ps) );
     binders = f.binders;
+    modes = f.modes;
     loop = f.loop }
 
 (** [decl d] is [d] at the resolved phase; raises {!Owed} also at a callable

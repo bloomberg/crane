@@ -463,6 +463,7 @@ let stored_adapter ?(moved = []) params (e : Cpp_ir.Lowered.Expr.t) : Cpp_ir.Low
       capture = Stored;
       moved;
       binders = [];
+      modes = [];
       fixpoint = None }
 
 (** Whether a parameter of type [ty] an adapter takes is worth moving into

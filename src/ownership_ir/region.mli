@@ -386,13 +386,15 @@ end
 (** How each function of a local fixpoint passes its parameters -- the
     callable plan of a function with no global, which the frames of its
     machine read ({!Storage}): for each of its Core
-    parameters, outermost first, how the lambda it is generated as takes
-    it, [None] for one of no runtime value, which the lambda does not take.
+    parameters, outermost first, whether the lambda it is generated as owns
+    it ({!Cpp_ir.Param_mode.ownership}), [None] for one of no runtime value,
+    which the lambda does not take.  The form each is declared in is decided
+    with the lambda, which records the whole mode ({!Cpp_ir.Grammar.Lambda}).
     Translation decides it once per group, before generating the group's
     lambdas from it and before any loop is lowered from them
     (the [local_passing] of [Core_to_cpp.Lower_expr]). *)
 module Local_passing : sig
-  type t = Core_plan.Callable_abi.passing option list
+  type t = Cpp_ir.Param_mode.ownership option list
 
   (** [record member t]: the function [member] -- the fixpoint's
       occurrence, and the function's position in it -- passes its

@@ -73,6 +73,7 @@ let invoked_in_place body : expr =
           capture = Runs_in_place;
           moved = [];
           binders = [];
+          modes = [];
           fixpoint = None },
       [] )
 
