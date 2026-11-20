@@ -116,6 +116,9 @@ Inductive ViewEscape (T : Type) : Type :=
 Arguments MaterialiseView {T} construction.
 Arguments BorrowOnly {T}.
 
+(** The read view of a type with literals (a string) is constructible from
+    a C++ string literal, and from a literal and its length: a literal
+    taken as the view is the view of the literal itself. *)
 Record ViewSpec (T : Type) (mode : ViewMode) : Type := {
   view_headers : list string;
   view_cpp : Crane.Cpp.TypeExpr;

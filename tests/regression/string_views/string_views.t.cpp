@@ -74,6 +74,13 @@ int main() {
   ASSERT(StringViews::outer(hello) == 15);
   ASSERT(StringViews::joined_prefix_size("a", "bcdefghijklmnopqrstuvwxyz") ==
          3);
+  ASSERT(StringViews::literal_size == 5);
+  ASSERT(StringViews::literal_length == 3);
+  ASSERT(StringViews::literal_prefix_size == 3);
+  ASSERT(StringViews::with_nul.size() == 3);
+  ASSERT(StringViews::with_nul == std::string("a\0b", 3));
+  ASSERT(StringViews::nul_size == 3);
+  ASSERT(StringViews::nul_length == 3);
   if (testStatus == 0) {
     std::cout << "All string_views tests passed!" << std::endl;
   }
