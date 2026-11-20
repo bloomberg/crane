@@ -1892,7 +1892,10 @@ let init ?(compute = false) ?(inner = false) modular library =
   set_extrcompute compute;
   Unit_plan.Cpp_state.reset_cpp_state ();
   (* Reset ALL C++ global state from previous extractions *)
-  reset ()
+  reset ();
+  (* Typed mappings: which heads have an active instance.  Mappings are
+     consulted while the environment is collected, so this comes first. *)
+  Base.Mapping_discovery.discover ()
 
 (** Emits warnings about opaque constants and axioms encountered during
     extraction. *)
