@@ -3,14 +3,18 @@
 #include "crane_fn.h"
 #include "obj.h"
 #include "small_vector.h"
+#include <algorithm>
+#include <array_storage.h>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
 #include <crane_st.h>
 #include <cstdint>
 #include <memory>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <template_argument.h>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -27,37 +31,48 @@ concept STRefClass = requires {
 };
 
 struct StArrayHelpers {
+  /// Only reads a cell.
+  static uint64_t peek(std::span<const uint64_t> arr, uint64_t i);
   /// Reads one cell and writes it back.
-  static void bump(const std::shared_ptr<std::vector<uint64_t>> &arr,
-                   uint64_t i);
+  static void bump(std::span<uint64_t> arr, uint64_t i);
   /// A write two calls deep.
-  static void middle(const std::shared_ptr<std::vector<uint64_t>> &arr,
-                     uint64_t i);
-  static void outer(const std::shared_ptr<std::vector<uint64_t>> &arr);
+  static void middle(std::span<uint64_t> arr, uint64_t i);
+  static void outer(std::span<uint64_t> arr);
   /// Swaps the first and last cells: swapArray is called, not unfolded.
-  static void swap_ends(const std::shared_ptr<std::vector<uint64_t>> &arr,
-                        uint64_t last);
+  static void swap_ends(std::span<uint64_t> arr, uint64_t last);
   /// Returns one of its arrays: it keeps them, so takes them by value.
-  static std::shared_ptr<std::vector<uint64_t>>
-  pick(bool b, std::shared_ptr<std::vector<uint64_t>> arr1,
-       std::shared_ptr<std::vector<uint64_t>> arr2);
+  static std::shared_ptr<crane::array_storage<uint64_t>>
+  pick(bool b, std::shared_ptr<crane::array_storage<uint64_t>> arr1,
+       std::shared_ptr<crane::array_storage<uint64_t>> arr2);
   /// Writes its first array and passes both to pick, which keeps them:
   /// by value too.
-  static std::shared_ptr<std::vector<uint64_t>>
-  write_then_pick(std::shared_ptr<std::vector<uint64_t>> arr1,
-                  std::shared_ptr<std::vector<uint64_t>> arr2);
+  static std::shared_ptr<crane::array_storage<uint64_t>>
+  write_then_pick(std::shared_ptr<crane::array_storage<uint64_t>> arr1,
+                  std::shared_ptr<crane::array_storage<uint64_t>> arr2);
   /// Returns its array through the monad's Ret, a legacy mapping whose
   /// argument Crane takes to be only read: borrowed, and copied where it is
   /// returned.
-  static std::shared_ptr<std::vector<uint64_t>>
-  keep(const std::shared_ptr<std::vector<uint64_t>> &arr);
+  static std::shared_ptr<crane::array_storage<uint64_t>>
+  keep(const std::shared_ptr<crane::array_storage<uint64_t>> &arr);
+  /// Recursive helpers keep the view: a tail-recursive write loop takes the
+  /// writable view, a non-tail-recursive read the read view.
+  static void zero_from(std::span<uint64_t> arr, uint64_t i, uint64_t n);
+  static uint64_t sum_from(std::span<const uint64_t> arr, uint64_t i,
+                           uint64_t n);
+  /// Writes a cell, then refills the array canonically.
+  static void
+  write_and_refill(const std::shared_ptr<crane::array_storage<uint64_t>> &arr,
+                   uint64_t v);
   /// Replaces its array, then writes the new one.
-  static void regrow_then_write(std::shared_ptr<std::vector<uint64_t>> &arr,
-                                uint64_t n);
+  static void
+  regrow_then_write(std::shared_ptr<crane::array_storage<uint64_t>> &arr,
+                    uint64_t n);
   /// A bool array: reads one cell and writes its negation back.
-  static void flip(const std::shared_ptr<std::vector<bool>> &arr, uint64_t i);
+  static void flip(std::span<bool> arr, uint64_t i);
   static List<uint64_t> helpers_list(const List<uint64_t> &xs);
   static std::pair<List<uint64_t>, List<uint64_t>> keep_list(uint64_t n);
+  static std::pair<uint64_t, List<uint64_t>> refill_list(uint64_t n);
+  static std::pair<uint64_t, List<uint64_t>> loops_list(uint64_t n);
   static List<uint64_t> regrow_list(uint64_t n);
   static List<bool> flip_list(const List<bool> &bs);
   static std::pair<bool, List<bool>> bools_filled(uint64_t n);
@@ -232,9 +247,8 @@ struct STMonad {
   template <typename _tcI0, typename T1 = void, typename T2, typename T3 = void,
             typename T4>
     requires STRefClass<_tcI0, T2>
-  static void swapArray(const T2 &_x,
-                        const std::shared_ptr<std::vector<T4>> &arr,
-                        const T2 &i, const T2 &j);
+  static void swapArray(const T2 &_x, std::span<T4> arr, const T2 &i,
+                        const T2 &j);
 };
 
 struct nat_ix_stref {
@@ -250,12 +264,12 @@ static_assert(STRefClass<nat_ix_stref, uint64_t>);
 
 template <typename _tcI0, typename T1, typename T2, typename T3, typename T4>
   requires STRefClass<_tcI0, T2>
-void STMonad::swapArray(const T2 &, const std::shared_ptr<std::vector<T4>> &arr,
-                        const T2 &i, const T2 &j) {
-  T4 vi = (*arr)[i];
-  T4 vj = (*arr)[j];
-  (*arr)[i] = std::move(vj);
-  (*arr)[j] = std::move(vi);
+void STMonad::swapArray(const T2 &, std::span<T4> arr, const T2 &i,
+                        const T2 &j) {
+  T4 vi = std::span<const T4>{arr}[i];
+  T4 vj = std::span<const T4>{arr}[j];
+  arr[i] = std::move(vj);
+  arr[j] = std::move(vi);
   return;
 }
 

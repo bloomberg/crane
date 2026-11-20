@@ -11,7 +11,7 @@
 
 include Grammar.Param_mode
 
-let make ?(role = Value) ownership form = {ownership; form; role}
+let make ?(role = Value) ownership form = {ownership; form; role; invalidates_views = false}
 
 (** Owned, by value: the caller moves or copies its argument in. *)
 let owned = make Owned By_value
@@ -35,10 +35,10 @@ let receiver = make ~role:Receiver Borrowed By_value
 let equal (a : t) (b : t) = a = b
 
 (** The type a parameter whose value is of type [t] is declared at when
-    passed in [form]. *)
+    passed in [form]; for a view, [t] is the view type already. *)
 let declare form (t : 'p Type.t) : 'p Type.t =
   match form with
-  | By_value -> t
+  | By_value | By_view _ -> t
   | By_const_value -> Const t
   | By_const_reference -> Reference (Lvalue, Const t)
   | By_forwarding_reference -> Reference (Forwarding, t)
@@ -67,6 +67,9 @@ let spelled ?(owned = false) (t : 'p Type.t) =
     declared by value, not [const], a reference or the receiver. *)
 let holds_own_value m = m.form = By_value && m.role = Value
 
+(** The view a parameter is, if it is one. *)
+let view m = match m.form with By_view (k, head) -> Some (k, head) | _ -> None
+
 (** Whether the parameter is declared by value, [const] or not, a pointer
     the receiver is included. *)
 let by_value m = m.form = By_value
@@ -82,7 +85,7 @@ let is_receiver m = m.role = Receiver
     for: [t] without the declarator [m]'s form adds ({!declare}). *)
 let rec value_type m (t : 'p Type.t) : 'p Type.t =
   match (m.form, t) with
-  | By_value, t -> t
+  | (By_value | By_view _), t -> t
   | By_const_value, Const t -> t
   | By_const_reference, Reference (Lvalue, Const t) -> t
   | (By_forwarding_reference | By_reference), Reference (_, t) -> t
@@ -99,14 +102,18 @@ let disagreement m (t : 'p Type.t) =
     | By_const_reference -> "by const reference"
     | By_forwarding_reference -> "by forwarding reference"
     | By_reference -> "by reference"
+    | By_view (Read_view, _) -> "by read view"
+    | By_view (Write_view, _) -> "by writable view"
   in
   let spelled = spelled_form t in
-  if spelled <> m.form then Some ("recorded " ^ name m.form ^ ", declared " ^ name spelled)
+  (* A view is a value, spelled as one. *)
+  let recorded = match m.form with By_view _ -> By_value | f -> f in
+  if spelled <> recorded then Some ("recorded " ^ name m.form ^ ", declared " ^ name spelled)
   else
     match (m.ownership, m.form) with
-    | Owned, (By_const_value | By_const_reference | By_forwarding_reference | By_reference) ->
+    | Owned, (By_const_value | By_const_reference | By_forwarding_reference | By_reference | By_view _) ->
       Some ("recorded owned " ^ name m.form)
-    | Forwarded, (By_value | By_const_value | By_const_reference | By_reference)
+    | Forwarded, (By_value | By_const_value | By_const_reference | By_reference | By_view _)
      |Borrowed, By_forwarding_reference ->
       Some "recorded forwarded other than by forwarding reference"
     | _ -> (

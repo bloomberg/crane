@@ -505,7 +505,24 @@ let operation_mapping env ~instance ~(source : declaration) cx (m : operation_ma
           path "WritesComponent" p;
           Option.iter (declared "WritesComponent") s
         | Invalidates_element_borrows p -> path "InvalidatesElementBorrows" p
-        | Invalidates_views p -> path "InvalidatesViews" p
+        | Invalidates_views p -> (
+          path "InvalidatesViews" p;
+          (* An argument whose views the operation invalidates (it may
+             reallocate) cannot be given to it as a view (design 13.8). *)
+          match (use_of p.path_argument, argument_mapping p.path_argument) with
+          | Read, Some {type_views = Read_views _ | Read_write_views _; _} ->
+            failf
+              "argument %s is declared Read, so it is given as its type's read view, but \
+               InvalidatesViews names it: an operation that invalidates views \
+               cannot work through one; declare it ReadCanonical, WriteCanonical or Replace"
+              (quote p.path_argument)
+          | Write, Some {type_views = Read_write_views _; _} ->
+            failf
+              "argument %s is declared Write, so it is given as its type's writable view, but \
+               InvalidatesViews names it: an operation that invalidates views \
+               (a resize) cannot work through one; declare it WriteCanonical or Replace"
+              (quote p.path_argument)
+          | _ -> () )
         | Retains_argument (x, p) ->
           impure "retain an argument (RetainsArgument)";
           declared "RetainsArgument" x;

@@ -2,10 +2,10 @@
 
 /// for_each_with at B := unit, unfolded below into a local fixpoint.
 uint64_t UnitAccumLocalFix::fill(uint64_t n) {
-  std::shared_ptr<std::vector<uint64_t>> a =
-      std::make_shared<std::vector<uint64_t>>(crane::st::extent(
+  std::shared_ptr<crane::array_storage<uint64_t>> a =
+      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(
           UINT64_C(0), (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))),
-                                              UINT64_C(0));
+                                                       UINT64_C(0));
   [&]() {
     auto for_each_with =
         [](const List<uint64_t> &xs, std::monostate,
@@ -29,23 +29,25 @@ uint64_t UnitAccumLocalFix::fill(uint64_t n) {
         };
     return for_each_with(ListDef::seq(UINT64_C(0), n), std::monostate{},
                          [=](std::monostate, uint64_t i) {
-                           (*a)[i] = (i * UINT64_C(2));
+                           std::span<uint64_t>{*a}[i] = (i * UINT64_C(2));
                            return std::monostate{};
                          });
   }();
-  return (*a)[(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
+  return std::span<const uint64_t>{*a}[
+      (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
 }
 
 uint64_t UnitAccumLocalFix::fill_top(uint64_t n) {
-  std::shared_ptr<std::vector<uint64_t>> a =
-      std::make_shared<std::vector<uint64_t>>(crane::st::extent(
+  std::shared_ptr<crane::array_storage<uint64_t>> a =
+      std::make_shared<crane::array_storage<uint64_t>>(crane::st::extent(
           UINT64_C(0), (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))),
-                                              UINT64_C(0));
+                                                       UINT64_C(0));
   each_unit(ListDef::seq(UINT64_C(0), n), [=](std::monostate, uint64_t i) {
-    (*a)[i] = (i * UINT64_C(3));
+    std::span<uint64_t>{*a}[i] = (i * UINT64_C(3));
     return std::monostate{};
   });
-  return (*a)[(((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
+  return std::span<const uint64_t>{*a}[
+      (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))))];
 }
 
 /// A pure top-level Fixpoint returning its unit accumulator.

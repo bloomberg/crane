@@ -26,6 +26,23 @@ type constructor = { source : Names.constructor; build : string; view : view opt
 
 type interface = Abstract | Algebraic of constructor list
 
+type view_kind = Read_view | Write_view
+
+type escape = Materialise of string | Borrow_only
+
+type view_plan = {
+  view_type : type_expr;
+  from_canonical : string;
+  escape : escape;
+  view_headers : string list;
+}
+
+type views = {
+  read : view_plan option;
+  write : view_plan option;
+  read_from_write : string option;
+}
+
 type t = {
   instance : GlobRef.t;
   head : GlobRef.t;
@@ -38,6 +55,7 @@ type t = {
   lifetime : lifetime_model;
   release : release_plan;
   interface : interface;
+  views : views;
   headers : string list;
 }
 
@@ -125,8 +143,9 @@ let starts_at text i s =
   let k = String.length s in
   i + k <= String.length text && String.sub text i k = s
 
-(* [%stored(x)] spelled as the [%tN] of the parameter [x] is. *)
-let compile_template ~fail ~stored text =
+(* [%stored(x)] spelled as the [%tN] of the parameter [x] is, and each hole
+   [%h] of [renamed] as the text [renamed] gives it. *)
+let compile_template ?(renamed = []) ~fail ~stored text =
   let n = String.length text in
   let b = Buffer.create n in
   let rec go i =
@@ -137,7 +156,13 @@ let compile_template ~fail ~stored text =
       let name = String.trim (String.sub text start (max 0 (close - start))) in
       Buffer.add_string b (Printf.sprintf "%%t%d" (stored name));
       go (close + 1) )
-    else if starts_at text i "%tmp" && i + 4 < n && text.[i + 4] >= '0' && text.[i + 4] <= '9' then
+    else
+      match List.find_opt (fun (h, _) -> starts_at text i h) renamed with
+      | Some (h, r) ->
+        Buffer.add_string b r;
+        go (i + String.length h)
+      | None ->
+    if starts_at text i "%tmp" && i + 4 < n && text.[i + 4] >= '0' && text.[i + 4] <= '9' then
       fail
         (Pp.strbrk
            "a template uses a fresh-name hole (%tmpN), which constructor and \
@@ -207,6 +232,31 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     | Cpp.Unsafe_verbatim s -> Verbatim s
   in
   let template = compile_template ~fail ~stored in
+  (* A view's conversions are term templates of one value argument: the
+     canonical value ([%value]) or the view ([%view]) is its [%a0]. *)
+  let construction ~hole = function
+    | Expr e -> compile_template ~renamed:[(hole, "%a0")] ~fail ~stored e
+    | With_body _ ->
+      fail (Pp.strbrk "materialises a view with a WithBody construction, which is not supported yet; use Expr.")
+  in
+  let view_plan (v : view_spec) =
+    { view_type = type_expr v.view_cpp;
+      from_canonical = construction ~hole:"%value" (Expr v.view_from_canonical);
+      escape =
+        ( match v.view_escape with
+        | Materialise_view k -> Materialise (construction ~hole:"%view" k)
+        | Borrow_only -> Borrow_only );
+      view_headers = v.view_headers }
+  in
+  let views =
+    match m.type_views with
+    | No_views -> {read = None; write = None; read_from_write = None}
+    | Read_views r -> {read = Some (view_plan r); write = None; read_from_write = None}
+    | Read_write_views (r, w, conv) ->
+      { read = Some (view_plan r);
+        write = Some (view_plan w);
+        read_from_write = Some (construction ~hole:"%view" (Expr conv)) }
+  in
   let interface =
     match m.type_interface with
     | Abstract_interface -> Abstract
@@ -254,7 +304,24 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     lifetime = m.type_lifetime;
     release = m.type_release;
     interface;
-    headers = m.type_headers }
+    views;
+    headers =
+      m.type_headers
+      @ (match m.type_views with
+        | No_views -> []
+        | Read_views r -> r.view_headers
+        | Read_write_views (r, w, _) -> r.view_headers @ w.view_headers)
+      (* A view conversion may read its component types back from a value
+         ({!Cpp_passes.View_args}). *)
+      @
+      let names_component text =
+        let n = String.length text in
+        let rec at i = i + 2 < n && ((text.[i] = '%' && text.[i + 1] = 't') || at (i + 1)) in
+        at 0
+      in
+      if List.exists (fun v -> names_component v.from_canonical) (List.filter_map Fun.id [views.read; views.write])
+      then ["template_argument.h"]
+      else [] }
 
 let plans : t GlobRef.Map.t ref = State.cell State.Extraction GlobRef.Map.empty
 
@@ -281,7 +348,7 @@ let find g =
 
 (** {1 Queries} *)
 
-let cpp_type (type p) plan (tys : p Cpp_ir.Type.t list) : p Cpp_ir.Type.t =
+let instantiate (type p) (e : type_expr) (tys : p Cpp_ir.Type.t list) : p Cpp_ir.Type.t =
   let rec go : type_expr -> p Cpp_ir.Type.t = function
     | Name s -> External (s, [])
     | Apply (s, args) -> External (s, List.map (function Type t -> go t | Value v -> Cpp_ir.Type.External (v, [])) args)
@@ -290,7 +357,48 @@ let cpp_type (type p) plan (tys : p Cpp_ir.Type.t list) : p Cpp_ir.Type.t =
     | Const t -> Const (go t)
     | Verbatim s -> External (s, [])
   in
-  go plan.canonical
+  go e
+
+let cpp_type plan tys = instantiate plan.canonical tys
+
+let view plan = function Read_view -> plan.views.read | Write_view -> plan.views.write
+
+let has_view plan k = Option.has_some (view plan k)
+
+let view_type plan k tys =
+  match view plan k with
+  | Some v -> instantiate v.view_type tys
+  | None -> CErrors.anomaly Pp.(str "Crane: a view the typed mapping does not declare.")
+
+(* The type arguments [ty], an instantiation of [e], gives the parameters
+   [e] names, where it is one. *)
+let match_instance (type p) (e : type_expr) (ty : p Cpp_ir.Type.t) : (int * p Cpp_ir.Type.t) list option =
+  let rec go (e : type_expr) (t : p Cpp_ir.Type.t) acc =
+    match (e, t) with
+    | Parameter i, t -> Some ((i, t) :: acc)
+    | Name s, External (s', []) | Verbatim s, External (s', []) when s = s' -> Some acc
+    | Apply (s, args), External (s', ts) when s = s' && List.length args = List.length ts ->
+      List.fold_left2
+        (fun acc a t ->
+          match (acc, a) with
+          | None, _ -> None
+          | Some acc, Type a -> go a t acc
+          | Some acc, Value _ -> Some acc)
+        (Some acc) args ts
+    | Pointer e, Pointer t | Const e, Const t -> go e t acc
+    | _ -> None
+  in
+  go e ty []
+
+let view_arguments (type p) plan k (ty : p Cpp_ir.Type.t) : p Cpp_ir.Type.t list option =
+  match view plan k with
+  | None -> None
+  | Some v -> (
+    match match_instance v.view_type ty with
+    | None -> None
+    | Some found ->
+      let n = List.fold_left (fun n (i, _) -> max n (i + 1)) 0 found in
+      Some (List.init n (fun i -> match List.assoc_opt i found with Some t -> t | None -> Cpp_ir.Type.Any)) )
 
 let type_text plan =
   let rec go = function
@@ -399,7 +507,12 @@ let read_by_value p ~argument =
   | Read_only_handle h | Mutable_handle h -> h = Handle_by_value
   | Explicit_access {explicit_read; _} -> explicit_read = Canonical_by_value
 
-type physical = As_read | Physical_value | Physical_const_reference | Physical_mutable_reference
+type physical =
+  | As_read
+  | Physical_value
+  | Physical_const_reference
+  | Physical_mutable_reference
+  | Physical_view of view_kind
 
 let explicit_form = function
   | Some Canonical_by_value -> Physical_value

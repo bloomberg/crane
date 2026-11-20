@@ -85,14 +85,22 @@ and Param_mode : sig
       value it stands for: [T], [const T] (a lifted helper's), [const T &],
       the [T &&] a deduced callable is, or a mutable [T &].  No parameter is
       planned [By_reference] yet: only a declaration read back has it
-      ({!Cpp_ir.Param_mode.spelled}).  A view taken through a conversion is
-      a form to come. *)
+      ({!Cpp_ir.Param_mode.spelled}).  [By_view] is a typed mapping's read
+      or writable view of the value, by value (design 7, 12.5): declared at
+      the view type, not the value's, and given its argument through the
+      mapping's declared conversion ({!Cpp_passes.View_args}). *)
   type form =
     | By_value
     | By_const_value
     | By_const_reference
     | By_forwarding_reference
     | By_reference
+    | By_view of view * GlobRef.t  (** the view, of the mapped type headed so *)
+
+  (** A typed mapping's read view or writable view. *)
+  and view =
+    | Read_view
+    | Write_view
 
   (** What the parameter is to its body: a value, or the receiver a loop
       over a method is entered with, [_self], a pointer to the object the
@@ -108,6 +116,10 @@ and Param_mode : sig
     ownership : ownership;
     form : form;
     role : role;
+    invalidates_views : bool;
+        (** whether the callee may invalidate a view of its argument
+            (design 7.8): replace it, or resize what it holds, so that a
+            caller may not pass a view of the same value beside it *)
   }
 end =
   Param_mode

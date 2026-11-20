@@ -67,29 +67,29 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
     auto _once2 = nat_idx::zero();
     auto _once3 = nat_idx::fromNat(
         (((_once1 - UINT64_C(1)) > _once1 ? 0 : (_once1 - UINT64_C(1)))));
-    std::shared_ptr<std::vector<uint64_t>> arr =
+    std::shared_ptr<crane::array_storage<uint64_t>> arr =
         crane::st::new_list_array<uint64_t>(
             crane::st::extent(std::move(_once2), std::move(_once3)), xs);
     auto _once7 = xs.length();
     [&]() {
-      static std::vector<std::pair<
-          std::pair<std::pair<std::shared_ptr<std::vector<uint64_t>>, uint64_t>,
-                    uint64_t>,
-          uint64_t>> _stack;
+      static std::vector<std::pair<std::pair<
+          std::pair<std::shared_ptr<crane::array_storage<uint64_t>>, uint64_t>,
+          uint64_t>,
+                                   uint64_t>> _stack;
       _stack.push_back(std::make_pair(
           std::make_pair(std::make_pair(arr, nat_idx::zero()), nat_idx::zero()),
           nat_idx::fromNat(
               (((_once7 - UINT64_C(1)) > _once7 ? 0
                                                 : (_once7 - UINT64_C(1)))))));
       while (!_stack.empty()) {
-        std::pair<std::pair<
-            std::pair<std::shared_ptr<std::vector<uint64_t>>, uint64_t>,
-            uint64_t>,
+        std::pair<std::pair<std::pair<
+            std::shared_ptr<crane::array_storage<uint64_t>>, uint64_t>,
+                            uint64_t>,
                   uint64_t> _arg = _stack.back();
         _stack.pop_back();
-        [](std::pair<std::pair<
-            std::pair<std::shared_ptr<std::vector<uint64_t>>, uint64_t>,
-            uint64_t>,
+        [](std::pair<std::pair<std::pair<
+            std::shared_ptr<crane::array_storage<uint64_t>>, uint64_t>,
+                               uint64_t>,
                      uint64_t> args) {
           auto [p, r] = std::move(args);
           auto [p0, l] = std::move(p);
@@ -128,7 +128,7 @@ List<uint64_t> StQuicksort::quicksort_ST_mine(const List<uint64_t> &xs) {
       }
     } ();
     ;
-    return crane::st::elems<List<uint64_t>>(arr);
+    return crane::st::elems<List<uint64_t>>(std::span<const uint64_t>{*arr});
   }
 }
 

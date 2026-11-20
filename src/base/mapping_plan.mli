@@ -44,6 +44,29 @@ type constructor = {
 
 type interface = Abstract | Algebraic of constructor list
 
+(** A read view or a writable view (design 7.1). *)
+type view_kind = Read_view | Write_view
+
+(** Whether a view escaping its owner is copied into a canonical value, by
+    a term template of [%a0], the view; or may not escape (design 7.2). *)
+type escape = Materialise of string | Borrow_only
+
+type view_plan = {
+  view_type : type_expr;
+  from_canonical : string;
+      (** a term template of [%a0], a live canonical lvalue ([%value]) *)
+  escape : escape;
+  view_headers : string list;
+}
+
+(** No view, a read view, or a read and a writable view (design 7.4). *)
+type views = {
+  read : view_plan option;
+  write : view_plan option;
+  read_from_write : string option;
+      (** narrows the writable view [%a0] to the read view *)
+}
+
 type t = {
   instance : Names.GlobRef.t;
   head : Names.GlobRef.t;
@@ -60,7 +83,8 @@ type t = {
   lifetime : lifetime_model;
   release : release_plan;
   interface : interface;
-  headers : string list;
+  views : views;
+  headers : string list;  (** the views' headers included *)
 }
 
 (** Whether [g] heads a type with a [TypeMapping] instance. *)
@@ -77,6 +101,23 @@ val find : Names.GlobRef.t -> t
 
 (** The canonical C++ type of [p] at the type arguments [tys]. *)
 val cpp_type : t -> 'p Cpp_ir.Type.t list -> 'p Cpp_ir.Type.t
+
+(** [e], a type of the plan, at the type arguments [tys]. *)
+val instantiate : type_expr -> 'p Cpp_ir.Type.t list -> 'p Cpp_ir.Type.t
+
+(** The view of kind [k] [p] declares, if any. *)
+val view : t -> view_kind -> view_plan option
+
+val has_view : t -> view_kind -> bool
+
+(** The type of [p]'s view [k] at the type arguments [tys]; an anomaly when
+    [p] declares no such view. *)
+val view_type : t -> view_kind -> 'p Cpp_ir.Type.t list -> 'p Cpp_ir.Type.t
+
+(** The type arguments a type of [p]'s view [k] was instantiated at, read
+    back from it, as far as the view type names them ([Any] for the
+    others); [None] when it is not an instance of the view type. *)
+val view_arguments : t -> view_kind -> 'p Cpp_ir.Type.t -> 'p Cpp_ir.Type.t list option
 
 (** The canonical type in the legacy type-template vocabulary
     ([std::optional<%t0>]), for the readers that reason about a mapping's
@@ -108,7 +149,12 @@ val read_by_value : t -> argument:(int -> bool) -> bool
 
 (** A physical parameter form the access model asks for (design 6.6), when
     it is not the canonical read form ([As_read]). *)
-type physical = As_read | Physical_value | Physical_const_reference | Physical_mutable_reference
+type physical =
+  | As_read
+  | Physical_value
+  | Physical_const_reference
+  | Physical_mutable_reference
+  | Physical_view of view_kind  (** the view, by value (design 12.5) *)
 
 (** The canonical write-through form of [p] (design 6.6): [T&] for a
     mutable value, the read form for a handle (writing through a handle

@@ -8,7 +8,22 @@ open Mapping_descriptor
 
 type purity = Pure | Effectful | Opaque
 
-type argument = { name : string; use : input_use; position : int; binder : int; in_place : bool }
+type view_conversions = {
+  kind : Mapping_plan.view_kind;
+  mapped : GlobRef.t;
+  from_canonical : string;
+  read_from_write : string option;
+  materialise : string option;
+}
+
+type argument = {
+  name : string;
+  use : input_use;
+  position : int;
+  binder : int;
+  in_place : bool;
+  view : view_conversions option;
+}
 
 type t = {
   instance : GlobRef.t;
@@ -18,6 +33,7 @@ type t = {
   binder_count : int;
   call_binders : int list;
   result : result_spec;
+  result_view : view_conversions option;
   facts : operation_fact list;
   purity : purity;
   headers : string list;
@@ -154,16 +170,30 @@ let compile g =
   (* Whether an argument used as [use] at a binder of type [t] is passed to
      the template as a mutable lvalue: a [Replace] of a mapped type, or a
      write of one whose write-through form is [T&] (design 6.6). *)
-  let in_place use t =
+  let mapped_head t =
     let head, _ = EConstr.decompose_app_list sigma t in
-    let g =
-      match EConstr.kind sigma head with
-      | Constr.Ind (i, _) -> Some (GlobRef.IndRef i)
-      | Constr.Const (k, _) -> Some (GlobRef.ConstRef k)
-      | _ -> None
-    in
-    match g with
-    | Some g when Mapping_plan.is_type_head g -> (
+    match EConstr.kind sigma head with
+    | Constr.Ind (i, _) when Mapping_plan.is_type_head (GlobRef.IndRef i) -> Some (GlobRef.IndRef i)
+    | Constr.Const (k, _) when Mapping_plan.is_type_head (GlobRef.ConstRef k) -> Some (GlobRef.ConstRef k)
+    | _ -> None
+  in
+  (* The view an argument used as [use] at a binder of type [t] is given to
+     the template as (design 7.5): a [Read] the read view, a [Write] the
+     writable view, where its mapped type declares one. *)
+  let view_of use t =
+    match mapped_head t with
+    | None -> None
+    | Some g -> (
+      let p = Mapping_plan.find g in
+      match use with
+      | Read when Mapping_plan.has_view p Read_view -> Some (g, Mapping_plan.Read_view)
+      | Write when Mapping_plan.has_view p Write_view -> Some (g, Mapping_plan.Write_view)
+      | _ -> None )
+  in
+  let in_place use t =
+    match mapped_head t with
+    | Some _ when Option.has_some (view_of use t) -> false
+    | Some g -> (
       let p = Mapping_plan.find g in
       match use with
       | Replace -> Mapping_plan.replace_form p = Mapping_plan.Physical_mutable_reference
@@ -181,13 +211,14 @@ let compile g =
             use = s.argument_use;
             position = pos;
             binder = k;
-            in_place = in_place s.argument_use b.binder_type })
+            in_place = in_place s.argument_use b.binder_type;
+            view = None })
         specs runtime
     | None ->
       List.map
         (fun ((b : Mapping_discovery.operation_binder), k, pos) ->
           let name = match b.binder_name with Name id -> Id.to_string id | Anonymous -> "" in
-          {name; use = Opaque_use; position = pos; binder = k; in_place = false})
+          {name; use = Opaque_use; position = pos; binder = k; in_place = false; view = None})
         runtime
   in
   let arg x =
@@ -213,6 +244,75 @@ let compile g =
   in
   let stored c = dictionaries + stored_parameter ~fail sigma binders candidates c in
   let template t = compile_template ~fail ~arg ~stored t in
+  (* A view's conversions, in the operation's vocabulary: the component
+     types are the operation's type parameters ([%tN]) the type [t] stores
+     them at. *)
+  let conversions ~whole (g, kind) t =
+    let p = Mapping_plan.find g in
+    let at text =
+      (* [text] is in the plan's vocabulary: [%tI] is the mapped type's type
+         argument [I], stored at the operation's type parameter named by
+         the component declared there. *)
+      let component i = List.find_map (fun (c, j) -> if j = i then Some c else None) p.components in
+      let n = String.length text in
+      let b = Buffer.create n in
+      let rec go i =
+        if i >= n then ()
+        else if text.[i] = '%' && i + 2 < n && text.[i + 1] = 't' && text.[i + 2] >= '0' && text.[i + 2] <= '9' then (
+          let j = ref (i + 2) in
+          while !j < n && text.[!j] >= '0' && text.[!j] <= '9' do incr j done;
+          let k = int_of_string (String.sub text (i + 2) (!j - i - 2)) in
+          ( match component k with
+          | Some c ->
+            Buffer.add_string b
+              (Printf.sprintf "%%t%d" (dictionaries + stored_parameter ~fail sigma binders [(whole, t)] c))
+          | None ->
+            fail
+              (Pp.strbrk
+                 (Printf.sprintf
+                    "a view conversion of the type of an argument names its type argument %d, which no component \
+                     names, so Crane cannot name its C++ type at a call."
+                    k)) );
+          go !j )
+        else (
+          Buffer.add_char b text.[i];
+          go (i + 1) )
+      in
+      go 0;
+      Buffer.contents b
+    in
+    let v = Option.get (Mapping_plan.view p kind) in
+    { kind;
+      mapped = g;
+      from_canonical = at v.from_canonical;
+      read_from_write = (match kind with Write_view -> Option.map at p.views.read_from_write | Read_view -> None);
+      materialise = (match v.escape with Materialise e -> Some (at e) | Borrow_only -> None) }
+  in
+  let arguments =
+    List.map
+      (fun a ->
+        match List.find_opt (fun ((b : Mapping_discovery.operation_binder), k, _) -> k = a.binder) runtime with
+        | Some (b, _, _) ->
+          {a with view = Option.map (fun gv -> conversions ~whole:true gv b.binder_type) (view_of a.use b.binder_type)}
+        | None -> a)
+      arguments
+  in
+  (* A result borrowed as a view, which a call materialises where it
+     escapes (design 12.8). *)
+  let result_view =
+    match result with
+    | Return_borrowed (((Read_view_borrow | Writable_view_borrow) as form), _) -> (
+      let kind = match form with Writable_view_borrow -> Mapping_plan.Write_view | _ -> Mapping_plan.Read_view in
+      let rec find t =
+        match mapped_head t with
+        | Some g -> Some (g, t)
+        | None -> List.find_map find (snd (EConstr.decompose_app_list sigma t))
+      in
+      match find binders.result_type with
+      | Some (g, t) when Mapping_plan.has_view (Mapping_plan.find g) kind -> Some (conversions ~whole:true (g, kind) t)
+      | _ -> None )
+    | _ -> None
+  in
   let text =
     match m.operation_cpp with
     | Expr e -> template e
@@ -230,6 +330,7 @@ let compile g =
              match b.role with Runtime _ | Instance -> [k] | Type_parameter _ | Erased -> [])
            binders.binders);
     result;
+    result_view;
     facts;
     purity;
     headers = m.operation_headers }

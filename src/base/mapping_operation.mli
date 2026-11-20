@@ -32,6 +32,19 @@ open Mapping_descriptor
 
 type purity = Pure | Effectful | Opaque
 
+(** How an argument or a result taken as a view is converted (design 12.7,
+    12.8), each a term template of [%a0] in the operation's vocabulary: its
+    [%tN] are the call's type arguments. *)
+type view_conversions = {
+  kind : Mapping_plan.view_kind;  (** the view the template is given *)
+  mapped : Names.GlobRef.t;  (** the mapped type the view is of *)
+  from_canonical : string;  (** the view of the canonical value [%a0] *)
+  read_from_write : string option;  (** a writable view [%a0] narrowed to the read view *)
+  materialise : string option;
+      (** the canonical value copied out of the view [%a0], where the view
+          is [MaterialiseView] *)
+}
+
 type argument = {
   name : string;
   use : input_use;
@@ -40,7 +53,10 @@ type argument = {
   in_place : bool;
       (** the template receives it as a mutable lvalue: a [Replace] of a
           mapped type, or a write of one whose write-through form is [T&]
-          ({!Mapping_plan.write_through}) *)
+          ({!Mapping_plan.write_through}); never one given as a view *)
+  view : view_conversions option;
+      (** the view the template is given the argument as: a [Read] of a
+          type with a read view, a [Write] of one with a writable view *)
 }
 
 type t = {
@@ -54,6 +70,8 @@ type t = {
           type-class instances (type parameters become type variables,
           proofs and [Extraction Implicit] positions are dropped) *)
   result : result_spec;
+  result_view : view_conversions option;
+      (** for a result borrowed as a read or writable view *)
   facts : operation_fact list;
   purity : purity;
   headers : string list;

@@ -15306,3 +15306,25 @@
   (alias runtest)
   (deps typed_mapping_selection.t.exe)
   (action (run ./typed_mapping_selection.t.exe))))
+
+(subdir string_views
+ (rule
+  (targets string_views.t.exe)
+  (deps StringViews.vo string_views.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_views.t.exe string_views.t.cpp string_views.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_views.t.exe)
+  (action (run ./string_views.t.exe))))
+
+(subdir structural_spans
+ (rule
+  (targets structural_spans.t.exe)
+  (deps StructuralSpans.vo structural_spans.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} structural_spans.t.exe structural_spans.t.cpp structural_spans.cpp)))
+ (rule
+  (alias runtest)
+  (deps structural_spans.t.exe)
+  (action (run ./structural_spans.t.exe))))
