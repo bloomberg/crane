@@ -15230,6 +15230,17 @@
   (deps typed_mapping_copy.t.exe)
   (action (run ./typed_mapping_copy.t.exe))))
 
+(subdir typed_mapping_access
+ (rule
+  (targets typed_mapping_access.t.exe)
+  (deps TypedMappingAccess.vo typed_mapping_access.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_access.t.exe typed_mapping_access.t.cpp typed_mapping_access.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_access.t.exe)
+  (action (run ./typed_mapping_access.t.exe))))
+
 (subdir typed_mapping_algebraic
  (rule
   (targets typed_mapping_algebraic.t.exe)
