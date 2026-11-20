@@ -15208,6 +15208,39 @@
   (deps module_alias_shadows_global.t.exe)
   (action (run ./module_alias_shadows_global.t.exe))))
 
+(subdir typed_mapping_abstract
+ (rule
+  (targets typed_mapping_abstract.t.exe)
+  (deps TypedMappingAbstract.vo typed_mapping_abstract.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_abstract.t.exe typed_mapping_abstract.t.cpp typed_mapping_abstract.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_abstract.t.exe)
+  (action (run ./typed_mapping_abstract.t.exe))))
+
+(subdir typed_mapping_copy
+ (rule
+  (targets typed_mapping_copy.t.exe)
+  (deps TypedMappingCopy.vo typed_mapping_copy.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_copy.t.exe typed_mapping_copy.t.cpp typed_mapping_copy.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_copy.t.exe)
+  (action (run ./typed_mapping_copy.t.exe))))
+
+(subdir typed_mapping_algebraic
+ (rule
+  (targets typed_mapping_algebraic.t.exe)
+  (deps TypedMappingAlgebraic.vo typed_mapping_algebraic.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} typed_mapping_algebraic.t.exe typed_mapping_algebraic.t.cpp typed_mapping_algebraic.cpp)))
+ (rule
+  (alias runtest)
+  (deps typed_mapping_algebraic.t.exe)
+  (action (run ./typed_mapping_algebraic.t.exe))))
+
 (subdir typed_mapping_golden
  (rule
   (targets typed_mapping_golden.t.exe)
