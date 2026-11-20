@@ -905,7 +905,7 @@ let receiver_position (mf : meth) =
 
     @param tparams        Type parameters
     @param self_ty        C++ type for the struct pointer (e.g.,
-                          [Const (Pointer (Entity_application (...)))])
+                          [Pointer (Const (Entity_application (...)))])
     @param mf             The method record to transform
     @param varying        Which of the receiver and the parameters the loop
                           varies, as its ControlIR says

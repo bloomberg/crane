@@ -428,7 +428,7 @@ let build_cell_call ~unit ?token ?(rec_arg = Literal Null_pointer) ?(allocate = 
 let borrow_cursor_matches shadow_params stmts =
   Cpp_passes.Simplify.borrow_matches_on
     (List.filter_map
-       (fun (id, ty) -> match ty with Pointer _ -> Some id | _ -> None)
+       (fun ((id, _) as s) -> if borrowed_pointer_shadow s then Some id else None)
        shadow_params)
     stmts
 
@@ -560,7 +560,7 @@ let read_before_step (step : Reuse_cursor.step) varying shadow_params cells args
         if not (List.mem i step.arguments_read_first) then e
         else
           match shadow with
-          | Some (_, Pointer _) -> raise Cursor_declined
+          | Some s when borrowed_pointer_shadow s -> raise Cursor_declined
           | Some _ -> bind e
           | None -> e )
       (List.combine varying args)
@@ -636,7 +636,7 @@ let cursor_step ~(cursor : Reuse_cursor.t) ~derefs varying shadow_params call ar
       | Some _ | None -> None
     in
     match (List.nth_opt varying cursor.parameter, shadow, field (List.nth_opt args cursor.parameter)) with
-    | Some true, Some (cursor_id, Pointer _), Some field -> Some (step, cursor_id, field)
+    | Some true, Some ((cursor_id, _) as s), Some field when borrowed_pointer_shadow s -> Some (step, cursor_id, field)
     | _ ->
       Base.Probe.violation "reuse cursor"
         Pp.(str "a turn the cursor steps at does not walk a pointer shadow on to a field of its cell");

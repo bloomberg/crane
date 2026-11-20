@@ -3327,7 +3327,7 @@ let gen_ind_header_v2 cx
         if not is_coinductive then []
         else
           [ accessor ~no_pure:false "lazy_cell"
-              (T.Const (T.Reference (Lvalue, T.External (Cpp_ir.Crane_rt.lazy_, [variant_alias_ty]))))
+              (T.Reference (Lvalue, T.Const (T.External (Cpp_ir.Crane_rt.lazy_, [variant_alias_ty]))))
               [S.Return (Some (E.Local vmn_id))] ]
       in
       (* Add public accessor for v_ to enable pattern matching from outside *)
@@ -3336,12 +3336,12 @@ let gen_ind_header_v2 cx
           (* For coinductive: const variant_t& v() const { return
              lazy_v_.force(); } *)
           accessor ~no_pure:false "v"
-            (T.Const (T.Reference (Lvalue, variant_alias_ty)))
+            (T.Reference (Lvalue, T.Const variant_alias_ty))
             [ S.Return
                 (Some (B.call (E.Access (Dot, E.Local vmn_id, Id.of_string "force")) [])) ]
         else (* For inductive: const variant_t& v() const { return v_; } *)
           accessor ~no_pure:false "v"
-            (T.Const (T.Reference (Lvalue, variant_alias_ty)))
+            (T.Reference (Lvalue, T.Const variant_alias_ty))
             [S.Return (Some (E.Local vmn_id))]
       in
 

@@ -48,14 +48,14 @@ let rec strip_ref_type = function
 
 (** Strip reference types AND const modifiers from a type. Used for shadow
     variables in tail recursion, which must be mutable to support reassignment
-    in the loop body.  However, [const] on a pointer pointee is preserved:
-    [const tree *] stays [const tree *] because the pointer variable itself is
-    mutable (can be reassigned), while the [const] just prevents modification
-    through the pointer; removing it would break [_loop_self = this] when
-    [this] is [const T *] in a const method. *)
+    in the loop body.  Only the top-level [const] goes: a pointer's pointee
+    keeps its own, [Pointer (Const tree)] ([const tree *]) stays, because
+    the pointer variable itself is mutable (can be reassigned), while the
+    [const] just prevents modification through the pointer; removing it
+    would break [_loop_self = this] when [this] is [const T *] in a const
+    method. *)
 let rec strip_ref_and_const_type = function
   | Reference (_, t) -> strip_ref_and_const_type t
-  | Const (Pointer _) as t -> t
   | Const t -> strip_ref_and_const_type t
   | t -> t
 
@@ -148,6 +148,13 @@ let tail_shadow_type u ~tparams ~pointer_safe ty =
     | Some arrow -> arrow
     | None -> ty )
 
+(** Whether the shadow [(id, ty)] holds a borrowed value through a pointer
+    ({!tail_shadow_type}).  The receiver's shadow, [_loop_self] of
+    {!Analysis.id_self}, is a pointer of the same type, [const T *], but a
+    pointer by itself, not a value borrowed through one, so it is not. *)
+let borrowed_pointer_shadow ((id, ty) : Id.t * ty) =
+  match ty with Pointer _ -> not (Id.equal id (shadow_name id_self)) | _ -> false
+
 (** Generate the initialiser expression for a shadow variable.
 
     - Pointer-safe shadows: [& orig_id] (address-of)
@@ -172,14 +179,14 @@ let tail_shadow_init u orig_id shadow_ty ty =
     - Otherwise: pass through unchanged
 
     @param shadow_ids  Shadow variable IDs that are already raw pointers *)
-let tail_shadow_arg ~shadow_ids shadow_ty arg =
-  match shadow_ty, arg with
-  | Pointer _, Dereference (Local id) when List.exists (Id.equal id) shadow_ids ->
-    Local id
-  | Pointer _, Dereference inner ->
-    Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [inner])
-  | Pointer _, Local _ -> Unary (Address_of, arg)
-  | _ -> arg
+let tail_shadow_arg ~shadow_ids shadow arg =
+  if not (borrowed_pointer_shadow shadow) then arg
+  else
+    match arg with
+    | Dereference (Local id) when List.exists (Id.equal id) shadow_ids -> Local id
+    | Dereference inner -> Call (call_opaque, Runtime Cpp_ir.Crane_rt.Raw, [inner])
+    | Local _ -> Unary (Address_of, arg)
+    | _ -> arg
 
 (** The variable whose storage [e] stays inside, through dereferences, moves,
     member accesses and variant projections ([x.v()], [std::get<K>(e)]): one
@@ -219,14 +226,14 @@ let pointer_safe_flags u ~parts params =
       matched through [->]; any other scrutinee is rewritten as an
       ordinary expression
 
-    @param shadow_params The shadow parameter list; only entries whose type
-                         is [Pointer _] are considered pointer-safe
+    @param shadow_params The shadow parameter list; only the entries
+                         {!borrowed_pointer_shadow} accepts are rewritten
     @param stmts         Statement list to rewrite
     @return Rewritten statements with pointer dereferences inserted *)
 let rewrite_borrowed_shadow_uses shadow_params stmts =
   let ptr_shadows =
     List.filter_map
-      (fun (id, ty) -> match ty with Pointer _ -> Some id | _ -> None)
+      (fun ((id, _) as s) -> if borrowed_pointer_shadow s then Some id else None)
       shadow_params
   in
   let is_ptr_shadow id = List.exists (Id.equal id) ptr_shadows in
@@ -348,7 +355,7 @@ let make_shadow_updates ?(aliases = []) ?(derefs = []) ?(last_reads = []) shadow
   let pairs =
     List.map
       (fun ((shadow_id, ty), arg) ->
-        ((shadow_id, ty), tail_shadow_arg ~shadow_ids ty arg))
+        ((shadow_id, ty), tail_shadow_arg ~shadow_ids (shadow_id, ty) arg))
       ( if List.compare_lengths shadow_params args <> 0 then
           arity_mismatch ~args:(List.length args) ~params:(List.length shadow_params)
         else List.combine shadow_params args )
