@@ -28,18 +28,27 @@ val type_mapping :
   type_mapping ->
   unit
 
-(** What is known about an operation's argument and result types: the type
-    mapping of the type of the argument of that name, and of the result type,
-    when the type is closed and mapped. *)
+(** A retained runtime binder of an operation: its Rocq name, if it has one,
+    and the type mapping of its type, if that type is mapped. *)
+type runtime_binder = {
+  binder_name : string option;
+  binder_mapping : type_mapping option Lazy.t;
+}
+
+(** What is known about an operation's runtime binders and result type.
+    [runtime_binders] is [None] when the binders are not known (validation
+    rule 19.6.2 is then skipped). *)
 type operation_context = {
-  argument_mapping : string -> type_mapping option;
+  runtime_binders : runtime_binder list option;
   result_mapping : type_mapping option;
 }
 
 val no_context : operation_context
 
 (** Check an operation mapping of [source], resolved from [instance]:
-    argument names unique; [%arg(x)] names a declared argument that is not
+    argument names unique; the arguments, in order, the retained runtime
+    binders of the operation (one per binder, a named binder by its own
+    name); [%arg(x)] names a declared argument that is not
     [Ignore]; holes available in an operation template; every argument a
     fact, result or initialiser names declared; a borrowed result has an
     owner; a [PureOperation] has no [Write], [WriteCanonical], [Replace],

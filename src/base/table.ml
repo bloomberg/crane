@@ -2661,7 +2661,8 @@ let inline_table = Summary.ref empty_inline_table ~name:"CraneExtrInline"
 
 (* A typed-mapped type and its constructors are inline as a legacy
    [Crane Extract Inductive] makes them ({!Mapping_plan}). *)
-let to_inline r = Core.Ref.Can.Set.mem r (fst !inline_table) || Mapping_plan.is_mapped r
+let to_inline r =
+  Core.Ref.Can.Set.mem r (fst !inline_table) || Mapping_plan.is_mapped r || Mapping_operation.is_operation_head r
 
 (* Foreign function call extraction: constants called through a C++ function
    of the given name ([Crane Extract Foreign Constant]). *)
@@ -2808,6 +2809,10 @@ let implicits_of_global r =
   match Core.Ref.User.Map.find_opt r !implicits_table with
   | Some s -> s
   | None -> Int.Set.empty
+
+(* An operation mapping binds its arguments to the binders Crane retains,
+   which these positions take away. *)
+let () = Mapping_discovery.implicit_positions := implicits_of_global
 
 (** Register implicit argument positions for a global reference by index or
     name. *)
@@ -3015,14 +3020,16 @@ let same_mutual_block r1 r2 =
 (* Custom: a legacy mapping, or a typed one ([TypeMapping], plan D3): the
    head of a mapped type or a constructor of one.  Where the content of the
    mapping is read, the typed plan answers first ({!custom_text}). *)
-let is_custom r = Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r
+let is_custom r =
+  Core.Ref.Can.Map.mem r !customs || Mapping_plan.is_mapped r || Mapping_operation.is_operation_head r
 
 (* The text a typed-mapped global stands for: a constructor's build
    template, or the canonical type in the legacy type vocabulary for the
    readers that reason about a type's text (the type itself is built
    structurally, {!Cpp_passes.Erasure}). *)
 let typed_custom_text r =
-  if not (Mapping_plan.is_mapped r) then None
+  if Mapping_operation.is_operation_head r then Some (Mapping_operation.find r).template
+  else if not (Mapping_plan.is_mapped r) then None
   else
     match r with
     | GlobRef.ConstructRef k -> Some (Mapping_plan.constructor_template k)
@@ -3042,7 +3049,19 @@ let check_typed_mapping_conflicts () =
               ++ prlist_with_sep (fun () -> str "," ++ spc ()) Printer.pr_global instances
               ++ spc () ++ strbrk "and by a legacy Crane Extract command." ++ spc ()
               ++ strbrk "Remove one of them: a type is mapped either by a TypeMapping instance or by Crane Extract Inductive/Constant, never both." )))
-    (Mapping_discovery.type_mapping_heads ())
+    (Mapping_discovery.type_mapping_heads ());
+  List.iter
+    (fun (head, instances) ->
+      if Core.Ref.Can.Map.mem head !customs then
+        CErrors.user_err
+          Pp.(
+            hov 0
+              ( str "Crane: " ++ Printer.pr_global head ++ str " is mapped twice:" ++ spc ()
+              ++ str "by the operation mapping" ++ spc ()
+              ++ prlist_with_sep (fun () -> str "," ++ spc ()) Printer.pr_global instances
+              ++ spc () ++ strbrk "and by a legacy Crane Extract command." ++ spc ()
+              ++ strbrk "Remove one of them: an operation is mapped either by an OperationMapping instance or by Crane Extract Inlined Constant/Constant, never both." )))
+    (Mapping_discovery.operation_mapping_heads ())
 
 (** Whether an inductive packet is generated as a flat struct -- its one
     constructor's fields directly, with no variant: an ordinary inductive
@@ -3132,6 +3151,25 @@ let inline_custom_text r =
     match typed_custom_text r with
     | Some _ as t -> t
     | None -> Option.map snd (Core.Ref.Can.Map.find_opt r !customs)
+
+(* An operation mapping's call supplies one argument per retained runtime
+   binder, whether its template names it or not (an [Ignore] argument is
+   not named); a legacy text's arguments stop at its last [%aN]. *)
+let inline_custom_arity r =
+  if Mapping_operation.is_operation_head r then Some (Mapping_operation.arity (Mapping_operation.find r))
+  else
+    match inline_custom_text r with
+    | None -> None
+    | Some tmpl ->
+      let re = Str.regexp "%a\\([0-9]+\\)" in
+      let rec scan pos acc =
+        match Str.search_forward re tmpl pos with
+        | i -> scan (i + 1) (max acc (int_of_string (Str.matched_group 1 tmpl) + 1))
+        | exception Not_found -> acc
+      in
+      Some (scan 0 0)
+
+let is_mapped_operation r = Mapping_operation.is_operation_head r
 
 let is_foreign_custom r = is_custom r && to_foreign r
 
@@ -3491,12 +3529,12 @@ let ref_imports_object : GlobRef.t * string -> obj =
 let get_ref_import_list r =
   match Core.Ref.Can.Map.find_opt r !ref_imports with
   | Some imports -> StringSet.elements imports
-  | None -> Mapping_plan.headers r
+  | None -> Mapping_plan.headers r @ Mapping_operation.headers r
 
 let imports_of refs =
   Core.Ref.User.Set.fold
     (fun r acc ->
-      let acc = List.fold_right StringSet.add (Mapping_plan.headers r) acc in
+      let acc = List.fold_right StringSet.add (Mapping_plan.headers r @ Mapping_operation.headers r) acc in
       match Core.Ref.Can.Map.find_opt r !ref_imports with
       | Some imports -> StringSet.union imports acc
       | None -> acc )

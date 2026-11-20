@@ -55,6 +55,44 @@ val resolve_type_mapping :
 val resolve_operation_mapping :
   Environ.env -> Evd.evar_map -> EConstr.t -> resolved_operation_mapping option
 
+(** {1 Operation binders} *)
+
+(** What Crane makes of a binder of an operation's type: a type parameter
+    (its [%tN] position among the type parameters), a retained runtime
+    argument (its [%aN] position among those), a type-class instance (passed
+    by Crane apart from the runtime arguments), or erased (a proof, or an
+    [Extraction Implicit] position). *)
+type binder_role = Type_parameter of int | Runtime of int | Instance | Erased
+
+type operation_binder = {
+  binder_id : Names.Id.t;  (** the variable standing for it in {!binders_env} *)
+  binder_name : Names.Name.t;  (** its name in the source *)
+  binder_type : EConstr.types;  (** over the variables of the binders before it *)
+  role : binder_role;
+}
+
+type operation_binders = {
+  binders_env : Environ.env;  (** declares one variable per binder *)
+  binders : operation_binder list;  (** in source order *)
+  result_type : EConstr.types;
+  generic_use : EConstr.t;  (** the operation applied to every variable *)
+}
+
+(** [Table.implicits_of_global], set by [Table]: the positions, from 1, of
+    the [Crane Extraction Implicit] arguments of a global. *)
+val implicit_positions : (Names.GlobRef.t -> Int.Set.t) ref
+
+(** The binders of the type of the operation [g], classified as Crane's
+    erasure classifies them. *)
+val operation_binders : Environ.env -> Evd.evar_map -> Names.GlobRef.t -> operation_binders
+
+(** Whether an [OperationMapping] instance is recorded for this head. *)
+val has_operation_mapping : Names.GlobRef.t -> bool
+
+(** Every head with a recorded [OperationMapping] instance, with its
+    instances. *)
+val operation_mapping_heads : unit -> (Names.GlobRef.t * Names.GlobRef.t list) list
+
 (** {1 Debug commands} *)
 
 (** [Crane Show Mapping c]: print the mapping of [c], a type or an

@@ -294,24 +294,13 @@ let split_instance_args ~lex args =
 
 (** [inline_custom_arg_arity id] is the number of [%aN] term placeholders an
     inline-custom mapping for [id] names -- one past the largest index it
-    uses -- or [None] when [id] has no inline-custom mapping.
+    uses, or for an operation mapping its retained runtime arguments -- or
+    [None] when [id] has no inline-custom mapping.
 
     A call has to supply exactly that many arguments: the printer drops any
     beyond the last placeholder, and raises on a placeholder it cannot fill. *)
 let inline_custom_arg_arity id =
-  if not (Base.Table.is_inline_custom id) then None
-  else
-    match Base.Table.find_custom_opt id with
-    | None -> None
-    | Some tmpl ->
-      let re = Str.regexp "%a\\([0-9]+\\)" in
-      let rec scan pos acc =
-        match Str.search_forward re tmpl pos with
-        | i ->
-          scan (i + 1) (max acc (int_of_string (Str.matched_group 1 tmpl) + 1))
-        | exception Not_found -> acc
-      in
-      Some (scan 0 0)
+  if not (Base.Table.is_inline_custom id) then None else Base.Table.inline_custom_arity id
 
 (** Convert Core type arguments to C++ template parameters, applying type
     simplification and handling out-of-scope type variables.

@@ -48,6 +48,7 @@ let nb_occur_match =
                        arguments = args} when Base.Table.is_inline_custom r ->
       let mentions =
         match Base.Table.inline_custom_text r with
+        | _ when Base.Table.is_mapped_operation r -> fun _ -> 1
         | Some s -> Cpp_ir.Foreign_template.arg_mentions s
         | None -> fun _ -> 1
       in
@@ -187,7 +188,15 @@ type escape_query = Conservative | Of_sub_binding | Of_param
    it, so a borrowed [k] would be copied there, where an owned one is
    moved. *)
 let passed_to_owned callee_flags g k args =
-  match callee_flags g with
+  (* An operation mapping's contract says which arguments it keeps
+     ({!Base.Mapping_operation.owns}); a legacy inline custom has no flags,
+     so its arguments are only read. *)
+  let flags =
+    if Base.Table.is_mapped_operation g then
+      Some (List.rev (Base.Mapping_operation.owned_call_arguments (Base.Mapping_operation.find g)))
+    else callee_flags g
+  in
+  match flags with
   | None -> false
   | Some flags ->
     let n = List.length flags in
