@@ -380,6 +380,59 @@ This milestone fixes the reported bug.
   `Extraction Implicit` binders with Core's arguments is assumed (dropped,
   like proofs) and untested; holes inside C++ string literals are still
   substituted when compiling (validation skips them).
+- **M5 (second part).** The lattice is `Core_plan.Access` (access
+  `Unused < Read_access < Write_access < Replace_access`, representation
+  `Preferred < Canonical`), beside `Ownership`, summarised per generated
+  function (innermost first, aligned with the ownership flags) and settled
+  to a fixed point over every function of the program
+  (`Program_facts.parameter_access`); `CRANE_TRACE_ACCESS=1` prints the
+  summaries. Uses: a mapped operation's argument as its `InputUse` says
+  (a `Take` reads unless a `WritesComponent` fact names it), a direct call's
+  argument as the callee's summary says, a local bound to a parameter as it
+  is (`let y := x`) as that parameter; anything else (constructor argument,
+  returned, matched, passed to a legacy mapping, a closure, a partial
+  application) is a canonical read. Ownership stays where it was: `Owned`
+  is still the ownership flag, so a `Take` beside a `Replace` is by value.
+  Physical selection (`Access.physical`, read by
+  `Core_to_cpp.Ownership.wrap_param_by_ownership`) only departs from the
+  canonical read form for a borrowed parameter of a typed-mapped type:
+  `Replace_access` is `T&` (`replace_form`, or `explicit_replace`), and
+  `Write_access` is the access model's write-through form (`T&` for
+  `MutableValue`, the read form for a handle, `explicit_write` for
+  `ExplicitAccess`; `ExactParameter` falls back to the read form). So for
+  `MutableHandle` only a replacement changes the signature; the write chain
+  is visible only for a mutable value. Without views, the representation
+  dimension decides nothing yet; it is computed for M7.
+  First-class functions (§12.9): a function named anywhere other than as
+  the head of a saturated call is *pinned*, and so is a function generated
+  as a method. A pinned function's mutable-reference forms become a copy
+  by value (`Param_mode.copied`), which its body may write or replace, and
+  its callers read its summary capped at `Read_access`. So no adapter is
+  generated: the function itself keeps the canonical ABI (the design's
+  adapters would let direct calls keep `T&`; not needed by anything yet).
+  Under a closure (a lambda or a local fixpoint body) a parameter is a copy
+  the closure holds, so a use there is capped at a read too; lambdas and
+  local fixpoints keep canonical forms.
+  Call sites: rather than rebuilding each argument passing site
+  (`gen_call_args`, control lowering, `Frame_storage`), a lowered pass
+  `in_place_args` (after `shared_args`) reads the callee's *planned* modes
+  (`Callable_abi.modes`, `By_reference` now has a producer) and an
+  operation's `in_place` arguments (a `Replace`, or a write whose
+  write-through form is `T&`, computed in `Mapping_operation`), and passes
+  a variable the caller declares writable as it is; anything else (a call's
+  result, a `const&` parameter, a closure's copy, a match binding) is
+  materialised as `crane::writable(e).ref()` (`theories/cpp/writable.h`, a
+  temporary that lives to the end of the full expression). Because it runs
+  on the final lowered body, loops and frames are covered by the same pass.
+  `Shared_args` no longer moves an in-place argument's temporary. `Tail`
+  gets a fourth shadow hold, `In_place`: a `By_reference` parameter's loop
+  shadow is a `T&` to it, so a loop rebinds the caller's object instead of
+  copying it into a value. A frame (`Frame_storage`) holds an in-place
+  parameter by value, as each recursive call's materialised argument would
+  be. Semantics to keep in mind: the recursive and the loop lowering of the
+  same self-recursive `Replace` differ in which reseats reach the caller's
+  slot (the loop's do, a recursion's inner calls write temporaries); both
+  are within the contract ("may replace").
 - **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
   existing worktree (stale `_build/census`: dune does not rebuild a sibling
   `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
@@ -390,7 +443,7 @@ This milestone fixes the reported bug.
 - [x] M2 descriptor library and discovery
 - [x] M3 type mappings in the pipeline
 - [x] M4 operation mappings
-- [ ] M5 explicit parameter modes and access fixed point
+- [x] M5 explicit parameter modes and access fixed point
 - [ ] M6 ST arrays and references without views
 - [ ] M7 views
 - [ ] M8 standard mappings, interfaces, deprecation
