@@ -4,6 +4,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
+#include <array_storage.h>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -11,12 +12,13 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <template_argument.h>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
@@ -280,9 +282,8 @@ struct STMonad {
   template <typename _tcI0, typename T1 = void, typename T2, typename T3 = void,
             typename T4>
     requires STRefClass<_tcI0, T2>
-  static void swapArray(const T2 &_x,
-                        const std::shared_ptr<std::vector<T4>> &arr,
-                        const T2 &i, const T2 &j);
+  static void swapArray(const T2 &_x, std::span<T4> arr, const T2 &i,
+                        const T2 &j);
   template <typename T1 = void, typename T2, typename T3, typename F2>
   static T3 for_each_with(const List<T2> &xs, const T3 &v, F2 &&f);
 };
@@ -290,25 +291,25 @@ struct STMonad {
 template <typename _tcI0, typename _tcI1, typename T1, typename T2 = void,
           typename T3 = void>
   requires STRefClass<_tcI0, T1> && Ix<_tcI1, T1>
-T1 partition(std::shared_ptr<std::vector<uint64_t>> arr, T1 arr_idx,
+T1 partition(std::shared_ptr<crane::array_storage<uint64_t>> arr, T1 arr_idx,
              const T1 &left, const T1 &right, const T1 &pivotIndex) {
-  uint64_t pivotValue = (*arr)[pivotIndex];
-  STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(arr_idx, arr,
-                                                           pivotIndex, right);
+  uint64_t pivotValue = std::span<const uint64_t>{*arr}[pivotIndex];
+  STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
+      arr_idx, std::span<uint64_t>{*arr}, pivotIndex, right);
   T1 storeIndex = STMonad::template for_each_with<T3, T1, T1>(
       _tcI1::range(left, _tcI1::sub(right, _tcI1::suc(_tcI1::zero()))), left,
       [=](const T1 &storeIndex, const T1 &i) {
-        uint64_t val = (*arr)[i];
+        uint64_t val = std::span<const uint64_t>{*arr}[i];
         if (val <= pivotValue) {
           STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
-              arr_idx, arr, i, storeIndex);
+              arr_idx, std::span<uint64_t>{*arr}, i, storeIndex);
           return _tcI1::suc(storeIndex);
         } else {
           return storeIndex;
         }
       });
   STMonad::template swapArray<_tcI0, T3, T1, T2, uint64_t>(
-      std::move(arr_idx), std::move(arr), storeIndex, right);
+      std::move(arr_idx), std::span<uint64_t>{*arr}, storeIndex, right);
   return storeIndex;
 }
 
@@ -411,12 +412,12 @@ struct StQuicksort {
 
 template <typename _tcI0, typename T1, typename T2, typename T3, typename T4>
   requires STRefClass<_tcI0, T2>
-void STMonad::swapArray(const T2 &, const std::shared_ptr<std::vector<T4>> &arr,
-                        const T2 &i, const T2 &j) {
-  T4 vi = (*arr)[i];
-  T4 vj = (*arr)[j];
-  (*arr)[i] = std::move(vj);
-  (*arr)[j] = std::move(vi);
+void STMonad::swapArray(const T2 &, std::span<T4> arr, const T2 &i,
+                        const T2 &j) {
+  T4 vi = std::span<const T4>{arr}[i];
+  T4 vj = std::span<const T4>{arr}[j];
+  arr[i] = std::move(vj);
+  arr[j] = std::move(vi);
   return;
 }
 

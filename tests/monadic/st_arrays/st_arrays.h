@@ -4,6 +4,7 @@
 #include "obj.h"
 #include "small_vector.h"
 #include <algorithm>
+#include <array_storage.h>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -11,11 +12,12 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <template_argument.h>
 #include <utility>
 #include <variant>
-#include <vector>
 
 template <typename A> struct List;
 template <typename Err> struct ExceptE;
@@ -220,9 +222,8 @@ struct STMonad {
   template <typename _tcI0, typename T1 = void, typename T2, typename T3 = void,
             typename T4>
     requires STRefClass<_tcI0, T2>
-  static void swapArray(const T2 &_x,
-                        const std::shared_ptr<std::vector<T4>> &arr,
-                        const T2 &i, const T2 &j);
+  static void swapArray(const T2 &_x, std::span<T4> arr, const T2 &i,
+                        const T2 &j);
 };
 
 struct StArrays {
@@ -283,12 +284,12 @@ struct StArrays {
 
 template <typename _tcI0, typename T1, typename T2, typename T3, typename T4>
   requires STRefClass<_tcI0, T2>
-void STMonad::swapArray(const T2 &, const std::shared_ptr<std::vector<T4>> &arr,
-                        const T2 &i, const T2 &j) {
-  T4 vi = (*arr)[i];
-  T4 vj = (*arr)[j];
-  (*arr)[i] = std::move(vj);
-  (*arr)[j] = std::move(vi);
+void STMonad::swapArray(const T2 &, std::span<T4> arr, const T2 &i,
+                        const T2 &j) {
+  T4 vi = std::span<const T4>{arr}[i];
+  T4 vj = std::span<const T4>{arr}[j];
+  arr[i] = std::move(vj);
+  arr[j] = std::move(vi);
   return;
 }
 

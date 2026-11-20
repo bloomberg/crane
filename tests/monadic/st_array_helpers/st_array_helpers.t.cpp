@@ -4,6 +4,7 @@
 
 #include <iostream>
 #include <memory>
+#include <span>
 #include <type_traits>
 #include <vector>
 
@@ -43,18 +44,29 @@ template <typename T> List<T> from_vector(const std::vector<T> &v) {
   return out;
 }
 
-using NatArray = std::shared_ptr<std::vector<uint64_t>>;
-using BoolArray = std::shared_ptr<std::vector<bool>>;
+using NatArray = std::shared_ptr<crane::array_storage<uint64_t>>;
+using NatRead = std::span<const uint64_t>;
+using NatWrite = std::span<uint64_t>;
+using BoolWrite = std::span<bool>;
 
-// The helpers' signatures: the canonical handle by const reference for a
-// read or a write, by value where it is kept, by reference where replaced.
+// The helpers' signatures: the read view for a read, the writable view for
+// an element write, the canonical handle by const reference for a canonical
+// write, by value where it is kept, by reference where replaced.
+static_assert(std::is_same_v<decltype(&StArrayHelpers::peek),
+                             uint64_t (*)(NatRead, uint64_t)>);
 static_assert(std::is_same_v<decltype(&StArrayHelpers::bump),
-                             void (*)(const NatArray &, uint64_t)>);
+                             void (*)(NatWrite, uint64_t)>);
 static_assert(std::is_same_v<decltype(&StArrayHelpers::middle),
-                             void (*)(const NatArray &, uint64_t)>);
+                             void (*)(NatWrite, uint64_t)>);
 static_assert(std::is_same_v<decltype(&StArrayHelpers::outer),
-                             void (*)(const NatArray &)>);
+                             void (*)(NatWrite)>);
 static_assert(std::is_same_v<decltype(&StArrayHelpers::swap_ends),
+                             void (*)(NatWrite, uint64_t)>);
+static_assert(std::is_same_v<decltype(&StArrayHelpers::zero_from),
+                             void (*)(NatWrite, uint64_t, uint64_t)>);
+static_assert(std::is_same_v<decltype(&StArrayHelpers::sum_from),
+                             uint64_t (*)(NatRead, uint64_t, uint64_t)>);
+static_assert(std::is_same_v<decltype(&StArrayHelpers::write_and_refill),
                              void (*)(const NatArray &, uint64_t)>);
 static_assert(std::is_same_v<decltype(&StArrayHelpers::pick),
                              NatArray (*)(bool, NatArray, NatArray)>);
@@ -63,7 +75,7 @@ static_assert(std::is_same_v<decltype(&StArrayHelpers::write_then_pick),
 static_assert(std::is_same_v<decltype(&StArrayHelpers::regrow_then_write),
                              void (*)(NatArray &, uint64_t)>);
 static_assert(std::is_same_v<decltype(&StArrayHelpers::flip),
-                             void (*)(const BoolArray &, uint64_t)>);
+                             void (*)(BoolWrite, uint64_t)>);
 
 } // namespace
 
@@ -83,6 +95,20 @@ int main() {
     ASSERT((to_vector(elems) == std::vector<uint64_t>{8, 7, 3}));
     ASSERT((to_vector(others) == std::vector<uint64_t>{4, 4}));
     std::cout << "keep_list 3: ok" << std::endl;
+  }
+
+  {
+    auto [first, elems] = StArrayHelpers::refill_list(5);
+    ASSERT(first == 5);
+    ASSERT((to_vector(elems) == std::vector<uint64_t>{5, 5, 5}));
+    std::cout << "refill_list 5: ok" << std::endl;
+  }
+
+  {
+    auto [sum, elems] = StArrayHelpers::loops_list(4);
+    ASSERT(sum == 4);
+    ASSERT((to_vector(elems) == std::vector<uint64_t>{2, 0, 0, 2}));
+    std::cout << "loops_list 4: ok" << std::endl;
   }
 
   {
@@ -106,11 +132,13 @@ int main() {
   }
 
   {
-    // The handle owns its vector: it is released with the last copy.
-    NatArray a = std::make_shared<std::vector<uint64_t>>(4, 1);
-    std::weak_ptr<std::vector<uint64_t>> w = a;
-    StArrayHelpers::bump(a, 2);
+    // The handle owns its storage: it is released with the last copy, and
+    // a helper given a view neither copies nor retains the handle.
+    NatArray a = std::make_shared<crane::array_storage<uint64_t>>(4, 1);
+    std::weak_ptr<crane::array_storage<uint64_t>> w = a;
+    StArrayHelpers::bump(NatWrite{*a}, 2);
     ASSERT((*a)[2] == 2);
+    ASSERT(StArrayHelpers::peek(NatRead{*a}, 2) == 2);
     ASSERT(a.use_count() == 1);
     a.reset();
     ASSERT(w.expired());

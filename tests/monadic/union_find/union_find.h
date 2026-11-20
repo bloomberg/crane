@@ -4,6 +4,7 @@
 #include "fn.h"
 #include "obj.h"
 #include "small_vector.h"
+#include <array_storage.h>
 #include <atomic>
 #include <concepts>
 #include <crane_itree.h>
@@ -11,12 +12,13 @@
 #include <cstdint>
 #include <memory>
 #include <optional>
+#include <span>
 #include <stdexcept>
 #include <string>
+#include <template_argument.h>
 #include <type_traits>
 #include <utility>
 #include <variant>
-#include <vector>
 
 struct nat_ix_stref;
 template <typename A> struct List;
@@ -3065,25 +3067,24 @@ public:
 };
 
 template <typename T1 = void>
-std::shared_ptr<std::vector<node>> make_ST(uint64_t n) {
+std::shared_ptr<crane::array_storage<node>> make_ST(uint64_t n) {
   auto _once1 = (((n - UINT64_C(1)) > n ? 0 : (n - UINT64_C(1))));
   auto _once2 = std::make_pair(UINT64_C(0), UINT64_C(0));
-  std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> a =
-      std::make_shared<std::vector<node>>(
+  std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
+      std::make_shared<crane::array_storage<node>>(
           crane::st::extent(UINT64_C(0), std::move(_once1)), std::move(_once2));
   STMonad::template for_each_with<void, uint64_t, std::monostate>(
       ListDef::seq(UINT64_C(0), n), std::monostate{},
       [=](std::monostate, uint64_t i) {
-        (*a)[i] = std::make_pair(i, UINT64_C(0));
+        std::span<node>{*a}[i] = std::make_pair(i, UINT64_C(0));
         return std::monostate{};
       });
   return a;
 }
 
 template <typename T1 = void>
-uint64_t
-find_ST(const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
-        uint64_t fuel, uint64_t x) {
+uint64_t find_ST(std::span<std::pair<uint64_t, uint64_t>> a, uint64_t fuel,
+                 uint64_t x) {
   // Explicit stack replaces the non-tail recursion of find_ST: _call frames are
   // pending calls, _after frames resume a caller.
   struct _call {
@@ -3111,7 +3112,8 @@ find_ST(const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
         _result = std::move(x);
       } else {
         uint64_t fuel_ = fuel - 1;
-        std::pair<uint64_t, uint64_t> x_ = (*a)[x];
+        std::pair<uint64_t, uint64_t> x_ =
+            std::span<const std::pair<uint64_t, uint64_t>>{a}[x];
         const auto &[p, k] = x_;
         if (p == x) {
           _result = std::move(x);
@@ -3126,7 +3128,7 @@ find_ST(const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
       uint64_t x = _f.x;
       uint64_t k = _f.k;
       uint64_t r = std::move(_result);
-      (*a)[x] = std::make_pair(r, k);
+      a[x] = std::make_pair(r, k);
       _result = std::move(r);
     }
   }
@@ -3134,29 +3136,29 @@ find_ST(const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
 }
 
 template <typename T1 = void>
-void
-union_ST(uint64_t n,
-         const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
-         uint64_t x, uint64_t y) {
+void union_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+              uint64_t x, uint64_t y) {
   uint64_t rx = find_ST<crane::obj>(a, n, x);
   uint64_t ry = find_ST<crane::obj>(a, n, y);
   if (rx == ry) {
     return;
   } else {
-    std::pair<uint64_t, uint64_t> x_ = (*a)[rx];
+    std::pair<uint64_t, uint64_t> x_ =
+        std::span<const std::pair<uint64_t, uint64_t>>{a}[rx];
     const auto &[_x, kx] = x_;
-    std::pair<uint64_t, uint64_t> x_0 = (*a)[ry];
+    std::pair<uint64_t, uint64_t> x_0 =
+        std::span<const std::pair<uint64_t, uint64_t>>{a}[ry];
     const auto &[_x0, ky] = x_0;
     if (kx < ky) {
-      (*a)[rx] = std::make_pair(ry, kx);
+      a[rx] = std::make_pair(ry, kx);
       return;
     } else {
       if (ky < kx) {
-        (*a)[ry] = std::make_pair(rx, ky);
+        a[ry] = std::make_pair(rx, ky);
         return;
       } else {
-        (*a)[ry] = std::make_pair(rx, ky);
-        (*a)[rx] = std::make_pair(rx, (kx + 1));
+        a[ry] = std::make_pair(rx, ky);
+        a[rx] = std::make_pair(rx, (kx + 1));
         return;
       }
     }
@@ -3164,20 +3166,16 @@ union_ST(uint64_t n,
 }
 
 template <typename T1 = void>
-bool
-same_ST(uint64_t n,
-        const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
-        uint64_t x, uint64_t y) {
+bool same_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a, uint64_t x,
+             uint64_t y) {
   uint64_t rx = find_ST<crane::obj>(a, n, x);
   uint64_t ry = find_ST<crane::obj>(a, n, y);
   return rx == ry;
 }
 
 template <typename T1 = void>
-List<bool>
-run_ST(uint64_t n,
-       const std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> &a,
-       const List<Op> &ops) {
+List<bool> run_ST(uint64_t n, std::span<std::pair<uint64_t, uint64_t>> a,
+                  const List<Op> &ops) {
   // Explicit stack replaces the non-tail recursion of run_ST: _call frames are
   // pending calls, _after frames resume a caller.
   struct _call {
@@ -3226,9 +3224,10 @@ run_ST(uint64_t n,
 
 template <typename T1 = void>
 List<bool> union_find_ST(uint64_t n, const List<Op> &ops) {
-  std::shared_ptr<std::vector<std::pair<uint64_t, uint64_t>>> a =
+  std::shared_ptr<crane::array_storage<std::pair<uint64_t, uint64_t>>> a =
       make_ST<crane::obj>(n);
-  return run_ST<crane::obj>(n, std::move(a), ops);
+  return run_ST<crane::obj>(n, std::span<std::pair<uint64_t, uint64_t>>{*a},
+                            ops);
 }
 
 using NatMap = Make<Nat_as_OT>;

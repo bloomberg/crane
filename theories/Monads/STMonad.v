@@ -330,10 +330,16 @@ Crane Extract Skip STRefToIx.
 (* Crane Extract Skip STRefClass. *)
 (** References and arrays are typed mappings (docs/typed-mappings-design.md
     13): a reference is a [std::shared_ptr<A>] and an array a
-    [std::shared_ptr<std::vector<A>>], each a mutable handle passed by const
-    reference, owned by the shared pointer ([NativeRAII]), with no views.  A
-    generated function that reads or writes an array or a reference takes
-    it as [const std::shared_ptr<...>&]; one that keeps it takes it by value.
+    [std::shared_ptr<crane::array_storage<A>>], each a mutable handle passed
+    by const reference and owned by the shared pointer ([NativeRAII]).  An
+    array has a read view, [std::span<const A>], and a writable view,
+    [std::span<A>], both borrow-only (a copy of the elements would not be
+    the same array): a generated function that only reads an array takes
+    the read view, one that writes its elements the writable view, one that
+    keeps it the handle by value, and one that replaces it the handle by
+    reference.  [crane::array_storage] (theories/cpp/array_storage.h)
+    stores one addressable element each, [bool] included, so the views are
+    valid at every element type (design 14.9).  A reference has no view.
     Shared pointers do not collect cycles of references. *)
 
 From Crane Require Import Mapping.Descriptor.
@@ -398,17 +404,31 @@ Crane Extraction Implicit getElems [idx].
           InvalidatesElementBorrows {| path_argument := "ref"; path_components := ["contents"] |}] |}%pstring.
 
 #[export] Instance st_array_mapping (T S A : Type) : TypeMapping (STArray T S A) :=
-  {| type_headers := ["memory"; "vector"];
+  {| type_headers := ["array_storage.h"; "memory"];
      type_cpp :=
        Crane.Cpp.Apply "std::shared_ptr"
          [Crane.Cpp.TypeArg
-            (Crane.Cpp.Apply "std::vector"
+            (Crane.Cpp.Apply "crane::array_storage"
                [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")])];
      type_components :=
        [{| component_name := "contents"; component_type := KnownType A |}];
      type_copy := RetainIdentity;
      type_access := MutableHandle HandleByConstReference;
-     type_views := NoViews (STArray T S A);
+     type_views :=
+       ReadWriteViews
+         {| view_headers := ["span"];
+            view_cpp :=
+              Crane.Cpp.Apply "std::span"
+                [Crane.Cpp.TypeArg (Crane.Cpp.Const (Crane.Cpp.StoredComponent "contents"))];
+            view_from_canonical := "std::span<const %stored(contents)>{*%value}";
+            view_escape := BorrowOnly |}
+         {| view_headers := ["span"];
+            view_cpp :=
+              Crane.Cpp.Apply "std::span"
+                [Crane.Cpp.TypeArg (Crane.Cpp.StoredComponent "contents")];
+            view_from_canonical := "std::span<%stored(contents)>{*%value}";
+            view_escape := BorrowOnly |}
+         "std::span<const %stored(contents)>{%view}";
      type_interface := AbstractInterface;
      type_model := Identity;
      type_lifetime := NativeRAII;
@@ -416,9 +436,9 @@ Crane Extraction Implicit getElems [idx].
      type_numerals := None |}%pstring.
 
 #[export] Instance new_array_mapping : OperationMapping (Ref (@newArray)) :=
-  {| operation_headers := ["crane_st.h"; "memory"; "vector"];
+  {| operation_headers := ["crane_st.h"; "memory"];
      operation_cpp :=
-       Expr "std::make_shared<std::vector<%stored(contents)>>(crane::st::extent(%arg(lo), %arg(hi)), %arg(def))";
+       Expr "std::make_shared<crane::array_storage<%stored(contents)>>(crane::st::extent(%arg(lo), %arg(hi)), %arg(def))";
      operation_contract :=
        EffectfulOperation
          [{| argument_name := "lo"; argument_use := Read |};
@@ -445,9 +465,10 @@ Crane Extraction Implicit getElems [idx].
                 initial_multiplicity := InitialiseMany |}])
          [] |}%pstring.
 
+(** [Read] gives the template the read view, [std::span<const A>]. *)
 #[export] Instance read_array_mapping : OperationMapping (Ref (@readArray)) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(*%arg(arr))[%arg(i)]";
+  {| operation_headers := ["span"];
+     operation_cpp := Expr "%arg(arr)[%arg(i)]";
      operation_contract :=
        PureOperation
          [{| argument_name := "arr"; argument_use := Read |};
@@ -455,9 +476,12 @@ Crane Extraction Implicit getElems [idx].
          ReturnValue
          [ReadsComponent {| path_argument := "arr"; path_components := ["contents"] |}] |}%pstring.
 
+(** [Write] gives the template the writable view, [std::span<A>].  Writing
+    an element does not reallocate the storage: it invalidates borrows of
+    the old element, not views of the array. *)
 #[export] Instance write_array_mapping : OperationMapping (Ref (@writeArray)) :=
-  {| operation_headers := [];
-     operation_cpp := Expr "(*%arg(arr))[%arg(i)] = %arg(v)";
+  {| operation_headers := ["span"];
+     operation_cpp := Expr "%arg(arr)[%arg(i)] = %arg(v)";
      operation_contract :=
        EffectfulOperation
          [{| argument_name := "arr"; argument_use := Write |};

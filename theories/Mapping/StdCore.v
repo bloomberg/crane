@@ -1,0 +1,92 @@
+(* Copyright 2025 Bloomberg Finance L.P. *)
+(* Distributed under the terms of the GNU LGPL v2.1 license. *)
+(** Standard-library extraction mappings, strings excepted.
+
+    Maps [option], [prod], [int63], and [float] to their C++ standard
+    library equivalents ([std::optional], [std::pair], [int64_t],
+    [double]).  [Std] adds the legacy [string] mappings, [StringView] the
+    typed ones; import one of them.
+
+    Sets the stdlib flavor to ["std"]. *)
+From Crane Require Extraction.
+From Crane Require Export Mapping.Shared.
+
+#[export] Set Crane StdLib "std".
+
+Crane Extract Inductive option =>
+  "std::optional<%t0>"
+  [ "std::make_optional<%t0>(%a0)"
+    "std::optional<%t0>()" ]
+  "if (%scrut.has_value()) { const %t0& %b0a0 = *%scrut; %br0 } else { %br1 }"
+  From "optional" "memory".
+
+Crane Extract Inductive prod =>
+  "std::pair<%t0, %t1>"
+  [ "std::make_pair(%a0, %a1)" ]
+  "const auto& [%b0a0, %b0a1] = %scrut; %br0"
+  From "utility".
+
+(* [std::pair] and [std::optional] cost nothing to copy beyond what their
+   contents cost, which the mapping template above has no way of saying. *)
+Crane TriviallyCopyable option prod.
+
+Crane Extract Inlined Constant fst => "%a0.first" From "utility".
+Crane Extract Inlined Constant snd => "%a0.second" From "utility".
+
+From Corelib Require Import PrimString.
+Crane Extract Inlined Constant PrimString.char63 => "char".
+
+(* int63 primitives - int64_t with 63-bit masking.
+   Arithmetic is performed in the unsigned (uint64_t) domain, where overflow is
+   defined as wraparound, then masked to [0, 2^63) to match Rocq semantics and
+   cast back to int64_t. Performing add/sub/mul directly on signed int64_t would
+   be undefined behavior on overflow (CWE-190), even though the result is later
+   masked. Bitwise ops preserve the invariant (inputs have bit 63 = 0).
+   Shifts guard against UB when shift amount >= 63 and shift in the unsigned
+   domain. Division and modulo by zero follow Rocq rather than C++: [x / 0]
+   is 0, and [x mod 0] is [x].
+
+   The guarded branch also has to be well-defined on its own, not merely
+   unreachable: with constant arguments the compiler folds both arms of the
+   conditional and diagnoses a literal division or over-wide shift even in the
+   arm the guard excludes. Hence the redundant-looking [| (%a1 == 0)] on the
+   divisor, which is the divisor itself whenever it is nonzero and 1
+   otherwise, and the [& 63] on the shift count, which is the identity
+   whenever the guard admits it. *)
+From Corelib Require Import PrimInt63.
+Crane Extract Inlined Constant PrimInt63.int => "int64_t" From "cstdint".
+Crane Extract Inlined Constant PrimInt63.add => "static_cast<int64_t>((static_cast<uint64_t>(%a0) + static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
+Crane Extract Inlined Constant PrimInt63.sub => "static_cast<int64_t>((static_cast<uint64_t>(%a0) - static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
+Crane Extract Inlined Constant PrimInt63.mul => "static_cast<int64_t>((static_cast<uint64_t>(%a0) * static_cast<uint64_t>(%a1)) & 0x7FFFFFFFFFFFFFFFULL)".
+Crane Extract Inlined Constant PrimInt63.div => "(%a1 == 0 ? 0 : %a0 / (%a1 | (%a1 == 0)))".
+Crane Extract Inlined Constant PrimInt63.mod => "(%a1 == 0 ? %a0 : %a0 % (%a1 | (%a1 == 0)))".
+Crane Extract Inlined Constant PrimInt63.eqb => "%a0 == %a1".
+Crane Extract Inlined Constant PrimInt63.ltb => "%a0 < %a1".
+Crane Extract Inlined Constant PrimInt63.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant PrimInt63.land => "(%a0 & %a1)".
+Crane Extract Inlined Constant PrimInt63.lor => "(%a0 | %a1)".
+Crane Extract Inlined Constant PrimInt63.lxor => "(%a0 ^ %a1)".
+Crane Extract Inlined Constant PrimInt63.lsl => "(%a1 >= 63 ? 0 : static_cast<int64_t>((static_cast<uint64_t>(%a0) << (%a1 & 63)) & 0x7FFFFFFFFFFFFFFFULL))".
+Crane Extract Inlined Constant PrimInt63.lsr => "(%a1 >= 63 ? 0 : static_cast<int64_t>(static_cast<uint64_t>(%a0) >> (%a1 & 63)))".
+
+(* PrimFloat - IEEE 754 binary64 (C++ double).
+   Import PrimFloat AFTER PrimInt63 so the qualified names below resolve
+   unambiguously even though both modules export [add], [sub], etc. *)
+From Corelib Require Import PrimFloat.
+Crane Extract Inlined Constant PrimFloat.float => "double".
+Crane Extract Inlined Constant PrimFloat.add => "(%a0 + %a1)".
+Crane Extract Inlined Constant PrimFloat.sub => "(%a0 - %a1)".
+Crane Extract Inlined Constant PrimFloat.mul => "(%a0 * %a1)".
+Crane Extract Inlined Constant PrimFloat.div => "(%a0 / %a1)".
+Crane Extract Inlined Constant PrimFloat.opp => "(-%a0)".
+Crane Extract Inlined Constant PrimFloat.abs => "std::abs(%a0)" From "cmath".
+Crane Extract Inlined Constant PrimFloat.sqrt => "std::sqrt(%a0)" From "cmath".
+Crane Extract Inlined Constant PrimFloat.eqb => "%a0 == %a1".
+Crane Extract Inlined Constant PrimFloat.ltb => "%a0 < %a1".
+Crane Extract Inlined Constant PrimFloat.leb => "%a0 <= %a1".
+Crane Extract Inlined Constant PrimFloat.of_uint63 => "static_cast<double>(%a0)".
+(* [classify]'s result is the [float_class] enum, whose constructors are
+   numbered in declaration order: [PNormal], [NNormal], [PSubn], [NSubn],
+   [PZero], [NZero], [PInf], [NInf], [NaN]. *)
+Crane Extract Inlined Constant PrimFloat.classify =>
+  "[](double _x) { const int _c = std::fpclassify(_x); const int _n = std::signbit(_x) ? 1 : 0; return static_cast<%ret>(_c == FP_NAN ? 8 : (_c == FP_INFINITE ? 6 : _c == FP_ZERO ? 4 : _c == FP_SUBNORMAL ? 2 : 0) + _n); }(%a0)" From "cmath".
