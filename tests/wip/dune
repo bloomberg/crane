@@ -360,3 +360,14 @@
   (alias runtest)
   (deps bake_long_list.t.exe)
   (action (run ./bake_long_list.t.exe))))
+
+(subdir branch_callables_fix_accumulator
+ (rule
+  (targets branch_callables_fix_accumulator.t.exe)
+  (deps BranchCallablesFixAccumulator.vo branch_callables_fix_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_callables_fix_accumulator.t.exe branch_callables_fix_accumulator.t.cpp branch_callables_fix_accumulator.cpp)))
+ (rule
+  (alias runtest)
+  (deps branch_callables_fix_accumulator.t.exe)
+  (action (run ./branch_callables_fix_accumulator.t.exe))))
