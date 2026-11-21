@@ -532,6 +532,9 @@ and Expr : sig
     | Holds_alternative : 'p Type.t -> 'p t
         (** bare [std::holds_alternative<T>], applied by a [Call] *)
     | Declval : 'p Type.t -> 'p t  (** [std::declval<T>()] *)
+    | Baked_value : 'p Type.t * string -> 'p t
+        (** [crane::bake::read<T>(image)]: a constant of type [T] read back
+            from the image [Crane Bake] wrote for it, named by the string *)
     | Type_name : 'p Type.t -> 'p t
         (** a type written where an expression token stands, such as a
             dependent nested struct's [typename T::Nested] *)

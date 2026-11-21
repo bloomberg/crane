@@ -15482,3 +15482,57 @@
   (alias runtest)
   (deps string_literal_as_char_pointer.t.exe)
   (action (run ./string_literal_as_char_pointer.t.exe))))
+(subdir bake_std_optional
+ (rule
+  (targets bake_std_optional.t.exe)
+  (deps BakeStdOptional.vo bake_std_optional.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_std_optional.t.exe bake_std_optional.t.cpp bake_std_optional.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_std_optional.t.exe)
+  (action (run ./bake_std_optional.t.exe))))
+
+(subdir bake_prim_string
+ (rule
+  (targets bake_prim_string.t.exe)
+  (deps BakePrimString.vo bake_prim_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_prim_string.t.exe bake_prim_string.t.cpp bake_prim_string.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_prim_string.t.exe)
+  (action (run ./bake_prim_string.t.exe))))
+
+(subdir bake_boxed_field
+ (rule
+  (targets bake_boxed_field.t.exe)
+  (deps BakeBoxedField.vo bake_boxed_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_boxed_field.t.exe bake_boxed_field.t.cpp bake_boxed_field.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_boxed_field.t.exe)
+  (action (run ./bake_boxed_field.t.exe))))
+
+(subdir bake_long_list
+ (rule
+  (targets bake_long_list.t.exe)
+  (deps BakeLongList.vo bake_long_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_long_list.t.exe bake_long_list.t.cpp bake_long_list.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_long_list.t.exe)
+  (action (run ./bake_long_list.t.exe))))
+
+(subdir bake_mapped_values
+ (rule
+  (targets bake_mapped_values.t.exe)
+  (deps BakeMappedValues.vo bake_mapped_values.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_mapped_values.t.exe bake_mapped_values.t.cpp bake_mapped_values.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_mapped_values.t.exe)
+  (action (run ./bake_mapped_values.t.exe))))

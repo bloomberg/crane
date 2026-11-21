@@ -109,31 +109,51 @@ std::string String0::append(const std::string &s1, std::string s2) {
 }
 
 // Baked by crane::bake: the value of crane_baked_table_c8c1801e8579.
-[[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_c8c1801e8579_b0{0ULL,1ULL,2ULL,3ULL,4ULL,5ULL,6ULL,7ULL,8ULL,9ULL};
-[[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_c8c1801e8579_b1{0ULL,3ULL,6ULL,9ULL,12ULL,15ULL,18ULL,21ULL,24ULL,27ULL};
-[[clang::no_destroy]] constinit crane::shared_array<crane::shared_array<unsigned long long>>::fixed<4> crane_baked_table_c8c1801e8579_b2{crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b0),crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b1),crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b1),crane::shared_array<unsigned long long>{}};
-[[clang::no_destroy]] constinit crane::shared_array<bool>::fixed<3> crane_baked_table_c8c1801e8579_b3{true,false,true};
-constinit const void *const crane_baked_table_c8c1801e8579_blocks[] = {&crane_baked_table_c8c1801e8579_b2,&crane_baked_table_c8c1801e8579_b3};
-constinit const std::uint64_t crane_baked_table_c8c1801e8579_words[] = {0x2u,0x0u,0x9b8u,0x2u,0x1u,0x11u};
-constinit const crane::bake::image crane_baked_table_c8c1801e8579{crane_baked_table_c8c1801e8579_words, 6, crane_baked_table_c8c1801e8579_blocks, 2};
+static_assert(crane::bake::data_model == 0x80408080402u,
+              "crane::bake: baked on a host with other scalar widths");
+[[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_c8c1801e8579_b0{
+    0ULL, 1ULL, 2ULL, 3ULL, 4ULL, 5ULL, 6ULL, 7ULL, 8ULL, 9ULL};
+[[clang::no_destroy]] constinit crane::shared_array<unsigned long long>::fixed<10> crane_baked_table_c8c1801e8579_b1{
+    0ULL, 3ULL, 6ULL, 9ULL, 12ULL, 15ULL, 18ULL, 21ULL, 24ULL, 27ULL};
+[[clang::no_destroy]] constinit crane::shared_array<crane::shared_array<unsigned long long>>::fixed<4> crane_baked_table_c8c1801e8579_b2{
+    crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b0),
+    crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b1),
+    crane::shared_array<unsigned long long>::of_static(crane_baked_table_c8c1801e8579_b1),
+    crane::shared_array<unsigned long long>{}};
+[[clang::no_destroy]] constinit crane::shared_array<bool>::fixed<3> crane_baked_table_c8c1801e8579_b3{
+    true, false, true};
+constinit const void *const crane_baked_table_c8c1801e8579_blocks[] = {
+    &crane_baked_table_c8c1801e8579_b2, &crane_baked_table_c8c1801e8579_b3};
+constinit const std::uint64_t crane_baked_table_c8c1801e8579_words[] = {
+    0x2u, 0x0u, 0x9b8u, 0x2u, 0x1u, 0x11u};
+constinit const crane::bake::image crane_baked_table_c8c1801e8579{
+    crane_baked_table_c8c1801e8579_words, 6,
+    crane_baked_table_c8c1801e8579_blocks, 2};
 
 // Baked by crane::bake: the value of crane_baked_big_43cf8fb6d90e.
+static_assert(crane::bake::data_model == 0x80408080402u,
+              "crane::bake: baked on a host with other scalar widths");
 constinit const void *const crane_baked_big_43cf8fb6d90e_blocks[] = {nullptr};
-constinit const std::uint64_t crane_baked_big_43cf8fb6d90e_words[] = {0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,
-0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,
-0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,
-0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,0x0u,0x1u,
-0x0u,0x0u,0x1u,0x0u,0x0u,0x2u,0x10u,0x3u,
-0xfu,0x4u,0xeu,0x5u,0xdu,0x6u,0xcu,0x7u,
-0xbu,0x8u,0xau,0x9u,0x9u,0xau,0x8u,0xbu,
-0x7u,0xcu,0x6u,0xdu,0x5u,0xeu,0x4u,0xfu,
-0x3u,0x10u,0x2u};
-constinit const crane::bake::image crane_baked_big_43cf8fb6d90e{crane_baked_big_43cf8fb6d90e_words, 67, crane_baked_big_43cf8fb6d90e_blocks, 0};
+constinit const std::uint64_t crane_baked_big_43cf8fb6d90e_words[] = {
+    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u,
+    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u,
+    0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x1u, 0x0u, 0x0u, 0x1u, 0x0u,
+    0x0u, 0x2u, 0x10u, 0x3u, 0xfu, 0x4u, 0xeu, 0x5u, 0xdu, 0x6u, 0xcu, 0x7u,
+    0xbu, 0x8u, 0xau, 0x9u, 0x9u, 0xau, 0x8u, 0xbu, 0x7u, 0xcu, 0x6u, 0xdu,
+    0x5u, 0xeu, 0x4u, 0xfu, 0x3u, 0x10u, 0x2u};
+constinit const crane::bake::image crane_baked_big_43cf8fb6d90e{
+    crane_baked_big_43cf8fb6d90e_words, 67, crane_baked_big_43cf8fb6d90e_blocks,
+    0};
 
 // Baked by crane::bake: the value of crane_baked_entries_a4d00e69f151.
-constinit const void *const crane_baked_entries_a4d00e69f151_blocks[] = {nullptr};
-constinit const std::uint64_t crane_baked_entries_a4d00e69f151_words[] = {0x0u,0x1u,0x0u,0x0u,0x5u,0x7473726966u,0x1u,0x7u,
-0x0u,0x1u,0x0u,0x1u,0x0u,0x0u,0x1u,0x0u,
-0x0u,0x2u,0x2u,0x0u,0x1u,0x0u,0x0u,0x0u,
-0x0u,0x0u,0x0u,0x0u,0x0u};
-constinit const crane::bake::image crane_baked_entries_a4d00e69f151{crane_baked_entries_a4d00e69f151_words, 29, crane_baked_entries_a4d00e69f151_blocks, 0};
+static_assert(crane::bake::data_model == 0x80408080402u,
+              "crane::bake: baked on a host with other scalar widths");
+constinit const void *const crane_baked_entries_a4d00e69f151_blocks[] = {
+    nullptr};
+constinit const std::uint64_t crane_baked_entries_a4d00e69f151_words[] = {
+    0x0u, 0x1u, 0x0u, 0x0u, 0x5u, 0x7473726966u, 0x1u, 0x7u, 0x0u, 0x1u, 0x0u,
+    0x1u, 0x0u, 0x0u, 0x1u, 0x0u, 0x0u, 0x2u, 0x2u, 0x0u, 0x1u, 0x0u, 0x0u,
+    0x0u, 0x0u, 0x0u, 0x0u, 0x0u, 0x0u};
+constinit const crane::bake::image crane_baked_entries_a4d00e69f151{
+    crane_baked_entries_a4d00e69f151_words, 29,
+    crane_baked_entries_a4d00e69f151_blocks, 0};

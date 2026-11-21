@@ -89,7 +89,7 @@ let expr : type p. p visitor -> p Expr.t -> unit =
     opt v.type_ l.return_type;
     each v.stmt l.body
   | Allocate (_, t) | Shared_from_this t | Type_member (t, _) | Convertible_to t | Abort (_, t)
-  | Holds_alternative t | Declval t | Type_name t ->
+  | Holds_alternative t | Declval t | Baked_value (t, _) | Type_name t ->
     v.type_ t
   | Aggregate a ->
     each v.type_ a.type_args;

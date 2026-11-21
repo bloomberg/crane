@@ -1847,7 +1847,9 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
     Option.iter
       (fun f ->
         write_laid_out f impl;
-        (* Appended as written: data, not code for the layout to read. *)
+        (* Appended as the bake driver wrote and laid it out
+           (theories/cpp/crane_bake.h, [writer::declaration]): the layout
+           would give each word of a long stream a line. *)
         if baked_here <> [] then begin
           let oc = open_out_gen [Open_wronly; Open_append; Open_binary] 0o644 f in
           Fun.protect ~finally:(fun () -> close_out oc) @@ fun () ->

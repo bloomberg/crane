@@ -51,13 +51,10 @@ let check_type env sigma r ty =
     | _ -> refuse r (what ^ " a value of a type it cannot see the definition of")
   and constant ~what c =
     (* What [whd_all] leaves a constant: a primitive type, or an axiom --
-       data only where a mapping says what it is in C++, which the bake
-       driver then checks it can write. *)
-    let cb = Environ.lookup_constant c (Global.env ()) in
-    match cb.Declarations.const_body with
-    | Declarations.Primitive _ -> ()
-    | _ when Base.Table.is_custom (GlobRef.ConstRef c) -> ()
-    | _ ->
+       data only where a mapping (typed or legacy) says what it is in C++,
+       which the bake driver then checks it can write. *)
+    if Environ.is_primitive_type env c || Base.Table.is_custom (GlobRef.ConstRef c) then ()
+    else
       refuse r (what ^ " a value of the opaque type " ^ Constant.to_string c ^ ", which has no definition to bake")
   and inductive env ~what ind u args =
     let mib, _ = Inductive.lookup_mind_specif env ind in
@@ -73,7 +70,7 @@ let check_type env sigma r ty =
         let rec fields env cty =
           match EConstr.kind sigma (Reductionops.whd_all env sigma cty) with
           | Prod (na, a, b) ->
-            if not (is_proof env a) then value env ~what:(what ^ ", in a constructor field,") a;
+            if not (is_proof env a) then value env ~what:"holds, in a constructor field," a;
             fields (EConstr.push_rel (Context.Rel.Declaration.LocalAssum (na, a)) env) b
           | _ -> ()
         in
@@ -96,6 +93,9 @@ let check r =
     | _ -> refuse r "has no transparent body to evaluate" );
     if not (Base.Table.is_custom r) then ()
     else refuse r "has a custom extraction, which is what it is extracted as";
+    (* Which heads a typed mapping maps: an extraction discovers them when
+       it starts, and the check runs before any. *)
+    Base.Mapping_discovery.discover ();
     let sigma = Evd.from_env env in
     check_type env sigma r (EConstr.of_constr cb.Declarations.const_type)
   | _ -> refuse r "is not a constant"

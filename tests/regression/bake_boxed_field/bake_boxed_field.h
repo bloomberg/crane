@@ -1,27 +1,96 @@
 #pragma once
 
 #include "crane_fn.h"
+#include "field.h"
 #include "obj.h"
 #include "small_vector.h"
 #include <atomic>
 #include <cstdint>
 #include <memory>
-#include <optional>
 #include <stdexcept>
 #include <utility>
 #include <variant>
 
 #include "crane_bake.h"
-extern const crane::bake::image crane_baked_flags_f402cfb1c658;
+extern const crane::bake::image crane_baked_choice_2999d3bac477;
 
+template <typename A, typename B> struct Sum;
 template <typename A> struct List;
+
+template <typename A, typename B> struct Sum {
+  // TYPES
+  struct Inl {
+    crane::field<A> a0;
+  };
+
+  struct Inr {
+    crane::field<B> a0;
+  };
+
+  using variant_t = std::variant<Inl, Inr>;
+
+private:
+  // DATA
+  variant_t v_;
+
+public:
+  // CREATORS
+  Sum() {}
+
+  explicit Sum(Inl _v) : v_(std::move(_v)) {}
+
+  explicit Sum(Inr _v) : v_(std::move(_v)) {}
+
+  template <typename CraneU0, typename CraneU1>
+  Sum(const Sum<CraneU0, CraneU1> &_other)
+      : v_([&]() -> variant_t {
+          if (std::holds_alternative<typename Sum<CraneU0, CraneU1>::Inl>(
+                  _other.v())) {
+            const auto &[a0] =
+                std::get<typename Sum<CraneU0, CraneU1>::Inl>(_other.v());
+            return Inl{[&]() -> A {
+              if constexpr (crane_convertible<A, const CraneU0 &>) {
+                return crane_convert<A>(crane::unbox(a0));
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          } else {
+            const auto &[a0] =
+                std::get<typename Sum<CraneU0, CraneU1>::Inr>(_other.v());
+            return Inr{[&]() -> B {
+              if constexpr (crane_convertible<B, const CraneU1 &>) {
+                return crane_convert<B>(crane::unbox(a0));
+              } else {
+                throw std::logic_error("unreachable: inactive constructor "
+                                       "field at this instantiation");
+              }
+            }()};
+          }
+        }()) {}
+
+  static Sum<A, B> inl(A a0) {
+    return Sum<A, B>(Inl{crane::field<A>(std::move(a0))});
+  }
+
+  static Sum<A, B> inr(B a0) {
+    return Sum<A, B>(Inr{crane::field<B>(std::move(a0))});
+  }
+
+  // MANIPULATORS
+  inline variant_t &v_mut() { return v_; }
+
+  // ACCESSORS
+  const variant_t &v() const { return v_; }
+};
 
 template <typename A> struct List {
   // TYPES
   struct Nil {};
 
   struct Cons {
-    A a;
+    crane::field<A> a;
     std::shared_ptr<List<A>> l;
   };
 
@@ -50,7 +119,7 @@ public:
             return Cons{
                 [&]() -> A {
                   if constexpr (crane_convertible<A, const CraneU &>) {
-                    return crane_convert<A>(a);
+                    return crane_convert<A>(crane::unbox(a));
                   } else {
                     throw std::logic_error("unreachable: inactive constructor "
                                            "field at this instantiation");
@@ -64,7 +133,7 @@ public:
   static List<A> nil() { return List<A>(Nil{}); }
 
   static List<A> cons(A a, crane::shared_child_slot<List<A>> l) {
-    return List<A>(Cons{std::move(a), l.take()});
+    return List<A>(Cons{crane::field<A>(std::move(a)), l.take()});
   }
 
   // MANIPULATORS
@@ -95,38 +164,6 @@ public:
 
   // ACCESSORS
   const variant_t &v() const { return v_; }
-
-  template <typename F0> List<A> filter(F0 &&f) const {
-    // Builds the result front to back: _write points at the empty tail the next
-    // cell fills.
-    std::optional<List<A>> _root{};
-    std::shared_ptr<List<A>> *_write = nullptr;
-    const List<A> *_loop_self = this;
-    while (true) {
-      auto &&_sv = *_loop_self;
-      if (std::holds_alternative<typename List<A>::Nil>(_sv.v())) {
-        auto _value = List<A>::nil();
-        (_write ? *(*_write = std::make_shared<List<A>>(std::move(_value)))
-                : _root.emplace(std::move(_value)));
-        break;
-      } else {
-        const auto &[a0, a1] = std::get<typename List<A>::Cons>(_sv.v());
-        if (f(a0)) {
-          auto _cell = typename List<A>::Cons(a0, nullptr);
-          List<A> &_node =
-              (_write ? *(*_write = std::make_shared<List<A>>(std::move(_cell)))
-                      : _root.emplace(std::move(_cell)));
-          _write = &std::get<typename List<A>::Cons>(_node.v_mut()).l;
-          _loop_self = crane_raw(a1);
-          continue;
-        } else {
-          _loop_self = crane_raw(a1);
-          continue;
-        }
-      }
-    }
-    return std::move(*_root);
-  }
 
   uint64_t length() const {
     const List<A> *_self = this;
@@ -167,39 +204,21 @@ public:
   }
 };
 
-struct ListDef {
-  template <typename T1> static List<T1> repeat(const T1 &x, uint64_t n);
-};
-
-struct BakeLongList {
-  static inline const List<bool> flags =
-      crane::bake::value{crane_baked_flags_f402cfb1c658};
-  static inline const uint64_t count =
-      flags.filter([](bool b) { return b; }).length();
-};
-
-template <typename T1> List<T1> ListDef::repeat(const T1 &x, uint64_t n) {
-  // Builds the result front to back: _write points at the empty tail the next
-  // cell fills.
-  std::optional<List<T1>> _root{};
-  std::shared_ptr<List<T1>> *_write = nullptr;
-  uint64_t _loop_n = n;
-  while (true) {
-    if (_loop_n <= 0) {
-      auto _value = List<T1>::nil();
-      (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_value)))
-              : _root.emplace(std::move(_value)));
-      break;
+struct BakeBoxedField {
+  static inline const Sum<List<uint64_t>, uint64_t> choice =
+      crane::bake::read<Sum<List<uint64_t>, uint64_t>>(
+          crane_baked_choice_2999d3bac477);
+  static inline const uint64_t total = []() {
+    auto &&_sv = choice;
+    if (std::holds_alternative<typename Sum<List<uint64_t>, uint64_t>::Inl>(
+            _sv.v())) {
+      const auto &[a0] =
+          std::get<typename Sum<List<uint64_t>, uint64_t>::Inl>(_sv.v());
+      return crane::unbox(a0).length();
     } else {
-      uint64_t k = _loop_n - 1;
-      auto _cell = typename List<T1>::Cons(x, nullptr);
-      List<T1> &_node =
-          (_write ? *(*_write = std::make_shared<List<T1>>(std::move(_cell)))
-                  : _root.emplace(std::move(_cell)));
-      _write = &std::get<typename List<T1>::Cons>(_node.v_mut()).l;
-      _loop_n = k;
-      continue;
+      const auto &[a0] =
+          std::get<typename Sum<List<uint64_t>, uint64_t>::Inr>(_sv.v());
+      return crane::unbox(a0);
     }
-  }
-  return std::move(*_root);
-}
+  }();
+};

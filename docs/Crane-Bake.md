@@ -26,10 +26,13 @@ Running the generated C++ once and emitting the value as data does work.
 1. **Check** (`src/driver/bake.ml`, `check`). The constant must be a
    transparent constant outside any functor or module type, and its type must
    hold only data: no function, type, proof (at the top), coinductive (lazy or
-   effectful, `itree` included) or opaque axiom type unless it is custom-mapped
-   or primitive. The walk reduces the type, then instantiates each
-   constructor's parameters and checks every non-`Prop` field, recursively.
-   A refusal is a `Crane Bake: <c> is a function, which is not data.` error.
+   effectful, `itree` included) or opaque axiom type unless it is mapped (a
+   typed `TypeMapping` or a legacy custom extraction) or primitive. The check
+   runs before any extraction, so it discovers the typed mappings itself
+   (`Mapping_discovery.discover`). The walk reduces the type, then
+   instantiates each constructor's parameters and checks every non-`Prop`
+   field, recursively. A refusal is a `Crane Bake: <c> is a function, which is
+   not data.` error (`<c> holds, in a constructor field, ...` for a field).
 2. **Bake** (`bake_one`). Inside `Vernacstate.System.protect`, so the
    extraction leaves no trace in the summary or the library, Crane extracts
    `c` on its own into a temporary directory. A constant at a library's top
@@ -49,10 +52,14 @@ Running the generated C++ once and emitting the value as data does work.
 3. **Use**. Lowering (`Functions.baked_initialiser`, on both the definition
    and the header specification path) still generates the body, so the unit
    plans and includes what it would. It then initialises the constant with
-   `crane::bake::value{<symbol>}`, which converts to the declared type.
+   `crane::bake::read<T>(<symbol>)` (CppIR `Baked_value`), `T` its declared
+   type. A proxy that converts to the declared type
+   (`crane::bake::value{<symbol>}`) is left for a declaration whose type is
+   `auto`: copy-initialising a `std::optional<U>` from it picks optional's
+   converting constructor, which reads the image as a bare `U`.
    `print_structure_to_file` declares the image `extern` in the header (after
    `#include "crane_bake.h"`, ahead of the namespace) and appends the image
-   text, as written and not laid out, to the implementation file.
+   text, as the driver wrote it, to the implementation file.
 
 ## The image (`theories/cpp/crane_bake.h`)
 
@@ -61,17 +68,33 @@ serialiser is generic over the generated types. It uses C++26 structured
 binding packs to read a struct's fields, so no per-type code is generated;
 each type gets its own template instantiation.
 
-- A scalar (integer, char, bool, enum, floating point) is one word. A
-  `std::string` is its length and then its bytes, eight to a word. Pairs,
-  tuples and `std::optional` (presence word first) are their components. An
-  empty type is nothing.
+- A scalar (integer, char, bool, enum, `float`, `double`) is one word; a
+  wider one (`long double`, a 128-bit integer) is a compile error. A string
+  (`std::string`, `bsl::string`: a `traits_type`, an allocator and a
+  constructor from pointer and length) is its length and then its bytes,
+  eight to a word. Pairs (`first_type`/`second_type`), tuples and optionals
+  (`has_value`, presence word first) are their components. A sequence
+  container (`std::vector`, `std::deque`: an allocator and `push_back`) and a
+  `persistent_array` (its default element after the length) are their length
+  and elements. A number with a text form (`mpz_class`: `get_str(16)` and a
+  constructor from a string and a base) is its base-16 text. An empty type is
+  nothing. These hooks are structural, so the C++ type of every shipped
+  typed mapping (`Mapping/Std.v`, `BDE.v`, `DequeList.v`, the GMP mappings)
+  has one; `Real` (`Mapping/Real.v`, a private `long double`) does not.
 - A generated inductive, record or flat struct starts with a sharing word:
   `k+1` means the k-th node already read of that type, and `0` means a new node
   (constructor index, then fields). An enum is a new node with its index, so
   an enum and a nullary-constructor variant read each other.
-  `std::shared_ptr`/`crane::shared_box`/`crane::rc` fields are transparent;
-  the sharing lives at the node level. When reading, a pointer to a node
-  already read is the same pointer again.
+  `std::shared_ptr`/`crane::shared_box`/`crane::rc`/`crane::field_box`
+  fields (`detail::handle`) are transparent; the sharing lives at the node
+  level. When reading, a counted pointer to a node already read is the same
+  pointer again.
+- A node's fields that hold a node of its own type (`detail::self_handle`)
+  are written and read with an explicit stack, whichever field it is, so a
+  list or tree is as deep as memory allows (`bake_long_list`, 30000 cells; a
+  left spine in `bake_mapped_values`). A type that recurses through another
+  (a mutual inductive, a tree whose children are in a list) still takes C++
+  frames per level of that recursion.
 - `crane::list`: cells `1 head`, ended by `0` (nil) or `k+2` (shared suffix).
 - `crane::shared_array<E>`: `0` empty, `1 n elems` heap, `k+3` shared, or
   `2 block code` for a static block. A static block is used when `E` is a
@@ -79,6 +102,25 @@ each type gets its own template instantiation.
   `crane::shared_array<E>::fixed<N>`, `constinit`, `[[clang::no_destroy]]`,
   with its count at `block_detail::immortal`. `code` encodes `E`, and reading
   checks it.
+
+The format does not depend on byte order: a word is written as the number it
+is (a C++ literal), a string's bytes are packed by shifts, a float is its
+IEEE bits as an integer. `crane_bake.h` asserts what it does assume (8-bit
+bytes, IEEE `float`/`double`, a length fits a word), and each image starts
+with `static_assert(crane::bake::data_model == ...)`: the widths of `short`,
+`int`, `long`, `long long`, `wchar_t` and `size_t` on the bake host, which
+the target must share (a `long` written on LP64 and read on LLP64 would be
+truncated). Cross-compiling a baked unit is otherwise unsupported.
+
+The driver lays the image out itself (`writer::declaration`): a declaration
+on one line if it fits in 80 columns, else broken after the brace with the
+elements filled into lines indented four columns, as clang-format writes a
+long initialiser. It is not handed to `Emit.Layout`, which gives every
+element of a braced list too long for one line a line of its own (90,002
+lines for `bake_long_list`'s stream). Routing it through CppIR would mean
+the driver emitting a structured image for OCaml to rebuild as declarations
+(`constinit`, `[[clang::no_destroy]]` and `shared_array::fixed<N>`, none of
+which CppIR spells) for the same text.
 
 Reading happens once, at static initialisation. Every block it allocates is
 made immortal (`crane::make_immortal`). Sharing is kept: the
@@ -115,7 +157,7 @@ the `crane::bake::value` proxy. The reader marks the decoded value itself
   sentinel object instead of odd tags.
 - **immer containers** (`immer::map`, `flex_vector`) have no hook. The plan
   is to write them as flat arrays of entries and rebuild on first use.
-- **`crane::obj` / erased values and persistent arrays** have no hook either.
+- **`crane::obj` / erased values** have no hook either.
   The C++ `static_assert` reports them at bake time as "no way to write a
   value of this type".
 - Heap `shared_array`s of non-scalar elements (`shared_array<Regex>`) are
