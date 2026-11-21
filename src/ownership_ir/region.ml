@@ -317,15 +317,24 @@ let rec strip =
   function Core.Expr.Coerce {value = t; _} | Core.Expr.Boxed_value {value = t; _}
     | Core.Expr.Lambda_group_barrier {value = t; _} -> strip t | t -> t
 
-(* What a match's pattern variables are parts of: the variable it matches,
-   when it matches one. *)
-let bind_parts parents d ~n scrut =
+(* Whether the custom match [branches] binds the pattern variable [j] of its
+   branch [k] as a variable of its own, a copy rather than a part of the
+   scrutinee: its template declares it by value. *)
+let copied_binder branches k j =
+  Base.Table.is_custom_match branches
+  && Cpp_ir.Foreign_template.declared_by_value (Base.Table.find_custom_match branches) k j
+
+(* What the pattern variables of a match's branch [k] are parts of: the
+   variable it matches, when it matches one, unless the branch binds the
+   variable as a copy of its own ({!copied_binder}). *)
+let bind_parts ?(k = 0) ?(branches = [||]) parents d ~n scrut =
   let rec go parents l =
     if l >= d + n then parents
     else
       let parents =
         match strip scrut with
-        | Core.Expr.Bound_variable {index = i; _} -> Parents.add l (d - i) parents
+        | Core.Expr.Bound_variable {index = i; _} when not (copied_binder branches k (l - d)) ->
+          Parents.add l (d - i) parents
         | _ -> Parents.remove l parents
       in
       go parents (l + 1)
@@ -365,10 +374,12 @@ let rec free ?(parts = true) ?(outside = Levels.empty) parents d t =
     let parents' = bind parents d ~n in
     whole (leave parents' d (closure_frees parents' (d + n) (Array.to_list defs)))
   | Core.Expr.Match {scrutinee = scrut; branches; _} ->
+    let k = ref (-1) in
     Array.fold_left
       (fun acc {Core.Match.Branch.binders = ids; body = body; _} ->
+        incr k;
         let n = List.length ids in
-        let parents' = bind_parts parents d ~n scrut in
+        let parents' = bind_parts ~k:!k ~branches parents d ~n scrut in
         Levels.union acc (leave parents' d (free parents' (d + n) body)) )
       (free parents d scrut) branches
   | Core.Expr.Global _
@@ -661,10 +672,16 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
          binder may be an argument, [sz0 (let r := g m in sz1 r)], and what
          reads [sz0] after the let is the same handler. *)
       let read_after = Levels.union (free parents d t) (Levels.union (Levels.diff s.outside s.kept) entered) in
+      (* A part the frame keeps beside its whole is saved before the whole
+         ({!Control_to_cpp.Frame}): the whole may still be moved in after it,
+         but not a part while its whole is kept. *)
       let last l =
         (not (Levels.mem l copied))
         && (not (Levels.exists (overlap parents l) read_after))
-        && not (Levels.exists (overlap parents l) (Levels.remove l s.kept))
+        && not
+             (Levels.exists
+                (fun m -> overlap parents l m && not (List.mem l (ancestors parents m)))
+                (Levels.remove l s.kept))
       in
       saves := {save_at = s.let_at; saved = List.map (fun (b, l) -> (b, l, last l)) s.kept_at} :: !saves;
       Levels.union saved (walk ~consumed ~pinned parents d after_save t)
@@ -756,12 +773,16 @@ let liveness ~effects ~n_outer ~copied ~arms ~resumes t =
        it hands over -- so what follows the scrutinee is what the branches
        read besides them. *)
     | Core.Expr.Match {scrutinee_type = ty; scrutinee = scrut; branches; _} ->
+      let k = ref (-1) in
       let after_scrut =
         Array.fold_left
           (fun acc {Core.Match.Branch.binders = ids; body = body; _} ->
+            incr k;
             let n = List.length ids in
             let tail = if bound_in_place ty branches then tail else None in
-            let live_body = walk ~consumed ?tail ~pinned (bind_parts parents d ~n scrut) (d + n) live body in
+            let live_body =
+              walk ~consumed ?tail ~pinned (bind_parts ~k:!k ~branches parents d ~n scrut) (d + n) live body
+            in
             Levels.union acc (leave (bind parents d ~n) d live_body) )
           Levels.empty branches
       in
@@ -1112,7 +1133,10 @@ let ownership ~effects ~n_outer ~outer ~resumes ~certain ~reads ~arms ~owned ~co
       | Custom ->
         if Binding.pair_by_value ~owned:(owned_var owned d) scrut branches then
           Levels.union owned (fields (fun _ (_, ty) -> worth_moving ty))
-        else owned
+        else
+          (* A binder the template declares as a variable of its own holds a
+             copy, whoever owns the scrutinee. *)
+          Levels.union owned (fields (fun j (_, ty) -> copied_binder branches k j && worth_moving ty))
       | Record _ -> (
         match List.find_map (function Fields f when f.case == case -> Some f.by_value | _ -> None) arms with
         | Some by_value ->

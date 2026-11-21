@@ -15350,3 +15350,14 @@
   (alias runtest)
   (deps typed_mapping_exact_numbers.t.exe)
   (action (run ./typed_mapping_exact_numbers.t.exe))))
+
+(subdir frame_save_copied_binder
+ (rule
+  (targets frame_save_copied_binder.t.exe)
+  (deps FrameSaveCopiedBinder.vo frame_save_copied_binder.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} frame_save_copied_binder.t.exe frame_save_copied_binder.t.cpp frame_save_copied_binder.cpp)))
+ (rule
+  (alias runtest)
+  (deps frame_save_copied_binder.t.exe)
+  (action (run ./frame_save_copied_binder.t.exe))))

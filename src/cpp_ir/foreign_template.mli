@@ -108,3 +108,10 @@ val structured_binding : string -> binding option
 
 (** [bound_by_value s] is the structured binding [s] binding by value. *)
 val bound_by_value : string -> string
+
+(** Whether the match template [s] declares branch [i]'s binder [j] as a
+    variable of its own, by value: [auto %b1a1 = %scrut.tail();], its type
+    [auto], a type argument or its own type hole, and no reference.  Such a
+    binder holds a copy, not a part of the scrutinee, and is the branch's to
+    move. *)
+val declared_by_value : string -> int -> int -> bool

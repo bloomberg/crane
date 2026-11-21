@@ -71,6 +71,21 @@
     outside its frames. *)
 val function_resumes : unit:Unit_plan.Context.t -> Names.GlobRef.t -> depth:int -> Ownership_ir.Region.resumes option
 
+(** [frame_owned_parameters r ~params ~modes ~binders]: the positions among
+    the parameters of the loop of [r]'s machine ({!function_resumes}) of
+    those its entry frames hold by value, so that the handler entering the
+    machine owns them whatever [r]'s head lends: those some turn varies, but
+    for one a frame holds by pointer.  [params] are [r]'s C++ parameters,
+    the last first,
+    [modes] how each is passed, [binders] the Core binder each stands for. *)
+val frame_owned_parameters :
+  unit:Unit_plan.Context.t ->
+  Names.GlobRef.t ->
+  params:(Names.Id.t * Cpp_ir.Lowered.Type.t) list ->
+  modes:(Names.Id.t * Cpp_ir.Param_mode.t) list ->
+  binders:(Names.Id.t * Core.Binder.t) list ->
+  int list
+
 (** [method_resumes r ~inductive ~receiver ~depth]: the points the method
     made of the function [r] in the struct of [inductive], its receiver its
     parameter [receiver] (outermost first) and its body standing under
