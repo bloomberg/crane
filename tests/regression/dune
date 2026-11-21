@@ -15460,3 +15460,14 @@
   (alias runtest)
   (deps bake_boxed_field.t.exe)
   (action (run ./bake_boxed_field.t.exe))))
+
+(subdir bake_long_list
+ (rule
+  (targets bake_long_list.t.exe)
+  (deps BakeLongList.vo bake_long_list.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_long_list.t.exe bake_long_list.t.cpp bake_long_list.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_long_list.t.exe)
+  (action (run ./bake_long_list.t.exe))))

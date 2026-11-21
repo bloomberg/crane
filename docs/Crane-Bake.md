@@ -80,6 +80,12 @@ each type gets its own template instantiation.
   fields (`detail::handle`) are transparent; the sharing lives at the node
   level. When reading, a counted pointer to a node already read is the same
   pointer again.
+- A node's fields that hold a node of its own type (`detail::self_handle`)
+  are written and read with an explicit stack, whichever field it is, so a
+  list or tree is as deep as memory allows (`bake_long_list`, 30000 cells; a
+  left spine in `bake_mapped_values`). A type that recurses through another
+  (a mutual inductive, a tree whose children are in a list) still takes C++
+  frames per level of that recursion.
 - `crane::list`: cells `1 head`, ended by `0` (nil) or `k+2` (shared suffix).
 - `crane::shared_array<E>`: `0` empty, `1 n elems` heap, `k+3` shared, or
   `2 block code` for a static block. A static block is used when `E` is a

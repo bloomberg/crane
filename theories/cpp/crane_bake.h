@@ -35,6 +35,13 @@
 //   count ([crane::shared_array::fixed]), so it costs nothing at startup and
 //   its count is never written.
 //
+// Writing and reading take one C++ frame per level of the value's type, not
+// of the value: a node's fields that point to a node of its own type are
+// walked with an explicit stack, so a list or a tree as deep as memory
+// allows is baked and read back.  (A type that recurses through another --
+// a mutual inductive, a tree whose children are in a list -- still takes a
+// frame per level of that recursion.)
+//
 // Reading builds the value once, at static initialisation, and makes every
 // block it allocates immortal ([crane::make_immortal]): the value lives as
 // long as the program, and reading it from any thread never touches its
@@ -147,6 +154,11 @@ template <template <class...> class V, class... Ts> struct alternatives<V<Ts...>
 
 // A generated inductive: its variant, the alternatives' structs, and a
 // constructor from each.
+// A field of a node of type [T] that holds another node of type [T]: the
+// spine the writer and reader walk with an explicit stack.
+template <class F, class T>
+concept self_handle = handle<F>::value && std::is_same_v<typename handle<F>::element, T>;
+
 template <class T>
 concept inductive = requires(const T &t) {
   typename T::variant_t;
@@ -168,6 +180,11 @@ template <class A, class F> void each(const A &a, F &&f) {
   (f(fs), ...);
 }
 
+template <std::size_t K, class A> const auto &field_at(const A &a) {
+  const auto &[... fs] = a;
+  return fs...[K];
+}
+
 template <std::size_t I, class V> const auto &alt_at(const V &v) {
   using std::get;
   return get<I>(v);
@@ -176,6 +193,23 @@ template <std::size_t I, class V> const auto &alt_at(const V &v) {
 template <class F, std::size_t... I> void on_index(std::size_t i, F &&f, std::index_sequence<I...>) {
   (void)((i == I ? (f(std::integral_constant<std::size_t, I>{}), true) : false) || ...);
 }
+
+// An alternative's fields as they are read, one by one: each empty until
+// read.  Index [I + 1] of [slots_of<alts>] is alternative [I]'s.
+template <class A, bool = std::is_empty_v<A>> struct slots_of_alt {
+  using type = std::monostate;
+};
+template <class A> struct slots_of_alt<A, false> {
+  template <class Fs> struct of;
+  template <class... F> struct of<std::tuple<F...>> {
+    using type = std::tuple<std::optional<F>...>;
+  };
+  using type = typename of<fields_t<A>>::type;
+};
+template <class Alts> struct slots_of;
+template <class... A> struct slots_of<std::tuple<A...>> {
+  using type = std::variant<std::monostate, typename slots_of_alt<A>::type...>;
+};
 
 // A scalar's literal type has a static block only if it can be spelled.
 template <class E> constexpr const char *scalar_name() {
@@ -344,6 +378,60 @@ class writer {
     return out + "\n";
   }
 
+  // A node of a generated inductive and the nodes of its own type its fields
+  // point to, depth first, with an explicit stack.
+  template <class T> void put_inductive(const T &root) {
+    using V = typename T::variant_t;
+    using alts = typename detail::alternatives<V>::type;
+    struct frame {
+      std::size_t alt;
+      const void *node;
+      std::size_t next;
+    };
+    std::vector<frame> stack;
+    // Writes [x]'s sharing word and constructor, and stacks its fields.
+    auto start = [&](const T &x) {
+      const V &v = x.v();
+      detail::on_index(v.index(), [&](auto i) {
+        constexpr std::size_t I = decltype(i)::value;
+        using A = std::tuple_element_t<I, alts>;
+        const A &a = detail::alt_at<I>(v);
+        if (!node<T>(std::is_empty_v<A> ? nullptr : static_cast<const void *>(&a))) return;
+        words_.push_back(I);
+        if constexpr (!std::is_empty_v<A>) stack.push_back({I, &a, 0});
+      }, std::make_index_sequence<std::tuple_size_v<alts>>{});
+    };
+    start(root);
+    while (!stack.empty()) {
+      // [stack.back()] is only read before a field stacks a node.
+      bool started = false;
+      detail::on_index(stack.back().alt, [&](auto i) {
+        constexpr std::size_t I = decltype(i)::value;
+        using A = std::tuple_element_t<I, alts>;
+        if constexpr (!std::is_empty_v<A>) {
+          using Fs = detail::fields_t<A>;
+          constexpr std::size_t N = std::tuple_size_v<Fs>;
+          const A &a = *static_cast<const A *>(stack.back().node);
+          while (!started && stack.back().next < N) {
+            std::size_t k = stack.back().next++;
+            detail::on_index(k, [&](auto kk) {
+              constexpr std::size_t K = decltype(kk)::value;
+              const auto &f = detail::field_at<K>(a);
+              if constexpr (detail::self_handle<std::remove_cvref_t<decltype(f)>, T>) {
+                check_not_null(f);
+                std::size_t depth = stack.size();
+                start(*f);
+                started = stack.size() > depth;
+              } else
+                put(f);
+            }, std::make_index_sequence<N>{});
+          }
+        }
+      }, std::make_index_sequence<std::tuple_size_v<alts>>{});
+      if (!started) stack.pop_back();
+    }
+  }
+
 public:
   explicit writer(std::string prefix) : prefix_(std::move(prefix)) {}
 
@@ -378,17 +466,7 @@ public:
     } else if constexpr (is_shared_array<T>::value) {
       put_array(x);
     } else if constexpr (inductive<T>) {
-      using V = typename T::variant_t;
-      using alts = typename alternatives<V>::type;
-      const V &v = x.v();
-      on_index(v.index(), [&](auto i) {
-        constexpr std::size_t I = decltype(i)::value;
-        using A = std::tuple_element_t<I, alts>;
-        const A &a = alt_at<I>(v);
-        if (!node<T>(std::is_empty_v<A> ? nullptr : static_cast<const void *>(&a))) return;
-        words_.push_back(I);
-        if constexpr (!std::is_empty_v<A>) each(a, [&](const auto &f) { put(f); });
-      }, std::make_index_sequence<std::tuple_size_v<alts>>{});
+      put_inductive(x);
     } else if constexpr (std::is_empty_v<T>) {
     } else if constexpr (fielded<T>) {
       words_.push_back(0);
@@ -541,6 +619,104 @@ class reader {
       return make_handle<P>(get<U>(), no_node);
   }
 
+  // A node of a generated inductive, and the nodes of its own type its
+  // fields hold, depth first, with an explicit stack: each frame a node
+  // whose fields are being read, the next of them a node of its own type.
+  template <class T> T get_inductive() {
+    using alts = typename detail::alternatives<typename T::variant_t>::type;
+    using slots = typename detail::slots_of<alts>::type;
+    struct frame {
+      std::size_t id;
+      std::size_t alt;
+      std::size_t next;
+      slots fields;
+    };
+    constexpr auto all_alts = std::make_index_sequence<std::tuple_size_v<alts>>{};
+    auto &tab = table<T>();
+    std::vector<frame> stack;
+    // The node the stream starts here: its value if it is shared or has no
+    // fields, else none, its frame stacked.
+    auto start = [&]() -> std::optional<T> {
+      std::uint64_t share = word();
+      if (share != 0) {
+        if (share - 1 >= tab.size() || !tab[share - 1]) corrupt("a shared node");
+        return *tab[share - 1];
+      }
+      std::size_t idx = word();
+      if (idx >= std::tuple_size_v<alts>) corrupt("a constructor index");
+      std::optional<T> out;
+      detail::on_index(idx, [&](auto i) {
+        constexpr std::size_t I = decltype(i)::value;
+        using A = std::tuple_element_t<I, alts>;
+        if constexpr (std::is_empty_v<A>) out.emplace(A{});
+        else {
+          stack.push_back(frame{tab.size(), I, 0, slots(std::in_place_index<I + 1>)});
+          tab.emplace_back();
+        }
+      }, all_alts);
+      return out;
+    };
+    if (auto v = start()) return std::move(*v);
+    for (;;) {
+      // [stack.back()] is only touched before a field stacks a node.
+      bool started = false;
+      std::optional<T> done;
+      detail::on_index(stack.back().alt, [&](auto i) {
+        constexpr std::size_t I = decltype(i)::value;
+        using A = std::tuple_element_t<I, alts>;
+        if constexpr (!std::is_empty_v<A>) {
+          using Fs = detail::fields_t<A>;
+          constexpr std::size_t N = std::tuple_size_v<Fs>;
+          while (!started && stack.back().next < N) {
+            std::size_t k = stack.back().next++;
+            detail::on_index(k, [&](auto kk) {
+              constexpr std::size_t K = decltype(kk)::value;
+              using G = std::tuple_element_t<K, Fs>;
+              if constexpr (detail::self_handle<G, T>) {
+                if (auto p = shared_handle<G>()) {
+                  std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(std::move(*p));
+                } else if (auto v = start()) {
+                  std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(make_handle<G>(std::move(*v), no_node));
+                } else
+                  started = true;
+              } else {
+                G g = get<G>();
+                std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(std::move(g));
+              }
+            }, std::make_index_sequence<N>{});
+          }
+          if (!started) {
+            auto &s = std::get<I + 1>(stack.back().fields);
+            [&]<std::size_t... K>(std::index_sequence<K...>) {
+              done.emplace(A{std::move(*std::get<K>(s))...});
+            }(std::make_index_sequence<N>{});
+          }
+        }
+      }, all_alts);
+      if (started) continue;
+      // A node read: kept by its index, and handed to the node holding it.
+      std::size_t id = stack.back().id;
+      stack.pop_back();
+      crane::make_immortal(*done);
+      tab[id] = *done;
+      if (stack.empty()) return std::move(*done);
+      std::size_t k = stack.back().next - 1;
+      detail::on_index(stack.back().alt, [&](auto i) {
+        constexpr std::size_t I = decltype(i)::value;
+        using A = std::tuple_element_t<I, alts>;
+        if constexpr (!std::is_empty_v<A>) {
+          using Fs = detail::fields_t<A>;
+          detail::on_index(k, [&](auto kk) {
+            constexpr std::size_t K = decltype(kk)::value;
+            using G = std::tuple_element_t<K, Fs>;
+            if constexpr (detail::self_handle<G, T>)
+              std::get<K>(std::get<I + 1>(stack.back().fields)).emplace(make_handle<G>(std::move(*done), id));
+          }, std::make_index_sequence<std::tuple_size_v<Fs>>{});
+        }
+      }, all_alts);
+    }
+  }
+
 public:
   explicit reader(const image &img) : img_(img) {}
   bool done() const { return pos_ == img_.size; }
@@ -578,32 +754,7 @@ public:
     } else if constexpr (is_shared_array<T>::value) {
       return get_array<typename T::value_type>();
     } else if constexpr (inductive<T>) {
-      using V = typename T::variant_t;
-      using alts = typename alternatives<V>::type;
-      auto &tab = table<T>();
-      std::uint64_t share = word();
-      if (share != 0) {
-        if (share - 1 >= tab.size() || !tab[share - 1]) corrupt("a shared node");
-        return *tab[share - 1];
-      }
-      std::size_t idx = word();
-      if (idx >= std::tuple_size_v<alts>) corrupt("a constructor index");
-      std::optional<T> out;
-      on_index(idx, [&](auto i) {
-        constexpr std::size_t I = decltype(i)::value;
-        using A = std::tuple_element_t<I, alts>;
-        if constexpr (std::is_empty_v<A>) {
-          out.emplace(A{});
-        } else {
-          std::size_t id = tab.size();
-          tab.emplace_back();
-          T t(get_fields<A>());
-          crane::make_immortal(t);
-          table<T>()[id] = t;
-          out.emplace(std::move(t));
-        }
-      }, std::make_index_sequence<std::tuple_size_v<alts>>{});
-      return std::move(*out);
+      return get_inductive<T>();
     } else if constexpr (std::is_empty_v<T>) {
       return T{};
     } else if constexpr (fielded<T>) {
