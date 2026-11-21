@@ -26,10 +26,13 @@ Running the generated C++ once and emitting the value as data does work.
 1. **Check** (`src/driver/bake.ml`, `check`). The constant must be a
    transparent constant outside any functor or module type, and its type must
    hold only data: no function, type, proof (at the top), coinductive (lazy or
-   effectful, `itree` included) or opaque axiom type unless it is custom-mapped
-   or primitive. The walk reduces the type, then instantiates each
-   constructor's parameters and checks every non-`Prop` field, recursively.
-   A refusal is a `Crane Bake: <c> is a function, which is not data.` error.
+   effectful, `itree` included) or opaque axiom type unless it is mapped (a
+   typed `TypeMapping` or a legacy custom extraction) or primitive. The check
+   runs before any extraction, so it discovers the typed mappings itself
+   (`Mapping_discovery.discover`). The walk reduces the type, then
+   instantiates each constructor's parameters and checks every non-`Prop`
+   field, recursively. A refusal is a `Crane Bake: <c> is a function, which is
+   not data.` error (`<c> holds, in a constructor field, ...` for a field).
 2. **Bake** (`bake_one`). Inside `Vernacstate.System.protect`, so the
    extraction leaves no trace in the summary or the library, Crane extracts
    `c` on its own into a temporary directory. A constant at a library's top

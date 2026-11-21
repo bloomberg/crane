@@ -15438,3 +15438,14 @@
   (alias runtest)
   (deps bake_std_optional.t.exe)
   (action (run ./bake_std_optional.t.exe))))
+
+(subdir bake_prim_string
+ (rule
+  (targets bake_prim_string.t.exe)
+  (deps BakePrimString.vo bake_prim_string.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_prim_string.t.exe bake_prim_string.t.cpp bake_prim_string.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_prim_string.t.exe)
+  (action (run ./bake_prim_string.t.exe))))
