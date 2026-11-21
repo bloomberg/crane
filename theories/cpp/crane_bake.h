@@ -38,11 +38,18 @@
 // block it allocates immortal ([crane::make_immortal]): the value lives as
 // long as the program, and reading it from any thread never touches its
 // counts.
+//
+// The format is the same on every byte order: a word is written as the
+// number it is, never as memory, and a string's bytes are packed by shifts.
+// What it does assume is asserted below; and an image asserts that the
+// target reads its scalars at the widths the bake host wrote them at
+// ([data_model]), which is what cross-compiling a baked unit could break.
 
 #pragma once
 
 #include <bit>
 #include <cinttypes>
+#include <climits>
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
@@ -64,6 +71,14 @@
 #include "shared_array.h"
 #include "shared_variant.h"
 
+static_assert(CHAR_BIT == 8, "crane::bake: an image packs a string's bytes eight to a 64-bit word, "
+                             "so a byte must have 8 bits");
+static_assert(std::numeric_limits<float>::is_iec559 && sizeof(float) == 4 &&
+                  std::numeric_limits<double>::is_iec559 && sizeof(double) == 8,
+              "crane::bake: an image holds a float or a double as its IEEE 754 bits in a word");
+static_assert(sizeof(std::size_t) <= sizeof(std::uint64_t),
+              "crane::bake: an image holds a length in a 64-bit word");
+
 namespace crane::bake {
 
 // A baked value as the generated implementation file holds it.
@@ -73,6 +88,14 @@ struct image {
   const void *const *blocks;
   std::size_t block_count;
 };
+
+// The widths of the scalar types an image may hold, which the bake host and
+// the target must agree on: each image asserts it equals the host's.
+inline constexpr std::uint64_t data_model =
+    std::uint64_t(sizeof(short)) | std::uint64_t(sizeof(int)) << 8 | std::uint64_t(sizeof(long)) << 16 |
+    std::uint64_t(sizeof(long long)) << 24 | std::uint64_t(sizeof(wchar_t)) << 32 |
+    std::uint64_t(sizeof(std::size_t)) << 40;
+
 
 namespace detail {
 
@@ -243,20 +266,52 @@ class writer {
   template <class E> std::string static_block(const crane::shared_array<E> &a) {
     auto it = block_names_.find(a.begin());
     if (it != block_names_.end()) return it->second;
-    std::string elems;
+    std::vector<std::string> elems;
+    elems.reserve(a.size());
     for (const E &x : a) {
-      if (!elems.empty()) elems += ",";
       if constexpr (detail::is_shared_array<E>::value) {
-        if (x.empty()) elems += "crane::shared_array<" + type_name<typename E::value_type>() + ">{}";
-        else elems += type_name<E>() + "::of_static(" + static_block(x) + ")";
+        if (x.empty()) elems.push_back("crane::shared_array<" + type_name<typename E::value_type>() + ">{}");
+        else elems.push_back(type_name<E>() + "::of_static(" + static_block(x) + ")");
       } else
-        elems += literal(x);
+        elems.push_back(literal(x));
     }
     std::string name = prefix_ + "b" + std::to_string(block_names_.size());
-    decls_ += "[[clang::no_destroy]] constinit " + type_name<crane::shared_array<E>>() + "::fixed<" +
-              std::to_string(a.size()) + "> " + name + "{" + elems + "};\n";
+    decls_ += declaration("[[clang::no_destroy]] constinit " + type_name<crane::shared_array<E>>() + "::fixed<" +
+                              std::to_string(a.size()) + "> " + name,
+                          elems);
     block_names_.emplace(a.begin(), name);
     return name;
+  }
+
+  // The declaration [head{elems};], laid out as Crane lays out the code the
+  // image follows (emit/layout.ml: LLVM style, 80 columns): on one line if it
+  // fits, else broken after the brace and the elements filled into lines
+  // indented four columns.  The image is not handed to that layout, which
+  // gives each element of a braced list too long for one line a line of its
+  // own: one per word of the stream.
+  static std::string declaration(const std::string &head, const std::vector<std::string> &elems) {
+    constexpr std::size_t limit = 80;
+    std::string one = head + "{";
+    for (std::size_t i = 0; i < elems.size(); ++i) one += (i ? ", " : "") + elems[i];
+    one += "};\n";
+    if (one.size() - 1 <= limit) return one;
+    std::string out = head + "{";
+    std::size_t col = limit;
+    for (std::size_t i = 0; i < elems.size(); ++i) {
+      bool last = i + 1 == elems.size();
+      std::size_t width = elems[i].size() + (last ? 2 : 1);
+      if (col + 1 + width > limit) {
+        out += "\n    ";
+        col = 4;
+      } else {
+        out += " ";
+        ++col;
+      }
+      out += elems[i];
+      out += last ? "};" : ",";
+      col += width;
+    }
+    return out + "\n";
   }
 
 public:
@@ -359,22 +414,29 @@ public:
     }
   }
 
-  // The image as C++: the static blocks, the stream and [symbol].
+  // The image as C++: the host's data model asserted, the static blocks, the
+  // stream and [symbol], laid out as Crane lays out the code around it.
   std::string cpp(const std::string &symbol) const {
-    std::string out = "// Baked by crane::bake: the value of " + symbol + ".\n";
-    out += decls_;
-    out += "constinit const void *const " + prefix_ + "blocks[] = {";
-    if (stream_blocks_.empty()) out += "nullptr";
-    for (std::size_t i = 0; i < stream_blocks_.size(); ++i) out += (i ? ",&" : "&") + stream_blocks_[i];
-    out += "};\nconstinit const std::uint64_t " + prefix_ + "words[] = {";
     char buf[32];
-    for (std::size_t i = 0; i < words_.size(); ++i) {
-      std::snprintf(buf, sizeof buf, "%s0x%" PRIx64 "u", i ? (i % 8 ? "," : ",\n") : "", words_[i]);
-      out += buf;
+    std::string out = "// Baked by crane::bake: the value of " + symbol + ".\n";
+    std::snprintf(buf, sizeof buf, "0x%" PRIx64 "u", data_model);
+    out += "static_assert(crane::bake::data_model == " + std::string(buf) +
+           ",\n              \"crane::bake: baked on a host with other scalar widths\");\n";
+    out += decls_;
+    std::vector<std::string> blocks;
+    for (const auto &b : stream_blocks_) blocks.push_back("&" + b);
+    if (blocks.empty()) blocks.push_back("nullptr");
+    out += declaration("constinit const void *const " + prefix_ + "blocks[] = ", blocks);
+    std::vector<std::string> words;
+    words.reserve(words_.size());
+    for (std::uint64_t w : words_) {
+      std::snprintf(buf, sizeof buf, "0x%" PRIx64 "u", w);
+      words.push_back(buf);
     }
-    out += "};\nconstinit const crane::bake::image " + symbol + "{" + prefix_ + "words, " +
-           std::to_string(words_.size()) + ", " + prefix_ + "blocks, " + std::to_string(stream_blocks_.size()) +
-           "};\n";
+    out += declaration("constinit const std::uint64_t " + prefix_ + "words[] = ", words);
+    out += declaration("constinit const crane::bake::image " + symbol,
+                       {prefix_ + "words", std::to_string(words_.size()), prefix_ + "blocks",
+                        std::to_string(stream_blocks_.size())});
     return out;
   }
 };

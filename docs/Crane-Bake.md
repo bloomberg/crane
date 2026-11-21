@@ -52,7 +52,7 @@ Running the generated C++ once and emitting the value as data does work.
    `crane::bake::value{<symbol>}`, which converts to the declared type.
    `print_structure_to_file` declares the image `extern` in the header (after
    `#include "crane_bake.h"`, ahead of the namespace) and appends the image
-   text, as written and not laid out, to the implementation file.
+   text, as the driver wrote it, to the implementation file.
 
 ## The image (`theories/cpp/crane_bake.h`)
 
@@ -79,6 +79,25 @@ each type gets its own template instantiation.
   `crane::shared_array<E>::fixed<N>`, `constinit`, `[[clang::no_destroy]]`,
   with its count at `block_detail::immortal`. `code` encodes `E`, and reading
   checks it.
+
+The format does not depend on byte order: a word is written as the number it
+is (a C++ literal), a string's bytes are packed by shifts, a float is its
+IEEE bits as an integer. `crane_bake.h` asserts what it does assume (8-bit
+bytes, IEEE `float`/`double`, a length fits a word), and each image starts
+with `static_assert(crane::bake::data_model == ...)`: the widths of `short`,
+`int`, `long`, `long long`, `wchar_t` and `size_t` on the bake host, which
+the target must share (a `long` written on LP64 and read on LLP64 would be
+truncated). Cross-compiling a baked unit is otherwise unsupported.
+
+The driver lays the image out itself (`writer::declaration`): a declaration
+on one line if it fits in 80 columns, else broken after the brace with the
+elements filled into lines indented four columns, as clang-format writes a
+long initialiser. It is not handed to `Emit.Layout`, which gives every
+element of a braced list too long for one line a line of its own (90,002
+lines for `bake_long_list`'s stream). Routing it through CppIR would mean
+the driver emitting a structured image for OCaml to rebuild as declarations
+(`constinit`, `[[clang::no_destroy]]` and `shared_array::fixed<N>`, none of
+which CppIR spells) for the same text.
 
 Reading happens once, at static initialisation. Every block it allocates is
 made immortal (`crane::make_immortal`). Sharing is kept: the
