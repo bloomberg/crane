@@ -198,13 +198,7 @@ struct UnitReturningCallbackMap {
   };
 
   static inline const sink s = sink{noop, std::monostate{}};
-  static inline const uint64_t total = ((run + []() -> uint64_t {
-    {
-      return UINT64_C(1);
-    }
-  }()) + []() -> uint64_t {
-    {
-      return UINT64_C(1);
-    }
-  }());
+  static inline const uint64_t total =
+      ((run + []() -> uint64_t { return UINT64_C(1); }()) +
+       []() -> uint64_t { return UINT64_C(1); }());
 };

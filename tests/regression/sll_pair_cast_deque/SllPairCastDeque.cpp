@@ -18,13 +18,15 @@ SllPairCastDeque::sll_final_config(const SllPairCastDeque::sll_subparser &sp) {
       if (l.empty()) {
         return true;
       } else {
-        const auto &_x0 = l.front();
-        std::deque<SllPairCastDeque::sll_frame> _x1(l.begin()+1, l.end());
+        const SllPairCastDeque::sll_frame &_x0 = l.front();
+        std::deque<SllPairCastDeque::sll_frame> _x1 =
+            std::deque<SllPairCastDeque::sll_frame>(l.begin() + 1, l.end());
         return false;
       }
     } else {
-      const auto &_x0 = fr_suf0.front();
-      std::deque<uint64_t> _x1(fr_suf0.begin()+1, fr_suf0.end());
+      const uint64_t &_x0 = fr_suf0.front();
+      std::deque<uint64_t> _x1 =
+          std::deque<uint64_t>(fr_suf0.begin() + 1, fr_suf0.end());
       return false;
     }
   }

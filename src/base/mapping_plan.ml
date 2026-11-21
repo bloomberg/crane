@@ -287,7 +287,6 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
     | Cpp.Unsafe_verbatim s -> Verbatim s
   in
   let template = compile_template ~fail ~stored in
-  let canonical_text = text_of_type_expr (type_expr m.type_cpp) in
   (* A view's conversions are term templates of one value argument: the
      canonical value ([%value]) or the view ([%view]) is its [%a0]. *)
   let construction ~hole = function
@@ -330,6 +329,15 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
                | Expr e -> template e
                | With_body (i, b) -> "%result = " ^ template i ^ "; " ^ template b
              in
+             (* A field declared at a type parameter is spelled as that
+                parameter's [%tN]; a recursive field as the matched value's
+                type, [%ty], which is the canonical type at the instantiation
+                the value is read at (an erased one where it is boxed). *)
+             let field_type n =
+               match parameter_of_field env c.ctor_source n with
+               | Some i -> Some (Printf.sprintf "%%t%d" (position i))
+               | None -> if recursive_field env c.ctor_source n then Some "%ty" else None
+             in
              let view =
                Option.map
                  (fun v ->
@@ -338,6 +346,16 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
                      fields =
                        List.map
                          (fun (n, p) ->
+                           (* [%ret], the projection's result: the field's
+                              type, where the plan spells it. *)
+                           let template e =
+                             let renamed =
+                               match field_type n with
+                               | Some t -> [("%ret", t)]
+                               | None -> []
+                             in
+                             compile_template ~renamed ~fail ~stored e
+                           in
                            ( n,
                              match p with
                              | Owned_projection e -> Owned_projection (template e)
@@ -345,12 +363,7 @@ let compile env (r : Mapping_discovery.resolved_type_mapping) head ids kinds =
                              | Read_view_projection e -> Read_view_projection (template e) ))
                          v.case_fields;
                      field_types =
-                       List.filter_map
-                         (fun (n, _) ->
-                           match parameter_of_field env c.ctor_source n with
-                           | Some i -> Some (n, Printf.sprintf "%%t%d" (position i))
-                           | None -> if recursive_field env c.ctor_source n then Some (n, canonical_text) else None)
-                         v.case_fields;
+                       List.filter_map (fun (n, _) -> Option.map (fun t -> (n, t)) (field_type n)) v.case_fields;
                      field_heads =
                        List.filter_map
                          (fun (n, _) -> Option.map (fun g -> (n, g)) (other_inductive_field env c.ctor_source n))
@@ -537,9 +550,10 @@ let constructor_templates ip =
   List.init (constructor_count ip) (fun j -> constructor_template (ip, j + 1))
 
 (* A structured binding of the scrutinee, when that is what the one
-   constructor's view says: the canonical type is a [std::pair] or a
-   [std::tuple] with as many elements as the constructor has fields, and
-   field [j] is borrowed as [std::get<j>(%scrut)] -- what a structured
+   constructor's view says: the canonical type is a [std::pair] (or
+   [bsl::pair]) or a [std::tuple] with as many elements as the constructor
+   has fields, and field [j] is borrowed as [std::get<j>(%scrut)] (a pair's
+   as [%scrut.first], [%scrut.second]) -- what a structured
    binding of a tuple-like type binds its [j]-th name to.  The binding
    form lets an owned scrutinee be taken apart by value
    ({!Cpp_ir.Foreign_template.structured_binding}). *)
@@ -547,7 +561,7 @@ let tuple_binding p ((mind, i) as ip) n =
   let arity = (Global.lookup_mind mind).Declarations.mind_packets.(i).Declarations.mind_consnrealdecls.(0) in
   let tuple_like =
     match p.canonical with
-    | Apply ("std::pair", args) -> List.length args = 2 && arity = 2
+    | Apply (("std::pair" | "bsl::pair"), args) -> List.length args = 2 && arity = 2
     | Apply ("std::tuple", args) -> List.length args = arity
     | _ -> false
   in
@@ -559,7 +573,10 @@ let tuple_binding p ((mind, i) as ip) n =
            && List.for_all
                 (fun (j, proj) ->
                   match proj with
-                  | Canonical_borrow_projection e -> String.equal e (Printf.sprintf "std::get<%d>(%%scrut)" j)
+                  | Canonical_borrow_projection e ->
+                    String.equal e (Printf.sprintf "std::get<%d>(%%scrut)" j)
+                    || (j = 0 && String.equal e "%scrut.first")
+                    || (j = 1 && String.equal e "%scrut.second")
                   | Owned_projection _ | Read_view_projection _ -> false)
                 v.fields ->
       Some

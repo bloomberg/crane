@@ -15,5 +15,5 @@ Definition t2 : bool := eqb_dec true false.
 End BoolDecBde.
 
 Require Crane.Extraction.
-From Crane Require Mapping.BDE.
+From Crane Require Import Mapping.BDE.
 Crane Extraction "bool_dec_bde" BoolDecBde.

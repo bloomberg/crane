@@ -37,7 +37,8 @@ type view = {
   field_types : (int * string) list;
       (** a field whose C++ type the plan spells, and its spelling in the
           legacy vocabulary: [%tN] for a field declared at one of the head's
-          type parameters, the canonical type for a recursive field *)
+          type parameters, [%ty] (the matched value's type) for a recursive
+          field; a projection's [%ret] is compiled to it *)
   field_heads : (int * Names.GlobRef.t) list;
       (** a field of another inductive type, applied to no argument:
           spelled as that type's typed mapping writes it, where it has one *)

@@ -4,8 +4,8 @@ bool triples_le_max(const std::deque<rgb> &ts, uint64_t m) {
   if (ts.empty()) {
     return true;
   } else {
-    const auto &t = ts.front();
-    std::deque<rgb> ts_(ts.begin()+1, ts.end());
+    const rgb &t = ts.front();
+    std::deque<rgb> ts_ = std::deque<rgb>(ts.begin() + 1, ts.end());
     return (t.red <= m && triples_le_max(ts_, m));
   }
 }

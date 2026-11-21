@@ -193,14 +193,14 @@ bool AsciiAsChar::same(const String &a, const String &b) {
 
 /// Looks inside a character: its low bit.
 bool AsciiAsChar::odd_code(char c) {
-  const bool b0 = (static_cast<unsigned char>(c) & 1) != 0;
-  const bool _x = (static_cast<unsigned char>(c) & 2) != 0;
-  const bool _x0 = (static_cast<unsigned char>(c) & 4) != 0;
-  const bool _x1 = (static_cast<unsigned char>(c) & 8) != 0;
-  const bool _x2 = (static_cast<unsigned char>(c) & 16) != 0;
-  const bool _x3 = (static_cast<unsigned char>(c) & 32) != 0;
-  const bool _x4 = (static_cast<unsigned char>(c) & 64) != 0;
-  const bool _x5 = (static_cast<unsigned char>(c) & 128) != 0;
+  bool b0 = (static_cast<unsigned char>(c) & 1) != 0;
+  bool _x = (static_cast<unsigned char>(c) & 2) != 0;
+  bool _x0 = (static_cast<unsigned char>(c) & 4) != 0;
+  bool _x1 = (static_cast<unsigned char>(c) & 8) != 0;
+  bool _x2 = (static_cast<unsigned char>(c) & 16) != 0;
+  bool _x3 = (static_cast<unsigned char>(c) & 32) != 0;
+  bool _x4 = (static_cast<unsigned char>(c) & 64) != 0;
+  bool _x5 = (static_cast<unsigned char>(c) & 128) != 0;
   return b0;
 }
 
@@ -483,14 +483,14 @@ N Ascii0::N_of_digits(const List<bool> &l) {
 }
 
 N Ascii0::N_of_ascii(char a) {
-  const bool a0 = (static_cast<unsigned char>(a) & 1) != 0;
-  const bool a1 = (static_cast<unsigned char>(a) & 2) != 0;
-  const bool a2 = (static_cast<unsigned char>(a) & 4) != 0;
-  const bool a3 = (static_cast<unsigned char>(a) & 8) != 0;
-  const bool a4 = (static_cast<unsigned char>(a) & 16) != 0;
-  const bool a5 = (static_cast<unsigned char>(a) & 32) != 0;
-  const bool a6 = (static_cast<unsigned char>(a) & 64) != 0;
-  const bool a7 = (static_cast<unsigned char>(a) & 128) != 0;
+  bool a0 = (static_cast<unsigned char>(a) & 1) != 0;
+  bool a1 = (static_cast<unsigned char>(a) & 2) != 0;
+  bool a2 = (static_cast<unsigned char>(a) & 4) != 0;
+  bool a3 = (static_cast<unsigned char>(a) & 8) != 0;
+  bool a4 = (static_cast<unsigned char>(a) & 16) != 0;
+  bool a5 = (static_cast<unsigned char>(a) & 32) != 0;
+  bool a6 = (static_cast<unsigned char>(a) & 64) != 0;
+  bool a7 = (static_cast<unsigned char>(a) & 128) != 0;
   return Ascii0::N_of_digits(List<bool>::cons(
       a0,
       List<bool>::cons(

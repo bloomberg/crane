@@ -11,12 +11,12 @@ struct StringMatch {
   static inline const std::string str_cat =
       std::string("hello ") + std::string("world");
   static inline const int64_t str_len_empty =
-      static_cast<int64_t>(std::string("").size());
+      static_cast<int64_t>(std::string_view("").size());
   static inline const int64_t str_len_hello =
-      static_cast<int64_t>(std::string("hello").size());
+      static_cast<int64_t>(std::string_view("hello").size());
   static bool is_empty(std::string_view s);
-  static inline const bool test_empty_true = is_empty("");
-  static inline const bool test_empty_false = is_empty("x");
+  static inline const bool test_empty_true = is_empty(std::string_view(""));
+  static inline const bool test_empty_false = is_empty(std::string_view("x"));
   static inline const std::string test_cat =
       std::string("foo") + std::string("bar");
 };

@@ -73,6 +73,9 @@ type operation_binder = {
 
 type operation_binders = {
   binders_env : Environ.env;  (** declares one variable per binder *)
+  binders_sigma : Evd.evar_map;
+      (** declares the universes of the operation's fresh instance (a
+          universe-polymorphic primitive, [PrimArray.get], has some) *)
   binders : operation_binder list;  (** in source order *)
   result_type : EConstr.types;
   generic_use : EConstr.t;  (** the operation applied to every variable *)

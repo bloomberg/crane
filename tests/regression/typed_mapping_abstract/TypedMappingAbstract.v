@@ -8,6 +8,8 @@
       (operation mappings come later): the type side is the typed mapping.
     - [Token]: an inductive mapped abstractly.  Matching on it, or building
       it, in source is refused (design 19.5.7).
+    - [Bead]: given a legacy [Crane Extract Numeral] and a typed mapping,
+      which is refused (design 22.5).
     - [Pin]: mapped both by [Crane Extract Inductive] and by a typed
       mapping, which is refused (design 22.5). *)
 
@@ -83,6 +85,34 @@ Module AbstractBuild.
 Definition first_token : Token := token 1.
 End AbstractBuild.
 Fail Crane Extraction "typed_mapping_abstract_build" AbstractBuild.
+
+(** A legacy [Crane Extract Numeral] on a typed head is refused too
+    (design 22.5): a typed type's literals are its descriptor's.  The
+    instance is imported only inside the module that extracts, so this
+    conflict is the only one active there. *)
+Inductive Bead : Type := bead_zero | bead_next (b : Bead).
+Crane Extract Numeral Bead => "%nu".
+
+Module BeadMapping.
+  #[export] Instance bead_mapping : TypeMapping Bead :=
+    {| type_headers := [];
+       type_cpp := Crane.Cpp.Name "unsigned";
+       type_components := [];
+       type_copy := BitCopy;
+       type_access := ReadOnlyValue ReadByValue;
+       type_views := NoViews Bead;
+       type_interface := AbstractInterface;
+       type_model := Structural;
+       type_lifetime := NativeRAII;
+       type_release := OrdinaryRelease;
+       type_numerals := None |}.
+End BeadMapping.
+
+Module UsesBead.
+  Import BeadMapping.
+  Definition keep (b : Bead) : Bead := b.
+  Fail Crane Extraction "typed_mapping_abstract_numeral_conflict" keep.
+End UsesBead.
 
 (** A type mapped both by a legacy command and by a typed mapping. *)
 Inductive Pin : Type := pin.

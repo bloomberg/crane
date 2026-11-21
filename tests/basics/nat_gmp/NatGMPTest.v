@@ -37,9 +37,4 @@ Definition add_big (n : nat) : nat := n + 200.
 
 End NatGMPTest.
 
-Crane Extract Inductive bool =>
-  "bool"
-  [ "true" "false" ]
-  "if (%scrut) { %br0 } else { %br1 }".
-
 Crane Extraction "nat_gmp" NatGMPTest.

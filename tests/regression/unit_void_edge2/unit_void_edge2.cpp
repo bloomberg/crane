@@ -16,9 +16,7 @@ void UnitVoidEdge2::let_return_unit(uint64_t x0_) {
 
 uint64_t UnitVoidEdge2::let_match_unit(uint64_t n) {
   opaque_unit(n);
-  {
-    return n;
-  }
+  return n;
 }
 
 uint64_t UnitVoidEdge2::let_chain_use(uint64_t n) { return let_use_as_arg(n); }
@@ -50,9 +48,7 @@ void UnitVoidEdge2::mono_chain() {
 
 uint64_t UnitVoidEdge2::mono_bind_match() {
   std::cout << std::string("test");
-  {
-    return UINT64_C(42);
-  }
+  return UINT64_C(42);
 }
 
 uint64_t UnitVoidEdge2::mono_bind_opaque() {

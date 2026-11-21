@@ -201,6 +201,30 @@ let read_back (p : Plan.t) (e : expr) : ty list =
   in
   List.init n (fun i -> match List.assoc_opt i found with Some path -> at path | None -> Any)
 
+(* A string literal taken as the read view [t]: the view of the literal's
+   characters, constructed from them, and from their count where they hold
+   a NUL (a view of a character array would stop at it).  A literal has
+   static storage, so the view needs no owner and no canonical string is
+   made for it.  The read view of a type with literals is therefore
+   constructible from a literal and a count (Descriptor.v, [ViewSpec]); one
+   whose type names a type argument is left to its conversion. *)
+let literal_view t (e : expr) : expr option =
+  match e with
+  | Literal (String s) when target_kind t = Plan.Read_view -> (
+    let rec closed : Plan.type_expr -> bool = function
+      | Parameter _ -> false
+      | Name _ | Verbatim _ -> true
+      | Pointer t | Const t -> closed t
+      | Apply (_, args) -> List.for_all (function Plan.Type t -> closed t | Plan.Value _ -> true) args
+    in
+    match Plan.view (Plan.find (target_mapped t)) Plan.Read_view with
+    | Some v when closed v.view_type ->
+      let text = Pstring.to_string s in
+      let count : expr list = if String.contains text '\000' then [Literal (Int (String.length text))] else [] in
+      Some (Converting_construct (Plan.instantiate v.view_type [], Literal (Characters s) :: count))
+    | _ -> None )
+  | _ -> None
+
 (* Whether the template [text] places its argument [%a0] more than once. *)
 let repeats_argument text = Cpp_ir.Foreign_template.arg_mentions text 0 > 1
 
@@ -367,6 +391,9 @@ let transform_body u params modes (body : stmt list) : stmt list =
               (* A view takes nothing from its owner: a move there is
                  dropped. *)
               let a = match a with Move (Local _ as l) -> l | a -> a in
+              match literal_view t a with
+              | Some v -> v
+              | None ->
               let h = holding_of a in
               let inner () = match a with Local _ -> a | Call _ -> call ~escapes:false ~bound a | _ -> fe a in
               match as_view f (target_kind t) h (inner ()) with
@@ -433,6 +460,24 @@ let transform_body u params modes (body : stmt list) : stmt list =
   and rw () = Cpp_ir.Map.make ~stmts ~expr:fe ~stmt:fs ~type_:Fun.id () in
   stmts body
 
+(* [e] with each string literal a call takes as a read view written as the
+   view of the literal ({!literal_view}). *)
+let literal_views u (e : expr) : expr =
+  let rec fe (e : expr) : expr =
+    match e with
+    | Call (sg, f, args) ->
+      let target = targets u f (List.length args) in
+      let args =
+        List.mapi
+          (fun i a ->
+            match Option.bind (target i) (fun t -> literal_view t a) with Some v -> v | None -> fe a)
+          args
+      in
+      Call (sg, fe f, args)
+    | _ -> Cpp_ir.Map.expr (rw ()) e
+  and rw () = Cpp_ir.Map.make ~expr:fe ~stmt:Fun.id ~type_:Fun.id () in
+  fe e
+
 let transform_decl u (d : Cpp_ir.Lowered.Decl.t) : Cpp_ir.Lowered.Decl.t =
   let rec member ((f, a, b) : _ Cpp_ir.Field.member) : _ Cpp_ir.Field.member =
     match f with
@@ -448,6 +493,10 @@ let transform_decl u (d : Cpp_ir.Lowered.Decl.t) : Cpp_ir.Lowered.Decl.t =
       Function {fn with shape = Definition (params, transform_body u params fn.modes body)}
     | Template (ps, c, d) -> Template (ps, c, decl d)
     | Namespace (x, ds) -> Namespace (x, List.map decl ds)
+    (* An initialiser converts implicitly where its callee takes a view;
+       only a string literal, which would become a canonical string first,
+       is made the view of itself. *)
+    | Variable v -> Variable {v with init = literal_views u v.init}
     | Struct s -> Struct {s with fields = List.map member s.fields}
     | Merged_struct_members s -> Merged_struct_members {s with fields = List.map member s.fields}
     | Member_definition ({member = Method m; _} as md) ->

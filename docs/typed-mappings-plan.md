@@ -700,6 +700,62 @@ This milestone fixes the reported bug.
   legacy, and `Crane Extract Monad/Skip/Void` have no typed counterpart, so
   a migrated equivalent does not exist for every standard use and the
   legacy commands are not deprecated.
+- **M8 (second pass).** Migrated, each with its outputs: `Shared.v`
+  (`bool`, `sumbool` as BitCopy `bool`, `true`/`left` tested first;
+  `negb`/`andb`/`orb`; `unit` as `std::monostate`; `PrimArray` as
+  `persistent_array<T>` read by const reference), `AsciiChar.v`, `Real.v`,
+  `DequeList.v` (`list` as `std::deque`, nil tested first, the tail an
+  owned copy `%ret(%scrut.begin() + 1, %scrut.end())`), `BDE.v`,
+  `NatIntBDE.v`, `NIntBDE.v`, `ZIntBDE.v` (generated from their Std
+  counterparts with the `bsl` spellings; BDE strings have a
+  `bsl::string_view` read view). What it needed of the pipeline:
+  - 22.5: a legacy `Crane Extract Numeral` on a typed head is refused when
+    mappings are discovered (`typed_mapping_abstract`, `Bead`).
+    `Crane TriviallyCopyable` needs a legacy mapping of its head, so on a
+    typed head it already met the `customs` conflict.
+  - A string literal taken as a read view is the view of the literal
+    (`View_args.literal_view`, CppIR `Literal (Characters _)`):
+    `std::string_view("...")`, with the length where the literal holds a
+    NUL. The read view of a type with literals must be constructible from
+    a literal and a length (documented on `ViewSpec`). A global's
+    initialiser gets only this rewrite. A string literal holding a NUL is
+    printed `std::string("a\000b", 3)` everywhere (it was truncated).
+  - An operation's binders carry the evar map of the fresh instance they
+    were read from: a universe-polymorphic primitive (`PrimArray.get`)
+    failed to resolve.
+  - A recursive field's match binder is spelled `%ty`, the matched value's
+    type, not the canonical type, and a projection's `%ret` is the field's
+    type: a deque read at an erased instantiation
+    (`any_cast<std::deque<crane::obj>>`) binds its tail at that type.
+    A custom match whose scrutinee is cast to an erased instantiation
+    spells its type arguments `auto`, so a borrowed head is `const auto&`.
+  - A `bsl::pair` whose projections are `%scrut.first`/`%scrut.second` is
+    matched by a structured binding, as `std::pair` with `std::get`.
+  Output changes, reviewed: a match on `unit` opens no block; `Real` is not
+  moved and pairs of reals are bound by const reference; BDE outputs pass
+  options' payloads and pair fields by const reference and strings that
+  are only read as `const bsl::string&`/`bsl::string_view` (as Std);
+  `bool_dec_bde` now Imports `Mapping.BDE` and is extracted in the BDE
+  flavour it is compiled with; deque tails are written
+  `std::deque<T> x = std::deque<T>(b, e)` (was direct initialisation) and
+  heads `const T&` (was `const auto&`). Worse, recorded: `AsciiChar`'s
+  eight bit bindings lost `const` (an owned projection binds a plain
+  local).
+  Not migrated, and why: `External/*` (`StringViewStd`/`BDE` map an
+  axiomatised `string_view` whose operations are already views; `Vector`
+  maps a mutable `std::vector` mutated through ITree events, which needs
+  a `MutableHandle` model and the event mapping below), the monad
+  mappings (IO, STM, threads, ITree events): their events are
+  `Crane Extract Inductive E => ""` constructor templates of an indexed
+  event family run by `Crane Extract Monad`, and the design has no typed
+  counterpart for an event family, a monad, `Skip` or `Void` (design 22
+  covers only Inductive, Inlined Constant and TriviallyCopyable); their
+  smart constructors could become `EffectfulOperation`s, but the event
+  constructors they embed would stay legacy, so nothing is gained until
+  events have a descriptor. Hence no deprecation warning: a typed
+  equivalent does not exist for every standard use (`Crane Extract
+  Monad/Skip/Void/Skip Module` and event families have none), and every
+  test-local legacy mapping still works through the legacy path.
 - **Infrastructure.** `scripts/loopify-census.sh` fails on a rerun in an
   existing worktree (stale `_build/census`: dune does not rebuild a sibling
   `.vo` after the script deletes it); `rm -rf _build/census` before `make test`.
@@ -722,12 +778,15 @@ This milestone fixes the reported bug.
         `ZGMP`, with numeral descriptors
   - [x] compiled interfaces (`typed_mapping_interface`)
   - [x] exact-number example (`typed_mapping_exact_numbers`, cpp_int)
-  - [ ] BDE mappings (`BDE.v`, `NatIntBDE`, `NIntBDE`, `ZIntBDE`,
-        `Monads/*BDE*`); BDE is installed here and its tests run
-  - [ ] `Shared.v` (bool, sumbool, unit, PrimArray), `Real.v`,
-        `DequeList.v`, `AsciiChar.v`, `External/*`, monad mappings
-  - [ ] refuse a legacy `Crane Extract Numeral` on a typed head (22.5)
-  - [ ] a string literal passed as a view without `std::string(...)`
-  - [ ] deprecation warnings: blocked on the two items above (no typed
-        equivalent for every standard use; `Crane Extract Monad/Skip/Void`
-        have none)
+  - [x] BDE mappings (`BDE.v`, `NatIntBDE`, `NIntBDE`, `ZIntBDE`)
+  - [x] `Shared.v` (bool, sumbool, unit, PrimArray), `Real.v`,
+        `DequeList.v`, `AsciiChar.v`
+  - [ ] `External/*`, monad mappings (`Monads/*`, `*BDE` included):
+        event families and `Crane Extract Monad/Skip/Void` have no typed
+        counterpart in the design (see 6, M8 second pass)
+  - [x] refuse a legacy `Crane Extract Numeral` on a typed head (22.5)
+  - [x] a string literal passed as a view without `std::string(...)`
+  - [ ] deprecation warnings: blocked, no typed equivalent for event
+        families, monads, `Skip`, `Void`
+  - [x] full suite and corpus re-extraction after the second pass:
+        1462 passed, 17 failed (the 17 `tests/wip`), no output changed

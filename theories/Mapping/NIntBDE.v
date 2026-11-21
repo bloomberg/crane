@@ -3,8 +3,13 @@
 From Crane Require Extraction.
 From Crane Require Export Mapping.BDE.
 From Stdlib Require Import BinNat BinPos.
+From Crane Require Import Mapping.Descriptor.
+From Corelib Require Import PrimString.
+From Stdlib Require Import List.
+Import ListNotations.
+Local Open Scope pstring_scope.
 
-(** Extraction of [N] (binary natural numbers) to [unsigned int] (BDE flavor).
+(** Extraction of [N] (binary natural numbers) to [unsigned int].
 
     Maps [positive] to [unsigned int] and [N] to [unsigned int].
     All [N] and [Pos] operations become native C++ arithmetic.
@@ -19,56 +24,329 @@ From Stdlib Require Import BinNat BinPos.
     instead.
 *)
 
-(* positive: strictly positive binary integers *)
-Crane Extract Inductive positive =>
-  "unsigned int"
-  [ "(2u * %a0 + 1u)" "(2u * %a0)" "1u" ]
-  "if (%scrut == 1u) { %br2 } else if (%scrut % 2u != 0u) { unsigned int %b0a0 = (%scrut - 1u) / 2u; %br0 } else { unsigned int %b1a0 = %scrut / 2u; %br1 }".
+(** [positive] is an [unsigned int]: [xI p] is [2p + 1], [xO p] is [2p],
+    [xH] is [1]; a match tests [1], then oddness; a numeral is an
+    [unsigned int] literal. *)
+#[export] Instance bde_positive_mapping : TypeMapping positive :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.Name "unsigned int";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews positive;
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref xH;
+             ctor_build := Expr "1u";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut == 1u";
+                       case_fields := [] |} |};
+          {| ctor_source := Ref xI;
+             ctor_build := Expr "(2u * %a0 + 1u)";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut % 2u != 0u";
+                       case_fields := [(0, OwnedProjection "(%scrut - 1u) / 2u")] |} |};
+          {| ctor_source := Ref xO;
+             ctor_build := Expr "(2u * %a0)";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut % 2u == 0u";
+                       case_fields := [(0, OwnedProjection "%scrut / 2u")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals :=
+       Some {| numeral_cases :=
+                 [{| numeral_constructor := Ref xI; numeral_action := NumeralDoublePlusOne 0 |};
+                  {| numeral_constructor := Ref xO; numeral_action := NumeralDouble 0 |};
+                  {| numeral_constructor := Ref xH; numeral_action := NumeralOne |}];
+               numeral_emitter := IntegerToken "" "u";
+               numeral_converters := [] |} |}.
 
-(* N: natural numbers with zero *)
-Crane Extract Inductive N =>
-  "unsigned int"
-  [ "0u" "%a0" ]
-  "if (%scrut == 0u) { %br0 } else { unsigned int %b1a0 = %scrut; %br1 }".
-
-Crane Extract Numeral N => "%nu".
+(** [N] is an [unsigned int]: [N0] is [0], [Npos p] is [p]. *)
+#[export] Instance bde_n_mapping : TypeMapping N :=
+  {| type_headers := [];
+     type_cpp := Crane.Cpp.Name "unsigned int";
+     type_components := [];
+     type_copy := BitCopy;
+     type_access := ReadOnlyValue ReadByValue;
+     type_views := NoViews N;
+     type_interface :=
+       AlgebraicInterface
+         [{| ctor_source := Ref N0;
+             ctor_build := Expr "0u";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut == 0u";
+                       case_fields := [] |} |};
+          {| ctor_source := Ref Npos;
+             ctor_build := Expr "%a0";
+             ctor_view :=
+               Some {| view_requirement := PreferredObservation;
+                       case_test := "%scrut != 0u";
+                       case_fields := [(0, OwnedProjection "%scrut")] |} |}];
+     type_model := Structural;
+     type_lifetime := NativeRAII;
+     type_release := OrdinaryRelease;
+     type_numerals :=
+       Some {| numeral_cases :=
+                 [{| numeral_constructor := Ref N0; numeral_action := NumeralZero |};
+                  {| numeral_constructor := Ref Npos; numeral_action := NumeralIdentity 0 |}];
+               numeral_emitter := IntegerToken "" "u";
+               numeral_converters := [Ref N.of_num_uint] |} |}.
 
 (* Pos operations *)
-Crane Extract Inlined Constant Pos.add => "(%a0 + %a1)".
-Crane Extract Inlined Constant Pos.sub => "(%a0 > %a1 ? %a0 - %a1 : 1u)".
-Crane Extract Inlined Constant Pos.mul => "(%a0 * %a1)".
-Crane Extract Inlined Constant Pos.succ => "(%a0 + 1u)".
-Crane Extract Inlined Constant Pos.pred => "(%a0 > 1u ? %a0 - 1u : 1u)".
-Crane Extract Inlined Constant Pos.eqb => "%a0 == %a1".
-Crane Extract Inlined Constant Pos.ltb => "%a0 < %a1".
-Crane Extract Inlined Constant Pos.leb => "%a0 <= %a1".
-Crane Extract Inlined Constant Pos.compare =>
-  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
-Crane Extract Inlined Constant Pos.eq_dec => "%a0 == %a1".
-Crane Extract Inlined Constant Pos.min => "bsl::min(%a0, %a1)" From "bsl_algorithm.h".
-Crane Extract Inlined Constant Pos.max => "bsl::max(%a0, %a1)" From "bsl_algorithm.h".
+#[export] Instance bde_pos_add_mapping : OperationMapping (Ref Pos.add) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) + %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_sub_mapping : OperationMapping (Ref Pos.sub) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) > %arg(y) ? %arg(x) - %arg(y) : 1u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_mul_mapping : OperationMapping (Ref Pos.mul) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) * %arg(y))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_succ_mapping : OperationMapping (Ref Pos.succ) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) + 1u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_pred_mapping : OperationMapping (Ref Pos.pred) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) > 1u ? %arg(x) - 1u : 1u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_eqb_mapping : OperationMapping (Ref Pos.eqb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(p) == %arg(q)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "p"; argument_use := Read |};
+          {| argument_name := "q"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_ltb_mapping : OperationMapping (Ref Pos.ltb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) < %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_leb_mapping : OperationMapping (Ref Pos.leb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) <= %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_compare_mapping : OperationMapping (Ref Pos.compare) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) < %arg(y) ? %ret::LT : (%arg(y) < %arg(x) ? %ret::GT : %ret::EQ))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_eq_dec_mapping : OperationMapping (Ref Pos.eq_dec) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) == %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_min_mapping : OperationMapping (Ref Pos.min) :=
+  {| operation_headers := ["bsl_algorithm.h"];
+     operation_cpp := Expr "bsl::min(%arg(p), %arg(p'))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "p"; argument_use := Read |};
+          {| argument_name := "p'"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_max_mapping : OperationMapping (Ref Pos.max) :=
+  {| operation_headers := ["bsl_algorithm.h"];
+     operation_cpp := Expr "bsl::max(%arg(p), %arg(p'))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "p"; argument_use := Read |};
+          {| argument_name := "p'"; argument_use := Read |}]
+         ReturnValue [] |}.
 
 (* N operations *)
-Crane Extract Inlined Constant N.add => "(%a0 + %a1)".
-Crane Extract Inlined Constant N.sub => "(%a0 >= %a1 ? %a0 - %a1 : 0u)".
-Crane Extract Inlined Constant N.mul => "(%a0 * %a1)".
-Crane Extract Inlined Constant N.div => "(%a1 == 0u ? 0u : %a0 / %a1)".
-Crane Extract Inlined Constant N.modulo => "(%a1 == 0u ? %a0 : %a0 % %a1)".
-Crane Extract Inlined Constant N.succ => "(%a0 + 1u)".
-Crane Extract Inlined Constant N.pred => "(%a0 == 0u ? 0u : %a0 - 1u)".
-Crane Extract Inlined Constant N.eqb => "%a0 == %a1".
-Crane Extract Inlined Constant N.ltb => "%a0 < %a1".
-Crane Extract Inlined Constant N.leb => "%a0 <= %a1".
-Crane Extract Inlined Constant N.compare =>
-  "(%a0 < %a1 ? %ret::LT : (%a1 < %a0 ? %ret::GT : %ret::EQ))".
-Crane Extract Inlined Constant N.eq_dec => "%a0 == %a1".
-Crane Extract Inlined Constant N.min => "bsl::min(%a0, %a1)" From "bsl_algorithm.h".
-Crane Extract Inlined Constant N.max => "bsl::max(%a0, %a1)" From "bsl_algorithm.h".
-Crane Extract Inlined Constant N.double => "(%a0 * 2u)".
-Crane Extract Inlined Constant N.succ_double => "(%a0 * 2u + 1u)".
+#[export] Instance bde_n_add_mapping : OperationMapping (Ref N.add) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) + %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_sub_mapping : OperationMapping (Ref N.sub) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) >= %arg(m) ? %arg(n) - %arg(m) : 0u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_mul_mapping : OperationMapping (Ref N.mul) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) * %arg(m))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_div_mapping : OperationMapping (Ref N.div) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(b) == 0u ? 0u : %arg(a) / %arg(b))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "a"; argument_use := Read |};
+          {| argument_name := "b"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_modulo_mapping : OperationMapping (Ref N.modulo) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(b) == 0u ? %arg(a) : %arg(a) % %arg(b))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "a"; argument_use := Read |};
+          {| argument_name := "b"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_succ_mapping : OperationMapping (Ref N.succ) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) + 1u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_pred_mapping : OperationMapping (Ref N.pred) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) == 0u ? 0u : %arg(n) - 1u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_eqb_mapping : OperationMapping (Ref N.eqb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(n) == %arg(m)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_ltb_mapping : OperationMapping (Ref N.ltb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) < %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_leb_mapping : OperationMapping (Ref N.leb) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(x) <= %arg(y)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |};
+          {| argument_name := "y"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_compare_mapping : OperationMapping (Ref N.compare) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) < %arg(m) ? %ret::LT : (%arg(m) < %arg(n) ? %ret::GT : %ret::EQ))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_eq_dec_mapping : OperationMapping (Ref N.eq_dec) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "%arg(n) == %arg(m)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "m"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_min_mapping : OperationMapping (Ref N.min) :=
+  {| operation_headers := ["bsl_algorithm.h"];
+     operation_cpp := Expr "bsl::min(%arg(n), %arg(n'))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "n'"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_max_mapping : OperationMapping (Ref N.max) :=
+  {| operation_headers := ["bsl_algorithm.h"];
+     operation_cpp := Expr "bsl::max(%arg(n), %arg(n'))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "n'"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_double_mapping : OperationMapping (Ref N.double) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(n) * 2u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_succ_double_mapping : OperationMapping (Ref N.succ_double) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "(%arg(x) * 2u + 1u)";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.
 
-(* Conversions *)
-Crane Extract Inlined Constant N.of_nat => "static_cast<unsigned int>(%a0)".
-Crane Extract Inlined Constant N.to_nat => "static_cast<unsigned int>(%a0)".
-Crane Extract Inlined Constant Pos.of_nat => "static_cast<unsigned int>(%a0 == 0u ? 1u : %a0)".
-Crane Extract Inlined Constant Pos.to_nat => "static_cast<unsigned int>(%a0)".
+(* Conversions.  A [nat] is whatever the [nat] mapping in force makes it
+   ([unsigned int] under [Mapping.NatIntBDE]), so the conversions into it name
+   the type their call yields, [%ret], rather than this mapping's width. *)
+#[export] Instance bde_n_of_nat_mapping : OperationMapping (Ref N.of_nat) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<unsigned int>(%arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_n_to_nat_mapping : OperationMapping (Ref N.to_nat) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<%ret>(%arg(a))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "a"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_of_nat_mapping : OperationMapping (Ref Pos.of_nat) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<unsigned int>(%arg(n) == 0u ? 1u : %arg(n))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |}]
+         ReturnValue [] |}.
+#[export] Instance bde_pos_to_nat_mapping : OperationMapping (Ref Pos.to_nat) :=
+  {| operation_headers := [];
+     operation_cpp := Expr "static_cast<%ret>(%arg(x))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "x"; argument_use := Read |}]
+         ReturnValue [] |}.

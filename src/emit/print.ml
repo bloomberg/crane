@@ -1005,7 +1005,16 @@ and pp_cpp_expr ctx env args (t : expr) =
     | Dereference _ | Foreign_text _ ->
       str "(" ++ pp_cpp_expr ctx env args e ++ str ")." ++ field_name
     | _ -> pp_cpp_expr ctx env args e ++ str "." ++ field_name )
-  | Literal (String s) -> str ("\"" ^ escape_cpp_string (Pstring.to_string s) ^ "\"")
+  | Literal (String s) ->
+    let text = Pstring.to_string s in
+    let quoted = str ("\"" ^ escape_cpp_string text ^ "\"") in
+    (* A NUL ends a character array read as a string: the string is
+       constructed from the array and its length. *)
+    if String.contains text '\000' then (
+      writes_standard "string";
+      str (sn ctx.unit).string ++ str "(" ++ quoted ++ str (", " ^ string_of_int (String.length text) ^ ")") )
+    else quoted
+  | Literal (Characters s) -> str ("\"" ^ escape_cpp_string (Pstring.to_string s) ^ "\"")
   | Persistent_array (elems, _) ->
     str "{" ++ pp_list (pp_cpp_expr ctx env args) (Array.to_list elems) ++ str "}"
   | Literal (Uint63 x) ->
@@ -1530,7 +1539,7 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
       | Scrutinee {parenthesised} ->
         let printed = pp_cpp_expr ctx env [] t in
         ( match t with
-        | Literal (String _) -> string_object ctx printed
+        | Literal (String s) -> string_object ctx s printed
         (* A scrutinee carrying a prefix pointer operator binds looser than
            whatever the template appends: the option template's
            [%scrut.has_value()] applied to a recursive occurrence stored
@@ -1746,9 +1755,12 @@ and pp_cpp_stmt ctx env args (stmt : stmt) =
    the template's operations expect ([std::string("(") + p(a)]).  Spelled as a
    construction rather than with the [s] literal suffix, which would need a
    [using namespace] in every header that splices one. *)
-and string_object ctx printed =
-  writes_standard "string";
-  str (sn ctx.unit).string ++ str "(" ++ printed ++ str ")"
+and string_object ctx (s : Pstring.t) printed =
+  (* One holding a NUL is printed as a string object already. *)
+  if String.contains (Pstring.to_string s) '\000' then printed
+  else (
+    writes_standard "string";
+    str (sn ctx.unit).string ++ str "(" ++ printed ++ str ")" )
 
 (* A block's statements, each written on its own with the semicolon that
    ends it, its [%result] spelled [result]. *)
@@ -1769,7 +1781,7 @@ and pp_spliced ctx env ~followed_by_dot (arg_expr : expr) =
   let arg = pp_cpp_expr ctx env [] arg_expr in
   let arg =
     match arg_expr with
-    | Literal (String _) -> string_object ctx arg
+    | Literal (String s) -> string_object ctx s arg
     | _ -> arg
   in
   (* Parenthesize compound expressions that would bind incorrectly

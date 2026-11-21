@@ -3035,34 +3035,6 @@ let typed_custom_text r =
     | GlobRef.ConstructRef k -> Some (Mapping_plan.constructor_template k)
     | _ -> Some (Mapping_plan.type_text (Mapping_plan.find r))
 
-(** The typed mappings whose head also has a legacy mapping: an error (design
-    22.5), raised once mappings are discovered. *)
-let check_typed_mapping_conflicts () =
-  List.iter
-    (fun (head, instances) ->
-      if Core.Ref.Can.Map.mem head !customs then
-        CErrors.user_err
-          Pp.(
-            hov 0
-              ( str "Crane: " ++ Printer.pr_global head ++ str " is mapped twice:" ++ spc ()
-              ++ str "by the typed mapping" ++ spc ()
-              ++ prlist_with_sep (fun () -> str "," ++ spc ()) Printer.pr_global instances
-              ++ spc () ++ strbrk "and by a legacy Crane Extract command." ++ spc ()
-              ++ strbrk "Remove one of them: a type is mapped either by a TypeMapping instance or by Crane Extract Inductive/Constant, never both." )))
-    (Mapping_discovery.type_mapping_heads ());
-  List.iter
-    (fun (head, instances) ->
-      if Core.Ref.Can.Map.mem head !customs then
-        CErrors.user_err
-          Pp.(
-            hov 0
-              ( str "Crane: " ++ Printer.pr_global head ++ str " is mapped twice:" ++ spc ()
-              ++ str "by the operation mapping" ++ spc ()
-              ++ prlist_with_sep (fun () -> str "," ++ spc ()) Printer.pr_global instances
-              ++ spc () ++ strbrk "and by a legacy Crane Extract command." ++ spc ()
-              ++ strbrk "Remove one of them: an operation is mapped either by an OperationMapping instance or by Crane Extract Inlined Constant/Constant, never both." )))
-    (Mapping_discovery.operation_mapping_heads ())
-
 (** Whether an inductive packet is generated as a flat struct -- its one
     constructor's fields directly, with no variant: an ordinary inductive
     (records and classes are generated otherwise), not custom, not
@@ -3307,7 +3279,8 @@ let extraction_trivially_copyable (l : qualid list) =
             ++ str
                  " has no custom extraction, so there is no C++ type to \
                   declare trivially copyable.  Give it a mapping with Crane \
-                  Extract Inductive first." ) )
+                  Extract Inductive first; a type mapped by a TypeMapping \
+                  instance declares its copy cost in type_copy." ) )
     l
 
 (** True when [r] is a custom-extracted inductive whose C++ representation
@@ -4187,6 +4160,40 @@ let in_numeral : GlobRef.t * numeral_info -> obj =
                         info.converters in
          (r', { info with converters = convs' })))
        ~discharge:(fun x -> Some x)
+
+(** The typed mappings whose head also has a legacy mapping: an error (design
+    22.5), raised once mappings are discovered.  Legacy declarations live in
+    two tables: a type or operation template ([customs], which also holds
+    [Crane Extract Monad], [Skip], the ghost of [Void], and every head a
+    [Crane TriviallyCopyable] names, which needs a legacy mapping), and a
+    numeral format ([Crane Extract Numeral]: a typed type's numerals are its
+    descriptor's, design 17). *)
+let check_typed_mapping_conflicts () =
+  let refuse ~kind ~fix head instances command =
+    CErrors.user_err
+      Pp.(
+        hov 0
+          ( str "Crane: " ++ Printer.pr_global head ++ str " is mapped twice:" ++ spc ()
+          ++ str ("by the " ^ kind ^ " mapping") ++ spc ()
+          ++ prlist_with_sep (fun () -> str "," ++ spc ()) Printer.pr_global instances
+          ++ spc () ++ strbrk ("and by a legacy " ^ command ^ " command.") ++ spc () ++ strbrk fix ))
+  in
+  List.iter
+    (fun (head, instances) ->
+      let refuse = refuse ~kind:"typed" head instances in
+      if Core.Ref.Can.Map.mem head !customs then
+        refuse "Crane Extract"
+          ~fix:"Remove one of them: a type is mapped either by a TypeMapping instance or by Crane Extract Inductive/Constant, never both."
+      else if Core.Ref.Can.Map.mem head !numeral_table then
+        refuse "Crane Extract Numeral"
+          ~fix:"Remove it: a typed type's literals are given by its TypeMapping's type_numerals.")
+    (Mapping_discovery.type_mapping_heads ());
+  List.iter
+    (fun (head, instances) ->
+      if Core.Ref.Can.Map.mem head !customs then
+        refuse ~kind:"operation" head instances "Crane Extract"
+          ~fix:"Remove one of them: an operation is mapped either by an OperationMapping instance or by Crane Extract Inlined Constant/Constant, never both.")
+    (Mapping_discovery.operation_mapping_heads ())
 
 (* A numeral format is documented as a numeric-literal formatting directive, but
    it is rendered by textual [%n] substitution and emitted verbatim as C++

@@ -422,7 +422,10 @@ end =
 and Literal : sig
   (** A literal value. *)
   type t =
-    | String of Pstring.t
+    | String of Pstring.t  (** a Rocq string: the canonical string object *)
+    | Characters of Pstring.t
+        (** the C++ string literal itself, a character array, as a view is
+            constructed from it *)
     | Uint63 of Uint63.t
     | Float of Float64.t
     | Bool of bool

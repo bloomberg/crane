@@ -27,6 +27,11 @@
       as a view of the temporary, which lives to the end of the call's
       full expression; [outer] itself passes [s] to [cat], so it takes the
       canonical string and views it for [size_of].
+    - [literal_size], [literal_length], [literal_prefix_size]: a string
+      literal read as a view is the view of the literal
+      ([std::string_view("hello")]), no [std::string] made for it;
+      [nul_size], [nul_length]: one holding a NUL is constructed with its
+      length, as is the [std::string] of [with_nul].
     - A string declared [Write] by an operation mapping is refused: a Rocq
       string is a read-only value. *)
 
@@ -68,6 +73,20 @@ Module StringViews.
 
   Definition outer (s : string) : int :=
     PrimInt63.add (size_of s) (size_of (cat s s)).
+
+  (** String literals read as views: the view of the literal itself, with
+      no [std::string] made for it; one holding a NUL carries its length. *)
+  Definition literal_size : int := size_of "hello".
+
+  Definition literal_length : int := length "abc".
+
+  Definition literal_prefix_size : int := length (prefix "crane" 3).
+
+  Definition with_nul : string := Eval vm_compute in cat (cat "a" (make 1 0%uint63)) "b".
+
+  Definition nul_size : int := Eval cbv delta [with_nul] in size_of with_nul.
+
+  Definition nul_length : int := Eval cbv delta [with_nul] in length with_nul.
 
 End StringViews.
 
