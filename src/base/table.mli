@@ -1454,3 +1454,24 @@ val add_erased_fix_group : Core.Occurrence.t -> unit
 
 (** Whether {!add_erased_fix_group} recorded [occ]. *)
 val is_erased_fix_group : Core.Occurrence.t -> bool
+
+(** {2 Baked constants ([Crane Bake c])} *)
+
+(** What a baked constant is initialised with: the C++ name its image is
+    declared under, and the image, C++ text the bake driver wrote. *)
+type baked = {symbol : string; image : string}
+
+(** Records [r]'s image (a libobject, so it survives [Require]); [r] is then
+    never inlined. *)
+val record_baked : GlobRef.t -> baked -> unit
+
+val baked_image : GlobRef.t -> baked option
+val baked_constants : unit -> (GlobRef.t * baked) list
+
+(** The constant the extraction driving a bake is for, while it runs. *)
+val bake_root : GlobRef.t option ref
+
+val is_bake_root : GlobRef.t -> bool
+
+(** [Set Crane Bake Flags]: extra compiler flags for the bake driver. *)
+val bake_flags : unit -> string

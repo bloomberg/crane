@@ -160,6 +160,17 @@ From Crane.Libraries.ParseALot.Lexer Require Import Regex.
 
 Crane Guard Compare Literal.LXR.Mem.STT.TabT.R.Defs.Regexes.re_compare => Eq.
 
+(* Each lexer's rules with their DFAs built, computed once here and extracted
+   as data: [crane_extracted] holds the tables as constant-initialised static
+   blocks rather than code building them at startup.  The bake compiles the
+   lexer against the immer headers the build uses: set CRANE_BAKE_FLAGS (e.g.
+   "-I$HOME/cpp/immer -DIMMER_NO_THREAD_SAFETY=1") where they are not on the
+   default include path. *)
+Crane Bake
+  Crane.Libraries.ParseALot.Examples.JSON.Parser.JSON.json_srules
+  Crane.Libraries.ParseALot.Examples.CSV.Parser.CSV.csv_srules
+  Crane.Libraries.ParseALot.Examples.XML.Parser.XML.xml_srules.
+
 (* Baseline for the codegen-perf pass: arena OFF. The retired per-type
    `Crane Arena`/`Crane Arena Shared regex` directives were removed (scoped-arena
    redesign established arena-off is fastest for parse-a-lot; see

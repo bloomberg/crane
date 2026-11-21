@@ -1758,6 +1758,23 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
     Base.Pipeline_trace.event "emit" (Core_plan.Effects.report facts.effects);
     Base.Pipeline_trace.event "emit" (Core_plan.Callable_abi.report_foreign u.callables)
   end;
+  (* The images of the baked constants the unit declares ([Crane Bake]):
+     declared in the header, ahead of the namespace, and defined at the end
+     of the implementation file, as the bake driver wrote them. *)
+  let baked_here =
+    let declared = declares struc in
+    List.filter_map
+      (fun (r, (b : Base.Table.baked)) -> if declared r && not (Base.Table.is_bake_root r) then Some b else None)
+      (Base.Table.baked_constants ())
+  in
+  let bake_decls =
+    match baked_here with
+    | [] -> mt ()
+    | l ->
+      str "#include \"crane_bake.h\"" ++ fnl ()
+      ++ prlist (fun (b : Base.Table.baked) -> str ("extern const crane::bake::image " ^ b.symbol ^ ";") ++ fnl ()) l
+      ++ fnl ()
+  in
   let opened = List.filter !opened_filter (opened_libraries ()) in
   (* The header includes every file either of the unit's files names, so a
      unit including a function's header also includes the header of each
@@ -1830,6 +1847,12 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
     Option.iter
       (fun f ->
         write_laid_out f impl;
+        (* Appended as written: data, not code for the layout to read. *)
+        if baked_here <> [] then begin
+          let oc = open_out_gen [Open_wronly; Open_append; Open_binary] 0o644 f in
+          Fun.protect ~finally:(fun () -> close_out oc) @@ fun () ->
+          List.iter (fun (b : Base.Table.baked) -> output_string oc ("\n" ^ b.image)) baked_here
+        end;
         info_file f )
       fn;
   (* Now, let's print the signature *)
@@ -1840,6 +1863,7 @@ let print_structure_to_file cx ?(namespace = None) ?(unit_includes = [])
       ( try
           pp_with ft (spec_header ~unit_includes ~config:plan.config (Some si) ());
           pp_with ft (d.sig_preamble mo comment opened unsafe_needs);
+          pp_with ft bake_decls;
           pp_with ft ns_open;
           pp_with ft body_hstruct;
           pp_with ft ns_close;

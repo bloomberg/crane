@@ -979,6 +979,24 @@ Crane Guard Compare <Rocq function> => <Rocq constructor>.
 
 ---
 
+## `Crane Bake`
+
+Compute closed constants once, when the command runs, and extract them as data. The generated code initialises each one from a static image, with no code computing it at startup. Arrays of scalars (and arrays of such arrays) become constant-initialised immortal blocks. Everything else is rebuilt from a flat word stream at static initialisation, keeping sharing (a DAG stays a DAG). See `docs/Crane-Bake.md`.
+
+### Syntax
+
+```coq
+Crane Bake <constant> <constant> ... .
+Set Crane Bake Flags "<extra clang++ flags>".   (* also read from CRANE_BAKE_FLAGS *)
+```
+
+* **`<constant>`**
+  A transparent constant outside any functor or module type, whose type holds only data. Crane refuses a function, a type, a proof, a coinductive value (lazy or effectful), or an opaque type that has no mapping.
+
+* Put it after the mappings and options the extraction uses. Crane extracts the constant on its own, compiles it with `clang++ -O1`, runs it, and records the image with the constant, so it survives `Require`. A baked constant is never inlined.
+
+---
+
 ## `Crane Show Extraction`
 
 Display the C++ extraction of the term corresponding to the current proof state (e.g., while working inside a proof script). Useful for interactively inspecting how in-progress definitions will extract.

@@ -104,6 +104,15 @@ struct count {
 };
 #endif
 
+// The count a block constant-initialised as immortal starts at
+// ([crane::shared_array::fixed], a [Crane Bake] image's static block): what
+// [count::make_immortal] stores.
+#if defined(CRANE_NON_ATOMIC_RC) && defined(CRANE_SINGLE_THREADED)
+inline constexpr std::size_t born_immortal = sticky;
+#else
+inline constexpr std::size_t born_immortal = immortal;
+#endif
+
 // Frees a block whose count reached zero.  A block's destructor releases what
 // it held, which may free another block, and so on down a chain as long as
 // the program's longest continuation or tree: freed recursively, that is one

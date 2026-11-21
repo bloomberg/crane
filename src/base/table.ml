@@ -4353,3 +4353,40 @@ let is_erased_fix_group occ = List.exists (Core.Occurrence.equal occ) !erased_fi
 let () =
   Mapping_discovery.skipped_class :=
     fun g -> is_inline_custom g && match find_custom_opt g with Some s -> String.equal s "" | None -> false
+
+(** {2 Baked constants ([Crane Bake c])} *)
+
+(* What a baked constant is initialised with: the name its image is declared
+   under, and the image itself, C++ text ({!Driver.Bake}). *)
+type baked = {symbol : string; image : string}
+
+let bake_table = Summary.ref Core.Ref.Can.Map.empty ~name:"CraneExtrBake"
+
+let add_baked (r, b) =
+  bake_table := Core.Ref.Can.Map.add r b !bake_table;
+  (* A baked constant is never inlined: its uses read the value its
+     declaration is initialised with. *)
+  add_inline_entries false [r]
+
+let bake_object : GlobRef.t * baked -> obj =
+  declare_object
+  @@ superglobal_object
+       "Crane Bake"
+       ~cache:add_baked
+       ~subst:(Some (fun (s, (r, b)) -> (fst (subst_global s r), b)))
+       ~discharge:(fun x -> Some x)
+
+let record_baked r b = Lib.add_leaf (bake_object (r, b))
+
+let baked_image r = Core.Ref.Can.Map.find_opt r !bake_table
+
+(* The constant the extraction driving a bake is for: its initialiser is
+   handed to [crane::bake::root], and every unit initialises it. *)
+let bake_root : GlobRef.t option ref = ref None
+
+let is_bake_root r = match !bake_root with Some c -> Core.Ref.Can.equal c r | None -> false
+
+let {Goptions.get = bake_flags} =
+  declare_string_option_and_ref ~key:["Crane"; "Bake"; "Flags"] ~value:"" ()
+
+let baked_constants () = Core.Ref.Can.Map.bindings !bake_table

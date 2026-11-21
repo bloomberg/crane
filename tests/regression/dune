@@ -18,6 +18,28 @@
 
 ; Test rules - compile C++ and run tests
 
+(subdir baked_constants_default
+ (rule
+  (targets baked_constants_default.t.exe)
+  (deps BakedConstantsDefault.vo baked_constants_default.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} baked_constants_default.t.exe baked_constants_default.t.cpp baked_constants_default.cpp)))
+ (rule
+  (alias runtest)
+  (deps baked_constants_default.t.exe)
+  (action (run ./baked_constants_default.t.exe))))
+
+(subdir baked_constants
+ (rule
+  (targets baked_constants.t.exe)
+  (deps BakedConstants.vo baked_constants.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} baked_constants.t.exe baked_constants.t.cpp baked_constants.cpp)))
+ (rule
+  (alias runtest)
+  (deps baked_constants.t.exe)
+  (action (run ./baked_constants.t.exe))))
+
 (subdir assoc_type_erased_in_lambda_body
  (rule
   (targets assoc_type_erased_in_lambda_body.t.exe)

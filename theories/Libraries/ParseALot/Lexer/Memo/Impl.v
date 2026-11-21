@@ -823,17 +823,20 @@ Module ImplFn (Import MEM : Memo.T).
       intros. split; auto. exists []. auto.
     Qed.
 
-    (** Top-level memoized lexer: initialises memos and invokes [lex'_M], discarding the final memo list. *)
-    Definition lex_M (rules : list Rule) (code : String) : list Token * String :=
-      let
-        srules := map init_srule rules
-      in
+    (** Memoized lexer over rules already converted by [init_srule]: initialises memos and invokes
+        [lex'_M], discarding the final memo list.  Converting the rules builds each rule's DFA, so a
+        program that lexes many inputs with the same rules converts them once and calls this. *)
+    Definition lex_M_pre (srules : list sRule) (code : String) : list Token * String :=
       match
         lex'_M code (init_Memos srules) srules code (init_index (length code))
               (init_index_self _) (lt_wf _) (init_Memos_lexy _ _) (init_Memos_parallel _)
        with
        | (_, ts, rest) => (ts, rest)
        end.
+
+    (** Top-level memoized lexer: [lex_M_pre] over the converted rules. *)
+    Definition lex_M (rules : list Rule) (code : String) : list Token * String :=
+      lex_M_pre (map init_srule rules) code.
 
   End Lex.
 

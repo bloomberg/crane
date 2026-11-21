@@ -733,6 +733,9 @@ let note_program_reads s = program_reads := s
 let plan_function_reads s = function_reads := Some (Core.Ref.Can.Set.union s !program_reads)
 
 let read_by_a_function r =
+  (* The bake driver links a unit that names no baked constant: its
+     initialiser has to run all the same. *)
+  Base.Table.is_bake_root r ||
   match !function_reads with
   | Some s -> Core.Ref.Can.Set.mem r s
   | None -> false
