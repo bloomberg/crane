@@ -33,3 +33,8 @@
     templates are instantiated ([foreign]). *)
 
 val transform_decl : Unit_plan.Context.t -> Cpp_ir.Lowered.Decl.t -> Cpp_ir.Lowered.Decl.t
+
+(** The copy of a read view of the mapped head [g], at the canonical
+    type's arguments [types], that its [MaterialiseView] construction
+    makes; [None] where the view is [BorrowOnly]. *)
+val materialisable : Names.GlobRef.t -> (Cpp_ir.Lowered.Type.t list -> Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowered.Expr.t) option

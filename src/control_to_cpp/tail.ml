@@ -201,13 +201,26 @@ let make_shadow u ~tparams ~pointer_safe name mode ty =
     one, so it is not. *)
 let borrowed_pointer_shadow (s : Shadow.t) = s.hold = Through_pointer
 
+(** The value a parameter passed as [mode] says, which the loop holds at
+    [ty], is copied out of [e], the read view the caller passed, where
+    {!held_across_turns} chose the canonical type for it. *)
+let held_from_view (mode : Cpp_ir.Param_mode.t) (ty : ty) (e : expr) =
+  match (mode.form, ty) with
+  | By_view (Read_view, g), Entity_application (g', tys, _) when GlobRef.CanOrd.equal g g' ->
+    Option.map (fun materialise -> materialise tys e) (Cpp_passes.View_args.materialisable g)
+  | _ -> None
+
 (** Generate the initialiser expression for a shadow variable [shadow] of
     the parameter [orig_id], passed as [mode] says and declared at [ty].
 
     - Pointer-safe shadows: [& orig_id] (address-of)
     - Moveable parameters: [std::move(orig_id)]
+    - A read view held as a value ({!held_from_view}): the value copied out
     - Otherwise: plain copy *)
 let tail_shadow_init orig_id (shadow : Shadow.t) mode ty =
+  match held_from_view mode ty (Local orig_id) with
+  | Some e -> e
+  | None ->
   if borrowed_pointer_shadow shadow then Unary (Address_of, Local orig_id)
   else if shadow.hold = In_place then Local orig_id
   else if is_moveable_param_type mode ty then Move (Local orig_id)
@@ -984,6 +997,62 @@ let planned_last_reads ~moves e args =
          flags args )
   | Some _ | None -> []
 
+(** The arguments of each recursive call [check] finds in [body]. *)
+let recursive_arguments check body =
+  List.map (fun (cs : call_site) -> cs.args) (collect_stmts check ~in_visitor:false body)
+
+(** [params], each passed by read view ({!Cpp_ir.Param_mode.view}) that
+    the loop cannot keep a view declared at the mapped type's canonical type
+    instead.  A loop variable is reassigned at every turn, and a view of
+    what a turn computes -- [crane::string_sub(_loop_s, 1, n)], an owner
+    made for the call -- dangles once the statement assigning it ends; a
+    call would have kept the temporary alive until it returned.  So a
+    parameter the recursive calls vary ([varying], parallel to [params])
+    stays a view only where every call in [sites] (the argument lists,
+    parallel to [params]) passes it a parameter that outlives the loop --
+    one no call varies, or one that stays a view itself -- and none passes
+    it to a varying parameter that does not, which would copy it at every
+    turn.  The others hold their value, copied once out of the view the
+    caller passed ({!held_from_view}).  A writable view is left: the writes
+    through it are the caller's, which a value of the loop's own would not
+    see; so is a view whose mapping cannot copy it ([BorrowOnly]). *)
+let held_across_turns ~varying ~sites ~modes params =
+  let read_view (m : Cpp_ir.Param_mode.t) =
+    match m.form with
+    | By_view (Read_view, g) when Option.has_some (Cpp_passes.View_args.materialisable g) -> Some g
+    | _ -> None
+  in
+  let n = List.length params in
+  let sites = List.filter (fun args -> List.length args = n) sites in
+  let names = List.map fst params in
+  let rec settle kept =
+    let outlives x = List.exists2 (fun id (v, k) -> Id.equal id x && ((not v) || k)) names (List.combine varying kept) in
+    let passed i (a : expr) = match a with Local x | Move (Local x) -> Id.equal x (List.nth names i) | _ -> false in
+    let kept' =
+      List.mapi
+        (fun i k ->
+          k
+          && List.for_all
+               (fun args ->
+                 (match List.nth args i with Local x | Move (Local x) -> outlives x | _ -> false)
+                 && List.for_all2 (fun a (v, k') -> (not v) || k' || not (passed i a)) args (List.combine varying kept))
+               sites)
+        kept
+    in
+    if kept' = kept then kept else settle kept'
+  in
+  let candidate v m = v && Option.has_some (read_view m) in
+  let kept = settle (List.map2 candidate varying modes) in
+  List.map2
+    (fun (((id, ty), m), v) k ->
+      match read_view m with
+      | Some g when v && not k -> (
+        match Base.Mapping_plan.view_arguments (Base.Mapping_plan.find g) Base.Mapping_plan.Read_view ty with
+        | Some tys -> (id, Entity_application (g, tys, []))
+        | None -> (id, ty) )
+      | _ -> (id, ty))
+    (List.combine (List.combine params modes) varying) kept
+
 (** Compute the shadow-variable setup shared by {!transform_tail} and
     {!Tmc.transform_tmc}.
 
@@ -1001,8 +1070,9 @@ let planned_last_reads ~moves e args =
     @param params  Function parameters [(id, type)]
     @param modes   How each of [params] is passed, parallel to it
     @return {!shadow_setup} record consumed by the caller *)
-let build_shadow_setup ~unit ~varying ~parts ~modes tparams params =
+let build_shadow_setup ~unit ~varying ~parts ~modes ~sites tparams params =
   let pointer_safe = pointer_safe_flags unit ~parts ~modes params in
+  let params = held_across_turns ~varying ~sites ~modes params in
   let varying_params = filter_by_mask varying params in
   let varying_modes = filter_by_mask varying modes in
   let varying_pointer_safe = filter_by_mask varying pointer_safe in
@@ -1133,7 +1203,7 @@ let transform_tail ?(param_inits = []) ?(jumped = ignore) ?(moves = []) ~unit ~v
   check params ret_ty body =
   let { Shadow_setup.varying = varying; varying_params = varying_params; varying_modes;
         shadow_params = shadow_params; subs = subs } =
-    build_shadow_setup ~unit ~varying ~parts ~modes tparams params
+    build_shadow_setup ~unit ~varying ~parts ~modes ~sites:(recursive_arguments check body) tparams params
   in
   let is_void = ret_ty = Void in
   (* Shadow variable declarations (only for varying params) *)

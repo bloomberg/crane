@@ -899,7 +899,7 @@ let transform_tmc ?(param_inits = []) ?(jumped = ignore) ?cursor ~unit ~varying 
   let planned = planned_result shapes ret_ty in
   let { Tail.Shadow_setup.varying = varying; varying_params = varying_params; varying_modes;
         shadow_params = shadow_params; subs = subs } =
-    build_shadow_setup ~unit ~varying ~parts ~modes tparams params
+    build_shadow_setup ~unit ~varying ~parts ~modes ~sites:(recursive_arguments check body) tparams params
   in
   (* Shadow variable declarations.
      For pointer params with custom inits (e.g., _self = this in methods), only

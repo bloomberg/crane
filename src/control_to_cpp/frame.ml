@@ -1556,6 +1556,8 @@ let rewrite_enter_stmt ctx stmt =
     while-loop dispatch. These helpers factor out the common patterns. *)
 
 (** Generate the initial [_stack.emplace_back(_call\{...\})] statement.
+    A read view the frame holds as a value is copied out of the view the
+    caller passed ({!held_from_view}).
 
     @param varying_params The parameters to include in the Enter frame
     @return A raw C++ statement pushing the initial Enter frame *)
@@ -1570,6 +1572,9 @@ let make_stack_init varying_params =
     (Local_aggregate {struct_ = id_enter; type_args = []; values = List.map
            (fun p ->
              let v = Local p.Frame_param.name in
+             match held_from_view p.mode p.ty v with
+             | Some copy -> copy
+             | None ->
              if p.pointer_safe then Unary (Address_of, v)
              else move_if_needed p.ty v )
            varying_params})
@@ -2127,6 +2132,12 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
     | Some (ad, _) -> ad.install body
   in
   let pointer_safe = pointer_safe_flags unit ~parts ~modes params in
+  (* A frame is a loop variable too: one holding a read view of what a call
+     computed would dangle once the push ends ({!held_across_turns}). *)
+  let params =
+    let own = List.filter (fun (cs : call_site) -> cs.entry = 0) (collect_stmts check ~in_visitor:false body) in
+    held_across_turns ~varying ~sites:(List.map (fun (cs : call_site) -> cs.args) own) ~modes params
+  in
   (* Loopifying a function on its own gives a machine with one entry: the
      function itself, entered through [_call]. *)
   let own_entry = machine_entry ~enter_id:id_enter ~params ~modes ~varying in

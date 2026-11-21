@@ -5,16 +5,16 @@
     Expected: [result = 34099] (the string loses its first byte twice: 34
     bytes, the first is 'c' = 99).
 
-    Actual: the string parameter is only read, so it is a [std::string_view]
-    (the read view), and Loopify keeps it as a [std::string_view] loop
-    variable. The recursive call's argument [crane::string_sub(...)] is a
-    fresh [std::string] temporary, and [_loop_s = crane::string_sub(...)]
-    leaves the view pointing into it after the statement: clang rejects it
-    ("object backing the pointer '_loop_s' will be destroyed at the end of
-    the full-expression [-Werror,-Wdangling-assignment-gsl]"); without the
-    warning it is a use after free. A loop variable updated with an owned
-    value needs the canonical [std::string]. Typed-mappings regression:
-    main has no read views and passes the test. *)
+    Fixed: the string parameter is only read, so it is a [std::string_view]
+    (the read view), and Loopify kept it as a [std::string_view] loop
+    variable assigned [crane::string_sub(...)], a fresh [std::string]
+    temporary: the view dangled once the assignment ended (clang:
+    -Wdangling-assignment-gsl; a frame machine's [_call] field had the same
+    use after free without the warning).  A loop variable or frame field of
+    a read view now stays a view only when every recursive call passes it
+    a parameter that outlives the loop; otherwise it holds the canonical
+    [std::string], copied once out of the caller's view.
+    Typed-mappings regression: main has no read views. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Stdlib Require Import List ZArith Uint63.

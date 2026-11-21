@@ -159,7 +159,7 @@ uint64_t LoopifyStringViewDangling::drop_each(const List<bool> &l,
                                               std::string_view s) {
   // Loop replaces the tail recursion: each recursive call updates the loop
   // variables.
-  std::string_view _loop_s = s;
+  std::string _loop_s = std::string{s};
   const List<bool> *_loop_l = &l;
   while (true) {
     if (std::holds_alternative<typename List<bool>::Nil>(_loop_l->v())) {

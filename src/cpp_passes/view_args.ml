@@ -225,6 +225,11 @@ let literal_view t (e : expr) : expr option =
     | _ -> None )
   | _ -> None
 
+let materialisable g =
+  match Plan.view (Plan.find g) Plan.Read_view with
+  | Some {escape = Materialise text; _} -> Some (fun types e -> apply {custom = g; text; types} e)
+  | Some {escape = Borrow_only; _} | None -> None
+
 (* Whether the template [text] places its argument [%a0] more than once. *)
 let repeats_argument text = Cpp_ir.Foreign_template.arg_mentions text 0 > 1
 
@@ -259,6 +264,8 @@ let transform_body u params modes (body : stmt list) : stmt list =
     else apply c e
   in
   let holding x = match Id.Map.find_opt x held with Some h -> h | None -> Unknown in
+  let is_view = function View _ -> true | Canonical _ | Borrowed _ | Unknown -> false in
+  let is_canonical = function Canonical _ -> true | View _ | Borrowed _ | Unknown -> false in
   let holding_of (e : expr) =
     match e with
     | Local x -> holding x
@@ -451,6 +458,18 @@ let transform_body u params modes (body : stmt list) : stmt list =
        view; its uses decide whether it escapes. *)
     | Bind_variable (x, (Declare (Auto, _) as b), init) when Option.has_some (borrowed_call init) ->
       Bind_variable (x, b, call ~escapes:false ~bound:true init)
+    (* A view put in a variable of the canonical type -- a loop variable
+       that holds its value ({!Control_to_cpp.Tail.held_across_turns}) set
+       from a parameter the loop does not vary -- is the value copied out
+       of it. *)
+    | Bind_variable (x, (Declare (t, _) as b), (Local y | Move (Local y)))
+      when Option.has_some (mapped_type t) && is_view (holding y) ->
+      Bind_variable (x, b, materialised "view" (holding y) (Local y))
+    | Bind_variable (x, Existing, (Local y | Move (Local y))) when is_canonical (holding x) && is_view (holding y) ->
+      Bind_variable (x, Existing, materialised "view" (holding y) (Local y))
+    | Expression (Binary (Assign, (Local x as l), (Local y | Move (Local y))))
+      when is_canonical (holding x) && is_view (holding y) ->
+      Expression (Binary (Assign, l, materialised "view" (holding y) (Local y)))
     | Foreign_block fb when Base.Table.is_mapped_operation fb.custom ->
       let f : expr = Entity (fb.custom, fb.type_args, Some {inline = Some (Cpp_ir.Foreign.template_of_text fb.template); custom_yields = None}) in
       ( match fe (Call (Cpp_ir.Build.signature ~nargs:(List.length fb.values) (), f, fb.values)) with
