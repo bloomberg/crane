@@ -180,6 +180,12 @@ val mark_unused_bindings : settled -> settled
     names nothing. *)
 val name_scrutinees : settled -> settled
 
+(** [capture_scrutinees decl]: a stored lambda in a branch of a borrowing
+    match on a shared variant, reading every field the branch binds and
+    moving none, captures the scrutinee and binds the fields again inside,
+    where copying the fields costs more counts than copying the scrutinee. *)
+val capture_scrutinees : settled -> settled
+
 (** [narrow_captures decl]: a stored lambda reading a local record only
     through at most half its fields captures those fields, each bound by
     reference in front of the statement holding it, instead of the whole
