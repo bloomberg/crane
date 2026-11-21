@@ -43,8 +43,6 @@ Crane Extract Inlined Constant String.eqb => "(%a0 == %a1)".
 Crane Extract Inlined Constant Ascii.N_of_ascii => "(static_cast<unsigned int>(static_cast<unsigned char>(%a0)))".
 Crane Extract Inlined Constant Ascii.compare =>
   "((%a0) < (%a1) ? Datatypes::Comparison::LT : (%a0) == (%a1) ? Datatypes::Comparison::EQ : Datatypes::Comparison::GT)".
-Crane Extract Inlined Constant BinNat.N.compare =>
-  "((%a0) < (%a1) ? Datatypes::Comparison::LT : (%a0) == (%a1) ? Datatypes::Comparison::EQ : Datatypes::Comparison::GT)".
 
 (* ----------------------------------------------------------------- *)
 (* Custom mapping: NativeMap -> immer::map (replaces HashTrie)         *)
