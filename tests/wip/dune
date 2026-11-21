@@ -274,3 +274,14 @@
   (alias runtest)
   (deps deque_fold_function_acc.t.exe)
   (action (run ./deque_fold_function_acc.t.exe))))
+
+(subdir string_cat_max_length
+ (rule
+  (targets string_cat_max_length.t.exe)
+  (deps StringCatMaxLength.vo string_cat_max_length.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_cat_max_length.t.exe string_cat_max_length.t.cpp string_cat_max_length.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_cat_max_length.t.exe)
+  (action (run ./string_cat_max_length.t.exe))))
