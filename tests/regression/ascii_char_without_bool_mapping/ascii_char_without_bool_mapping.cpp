@@ -139,51 +139,39 @@ Nat BinNat::to_nat(const N &a) {
   }
 }
 
-N Ascii0::N_of_digits(const List<Bool0> &l) {
-  if (std::holds_alternative<typename List<Bool0>::Nil>(l.v())) {
+N Ascii0::N_of_digits(const List<bool> &l) {
+  if (std::holds_alternative<typename List<bool>::Nil>(l.v())) {
     return N::n0();
   } else {
-    const auto &[a0, a1] = std::get<typename List<Bool0>::Cons>(l.v());
-    return BinNat::add(
-        [&]() {
-          switch (a0) {
-          case Bool0::TRUE_: {
-            return N::npos(Positive::xh());
-          }
-          case Bool0::FALSE_: {
-            return N::n0();
-          }
-          default:
-            std::unreachable();
-          }
-        }(),
-        BinNat::mul(N::npos(Positive::xo(Positive::xh())),
-                    Ascii0::N_of_digits(*a1)));
+    const auto &[a0, a1] = std::get<typename List<bool>::Cons>(l.v());
+    return BinNat::add((a0 ? N::npos(Positive::xh()) : N::n0()),
+                       BinNat::mul(N::npos(Positive::xo(Positive::xh())),
+                                   Ascii0::N_of_digits(*a1)));
   }
 }
 
 N Ascii0::N_of_ascii(char a) {
-  auto a0 = (static_cast<unsigned char>(a) & 1) != 0;
-  auto a1 = (static_cast<unsigned char>(a) & 2) != 0;
-  auto a2 = (static_cast<unsigned char>(a) & 4) != 0;
-  auto a3 = (static_cast<unsigned char>(a) & 8) != 0;
-  auto a4 = (static_cast<unsigned char>(a) & 16) != 0;
-  auto a5 = (static_cast<unsigned char>(a) & 32) != 0;
-  auto a6 = (static_cast<unsigned char>(a) & 64) != 0;
-  auto a7 = (static_cast<unsigned char>(a) & 128) != 0;
-  return Ascii0::N_of_digits(List<Bool0>::cons(
+  bool a0 = (static_cast<unsigned char>(a) & 1) != 0;
+  bool a1 = (static_cast<unsigned char>(a) & 2) != 0;
+  bool a2 = (static_cast<unsigned char>(a) & 4) != 0;
+  bool a3 = (static_cast<unsigned char>(a) & 8) != 0;
+  bool a4 = (static_cast<unsigned char>(a) & 16) != 0;
+  bool a5 = (static_cast<unsigned char>(a) & 32) != 0;
+  bool a6 = (static_cast<unsigned char>(a) & 64) != 0;
+  bool a7 = (static_cast<unsigned char>(a) & 128) != 0;
+  return Ascii0::N_of_digits(List<bool>::cons(
       a0,
-      List<Bool0>::cons(
+      List<bool>::cons(
           a1,
-          List<Bool0>::cons(
+          List<bool>::cons(
               a2,
-              List<Bool0>::cons(
-                  a3, List<Bool0>::cons(
-                          a4, List<Bool0>::cons(
-                                  a5, List<Bool0>::cons(
-                                          a6, List<Bool0>::cons(
+              List<bool>::cons(
+                  a3, List<bool>::cons(
+                          a4, List<bool>::cons(
+                                  a5, List<bool>::cons(
+                                          a6, List<bool>::cons(
                                                   a7,
-                                                  List<Bool0>::nil())))))))));
+                                                  List<bool>::nil())))))))));
 }
 
 Nat Ascii0::nat_of_ascii(char a) {

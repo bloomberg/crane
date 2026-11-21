@@ -262,17 +262,6 @@
   (deps string_get_high_byte.t.exe)
   (action (run ./string_get_high_byte.t.exe))))
 
-(subdir ascii_char_without_bool_mapping
- (rule
-  (targets ascii_char_without_bool_mapping.t.exe)
-  (deps AsciiCharWithoutBoolMapping.vo ascii_char_without_bool_mapping.t.cpp (source_tree .))
-  (action
-   (run %{project_root}/scripts/compile-std.sh %{project_root} ascii_char_without_bool_mapping.t.exe ascii_char_without_bool_mapping.t.cpp ascii_char_without_bool_mapping.cpp)))
- (rule
-  (alias runtest)
-  (deps ascii_char_without_bool_mapping.t.exe)
-  (action (run ./ascii_char_without_bool_mapping.t.exe))))
-
 (subdir bake_std_optional
  (rule
   (targets bake_std_optional.t.exe)
