@@ -338,3 +338,14 @@
   (alias runtest)
   (deps bake_long_list.t.exe)
   (action (run ./bake_long_list.t.exe))))
+
+(subdir sep_ext_accessor_functor_chain
+ (rule
+  (targets sep_ext_accessor_functor_chain.t.exe)
+  (deps Pred.vo Sound.vo SepExtAccessorFunctorChain.vo sep_ext_accessor_functor_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_accessor_functor_chain.t.exe sep_ext_accessor_functor_chain.t.cpp Datatypes.cpp Pred.cpp Sound.cpp SepExtAccessorFunctorChain.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_accessor_functor_chain.t.exe)
+  (action (run ./sep_ext_accessor_functor_chain.t.exe))))
