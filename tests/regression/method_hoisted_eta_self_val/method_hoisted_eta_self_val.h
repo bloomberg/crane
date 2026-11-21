@@ -305,13 +305,12 @@ struct MethodHoistedEtaSelfVal {
             true, List<bool>::nil())
                                                             .template fold_left<
             crane::fn<uint64_t(uint64_t)>>(
-            [=](crane::fn<uint64_t(uint64_t)>, bool) {
+            [](crane::fn<uint64_t(uint64_t)>, bool) {
               auto _pa0 =
                   List<uint64_t>::cons(UINT64_C(7), List<uint64_t>::nil());
-              return [=](uint64_t) -> uint64_t { return f2(_pa0, _self_val); };
+              return [=](uint64_t _x0) -> uint64_t { return f2(_pa0, _x0); };
             },
             [](uint64_t) { return UINT64_C(0); }));
-        tree _self_val = *this;
         return fold_left_1(x0_);
       }
     };

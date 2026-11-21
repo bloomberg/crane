@@ -3,17 +3,14 @@
     returning a closed [fold_left] whose step returns the partial
     application [f2 [7]].
 
-    Expected: compiles, and [t_1 = 4] ([f2 [7] 3 = 1 + 3]).
-
-    Actual: compile error "use of undeclared identifier '_self_val'". The
-    closed fold is hoisted to a function-local [static const] built once
-    ("Built on the first call and immortal"), and the eta-expanded partial
-    application inside it is printed as [[=](uint64_t) -> uint64_t { return
-    f2(_pa0, _self_val); }]: the lambda's own parameter is left unnamed and
-    its use is spelled as the receiver's copy [_self_val], which is declared
-    only after the static (and could not be captured by it anyway). With
-    the receiver first, or with a fold that is not closed (so not hoisted),
-    it compiles. Also on main. *)
+    Fixed: neither [c] nor [t] is read, so both binders are named apart as
+    [_x] and [_x0], and the eta-expansion of [f2 [7]] names its own
+    parameter [_x0] as well.  Substituting the receiver by [*this] was not
+    capture-avoiding: it rewrote the lambda's read of its parameter, which
+    then printed unnamed, and the closure's [*this] became the receiver's
+    copy [_self_val] ("use of undeclared identifier '_self_val'"), declared
+    after the hoisted static that read it.  The substitution now stops at a
+    lambda binding the same name.  Expected [t_1 = 4]. *)
 From Crane Require Import Mapping.NatIntStd.
 From Crane Require Extraction.
 From Stdlib Require Import List.
