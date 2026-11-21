@@ -788,5 +788,5 @@ This milestone fixes the reported bug.
   - [x] a string literal passed as a view without `std::string(...)`
   - [ ] deprecation warnings: blocked, no typed equivalent for event
         families, monads, `Skip`, `Void`
-  - [ ] full suite and corpus re-extraction after the second pass (not
-        run: `/tmp/crane-vellvm-perf/quiet-ok` absent)
+  - [x] full suite and corpus re-extraction after the second pass:
+        1462 passed, 17 failed (the 17 `tests/wip`), no output changed
