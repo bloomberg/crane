@@ -1,5 +1,6 @@
 #pragma once
 
+#include <crane_string.h>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -12,7 +13,7 @@ enum class Comparison { EQ, LT, GT };
 
 struct PingPong {
   /// Check if two strings are equal using PrimString.compare.
-  static bool string_eq(const std::string &s1, const std::string &s2);
+  static bool string_eq(std::string_view s1, std::string_view s2);
   static void run_game(uint64_t round);
   /// Entry point.
   static void play();

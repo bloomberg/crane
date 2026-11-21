@@ -158,6 +158,29 @@ From Corelib Require Import PrimString.
           {| argument_name := "i"; argument_use := Read |}]
          ReturnValue [] |}.
 
+#[export] Instance bde_string_make_mapping : OperationMapping (Ref PrimString.make) :=
+  {| operation_headers := ["bsl_string.h"; "bsl_cstdint.h"];
+     operation_cpp := Expr "[](int64_t _n, int64_t _c) { return bsl::string(static_cast<std::size_t>(_n < INT64_C(16777211) ? _n : INT64_C(16777211)), static_cast<char>(static_cast<unsigned char>(_c & 255))); }(%arg(n), %arg(c))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "c"; argument_use := Read |}]
+         ReturnValue [] |}.
+
+#[export] Instance bde_string_max_length_mapping : OperationMapping (Ref PrimString.max_length) :=
+  {| operation_headers := ["bsl_cstdint.h"];
+     operation_cpp := Expr "INT64_C(16777211)";
+     operation_contract := PureOperation [] ReturnValue [] |}.
+
+#[export] Instance bde_string_compare_mapping : OperationMapping (Ref PrimString.compare) :=
+  {| operation_headers := ["bsl_string_view.h"];
+     operation_cpp := Expr "[](bsl::string_view _x, bsl::string_view _y) { int _c = _x.compare(_y); return static_cast<%ret>(_c == 0 ? 0 : (_c < 0 ? 1 : 2)); }(%arg(s1), %arg(s2))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "s1"; argument_use := Read |};
+          {| argument_name := "s2"; argument_use := Read |}]
+         ReturnValue [] |}.
+
 #[export] Instance bde_string_sub_mapping : OperationMapping (Ref PrimString.sub) :=
   {| operation_headers := ["bsl_string.h"; "bsl_string_view.h"];
      operation_cpp := Expr "((%arg(off) >= 0 && %arg(off) <= static_cast<int64_t>(%arg(s).length())) ? bsl::string(%arg(s).substr(%arg(off), %arg(len))) : bsl::string())";

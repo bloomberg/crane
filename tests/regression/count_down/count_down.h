@@ -1,5 +1,6 @@
 #pragma once
 
+#include <crane_string.h>
 #include <cstdint>
 #include <iostream>
 #include <string>
@@ -23,7 +24,7 @@ struct CountDown {
   static void repeat_msg(uint64_t n, const std::string &msg);
   static void run_fixpoint();
   /// Helper: compare two strings
-  static bool string_eq(const std::string &s1, const std::string &s2);
+  static bool string_eq(std::string_view s1, std::string_view s2);
   static void co_count_down();
   static void co_two_prints();
   static void co_echo_loop();

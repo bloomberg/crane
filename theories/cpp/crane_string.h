@@ -32,6 +32,25 @@ inline std::int64_t string_get(std::string_view text, std::int64_t i) {
              : 0;
 }
 
+// PrimString.max_length, Rocq's bound on a string's length.
+inline constexpr std::int64_t string_max_length = 16777211;
+
+// PrimString.make: total, as Rocq's: the length is clamped to max_length
+// and the character to its low byte.
+inline std::string string_make(std::int64_t len, std::int64_t c) {
+  return std::string(
+      static_cast<std::size_t>(len < string_max_length ? len : string_max_length),
+      static_cast<char>(static_cast<unsigned char>(c & 255)));
+}
+
+// PrimString.compare: lexicographic on the bytes read unsigned, as
+// std::string_view::compare does; 0, 1, 2 for Eq, Lt, Gt, the order the
+// constructors of comparison are declared in.
+inline int string_compare(std::string_view left, std::string_view right) {
+  int c = left.compare(right);
+  return c == 0 ? 0 : (c < 0 ? 1 : 2);
+}
+
 // PrimString.sub: total, an offset at or past the end gives the empty
 // string and the length is clamped to what remains.  An owner, not a view.
 inline std::string string_sub(std::string_view text, std::int64_t off,

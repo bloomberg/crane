@@ -43,7 +43,4 @@ End PingPong.
 Crane Extract Inlined Constant PingPong.nat_to_string =>
   "std::to_string(%a0)".
 
-Crane Extract Inlined Constant PrimString.compare =>
-  "(%a0 == %a1 ? Comparison::EQ : (%a0 < %a1 ? Comparison::LT : Comparison::GT))".
-
 Crane Extraction "ping_pong" PingPong.

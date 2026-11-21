@@ -75,6 +75,34 @@ Local Open Scope pstring_scope.
           {| argument_name := "i"; argument_use := Read |}]
          ReturnValue [] |}.
 
+(** Total, as Rocq's: the length is clamped to [max_length] and the
+    character to its low byte. *)
+#[export] Instance string_make_mapping : OperationMapping (Ref PrimString.make) :=
+  {| operation_headers := ["crane_string.h"];
+     operation_cpp := Expr "crane::string_make(%arg(n), %arg(c))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "n"; argument_use := Read |};
+          {| argument_name := "c"; argument_use := Read |}]
+         ReturnValue [] |}.
+
+#[export] Instance string_max_length_mapping : OperationMapping (Ref PrimString.max_length) :=
+  {| operation_headers := ["crane_string.h"];
+     operation_cpp := Expr "crane::string_max_length";
+     operation_contract := PureOperation [] ReturnValue [] |}.
+
+(** Lexicographic on the bytes read unsigned, as Rocq's.  The result is
+    the [comparison] enum, whose constructors are numbered in declaration
+    order ([Eq], [Lt], [Gt]); [%ret] names it. *)
+#[export] Instance string_compare_mapping : OperationMapping (Ref PrimString.compare) :=
+  {| operation_headers := ["crane_string.h"];
+     operation_cpp := Expr "static_cast<%ret>(crane::string_compare(%arg(s1), %arg(s2)))";
+     operation_contract :=
+       PureOperation
+         [{| argument_name := "s1"; argument_use := Read |};
+          {| argument_name := "s2"; argument_use := Read |}]
+         ReturnValue [] |}.
+
 (** Total, as Rocq's; returns an owner (design 14.4), though it reads its
     argument through a view. *)
 #[export] Instance string_sub_mapping : OperationMapping (Ref PrimString.sub) :=

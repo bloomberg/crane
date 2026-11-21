@@ -99,10 +99,8 @@ void CountDown::run_fixpoint() {
 }
 
 /// Helper: compare two strings
-bool CountDown::string_eq(const std::string &s1, const std::string &s2) {
-  switch (
-      (s1 == s2 ? Comparison::EQ
-                : (s1 < s2 ? Comparison::LT : Comparison::GT))) {
+bool CountDown::string_eq(std::string_view s1, std::string_view s2) {
+  switch (static_cast<Comparison>(crane::string_compare(s1, s2))) {
   case Comparison::EQ: {
     return true;
   }
@@ -118,7 +116,7 @@ void CountDown::co_count_down() {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(std::move(line), "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
       std::cout << std::string("tick") << '\n';
@@ -133,7 +131,7 @@ void CountDown::co_two_prints() {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(line, "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
       std::cout << std::string("got: ") + line << '\n';
@@ -149,7 +147,7 @@ void CountDown::co_echo_loop() {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(line, "quit")) {
+    if (string_eq(std::string_view{line}, std::string_view("quit"))) {
       return;
     } else {
       std::cout << std::string("echo: ") + line << '\n';
@@ -165,7 +163,7 @@ void CountDown::co_announce(uint64_t round) {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(std::move(line), "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       std::cout << std::string("done") << '\n';
       return;
     } else {
@@ -182,7 +180,7 @@ void CountDown::co_repeat(const std::string &msg) {
   while (true) {
     std::string line;
     std::getline(std::cin, line);
-    if (string_eq(std::move(line), "stop")) {
+    if (string_eq(std::string_view{line}, std::string_view("stop"))) {
       return;
     } else {
       std::cout << msg << '\n';
