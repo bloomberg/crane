@@ -763,8 +763,11 @@ let live_access (u : Context.t) x : Cpp_resolution.access =
     | None -> (
       match mp with
       | ModPath.MPdot (parent, lbl) ->
+        (* The child of a resolved parent may be an application in turn --
+           [SLLS.SLLP] is [SoundFn.SLLP] once [SLLS] is [SoundFn], and that
+           is [PredFn] -- so it is resolved again. *)
         let resolved_parent = resolve_mp parent in
-        if ModPath.equal resolved_parent parent then mp else ModPath.MPdot (resolved_parent, lbl)
+        if ModPath.equal resolved_parent parent then mp else resolve_mp (ModPath.MPdot (resolved_parent, lbl))
       | _ -> mp )
   in
   let resolved_x_mp = resolve_mp x_mp in

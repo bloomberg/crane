@@ -2,7 +2,7 @@
 
 uint64_t FoldInitCurriedBranches::pick(uint64_t n) {
   auto _lc1_pa1 = List<uint64_t>::nil();
-  auto _lc1_pa2 = [&]() -> crane::fn<int64_t(uint64_t, bool)> {
+  auto _lc1_pa2 = [&]() -> crane::fn<crane::fn<int64_t(bool)>(uint64_t)> {
     if (n <= 0) {
       return [](uint64_t) {
         return [](bool) { return INT64_C(5); };

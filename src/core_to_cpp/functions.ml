@@ -159,11 +159,15 @@ and glob_subst_map ~spare id repl =
     replaced by.  A method's receiver becoming [this] keeps its name there:
     the closure captures a copy of the object, which
     {!Inductives.replace_this_in_lambdas} names.  Replaced by anything
-    else, it captures nothing of that name. *)
+    else, it captures nothing of that name.  A lambda whose parameter is
+    named [id] reads its parameter there, not [id]: an eta-expansion's
+    [_x0] is named apart from no one, and a receiver nothing reads is named
+    [_x0] too. *)
 let rec var_subst_expr (id : Id.t) (repl : Cpp_ir.Lowered.Expr.t) (e : Cpp_ir.Lowered.Expr.t) :
     Cpp_ir.Lowered.Expr.t =
   match e with
   | Local id' when Id.equal id id' -> repl
+  | Lambda l when List.exists (fun (_, x) -> Option.equal Id.equal x (Some id)) l.params -> e
   | Lambda l when List.exists (Id.equal id) l.moved ->
     let moved =
       List.sort_uniq Id.compare

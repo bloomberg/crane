@@ -15536,3 +15536,68 @@
   (alias runtest)
   (deps bake_mapped_values.t.exe)
   (action (run ./bake_mapped_values.t.exe))))
+(subdir fold_init_curried_branches
+ (rule
+  (targets fold_init_curried_branches.t.exe)
+  (deps FoldInitCurriedBranches.vo fold_init_curried_branches.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} fold_init_curried_branches.t.exe fold_init_curried_branches.t.cpp fold_init_curried_branches.cpp)))
+ (rule
+  (alias runtest)
+  (deps fold_init_curried_branches.t.exe)
+  (action (run ./fold_init_curried_branches.t.exe))))
+
+(subdir branch_callables_fix_accumulator
+ (rule
+  (targets branch_callables_fix_accumulator.t.exe)
+  (deps BranchCallablesFixAccumulator.vo branch_callables_fix_accumulator.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} branch_callables_fix_accumulator.t.exe branch_callables_fix_accumulator.t.cpp branch_callables_fix_accumulator.cpp)))
+ (rule
+  (alias runtest)
+  (deps branch_callables_fix_accumulator.t.exe)
+  (action (run ./branch_callables_fix_accumulator.t.exe))))
+
+(subdir method_hoisted_eta_self_val
+ (rule
+  (targets method_hoisted_eta_self_val.t.exe)
+  (deps MethodHoistedEtaSelfVal.vo method_hoisted_eta_self_val.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} method_hoisted_eta_self_val.t.exe method_hoisted_eta_self_val.t.cpp method_hoisted_eta_self_val.cpp)))
+ (rule
+  (alias runtest)
+  (deps method_hoisted_eta_self_val.t.exe)
+  (action (run ./method_hoisted_eta_self_val.t.exe))))
+
+(subdir ascii_char_without_bool_mapping
+ (rule
+  (targets ascii_char_without_bool_mapping.t.exe)
+  (deps AsciiCharWithoutBoolMapping.vo ascii_char_without_bool_mapping.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} ascii_char_without_bool_mapping.t.exe ascii_char_without_bool_mapping.t.cpp ascii_char_without_bool_mapping.cpp)))
+ (rule
+  (alias runtest)
+  (deps ascii_char_without_bool_mapping.t.exe)
+  (action (run ./ascii_char_without_bool_mapping.t.exe))))
+
+(subdir sep_ext_accessor_functor_chain
+ (rule
+  (targets sep_ext_accessor_functor_chain.t.exe)
+  (deps Pred.vo Sound.vo SepExtAccessorFunctorChain.vo sep_ext_accessor_functor_chain.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_accessor_functor_chain.t.exe sep_ext_accessor_functor_chain.t.cpp Datatypes.cpp Pred.cpp Sound.cpp SepExtAccessorFunctorChain.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_accessor_functor_chain.t.exe)
+  (action (run ./sep_ext_accessor_functor_chain.t.exe))))
+
+(subdir sep_ext_callee_alias_type_head
+ (rule
+  (targets sep_ext_callee_alias_type_head.t.exe)
+  (deps Lib.vo Inst.vo SepExtCalleeAliasTypeHead.vo sep_ext_callee_alias_type_head.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} sep_ext_callee_alias_type_head.t.exe sep_ext_callee_alias_type_head.t.cpp Datatypes.cpp ListDef.cpp Lib.cpp Inst.cpp SepExtCalleeAliasTypeHead.cpp)))
+ (rule
+  (alias runtest)
+  (deps sep_ext_callee_alias_type_head.t.exe)
+  (action (run ./sep_ext_callee_alias_type_head.t.exe))))

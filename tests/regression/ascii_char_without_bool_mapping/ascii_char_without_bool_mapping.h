@@ -10,7 +10,6 @@
 #include <utility>
 #include <variant>
 
-enum class Bool0;
 struct Nat;
 template <typename A> struct List;
 struct Positive;
@@ -24,12 +23,10 @@ struct Coq_Pos {
 };
 
 struct Ascii0 {
-  static N N_of_digits(const List<Bool0> &l);
+  static N N_of_digits(const List<bool> &l);
   static N N_of_ascii(char a);
   static Nat nat_of_ascii(char a);
 };
-
-enum class Bool0 { TRUE_, FALSE_ };
 
 struct Nat {
   // TYPES
@@ -86,7 +83,7 @@ public:
   // ACCESSORS
   const variant_t &v() const { return v_; }
 
-  Bool0 eqb(const Nat &m) const {
+  bool eqb(const Nat &m) const {
     // Loop replaces the tail recursion: each recursive call updates the loop
     // variables.
     const Nat *_loop_self = this;
@@ -95,14 +92,14 @@ public:
       auto &&_sv = *_loop_self;
       if (std::holds_alternative<typename Nat::O>(_sv.v())) {
         if (std::holds_alternative<typename Nat::O>(_loop_m->v())) {
-          return Bool0::TRUE_;
+          return true;
         } else {
-          return Bool0::FALSE_;
+          return false;
         }
       } else {
         const auto &[a0] = std::get<typename Nat::S>(_sv.v());
         if (std::holds_alternative<typename Nat::O>(_loop_m->v())) {
-          return Bool0::FALSE_;
+          return false;
         } else {
           const auto &[a00] = std::get<typename Nat::S>(_loop_m->v());
           _loop_self = crane_raw(a0);
@@ -355,10 +352,9 @@ struct BinNat {
 
 struct AsciiCharWithoutBoolMapping {
   static inline const char c =
-      static_cast<char>((Bool0::FALSE_ ? 1 : 0) | (Bool0::TRUE_ ? 2 : 0) |
-                        (Bool0::FALSE_ ? 4 : 0) | (Bool0::FALSE_ ? 8 : 0) |
-                        (Bool0::FALSE_ ? 16 : 0) | (Bool0::FALSE_ ? 32 : 0) |
-                        (Bool0::TRUE_ ? 64 : 0) | (Bool0::FALSE_ ? 128 : 0));
-  static inline const Bool0 code_is_66 =
+      static_cast<char>((false ? 1 : 0) | (true ? 2 : 0) | (false ? 4 : 0) |
+                        (false ? 8 : 0) | (false ? 16 : 0) | (false ? 32 : 0) |
+                        (true ? 64 : 0) | (false ? 128 : 0));
+  static inline const bool code_is_66 =
       Ascii0::nat_of_ascii(c).eqb(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::s(Nat::o())))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))))));
 };

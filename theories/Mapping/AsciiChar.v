@@ -14,8 +14,14 @@
     unpacks them.  [compare], [eqb] and [ascii_dec] compare bytes.
     [compare]'s result is the [comparison] enum, whose constructors are
     numbered in declaration order ([Eq], [Lt], [Gt]); [%ret] names the enum
-    whatever the generator calls it. *)
+    whatever the generator calls it.
+
+    The constructor's eight fields, a match's projections, and the results
+    of [eqb] and [ascii_dec] are C++ [bool]s: the mapping is written against
+    [Mapping.Shared]'s [bool] and [sumbool], which it exports, so a program
+    importing it alone does not meet the generated [bool] enum. *)
 From Crane Require Extraction.
+From Crane Require Export Mapping.Shared.
 From Crane Require Import Mapping.Descriptor.
 From Corelib Require Import PrimString.
 From Stdlib Require Import Ascii List.
