@@ -176,8 +176,9 @@ bool nodupKeys(const std::deque<std::pair<std::string, T1>> &prs) {
   if (prs.empty()) {
     return true;
   } else {
-    const auto &_x = prs.front();
-    std::deque<std::pair<std::string, T1>> _x0(prs.begin()+1, prs.end());
+    const std::pair<std::string, T1> &_x = prs.front();
+    std::deque<std::pair<std::string, T1>> _x0 =
+        std::deque<std::pair<std::string, T1>>(prs.begin() + 1, prs.end());
     return false;
   }
 }

@@ -1190,13 +1190,16 @@ let gen_custom_cpp_case cx ?slot env (k : Cpp_ir.Lowered.Expr.t -> Cpp_ir.Lowere
      so all fields are [std::any] regardless of the original field types.
      Force [Auto] so the binding uses [auto] and C++ deduces the type.
      Also force [Auto] when a type contains erased positions ([Any]),
-     since an explicit type annotation would block valid concrete-type calls. *)
+     since an explicit type annotation would block valid concrete-type calls,
+     and when the scrutinee is read at an erased instantiation (cast to
+     [std::deque<crane::obj>]): its elements are not of the Core types. *)
+  let erased_cast = match cast_to with Some ty -> has_tany_in_type ty | None -> false in
   let temps =
     match core_typ with
     | Core.Type.Global_app {type_arguments = tys; _} ->
       let raw = Types.template_params_of_core cx ~site:Cpp_ir.Types.Declared env tys in
       List.map (fun ty : Cpp_ir.Lowered.Type.t ->
-        if fix_a_fired || has_tany_in_type ty then Auto else ty) raw
+        if fix_a_fired || erased_cast || has_tany_in_type ty then Auto else ty) raw
     | _ -> []
   in
   (* When the template uses %scrut more than once and the scrutinee is a
