@@ -4,5 +4,5 @@
 #include <string_view>
 
 struct StringLiteralTrigraph {
-  static inline const std::string marks = "??=";
+  static inline const std::string marks = "?\?=";
 };

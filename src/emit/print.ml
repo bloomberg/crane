@@ -49,12 +49,15 @@ type tparams = I.Resolved.phase I.Template.parameters
     three-digit octal escape ([\\ooo]) — octal is bounded to three digits, so
     unlike [\\x…] it cannot swallow a following hex digit. Note this differs from
     OCaml's [String.escaped], whose [\\ddd] escapes are decimal and would be
-    misread by C++ as octal. *)
+    misread by C++ as octal. A [?] after a [?] is escaped as [\\?]: an
+    unescaped [??=] is a trigraph, which C++17 ignores but clang warns about
+    ([-Wtrigraphs]). *)
 let escape_cpp_string (s : string) : string =
   let buf = Buffer.create (String.length s + 2) in
-  String.iter
-    (fun c ->
+  String.iteri
+    (fun i c ->
       match c with
+      | '?' when i > 0 && s.[i - 1] = '?' -> Buffer.add_string buf "\\?"
       | '"' -> Buffer.add_string buf "\\\""
       | '\\' -> Buffer.add_string buf "\\\\"
       | '\n' -> Buffer.add_string buf "\\n"

@@ -15449,3 +15449,14 @@
   (alias runtest)
   (deps string_get_high_byte.t.exe)
   (action (run ./string_get_high_byte.t.exe))))
+
+(subdir string_literal_trigraph
+ (rule
+  (targets string_literal_trigraph.t.exe)
+  (deps StringLiteralTrigraph.vo string_literal_trigraph.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} string_literal_trigraph.t.exe string_literal_trigraph.t.cpp string_literal_trigraph.cpp)))
+ (rule
+  (alias runtest)
+  (deps string_literal_trigraph.t.exe)
+  (action (run ./string_literal_trigraph.t.exe))))

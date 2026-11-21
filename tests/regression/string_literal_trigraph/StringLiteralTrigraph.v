@@ -4,10 +4,9 @@
     Expected: the generated C++ compiles with the test suite's flags and
     [marks] is the three bytes [??=].
 
-    Actual: the literal is printed as ["??="] and clang rejects it:
-    "trigraph ignored [-Werror,-Wtrigraphs]". C++17 removed trigraphs, so
-    the value would be right, but the warning is an error under [-Werror];
-    the printer should escape the second [?] ([?\?=]). Also on main. *)
+    Fixed: the literal was printed as ["??="] and clang rejected it:
+    "trigraph ignored [-Werror,-Wtrigraphs]".  The string literal printer
+    now escapes a [?] that follows a [?] ([?\?=]).  Also on main. *)
 From Crane Require Import Mapping.NatIntStd Mapping.Std.
 From Crane Require Extraction.
 From Corelib Require Import PrimString.
