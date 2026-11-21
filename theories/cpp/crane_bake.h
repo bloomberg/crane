@@ -23,8 +23,9 @@
 //   the DAG it was.  0 is a new node: its constructor's index (0 for a record
 //   or a flat struct) and its fields follow.  An enumeration is a new node
 //   too, so it reads back as a nullary-constructor variant and back.  The
-//   node a field points to through [std::shared_ptr], [crane::shared_box] or
-//   [crane::rc] is written in place: the sharing is the inductive's.
+//   node a field points to through [std::shared_ptr], [crane::shared_box],
+//   [crane::rc] or [crane::field_box] is written in place: the sharing is the
+//   inductive's.
 // - A [crane::list] is its cells in order, each [1] and its head, ended by
 //   [0] (nil) or [k + 2] (the tail is the [k]th cell already read).
 // - A [crane::shared_array] is [0] (empty), [1] (its length and elements),
@@ -68,6 +69,7 @@
 #include <vector>
 
 #include "conslist.h"
+#include "field.h"
 #include "shared_array.h"
 #include "shared_variant.h"
 
@@ -105,16 +107,36 @@ template <class T> struct is_std_tuple : std::false_type {};
 template <class... A> struct is_std_tuple<std::tuple<A...>> : std::true_type {};
 template <class T> struct is_std_optional : std::false_type {};
 template <class A> struct is_std_optional<std::optional<A>> : std::true_type {};
-template <class T> struct is_std_shared_ptr : std::false_type {};
-template <class A> struct is_std_shared_ptr<std::shared_ptr<A>> : std::true_type {};
-template <class T> struct is_shared_box : std::false_type {};
-template <class A> struct is_shared_box<crane::shared_box<A>> : std::true_type {};
-template <class T> struct is_rc : std::false_type {};
-template <class A> struct is_rc<crane::rc<A>> : std::true_type {};
 template <class T> struct is_list : std::false_type {};
 template <class A> struct is_list<crane::list<A>> : std::true_type {};
 template <class T> struct is_shared_array : std::false_type {};
 template <class A> struct is_shared_array<crane::shared_array<A>> : std::true_type {};
+
+// A handle to one value of another type, written in place: what it points
+// to, and whether it shares that value by identity ([counted]), which
+// reading then keeps, rather than by the value's own node sharing.
+template <class P> struct handle : std::false_type {};
+template <class A> struct handle<std::shared_ptr<A>> : std::true_type {
+  using element = A;
+  static constexpr bool counted = true;
+  static std::shared_ptr<A> make(A &&a) { return std::make_shared<A>(std::move(a)); }
+};
+template <class A> struct handle<crane::rc<A>> : std::true_type {
+  using element = A;
+  static constexpr bool counted = true;
+  static crane::rc<A> make(A &&a) { return crane::make_rc<A>(std::move(a)); }
+};
+template <class A> struct handle<crane::shared_box<A>> : std::true_type {
+  using element = A;
+  static constexpr bool counted = false;
+  static crane::shared_box<A> make(A &&a) { return crane::shared_box<A>::make(std::move(a)); }
+};
+template <class A> struct handle<crane::field_box<A>> : std::true_type {
+  using element = A;
+  static constexpr bool counted = false;
+  static crane::field_box<A> make(A &&a) { return crane::field_box<A>(std::move(a)); }
+};
+
 
 // The alternatives of a variant: std::variant, crane::variant or
 // crane::shared_variant.
@@ -242,6 +264,14 @@ class writer {
     return true;
   }
 
+  template <class P> static void check_not_null(const P &p) {
+    if constexpr (requires { static_cast<bool>(p); })
+      if (!p) {
+        std::fprintf(stderr, "crane::bake: a null pointer in the value\n");
+        std::exit(2);
+      }
+  }
+
   template <class E> static std::string literal(const E &x) {
     char buf[64];
     if constexpr (std::is_same_v<E, bool>) return x ? "true" : "false";
@@ -340,11 +370,8 @@ public:
     } else if constexpr (is_std_optional<T>::value) {
       words_.push_back(x.has_value());
       if (x) put(*x);
-    } else if constexpr (is_std_shared_ptr<T>::value || is_shared_box<T>::value || is_rc<T>::value) {
-      if (!x) {
-        std::fprintf(stderr, "crane::bake: a null pointer in the value\n");
-        std::exit(2);
-      }
+    } else if constexpr (handle<T>::value) {
+      check_not_null(x);
       put(*x);
     } else if constexpr (is_list<T>::value) {
       put_list(x);
@@ -443,6 +470,8 @@ public:
 
 // Reads an image back.
 class reader {
+  static constexpr std::size_t no_node = std::size_t(-1);
+
   const image &img_;
   std::size_t pos_ = 0;
   std::unordered_map<std::type_index, std::shared_ptr<void>> tables_;
@@ -470,12 +499,25 @@ class reader {
     }(std::make_index_sequence<std::tuple_size_v<F>>{});
   }
 
-  // A pointer to a node: the node read in place, and the pointer made for
-  // it kept by the node's index, so a node shared in the value is pointed
-  // to by one pointer again rather than copied into a second one.
-  template <class P, class Make> P get_pointer(Make &&make) {
-    using U = typename P::element_type;
-    if constexpr (detail::inductive<U>) {
+  // A handle [P] to the node [u], the [fresh]th of its type read (or
+  // [no_node] for one shared or nullary).  A counted handle made for a fresh
+  // node is kept by the node's index, so a node shared in the value is
+  // pointed to by one pointer again rather than copied into a second one.
+  template <class P> P make_handle(typename detail::handle<P>::element &&u, std::size_t fresh) {
+    P p = detail::handle<P>::make(std::move(u));
+    if constexpr (detail::handle<P>::counted)
+      if (fresh != no_node) {
+        auto &ptrs = table<P>();
+        if (ptrs.size() <= fresh) ptrs.resize(fresh + 1);
+        ptrs[fresh] = p;
+      }
+    return p;
+  }
+
+  // The counted handle already made for the shared node the stream names
+  // next, consumed; none if the stream holds no such reference.
+  template <class P> std::optional<P> shared_handle() {
+    if constexpr (detail::handle<P>::counted && detail::inductive<typename detail::handle<P>::element>) {
       auto &ptrs = table<P>();
       if (pos_ >= img_.size) corrupt("too short");
       std::uint64_t share = img_.words[pos_];
@@ -483,15 +525,20 @@ class reader {
         ++pos_;
         return *ptrs[share - 1];
       }
+    }
+    return std::nullopt;
+  }
+
+  template <class P> P get_handle() {
+    using U = typename detail::handle<P>::element;
+    if (auto p = shared_handle<P>()) return std::move(*p);
+    if constexpr (detail::inductive<U>) {
+      bool fresh = pos_ < img_.size && img_.words[pos_] == 0;
       std::size_t id = table<U>().size();
-      P p = make(get<U>());
-      if (share == 0 && table<U>().size() > id) {
-        if (ptrs.size() <= id) ptrs.resize(id + 1);
-        ptrs[id] = p;
-      }
-      return p;
+      U u = get<U>();
+      return make_handle<P>(std::move(u), fresh && table<U>().size() > id ? id : no_node);
     } else
-      return make(get<U>());
+      return make_handle<P>(get<U>(), no_node);
   }
 
 public:
@@ -524,12 +571,8 @@ public:
     } else if constexpr (is_std_optional<T>::value) {
       if (!word()) return T{};
       return T(get<typename T::value_type>());
-    } else if constexpr (is_std_shared_ptr<T>::value) {
-      return get_pointer<T>([](auto &&u) { return std::make_shared<typename T::element_type>(std::move(u)); });
-    } else if constexpr (is_shared_box<T>::value) {
-      return T::make(get<typename T::element_type>());
-    } else if constexpr (is_rc<T>::value) {
-      return get_pointer<T>([](auto &&u) { return crane::make_rc<typename T::element_type>(std::move(u)); });
+    } else if constexpr (handle<T>::value) {
+      return get_handle<T>();
     } else if constexpr (is_list<T>::value) {
       return get_list<typename T::value_type>();
     } else if constexpr (is_shared_array<T>::value) {

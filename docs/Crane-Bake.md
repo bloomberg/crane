@@ -76,9 +76,10 @@ each type gets its own template instantiation.
   `k+1` means the k-th node already read of that type, and `0` means a new node
   (constructor index, then fields). An enum is a new node with its index, so
   an enum and a nullary-constructor variant read each other.
-  `std::shared_ptr`/`crane::shared_box`/`crane::rc` fields are transparent;
-  the sharing lives at the node level. When reading, a pointer to a node
-  already read is the same pointer again.
+  `std::shared_ptr`/`crane::shared_box`/`crane::rc`/`crane::field_box`
+  fields (`detail::handle`) are transparent; the sharing lives at the node
+  level. When reading, a counted pointer to a node already read is the same
+  pointer again.
 - `crane::list`: cells `1 head`, ended by `0` (nil) or `k+2` (shared suffix).
 - `crane::shared_array<E>`: `0` empty, `1 n elems` heap, `k+3` shared, or
   `2 block code` for a static block. A static block is used when `E` is a

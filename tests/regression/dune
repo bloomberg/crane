@@ -15449,3 +15449,14 @@
   (alias runtest)
   (deps bake_prim_string.t.exe)
   (action (run ./bake_prim_string.t.exe))))
+
+(subdir bake_boxed_field
+ (rule
+  (targets bake_boxed_field.t.exe)
+  (deps BakeBoxedField.vo bake_boxed_field.t.cpp (source_tree .))
+  (action
+   (run %{project_root}/scripts/compile-std.sh %{project_root} bake_boxed_field.t.exe bake_boxed_field.t.cpp bake_boxed_field.cpp)))
+ (rule
+  (alias runtest)
+  (deps bake_boxed_field.t.exe)
+  (action (run ./bake_boxed_field.t.exe))))
