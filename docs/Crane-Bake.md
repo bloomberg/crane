@@ -32,7 +32,11 @@ Running the generated C++ once and emitting the value as data does work.
    A refusal is a `Crane Bake: <c> is a function, which is not data.` error.
 2. **Bake** (`bake_one`). Inside `Vernacstate.System.protect`, so the
    extraction leaves no trace in the summary or the library, Crane extracts
-   `c` on its own (`Extract_env.full_extraction`) into a temporary unit. With
+   `c` on its own into a temporary directory. A constant at a library's top
+   level is extracted one file per library (`separate_extraction`, the mode a
+   large program such as ParseALot is known to compile in). A constant inside a
+   module is extracted into one file (`full_extraction`), because one file per
+   library would make it a Meyers-singleton accessor that nothing calls. With
    `Table.bake_root = c`, the constant's initialiser becomes
    `crane::bake::root(<body>)` and its declaration `[[gnu::used]]`
    (`Cpp_state.read_by_a_function`), so it runs at static initialisation.
@@ -76,24 +80,27 @@ each type gets its own template instantiation.
   with its count at `block_detail::immortal`. `code` encodes `E`, and reading
   checks it.
 
-Reading happens once, at static initialisation. Every `shared_variant` block
-it allocates is made immortal (`crane::make_immortal`). Sharing is kept: the
+Reading happens once, at static initialisation. Every block it allocates is
+made immortal (`crane::make_immortal`). Sharing is kept: the
 value comes back as the DAG it was (address-based hash-consing on write).
 
-### Immortal representation assumed
+### Immortal representation
 
-The count sentinel already in `shared_block.h` (`block_detail::immortal =
-~0`, never incremented or decremented) is used as is. A static block is born
-with it. Its `drop` is never called. The `tm-immortal` branch's generic
-immortal constants should merge cleanly if they keep this sentinel. If they
-change it, `shared_array::fixed` (the only static-block constructor) is the
-one place to update.
+A static block starts at `block_detail::born_immortal`, which is the value
+`count::make_immortal` stores: `immortal` (`~0`, never changed), or `sticky`
+(half the range, plain increments) under NonAtomicRc + SingleThreaded, the
+`tm-immortal` scheme. Its `drop` is never called. `shared_array::fixed` is
+the only static-block constructor. Under SharedVariant the global's
+initialiser is also wrapped in `crane::immortal(...)`, which does nothing to
+the `crane::bake::value` proxy. The reader marks the decoded value itself
+(`crane::make_immortal`), which reaches lists and arrays too.
 
 ## Runtime additions (kept minimal for the merge)
 
 - `shared_array.h`: `value_type`, `fixed<N>` (static block),
   `of_static(fixed&)` (constexpr), `adopt_static(const void*)`, and constexpr
   default/move constructors and destructor.
+- `shared_block.h`: `block_detail::born_immortal`.
 - `crane_bake.h`: new.
 
 ## Not done (follow-ups)
@@ -112,7 +119,14 @@ one place to update.
   The C++ `static_assert` reports them at bake time as "no way to write a
   value of this type".
 - Heap `shared_array`s of non-scalar elements (`shared_array<Regex>`) are
-  rebuilt, not static, and not made immortal.
+  rebuilt at startup, not static.
+- Crane initialises every global of every linked unit at startup. A hoisted
+  constant that is *not* baked is therefore built by every program that links
+  its unit: the ParseALot runners link all three lexers, so hoisting alone
+  costs each runner the other two lexers' DFAs (+45..+106% on tiny inputs).
+  Baking turns that into a cheap decode.
+- Baking ParseALot makes extraction 8.5 s -> 113 s: three sub-extractions,
+  plus `-O1` compiles of each lexer's closure.
 - The bake extracts `c` in single-file mode while the user's extraction may be
   separate. The image is structural (constructor indices and fields in order),
   so the two only have to agree on constructor order and on which fields are

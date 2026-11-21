@@ -35,9 +35,9 @@
 //   its count is never written.
 //
 // Reading builds the value once, at static initialisation, and makes every
-// shared block it allocates immortal ([crane::make_immortal]): the value
-// lives as long as the program, and reading it from any thread never
-// touches its counts.
+// block it allocates immortal ([crane::make_immortal]): the value lives as
+// long as the program, and reading it from any thread never touches its
+// counts.
 
 #pragma once
 
@@ -568,6 +568,7 @@ struct value {
   template <class T> operator T() const {
     reader r(img);
     T v = r.template get<T>();
+    crane::make_immortal(v);
     if (!r.done()) {
       std::fprintf(stderr, "crane::bake: the baked image does not match its type (too long)\n");
       std::abort();

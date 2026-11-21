@@ -70,7 +70,7 @@ public:
     T elems[N];
     template <class... U>
     constexpr explicit fixed(U &&...u)
-        : block{{{block_detail::immortal}, &block::drop}, N}, elems{T(static_cast<U &&>(u))...} {
+        : block{{{block_detail::born_immortal}, &block::drop}, N}, elems{T(static_cast<U &&>(u))...} {
       static_assert(sizeof...(U) == N);
     }
   };

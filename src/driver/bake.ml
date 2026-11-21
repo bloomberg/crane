@@ -152,29 +152,38 @@ let errors_of diagnostics =
   let kept = keep 0 lines in
   String.concat "\n" (List.filteri (fun i _ -> i < 40) (if kept = [] then lines else kept))
 
-(** Bakes [r]: extracts it, one file per library as [Crane Separate
-    Extraction] does, compiles and runs the driver, and records the image it
-    writes. *)
+(** Bakes [r]: extracts it, compiles and runs the driver, and records the
+    image it writes. *)
 let bake_one ~opaque_access qualid =
   let r = Smartlocate.global_with_alias qualid in
   check r;
   let symbol = symbol_of r in
   let dir = Filename.temp_dir "crane_bake" "" in
-  (* Everything the extraction records -- the units it claims libraries
-     for, the output directory -- is forgotten: the bake is not an
-     extraction of the user's. *)
+  (* A constant at a library's top level is extracted one file per library,
+     as [Crane Separate Extraction] does: the mode a large program is known
+     to compile in, where its declaration is a variable initialised at
+     startup.  One inside a module is extracted into one file, where its
+     declaration is a static member initialised at startup; one file per
+     library would make it an accessor, which nothing calls.  Everything
+     either records -- the units it claims libraries for, the output
+     directory -- is forgotten: the bake is not an extraction of the
+     user's. *)
+  let modpath = match r with GlobRef.ConstRef c -> Constant.modpath c | _ -> assert false in
+  let top_level = match modpath with ModPath.MPfile _ -> true | _ -> false in
+  let unit_name = "crane_bake_unit" in
   Vernacstate.System.protect
     (fun () ->
       Goptions.set_string_option_value ~stage:Summary.Stage.Interp
         ["Crane"; "Extraction"; "Output"; "Directory"] dir;
       Base.Table.bake_root := Some r;
       Fun.protect ~finally:(fun () -> Base.Table.bake_root := None) @@ fun () ->
-      Extract_env.separate_extraction ~opaque_access [qualid] )
+      if top_level then Extract_env.separate_extraction ~opaque_access [qualid]
+      else
+        Extract_env.full_extraction ~validate:false ~opaque_access
+          (Some (Filename.concat dir (unit_name ^ ".cpp"))) [qualid] )
     ();
   let header =
-    match r with
-    | GlobRef.ConstRef c -> Base.Table.file_of_modfile (MPfile (ModPath.dp (Constant.modpath c))) ^ ".h"
-    | _ -> assert false
+    if top_level then Base.Table.file_of_modfile (MPfile (ModPath.dp modpath)) ^ ".h" else unit_name ^ ".h"
   in
   let sources = files_under dir ".cpp" in
   let include_dirs = List.sort_uniq String.compare (List.map Filename.dirname (files_under dir ".h")) in
