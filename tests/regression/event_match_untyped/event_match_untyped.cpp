@@ -16,11 +16,11 @@ Nat EventMatchUntyped::weight(const std::shared_ptr<ITree<Nat>> &t) {
     const auto &_itf = *std::get_if<typename ITree<Nat>::Vis>(&_cs);
     auto e = crane_event_as<EventMatchUntyped::IOE>(_itf.effect);
     auto _x = _itf.cont;
-    if (std::holds_alternative<typename EventMatchUntyped::IOE::Rd>(e.v())) {
+    if (std::holds_alternative<typename EventMatchUntyped::IOE::Rd>(e.v_mut())) {
       return Nat::s(Nat::o());
     } else {
-      const auto &[a0] = std::get<typename EventMatchUntyped::IOE::Wr>(e.v());
-      return a0;
+      auto &[a0] = std::get<typename EventMatchUntyped::IOE::Wr>(e.v_mut());
+      return std::move(a0);
     }
   }
 }

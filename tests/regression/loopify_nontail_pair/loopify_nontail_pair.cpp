@@ -34,7 +34,7 @@ LoopifyNontailPair::countdown(const List<uint64_t> &l) {
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const List<uint64_t> &l = _f.l;
+      List<uint64_t> l = std::move(_f.l);
       auto [_x, o] = classify(l);
       if (o.has_value()) {
         const std::pair<uint64_t, List<uint64_t>> &p = *o;
@@ -43,7 +43,7 @@ LoopifyNontailPair::countdown(const List<uint64_t> &l) {
         _stack.emplace_back(_call{xs});
       } else {
         _result = std::make_pair(
-            std::make_pair(UINT64_C(0), List<uint64_t>::nil()), l);
+            std::make_pair(UINT64_C(0), List<uint64_t>::nil()), std::move(l));
       }
     } else {
       auto _f = std::move(std::get<_after_countdown_in_pair>(_popped));

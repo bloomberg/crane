@@ -1140,7 +1140,7 @@ uint64_t ComprehensivePatterns::odd_count(uint64_t n,
       const ComprehensivePatterns::RCF &r = *_f.r;
       uint64_t n = _f.n;
       if (n <= 0) {
-        _result = r.cf_val;
+        _result = std::move(r).cf_val;
       } else {
         uint64_t m = n - 1;
         _stack.emplace_back(_after_even_count_entry_in_S{});

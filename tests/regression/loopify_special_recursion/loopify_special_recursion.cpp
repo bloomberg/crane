@@ -58,7 +58,7 @@ LoopifySpecialRecursion::process_twice_fuel(uint64_t fuel,
       _stack.pop_back();
       uint64_t a0 = _f.a0;
       List<uint64_t> second = std::move(_result);
-      _result = List<uint64_t>::cons(a0, std::move(second));
+      _result = List<uint64_t>::cons(std::move(a0), std::move(second));
     }
   }
   return _result;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <boost/multiprecision/cpp_int.hpp>
+#include <utility>
 
 struct TypedMappingExactNumbers {
   static boost::multiprecision::cpp_int

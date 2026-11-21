@@ -20,7 +20,7 @@ BoxedElementBlockTemplate::total(const BoxedElementBlockTemplate::rose &r) {
           } else {
             const BoxedElementBlockTemplate::rose &k = l.front();
             auto t = l.tail();
-            return (total(k) + _self_go(_self_go, t));
+            return (total(k) + _self_go(_self_go, std::move(t)));
           }
         };
     auto go =

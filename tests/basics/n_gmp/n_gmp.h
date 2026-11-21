@@ -1,6 +1,7 @@
 #pragma once
 
 #include <gmpxx.h>
+#include <utility>
 
 struct Pos {
   static mpz_class add_carry(const mpz_class &x, const mpz_class &y);

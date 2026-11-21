@@ -50,8 +50,8 @@ LoopifyComputedScrutineeTemp::walk(uint64_t n,
   };
 
   struct _after_walk_in_Cons {
-    LoopifyComputedScrutineeTemp::lst l;
     uint64_t a0;
+    LoopifyComputedScrutineeTemp::lst l;
   };
 
   using _frame = std::variant<_call, _after_walk_in_Cons>;
@@ -63,7 +63,7 @@ LoopifyComputedScrutineeTemp::walk(uint64_t n,
     if (std::holds_alternative<_call>(_popped)) {
       auto _f = std::move(std::get<_call>(_popped));
       _stack.pop_back();
-      const LoopifyComputedScrutineeTemp::lst &l = _f.l;
+      LoopifyComputedScrutineeTemp::lst l = std::move(_f.l);
       uint64_t n = _f.n;
       if (n <= 0) {
         _result = UINT64_C(0);
@@ -77,15 +77,15 @@ LoopifyComputedScrutineeTemp::walk(uint64_t n,
           const auto &[a0, a1] =
               std::get<typename LoopifyComputedScrutineeTemp::lst::Cons>(
                   _sv.v());
-          _stack.emplace_back(_after_walk_in_Cons{l, a0});
+          _stack.emplace_back(_after_walk_in_Cons{a0, std::move(l)});
           _stack.emplace_back(_call{*a1, m});
         }
       }
     } else {
       auto _f = std::move(std::get<_after_walk_in_Cons>(_popped));
       _stack.pop_back();
-      LoopifyComputedScrutineeTemp::lst l = std::move(_f.l);
       uint64_t a0 = _f.a0;
+      LoopifyComputedScrutineeTemp::lst l = std::move(_f.l);
       _result = ((a0 + hd(std::move(l))) + std::move(_result));
     }
   }

@@ -353,8 +353,9 @@ val continue_moves : effects:Core_plan.Effects.t -> Control_ir.Term.loop -> (Cor
     frame saved for its call keeps that the save may move into the frame:
     each owned there, and the save its last read in the turn -- the call's
     arguments, evaluated after it, read neither it nor a part of it, nothing
-    reads it at a closure's uses or after the let, and the frame keeps no
-    part of it, nor anything it is a part of, beside it.  What follows the
+    reads it at a closure's uses or after the let, and the frame keeps
+    nothing it is a part of beside it: a part of it kept beside it is saved
+    first, a copy, and the whole moved in after.  What follows the
     let reads it in the frame.  [None] of a let no point resumes at. *)
 val save_moves : t -> Core.Occurrence.t -> Core.Binder.t list option
 

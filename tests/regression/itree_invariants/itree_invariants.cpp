@@ -16,7 +16,7 @@ ItreeInvariants::count_taus(uint64_t fuel,
     } else if (std::holds_alternative<typename ITree<uint64_t>::Tau>(_cs)) {
       const auto &_itf = *std::get_if<typename ITree<uint64_t>::Tau>(&_cs);
       auto t_ = _itf.next;
-      return (count_taus(fuel_, t_) + 1);
+      return (count_taus(fuel_, std::move(t_)) + 1);
     } else {
       const auto &_itf = *std::get_if<typename ITree<uint64_t>::Vis>(&_cs);
       auto _x = crane_event_as<crane::obj>(_itf.effect);

@@ -37,16 +37,16 @@ AliasSlot::parts AliasSlot::expr_parts(const AliasSlot::expr &e,
     if (crane::holds_alternative<_call>(_popped)) {
       auto _f = std::move(crane::get<_call>(_popped));
       _stack.pop_back();
-      const List<String> &k = _f.k;
+      List<String> k = std::move(_f.k);
       const AliasSlot::expr &e = *_f.e;
       if (crane::holds_alternative<typename AliasSlot::expr::ELit>(e.v())) {
         const auto &[s0] = crane::get<typename AliasSlot::expr::ELit>(e.v());
-        _result = List<String>::cons(s0, k);
+        _result = List<String>::cons(s0, std::move(k));
       } else {
         const auto &[a0, b0] =
             crane::get<typename AliasSlot::expr::EAdd>(e.v());
         _stack.emplace_back(_after_expr_parts_in_EAdd{crane_raw(a0)});
-        _stack.emplace_back(_call{k, crane_raw(b0)});
+        _stack.emplace_back(_call{std::move(k), crane_raw(b0)});
       }
     } else if (crane::holds_alternative<_after_expr_parts_in_EAdd>(_popped)) {
       auto _f = std::move(crane::get<_after_expr_parts_in_EAdd>(_popped));

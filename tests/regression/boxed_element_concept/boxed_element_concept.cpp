@@ -19,7 +19,7 @@ uint64_t BoxedElementConcept::size(const BoxedElementConcept::rose &r) {
           } else {
             const BoxedElementConcept::rose &k = l.front();
             auto t = l.tail();
-            return (size(k) + _self_go(_self_go, t));
+            return (size(k) + _self_go(_self_go, std::move(t)));
           }
         };
     auto go =

@@ -1093,7 +1093,11 @@ let rec rewrite_enter_lambda_return ctx stmt =
                                                aliased =
                                                  with_aliased ctx.aliased
                                                    (free_vars_expr scrut
-                                                     @ List.map (fun (p : custom_param) -> p.name) ps) } b.body } )
+                                                     @ List.filteri
+                                                         (fun j _ ->
+                                                           not (Cpp_ir.Foreign_template.declared_by_value
+                                                                  m.template i j) )
+                                                         (List.map (fun (p : custom_param) -> p.name) ps)) } b.body } )
             branches };
     ]
   | Match (scrut, branches, default) ->
@@ -1202,10 +1206,32 @@ and rewrite_enter_stmts ctx stmts =
          and those recomputable from them -- is the plan's.  Of a value kept
          the frame keeps the local holding it, not one respelling it. *)
       let p = planned_point ctx id tgt in
+      (* Which a save moves is the ownership plan's, which planned the let
+         or bind the machine resumes at ({!Ownership_ir.Region.Frame_save}):
+         each binder it owns there or an enclosing frame of the turn holds,
+         read last by the save; the declared types say only which are worth
+         moving.  A save it did not plan moves nothing, and is a violation
+         under [CRANE_CHECK_IR]. *)
+      let plan_moves =
+        let b = match tgt with Declare (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
+        Option.bind b Ownership_ir.Region.Frame_save.lookup
+      in
+      let moved_by_plan x =
+        Option.cata (fun b -> List.exists (Core.Binder.equal b) (Option.default [] plan_moves)) false (binder_of ctx x)
+      in
+      (* A value moved into the frame that a reference reads -- a part of it
+         the frame keeps too -- is saved after the rest: the frame's fields
+         are initialised in order, so the part is copied before its whole is
+         moved. *)
       let cont_vars =
         let rebuilt = rebuilt_binders ctx p in
         let dropped b = available ctx b || List.exists (Core.Binder.equal b) rebuilt in
-        planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p
+        let kept = planned_frame ctx ~keeps:(fun b x -> not (dropped b || Id.equal x id || respells ctx x)) p in
+        let moved x =
+          moved_by_plan x && match List.assoc_opt x env with Some ty -> movable ty | None -> false
+        in
+        let rest, wholes = List.partition (fun x -> not (Id.Set.mem x ctx.aliased && moved x)) kept in
+        rest @ wholes
       in
       (* What the rest reads of what the frame does not keep is bound again
          in the handler.  Under [CRANE_CHECK_IR] each such local is one the
@@ -1324,24 +1350,13 @@ and rewrite_enter_stmts ctx stmts =
       (* A local the frame keeps is read for the last time where it is
          saved, unless the call the frame is saved for reads it, which the
          plan says ({!Core_plan.Recursion.resume.read_by_call}); one held by value
-         is moved into the frame there.  One the frame keeps as a pointer is
-         pointed at.  Under [CRANE_CHECK_IR] the call's arguments must read
-         none of those the plan says they do not.  Which a save moves is the
-         ownership plan's, which planned the let or bind the machine resumes
-         at ({!Ownership_ir.Region.Frame_save}): each binder it owns there or an
-         enclosing frame of the turn holds, read last by the save; the
-         declared types say only which are worth moving.  A save it did not
-         plan moves nothing, and is a violation under [CRANE_CHECK_IR]. *)
-      let plan_moves =
-        let b = match tgt with Declare (_, b) -> b | Existing -> binder_of ctx id | Declare_static _ -> None in
-        match Option.bind b Ownership_ir.Region.Frame_save.lookup with
-        | Some moved -> moved
-        | None ->
-          if cont_vars <> [] then
-            Base.Probe.violation "frame save"
-              (Pp.str "a machine saves a frame at a point the ownership plan did not plan the save of");
-          []
-      in
+         is moved into the frame there, as the ownership plan says.
+         One the frame keeps as a pointer is pointed at.  Under
+         [CRANE_CHECK_IR] the call's arguments must read none of those the
+         plan says they do not. *)
+      if plan_moves = None && cont_vars <> [] then
+        Base.Probe.violation "frame save"
+          (Pp.str "a machine saves a frame at a point the ownership plan did not plan the save of");
       let saved_conv =
         let read_by_call cid =
           match binder_of ctx cid with
@@ -1375,7 +1390,7 @@ and rewrite_enter_stmts ctx stmts =
             let planned =
               (not pointer)
               && (match List.assoc_opt cid env with Some ty -> movable ty | None -> false)
-              && Option.cata (fun b -> List.exists (Core.Binder.equal b) plan_moves) false (binder_of ctx cid)
+              && moved_by_plan cid
             in
             (* Under [CRANE_CHECK_IR], the plan moves at least what the
                C++ reading -- a local declared by value, not aliased, that
@@ -2233,8 +2248,25 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
   let aliased_params ?pointer_safe en =
     List.fold_left aliased_after Id.Set.empty (make_param_copies ~unit (entry_emission ?pointer_safe en []).params)
   in
+  (* [env] with each parameter an entry's frame holds by value at the type
+     its handler owns it at: the handler's own local, not the head's
+     reference -- one bound by reference to the frame's field is bound by
+     value where the handler moves it ({!own_moved_bindings}). *)
+  let bound_params ?pointer_safe en env =
+    let by_value =
+      List.filter_map
+        (function
+          | Bind_variable (id, Declare (Reference (Lvalue, Const ty), _), Access (Dot, Local f, _))
+            when Id.equal f id_f ->
+            Some (id, ty)
+          | Bind_variable (id, Declare (ty, _), _) when ty <> Auto && not (is_borrowed ty) -> Some (id, ty)
+          | _ -> None )
+        (make_param_copies ~unit (entry_emission ?pointer_safe en []).params)
+    in
+    List.map (fun (id, ty) -> (id, Option.default ty (List.assoc_opt id by_value))) env
+  in
   let ctx = { unit; check = check; entries = entries;
-               env = env;
+               env = bound_params ~pointer_safe:pointer_safe_varying own_entry env;
                result_ty = ret_ty;
                binders = List.map (fun (id, b) -> (id, Some b)) binders;
                callees = fn_name :: Option.cata (fun (ad, _) -> [Some ad.Adopted.name]) [] adopted;
@@ -2265,7 +2297,7 @@ let transform_nontail ?(fn_name : string option) ?loop ~unit ~varying ?adopted ?
     | Some (ad, en) ->
       let ctx1 =
         { ctx with
-          env = env @ en.params;
+          env = bound_params ~pointer_safe:adopted_pointers en (env @ en.params);
           binders =
             List.map (fun (id, _) -> (id, List.assoc_opt id ad.binders)) en.params @ ctx.binders;
           invariant_params = Id.Set.empty;

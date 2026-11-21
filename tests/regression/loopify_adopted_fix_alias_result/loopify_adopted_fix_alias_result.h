@@ -281,7 +281,7 @@ struct LoopifyAdoptedFixAliasResult {
         List<std::pair<uint64_t, T1>> m = std::move(_f.m);
         if (std::holds_alternative<typename List<std::pair<uint64_t, T1>>::Nil>(
                 m.v_mut())) {
-          _result = map2_r<T1, T2, T3>(f, x0_);
+          _result = map2_r<T1, T2, T3>(f, std::move(x0_));
         } else {
           auto &[a0, a1] =
               std::get<typename List<std::pair<uint64_t, T1>>::Cons>(m.v_mut());

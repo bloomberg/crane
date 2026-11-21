@@ -43,7 +43,7 @@ struct SharedArrayVec {
         return h;
       } else {
         uint64_t m = n - 1;
-        return vec_nth<T1>(t, m, std::move(d));
+        return vec_nth<T1>(std::move(t), m, std::move(d));
       }
     }
   }
@@ -109,7 +109,8 @@ T1 List::fold_left(F0 &&f, const crane::list<T2> &l, T1 a0) {
   } else {
     const T2 &b = l.front();
     auto l0 = l.tail();
-    return List::template fold_left<T1, T2>(f, l0, f(std::move(a0), b));
+    return List::template fold_left<T1, T2>(f, std::move(l0),
+                                            f(std::move(a0), b));
   }
 }
 
@@ -120,6 +121,6 @@ crane::list<T2> ListDef::map(F0 &&f, const crane::list<T1> &l) {
   } else {
     const T1 &a = l.front();
     auto l0 = l.tail();
-    return crane::cons(f(a), ListDef::template map<T1, T2>(f, l0));
+    return crane::cons(f(a), ListDef::template map<T1, T2>(f, std::move(l0)));
   }
 }

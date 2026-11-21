@@ -409,6 +409,41 @@ let machine_storage ~unit (f : func) params body (l : Control_ir.Term.loop) =
         (storage_at ~unit ~entering:r l positions params ~modes
           ~held:(planned_held ~unit r l positions ~declared:(fun k -> n - 1 - k)) body)
 
+(* The parameters of the function [r] whose machine's entry frames hold them
+   by value, by the position of each among the loop's: those some turn
+   varies, which the frame entering the machine carries and its handler
+   binds by value, but for one a frame holds by pointer -- borrowed, of a
+   value type, and passed by every turn a value lying in what the caller
+   passed or held so by the storage plan ({!Tail.pointer_safe_flags},
+   {!machine_storage}).  [params] are the C++ parameters, the last first,
+   [modes] how each is passed, [binders] the Core binder each stands for. *)
+let frame_owned_parameters ~unit r ~params ~modes ~binders =
+  match function_machine ~unit r with
+  | None -> []
+  | Some l ->
+    let positions = List.map (fun p -> position r l (binder_of binders p)) params in
+    if not (List.for_all Option.has_some positions) then []
+    else
+      let n = List.length params in
+      let modes = Analysis.param_modes ~what:(Base.Table.kername_of_global r) modes params in
+      let own_pointers, _ =
+        storage_at ~unit l positions params ~modes
+          ~held:(planned_held ~unit r l positions ~declared:(fun k -> n - 1 - k))
+          []
+      in
+      let invariant = Control_ir.Term.invariant_parameters l in
+      let parts = parts_passed ~unit l in
+      List.filter_map Fun.id
+        (List.map2
+           (fun (((_, ty), mode), position) own_pointer ->
+             let i = Option.get position in
+             let pointer =
+               (List.nth parts i || own_pointer) && Option.has_some (Tail.borrowed_value_param_pointee unit mode ty)
+             in
+             if List.nth invariant i || pointer then None else Some i )
+           (List.combine (List.combine params modes) positions)
+           own_pointers )
+
 (* The function [f], generated under the template parameters [tparams],
    lowered to the loop [l] varying the parameters [varying]; [Error why]
    where Loopify makes no loop of it -- a call passing the loop other

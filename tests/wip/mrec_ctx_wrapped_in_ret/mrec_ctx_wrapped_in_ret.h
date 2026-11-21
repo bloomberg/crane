@@ -220,28 +220,31 @@ Recursion::interp_mrec(const std::type_identity_t<
         if (std::holds_alternative<typename ITree<T3>::Ret>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Ret>(&_cs);
           auto r = _itf.value;
-          return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inr(r));
+          return itree_ret(
+              Sum<std::shared_ptr<ITree<T3>>, T3>::inr(std::move(r)));
         } else if (std::holds_alternative<typename ITree<T3>::Tau>(_cs)) {
           const auto &_itf = *std::get_if<typename ITree<T3>::Tau>(&_cs);
           auto t0 = _itf.next;
-          return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(t0));
+          return itree_ret(
+              Sum<std::shared_ptr<ITree<T3>>, T3>::inl(std::move(t0)));
         } else {
           const auto &_itf = *std::get_if<typename ITree<T3>::Vis>(&_cs);
           auto e0 = crane_event_as<Sum1<T1, T2, crane::obj>>(_itf.effect);
           auto k = _itf.cont;
           if (std::holds_alternative<typename Sum1<T1, T2, crane::obj>::Inl1>(
-                  e0.v())) {
-            const auto &[a0] =
-                std::get<typename Sum1<T1, T2, crane::obj>::Inl1>(e0.v());
+                  e0.v_mut())) {
+            auto &[a0] =
+                std::get<typename Sum1<T1, T2, crane::obj>::Inl1>(e0.v_mut());
             return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
-                itree_bind(ctx0(a0), k)));
+                itree_bind(ctx0(std::move(a0)), std::move(k))));
           } else {
-            const auto &[a0] =
-                std::get<typename Sum1<T1, T2, crane::obj>::Inr1>(e0.v());
-            return itree_vis(a0, [=](const auto &x) {
-              return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
-                  crane_call_erased(k, x)));
-            });
+            auto &[a0] =
+                std::get<typename Sum1<T1, T2, crane::obj>::Inr1>(e0.v_mut());
+            return itree_vis(
+                std::move(a0), [=, k = std::move(k)](const auto &x) {
+                  return itree_ret(Sum<std::shared_ptr<ITree<T3>>, T3>::inl(
+                      crane_call_erased(k, x)));
+                });
           }
         }
       },

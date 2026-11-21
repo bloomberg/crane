@@ -977,15 +977,15 @@ template <OrderedType X> struct Coq_Raw {
 
     struct _after_map2_in_EQ {
       std::decay_t<F0> f;
-      typename X::t k;
       T1 e;
       T2 e_;
+      typename X::t k;
     };
 
     struct _after_map2_in_LT {
       std::decay_t<F0> f;
-      typename X::t k;
       T1 e;
+      typename X::t k;
     };
 
     using _frame = std::variant<_call, _call_map2_aux, _after_map2_aux_in_GT,
@@ -1002,7 +1002,7 @@ template <OrderedType X> struct Coq_Raw {
         List<std::pair<typename X::t, T1>> m = std::move(_f.m);
         if (std::holds_alternative<
                 typename List<std::pair<typename X::t, T1>>::Nil>(m.v_mut())) {
-          _result = map2_r<T1, T2, T3>(f, x0_);
+          _result = map2_r<T1, T2, T3>(f, std::move(x0_));
         } else {
           auto &[a0, a1] =
               std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
@@ -1032,13 +1032,13 @@ template <OrderedType X> struct Coq_Raw {
           if (std::holds_alternative<typename Compare<typename X::t>::LT>(
                   _sv.v())) {
             _stack.emplace_back(
-                _after_map2_in_LT{f, std::move(k), std::move(e)});
+                _after_map2_in_LT{f, std::move(e), std::move(k)});
             _stack.emplace_back(_call{&m_, *a1});
           } else if (
               std::holds_alternative<typename Compare<typename X::t>::EQ>(
                   _sv.v())) {
             _stack.emplace_back(
-                _after_map2_in_EQ{f, std::move(k), std::move(e), e_});
+                _after_map2_in_EQ{f, std::move(e), e_, std::move(k)});
             _stack.emplace_back(_call{crane_raw(a10), *a1});
           } else {
             _stack.emplace_back(_after_map2_aux_in_GT{f, k_, e_});
@@ -1060,9 +1060,9 @@ template <OrderedType X> struct Coq_Raw {
         auto _f = std::move(std::get<_after_map2_in_EQ>(_popped));
         _stack.pop_back();
         std::decay_t<F0> f = std::move(_f.f);
-        typename X::t k = std::move(_f.k);
         auto e = std::move(_f.e);
         auto e_ = std::move(_f.e_);
+        typename X::t k = std::move(_f.k);
         _result = option_cons<T3>(
             k, f(std::make_optional<T1>(e), std::make_optional<T2>(e_)),
             std::move(_result));
@@ -1070,8 +1070,8 @@ template <OrderedType X> struct Coq_Raw {
         auto _f = std::move(std::get<_after_map2_in_LT>(_popped));
         _stack.pop_back();
         std::decay_t<F0> f = std::move(_f.f);
-        typename X::t k = std::move(_f.k);
         auto e = std::move(_f.e);
+        typename X::t k = std::move(_f.k);
         _result = option_cons<T3>(
             k, f(std::make_optional<T1>(e), std::optional<T2>()),
             std::move(_result));
@@ -1104,14 +1104,14 @@ template <OrderedType X> struct Coq_Raw {
     };
 
     struct _after_combine_in_EQ {
-      typename X::t k;
       T1 e;
       T2 e_;
+      typename X::t k;
     };
 
     struct _after_combine_in_LT {
-      typename X::t k;
       T1 e;
+      typename X::t k;
     };
 
     using _frame =
@@ -1134,7 +1134,7 @@ template <OrderedType X> struct Coq_Raw {
                 return std::make_pair(std::optional<T1>(),
                                       std::make_optional<T2>(e_));
               },
-              x0_);
+              std::move(x0_));
         } else {
           auto &[a0, a1] =
               std::get<typename List<std::pair<typename X::t, T1>>::Cons>(
@@ -1168,13 +1168,13 @@ template <OrderedType X> struct Coq_Raw {
           if (std::holds_alternative<typename Compare<typename X::t>::LT>(
                   _sv.v())) {
             _stack.emplace_back(
-                _after_combine_in_LT{std::move(k), std::move(e)});
+                _after_combine_in_LT{std::move(e), std::move(k)});
             _stack.emplace_back(_call{&m_, std::move(a1_value)});
           } else if (
               std::holds_alternative<typename Compare<typename X::t>::EQ>(
                   _sv.v())) {
             _stack.emplace_back(
-                _after_combine_in_EQ{std::move(k), std::move(e), e_});
+                _after_combine_in_EQ{std::move(e), e_, std::move(k)});
             _stack.emplace_back(_call{crane_raw(a10), std::move(a1_value)});
           } else {
             _stack.emplace_back(_after_combine_aux_in_GT{k_, e_});
@@ -1198,9 +1198,9 @@ template <OrderedType X> struct Coq_Raw {
       } else if (std::holds_alternative<_after_combine_in_EQ>(_popped)) {
         auto _f = std::move(std::get<_after_combine_in_EQ>(_popped));
         _stack.pop_back();
-        typename X::t k = std::move(_f.k);
         auto e = std::move(_f.e);
         auto e_ = std::move(_f.e_);
+        typename X::t k = std::move(_f.k);
         _result = List<std::pair<
             typename X::t,
             std::pair<std::optional<T1>, std::optional<T2>>>>::cons(
@@ -1211,8 +1211,8 @@ template <OrderedType X> struct Coq_Raw {
       } else {
         auto _f = std::move(std::get<_after_combine_in_LT>(_popped));
         _stack.pop_back();
-        typename X::t k = std::move(_f.k);
         auto e = std::move(_f.e);
+        typename X::t k = std::move(_f.k);
         _result = List<std::pair<
             typename X::t,
             std::pair<std::optional<T1>, std::optional<T2>>>>::cons(
@@ -1878,7 +1878,8 @@ template <Int I, OrderedType X> struct Raw {
         typename X::t x = std::move(_f.x);
         const tree<T1> &l = *_f.l;
         if (std::holds_alternative<typename tree<T1>::Leaf>(l.v())) {
-          _result = std::make_pair(r, std::make_pair(std::move(x), d));
+          _result =
+              std::make_pair(r, std::make_pair(std::move(x), std::move(d)));
         } else {
           const auto &[a0, a1, a2, a3, _] =
               std::get<typename tree<T1>::Node>(l.v());
@@ -2034,7 +2035,7 @@ template <Int I, OrderedType X> struct Raw {
         const tree<T1> &x2_ = *_f.x2_;
         tree<T1> l = std::move(_f.l);
         if (std::holds_alternative<typename tree<T1>::Leaf>(l.v_mut())) {
-          _result = add<T1>(x0_, x1_, x2_);
+          _result = add<T1>(x0_, x1_, std::move(x2_));
         } else {
           auto &[a0, a1, a2, a3, a4] =
               std::get<typename tree<T1>::Node>(l.v_mut());
@@ -2758,7 +2759,7 @@ template <Int I, OrderedType X> struct Raw {
                                    const typename X::t &, const T1 &,
                                    std::optional<T2> &&> &&
              std::is_invocable_r_v<tree<T3>, F1 &, const tree<T1> &> &&
-             std::is_invocable_r_v<tree<T3>, F2 &, const tree<T2> &>
+             std::is_invocable_r_v<tree<T3>, F2 &, tree<T2> &&>
   static tree<T3> map2_opt(F0 &&f, F1 &&mapl, F2 &&mapr, const tree<T1> &m1,
                            const tree<T2> &m2) {
     // Explicit stack replaces the non-tail recursion of map2_opt: _call frames
@@ -2801,10 +2802,10 @@ template <Int I, OrderedType X> struct Raw {
       if (std::holds_alternative<_call>(_popped)) {
         auto _f = std::move(std::get<_call>(_popped));
         _stack.pop_back();
-        const tree<T2> &m2 = _f.m2;
+        tree<T2> m2 = std::move(_f.m2);
         const tree<T1> &m1 = *_f.m1;
         if (std::holds_alternative<typename tree<T1>::Leaf>(m1.v())) {
-          _result = mapr(m2);
+          _result = mapr(std::move(m2));
         } else {
           const auto &[a0, a1, a2, a3, _] =
               std::get<typename tree<T1>::Node>(m1.v());
